@@ -11,12 +11,12 @@ def format_xenium():
     inout_params.add_argument('--out-minmax', type=str, default="coordinate_minmax.tsv", help='The output coordinate minmax TSV file. Default: coordinate_minmax.tsv')
     inout_params.add_argument('--out-feature', type=str, default="feature.clean.tsv.gz", help='The output files for gene. Default: feature.clean.tsv.gz')
 
-    incol_params = parser.add_argument_group("Input Columns Parameters", "Input column parameters for CSV.")
-    incol_params.add_argument('--csv-colname-x',  type=str, default='x_location', help='Column name for X-axis (default: x_location)')
-    incol_params.add_argument('--csv-colname-y',  type=str, default='y_location', help='Column name for Y-axis (default: y_location)')
-    incol_params.add_argument('--csv-colname-feature-name', type=str, default='feature_name', help='Column name for gene name(default: feature_name)')
-    incol_params.add_argument('--csv-colname-phredscore', type=str, default='qv', help='Column name for Phred-scaled quality value (Q-Score) estimating the probability of incorrect call(default: qv)')
-    incol_params.add_argument('--csv-colnames-others', nargs='+', default=[], help='Columns names to keep (e.g. cell_id, overlaps_nucleus).')
+    incol_params = parser.add_argument_group("Input Columns Parameters", "Input column parameters .")
+    incol_params.add_argument('--tsv-colname-x',  type=str, default='x_location', help='Column name for X-axis (default: x_location)')
+    incol_params.add_argument('--tsv-colname-y',  type=str, default='y_location', help='Column name for Y-axis (default: y_location)')
+    incol_params.add_argument('--tsv-colname-feature-name', type=str, default='feature_name', help='Column name for gene name(default: feature_name)')
+    incol_params.add_argument('--tsv-colname-phredscore', type=str, default='qv', help='Column name for Phred-scaled quality value (Q-Score) estimating the probability of incorrect call(default: qv)')
+    incol_params.add_argument('--tsv-colnames-others', nargs='+', default=[], help='Columns names to keep (e.g. cell_id, overlaps_nucleus).')
     
     key_params = parser.add_argument_group("Key Parameters", "Key parameters, such as filtering cutoff.")
     key_params.add_argument('--min-phred-score', type=float, default=13, help='Quality score cutoff')
@@ -54,29 +54,29 @@ def format_xenium():
     ymax=0
     
     # transcript header
-    unit_info=[args.colname_x, args.colname_y, args.colname_feature_name] + args.csv_colnames_others
+    unit_info=[args.colname_x, args.colname_y, args.colname_feature_name] + args.tsv_colnames_others
     oheader = unit_info + [args.colname_count]
     with open(out_transcript_path, 'w') as wf:
         _ = wf.write('\t'.join(oheader)+'\n')
     
     for chunk in pd.read_csv(args.input,header=0,chunksize=500000):
         # filter
-        chunk = chunk.loc[chunk[args.csv_colname_phredscore] > args.min_phred_score]
+        chunk = chunk.loc[chunk[args.tsv_colname_phredscore] > args.min_phred_score]
         if args.dummy_genes != '':
-            chunk = chunk[~chunk[args.csv_colname_feature_name].str.contains(args.dummy_genes, flags=re.IGNORECASE, regex=True)]
+            chunk = chunk[~chunk[args.tsv_colname_feature_name].str.contains(args.dummy_genes, flags=re.IGNORECASE, regex=True)]
         
         # rename
-        chunk.rename(columns = {args.csv_colname_x:args.colname_x, 
-                                args.csv_colname_y:args.colname_y, 
-                                args.csv_colname_feature_name:args.colname_feature_name}, inplace=True)
+        chunk.rename(columns = {args.tsv_colname_x:args.colname_x, 
+                                args.tsv_colname_y:args.colname_y, 
+                                args.tsv_colname_feature_name:args.colname_feature_name}, inplace=True)
         # count
         chunk[args.colname_count] = 1
         chunk = chunk.groupby(by = unit_info).agg({args.colname_count:'sum'}).reset_index()
         
         # conversion (skip given that the input x y are in um, no need to convert.)
         # if args.units_per_um != 1:
-        #     chunk[args.csv_colname_x] = chunk[args.csv_colname_x] / args.units_per_um
-        #     chunk[args.csv_colname_y] = chunk[args.csv_colname_y] / args.units_per_um
+        #     chunk[args.tsv_colname_x] = chunk[args.tsv_colname_x] / args.units_per_um
+        #     chunk[args.tsv_colname_y] = chunk[args.tsv_colname_y] / args.units_per_um
         
         # write down
         chunk[oheader].to_csv(out_transcript_path, sep='\t',mode='a',index=False,header=False,float_format=float_format)

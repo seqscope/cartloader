@@ -61,21 +61,14 @@ def parse_arguments(_args):
     aux_sge_params.add_argument('--pos-colname-y', type=str, default='pxl_col_in_fullres', help='Additional Barcode Position File. Column name for Y-axis in the position file (default: pxl_col_in_fullres)')
     aux_sge_params.add_argument('--pos-delim', type=str, default=',', help='Additional Barcode Position File. Delimiter for the position file (default: ",")')
 
-    aux_csv_params = parser.add_argument_group("CSV Auxiliary Parameters", "Auxiliary Parameters for CSV input.")
-    aux_csv_params.add_argument('--csv-colname-x',  type=str, default='x_location', help='Column name for X-axis (default: x_location)')
-    aux_csv_params.add_argument('--csv-colname-y',  type=str, default='y_location', help='Column name for Y-axis (default: y_location)')
-    aux_csv_params.add_argument('--csv-colname-feature-name', type=str, default='feature_name', help='Column name for gene name(default: feature_name)')
-    # aux_csv_params.add_argument('--csv-colname-feature-id', type=str, default=None, help='Column name for gene id (e.g.: transcript_id)')
-    aux_csv_params.add_argument('--csv-colname-phredscore', type=str, default='qv', help='Column name for Phred-scaled quality value (Q-Score) estimating the probability of incorrect call(default: qv)')
-    aux_csv_params.add_argument('--csv-colnames-others', nargs='+', default=[], help='Columns names to keep.e.g., cell_id, overlaps_nucleus')
-
-
-    aux_csv_params = parser.add_argument_group("TSV Auxiliary Parameters", "Auxiliary Parameters for CSV input.")
+    aux_csv_params = parser.add_argument_group("CSV Auxiliary Parameters", "Auxiliary Parameters TSV/CSV input.")
     aux_csv_params.add_argument('--tsv-colname-x',  type=str, default='x_location', help='Column name for X-axis (default: x_location)')
     aux_csv_params.add_argument('--tsv-colname-y',  type=str, default='y_location', help='Column name for Y-axis (default: y_location)')
     aux_csv_params.add_argument('--tsv-colname-feature-name', type=str, default='feature_name', help='Column name for gene name(default: feature_name)')
-    aux_csv_params.add_argument('--csv-colname-feature-count', type=str, default=, help='Column name for gene id (e.g.: transcript_id)')
-
+    # aux_csv_params.add_argument('--tsv-colname-feature-id', type=str, default=None, help='Column name for gene id (e.g.: transcript_id)')
+    aux_csv_params.add_argument('--tsv-colname-phredscore', type=str, default='qv', help='Column name for Phred-scaled quality value (Q-Score) estimating the probability of incorrect call(default: qv)')
+    aux_csv_params.add_argument('--tsv-colnames-others', nargs='+', default=[], help='Columns names to keep.e.g., cell_id, overlaps_nucleus')
+    aux_csv_params.add_argument('--tsv-colname-count', type=str, default="MIDCounts", help='Column name for gene id (e.g.: transcript_id)')
 
     aux_output_params = parser.add_argument_group("Shared Output Auxiliary Parameters", "Auxiliary Shared Output column index parameters for the FICTURE pipeline.")
     aux_output_params.add_argument('--colname-x', type=str, default='X', help='Column name for X (default: X)')
@@ -168,13 +161,7 @@ def create_minmax(cmds, args):
     minmax_cmd = f"""{args.gzip} -cd {args.out_dir}/{args.out_transcript} | awk 'BEGIN{{FS=OFS="\\t"}} NR==1{{for(i=1;i<=NF;i++){{if($i=="X")x=i;if($i=="Y")y=i}}print $x,$y;next}}{{print $x,$y}}' | awk -F'\\t' ' BEGIN {{ min1 = "undef"; max1 = "undef"; min2 = "undef"; max2 = "undef"; }} {{ if (NR == 2 || $1 < min1) min1 = $1; if (NR == 2 || $1 > max1) max1 = $1; if (NR == 2 || $2 < min2) min2 = $2; if (NR == 2 || $2 > max2) max2 = $2; }} END {{ print "xmin\\t", min1; print "xmax\\t", max1; print "ymin\\t", min2; print "ymax\\t", max2; }}' > {args.out_dir}/{args.out_minmax}"""
     cmds.append(minmax_cmd)
     return cmds
-    
-def uniq_transcript(transcript_tsv, args):
-    if args.unique:
-        uniq_cmd = f"awk 'BEGIN {{ OFS=\"\\t\"; print \"X\", \"Y\", \"gene\", \"{args.annotation}\", \"Count\" }} NR > 1 {{ if ($1 == prevX && $2 == prevY) {{ sumCount += $5; }} else {{ if (NR > 2) {{ print prevX, prevY, prevGene, firstCellID, sumCount; }} prevX = $1; prevY = $2; prevGene = $3; firstCellID = $4; sumCount = $5; }} }} END {{ print prevX, prevY, prevGene, firstCellID, sumCount; }}' {args.out_dir}/{transcript_tsv} | {args.gzip} -c > {args.out_dir}/{args.out_transcript}"
-    else:
-        uniq_cmd = f"{args.gzip} -c {args.out_dir}/{transcript_tsv} > {args.out_dir}/{args.out_transcript}"
-    return uniq_cmd
+
 
 def add_param_to_cmd(cmd, args, aux_argset):
     aux_args = {k: v for k, v in vars(args).items() if k in aux_argset}
@@ -215,7 +202,7 @@ def convert_xenium(cmds, args):
     transcript_tsv = args.out_transcript.replace(".gz", "")
     format_cmd = f"python {cartloader}/scripts/format_xenium_custom.py --input {args.in_csv} --out-dir {args.out_dir} --out-transcript {transcript_tsv} --out-feature {args.out_feature} --out-minmax {args.out_minmax}"
     aux_argset = {
-        'csv_colname_x', 'csv_colname_y', 'csv_colname_feature_name', 'csv_colname_phredscore', 'csv_colnames_others',
+        'tsv_colname_x', 'tsv_colname_y', 'tsv_colname_feature_name', 'tsv_colname_phredscore', 'tsv_colnames_others',
         'min_phred_score', 'dummy_genes', 
         'colname_x', 'colname_y','colname_feature_name', 'colnames_count'
     }
@@ -231,7 +218,7 @@ def convert_merscope(cmds, args):
     transcript_tsv = args.out_transcript.replace(".gz", "")
     format_cmd=f"python {cartloader}/scripts/format_vizgen_custom.py --input {args.in_csv} --out-dir {args.out_dir} --out-transcript {transcript_tsv} --out-feature {args.out_feature} --out-minmax {args.out_minmax}"
     aux_argset = {
-        'csv_colname_x', 'csv_colname_y', 'csv_colname_feature_name', 'csv_colname_feature_id',
+        'tsv_colname_x', 'tsv_colname_y', 'tsv_colname_feature_name', 'tsv_colname_feature_id',
         'dummy_genes', 'precision_um',
         'colname_x', 'colname_y', 'colname_feature_name', 'colname_feature_id', 'colnames_count', 'colname_molecule_id'
     }
@@ -241,22 +228,29 @@ def convert_merscope(cmds, args):
     cmds.append(f"rm {args.out_dir}/{transcript_tsv}")
     return cmds
 
+def uniq_transcript(transcript_tsv, args):
+    if args.unique:
+        uniq_cmd = f"awk 'BEGIN {{ OFS=\"\\t\"; print \"{args.colname_x}\", \"{args.colname_y}\", \"{args.colname_feature_name}\", \"{args.annotation}\", \"{args.colnames_count}\" }} NR > 1 {{ if ($1 == prevX && $2 == prevY) {{ sumCount += $5; }} else {{ if (NR > 2) {{ print prevX, prevY, prevGene, firstCellID, sumCount; }} prevX = $1; prevY = $2; prevGene = $3; firstCellID = $4; sumCount = $5; }} }} END {{ print prevX, prevY, prevGene, firstCellID, sumCount; }}' {args.out_dir}/{transcript_tsv} | {args.gzip} -c > {args.out_dir}/{args.out_transcript}"
+    else:
+        uniq_cmd = f"{args.gzip} -c {args.out_dir}/{transcript_tsv} > {args.out_dir}/{args.out_transcript}"
+    return uniq_cmd
+
 def convert_smi(cmds, args):
     # input: in_csv
     # output: out_transcript, out_minmax, out_feature
     transcript_tsv = args.out_transcript.replace(".gz", "")
     format_cmd=f"python {cartloader}/scripts/format_smi_custom.py --input {args.in_csv} --out-dir {args.out_dir} --out-transcript {transcript_tsv} --out-feature {args.out_feature} --out-minmax {args.out_minmax}"
     aux_argset = {
-        'csv_colname_x', 'csv_colname_y', 'csv_colname_feature_name', 'csv_colnames_others',
+        'tsv_colname_x', 'tsv_colname_y', 'tsv_colname_feature_name', 'tsv_colnames_others',
         'units_per_um', 'dummy_genes', 'precision_um',
         'colname_x', 'colname_y','colname_feature_name', 'colnames_count'
     }
     format_cmd = add_param_to_cmd(format_cmd, args, aux_argset)
     cmds.append(format_cmd)
-    cmds.append(f"{args.gzip} -c {args.out_dir}/{transcript_tsv} > {args.out_dir}/{args.out_transcript}")
+    uniq_cmd = uniq_transcript(transcript_tsv, args)
+    cmds.append(uniq_cmd)
     cmds.append(f"rm {args.out_dir}/{transcript_tsv}")
     return cmds
-
 
 def convert_stereoseq(cmds, args):
     # # cmds.append(f"(echo -e \"X\tY\tgene\tgn\"; {args.gzip} -cd {args.in_tsv} | tail -n +2 | perl -lane 'print join(\"\\t\",$F[1]*0.5,$F[2]*0.5,$F[0],$F[3])' | {args.gzip} -c > {args.out_dir}/{args.out_transcript}")
@@ -265,7 +259,7 @@ def convert_stereoseq(cmds, args):
     transcript_tsv = args.out_transcript.replace(".gz", "")
     format_cmd=f"python {cartloader}/scripts/format_stereoseq_custom.py --input {args.in_csv} --out-dir {args.out_dir} --out-transcript {transcript_tsv} --out-feature {args.out_feature} --out-minmax {args.out_minmax}"
     aux_argset = {
-        'tsv_colname_x', 'tsv_colname_y', 'tsv_colname_feature_name', 'tsv_colnames_count',
+        'tsv_colname_x', 'tsv_colname_y', 'tsv_colname_feature_name', 'tsv_colname_count',
         'units_per_um', 'dummy_genes', 'precision_um',
         'colname_x', 'colname_y','colname_feature_name', 'colnames_count'
     }

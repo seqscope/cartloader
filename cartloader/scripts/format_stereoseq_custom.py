@@ -10,18 +10,18 @@ def format_stereoseq():
     inout_params.add_argument('--out-minmax', type=str, default="coordinate_minmax.tsv", help='The output coordinate minmax TSV file. Default: coordinate_minmax.tsv')
     inout_params.add_argument('--out-feature', type=str, default="feature.clean.tsv.gz", help='The output files for gene. Default: feature.clean.tsv.gz')
 
-    incol_params = parser.add_argument_group("Input Columns Parameters", "Input column parameters for CSV.")
+    incol_params = parser.add_argument_group("Input Columns Parameters", "Input column parameters .")
     incol_params.add_argument('--tsv-colname-x',  type=str, default='global_x', help='Column name for X-axis (default: global_x)')
     incol_params.add_argument('--tsv-colname-y',  type=str, default='global_y', help='Column name for Y-axis (default: global_y)')
     incol_params.add_argument('--tsv-colname-feature-name', type=str, default='target', help='Column name for gene name (e.g.: target)')
-    incol_params.add_argument('--tsv-colnames-count', nargs='+', default=[], help='Columns names to keep(e.g. cell_ID, CellComp).')
+    incol_params.add_argument('--tsv-colname-count', nargs='+', default=[], help='Columns names to keep(e.g. cell_ID, CellComp).')
 
     key_params = parser.add_argument_group("Key Parameters", "Key parameters, such as filtering cutoff.")
     key_params.add_argument('--dummy-genes', type=str, default='', help='A single name or a regex describing the names of negative control probes')
     key_params.add_argument('--precision-um', type=int, default=2, help='Number of digits to store the transcript coordinates in micrometer')
     key_params.add_argument('--units-per-um', type=float, default=1, help='Units per micrometer (default: 1)')
     
-    outcol_params = parser.add_argument_group("Output Columns Parameters", "Output column parameters for CSV.")
+    outcol_params = parser.add_argument_group("Output Columns Parameters", "Output column parameters .")
     outcol_params.add_argument('--colname-x', type=str, default='X', help='Column name for X (default: X)')
     outcol_params.add_argument('--colname-y', type=str, default='Y', help='Column name for Y (default: Y)')
     outcol_params.add_argument('--colname-feature-name', type=str, default='gene', help='Column name for feature/gene name (default: None)')
