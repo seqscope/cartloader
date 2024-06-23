@@ -1,12 +1,9 @@
 import sys, os, gzip, argparse, logging, warnings, shutil
 
-from ficture.utils.minimake import minimake
+from cartloader.utils.minimake import minimake
+from cartloader.utils.utils import cmd_separator, scheck_app
 
 def parse_arguments(_args):
-    if len(_args) == 0:
-        parser.print_help()
-        return
-
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser()
 
@@ -90,7 +87,12 @@ def parse_arguments(_args):
     env_params.add_argument('--spatula', type=str, default="spatula", help='Path to spatula binary.')
     env_params.add_argument('--ficture', type=str, default="ficture", help='Path to ficture repository.')
     env_params.add_argument('--parquet-tools', type=str, default="parquet-tools", help='Path to parquet-tools binary.')
-    return parser.parse_args()
+
+    if len(_args) == 0:
+        parser.print_help()
+        sys.exit(1)
+
+    return parser.parse_args(_args)
 
 def convert_in_by_platform(args):
     if args.platform == "10x_visium_hd":
@@ -269,7 +271,7 @@ def convert_stereoseq(cmds, args):
     cmds.append(f"rm {args.out_dir}/{transcript_tsv}")
     return cmds
 
-def main(_args):
+def sge_convert(_args):
     # args
     args=parse_arguments(_args)
     scheck_app(args.gzip)
@@ -317,10 +319,11 @@ def main(_args):
         os.system(f"make -f {args.out_dir}/{args.makefn} -j {args.n_jobs}")
 
 if __name__ == "__main__":
-    global cartloader
-    cartloader=os.path.dirname(os.path.abspath(__file__))
-    sys.path.extend(dir_i for dir_i in [cartloader] if dir_i not in sys.path)
+    # Get the base file name without extension
+    script_name = os.path.splitext(os.path.basename(__file__))[0]
 
-    from utils import cmd_separator, scheck_app
+    # Dynamically get the function based on the script name
+    func = getattr(sys.modules[__name__], script_name)
 
-    main(sys.argv[1:])
+    # Call the function with command line arguments
+    func(sys.argv[1:])

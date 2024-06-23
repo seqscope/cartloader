@@ -1,8 +1,8 @@
-import argparse, os, re, sys, logging, gzip
+import argparse, os, re, sys, logging, gzip, inspect
 import pandas as pd
 
-def format_stereoseq():
-    parser = argparse.ArgumentParser()
+def format_stereoseq(_args):
+    parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", description="Format transcript file from Stereo-seq format.")
     inout_params = parser.add_argument_group("Input/Output Parameters", "Input/output directory/files.")
     inout_params.add_argument('--input', type=str, help='Input transcript file from Vizgen MERSCOPE, likely named like detected_transcripts.csv.gz')
     inout_params.add_argument('--out-dir', required= True, type=str, help='The output directory.')
@@ -27,7 +27,7 @@ def format_stereoseq():
     outcol_params.add_argument('--colname-feature-name', type=str, default='gene', help='Column name for feature/gene name (default: None)')
     # outcol_params.add_argument('--colname-feature-id', type=str, default='gene_id', help='Column name for feature/gene name (default: None)')
     outcol_params.add_argument('--colnames-count', type=str, default='gn', help='Comma-separate column names for Count (default: gn)')
-    args = parser.parse_args()
+    args = parser.parse_args(_args)
 
     logging.basicConfig(level=logging.INFO)
     
@@ -99,4 +99,11 @@ def format_stereoseq():
         wf.write(f"ymax\t{ymax:.2f}\n")
     
 if __name__ == "__main__":
-    format_stereoseq()
+    # Get the base file name without extension
+    script_name = os.path.splitext(os.path.basename(__file__))[0]
+
+    # Dynamically get the function based on the script name
+    func = getattr(sys.modules[__name__], script_name)
+
+    # Call the function with command line arguments
+    func(sys.argv[1:])

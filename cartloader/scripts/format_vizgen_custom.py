@@ -1,9 +1,9 @@
-import sys, os, re, copy, gzip, time, logging, pickle, argparse
+import sys, os, re, copy, gzip, time, logging, pickle, argparse, inspect
 import numpy as np
 import pandas as pd
 
-def format_vizgen():
-    parser = argparse.ArgumentParser()
+def format_vizgen(_args):
+    parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", description="Format transcript file from Vizgen MERSCOPE format.")
     inout_params = parser.add_argument_group("Input/Output Parameters", "Input/output directory/files.")
     inout_params.add_argument('--input', type=str, help='Input transcript file from Vizgen MERSCOPE, likely named like detected_transcripts.csv.gz')
     inout_params.add_argument('--out-dir', required= True, type=str, help='The output directory.')
@@ -30,7 +30,7 @@ def format_vizgen():
     outcol_params.add_argument('--colnames-count', type=str, default='gn', help='Comma-separate column names for Count (default: gn)')
     outcol_params.add_argument('--colname-molecule-id', type=str, default='MoleculeID', help='Column name for MoleculeID (default: MoleculeID)')
  
-    args = parser.parse_args()
+    args = parser.parse_args(_args)
 
     logging.basicConfig(level=logging.INFO)
 
@@ -99,5 +99,12 @@ def format_vizgen():
     with open(out_minmax_path, 'w') as wf:
         _ = wf.write(line)
 
-if __name__ == '__main__':
-    format_vizgen()
+if __name__ == "__main__":
+    # Get the base file name without extension
+    script_name = os.path.splitext(os.path.basename(__file__))[0]
+
+    # Dynamically get the function based on the script name
+    func = getattr(sys.modules[__name__], script_name)
+
+    # Call the function with command line arguments
+    func(sys.argv[1:])

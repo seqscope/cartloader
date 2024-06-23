@@ -1,0 +1,25 @@
+[project]
+name = "cartloader"
+description = "Tools for High-Resolution for Spatial Transcriptomics"
+version = "0.0.1"
+authors = [{name = "Weiqiu Cheng", email = "weiqiuc@umich.edu"}, {name = "Hyun Min Kang", email = "hmkang@umich.edu"}]
+license = {text = "Apache 2.0"}
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "numpy", "pandas", "ficture"
+]
+
+[project.scripts]
+cartloader = "cartloader.cli:main"
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.package-data]
+scripts = ["*.txt", "*.rst", "*.html"]
+
+[project.urls]
+"Homepage" = "https://seqscope.github.io/cartloader/"
+"Bug Tracker" = "https://github.com/seqscope/cartloader/issues"
