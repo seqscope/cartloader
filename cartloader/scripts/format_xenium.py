@@ -1,4 +1,4 @@
-import sys, os, re, copy, gzip, time, logging, pickle, argparse, inspect
+import sys, os, re, copy, gzip, time, logging, pickle, argparse, inspect, warnings
 import numpy as np
 import pandas as pd
 
@@ -9,7 +9,7 @@ def format_xenium(_args):
     inout_params.add_argument('--out-dir', required= True, type=str, help='The output directory.')
     inout_params.add_argument('--out-transcript', type=str, default="transcripts.unsorted.tsv", help='The output transcript-indexed SGE file in TSV format. Default: transcripts.unsorted.tsv')
     inout_params.add_argument('--out-minmax', type=str, default="coordinate_minmax.tsv", help='The output coordinate minmax TSV file. Default: coordinate_minmax.tsv')
-    inout_params.add_argument('--out-feature', type=str, default="feature.clean.tsv.gz", help='The output files for gene. Default: feature.clean.tsv.gz')
+    inout_params.add_argument('--out-feature', type=str, default="features.clean.tsv.gz", help='The output files for gene. Default: features.clean.tsv.gz')
 
     incol_params = parser.add_argument_group("Input Columns Parameters", "Input column parameters .")
     incol_params.add_argument('--tsv-colname-x',  type=str, default='x_location', help='Column name for X-axis (default: x_location)')
@@ -27,7 +27,7 @@ def format_xenium(_args):
     outcol_params.add_argument('--colname-x', type=str, default='X', help='Output Options. Column name for X (default: X)')
     outcol_params.add_argument('--colname-y', type=str, default='Y', help='Output Options. Column name for Y (default: Y)')
     outcol_params.add_argument('--colname-feature-name', type=str, default='gene', help='Output Options. Column name for feature/gene name (default: gene)')
-    outcol_params.add_argument('--colnames-count', type=str, default='gn', help='Output Options. Comma-separate column names for Count (default: gn)')
+    outcol_params.add_argument('--colname-count', type=str, default='gn', help='Output Options. Column name for Count (default: gn)')
 
     args = parser.parse_args(_args)
 
@@ -63,7 +63,9 @@ def format_xenium(_args):
         # filter
         chunk = chunk.loc[chunk[args.tsv_colname_phredscore] > args.min_phred_score]
         if args.dummy_genes != '':
-            chunk = chunk[~chunk[args.tsv_colname_feature_name].str.contains(args.dummy_genes, flags=re.IGNORECASE, regex=True)]
+            with warnings.catch_warnings(): ## to suppress the warning message for regex input
+                warnings.simplefilter("ignore", UserWarning)
+                chunk = chunk[~chunk[args.tsv_colname_feature_name].str.contains(args.dummy_genes, flags=re.IGNORECASE, regex=True)]
         
         # rename
         chunk.rename(columns = {args.tsv_colname_x:args.colname_x, 
