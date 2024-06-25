@@ -1,6 +1,9 @@
 import logging, os, shutil, sys, importlib
 
 def cmd_separator(cmds, info):
+    """
+    Append messages separating between commands
+    """
     cmds.append(rf"$(info --------------------------------------------------------------)")
     cmds.append(rf"$(info {info})")
     cmds.append(rf"$(info --------------------------------------------------------------)")
@@ -8,18 +11,25 @@ def cmd_separator(cmds, info):
 
 
 def scheck_app(app_cmd):
+    """
+    Check if the specified application is available
+    """
     if not shutil.which(app_cmd.split(" ")[0]):
-        logging.error(f"Cannot find {app_cmd}. Please make sure that the path to --gzip is correct")
+        logging.error(f"Cannot find {app_cmd}. Please make sure that the path to specify {app_cmd} is correct")
         sys.exit(1)
 
-## Get the function object among the runnable scripts based on the script name
 def get_func(name):
+    """
+    Get the function object among the runnable scripts based on the script name
+    """
     #print(f"get_func({name}) was called")
     module = importlib.import_module(f"cartloader.scripts.{name}")
     return getattr(module,name)
 
 def create_custom_logger(name, logfile=None, level=logging.INFO):
-    ## create a custom logger
+    """
+    Create a custom logger object
+    """
     logger = logging.getLogger(name)
     logger.setLevel(logging.INFO)
     logger.propagate = False  # Prevent log messages from being propagated to parent loggers

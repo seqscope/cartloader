@@ -7,6 +7,7 @@ from cartloader.utils.utils import create_custom_logger
 
 # Function to get log2 bins from the first file
 def get_log2_bins(multiplier, in_features, out_prefix, out_features_suffix, delim, colname_feature, colname_count):
+    print(f"delim = {delim} {len(delim)}")
     df = pd.read_csv(in_features, sep=delim)
     df['log2_bin'] = np.floor(multiplier * np.log2(df[colname_count])).astype(int)
     log2_bins = df.set_index(colname_feature)['log2_bin'].to_dict()
@@ -58,7 +59,7 @@ def split_molecule_counts(_args):
 
     args = parser.parse_args(_args)
 
-    logger = create_custom_logger(__name__, args.out_prefix + args.log_suffix if args.log else None)
+    logger = create_custom_logger(__name__, args.out_prefix + ".split_molecule_counts." + args.log_suffix if args.log else None)
 
     logger.info("Reading the feature counts and splitting into bins")
     # Get log2 bins from the tsv file
