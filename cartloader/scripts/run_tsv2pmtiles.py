@@ -156,7 +156,7 @@ def run_tsv2pmtiles(_args):
         for i, row in df.iterrows():
             bin_id = row["bin_id"]
             csv_path = out_dir + "/" + row["molecules_path"]
-            pmtiles_path = args.out_prefix + ".bin_" + bin_id + ".pmtiles"
+            pmtiles_path = args.out_prefix + "_bin" + bin_id + ".pmtiles"
             cmds = cmd_separator([], f"Converting bin {bin_id} to pmtiles")
             cmds.append(f"{args.tippecanoe} -o {pmtiles_path} -Z {args.min_zoom} -z {args.max_zoom} --force -s EPSG:3857 -M {args.max_tile_bytes} --drop-densest-as-needed --extend-zooms-if-still-dropping '--preserve-point-density-threshold={args.preserve_point_density_thres}' --no-duplication {csv_path}")
             mm.add_target(pmtiles_path, [csv_path], cmds)

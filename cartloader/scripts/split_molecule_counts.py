@@ -7,7 +7,7 @@ from cartloader.utils.utils import create_custom_logger
 
 # Function to get log2 bins from the first file
 def get_log2_bins(multiplier, in_features, out_prefix, out_features_suffix, delim, colname_feature, colname_count, skip_original):
-    print(f"delim = {delim} {len(delim)}")
+    #print(f"delim = {delim} {len(delim)}")
     df = pd.read_csv(in_features, sep=delim)
     df['bin'] = np.floor(multiplier * np.log2(df[colname_count])).astype(int)
     log2_bins = df.set_index(colname_feature)['bin'].to_dict()
