@@ -150,13 +150,13 @@ def run_tsv2pmtiles(_args):
     # 2. Perform conversion:
     if args.convert:
         ## open index file
-        df = pd.read_csv(f"{args.out_prefix}.index.tsv", sep="\t")
+        df = pd.read_csv(f"{args.out_prefix}_index.tsv", sep="\t")
 
         ## add targets for each bin
         for i, row in df.iterrows():
             bin_id = row["bin_id"]
             csv_path = out_dir + "/" + row["molecules_path"]
-            pmtiles_path = args.out_prefix + "." + bin_id + ".pmtiles"
+            pmtiles_path = args.out_prefix + ".bin_" + bin_id + ".pmtiles"
             cmds = cmd_separator([], f"Converting bin {bin_id} to pmtiles")
             cmds.append(f"{args.tippecanoe} -o {pmtiles_path} -Z {args.min_zoom} -z {args.max_zoom} --force -s EPSG:3857 -M {args.max_tile_bytes} --drop-densest-as-needed --extend-zooms-if-still-dropping '--preserve-point-density-threshold={args.preserve_point_density_thres}' --no-duplication {csv_path}")
             mm.add_target(pmtiles_path, [csv_path], cmds)
@@ -179,12 +179,15 @@ def run_tsv2pmtiles(_args):
     if args.clean:
         logger.info("Cleaning intermediate files")
 
-        df = pd.read_csv(f"{args.out_prefix}.index.tsv", sep="\t")
+        df = pd.read_csv(f"{args.out_prefix}_index.tsv", sep="\t")
         for i, row in df.iterrows():
             bin_id = row["bin_id"]
             csv_path = out_dir + "/" + row["molecules_path"]
             if os.path.exists(csv_path):
                 os.remove(csv_path)
+            ftr_path = out_dir + "/" + row["features_path"]
+            if os.path.exists(ftr_path):
+                os.remove(ftr_path)
 
     logger.info("Analysis Finished")
 
