@@ -1,14 +1,11 @@
 import sys, os, gzip, argparse, logging, warnings, shutil
 
-from ficture.utils.minimake import minimake
+from cartloader.utils.minimake import minimake
+from cartloader.utils.utils import cmd_separator, scheck_app
 
 def parse_arguments(_args):
-    if len(_args) == 0:
-        parser.print_help()
-        return
-
     """Parse command-line arguments."""
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(prog=f"cartloader run_ficture", description="Run FICTURE")
 
     cmd_params = parser.add_argument_group("Commands", "FICTURE commands to run together")
     cmd_params.add_argument('--all', action='store_true', default=False, help='Run all FICTURE commands (preprocess, segment, lda, decode)')
@@ -68,7 +65,12 @@ def parse_arguments(_args):
     aux_params.add_argument('--ficture', type=str, default="ficture", help='Path to ficture repository')
     # mem
     aux_params.add_argument('--sort-mem', type=str, default="5G", help='Memory size for each process')
-    return parser.parse_args()
+
+    if len(_args) == 0:
+        parser.print_help()
+        sys.exit(1)
+
+    return parser.parse_args(_args)
 
 def run_ficture(_args):
     """Run all functions in FICTURE by using GNU Makefile
@@ -82,6 +84,7 @@ def run_ficture(_args):
 
     # args
     args=parse_arguments(_args)
+
     if args.all:
         args.convert = True
         args.preprocess = True
@@ -242,9 +245,11 @@ rm ${input}
         os.system(f"make -f {args.out_dir}/Makefile -j {args.n_jobs}")
 
 if __name__ == "__main__":
-    global cartloader
-    cartloader=os.path.dirname(os.path.abspath(__file__))
-    sys.path.extend(dir_i for dir_i in [cartloader] if dir_i not in sys.path)
+    # Get the base file name without extension
+    script_name = os.path.splitext(os.path.basename(__file__))[0]
 
-    from utils import cmd_separator, scheck_app
-    run_ficture(sys.argv[1:])
+    # Dynamically get the function based on the script name
+    func = getattr(sys.modules[__name__], script_name)
+
+    # Call the function with command line arguments
+    func(sys.argv[1:])

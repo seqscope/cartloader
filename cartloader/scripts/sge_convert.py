@@ -1,10 +1,9 @@
 import sys, os, gzip, argparse, logging, warnings, shutil
-from ficture.utils.minimake import minimake
+
+from cartloader.utils.minimake import minimake
+from cartloader.utils.utils import cmd_separator, scheck_app
 
 def parse_arguments(_args):
-    if len(_args) == 0:
-        parser.print_help()
-        return
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser()
     # run params
@@ -31,7 +30,7 @@ def parse_arguments(_args):
     input_params.add_argument('--in-csv', type=str, default=None, help='Path to input raw csv/tsv file. Required platform(s): 10x_xenium; cosmx_smi.')
     # output params
     output_params=parser.add_argument_group("Output Parameters", "Output parameters for the FICTURE pipeline.")
-    output_params.add_argument('--out-dir', type=str, help='The output directory.')
+    output_params.add_argument('--out-dir', type=str, required= True, help='The output directory.')
     output_params.add_argument('--out-transcript', type=str, default="transcripts.unsorted.tsv.gz", help='The output compressed transcript-indexed SGE file in TSV format. Default: transcripts.unsorted.tsv.gz')
     output_params.add_argument('--out-minmax', type=str, default="coordinate_minmax.tsv", help='The output coordinate minmax TSV file. Default: coordinate_minmax.tsv')
     output_params.add_argument('--out-feature', type=str, default="feature.clean.tsv.gz", help='The output files for gene. Default: feature.clean.tsv.gz')
@@ -85,8 +84,12 @@ def parse_arguments(_args):
     env_params.add_argument('--sort', type=str, default="sort", help='Path to sort binary. For faster processing, you may add arguments like "sort -T /path/to/new/tmpdir --parallel=20 -S 10G".')
     env_params.add_argument('--spatula', type=str, default="spatula", help='Path to spatula binary.')
     env_params.add_argument('--parquet-tools', type=str, default="parquet-tools", help='Path to parquet-tools binary.')
-    args= parser.parse_args()
-    return args
+
+    if len(_args) == 0:
+        parser.print_help()
+        sys.exit(1)
+
+    return parser.parse_args(_args)
 
 def convert_in_by_platform(args):
     if args.platform == "10x_visium_hd":
@@ -147,7 +150,9 @@ def convert_xenium(cmds, args):
     # input: in_csv
     # output: out_transcript, out_minmax, out_feature
     transcript_tsv = args.out_transcript.replace(".gz", "")
-    format_cmd = f"python {cartloader}/scripts/format_xenium_custom.py --input {args.in_csv} --out-dir {args.out_dir} --out-transcript {transcript_tsv} --out-feature {args.out_feature} --out-minmax {args.out_minmax}"
+    # format_cmd = f"python {cartloader}/scripts/format_xenium.py --input {args.in_csv} --out-dir {args.out_dir} --out-transcript {transcript_tsv} --out-feature {args.out_feature} --out-minmax {args.out_minmax}"
+    format_cmd = f"cartloader format_xenium --input {args.in_csv} --out-dir {args.out_dir} --out-transcript {transcript_tsv} --out-feature {args.out_feature} --out-minmax {args.out_minmax}"
+
     aux_argset = {
         'csv_colname_x', 'csv_colname_y', 'csv_colname_feature_name', 'csv_colname_phredscore', 'csv_colnames_others',
         'min_phred_score', 'dummy_genes', 
@@ -163,7 +168,8 @@ def convert_merscope(cmds, args):
     # input: in_csv
     # output: out_transcript, out_minmax, out_feature
     transcript_tsv = args.out_transcript.replace(".gz", "")
-    format_cmd=f"python {cartloader}/scripts/format_merscope_custom.py --input {args.in_csv} --out-dir {args.out_dir} --out-transcript {transcript_tsv} --out-feature {args.out_feature} --out-minmax {args.out_minmax}"
+    #format_cmd=f"python {cartloader}/scripts/format_merscope.py --input {args.in_csv} --out-dir {args.out_dir} --out-transcript {transcript_tsv} --out-feature {args.out_feature} --out-minmax {args.out_minmax}"
+    format_cmd=f"cartloader format_merscope --input {args.in_csv} --out-dir {args.out_dir} --out-transcript {transcript_tsv} --out-feature {args.out_feature} --out-minmax {args.out_minmax}"
     aux_argset = {
         'csv_colname_x', 'csv_colname_y', 'csv_colname_feature_name', 'csv_colname_feature_id', 'csv_colnames_others',
         'dummy_genes', 'precision_um',
@@ -186,7 +192,8 @@ def convert_smi(cmds, args):
     # input: in_csv
     # output: out_transcript, out_minmax, out_feature
     transcript_tsv = args.out_transcript.replace(".gz", "")
-    format_cmd=f"python {cartloader}/scripts/format_smi_custom.py --input {args.in_csv} --out-dir {args.out_dir} --out-transcript {transcript_tsv} --out-feature {args.out_feature} --out-minmax {args.out_minmax}"
+    #format_cmd=f"python {cartloader}/scripts/format_smi.py --input {args.in_csv} --out-dir {args.out_dir} --out-transcript {transcript_tsv} --out-feature {args.out_feature} --out-minmax {args.out_minmax}"
+    format_cmd=f"cartloader format_smi --input {args.in_csv} --out-dir {args.out_dir} --out-transcript {transcript_tsv} --out-feature {args.out_feature} --out-minmax {args.out_minmax}"
     aux_argset = {
         'csv_colname_x', 'csv_colname_y', 'csv_colname_feature_name', 'csv_colnames_others',
         'units_per_um', 'dummy_genes', 'precision_um',
@@ -204,7 +211,8 @@ def convert_stereoseq(cmds, args):
     # input: in_csv
     # output: out_transcript, out_minmax, out_feature
     transcript_tsv = args.out_transcript.replace(".gz", "")
-    format_cmd=f"python {cartloader}/scripts/format_stereoseq_custom.py --input {args.in_csv} --out-dir {args.out_dir} --out-transcript {transcript_tsv} --out-feature {args.out_feature} --out-minmax {args.out_minmax}"
+    #format_cmd=f"python {cartloader}/scripts/format_stereoseq.py --input {args.in_csv} --out-dir {args.out_dir} --out-transcript {transcript_tsv} --out-feature {args.out_feature} --out-minmax {args.out_minmax}"
+    format_cmd=f"cartloader format_stereoseq --input {args.in_csv} --out-dir {args.out_dir} --out-transcript {transcript_tsv} --out-feature {args.out_feature} --out-minmax {args.out_minmax}"
     aux_argset = {
         'csv_colname_x', 'csv_colname_y', 'csv_colname_feature_name', 'csv_colnames_count',
         'units_per_um', 'dummy_genes', 'precision_um',
@@ -216,7 +224,7 @@ def convert_stereoseq(cmds, args):
     cmds.append(f"rm {args.out_dir}/{transcript_tsv}")
     return cmds
 
-def main(_args):
+def sge_convert(_args):
     # args
     args=parse_arguments(_args)
     scheck_app(args.gzip)
@@ -255,10 +263,12 @@ def main(_args):
         os.system(f"make -f {args.out_dir}/{args.makefn} -j {args.n_jobs}")
 
 if __name__ == "__main__":
-    global cartloader
-    cartloader=os.path.dirname(os.path.abspath(__file__))
-    # cartloader="/nfs/turbo/sph-hmkang/index/data/weiqiuc/cartloader/cartloader/"
-    sys.path.extend(dir_i for dir_i in [cartloader] if dir_i not in sys.path)
-    from utils import cmd_separator, scheck_app
 
-    main(sys.argv[1:])
+    # Get the base file name without extension
+    script_name = os.path.splitext(os.path.basename(__file__))[0]
+
+    # Dynamically get the function based on the script name
+    func = getattr(sys.modules[__name__], script_name)
+
+    # Call the function with command line arguments
+    func(sys.argv[1:])

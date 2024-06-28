@@ -2,7 +2,7 @@ import sys, os, re, copy, gzip, time, logging, pickle, argparse, inspect
 import numpy as np
 import pandas as pd
 
-def format_merscope(_args):
+def format_vizgen(_args):
     parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", description="Format transcript file from Vizgen MERSCOPE format.")
     inout_params = parser.add_argument_group("Input/Output Parameters", "Input/output directory/files.")
     inout_params.add_argument('--input', type=str, help='Input transcript file from Vizgen MERSCOPE, likely named like detected_transcripts.csv.gz')

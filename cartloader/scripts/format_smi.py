@@ -1,16 +1,15 @@
-import sys, os, re, copy, gzip, time, logging, pickle, argparse
+import sys, os, re, copy, gzip, time, logging, pickle, argparse, inspect
 import numpy as np
 import pandas as pd
 
-def format_smi():
-
-    parser = argparse.ArgumentParser()
+def format_smi(_args):
+    parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", description="Format transcript file from CosMx SMIformat.")
     inout_params = parser.add_argument_group("Input/Output Parameters", "Input/output directory/files.")
     inout_params.add_argument('--input', type=str, help='Input transcript file from Vizgen MERSCOPE, likely named like detected_transcripts.csv.gz')
     inout_params.add_argument('--out-dir', required= True, type=str, help='The output directory.')
     inout_params.add_argument('--out-transcript', type=str, default="transcripts.unsorted.tsv", help='The output transcript-indexed SGE file in TSV format. Default: transcripts.unsorted.tsv')
     inout_params.add_argument('--out-minmax', type=str, default="coordinate_minmax.tsv", help='The output coordinate minmax TSV file. Default: coordinate_minmax.tsv')
-    inout_params.add_argument('--out-feature', type=str, default="feature.clean.tsv.gz", help='The output files for gene. Default: feature.clean.tsv.gz')
+    inout_params.add_argument('--out-feature', type=str, default="features.clean.tsv.gz", help='The output files for gene. Default: features.clean.tsv.gz')
 
     incol_params = parser.add_argument_group("Input Columns Parameters", "Input column parameters.")
     incol_params.add_argument('--csv-colname-x',  type=str, default='global_x', help='Column name for X-axis (default: global_x)')
@@ -30,7 +29,7 @@ def format_smi():
     key_params.add_argument('--units-per-um', type=float, default=1.00, help=' Coordinate unit per um (conversion factor) (default: 1.00)') 
     key_params.add_argument('--precision-um', type=int, default=-1, help='Number of digits to store the transcript coordinates (only if --px_to_um is in use). Set it to 0 to round to integer. Default is -1, without rounding.')
     key_params.add_argument('--dummy-genes', type=str, default='NegPrb', help='A single name or a regex describing the names of negative control probes')
-    args = parser.parse_args()
+    args = parser.parse_args(_args)
 
     logging.basicConfig(level=logging.INFO)
     
@@ -102,5 +101,14 @@ def format_smi():
         wf.write(f"ymin\t{ymin:.2f}\n")
         wf.write(f"ymax\t{ymax:.2f}\n")
 
-if __name__ == '__main__':
-    format_smi()
+if __name__ == "__main__":
+    # Get the base file name without extension
+    script_name = os.path.splitext(os.path.basename(__file__))[0]
+
+    print(f"Running {script_name} script")
+
+    # Dynamically get the function based on the script name
+    func = getattr(sys.modules[__name__], script_name)
+
+    # Call the function with command line arguments
+    func(sys.argv[1:])
