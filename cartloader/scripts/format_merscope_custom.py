@@ -12,10 +12,11 @@ def format_vizgen():
     inout_params.add_argument('--out-feature', type=str, default="feature.clean.tsv.gz", help='The output files for gene. Default: feature.clean.tsv.gz')
 
     incol_params = parser.add_argument_group("Input Columns Parameters", "Input column parameters .")
-    incol_params.add_argument('--tsv-colname-x',  type=str, default='global_x', help='Column name for X-axis (default: global_x)')
-    incol_params.add_argument('--tsv-colname-y',  type=str, default='global_y', help='Column name for Y-axis (default: global_y)')
-    incol_params.add_argument('--tsv-colname-feature-name', type=str, default=None, help='Column name for gene name (e.g.: gene)')
-    incol_params.add_argument('--tsv-colname-feature-id', type=str, default=None, help='Column name for gene id (e.g.: transcript_id)')
+    incol_params.add_argument('--csv-colname-x',  type=str, default='global_x', help='Column name for X-axis (default: global_x)')
+    incol_params.add_argument('--csv-colname-y',  type=str, default='global_y', help='Column name for Y-axis (default: global_y)')
+    incol_params.add_argument('--csv-colname-feature-name', type=str, default=None, help='Column name for gene name (e.g.: gene)')
+    incol_params.add_argument('--csv-colname-feature-id', type=str, default=None, help='Column name for gene id (e.g.: transcript_id)')
+    incol_params.add_argument('--csv-colnames-others', nargs='+', default=[], help='Columns names to keep (e.g. cell_id, overlaps_nucleus).')
 
     key_params = parser.add_argument_group("Key Parameters", "Key parameters, such as filtering cutoff.")
     key_params.add_argument('--dummy-genes', type=str, default='', help='A single name or a regex describing the names of negative control probes')
@@ -45,7 +46,7 @@ def format_vizgen():
 
     # feature
     feature=pd.DataFrame()
-    feature_cols = [col for col in [args.tsv_colname_feature_name, args.tsv_colname_feature_id] if col is not None]
+    feature_cols = [col for col in [args.csv_colname_feature_name, args.csv_colname_feature_id] if col is not None]
     if len(feature_cols) == 0:
         logging.error("Please provide at least one of the feature columns.")
         sys.exit(1)
@@ -57,23 +58,23 @@ def format_vizgen():
     ymax = -np.inf
 
     # transcript
-    unit_info=[args.colname_x, args.colname_y] + feature_cols + [args.colname_molecule_id]
-    oheader = unit_info + [args.colname_count]
+    unit_info=[args.colname_x, args.colname_y] + feature_cols + [args.colname_molecule_id] + args.csv_colnames_others 
+    oheader = unit_info + [args.colnames_count]
     with open(out_transcript_path, 'w') as wf:
         _ = wf.write('\t'.join(oheader)+'\n')
     
     for chunk in pd.read_csv(args.input,header=0,chunksize=500000,index_col=0):
         # filter
         if args.dummy_genes != '':
-            chunk = chunk[~chunk[args.tsv_colname_feature_name].str.contains(args.dummy_genes, flags=re.IGNORECASE, regex=True)]    
+            chunk = chunk[~chunk[args.csv_colname_feature_name].str.contains(args.dummy_genes, flags=re.IGNORECASE, regex=True)]    
         # rename
-        chunk.rename(columns = {args.tsv_colname_x:args.colname_x, args.tsv_colname_y:args.colname_y}, inplace=True)
-        if args.tsv_colname_feature_name is not None:
-            chunk.rename(columns = {args.tsv_colname_feature_name:args.colname_feature_name}, inplace=True)
-        if args.tsv_colname_feature_id is not None:
-            chunk.rename(columns = {args.tsv_colname_feature_id:args.colname_feature_id}, inplace=True)
+        chunk.rename(columns = {args.csv_colname_x:args.colname_x, args.csv_colname_y:args.colname_y}, inplace=True)
+        if args.csv_colname_feature_name is not None:
+            chunk.rename(columns = {args.csv_colname_feature_name:args.colname_feature_name}, inplace=True)
+        if args.csv_colname_feature_id is not None:
+            chunk.rename(columns = {args.csv_colname_feature_id:args.colname_feature_id}, inplace=True)
         # count
-        chunk[args.colname_count] = 1
+        chunk[args.colnames_count] = 1
         chunk[args.colname_molecule_id] = chunk.index.values
         x,y = chunk[[args.colname_x, args.colname_y]].values.min(axis = 0)
         xmin = min(xmin,x)
@@ -84,14 +85,14 @@ def format_vizgen():
         chunk[oheader].to_csv(out_transcript_path,sep='\t',mode='a',index=False,header=False,float_format=float_format)
         logging.info(f"{chunk.shape[0]}")
         #feature = pd.concat([feature, chunk.groupby(by=['gene','transcript_id']).agg({'Count':sum}).reset_index()])
-        feature = pd.concat([feature, chunk.groupby(by=feature_cols).agg({args.colname_count:"sum"}).reset_index()])
+        feature = pd.concat([feature, chunk.groupby(by=feature_cols).agg({args.colnames_count:"sum"}).reset_index()])
         if args.debug:
             break
 
     # feature
     #feature = feature.groupby(by=['gene','transcript_id']).agg({'Count':sum}).reset_index()
     #feature.to_csv(out_feature_path,sep='\t',index=False)
-    feature = feature.groupby(by=feature_cols).agg({args.colname_count:"sum"}).reset_index()
+    feature = feature.groupby(by=feature_cols).agg({args.colnames_count:"sum"}).reset_index()
     feature.to_csv(out_feature_path,sep='\t',index=False)
 
     # minmax
