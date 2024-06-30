@@ -63,7 +63,7 @@ def split_molecule_counts(_args):
 
     args = parser.parse_args(_args)
 
-    logger = create_custom_logger(__name__, args.out_prefix + "_split_molecule_counts_" + args.log_suffix if args.log else None)
+    logger = create_custom_logger(__name__, args.out_prefix + "_split_molecule_counts" + args.log_suffix if args.log else None)
 
     logger.info("Reading the feature counts and splitting into bins")
     # Get log2 bins from the tsv file
