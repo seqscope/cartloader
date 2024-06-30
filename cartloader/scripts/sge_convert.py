@@ -1,11 +1,11 @@
-import sys, os, gzip, argparse, logging, warnings, shutil
-
+import sys, os, gzip, argparse, logging, warnings, shutil, re, copy, time, pickle, inspect, warnings
 from cartloader.utils.minimake import minimake
 from cartloader.utils.utils import cmd_separator, scheck_app
 
 def parse_arguments(_args):
     """Parse command-line arguments."""
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", description="Convert SGE into a tsv format.")
+    #parser = argparse.ArgumentParser()
     # run params
     run_params = parser.add_argument_group("Run Options", "Run options for FICTURE commands")
     run_params.add_argument('--dry-run', action='store_true', default=False, help='Dry run. Generate only the Makefile without running it')
@@ -26,7 +26,6 @@ def parse_arguments(_args):
     input_params.add_argument('--sge-ftr', type=str, default="features.tsv.gz", help='(Optional)Feature file name in SGE directory. Default: features.tsv.gz. Required platform(s): 10x_visium_hd.')
     input_params.add_argument('--sge-mtx', type=str, default="matrix.mtx.gz", help='(Optional) Matrix file name in SGE directory. Default: matrix.mtx.gz. Required platform(s): 10x_visium_hd.')
     input_params.add_argument('--in-parquet', type=str, default=None, help='Path to input raw parquet file for spatial coordinates in parquet format, e.g., tissue_positions.parquet. Required platform(s): 10x_visium_hd.')
-    input_params.add_argument('--in-json', type=str, default=None, help='Path to input scale factor json file, e.g., scalefactors_json.json. Required platform(s): 10x_visium_hd.')
     input_params.add_argument('--in-csv', type=str, default=None, help='Path to input raw csv/tsv file. Required platform(s): 10x_xenium; cosmx_smi.')
     # output params
     output_params=parser.add_argument_group("Output Parameters", "Output parameters for the FICTURE pipeline.")
@@ -82,7 +81,7 @@ def parse_arguments(_args):
     env_params = parser.add_argument_group("ENV Parameters", "Environment parameters for the tools.")
     env_params.add_argument('--gzip', type=str, default="gzip", help='Path to {args.gzip} binary. For faster processing, use "pigz -p 4".')
     env_params.add_argument('--sort', type=str, default="sort", help='Path to sort binary. For faster processing, you may add arguments like "sort -T /path/to/new/tmpdir --parallel=20 -S 10G".')
-    env_params.add_argument('--spatula', type=str, default="spatula", help='Path to spatula binary.')
+    env_params.add_argument('--spatula', type=str, default=None, help='Path to spatula binary.')
     env_params.add_argument('--parquet-tools', type=str, default="parquet-tools", help='Path to parquet-tools binary.')
 
     if len(_args) == 0:
@@ -93,7 +92,7 @@ def parse_arguments(_args):
 
 def convert_in_by_platform(args):
     if args.platform == "10x_visium_hd":
-        required_files = [os.path.join(args.in_sge, f) for f in [args.sge_bcd, args.sge_ftr, args.sge_mtx]] + [args.in_parquet, args.in_json]
+        required_files = [os.path.join(args.in_sge, f) for f in [args.sge_bcd, args.sge_ftr, args.sge_mtx]] + [args.in_parquet]
     elif args.platform == "10x_xenium":
         required_files = [args.in_csv]
     elif args.platform == "bgi_stereoseq":
@@ -124,6 +123,9 @@ def add_param_to_cmd(cmd, args, aux_argset):
     return cmd
 
 def convert_visiumhd(cmds, args):
+    if args.spatula is None:
+        args.spatula = os.path.join(cartloader_repo, "submodules", "spatula", "bin", "spatula")
+        print(f"Given spatula is not provided, using the spatula from submodules: {args.spatula}.")
     scheck_app(args.spatula)
     # input: in_sge, in_parquet, in_json
     # output: out_transcript, out_minmax, out_feature, (out_sge)
@@ -263,7 +265,10 @@ def sge_convert(_args):
         os.system(f"make -f {args.out_dir}/{args.makefn} -j {args.n_jobs}")
 
 if __name__ == "__main__":
-
+    # get the cartloader path
+    global cartloader_repo
+    cartloader_repo=os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+    
     # Get the base file name without extension
     script_name = os.path.splitext(os.path.basename(__file__))[0]
 
