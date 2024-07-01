@@ -68,7 +68,8 @@ def format_merscope(_args):
         if args.dummy_genes != '':
             chunk = chunk[~chunk[args.csv_colname_feature_name].str.contains(args.dummy_genes, flags=re.IGNORECASE, regex=True)]    
         # rename
-        chunk.rename(columns = {args.csv_colname_x:args.colname_x, args.csv_colname_y:args.colname_y}, inplace=True)
+        chunk.rename(columns = {args.csv_colname_x:args.colname_x, 
+                                args.csv_colname_y:args.colname_y}, inplace=True)
         if args.csv_colname_feature_name is not None:
             chunk.rename(columns = {args.csv_colname_feature_name:args.colname_feature_name}, inplace=True)
         if args.csv_colname_feature_id is not None:

@@ -12,29 +12,29 @@ def parse_arguments(_args):
     run_params.add_argument('--restart', action='store_true', default=False, help='Restart the run. Ignore all intermediate files and start from the beginning')
     run_params.add_argument('--threads', type=int, default=1, help='Maximum number of threads to use in each process')
     run_params.add_argument('--n-jobs', '-j', type=int, default=1, help='Number of jobs (processes) to run in parallel')
-    run_params.add_argument('--makefn', type=str, default="Makefile", help='The name of the Makefile to generate')
+    run_params.add_argument('--makefn', type=str, default="Makefile", help='The name of the Makefile to generate. Default: Makefile')
     # basic params
     bas_params = parser.add_argument_group("Basic Parameters", "Basic parameters for the FICTURE pipeline.")
-    bas_params.add_argument('--platform', type=str, choices=["10x_visium_hd", "10x_xenium", "bgi_stereoseq", "cosmx_smi", "vizgen_merscope"], help='Platform of the raw input file to infer the format of the input file.')
-    bas_params.add_argument('--dummy-genes', type=str, default="BLANK\|NegCon\|NegPrb", help='Name of the negative controls, could pass regex to match multiple name patterns. Required platform(s): cosmx_smi; 10x_xenium; vizgen_merscope. ')
-    bas_params.add_argument('--units-per-um', type=float, default=1.00, help='Output Options. Coordinate unit per um (conversion factor) (default: 1.00). Required platform(s):') 
+    bas_params.add_argument('--platform', type=str, choices=["10x_visium_hd", "10x_xenium", "bgi_stereoseq", "cosmx_smi", "vizgen_merscope"], required=True, help='Platform of the raw input file to infer the format of the input file.')
+    bas_params.add_argument('--dummy-genes', type=str, default="BLANK\|NegCon\|NegPrb", help='Name of the negative controls, could pass regex to match multiple name patterns. Required platform(s): cosmx_smi; 10x_xenium; vizgen_merscope.')
+    bas_params.add_argument('--units-per-um', type=float, default=1.00, help='Output Options. Coordinate unit per um (conversion factor). Required platform(s): 10x_visium_hd; bgi_stereoseq; cosmx_smi. Default: 1.00') 
     bas_params.add_argument('--precision-um', type=int, default=2, help='Number of digits to store the transcript coordinates (only if --px_to_um is in use). Set it to 0 to round to integer. Required platform(s): cosmx_smi; vizgen_merscope. Default: 2')
     # input params
     input_params = parser.add_argument_group("Input Parameters", "Input parameters, including platform information and the input files.")
     input_params.add_argument('--in-sge', type=str, default=None, help='Path to input raw sge directory. Required platform(s): 10x_visium_hd')
-    input_params.add_argument('--sge-bcd', type=str, default="barcodes.tsv.gz", help='(Optional) Barcode file name in SGE directory. Default: barcodes.tsv.gz. Required platform(s): 10x_visium_hd.')
-    input_params.add_argument('--sge-ftr', type=str, default="features.tsv.gz", help='(Optional)Feature file name in SGE directory. Default: features.tsv.gz. Required platform(s): 10x_visium_hd.')
-    input_params.add_argument('--sge-mtx', type=str, default="matrix.mtx.gz", help='(Optional) Matrix file name in SGE directory. Default: matrix.mtx.gz. Required platform(s): 10x_visium_hd.')
-    input_params.add_argument('--in-parquet', type=str, default=None, help='Path to input raw parquet file for spatial coordinates in parquet format, e.g., tissue_positions.parquet. Required platform(s): 10x_visium_hd.')
-    input_params.add_argument('--in-csv', type=str, default=None, help='Path to input raw csv/tsv file. Required platform(s): 10x_xenium; cosmx_smi.')
+    input_params.add_argument('--sge-bcd', type=str, default="barcodes.tsv.gz", help='Barcode file name in SGE directory. Required platform(s): 10x_visium_hd. Default: barcodes.tsv.gz.')
+    input_params.add_argument('--sge-ftr', type=str, default="features.tsv.gz", help='Feature file name in SGE directory. Required platform(s): 10x_visium_hd. Default: features.tsv.gz.')
+    input_params.add_argument('--sge-mtx', type=str, default="matrix.mtx.gz", help='Matrix file name in SGE directory. Required platform(s): 10x_visium_hd. Default: matrix.mtx.gz.')
+    input_params.add_argument('--in-parquet', type=str, default="tissue_positions.parquet", help='Path to input raw parquet file for spatial coordinates in parquet format. Required platform(s): 10x_visium_hd. Default: tissue_positions.parquet.')
+    input_params.add_argument('--in-csv', type=str, default=None, help='Path to input raw csv/tsv file. Required platform(s): 10x_xenium; bgi_stereoseq; cosmx_smi; vizgen_merscope')
     # output params
     output_params=parser.add_argument_group("Output Parameters", "Output parameters for the FICTURE pipeline.")
-    output_params.add_argument('--out-dir', type=str, required= True, help='The output directory.')
+    output_params.add_argument('--out-dir', type=str, required=True, help='The output directory.')
     output_params.add_argument('--out-transcript', type=str, default="transcripts.unsorted.tsv.gz", help='The output compressed transcript-indexed SGE file in TSV format. Default: transcripts.unsorted.tsv.gz')
     output_params.add_argument('--out-minmax', type=str, default="coordinate_minmax.tsv", help='The output coordinate minmax TSV file. Default: coordinate_minmax.tsv')
     output_params.add_argument('--out-feature', type=str, default="feature.clean.tsv.gz", help='The output files for gene. Default: feature.clean.tsv.gz')
     # AUX input SGE params
-    aux_in_sge_params = parser.add_argument_group("SGE Auxiliary Parameters", "Auxiliary Parameters for SGE input and additional barcode position input.")
+    aux_in_sge_params = parser.add_argument_group("SGE Auxiliary Parameters", "Auxiliary Parameters for SGE input and additional barcode position input. Required platform(s): 10x_visium_hd.")
     aux_in_sge_params.add_argument('--icols-mtx', type=str, default='1,2,3,4,5', help='Expected column index in SGE input. Comma-separated 1-based column indices use as the count (default: 1,2,3,4,5)')
     aux_in_sge_params.add_argument('--icol-bcd-barcode', type=int, default=1, help='Expected column index in SGE input. 1-based column index of barcode in the barcode file (default: 1)')
     aux_in_sge_params.add_argument('--icol-bcd-x', type=int, default=6, help='Expected column index in SGE input. 1-based column index of x coordinate in the barcode file (default: 6)')
@@ -46,7 +46,7 @@ def parse_arguments(_args):
     aux_in_sge_params.add_argument('--pos-colname-y', type=str, default='pxl_col_in_fullres', help='Additional Barcode Position File. Column name for Y-axis in the position file (default: pxl_col_in_fullres)')
     aux_in_sge_params.add_argument('--pos-delim', type=str, default=',', help='Additional Barcode Position File. Delimiter for the position file (default: ",")')
     # AUX input csv params
-    aux_in_csv_params = parser.add_argument_group("CSV Auxiliary Parameters", "Auxiliary Parameters TSV/CSV input.")
+    aux_in_csv_params = parser.add_argument_group("CSV Auxiliary Parameters", "Auxiliary Parameters TSV/CSV input. Required platform(s): 10x_xenium; bgi_stereoseq; cosmx_smi; vizgen_merscope.")
     aux_in_csv_params.add_argument('--csv-colname-x',  type=str, default='x_location', help='Column name for X-axis (default: x_location)')
     aux_in_csv_params.add_argument('--csv-colname-y',  type=str, default='y_location', help='Column name for Y-axis (default: y_location)')
     aux_in_csv_params.add_argument('--csv-colname-feature-name', type=str, default='feature_name', help='Column name for gene name(default: feature_name)')
@@ -54,7 +54,7 @@ def parse_arguments(_args):
     aux_in_csv_params.add_argument('--csv-colnames-others', nargs='+', default=[], help='Columns names to keep.e.g., cell_id, overlaps_nucleus')
     aux_in_csv_params.add_argument('--csv-colnames-count', type=str, default="MIDCounts", help='Column name for gene id (e.g.: transcript_id)')
     # AUX output params
-    aux_output_params = parser.add_argument_group("Shared Output Auxiliary Parameters", "Auxiliary Shared Output column index parameters for the FICTURE pipeline.")
+    aux_output_params = parser.add_argument_group("Output Auxiliary Parameters", "Auxiliary Output column index parameters for the FICTURE pipeline.")
     aux_output_params.add_argument('--colname-x', type=str, default='X', help='Column name for X (default: X)')
     aux_output_params.add_argument('--colname-y', type=str, default='Y', help='Column name for Y (default: Y)')
     aux_output_params.add_argument('--colnames-count', type=str, default='gn', help='Comma-separate column names for Count (default: gn)')
@@ -72,6 +72,7 @@ def parse_arguments(_args):
     aux_params.add_argument('--exclude-feature-regex', type=str, default=None, help='Input Filtering Options. A regex pattern of feature/gene names to be excluded (default: "")')
     aux_params.add_argument('--print-feature-id', action='store_true', help='Output Options. Print feature ID in output file (default: OFF)')
     aux_params.add_argument('--allow-duplicate-gene-names', action='store_true', help='Output Options. Allow duplicate gene names in the output file (default: OFF)')
+    # TO-DO: add the options to use an extra gene information file to filter the features
     # feature_params = parser.add_argument_group("Filtering Feature Parameters", "Filtering feature paramter using a reference gene info file.")
     # feature_params.add_argument('--filter-feature', action='store_true', default=False, help='Filter the feature using the gene information file.')
     # feature_params.add_argument('--geneinfo', type=str, default=None, help='Gene information file. Required when --filter-feature is used.')
@@ -79,9 +80,8 @@ def parse_arguments(_args):
     # feature_params.add_argument('--rm-gene-regex', type=str, default="^Gm\d+|^mt-|^MT-", help='Gene regex to remove. Default: ^Gm\d+|^mt-|^MT-')
     # env params
     env_params = parser.add_argument_group("ENV Parameters", "Environment parameters for the tools.")
-    env_params.add_argument('--gzip', type=str, default="gzip", help='Path to {args.gzip} binary. For faster processing, use "pigz -p 4".')
-    env_params.add_argument('--sort', type=str, default="sort", help='Path to sort binary. For faster processing, you may add arguments like "sort -T /path/to/new/tmpdir --parallel=20 -S 10G".')
-    env_params.add_argument('--spatula', type=str, default=None, help='Path to spatula binary.')
+    env_params.add_argument('--gzip', type=str, default="gzip", help='Path to gzip binary. For faster processing, use "pigz -p 4".')
+    env_params.add_argument('--spatula', type=str, default=None, help='Path to spatula binary. When not provided, it will use the spatula from the submodules.')
     env_params.add_argument('--parquet-tools', type=str, default="parquet-tools", help='Path to parquet-tools binary.')
 
     if len(_args) == 0:
@@ -127,13 +127,12 @@ def convert_visiumhd(cmds, args):
         args.spatula = os.path.join(cartloader_repo, "submodules", "spatula", "bin", "spatula")
         print(f"Given spatula is not provided, using the spatula from submodules: {args.spatula}.")
     scheck_app(args.spatula)
-    # input: in_sge, in_parquet, in_json
-    # output: out_transcript, out_minmax, out_feature, (out_sge)
+    # input: in_sge, in_parquet
+    # output: out_transcript, out_minmax, out_feature
     tmp_parquet = f"{args.out_dir}/tissue_positions.csv.gz"
     # 1) convert parquet to csv
     cmds.append(f"{args.parquet_tools} csv {args.in_parquet} |  {args.gzip} -c > {tmp_parquet}")
     # 2) convert sge to tsv (output: out_transcript, out_minmax, out_feature, (optional) out_sge)
-    #   - if out_sge is provided, spatula will generate sge files
     format_cmd=f"{args.spatula} convert-sge --in-sge {args.in_sge} --out-tsv {args.out_dir} --pos {tmp_parquet} --tsv-mtx {args.out_transcript} --tsv-ftr {args.out_feature} --tsv-minmax {args.out_minmax}"
     aux_argset = {
         'sge_bcd', 'sge_ftr', 'sge_mtx', 'out_sge',
@@ -152,9 +151,7 @@ def convert_xenium(cmds, args):
     # input: in_csv
     # output: out_transcript, out_minmax, out_feature
     transcript_tsv = args.out_transcript.replace(".gz", "")
-    # format_cmd = f"python {cartloader}/scripts/format_xenium.py --input {args.in_csv} --out-dir {args.out_dir} --out-transcript {transcript_tsv} --out-feature {args.out_feature} --out-minmax {args.out_minmax}"
     format_cmd = f"cartloader format_xenium --input {args.in_csv} --out-dir {args.out_dir} --out-transcript {transcript_tsv} --out-feature {args.out_feature} --out-minmax {args.out_minmax}"
-
     aux_argset = {
         'csv_colname_x', 'csv_colname_y', 'csv_colname_feature_name', 'csv_colname_phredscore', 'csv_colnames_others',
         'min_phred_score', 'dummy_genes', 
@@ -170,7 +167,6 @@ def convert_merscope(cmds, args):
     # input: in_csv
     # output: out_transcript, out_minmax, out_feature
     transcript_tsv = args.out_transcript.replace(".gz", "")
-    #format_cmd=f"python {cartloader}/scripts/format_merscope.py --input {args.in_csv} --out-dir {args.out_dir} --out-transcript {transcript_tsv} --out-feature {args.out_feature} --out-minmax {args.out_minmax}"
     format_cmd=f"cartloader format_merscope --input {args.in_csv} --out-dir {args.out_dir} --out-transcript {transcript_tsv} --out-feature {args.out_feature} --out-minmax {args.out_minmax}"
     aux_argset = {
         'csv_colname_x', 'csv_colname_y', 'csv_colname_feature_name', 'csv_colname_feature_id', 'csv_colnames_others',
@@ -194,7 +190,6 @@ def convert_smi(cmds, args):
     # input: in_csv
     # output: out_transcript, out_minmax, out_feature
     transcript_tsv = args.out_transcript.replace(".gz", "")
-    #format_cmd=f"python {cartloader}/scripts/format_smi.py --input {args.in_csv} --out-dir {args.out_dir} --out-transcript {transcript_tsv} --out-feature {args.out_feature} --out-minmax {args.out_minmax}"
     format_cmd=f"cartloader format_smi --input {args.in_csv} --out-dir {args.out_dir} --out-transcript {transcript_tsv} --out-feature {args.out_feature} --out-minmax {args.out_minmax}"
     aux_argset = {
         'csv_colname_x', 'csv_colname_y', 'csv_colname_feature_name', 'csv_colnames_others',
@@ -209,11 +204,9 @@ def convert_smi(cmds, args):
     return cmds
 
 def convert_stereoseq(cmds, args):
-    # # cmds.append(f"(echo -e \"X\tY\tgene\tgn\"; {args.gzip} -cd {args.in_csv} | tail -n +2 | perl -lane 'print join(\"\\t\",$F[1]*0.5,$F[2]*0.5,$F[0],$F[3])' | {args.gzip} -c > {args.out_dir}/{args.out_transcript}")
     # input: in_csv
     # output: out_transcript, out_minmax, out_feature
     transcript_tsv = args.out_transcript.replace(".gz", "")
-    #format_cmd=f"python {cartloader}/scripts/format_stereoseq.py --input {args.in_csv} --out-dir {args.out_dir} --out-transcript {transcript_tsv} --out-feature {args.out_feature} --out-minmax {args.out_minmax}"
     format_cmd=f"cartloader format_stereoseq --input {args.in_csv} --out-dir {args.out_dir} --out-transcript {transcript_tsv} --out-feature {args.out_feature} --out-minmax {args.out_minmax}"
     aux_argset = {
         'csv_colname_x', 'csv_colname_y', 'csv_colname_feature_name', 'csv_colnames_count',
@@ -230,22 +223,21 @@ def sge_convert(_args):
     # args
     args=parse_arguments(_args)
     scheck_app(args.gzip)
-    scheck_app(args.sort)
-
     # input
     in_raw_filelist=convert_in_by_platform(args)
     for f in in_raw_filelist:
         assert f is not None, f"Missing input file for {f}. Please provide --{f}"
     # output
     os.makedirs(args.out_dir, exist_ok=True)
-    # start cmds
+
+    # cmds
     cmds = cmd_separator([], f"Converting input for raw data from: {args.platform}...")
     if args.platform == "10x_visium_hd":
         cmds = convert_visiumhd(cmds, args)
     elif args.platform == "10x_xenium":
         cmds = convert_xenium(cmds, args)
     elif args.platform == "cosmx_smi":
-        cmds = convert_smi(cmds, args)      # return transcript, minmax
+        cmds = convert_smi(cmds, args)
     elif args.platform == "bgi_stereoseq":
         cmds = convert_stereoseq(cmds, args)
     elif args.platform == "vizgen_merscope":

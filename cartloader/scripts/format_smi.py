@@ -71,12 +71,9 @@ def format_smi(_args):
         chunk[args.colnames_count] = 1
         chunk = chunk.groupby(by = unit_info).agg({args.colnames_count:'sum'}).reset_index()
         # conversion
-        #if args.px_to_um != 1:
-            # chunk[args.csv_colname_x] *= args.px_to_um
-            # chunk[args.csv_colname_y] *= args.px_to_um
         if args.units_per_um != 1:
-            chunk[args.csv_colname_x] = chunk[args.csv_colname_x] / args.units_per_um
-            chunk[args.csv_colname_y] = chunk[args.csv_colname_y] / args.units_per_um
+            chunk[args.colname_x] = chunk[args.colname_x] / args.units_per_um
+            chunk[args.colname_y] = chunk[args.colname_y] / args.units_per_um
         chunk[oheader].to_csv(out_transcript_path,sep='\t',mode='a',index=False,header=False,float_format=float_format)
         
         logging.info(f"{chunk.shape[0]}")

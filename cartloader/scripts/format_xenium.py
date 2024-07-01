@@ -75,9 +75,6 @@ def format_xenium(_args):
         chunk[args.colnames_count] = 1
         chunk = chunk.groupby(by = unit_info).agg({args.colnames_count:'sum'}).reset_index()
         # conversion (skip given that the input x y are in um, no need to convert.)
-        # if args.units_per_um != 1:
-        #     chunk[args.csv_colname_x] = chunk[args.csv_colname_x] / args.units_per_um
-        #     chunk[args.csv_colname_y] = chunk[args.csv_colname_y] / args.units_per_um
         # write down
         chunk[oheader].to_csv(out_transcript_path, sep='\t',mode='a',index=False,header=False,float_format=float_format)
         # feature
