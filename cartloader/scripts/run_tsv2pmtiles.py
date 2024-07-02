@@ -51,7 +51,7 @@ def parse_arguments(_args):
     aux_params.add_argument('--out-features-delim', type=str, default='\t', help='Delimiter used in the output feature files. Default is tab.')
     aux_params.add_argument('--out-molecules-suffix', type=str, default="molecules.csv", help='The output file to store individual molecule count matrix. Each file name will be [out-prefix].split.[bin_id].[out-molecules-suffix]. Default: molecules.tsv.gz')
     aux_params.add_argument('--out-features-suffix', type=str, default="features.tsv.gz", help='The output file to store feature count matrix. Each file name will be [out-prefix].split.[bin_id].[out-features-suffix]. Default: features.tsv.gz')
-    aux_params.add_argument('--tippecanoe', type=str, default=f"{repo_dir}/submodules/tippecanoe/tippecanoe", help='Path to tippecanoe binary. For faster processing, use "bgzip -@ 4')
+    aux_params.add_argument('--tippecanoe', type=str, default=f"{repo_dir}/submodules/tippecanoe/tippecanoe", help='Path to tippecanoe binary')
 
     if len(_args) == 0:
         parser.print_help()
@@ -67,7 +67,7 @@ def run_tsv2pmtiles(_args):
     # parse argument
     args=parse_arguments(_args)
 
-    logger = create_custom_logger(__name__, args.out_prefix + ".tsv2pmtiles." + args.log_suffix if args.log else None)
+    logger = create_custom_logger(__name__, args.out_prefix + "_tsv2pmtiles" + args.log_suffix if args.log else None)
     logger.info("Analysis Started")
 
     if args.all:
@@ -156,7 +156,10 @@ def run_tsv2pmtiles(_args):
         for i, row in df.iterrows():
             bin_id = row["bin_id"]
             csv_path = out_dir + "/" + row["molecules_path"]
-            pmtiles_path = args.out_prefix + "_bin" + bin_id + ".pmtiles"
+            if bin_id == "all":
+                pmtiles_path = args.out_prefix + "_all.pmtiles"
+            else:
+                pmtiles_path = args.out_prefix + "_bin" + bin_id + ".pmtiles"
             cmds = cmd_separator([], f"Converting bin {bin_id} to pmtiles")
             cmds.append(f"{args.tippecanoe} -o {pmtiles_path} -Z {args.min_zoom} -z {args.max_zoom} --force -s EPSG:3857 -M {args.max_tile_bytes} --drop-densest-as-needed --extend-zooms-if-still-dropping '--preserve-point-density-threshold={args.preserve_point_density_thres}' --no-duplication {csv_path}")
             mm.add_target(pmtiles_path, [csv_path], cmds)
