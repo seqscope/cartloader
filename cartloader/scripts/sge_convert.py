@@ -33,9 +33,9 @@ def parse_arguments(_args):
     input_params = parser.add_argument_group(
         "Input Directory/File Parameters",
         """
-        Specify the input paths for the required files based on the platform you are using:
-        - For 10x_visium_hd: Specify the input paths for the SGE directory and parquet file. Additionally, provide the file names for barcode, feature, and matrix files in the SGE directory, if they differ from the defaults.
-        - For 10x_xenium, bgi_stereoseq, cosmx_smi, vizgen_merscope, and pixel_seq: Specify the path to the input raw CSV/TSV file.
+        Specify the input paths for the required files based on the platform you are using.
+        1) For 10x_visium_hd: Specify the input paths for the SGE directory and parquet file. Additionally, provide the file names for barcode, feature, and matrix files in the SGE directory, if they differ from the defaults.
+        2) For 10x_xenium, bgi_stereoseq, cosmx_smi, vizgen_merscope, and pixel_seq: Specify the path to the input raw CSV/TSV file.
         """
     )
     # - Arguments for 10x_visium_hd platform
@@ -52,9 +52,9 @@ def parse_arguments(_args):
         "IN-SGE Auxiliary Parameters",
         """
         Auxiliary parameters for processing input files when input files are SGE files. This applies to 10x_visium_hd datasets.
-        Use --icol-* parameters to specify the column indices in the input SGE files.
-        Use --pos-* parameters to specify the column names and the delimiter for an additional barcode position file when required.
-        Use --print-feature-id and --allow-duplicate-gene-names to customize the output.
+        1) Use --icol-* parameters to specify the column indices in the input SGE files.
+        2) Use --pos-* parameters to specify the column names and the delimiter for an additional barcode position file when required.
+        3) Use --print-feature-id and --allow-duplicate-gene-names to customize the output.
         """
     )
     aux_in_sge_params.add_argument('--icols-mtx', type=str, default='1,2,3,4,5', help='Input column indices (comma-separated 1-based) in the SGE matrix file (default: 1,2,3,4,5).')
@@ -75,8 +75,8 @@ def parse_arguments(_args):
         "IN-CSV Auxiliary Parameters", 
         """
         Auxiliary parameters for processing input files when input files are in TSV/CSV format. This applies to datasets from 10x_xenium, bgi_stereoseq, cosmx_smi, vizgen_merscope or pixel_seq.
-        Use --csv-colname-* parameters to specify the column names in the input CSV/TSV files.
-        Use --csv-colname-phredscore with --min-phred-score to filter the input data based on the Phred-scaled quality score.
+        1) Use --csv-colname-* parameters to specify the column names in the input CSV/TSV files.
+        2) Use --csv-colname-phredscore with --min-phred-score to filter the input data based on the Phred-scaled quality score.
         Please note --csv-columns-x, --csv-columns-y, --csv-columns-feature-name are mandatory when the input file is in CSV format.
         """)
     aux_in_csv_params.add_argument('--csv-colname-x',  type=str, default=None, help='Column name for X-axis (e.g., x_location for 10x_xenium; x for big_stereoseq, x_local_px for cosmx_smi; global_x for vizgen_merscope; xcoord for pixel_seq)')
@@ -102,8 +102,8 @@ def parse_arguments(_args):
         "Feature Filtering Auxiliary Parameters", 
         """
         Auxiliary parameters for filtering feature by feature name or feature type using an additional file or a substring or a regex pattern.
-        Use --*-feature-list, --*-feature-substr, and --*-feature-regex parameters filter the input data based on the feature name.
-        Use --*-feature-type-regex along with --csv-colname-genetype or --genetype-ref to filter the input data based on the feature type. 
+        1) Use --*-feature-list, --*-feature-substr, and --*-feature-regex parameters filter the input data based on the feature name.
+        2) Use --*-feature-type-regex along with --csv-colname-genetype or --genetype-ref to filter the input data based on the feature type. 
         """)
     aux_ftrfilter_params.add_argument('--include-feature-list', type=str, default=None, help='A file containing a list of input genes to be included (feature name of IDs) (default: None)')
     aux_ftrfilter_params.add_argument('--exclude-feature-list', type=str, default=None, help='A file containing a list of input genes to be excluded (feature name of IDs) (default: None)')

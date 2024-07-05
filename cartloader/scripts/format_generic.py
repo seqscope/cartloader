@@ -13,7 +13,7 @@ def format_generic(_args):
     inout_params.add_argument('--out-feature', type=str, default="features.clean.tsv.gz", help='The output files for gene. Default: features.clean.tsv.gz')
     
     key_params = parser.add_argument_group("Key Parameters", "Key parameters, such as filtering cutoff.")
-    key_params.add_argument('--dummy-genes', type=str, default='', help='A single name or a regex describing the names of negative control probes')
+    # key_params.add_argument('--dummy-genes', type=str, default='', help='A single name or a regex describing the names of negative control probes')
     key_params.add_argument('--precision-um', type=int, default=2, help='Number of digits to store the transcript coordinates in micrometer')
     key_params.add_argument('--units-per-um', type=float, default=1, help='Units per micrometer (default: 1)')
     
@@ -33,9 +33,11 @@ def format_generic(_args):
     aux_params = parser.add_argument_group("Auxiliary Parameters", 
                                            """
                                            Auxiliary parameters. 
-                                           1) Use --add-molecule-id to add a molecule ID to the output transcript-indexed SGE tsv file.
-                                           2) Use --csv-colname-phredscore with --min-phred-score to filter out low-quality reads. 
-                                           3) Use --*-feature-list or --*-feature-substr or --*-feature-regex to filter out features by feature name.
+                                           1) Use --csv-colname-feature-id and --colname-feature-id to add a gene ID column to the output transcript-indexed SGE tsv file.
+                                           2) Use --add-molecule-id to add a molecule ID to the output transcript-indexed SGE tsv file.
+                                           3) Use --csv-colname-phredscore with --min-phred-score to filter out low-quality reads. 
+                                           4) Use --*-feature-list or --*-feature-substr or --*-feature-regex to filter out features by feature name.
+                                           5) Use --include-feature-type-regex with --csv-colname-feature-type or --feature-type-ref to filter out features by gene type.
                                            """)
     aux_params.add_argument('--csv-colname-feature-id', type=str, default=None, help='Specify the input column name for gene ID if available')
     aux_params.add_argument('--colname-feature-id', type=str, default='gene_id', help='Specify the output column name for gene ID if needed')
@@ -127,9 +129,9 @@ def format_generic(_args):
 
     for chunk in pd.read_csv(args.input, header=0, chunksize=500000, index_col=0):
         # filtering:
-        # filter dummy genes
-        if args.dummy_genes != '':
-            chunk = chunk[~chunk[args.csv_colname_feature_name].str.contains(args.dummy_genes, flags=re.IGNORECASE, regex=True)]
+        # # filter dummy genes
+        # if args.dummy_genes != '':
+        #     chunk = chunk[~chunk[args.csv_colname_feature_name].str.contains(args.dummy_genes, flags=re.IGNORECASE, regex=True)]
         # filter by gene type
         if args.include_feature_type_regex is not None:
             if args.csv_colname_genetype is not None:
