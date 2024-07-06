@@ -10,24 +10,24 @@ def parse_arguments(_args):
     #parser = argparse.ArgumentParser()
     # run params
     run_params = parser.add_argument_group("Run Options", "Run options for converting SGE files into a tsv format.")
-    run_params.add_argument('--dry-run', action='store_true', default=False, help='Dry run. Generate only the Makefile without running it')
-    run_params.add_argument('--restart', action='store_true', default=False, help='Restart the run. Ignore all intermediate files and start from the beginning')
-    run_params.add_argument('--threads', type=int, default=1, help='Maximum number of threads to use in each process')
-    run_params.add_argument('--n-jobs', '-j', type=int, default=1, help='Number of jobs (processes) to run in parallel')
-    run_params.add_argument('--makefn', type=str, default="Makefile", help='The file name of the Makefile to generate. Default: Makefile')
+    run_params.add_argument('--dry-run', action='store_true', default=False, help='Dry run. Generate only the Makefile without running it (default: False)')
+    run_params.add_argument('--restart', action='store_true', default=False, help='Restart the run. Ignore all intermediate files and start from the beginning (default: False)')
+    run_params.add_argument('--threads', type=int, default=1, help='Maximum number of threads to use in each process (default: 1)')
+    run_params.add_argument('--n-jobs', '-j', type=int, default=1, help='Number of jobs (processes) to run in parallel (default: 1)')
+    run_params.add_argument('--makefn', type=str, default="Makefile", help='The file name of the Makefile to generate (default: Makefile)')
     
     # Key params
     key_params = parser.add_argument_group("Key Parameters", "Key parameters.")
     key_params.add_argument('--platform', type=str, choices=["10x_visium_hd", "10x_xenium", "bgi_stereoseq", "cosmx_smi", "vizgen_merscope", "pixel_seq"], required=True, help='Platform of the raw input file to infer the format of the input file.')
-    key_params.add_argument('--units-per-um', type=float, default=1.00, help='Coordinate unit per um (conversion factor). Default: 1.00') 
-    key_params.add_argument('--precision-um', type=int, default=2, help='Number of digits to store the transcript coordinates (only if --px_to_um is in use). Set it to 0 to round to integer. Default: 2')
+    key_params.add_argument('--units-per-um', type=float, default=1.00, help='Coordinate unit per um (conversion factor) (default: 1.00)') 
+    key_params.add_argument('--precision-um', type=int, default=2, help='Number of digits to store the transcript coordinates (only if --px_to_um is in use). Set it to 0 to round to integer (default: 2)')
     
     # Output dir/file params
     output_params=parser.add_argument_group("Output Directory/File Parameters", "Output Parameters.")
     output_params.add_argument('--out-dir', type=str, required=True, help='The output directory, which will host the transcript-indexed SGE file/coordinate minmax TSV file/feature file, as well as the Makefile.')
-    output_params.add_argument('--out-transcript', type=str, default="transcripts.unsorted.tsv.gz", help='The output compressed transcript-indexed SGE file in TSV format. Default: transcripts.unsorted.tsv.gz')
-    output_params.add_argument('--out-minmax', type=str, default="coordinate_minmax.tsv", help='The output coordinate minmax TSV file. Default: coordinate_minmax.tsv')
-    output_params.add_argument('--out-feature', type=str, default="feature.clean.tsv.gz", help='The output file collects UMI counts on a per-gene basis. Default: feature.clean.tsv.gz')
+    output_params.add_argument('--out-transcript', type=str, default="transcripts.unsorted.tsv.gz", help='The output compressed transcript-indexed SGE file in TSV format (default: transcripts.unsorted.tsv.gz)')
+    output_params.add_argument('--out-minmax', type=str, default="coordinate_minmax.tsv", help='The output coordinate minmax TSV file (default: coordinate_minmax.tsv)')
+    output_params.add_argument('--out-feature', type=str, default="feature.clean.tsv.gz", help='The output file collects UMI counts on a per-gene basis (default: feature.clean.tsv.gz)')
 
     # Input dir/file params
     input_params = parser.add_argument_group(
@@ -79,15 +79,17 @@ def parse_arguments(_args):
         2) Use --csv-colname-phredscore with --min-phred-score to filter the input data based on the Phred-scaled quality score.
         Please note --csv-columns-x, --csv-columns-y, --csv-columns-feature-name are mandatory when the input file is in CSV format.
         """)
-    aux_in_csv_params.add_argument('--csv-colname-x',  type=str, default=None, help='Column name for X-axis (e.g., x_location for 10x_xenium; x for big_stereoseq, x_local_px for cosmx_smi; global_x for vizgen_merscope; xcoord for pixel_seq)')
-    aux_in_csv_params.add_argument('--csv-colname-y',  type=str, default=None, help='Column name for Y-axis (e.g., y_location for 10x_xenium; y for big_stereoseq, y_local_px for cosmx_smi; global_y for vizgen_merscope; ycoord for pixel_seq)')
-    aux_in_csv_params.add_argument('--csv-colname-feature-name', type=str, default=None, help='Column name for gene name (e.g., feature_name for 10x_xenium; geneID for big_stereoseq, target for cosmx_smi; gene for vizgen_merscope; geneName for pixel_seq)')
-    aux_in_csv_params.add_argument('--csv-colnames-count', type=str, default=None, help='Column name for gene id (e.g.: transcript_id). If not provided, a count of 1 will be added for a feature in a pixel')
-    aux_in_csv_params.add_argument('--csv-colname-feature-id', type=str, default=None, help='Column name for gene id')
-    aux_in_csv_params.add_argument('--csv-colnames-others', nargs='+', default=[], help='Columns names to keep (e.g., cell_id, overlaps_nucleus)')
-    aux_in_csv_params.add_argument('--csv-colname-phredscore', type=str, default=None, help='Column name for Phred-scaled quality value (Q-Score) estimating the probability of incorrect call.') # qv
-    aux_in_csv_params.add_argument('--min-phred-score', type=float, default=None, help='Specify the Phred-scaled quality score cutoff.') # ficture used 13
-    aux_in_csv_params.add_argument('--add-molecule-id', action='store_true', default=False, help='If enabled, a column of "molecule_id" will be added to the output file to track the index of the original input will be stored in')
+
+    aux_in_csv_params.add_argument('--csv-delim', type=str, default=None, help='Delimiter for the additional input tsv/csv file. Required if not using the default ("\\t").')
+    aux_in_csv_params.add_argument('--csv-colname-x',  type=str, default=None, help='Column name for X-axis (e.g., x_location for 10x_xenium; x for big_stereoseq, x_local_px for cosmx_smi; global_x for vizgen_merscope; xcoord for pixel_seq) (default: None)')
+    aux_in_csv_params.add_argument('--csv-colname-y',  type=str, default=None, help='Column name for Y-axis (e.g., y_location for 10x_xenium; y for big_stereoseq, y_local_px for cosmx_smi; global_y for vizgen_merscope; ycoord for pixel_seq) (default: None)')
+    aux_in_csv_params.add_argument('--csv-colname-feature-name', type=str, default=None, help='Column name for gene name (e.g., feature_name for 10x_xenium; geneID for big_stereoseq, target for cosmx_smi; gene for vizgen_merscope; geneName for pixel_seq) (default: None)')
+    aux_in_csv_params.add_argument('--csv-colnames-count', type=str, default=None, help='Column name for gene id (e.g.: transcript_id). If not provided, a count of 1 will be added for a feature in a pixel (default: None)')
+    aux_in_csv_params.add_argument('--csv-colname-feature-id', type=str, default=None, help='Column name for gene id (default: None)')
+    aux_in_csv_params.add_argument('--csv-colnames-others', nargs='+', default=[], help='Columns names to keep (e.g., cell_id, overlaps_nucleus) (default: None)')
+    aux_in_csv_params.add_argument('--csv-colname-phredscore', type=str, default=None, help='Column name for Phred-scaled quality value (Q-Score) estimating the probability of incorrect call (default: None).') # qv
+    aux_in_csv_params.add_argument('--min-phred-score', type=float, default=None, help='Specify the Phred-scaled quality score cutoff (default: None).') # ficture used 13
+    aux_in_csv_params.add_argument('--add-molecule-id', action='store_true', default=False, help='If enabled, a column of "molecule_id" will be added to the output file to track the index of the original input will be stored in (default: False).')
 
    # AUX output params
     aux_output_params = parser.add_argument_group("Output Column Auxiliary Parameters",  "Auxiliary Output column parameters for the output files.")
@@ -161,7 +163,7 @@ def add_param_to_cmd(cmd, args, aux_argset):
 # arg names
 ans_out    =   ['units_per_um', 'precision_um'] + ['colname_x', 'colname_y', 'colnames_count', 'colname_feature_name', 'colname_feature_id']
 ans_insge  =   ['sge_bcd', 'sge_ftr', 'sge_mtx']+ ['icols_mtx', 'icol_bcd_barcode', 'icol_bcd_x', 'icol_bcd_y', 'icol_ftr_id', 'icol_ftr_name', 'pos_colname_barcode', 'pos_colname_x', 'pos_colname_y', 'pos_delim',  'print_feature_id', 'allow_duplicate_gene_names']
-ans_incsv  =   ['csv_colname_x', 'csv_colname_y', 'csv_colname_feature_name', 'csv_colnames_count', 'csv_colname_feature_id', 'csv_colnames_others', 'csv_colname_phredscore', 'min_phred_score', 'add_molecule_id']
+ans_incsv  =   ['csv_delim', 'csv_colname_x', 'csv_colname_y', 'csv_colname_feature_name', 'csv_colnames_count', 'csv_colname_feature_id', 'csv_colnames_others', 'csv_colname_phredscore', 'min_phred_score', 'add_molecule_id']
 ans_ftrname =  ['include_feature_list', 'exclude_feature_list', 'include_feature_substr', 'exclude_feature_substr', 'include_feature_regex', 'exclude_feature_regex'] 
 ans_ftrtype =  ['include_feature_type_regex',  'csv_colname_feature_type', 'feature_type_ref']
 
@@ -279,7 +281,7 @@ def convert_tsv(cmds, args):
     # output: out_transcript, out_minmax, out_feature
     transcript_tsv = args.out_transcript.replace(".gz", "")
     format_cmd=f"cartloader format_generic --input {args.in_csv} --out-dir {args.out_dir} --out-transcript {transcript_tsv} --out-feature {args.out_feature} --out-minmax {args.out_minmax}"
-    aux_argset = set(item for lst in [ans_out, ans_insge, ans_ftrname, ans_ftrtype] for item in lst)
+    aux_argset = set(item for lst in [ans_out, ans_incsv, ans_ftrname, ans_ftrtype] for item in lst)
     format_cmd = add_param_to_cmd(format_cmd, args, aux_argset)
     cmds.append(format_cmd)
     cmds.append(f"{args.gzip} -c {args.out_dir}/{transcript_tsv} > {args.out_dir}/{args.out_transcript}")

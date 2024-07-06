@@ -8,9 +8,9 @@ def parse_arguments(_args):
     parser = argparse.ArgumentParser(prog=f"cartloader run_ficture", description="Run FICTURE")
 
     cmd_params = parser.add_argument_group("Commands", "FICTURE commands to run together")
-    cmd_params.add_argument('--all', action='store_true', default=False, help='Run all FICTURE commands (preprocess, segment, lda, decode)')
+    cmd_params.add_argument('--all', action='store_true', default=False, help='Run all FICTURE commands (minibatch, segment, lda, decode)')
     cmd_params.add_argument('--sorttsv', action='store_true', default=False, help='Sort the input tsv file')
-    cmd_params.add_argument('--preprocess', action='store_true', default=False, help='Perform preprocess step')
+    cmd_params.add_argument('--minibatch', action='store_true', default=False, help='Perform minibatch step')
     cmd_params.add_argument('--segment', action='store_true', default=False, help='Perform hexagon segmentation into FICTURE-compatible format')
     cmd_params.add_argument('--lda', action='store_true', default=False, help='Perform LDA model training')
     cmd_params.add_argument('--decode', action='store_true', default=False, help='Perform pixel-level decoding')
@@ -97,7 +97,7 @@ def get_col_idx(input_file, column, sep):
 def define_sort_keys(input_file, columns, sep):
     sort_keys = []
     for col_flag in columns:
-        print(col_flag)
+        #print(col_flag)
         column, flag = col_flag.split(",")
         col_idx = get_col_idx(input_file, column, sep)
         sort_key = f"-k{col_idx},{col_idx}{flag}"
@@ -118,7 +118,7 @@ def run_ficture(_args):
 
     if args.all:
         args.convert = True
-        args.preprocess = True
+        args.minibatch = True
         args.lda = True
         args.decode = True
 
@@ -147,8 +147,8 @@ def run_ficture(_args):
         cmds.append(f"{args.gzip} -dc {args.in_transcript} | {args.sort} -S {args.sort_mem} {sort_keys} | {args.gzip} -c > {args.in_cstranscript}")
         mm.add_target(args.in_cstranscript, [args.in_transcript], cmds)
     
-    # 2. preprocess(create minibatch):
-    if args.preprocess:
+    # 2. minibatch(create minibatch):
+    if args.minibatch:
         scheck_app(args.gzip)
         scheck_app(args.sort)
         major_axis=define_major_axis(args)

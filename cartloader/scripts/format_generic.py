@@ -16,12 +16,13 @@ def format_generic(_args):
     # key_params.add_argument('--dummy-genes', type=str, default='', help='A single name or a regex describing the names of negative control probes')
     key_params.add_argument('--precision-um', type=int, default=2, help='Number of digits to store the transcript coordinates in micrometer')
     key_params.add_argument('--units-per-um', type=float, default=1, help='Units per micrometer (default: 1)')
-    
+
     incol_params = parser.add_argument_group("Input Columns Parameters", "Input column parameters.")
+    incol_params.add_argument('--csv-delim', type=str, default='\t', help='Delimiter for the additional barcode position file (default: \\t).')
     incol_params.add_argument('--csv-colname-x',  type=str, default=None, required=True, help='Specify the input column name for X-axis')
     incol_params.add_argument('--csv-colname-y',  type=str, default=None, required=True, help='Specify the input column name for Y-axis')
     incol_params.add_argument('--csv-colname-feature-name', type=str, default=None, required=True, help='Specify the input column name for gene name')
-    incol_params.add_argument('--csv-colnames-count', type=str, default=None, required=True, help='Specify column name(s) for UMI count. If not provided, a count of 1 will be added for a feature in a pixel')
+    incol_params.add_argument('--csv-colnames-count', type=str, default=None, help='Specify column name(s) for UMI count. If not provided, a count of 1 will be added for a feature in a pixel')
     incol_params.add_argument('--csv-colnames-others', nargs='+', default=[], help='Specify the input column names to keep (e.g. cell_id, overlaps_nucleus). Please note this will affect how the count is aggregated (default: [])')
 
     outcol_params = parser.add_argument_group("Output Columns Parameters", "Output column parameters .")
@@ -55,8 +56,8 @@ def format_generic(_args):
     aux_params.add_argument('--feature-type-ref', type=str, default=None, help='Specify the path to a tab-separated gene information reference file to provide gene type information. The format should be: chrom, start position, end position, gene id, gene name, gene type (default: None)')
     args = parser.parse_args(_args)
 
-    logger = create_custom_logger(__name__, args.out_prefix + "_tsv2pmtiles" + args.log_suffix if args.log else None)
-    logger.info("Analysis Started")
+    # logger = create_custom_logger(__name__, args.out_prefix + "_tsv2pmtiles" + args.log_suffix if args.log else None)
+    # logger.info("Analysis Started")
 
     # output
     os.makedirs(args.out_dir, exist_ok=True)
@@ -80,12 +81,11 @@ def format_generic(_args):
 
     # 3) transcript (header)
     feature_cols=[args.colname_feature_name] if args.csv_colname_feature_id is None else [args.colname_feature_name, args.colname_feature_id]
-    other_cols = args.csv_colnames_others if args.add_molecule_id else args.csv_colnames_others + ["molecule_id"]
-    unit_info=[args.colname_x, args.colname_y] + feature_cols + other_cols
-
-    iheader = pd.read_csv(args.input, sep='\t', nrows=1).columns.tolist()
-    icols = [args.csv_colname_x, args.csv_colname_y] + feature_cols + args.csv_colnames_others 
-    for j in [args.csv_colname_genetype, args.csv_colname_phredscore]:
+    other_cols = args.csv_colnames_others + ["molecule_id"] if args.add_molecule_id else args.csv_colnames_others 
+    
+    iheader = pd.read_csv(args.input, nrows=1, sep=args.csv_delim).columns.tolist()
+    icols = [args.csv_colname_x, args.csv_colname_y, args.csv_colname_feature_name] + args.csv_colnames_others
+    for j in [args.csv_colname_feature_id, args.csv_colname_feature_type, args.csv_colname_phredscore]:
         if j is not None:
             icols.append(j)
     if args.csv_colnames_count is not None:
@@ -93,6 +93,7 @@ def format_generic(_args):
     for icol in icols:
         assert icol in iheader, f"Column {icol} is not found in the input file."
         
+    unit_info = [args.colname_x, args.colname_y] + feature_cols + other_cols
     oheader = unit_info + [args.colnames_count]
     with open(out_transcript_path, 'w') as wf:
         _ = wf.write('\t'.join(oheader)+'\n')
@@ -112,7 +113,7 @@ def format_generic(_args):
 
     # 3) gene type filtering ref if provided
     if args.include_feature_type_regex is not None:
-        assert args.feature_type_ref is not None or args.csv_colname_genetype is not None, "Please provide the gene type reference file or the column name for gene type."
+        assert args.feature_type_ref is not None or args.csv_colname_feature_type is not None, "Please provide the gene type reference file or the column name for gene type."
         if args.feature_type_ref is not None:
             df_ftrtype = pd.read_csv(args.feature_type_ref, sep='\t', header=None, names=["chrom", "posstart", "posend", "gene_id", "gene_name", "gene_type"])
             df_ftrtype = df_ftrtype[~df_ftrtype["gene_type"].str.contains(args.include_feature_type_regex, flags=re.IGNORECASE, regex=True)]
@@ -127,14 +128,12 @@ def format_generic(_args):
     if args.csv_colname_phredscore is not None:
         assert args.min_phred_score is not None, "Please provide the minimum Phred score cutoff."
 
-    for chunk in pd.read_csv(args.input, header=0, chunksize=500000, index_col=0):
+    for chunk in pd.read_csv(args.input, header=0, chunksize=500000, index_col=None, sep=args.csv_delim):
+        Nraw=chunk.shape[0]
         # filtering:
-        # # filter dummy genes
-        # if args.dummy_genes != '':
-        #     chunk = chunk[~chunk[args.csv_colname_feature_name].str.contains(args.dummy_genes, flags=re.IGNORECASE, regex=True)]
         # filter by gene type
         if args.include_feature_type_regex is not None:
-            if args.csv_colname_genetype is not None:
+            if args.csv_colname_feature_type is not None:
                 chunk = chunk[~chunk[args.csv_colname_feature_name].str.contains(args.include_feature_type_regex, flags=re.IGNORECASE, regex=True)]
             else:
                 chunk = chunk[chunk[args.csv_colname_feature_id].isin(ftrs_keep_type)]
@@ -167,13 +166,14 @@ def format_generic(_args):
             chunk["molecule_id"] = chunk.index.values
         # umi count aggregation
         if args.csv_colnames_count is not None:
-            chunk.rename(columns = {args.csv_colnames_count:args.colname_count}, inplace=True)
+            chunk.rename(columns = {args.csv_colnames_count:args.colnames_count}, inplace=True)
         else:
             chunk[args.colnames_count] = 1
         chunk = chunk.groupby(by = unit_info).agg({args.colnames_count:'sum'}).reset_index()
         # write down
         chunk[oheader].to_csv(out_transcript_path, sep='\t',mode='a',index=False,header=False, float_format=float_format)
-        logging.info(f"{chunk.shape[0]}")
+        Nqc=chunk.shape[0]
+        print(f"processing: {Nraw} rows -> {Nqc} transcript")
         # feature
         feature = pd.concat([feature, chunk.groupby(by=feature_cols).agg({args.colnames_count:"sum"}).reset_index()])
         # minmax chunk
