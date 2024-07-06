@@ -6,7 +6,13 @@ from cartloader.utils.utils import cmd_separator, scheck_app
 def parse_arguments(_args):
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", 
-                                     description="Convert SGE into a tsv format. Besides the IN-SGE and IN-CSV Auxiliary Parameters, the rest of the parameters apply to all platforms.")
+                                    description="""
+                                     Standardize Spatial Transcriptomics (ST) datasets into a transcript-indexed SGE in TSV format for downstream analysis.  
+                                     1) Platform Support: 10X Visium HD, 10X Xenium, BGI Stereoseq, Cosmx SMI, Vizgen Merscope, Pixel-Seq.
+                                     2) Main functions: it generates a Makefile for a transcript-indexed SGE file in TSV format, a coordinate minmax TSV file, and a feature file counting UMIs per gene. 
+                                     When executed with --dry-run, it generates only the Makefile without running it. 
+                                     3) Additional Features: Includes options for filtering based on Phred-scaled quality score, gene name, and gene type, as well as converting pixel coordinates to micrometers
+                                     """)
     #parser = argparse.ArgumentParser()
     # run params
     run_params = parser.add_argument_group("Run Options", "Run options for converting SGE files into a tsv format.")

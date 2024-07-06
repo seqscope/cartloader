@@ -4,13 +4,17 @@ import pandas as pd
 from cartloader.utils.utils import cmd_separator, scheck_app, create_custom_logger
 
 def format_generic(_args):
-    parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", description="Format transcript file from Stereo-seq format.")
+    parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", 
+                                     description="""
+                                     Standardize Spatial Transcriptomics (ST) datasets from various platforms, including 10X Xenium, BGI Stereoseq, Cosmx SMI, Vizgen Merscope, Pixel-Seq. 
+                                     It will generate a transcript-indexed SGE file in TSV format, a feature file couning UMIs per gene, and a minmax file for X Y coordinates.
+                                     """)
     inout_params = parser.add_argument_group("Input/Output Parameters", "Input/output directory/files.")
     inout_params.add_argument('--input', type=str, help='Specify the input transcript-indexed SGE file in TSV or CSV format')
     inout_params.add_argument('--out-dir', required= True, type=str, help='The output directory')
     inout_params.add_argument('--out-transcript', type=str, default="transcripts.unsorted.tsv", help='The output transcript-indexed SGE file in TSV format. Default: transcripts.unsorted.tsv')
     inout_params.add_argument('--out-minmax', type=str, default="coordinate_minmax.tsv", help='The output TSV file for min and max X and Y coordinates. Default: coordinate_minmax.tsv')
-    inout_params.add_argument('--out-feature', type=str, default="features.clean.tsv.gz", help='The output files for gene. Default: features.clean.tsv.gz')
+    inout_params.add_argument('--out-feature', type=str, default="features.clean.tsv.gz", help='The output file collects UMI counts on a per-gene basis. Default: features.clean.tsv.gz')
     
     key_params = parser.add_argument_group("Key Parameters", "Key parameters, such as filtering cutoff.")
     # key_params.add_argument('--dummy-genes', type=str, default='', help='A single name or a regex describing the names of negative control probes')
