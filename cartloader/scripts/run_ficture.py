@@ -201,7 +201,12 @@ def run_ficture(_args):
                 cmap=f"{lda_prefix}.rgb.tsv"
                 cmds.append(f"ficture plot_base --input {fit_tsv} --output {lda_prefix}.coarse --fill_range {fillr} --color_table {cmap} --plot_um_per_pixel {args.lda_plot_um_per_pixel} --plot_discretized")
                 #cmds.append(f"touch {lda_prefix}.done")
-                cmds.append(f"[ -f {fit_tsv} ] && [ -f {cmap} ] && [ -f {lda_prefix}.coarse.png ] && [ -f {lda_prefix}.model.p ] && touch {lda_prefix}.done")
+                # 4) DE
+                cmds.append(f"ficture de_bulk --input {lda_prefix}.posterior.count.tsv.gz --output {lda_prefix}.bulk_chisq.tsv --min_ct_per_feature {args.min_ct_feature} --max_pval_output {args.de_max_pval} --min_fold_output {args.de_min_fold} --thread {args.threads}")
+                # 5) report
+                cmds.append(f"ficture factor_report --path {args.out_dir} --pref {lda_prefix} --color_table {cmap}")
+                # 6) done
+                cmds.append(f"[ -f {fit_tsv} ] && [ -f {cmap} ] && [ -f {lda_prefix}.coarse.png ] && [ -f {lda_prefix}.model.p ] && [ -f {lda_prefix}.bulk_chisq.tsv ] && [ -f {lda_prefix}.factor.info.html ] && touch {lda_prefix}.done")
                 mm.add_target(f"{lda_prefix}.done", [args.in_cstranscript, hexagon], cmds)
 
     if args.decode:
