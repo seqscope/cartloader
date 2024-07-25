@@ -11,10 +11,10 @@ def format_stereoseq(_args):
     inout_params.add_argument('--out-feature', type=str, default="features.clean.tsv.gz", help='The output files for gene. Default: features.clean.tsv.gz')
 
     incol_params = parser.add_argument_group("Input Columns Parameters", "Input column parameters .")
-    incol_params.add_argument('--tsv-colname-x',  type=str, default='global_x', help='Column name for X-axis (default: global_x)')
-    incol_params.add_argument('--tsv-colname-y',  type=str, default='global_y', help='Column name for Y-axis (default: global_y)')
-    incol_params.add_argument('--tsv-colname-feature-name', type=str, default='target', help='Column name for gene name (e.g.: target)')
-    incol_params.add_argument('--tsv-colname-count', nargs='+', default=[], help='Columns names to keep(e.g. cell_ID, CellComp).')
+    incol_params.add_argument('--csv-colname-x',  type=str, default='global_x', help='Column name for X-axis (default: global_x)')
+    incol_params.add_argument('--csv-colname-y',  type=str, default='global_y', help='Column name for Y-axis (default: global_y)')
+    incol_params.add_argument('--csv-colname-feature-name', type=str, default='target', help='Column name for gene name (e.g.: target)')
+    incol_params.add_argument('--csv-colnames-count', type=str, default="MIDCounts", help='Columns names to keep(e.g. cell_ID, CellComp).')
 
     key_params = parser.add_argument_group("Key Parameters", "Key parameters, such as filtering cutoff.")
     key_params.add_argument('--dummy-genes', type=str, default='', help='A single name or a regex describing the names of negative control probes')
@@ -25,7 +25,6 @@ def format_stereoseq(_args):
     outcol_params.add_argument('--colname-x', type=str, default='X', help='Column name for X (default: X)')
     outcol_params.add_argument('--colname-y', type=str, default='Y', help='Column name for Y (default: Y)')
     outcol_params.add_argument('--colname-feature-name', type=str, default='gene', help='Column name for feature/gene name (default: None)')
-    # outcol_params.add_argument('--colname-feature-id', type=str, default='gene_id', help='Column name for feature/gene name (default: None)')
     outcol_params.add_argument('--colnames-count', type=str, default='gn', help='Comma-separate column names for Count (default: gn)')
     args = parser.parse_args(_args)
 
@@ -53,21 +52,21 @@ def format_stereoseq(_args):
 
     # transcript
     unit_info = [args.colname_x, args.colname_y, args.colname_feature_name]
-    oheader = unit_info + [args.colname_count]
+    oheader = unit_info + [args.colnames_count]
     with open(out_transcript_path, 'w') as wf:
         _ = wf.write('\t'.join(oheader)+'\n')
     
     for chunk in pd.read_csv(args.input, header=0, chunksize=500000, sep='\t'):
         # filter
         if args.dummy_genes != '':
-            chunk = chunk[~chunk[args.tsv_colname_feature_name].str.contains(args.dummy_genes, flags=re.IGNORECASE, regex=True)]
+            chunk = chunk[~chunk[args.csv_colname_feature_name].str.contains(args.dummy_genes, flags=re.IGNORECASE, regex=True)]
         
         # rename
-        chunk.rename(columns = {args.tsv_colname_x:args.colname_x, 
-                                args.tsv_colname_y:args.colname_y, 
-                                args.tsv_colname_feature_name:args.colname_feature_name,
-                                args.tsv_colname_count:args.colname_count}, inplace=True)
-        chunk = chunk.groupby(by=unit_info).agg({args.colname_count: 'sum'}).reset_index()
+        chunk.rename(columns = {args.csv_colname_x:args.colname_x, 
+                                args.csv_colname_y:args.colname_y, 
+                                args.csv_colname_feature_name:args.colname_feature_name,
+                                args.csv_colnames_count:args.colnames_count}, inplace=True)
+        chunk = chunk.groupby(by=unit_info).agg({args.colnames_count: 'sum'}).reset_index()
         
         # conversion
         if args.units_per_um != 1:
@@ -79,7 +78,7 @@ def format_stereoseq(_args):
 
         # feature
         logging.info(f"{chunk.shape[0]}")
-        feature = pd.concat([feature, chunk.groupby(by=args.colname_feature_name).agg({args.colname_count:"sum"}).reset_index()])
+        feature = pd.concat([feature, chunk.groupby(by=args.colname_feature_name).agg({args.colnames_count:"sum"}).reset_index()])
         
         #Update bounds
         x0, x1 = chunk[args.colname_x].min(), chunk[args.colname_x].max()
@@ -88,7 +87,7 @@ def format_stereoseq(_args):
         ymin, ymax = min(ymin, y0), max(ymax, y1)
 
     # feature
-    feature = feature.groupby(by=args.colname_feature_name).agg({args.colname_count:"sum"}).reset_index()
+    feature = feature.groupby(by=args.colname_feature_name).agg({args.colnames_count:"sum"}).reset_index()
     feature.to_csv(out_feature_path,sep='\t',index=False)
 
     # minmax

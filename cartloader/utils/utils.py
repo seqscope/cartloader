@@ -1,4 +1,4 @@
-import logging, os, shutil, sys, importlib
+import logging, os, shutil, sys, importlib, csv
 
 def cmd_separator(cmds, info):
     """
@@ -8,7 +8,6 @@ def cmd_separator(cmds, info):
     cmds.append(rf"$(info {info})")
     cmds.append(rf"$(info --------------------------------------------------------------)")
     return cmds
-
 
 def scheck_app(app_cmd):
     """
@@ -56,3 +55,43 @@ def create_custom_logger(name, logfile=None, level=logging.INFO):
         logger.addHandler(log_file_handler)
     
     return logger
+
+# copied from NovaScope
+def find_major_axis(filename, format):
+    # purpose: find the longer axis of the image
+    # (1) detect from the "{uid}.coordinate_minmax.tsv"  
+    if format == "row":
+        data = {}
+        with open(filename, 'r') as file:
+            for line in file:
+                key, value = line.split()
+                data[key] = float(value)
+        if not all(k in data for k in ['xmin', 'xmax', 'ymin', 'ymax']):
+            raise ValueError("Missing one or more required keys (xmin, xmax, ymin, ymax)")
+        xmin = data['xmin']
+        xmax = data['xmax']
+        ymin = data['ymin']
+        ymax = data['ymax']
+    # (2) detect from the barcodes.minmax.tsv
+    elif format == "col":
+        with open(filename, 'r') as file:
+            reader = csv.DictReader(file, delimiter='\t')
+            try:
+                row = next(reader)  # Read the first row
+            except StopIteration:
+                raise ValueError("File is empty")
+            try:
+                next(reader)
+                raise ValueError("Error: More than one row of data found.")
+            except StopIteration:
+                pass  
+            xmin = int(row['xmin'])
+            xmax = int(row['xmax'])
+            ymin = int(row['ymin'])
+            ymax = int(row['ymax'])
+    deltaX = xmax - xmin
+    deltaY = ymax - ymin
+    if deltaX > deltaY:
+        return "X"
+    else:
+        return "Y"

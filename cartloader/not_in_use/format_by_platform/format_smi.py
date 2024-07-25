@@ -12,10 +12,10 @@ def format_smi(_args):
     inout_params.add_argument('--out-feature', type=str, default="features.clean.tsv.gz", help='The output files for gene. Default: features.clean.tsv.gz')
 
     incol_params = parser.add_argument_group("Input Columns Parameters", "Input column parameters.")
-    incol_params.add_argument('--tsv-colname-x',  type=str, default='global_x', help='Column name for X-axis (default: global_x)')
-    incol_params.add_argument('--tsv-colname-y',  type=str, default='global_y', help='Column name for Y-axis (default: global_y)')
-    incol_params.add_argument('--tsv-colname-feature-name', type=str, default='target', help='Column name for gene name (e.g.: target)')
-    incol_params.add_argument('--tsv-colnames-others', nargs='+', default=[], help='Columns names to keep(e.g. cell_ID, CellComp).')
+    incol_params.add_argument('--csv-colname-x',  type=str, default='global_x', help='Column name for X-axis (default: global_x)')
+    incol_params.add_argument('--csv-colname-y',  type=str, default='global_y', help='Column name for Y-axis (default: global_y)')
+    incol_params.add_argument('--csv-colname-feature-name', type=str, default='target', help='Column name for gene name (e.g.: target)')
+    incol_params.add_argument('--csv-colnames-others', nargs='+', default=[], help='Columns names to keep(e.g. cell_ID, CellComp).')
 
     outcol_params = parser.add_argument_group("Output Columns Parameters", "Output column parameters.")
     outcol_params.add_argument('--colname-x', type=str, default='X', help='Column name for X (default: X)')
@@ -54,33 +54,30 @@ def format_smi(_args):
     ymax=0
 
     # transcript header
-    unit_info=[args.colname_x, args.colname_y, args.colname_feature_name] + args.tsv_colnames_others
-    oheader = unit_info + [args.colname_count]
+    unit_info=[args.colname_x, args.colname_y, args.colname_feature_name] + args.csv_colnames_others
+    oheader = unit_info + [args.colnames_count]
     with open(out_transcript_path, 'w') as wf:
         _ = wf.write('\t'.join(oheader)+'\n')
     
     for chunk in pd.read_csv(args.input,header=0,chunksize=500000):
         # filter
         if args.dummy_genes != '':
-            chunk = chunk[~chunk[args.tsv_colname_feature_name].str.contains(args.dummy_genes, flags=re.IGNORECASE, regex=True)]
+            chunk = chunk[~chunk[args.csv_colname_feature_name].str.contains(args.dummy_genes, flags=re.IGNORECASE, regex=True)]
         # rename
-        chunk.rename(columns = {args.tsv_colname_x:args.colname_x, 
-                                args.tsv_colname_y:args.colname_y, 
-                                args.tsv_colname_feature_name:args.colname_feature_name}, inplace=True)
+        chunk.rename(columns = {args.csv_colname_x:args.colname_x, 
+                                args.csv_colname_y:args.colname_y, 
+                                args.csv_colname_feature_name:args.colname_feature_name}, inplace=True)
         # count
-        chunk[args.colname_count] = 1
-        chunk = chunk.groupby(by = unit_info).agg({args.colname_count:'sum'}).reset_index()
+        chunk[args.colnames_count] = 1
+        chunk = chunk.groupby(by = unit_info).agg({args.colnames_count:'sum'}).reset_index()
         # conversion
-        #if args.px_to_um != 1:
-            # chunk[args.tsv_colname_x] *= args.px_to_um
-            # chunk[args.tsv_colname_y] *= args.px_to_um
         if args.units_per_um != 1:
-            chunk[args.tsv_colname_x] = chunk[args.tsv_colname_x] / args.units_per_um
-            chunk[args.tsv_colname_y] = chunk[args.tsv_colname_y] / args.units_per_um
+            chunk[args.colname_x] = chunk[args.colname_x] / args.units_per_um
+            chunk[args.colname_y] = chunk[args.colname_y] / args.units_per_um
         chunk[oheader].to_csv(out_transcript_path,sep='\t',mode='a',index=False,header=False,float_format=float_format)
         
         logging.info(f"{chunk.shape[0]}")
-        feature = pd.concat([feature, chunk.groupby(by=args.colname_feature_name).agg({args.colname_count:"sum"}).reset_index()])
+        feature = pd.concat([feature, chunk.groupby(by=args.colname_feature_name).agg({args.colnames_count:"sum"}).reset_index()])
         x0 = chunk[args.colname_x].min()
         x1 = chunk[args.colname_x].max()
         y0 = chunk[args.colname_y].min()
@@ -91,7 +88,7 @@ def format_smi(_args):
         ymax = max(ymax, y1)
 
     # feature
-    feature = feature.groupby(by=args.colname_feature_name).agg({args.colname_count:"sum"}).reset_index()
+    feature = feature.groupby(by=args.colname_feature_name).agg({args.colnames_count:"sum"}).reset_index()
     feature.to_csv(out_feature_path,sep='\t',index=False)
 
     # minmax
