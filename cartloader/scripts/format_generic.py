@@ -48,7 +48,7 @@ def format_generic(_args):
     aux_params.add_argument('--colname-feature-id', type=str, default='gene_id', help='Specify the output column name for gene ID if needed')
     aux_params.add_argument('--add-molecule-id', action='store_true', default=False, help='If needed, use --add-molecule-id to generate a column of "molecule_id" in the output file to track the index of the original input. If the input file already has a column of molecule ID, use --csv-colnames-others instead of --add-molecule-id. (default: False)')
     aux_params.add_argument('--csv-colname-phredscore', type=str, default=None, help='Specify the input column name for Phred-scaled quality score (Q-Score) estimating the probability of incorrect call. If provided,  (platform: 10x_xenium; default: None)')
-    aux_params.add_argument('--min-phred-score', type=float, default=None, help='Specify the Phred-scaled quality score cutoff') # ficture used 13
+    aux_params.add_argument('--min-phred-score', type=float, default=None, help='Specify the Phred-scaled quality score cutoff') 
     aux_params.add_argument('--include-feature-list', type=str, default=None, help='A file containing a list of input genes to be included (feature name of IDs) (default: None)')
     aux_params.add_argument('--exclude-feature-list', type=str, default=None, help='A file containing a list of input genes to be excluded (feature name of IDs) (default: None)')
     aux_params.add_argument('--include-feature-substr', type=str, default=None, help='A substring of feature/gene names to be included (default: None)')
@@ -129,9 +129,10 @@ def format_generic(_args):
         ftrs_exclude_name = pd.read_csv(args.exclude_feature_list, header=None, names=["feature"])["feature"].tolist()
 
     # 4) phred score filtering
-    if args.csv_colname_phredscore is not None:
-        assert args.min_phred_score is not None, "Please provide the minimum Phred score cutoff."
+    if args.csv_colname_phredscore is not None and args.min_phred_score is None:
+        print(f"Warning: While the --csv-colname-phredscore is enabled, the --min-phred-score is not provided. carloader will SKIP filtering SGE by phred score.")
 
+    # processing
     for chunk in pd.read_csv(args.input, header=0, chunksize=500000, index_col=None, sep=args.csv_delim):
         Nraw=chunk.shape[0]
         # filtering:
@@ -155,7 +156,7 @@ def format_generic(_args):
         if args.exclude_feature_regex is not None:
             chunk = chunk[~chunk[args.csv_colname_feature_name].str.contains(args.exclude_feature_regex, flags=re.IGNORECASE, regex=True)]
         # filter low-quality reads
-        if args.csv_colname_phredscore is not None:
+        if args.csv_colname_phredscore is not None and args.min_phred_score is not None:
             chunk = chunk[chunk[args.csv_colname_phredscore] >= args.min_phred_score]
         # rename columns
         chunk.rename(columns = col_dict, inplace=True)
