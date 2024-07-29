@@ -227,9 +227,10 @@ def run_ficture(_args):
                 # 4) DE
                 cmds.append(f"ficture de_bulk --input {lda_prefix}.posterior.count.tsv.gz --output {lda_prefix}.bulk_chisq.tsv --min_ct_per_feature {args.min_ct_feature} --max_pval_output {args.de_max_pval} --min_fold_output {args.de_min_fold} --thread {args.threads}")
                 # 5) report
-                cmds.append(f"ficture factor_report --path {args.out_dir} --pref {lda_prefix} --color_table {cmap}")
+                lda_basename=os.path.basename(lda_prefix)
+                cmds.append(f"ficture factor_report --path {args.out_dir} --pref {lda_basename} --color_table {cmap}")
                 # done & target
-                cmds.append(f"[ -f {lda_fit_tsv} ] && [ -f {cmap} ] && [ -f {lda_prefix}.coarse.png ] && [ -f {lda_prefix}.model_matrix.tsv.gz] && [ -f {lda_prefix}.bulk_chisq.tsv ] && [ -f {lda_prefix}.factor.info.html ] && touch {lda_prefix}.done")
+                cmds.append(f"[ -f {lda_fit_tsv} ] && [ -f {cmap} ] && [ -f {lda_prefix}.coarse.png ] && [ -f {lda_prefix}.model_matrix.tsv.gz ] && [ -f {lda_prefix}.bulk_chisq.tsv ] && [ -f {lda_prefix}.factor.info.html ] && touch {lda_prefix}.done")
                 mm.add_target(f"{lda_prefix}.done", [args.in_cstranscript, hexagon], cmds)
 
     if args.decode:
@@ -313,7 +314,8 @@ fi
                     # - transform-DE
                     cmds.append(f"ficture de_bulk --input {tsf_prefix}.posterior.count.tsv.gz --output {tsf_prefix}.bulk_chisq.tsv --min_ct_per_feature {args.min_ct_feature} --max_pval_output {args.de_max_pval} --min_fold_output {args.de_min_fold} --thread {args.threads}")
                     # - transform-report
-                    cmds.append(f"ficture factor_report --path {args.out_dir} --pref {tsf_prefix} --color_table {cmap}")
+                    tsf_basename=os.path.basename(tsf_prefix)
+                    cmds.append(f"ficture factor_report --path {args.out_dir} --pref {tsf_basename} --color_table {cmap}")
                     # - transform-coarse-plot (add this step to be consistent with Scopeflow and NEDA)
                     cmds.append(f"ficture plot_base --input {tsf_prefix}.fit_result.tsv.gz --output {tsf_prefix}.coarse --fill_range {fit_fillr} --color_table {cmap} --plot_um_per_pixel {args.fit_plot_um_per_pixel} --plot_discretized")
                     # done & target
