@@ -1,7 +1,7 @@
 import sys, os, gzip, argparse, logging, warnings, shutil
 
 from cartloader.utils.minimake import minimake
-from cartloader.utils.utils import cmd_separator, scheck_app, find_major_axis
+from cartloader.utils.utils import cmd_separator, scheck_app, find_major_axis, add_param_to_cmd
 
 def parse_arguments(_args):
     """Parse command-line arguments."""
@@ -25,7 +25,6 @@ def parse_arguments(_args):
 
     key_params = parser.add_argument_group("Key Parameters", "Key parameters that requires user's attention")
     key_params.add_argument('--out-dir', required= True, type=str, help='Output directory')
-    #key_params.add_argument('--out-yaml', type=str, default=None, help='(Optional) If --summary or --all is enabled, specify the output YAML file summarizing the output files')
     key_params.add_argument('--in-transcript', type=str, default=None, help='Input unsorted transcript-indexed SGE file in TSV format. Default to transcripts.unsorted.tsv.gz in the output directory')
     key_params.add_argument('--in-cstranscript', type=str, default=None, help='(Optional) If a coordinate-sorted transcript-indexed SGE file (sorted by x and y coordinates) exists, specify it by --in-cstranscript to skip the sorting step. Default to transcripts.sorted.tsv.gz in the output directory')
     key_params.add_argument('--in-minmax', type=str, default=None, help='Input coordinate minmax TSV file. Default to coordinate_minmax.tsv in the output directory')
@@ -38,6 +37,8 @@ def parse_arguments(_args):
 
     aux_params = parser.add_argument_group("Auxiliary Parameters", "Auxiliary parameters (using default is recommended)")
     # ficture params
+    aux_params.add_argument('--csv-colidx-x',  type=int, default=1, help='Column index for X-axis in the --in-transcript (default: 1)')
+    aux_params.add_argument('--csv-colidx-y',  type=int, default=2, help='Column index for Y-axis in the --in-transcript (default: 2)')
     aux_params.add_argument('--train-epoch', type=int, default=3, help='Training epoch for LDA model')
     aux_params.add_argument('--train-epoch-id-len', type=int, default=2, help='Training epoch ID length')
     aux_params.add_argument('--train-n-move', type=int, default=1, help='Level of hexagonal sliding during training')
@@ -64,6 +65,7 @@ def parse_arguments(_args):
     aux_params.add_argument('--fit-plot-um-per-pixel', type=float, default=1, help='Image resolution for fit coarse plot')   # in Scopeflow, this is set to 2
     aux_params.add_argument('--decode-plot-um-per-pixel', type=float, default=0.5, help='Image resolution for pixel decoding plot')
     # summary yaml params
+    aux_params.add_argument('--platform', type=str, default=None, help='Provide the information of platform to be added in the summary yaml file')
     aux_params.add_argument('--data-id', type=str, default=None, help='Provide a data id or description to be added in the summary yaml file')
     # applications
     aux_params.add_argument('--bgzip', type=str, default="bgzip", help='Path to bgzip binary. For faster processing, use "bgzip -@ 4')
@@ -82,30 +84,32 @@ def parse_arguments(_args):
 
 def define_major_axis(args):
     if args.major_axis is None:
-        args.major_axis = find_major_axis(args.in_minmax,"row")
+        args.major_axis = find_major_axis(args.in_minmax, "row")
     return args.major_axis
 
-def get_col_idx(input_file, column, sep):
-    if input_file.endswith(".gz"):
-        with gzip.open(input_file, "rt") as f:
-            header = f.readline().strip()
-    else:
-        with open(input_file, "r") as f:
-            header = f.readline().strip()
-    headers = header.split(sep)
-    assert column in headers, f"Column {column} is not found in the input file"
-    col_idx = headers.index(column) + 1
-    return col_idx
+# ==update: replaced by using --csv-colidx-x and --csv-colidx-y==
+# def get_col_idx(input_file, column, sep):
+#     if input_file.endswith(".gz"):
+#         with gzip.open(input_file, "rt") as f:
+#             header = f.readline().strip()
+#     else:
+#         with open(input_file, "r") as f:
+#             header = f.readline().strip()
+#     headers = header.split(sep)
+#     assert column in headers, f"Column {column} is not found in the input file"
+#     col_idx = headers.index(column) + 1
+#     return col_idx
 
-def define_sort_keys(input_file, columns, sep):
-    sort_keys = []
-    for col_flag in columns:
-        #print(col_flag)
-        column, flag = col_flag.split(",")
-        col_idx = get_col_idx(input_file, column, sep)
-        sort_key = f"-k{col_idx},{col_idx}{flag}"
-        sort_keys.append(sort_key)
-    return " ".join(sort_keys)
+# def define_sort_keys(input_file, columns, sep):
+#     sort_keys = []
+#     for col_flag in columns:
+#         #print(col_flag)
+#         column, flag = col_flag.split(",")
+#         col_idx = get_col_idx(input_file, column, sep)
+#         sort_key = f"-k{col_idx},{col_idx}{flag}"
+#         sort_keys.append(sort_key)
+#     return " ".join(sort_keys)
+# ==END==
 
 def run_ficture(_args):
     """Run all functions in FICTURE by using GNU Makefile
@@ -120,10 +124,12 @@ def run_ficture(_args):
     args=parse_arguments(_args)
 
     if args.all:
-        args.convert = True
+        args.sorttsv = True
         args.minibatch = True
+        args.segment=True
         args.lda = True
         args.decode = True
+        args.summary = True
 
     # parse input parameters
     train_widths = [int(x) for x in args.train_width.split(",")]
@@ -149,8 +155,12 @@ def run_ficture(_args):
         scheck_app(args.gzip)
         scheck_app(args.sort)
         major_axis=define_major_axis(args)
-        sort_cols=[f"{major_axis},g"]+ [f"{axis},g" for axis in ["X", "Y"] if axis != major_axis]
-        sort_keys=define_sort_keys(args.in_transcript, sort_cols, "\t")
+        #sort_cols=[f"{major_axis},g"]+ [f"{axis},g" for axis in ["X", "Y"] if axis != major_axis]
+        #sort_keys=define_sort_keys(args.in_transcript, sort_cols, "\t")
+        if major_axis == 'X':
+            sort_keys=f'{args.csv_colidx_x},g  {args.csv_colidx_y},g'
+        elif major_axis == 'Y':
+            sort_keys=f'{args.csv_colidx_y},g  {args.csv_colidx_x},g'
         cmds = cmd_separator([], f"Sorting the input transcript-indexed SGE file in tgz...")
         #cmds.append(f"skeys_intsv=$$(cartloader define_keys --sort --input {args.in_transcript} --columns {sort_cols})")
         #cmds.append(f"{args.gzip} -dc {args.in_transcript} | {args.sort} -S {args.sort_mem} $$skeys_intsv | {args.gzip} -c > {args.in_cstranscript}")
@@ -166,8 +176,12 @@ def run_ficture(_args):
         batch_mat_tsv = f"{args.out_dir}/batched.matrix.tsv"
         cmds = cmd_separator([], f"Creating minibatch from {args.in_cstranscript}...")
         cmds.append(f"ficture make_spatial_minibatch --input {args.in_cstranscript} --output {batch_mat_tsv} --mu_scale {args.mu_scale} --batch_size {args.minibatch_size} --batch_buff {args.minibatch_buffer} --major_axis {args.major_axis}")
-        major_axis_col = get_col_idx(args.in_cstranscript, major_axis, "\t")
-        # make_spatial_minibatch will generate a random_index in the 2nd column
+        #major_axis_col = get_col_idx(args.in_cstranscript, major_axis, "\t")
+        if major_axis == 'X':
+            major_axis_col = args.csv_colidx_x
+        elif major_axis == 'Y':
+            major_axis_col = args.csv_colidx_y
+        # make_spatial_minibatch will insert a column on the 2nd position for a random_index.
         if major_axis_col != 1:
             major_axis_col = major_axis_col + 1
         sort_keys= f"-k2,2n -k{major_axis_col},{major_axis_col}g"
@@ -292,7 +306,7 @@ fi
                     decode_prefix=f"{args.out_dir}/{decode_basename}"
                     # files
                     tsf_fitres=f"{tsf_prefix}.fit_result.tsv.gz"
-                    decode_spixel={decode_prefix}.pixel.sorted.tsv.gz
+                    decode_spixel=f"{decode_prefix}.pixel.sorted.tsv.gz"
                     # 1) transform/fit
                     cmds=cmd_separator([], f"Creating projection for {train_width}um and {n_factor} factors, at {fit_width}um")
                     cmds.append(f"ficture transform --input {args.in_cstranscript} --output_pref {tsf_prefix} --model {model_mat} --key {args.key_col} --major_axis {major_axis} --hex_width {fit_width} --n_move {fit_nmove} --min_ct_per_unit {args.min_ct_unit_fit} --mu_scale {args.mu_scale} --thread {args.threads} --precision {args.fit_precision}")
@@ -304,7 +318,7 @@ fi
                     cmds.append(f"ficture plot_base --input {tsf_prefix}.fit_result.tsv.gz --output {tsf_prefix}.coarse --fill_range {fit_fillr} --color_table {cmap} --plot_um_per_pixel {args.fit_plot_um_per_pixel} --plot_discretized")
                     # done & target
                     cmds.append(f"[ -f {tsf_fitres} ] && [ -f {tsf_prefix}.bulk_chisq.tsv ] && [ -f {tsf_prefix}.factor.info.html ] && [ -f {tsf_prefix}.coarse.png ] && [ -f {tsf_prefix}.coarse.top.png ] && touch {tsf_prefix}.done")
-                    mm.add_target(f"{tsf_prefix}.done", [model_mat, cmap, f"{lda_prefix}.done"], cmds)
+                    mm.add_target(f"{tsf_prefix}.done", [f"{lda_prefix}.done"], cmds)
                     #
                     # 2) decode
                     cmds=cmd_separator([], f"Performing pixel-level decoding for {train_width}um and {n_factor} factors, at {fit_width}um")
@@ -322,16 +336,21 @@ fi
                     cmds.append(f"ficture plot_pixel_full --input {decode_spixel} --color_table {cmap} --output {decode_prefix}.pixel.png --plot_um_per_pixel {args.decode_plot_um_per_pixel} --full")
                     # done & target
                     cmds.append(f"[ -f {decode_spixel} ] && [ -f {decode_prefix}.bulk_chisq.tsv ] && [ -f {decode_prefix}.factor.info.html ] && [ -f {decode_prefix}.pixel.png ] && touch {decode_prefix}.done")
-                    mm.add_target(f"{decode_prefix}.done", [batch_mat, model_mat, cmap, f"{lda_prefix}.done"], cmds)
+                    mm.add_target(f"{decode_prefix}.done", [batch_mat, f"{lda_prefix}.done"], cmds)
 
     if args.summary:
+        # arg names (aux)
+        ans_description=["platform", "data_id"]
+        aux_argset = set(item for lst in [ans_description] for item in lst)
         for train_width in train_widths:
             for n_factor in n_factors:
                 for fit_width in fit_widths:
                     radius = args.anchor_res + 1
                     out_yaml = os.path.join(args.out_dir, f"ficture.nF{args.n_factor}.d_{args.train_width}.decode.prj_{args.fit_width}.r_{args.anchor_res}_{radius}.yaml") 
                     cmds = cmd_separator([], f"Summarizing output into {out_yaml} files...")
-                    cmds.append(f"cartloader write_yaml_for_ficture --out-dir {args.out_dir} --out-yaml {args.out_yaml} --in-transcript {args.in_transcript} --in-cstranscript {args.in_cstranscript} --in-minmax {args.in_minmax} --in-feature {args.in_feature} --data-id {args.data_id} --platform {args.platform} --train-width {train_width} --n-factor {n_factor} --fit-width {fit_width} --anchor-res {args.anchor_res} ")
+                    yaml_cmds=f"cartloader write_yaml_for_ficture --out-dir {args.out_dir} --out-yaml {out_yaml} --in-transcript {args.in_transcript} --in-cstranscript {args.in_cstranscript} --in-minmax {args.in_minmax} --in-feature {args.in_feature} --train-width {train_width} --n-factor {n_factor} --fit-width {fit_width} --anchor-res {args.anchor_res} "
+                    yaml_cmds = add_param_to_cmd(yaml_cmds, args, aux_argset)
+                    cmds.append(yaml_cmds)
                     prerequisities = []
                     if args.segment:
                         prerequisities.append(f"{args.out_dir}/hexagon.d_{train_width}.tsv.gz")

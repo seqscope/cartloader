@@ -1,7 +1,7 @@
 import sys, os, gzip, argparse, logging, warnings, shutil, re, copy, time, pickle, inspect, warnings, json
 import pandas as pd
 from cartloader.utils.minimake import minimake
-from cartloader.utils.utils import cmd_separator, scheck_app
+from cartloader.utils.utils import cmd_separator, scheck_app, add_param_to_cmd
 
 # get the path of the cu
 
@@ -129,7 +129,7 @@ def parse_arguments(_args):
     aux_ftrfilter_params.add_argument('--include-feature-substr', type=str, default=None, help='A substring of feature/gene names to be included (default: None)')
     aux_ftrfilter_params.add_argument('--exclude-feature-substr', type=str, default=None, help='A substring of feature/gene names to be excluded (default: None)')
     aux_ftrfilter_params.add_argument('--include-feature-regex', type=str, default=None, help='A regex pattern of feature/gene names to be included (default: None)')
-    aux_ftrfilter_params.add_argument('--exclude-feature-regex', type=str, default="BLANK|NegCon|NegPrb", help='A regex pattern of feature/gene names to be excluded (default: None)')
+    aux_ftrfilter_params.add_argument('--exclude-feature-regex', type=str, default="BLANK\|NegCon\|NegPrb", help='A regex pattern of feature/gene names to be excluded (default: None)')
     aux_ftrfilter_params.add_argument('--include-feature-type-regex', type=str, default=None, help='A regex pattern of feature/gene type to be included (default: None).') # (e.g. protein_coding|lncRNA)
     aux_ftrfilter_params.add_argument('--csv-colname-feature-type', type=str, default=None, help='The input column name in the input that corresponding to the gene type information, if your input file has gene type information(default: None)')
     aux_ftrfilter_params.add_argument('--feature-type-ref', type=str, default=None, help='Specify the path to a tab-separated gene information reference file to provide gene type information. The format should be: chrom, start position, end position, gene id, gene name, gene type (default: None)')
@@ -163,19 +163,6 @@ def create_minmax(cmds, args):
     minmax_cmd = f"""{args.gzip} -cd {args.out_dir}/{args.out_transcript} | awk 'BEGIN{{FS=OFS="\\t"}} NR==1{{for(i=1;i<=NF;i++){{if($i=="X")x=i;if($i=="Y")y=i}}print $x,$y;next}}{{print $x,$y}}' | awk -F'\\t' ' BEGIN {{ min1 = "undef"; max1 = "undef"; min2 = "undef"; max2 = "undef"; }} {{ if (NR == 2 || $1 < min1) min1 = $1; if (NR == 2 || $1 > max1) max1 = $1; if (NR == 2 || $2 < min2) min2 = $2; if (NR == 2 || $2 > max2) max2 = $2; }} END {{ print "xmin\\t", min1; print "xmax\\t", max1; print "ymin\\t", min2; print "ymax\\t", max2; }}' > {args.out_dir}/{args.out_minmax}"""
     cmds.append(minmax_cmd)
     return cmds
-
-def add_param_to_cmd(cmd, args, aux_argset):
-    aux_args = {k: v for k, v in vars(args).items() if k in aux_argset}
-    for arg, value in aux_args.items():
-        if value or isinstance(value, bool):
-            arg_name = arg.replace('_', '-')
-            if isinstance(value, bool) and value:
-                cmd += f" --{arg_name}"
-            elif isinstance(value, list):
-                cmd += f" --{arg_name} {' '.join(value)}"
-            elif not isinstance(value, bool):
-                cmd += f" --{arg_name} {value}"
-    return cmd
 
 # arg names
 ans_out    =   ['units_per_um', 'precision_um'] + ['colname_x', 'colname_y', 'colnames_count', 'colname_feature_name', 'colname_feature_id']
@@ -285,6 +272,8 @@ def update_csvformat_by_platform(args):
             "10x_xenium": None,
             "bgi_stereoseq": "MIDCounts",
             "cosmx_smi": None,
+            "vizgen_merscope": None,
+            "pixel_seq": None
         }
     }
     platform_csvdelim_mapping={

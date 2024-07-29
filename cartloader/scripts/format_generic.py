@@ -132,6 +132,11 @@ def format_generic(_args):
     if args.csv_colname_phredscore is not None and args.min_phred_score is None:
         print(f"Warning: While the --csv-colname-phredscore is enabled, the --min-phred-score is not provided. carloader will SKIP filtering SGE by phred score.")
 
+    # 5) for test
+    if args.exclude_feature_regex is not None:
+        print(f"Check: the --exclude-feature-regex is enabled. It will exclude features that match the regex pattern: {args.exclude_feature_regex}")
+    if args.include_feature_regex is not None:
+        print(f"Check: the --include-feature-regex is enabled. It will include features that match the regex pattern: {args.include_feature_regex}")
     # processing
     for chunk in pd.read_csv(args.input, header=0, chunksize=500000, index_col=None, sep=args.csv_delim):
         Nraw=chunk.shape[0]
