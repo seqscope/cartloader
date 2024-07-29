@@ -324,15 +324,15 @@ fi
                     cmds=cmd_separator([], f"Performing pixel-level decoding for {train_width}um and {n_factor} factors, at {fit_width}um")
                     cmds.append(f"ficture slda_decode --input {batch_mat} --output {decode_prefix} --model {model_mat} --anchor {tsf_fitres} --anchor_in_um --neighbor_radius {radius} --mu_scale {args.mu_scale} --key {args.key_col} --precision {args.decode_precision} --lite_topk_output_pixel {args.decode_top_k} --lite_topk_output_anchor {args.decode_top_k} --thread {args.threads}")
                     # - decode-sort
-                    cmds=cmd_separator(cmds, f"Creating pixel-level output image for {train_width}um and {n_factor} factors, at {fit_width}um")
+                    #cmds=cmd_separator(cmds, f"Creating pixel-level output image for {train_width}um and {n_factor} factors, at {fit_width}um")
                     cmds.append(f"bash {script_path} {decode_prefix}.pixel.tsv.gz {decode_spixel} {args.in_minmax} {n_factor} {args.decode_block_size} {args.decode_scale} {args.decode_top_k} {major_axis} {args.bgzip} {args.tabix} {args.sort} {args.sort_mem}")
                     cmds.append(f"rm {decode_prefix}.pixel.tsv.gz")
                     # - decode-de & report
-                    cmds=cmd_separator(cmds, f"Performing pseudo-bulk differential expression analysis for {train_width}um and {n_factor} factors, at {fit_width}um")
+                    #cmds=cmd_separator(cmds, f"Performing pseudo-bulk differential expression analysis for {train_width}um and {n_factor} factors, at {fit_width}um")
                     cmds.append(f"ficture de_bulk --input {decode_prefix}.posterior.count.tsv.gz --output {decode_prefix}.bulk_chisq.tsv --min_ct_per_feature {args.min_ct_feature} --max_pval_output {args.de_max_pval} --min_fold_output {args.de_min_fold} --thread {args.threads}")
                     cmds.append(f"ficture factor_report --path {args.out_dir} --pref {decode_basename} --color_table {cmap}")
                     # - decode-pixel-plot
-                    cmds=cmd_separator(cmds, f"Drawing pixel-level output image for {train_width}um and {n_factor} factors, at {fit_width}um")
+                    #cmds=cmd_separator(cmds, f"Drawing pixel-level output image for {train_width}um and {n_factor} factors, at {fit_width}um")
                     cmds.append(f"ficture plot_pixel_full --input {decode_spixel} --color_table {cmap} --output {decode_prefix}.pixel.png --plot_um_per_pixel {args.decode_plot_um_per_pixel} --full")
                     # done & target
                     cmds.append(f"[ -f {decode_spixel} ] && [ -f {decode_prefix}.bulk_chisq.tsv ] && [ -f {decode_prefix}.factor.info.html ] && [ -f {decode_prefix}.pixel.png ] && touch {decode_prefix}.done")
