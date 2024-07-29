@@ -24,10 +24,10 @@ def parse_arguments(_args):
     key_params.add_argument('--data-id', type=str, default=None, help='Data ID or Human-readable Description')
     key_params.add_argument('--platform', type=str, default=None, help='Platform')
     key_params.add_argument('--all-ficture', action='store_true', default=False, help='Use glob to find summarize all available output files from the out-dir in one yaml file. When applied, no need to provide --train-width,--n-factor, --fit-width, --anchor-res. Default: False')
-    key_params.add_argument('--train-width', type=str, default=None, help='Hexagon flat-to-flat width (in um) during training. Use comma to specify multiple values')
-    key_params.add_argument('--n-factor', type=str, default=None, help='Number of factors to train. Use comma to specify multiple values')
-    key_params.add_argument('--fit-width', type=float, default=None, help='Hexagon flat-to-flat width (in um) during model fitting (default: same to train-width)')
-    key_params.add_argument('--anchor-res', type=float, default=4, help='Anchor resolution for decoding')
+    key_params.add_argument('--train-width', type=int, default=None, help='Hexagon flat-to-flat width (in um) during training. Use comma to specify multiple values')
+    key_params.add_argument('--n-factor', type=int, default=None, help='Number of factors to train. Use comma to specify multiple values')
+    key_params.add_argument('--fit-width', type=int, default=None, help='Hexagon flat-to-flat width (in um) during model fitting (default: same to train-width)')
+    key_params.add_argument('--anchor-res', type=int, default=4, help='Anchor resolution for decoding')
 
     #action if the out yaml file exists (overwrite or add to the existing file)
     parser.add_argument('--append', action='store_true', default=False, help='Append to the existing yaml file if it exists. If not, overwrite the existing file')
@@ -67,6 +67,7 @@ def valid_yaml_field(key, config, format):
 def files_existence_by_fn(fnlist, out_dir):
   for fn in fnlist:
     if not os.path.exists(os.path.join(out_dir, fn)):
+      print(f"File {fn} does not exist in {out_dir}")
       return False
   return True
 
@@ -89,7 +90,7 @@ def update_yaml_for_lda(yaml_content, out_dir, train_width, n_factor):
   de_fn     = f"{prefix}.bulk_chisq.tsv"
   coarse_fn = f"{prefix}.coarse.png"
   top_fn    = f"{prefix}.coarse.top.png"
-  rgb_fn    = f"{color_prefix}.rgb.tsv.gz"
+  rgb_fn    = f"{color_prefix}.rgb.tsv"
   cbar_fn   = f"{color_prefix}.cbar.png"
   rep_fn    = f"{prefix}.factor.info.html"
   if files_existence_by_fn([fitres_fn, rgb_fn, de_fn, coarse_fn, top_fn, cbar_fn, rep_fn], out_dir):
@@ -119,7 +120,7 @@ def update_yaml_for_transform(yaml_content, out_dir, train_width, n_factor, fit_
   de_fn       = f"{prefix}.bulk_chisq.tsv"
   coarse_fn   = f"{prefix}.coarse.png"
   top_fn      = f"{prefix}.coarse.top.png"
-  rgb_fn      = f"{color_prefix}.rgb.tsv.gz"
+  rgb_fn      = f"{color_prefix}.rgb.tsv"
   cbar_fn     = f"{color_prefix}.cbar.png"
   rep_fn      = f"{prefix}.factor.info.html"
   if files_existence_by_fn([fitres_fn, rgb_fn, de_fn, coarse_fn, top_fn, cbar_fn, rep_fn], out_dir):
@@ -147,13 +148,13 @@ def update_yaml_for_decode(yaml_content, out_dir, train_width, n_factor, fit_wid
   prefix        = f"nF{n_factor}.d_{train_width}.decode.prj_{fit_width}.r_{anchor_res}_{radius}"
   color_prefix  = f"nF{n_factor}.d_{train_width}"
   # fn
-  fitres_fn   = f"{prefix}.fit_result.tsv.gz"
+  pixel_fn    = f"{prefix}.pixel.sorted.tsv.gz"
   de_fn       = f"{prefix}.bulk_chisq.tsv"
   pixel_fn    = f"{prefix}.pixel.png"
-  rgb_fn      = f"{color_prefix}.rgb.tsv.gz"
+  rgb_fn      = f"{color_prefix}.rgb.tsv"
   cbar_fn     = f"{color_prefix}.cbar.png"
   rep_fn      = f"{prefix}.factor.info.html"
-  if files_existence_by_fn([fitres_fn, rgb_fn, de_fn], out_dir):
+  if files_existence_by_fn([pixel_fn, rgb_fn, de_fn], out_dir):
     valid_yaml_field('decode', yaml_content['output'], "list")
     decode_entry= {
       # params
@@ -163,7 +164,7 @@ def update_yaml_for_decode(yaml_content, out_dir, train_width, n_factor, fit_wid
       'anchor_res': anchor_res,
       'radius': radius,
       # the deployed results in novaflow
-      'fit_results': fitres_fn, 
+      'pixel_sorted': pixel_fn, 
       'cmap': rgb_fn, 
       'de': de_fn,
       # other results may be useful
@@ -214,13 +215,12 @@ def write_yaml_for_ficture(_args):
       else:
         args.out_yaml = os.path.join(args.out_dir, f"ficture.nF{args.n_factor}.d_{args.train_width}.decode.prj_{args.fit_width}.r_{args.anchor_res}_{radius}.yaml") 
     # init yaml by --append or not
-    if os.path.exists(args.out_yaml):
-      if args.append:
-        with open(args.out_yaml, 'r') as rf:
-          yaml_content = yaml.load(rf, Loader=yaml.FullLoader)
-      else:
-        warnings.warn(f"File {args.out_yaml} exists. Overwriting the file...")
-        yaml_content = ini_yaml(args)
+    if os.path.exists(args.out_yaml) and args.append:
+      with open(args.out_yaml, 'r') as rf:
+        yaml_content = yaml.load(rf, Loader=yaml.FullLoader)
+    else:
+      warnings.warn(f"File {args.out_yaml} exists. Overwriting the file...")
+      yaml_content = ini_yaml(args)
     # yaml content
     update_yaml_for_input(yaml_content, args)
     if not args.all_ficture:
@@ -232,8 +232,11 @@ def write_yaml_for_ficture(_args):
     else:
       update_yaml_for_existing(yaml_content, args.out_dir)
     # write yaml
-    with open(args.out_yaml, 'w') as wf:
-      yaml.dump(yaml_content, wf, default_flow_style=False)
+    yaml_content_str = yaml.dump(yaml_content, sort_keys=False, default_flow_style=False)
+    with open(args.out_yaml, 'w') as file:
+        file.write(yaml_content_str)
+    # with open(args.out_yaml, 'w') as wf:
+    #   yaml.dump(yaml_content_str, wf, default_flow_style=False, sort_keys=False)
 
 if __name__ == "__main__":
     # get the cartloader path

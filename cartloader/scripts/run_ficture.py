@@ -346,9 +346,13 @@ fi
         aux_argset = set(item for lst in [ans_description] for item in lst)
         for train_width in train_widths:
             for n_factor in n_factors:
+                if args.fit_width is None:
+                    fit_widths = [train_width]
+                else:
+                    fit_widths = [float(x) for x in args.fit_width.split(",")]
                 for fit_width in fit_widths:
                     radius = args.anchor_res + 1
-                    out_yaml = os.path.join(args.out_dir, f"ficture.nF{args.n_factor}.d_{args.train_width}.decode.prj_{args.fit_width}.r_{args.anchor_res}_{radius}.yaml") 
+                    out_yaml = os.path.join(args.out_dir, f"ficture.nF{args.n_factor}.d_{args.train_width}.decode.prj_{fit_width}.r_{args.anchor_res}_{radius}.yaml") 
                     cmds = cmd_separator([], f"Summarizing output into {out_yaml} files...")
                     yaml_cmds=f"cartloader write_yaml_for_ficture --out-dir {args.out_dir} --out-yaml {out_yaml} --in-transcript {args.in_transcript} --in-cstranscript {args.in_cstranscript} --in-minmax {args.in_minmax} --in-feature {args.in_feature} --train-width {train_width} --n-factor {n_factor} --fit-width {fit_width} --anchor-res {args.anchor_res} "
                     yaml_cmds = add_param_to_cmd(yaml_cmds, args, aux_argset)
