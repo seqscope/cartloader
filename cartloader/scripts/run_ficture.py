@@ -158,9 +158,9 @@ def run_ficture(_args):
         #sort_cols=[f"{major_axis},g"]+ [f"{axis},g" for axis in ["X", "Y"] if axis != major_axis]
         #sort_keys=define_sort_keys(args.in_transcript, sort_cols, "\t")
         if major_axis == 'X':
-            sort_keys=f'{args.csv_colidx_x},g  {args.csv_colidx_y},g'
+            sort_keys=f'-k{args.csv_colidx_x},{args.csv_colidx_x}g  -k{args.csv_colidx_y},{args.csv_colidx_y}g'
         elif major_axis == 'Y':
-            sort_keys=f'{args.csv_colidx_y},g  {args.csv_colidx_x},g'
+            sort_keys=f'-k{args.csv_colidx_y},{args.csv_colidx_y}g  -k{args.csv_colidx_x},{args.csv_colidx_x}g'
         cmds = cmd_separator([], f"Sorting the input transcript-indexed SGE file in tgz...")
         #cmds.append(f"skeys_intsv=$$(cartloader define_keys --sort --input {args.in_transcript} --columns {sort_cols})")
         #cmds.append(f"{args.gzip} -dc {args.in_transcript} | {args.sort} -S {args.sort_mem} $$skeys_intsv | {args.gzip} -c > {args.in_cstranscript}")
