@@ -7,8 +7,11 @@ def parse_arguments(_args):
     parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", 
                                      description="""
                                      Summarize the ficture input/output files into a yaml file.
-                                     Example:
-                                      cartloader write_yaml_for_ficture --out-dir /path/to/outdir --in-transcript /path/to/transcripts.unsorted.tsv.gz --in-cstranscript /path/to/transcripts.sorted.tsv.gz --in-minmax /path/to/coordinate_minmax.tsv --in-feature /path/to/feature.clean.tsv.gz --data-id data_id --platform platform --train-width 100,200 --n-factor 10,20 --fit-width 100 --anchor-res 4 --out-yaml /path/to/ficture.yaml
+                                     Two options are available:
+                                     (1) Specifying the FICTURE parameters (train-width, n-factor, fit-width, anchor-res) to summarize the output files the out-yaml file. For example:
+                                        cartloader write_yaml_for_ficture --out-dir /path/to/outdir --in-transcript /path/to/transcripts.unsorted.tsv.gz --in-cstranscript /path/to/transcripts.sorted.tsv.gz --in-minmax /path/to/coordinate_minmax.tsv --in-feature /path/to/feature.clean.tsv.gz --data-id data_id --platform platform --train-width 12 --n-factor 6 --fit-width 12 --anchor-res 4 --out-yaml /path/to/ficture.yaml
+                                     (2) Use --all-ficture to summarize all available output files from the out-dir in one yaml file. For example:
+                                        cartloader write_yaml_for_ficture --out-dir /path/to/outdir --in-transcript /path/to/transcripts.unsorted.tsv.gz --in-cstranscript /path/to/transcripts.sorted.tsv.gz --in-minmax /path/to/coordinate_minmax.tsv --in-feature /path/to/feature.clean.tsv.gz --data-id data_id --platform platform --all-ficture --out-yaml /path/to/ficture.all.yaml
                                      """)
 
     inout_params = parser.add_argument_group("Input/Output Parameters", "Input/Output parameters")
@@ -31,7 +34,8 @@ def parse_arguments(_args):
 
     #action if the out yaml file exists (overwrite or add to the existing file)
     parser.add_argument('--append', action='store_true', default=False, help='Append to the existing yaml file if it exists. If not, overwrite the existing file')
-
+    parser.add_argument('--field-type', type=str, default="dict", choices=["list","dict"], help='How to organize the output structure in the YAML file. If --all-ficture is used, it has to be defined as list. By default, when --all-ficture is not used, it is defined as dict. Options: list, dict')
+  
     if len(_args) == 0:
         parser.print_help()
         sys.exit(1)
@@ -71,17 +75,20 @@ def files_existence_by_fn(fnlist, out_dir):
       return False
   return True
 
-def update_yaml_for_hexagon(yaml_content, out_dir, train_width):
+def update_yaml_for_hexagon(yaml_content, out_dir, train_width, field_type):
   hexagon_fn= f"hexagon.d_{train_width}.tsv.gz"
   if files_existence_by_fn([hexagon_fn], out_dir):
-    valid_yaml_field('hexagon', yaml_content['output'], "list")
+    valid_yaml_field('hexagon', yaml_content['output'], field_type)
     hexagon_entry= {
       'hexagon_width': train_width,
       'hexagon_sge': hexagon_fn,
     }
-    yaml_content['output']['hexagon'].append(hexagon_entry)
+    if field_type == "list":
+      yaml_content['output']['hexagon'].append(hexagon_entry)
+    elif field_type == "dict":
+      yaml_content['output']['hexagon'] = hexagon_entry
 
-def update_yaml_for_lda(yaml_content, out_dir, train_width, n_factor):
+def update_yaml_for_lda(yaml_content, out_dir, train_width, n_factor, field_type):
   # prefix
   prefix = f"nF{n_factor}.d_{train_width}"
   color_prefix = prefix
@@ -94,7 +101,7 @@ def update_yaml_for_lda(yaml_content, out_dir, train_width, n_factor):
   cbar_fn   = f"{color_prefix}.cbar.png"
   rep_fn    = f"{prefix}.factor.info.html"
   if files_existence_by_fn([fitres_fn, rgb_fn, de_fn, coarse_fn, top_fn, cbar_fn, rep_fn], out_dir):
-    valid_yaml_field('lda', yaml_content['output'], "list")
+    valid_yaml_field('lda', yaml_content['output'], field_type)
     lda_entry= {
       # params
       'train_width': train_width,
@@ -109,9 +116,12 @@ def update_yaml_for_lda(yaml_content, out_dir, train_width, n_factor):
       'cbar': cbar_fn,
       'report': rep_fn,
     }
-    yaml_content['output']['lda'].append(lda_entry)
+    if field_type == "list":
+      yaml_content['output']['lda'].append(lda_entry)
+    elif field_type == "dict":
+      yaml_content['output']['lda'] = lda_entry
 
-def update_yaml_for_transform(yaml_content, out_dir, train_width, n_factor, fit_width, anchor_res):
+def update_yaml_for_transform(yaml_content, out_dir, train_width, n_factor, fit_width, anchor_res, field_type):
   # prefix
   prefix      = f"nF{n_factor}.d_{train_width}.prj_{fit_width}.r_{anchor_res}"
   color_prefix  = f"nF{n_factor}.d_{train_width}"
@@ -124,7 +134,7 @@ def update_yaml_for_transform(yaml_content, out_dir, train_width, n_factor, fit_
   cbar_fn     = f"{color_prefix}.cbar.png"
   rep_fn      = f"{prefix}.factor.info.html"
   if files_existence_by_fn([fitres_fn, rgb_fn, de_fn, coarse_fn, top_fn, cbar_fn, rep_fn], out_dir):
-    valid_yaml_field('transform', yaml_content['output'], "list")
+    valid_yaml_field('transform', yaml_content['output'], field_type)
     transform_entry= {
       # params
       'train_width': train_width,
@@ -141,9 +151,12 @@ def update_yaml_for_transform(yaml_content, out_dir, train_width, n_factor, fit_
       'cbar': cbar_fn,
       'report': rep_fn,
     }
-    yaml_content['output']['transform'].append(transform_entry)
+    if field_type == "list":
+      yaml_content['output']['transform'].append(transform_entry)
+    elif field_type == "dict":
+      yaml_content['output']['transform'] = transform_entry
 
-def update_yaml_for_decode(yaml_content, out_dir, train_width, n_factor, fit_width, anchor_res, radius):
+def update_yaml_for_decode(yaml_content, out_dir, train_width, n_factor, fit_width, anchor_res, radius, field_type):
   # prefix
   prefix        = f"nF{n_factor}.d_{train_width}.decode.prj_{fit_width}.r_{anchor_res}_{radius}"
   color_prefix  = f"nF{n_factor}.d_{train_width}"
@@ -155,7 +168,7 @@ def update_yaml_for_decode(yaml_content, out_dir, train_width, n_factor, fit_wid
   cbar_fn     = f"{color_prefix}.cbar.png"
   rep_fn      = f"{prefix}.factor.info.html"
   if files_existence_by_fn([pixel_fn, rgb_fn, de_fn], out_dir):
-    valid_yaml_field('decode', yaml_content['output'], "list")
+    valid_yaml_field('decode', yaml_content['output'], field_type)
     decode_entry= {
       # params
       'train_width': train_width,
@@ -172,7 +185,10 @@ def update_yaml_for_decode(yaml_content, out_dir, train_width, n_factor, fit_wid
       'cbar': cbar_fn,
       'report': rep_fn,
     }
-    yaml_content['output']['decode'].append(decode_entry)
+    if field_type == "list":
+      yaml_content['output']['decode'].append(decode_entry)
+    elif field_type == "dict":
+      yaml_content['output']['decode'] = decode_entry
 
 # for existing files
 def extract_chars_from_existing(out_dir, regex, fn_pattern):
@@ -184,20 +200,20 @@ def extract_chars_from_existing(out_dir, regex, fn_pattern):
     ]
     return charlist
 
-def update_yaml_for_existing(yaml_content, out_dir):
+def update_yaml_for_existing(yaml_content, out_dir, field_type="list"):
   lda_charlist = extract_chars_from_existing(out_dir, regex=re.compile(r"nF(\d+)\.d_(\d+)\.fit_result\.tsv\.gz"), fn_pattern="nF*.d_*.fit_result.tsv.gz",)
   if len(lda_charlist) > 0:
     for train_width, n_factor in lda_charlist:
-      update_yaml_for_hexagon(yaml_content, out_dir, train_width)
-      update_yaml_for_lda(yaml_content, out_dir, train_width, n_factor)
+      update_yaml_for_hexagon(yaml_content, out_dir, train_width, field_type)
+      update_yaml_for_lda(yaml_content, out_dir, train_width, n_factor, field_type)
   tsf_charlist = extract_chars_from_existing(out_dir, regex=re.compile(r"nF(\d+)\.d_(\d+)\.prj_(\d+)\.r_(\d+)\.fit_result\.tsv\.gz"), fn_pattern="nF*.d_*.prj_*.r_*.fit_result.tsv.gz")
   if len(tsf_charlist) > 0:
     for train_width, n_factor, fit_width, anchor_res in tsf_charlist:
-      update_yaml_for_transform(yaml_content, out_dir, train_width, n_factor, fit_width, anchor_res)
+      update_yaml_for_transform(yaml_content, out_dir, train_width, n_factor, fit_width, anchor_res, field_type)
   dc_charlist = extract_chars_from_existing(out_dir, regex=re.compile(r"nF(\d+)\.d_(\d+)\.decode\.prj_(\d+)\.r_(\d+)_(\d+)\.fit_result\.tsv\.gz"), fn_pattern="nF*.d_*.decode.prj_*.r_*.fit_result.tsv.gz")
   if len(dc_charlist) > 0:
     for train_width, n_factor, fit_width, anchor_res, radius in dc_charlist:
-      update_yaml_for_decode(yaml_content, out_dir, train_width, n_factor, fit_width, anchor_res, radius)
+      update_yaml_for_decode(yaml_content, out_dir, train_width, n_factor, fit_width, anchor_res, radius, field_type)
 
 def write_yaml_for_ficture(_args):
     args = parse_arguments(_args)
@@ -225,12 +241,13 @@ def write_yaml_for_ficture(_args):
     update_yaml_for_input(yaml_content, args)
     if not args.all_ficture:
       # update the yaml output field
-      update_yaml_for_hexagon(yaml_content, args.out_dir, args.train_width)
-      update_yaml_for_lda(yaml_content, args.out_dir, args.train_width, args.n_factor)
-      update_yaml_for_transform(yaml_content, args.out_dir, args.train_width, args.n_factor, args.fit_width, args.anchor_res)
-      update_yaml_for_decode(yaml_content, args.out_dir, args.train_width, args.n_factor, args.fit_width, args.anchor_res, radius)
+      update_yaml_for_hexagon(yaml_content, args.out_dir, args.train_width, args.field_type)
+      update_yaml_for_lda(yaml_content, args.out_dir, args.train_width, args.n_factor, args.field_type)
+      update_yaml_for_transform(yaml_content, args.out_dir, args.train_width, args.n_factor, args.fit_width, args.anchor_res, args.field_type)
+      update_yaml_for_decode(yaml_content, args.out_dir, args.train_width, args.n_factor, args.fit_width, args.anchor_res, radius, args.field_type)
     else:
-      update_yaml_for_existing(yaml_content, args.out_dir)
+      print("Given --all-ficture, define the output structure as list")
+      update_yaml_for_existing(yaml_content, args.out_dir, "list")
     # write yaml
     yaml_content_str = yaml.dump(yaml_content, sort_keys=False, default_flow_style=False)
     with open(args.out_yaml, 'w') as file:
