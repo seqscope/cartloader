@@ -56,7 +56,9 @@ def ini_yaml(args):
   'data_id': args.data_id,
   'platform': args.platform,
   'input': {},
-  'output': {},
+  'output': {
+    "directory": args.out_dir,
+  },
   }
   return yaml_content
 
@@ -108,12 +110,12 @@ def update_yaml_for_lda(yaml_content, out_dir, train_width, n_factor, field_type
       'n_factor': n_factor,
       # the deployed results in novaflow
       'fit_results': fitres_fn, 
-      'cmap': rgb_fn, 
-      'de': de_fn,
+      'color_map': rgb_fn, 
+      'marker_genes': de_fn,
       # other results may be useful
-      'coarse': coarse_fn,
-      'top': top_fn,
-      'cbar': cbar_fn,
+      'coarse_figure': coarse_fn,
+      'top_coarse_figure': top_fn,
+      'color_bar': cbar_fn,
       'report': rep_fn,
     }
     if field_type == "list":
@@ -140,15 +142,15 @@ def update_yaml_for_transform(yaml_content, out_dir, train_width, n_factor, fit_
       'train_width': train_width,
       'n_factor': n_factor,
       'fit_width': fit_width,
-      'anchor_res': anchor_res,
+      'anchor_distance': anchor_res,
       # the deployed results in novaflow
       'fit_results': fitres_fn, 
-      'cmap': rgb_fn, 
-      'de': de_fn,
+      'color_map': rgb_fn, 
+      'marker_genes': de_fn,
       # other results may be useful
-      'coarse': coarse_fn,
-      'top': top_fn,
-      'cbar': cbar_fn,
+      'coarse_figure': coarse_fn,
+      'top_coarse_figure': top_fn,
+      'color_bar': cbar_fn,
       'report': rep_fn,
     }
     if field_type == "list":
@@ -161,28 +163,28 @@ def update_yaml_for_decode(yaml_content, out_dir, train_width, n_factor, fit_wid
   prefix        = f"nF{n_factor}.d_{train_width}.decode.prj_{fit_width}.r_{anchor_res}_{radius}"
   color_prefix  = f"nF{n_factor}.d_{train_width}"
   # fn
-  pixel_fn    = f"{prefix}.pixel.sorted.tsv.gz"
-  de_fn       = f"{prefix}.bulk_chisq.tsv"
-  pixel_fn    = f"{prefix}.pixel.png"
-  rgb_fn      = f"{color_prefix}.rgb.tsv"
-  cbar_fn     = f"{color_prefix}.cbar.png"
-  rep_fn      = f"{prefix}.factor.info.html"
-  if files_existence_by_fn([pixel_fn, rgb_fn, de_fn], out_dir):
+  pixel_tsv_fn = f"{prefix}.pixel.sorted.tsv.gz"
+  de_fn        = f"{prefix}.bulk_chisq.tsv"
+  pixel_fig_fn = f"{prefix}.pixel.png"
+  rgb_fn       = f"{color_prefix}.rgb.tsv"
+  cbar_fn      = f"{color_prefix}.cbar.png"
+  rep_fn       = f"{prefix}.factor.info.html"
+  if files_existence_by_fn([pixel_tsv_fn, rgb_fn, de_fn, pixel_fig_fn, cbar_fn, rep_fn], out_dir):
     valid_yaml_field('decode', yaml_content['output'], field_type)
     decode_entry= {
       # params
       'train_width': train_width,
       'n_factor': n_factor,
       'fit_width': fit_width,
-      'anchor_res': anchor_res,
-      'radius': radius,
+      'anchor_distance': anchor_res,
+      'neighbor_radius': radius,
       # the deployed results in novaflow
-      'pixel_sorted': pixel_fn, 
-      'cmap': rgb_fn, 
-      'de': de_fn,
+      'pixel_sorted': pixel_tsv_fn, 
+      'color_map': rgb_fn, 
+      'marker_genes': de_fn,
       # other results may be useful
-      'pixel': pixel_fn,
-      'cbar': cbar_fn,
+      'pixel_figure': pixel_fig_fn,
+      'color_bar': cbar_fn,
       'report': rep_fn,
     }
     if field_type == "list":
@@ -234,6 +236,9 @@ def write_yaml_for_ficture(_args):
     if os.path.exists(args.out_yaml) and args.append:
       with open(args.out_yaml, 'r') as rf:
         yaml_content = yaml.load(rf, Loader=yaml.FullLoader)
+      # if directory field is not in the output field, add it
+      if 'directory' not in yaml_content['output']:
+        yaml_content['output']['directory'] = args.out_dir
     else:
       warnings.warn(f"File {args.out_yaml} exists. Overwriting the file...")
       yaml_content = ini_yaml(args)

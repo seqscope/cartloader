@@ -213,7 +213,8 @@ def run_ficture(_args):
             feature_arg = f"--feature {args.in_feature}" if args.in_feature is not None else ""
             for n_factor in n_factors:
                 # prefix
-                lda_prefix=f"{args.out_dir}/nF{n_factor}.d_{train_width}"
+                lda_basename=f"nF{n_factor}.d_{train_width}"
+                lda_prefix=os.path.join(args.out_dir, lda_basename)
                 # 1) fit model
                 cmds = cmd_separator([], f"Creating LDA for {train_width}um and {n_factor} factors...")
                 cmds.append(f"ficture fit_model --input {hexagon} --output {lda_prefix} {feature_arg} --nFactor {n_factor} --epoch {args.train_epoch} --epoch_id_length {args.train_epoch_id_len} --unit_attr X Y --key {args.key_col} --min_ct_per_feature {args.min_ct_feature} --test_split 0.5 --R {args.lda_rand_init} --thread {args.threads}")
@@ -227,7 +228,6 @@ def run_ficture(_args):
                 # 4) DE
                 cmds.append(f"ficture de_bulk --input {lda_prefix}.posterior.count.tsv.gz --output {lda_prefix}.bulk_chisq.tsv --min_ct_per_feature {args.min_ct_feature} --max_pval_output {args.de_max_pval} --min_fold_output {args.de_min_fold} --thread {args.threads}")
                 # 5) report
-                lda_basename=os.path.basename(lda_prefix)
                 cmds.append(f"ficture factor_report --path {args.out_dir} --pref {lda_basename} --color_table {cmap}")
                 # done & target
                 cmds.append(f"[ -f {lda_fit_tsv} ] && [ -f {cmap} ] && [ -f {lda_prefix}.coarse.png ] && [ -f {lda_prefix}.model_matrix.tsv.gz ] && [ -f {lda_prefix}.bulk_chisq.tsv ] && [ -f {lda_prefix}.factor.info.html ] && touch {lda_prefix}.done")
@@ -294,7 +294,6 @@ fi
                     fit_widths = [train_width]
                 else:
                     fit_widths = [float(x) for x in args.fit_width.split(",")]
-
                 for fit_width in fit_widths:
                     # params
                     fit_nmove = int(fit_width / args.anchor_res)
@@ -302,9 +301,10 @@ fi
                     fit_fillr = int(args.anchor_res//2+1)
                     radius = args.anchor_res + 1
                     # prefix 
-                    tsf_prefix = f"{args.out_dir}/{model_id}.{anchor_info}"
+                    tsf_basename=f"{model_id}.{anchor_info}"
+                    tsf_prefix = os.path.join(args.out_dir, tsf_basename)
                     decode_basename=f"{model_id}.decode.{anchor_info}_{radius}"
-                    decode_prefix=f"{args.out_dir}/{decode_basename}"
+                    decode_prefix = os.path.join(args.out_dir, decode_basename)
                     # files
                     tsf_fitres=f"{tsf_prefix}.fit_result.tsv.gz"
                     decode_spixel=f"{decode_prefix}.pixel.sorted.tsv.gz"
@@ -314,7 +314,6 @@ fi
                     # - transform-DE
                     cmds.append(f"ficture de_bulk --input {tsf_prefix}.posterior.count.tsv.gz --output {tsf_prefix}.bulk_chisq.tsv --min_ct_per_feature {args.min_ct_feature} --max_pval_output {args.de_max_pval} --min_fold_output {args.de_min_fold} --thread {args.threads}")
                     # - transform-report
-                    tsf_basename=os.path.basename(tsf_prefix)
                     cmds.append(f"ficture factor_report --path {args.out_dir} --pref {tsf_basename} --color_table {cmap}")
                     # - transform-coarse-plot (add this step to be consistent with Scopeflow and NEDA)
                     cmds.append(f"ficture plot_base --input {tsf_prefix}.fit_result.tsv.gz --output {tsf_prefix}.coarse --fill_range {fit_fillr} --color_table {cmap} --plot_um_per_pixel {args.fit_plot_um_per_pixel} --plot_discretized")
@@ -345,25 +344,39 @@ fi
         ans_description=["platform", "data_id"]
         aux_argset = set(item for lst in [ans_description] for item in lst)
         for train_width in train_widths:
+            #print(f"trainwidth: {train_width}")
             for n_factor in n_factors:
+                #print(f"n_factor: {n_factor}")
                 if args.fit_width is None:
                     fit_widths = [train_width]
                 else:
                     fit_widths = [float(x) for x in args.fit_width.split(",")]
+                #print(f"fit_widths: {fit_widths}")
                 for fit_width in fit_widths:
+                    # params
                     radius = args.anchor_res + 1
-                    out_yaml = os.path.join(args.out_dir, f"ficture.nF{args.n_factor}.d_{args.train_width}.decode.prj_{fit_width}.r_{args.anchor_res}_{radius}.yaml") 
+                    model_id = f"nF{n_factor}.d_{train_width}"
+                    anchor_info = f"prj_{fit_width}.r_{args.anchor_res}"
+                    # basenames
+                    tsf_basename = f"{model_id}.{anchor_info}"
+                    decode_basename = f"{model_id}.decode.{anchor_info}_{radius}"
+                    # out_yaml
+                    out_yaml = os.path.join(args.out_dir, f"ficture.{decode_basename}.yaml") 
+                    # cmds
                     cmds = cmd_separator([], f"Summarizing output into {out_yaml} files...")
                     yaml_cmds=f"cartloader write_yaml_for_ficture --out-dir {args.out_dir} --out-yaml {out_yaml} --in-transcript {args.in_transcript} --in-cstranscript {args.in_cstranscript} --in-minmax {args.in_minmax} --in-feature {args.in_feature} --train-width {train_width} --n-factor {n_factor} --fit-width {fit_width} --anchor-res {args.anchor_res} "
                     yaml_cmds = add_param_to_cmd(yaml_cmds, args, aux_argset)
                     cmds.append(yaml_cmds)
+                    # prerequisities
                     prerequisities = []
                     if args.segment:
                         prerequisities.append(f"{args.out_dir}/hexagon.d_{train_width}.tsv.gz")
                     if args.lda:
-                        prerequisities.append(f"{args.out_dir}/nF{n_factor}.d_{train_width}.done")
+                        prerequisities.append(f"{args.out_dir}/{model_id}.done")
                     if args.decode:
-                        prerequisities.append(f"{args.out_dir}/{model_id}.decode.prj_{fit_width}.r_{args.anchor_res}_{radius}.done")
+                        prerequisities.append(f"{args.out_dir}/{tsf_basename}.done")
+                        prerequisities.append(f"{args.out_dir}/{decode_basename}.done")
+                    #print(f"prerequisities: {prerequisities}")
                     mm.add_target(out_yaml, prerequisities, cmds)
 
     if len(mm.targets) == 0:
