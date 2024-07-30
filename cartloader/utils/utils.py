@@ -95,3 +95,19 @@ def find_major_axis(filename, format):
         return "X"
     else:
         return "Y"
+    
+def add_param_to_cmd(cmd, args, aux_argset):
+    aux_args = {k: v for k, v in vars(args).items() if k in aux_argset}
+    for arg, value in aux_args.items():
+        if value or isinstance(value, bool):
+            arg_name = arg.replace('_', '-')
+            if isinstance(value, bool) and value:
+                cmd += f" --{arg_name}"
+            elif isinstance(value, list):
+                cmd += f" --{arg_name} {' '.join(value)}"
+            elif not isinstance(value, bool):
+                if "regex" in arg_name:
+                    cmd += f" --{arg_name} '{value}'"
+                else:
+                    cmd += f" --{arg_name} {value}"
+    return cmd

@@ -1,3 +1,5 @@
+# !!! This script is not yet finished & implemented !!
+
 import sys, os, gzip, argparse, logging, warnings, shutil, re, copy, time, pickle, inspect, warnings, yaml
 from cartloader.utils.minimake import minimake
 from cartloader.utils.utils import cmd_separator, scheck_app
@@ -49,7 +51,7 @@ def ini_yaml(_args):
     }
     return yaml_content
 
-def write_yaml(_args):
+def write_yaml_for_zenodo(_args):
     args = parse_arguments(_args)
     # in/out
     assert os.path.exists(args.out_dir), "Provide a valid output directory"
@@ -63,10 +65,7 @@ def write_yaml(_args):
     de_list = []
     hex_df = []
     pixel_df = []
-
-
-
-    for lda_id in args.lda_ids:
+    #for lda_id in args.lda_ids:
 
 
 
