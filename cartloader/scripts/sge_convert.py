@@ -1,4 +1,4 @@
-import sys, os, gzip, argparse, logging, warnings, shutil, re, copy, time, pickle, inspect, warnings, json
+import sys, os, gzip, argparse, logging, warnings, shutil, re, copy, time, pickle, inspect, warnings, json, yaml
 import pandas as pd
 from cartloader.utils.minimake import minimake
 from cartloader.utils.utils import cmd_separator, scheck_app, add_param_to_cmd
@@ -22,20 +22,21 @@ def parse_arguments(_args):
     run_params.add_argument('--restart', action='store_true', default=False, help='Restart the run. Ignore all intermediate files and start from the beginning (default: False)')
     run_params.add_argument('--threads', type=int, default=1, help='Maximum number of threads to use in each process (default: 1)')
     run_params.add_argument('--n-jobs', '-j', type=int, default=1, help='Number of jobs (processes) to run in parallel (default: 1)')
-    run_params.add_argument('--makefn', type=str, default="Makefile", help='The file name of the Makefile to generate (default: Makefile)')
+    run_params.add_argument('--makefn', type=str, default="sge_convert.mk", help='The file name of the Makefile to generate (default: sge_convert.mk)')
     
     # Key params
     key_params = parser.add_argument_group(
         "Key Parameters", 
         """
+        Parameters to specify platform, units per um, and precision for the output files.
         Two ways to specify the conversion from units to micrometers:
         1) Use --units-per-um directly.
-        2) For 10x_visium_hd datasets, use --units-per-um-from-json to calculate the units per um from a scale json file, which should be provided via --scale-json.
+        2) For 10x_visium_hd datasets, use --scale-json to provide a scale json valid file to calculate the units per um.
         """)
     key_params.add_argument('--platform', type=str, choices=["10x_visium_hd", "10x_xenium", "bgi_stereoseq", "cosmx_smi", "vizgen_merscope", "pixel_seq"], required=True, help='Platform of the raw input file to infer the format of the input file.')
     key_params.add_argument('--units-per-um', type=float, default=1.00, help='Coordinate unit per um (conversion factor) (default: 1.00)') 
-    key_params.add_argument('--units-per-um-from-json', action='store_true', default=False, help='Use the microns_per_pixel value from the json file to calculate the units per um (default: False). This is only applicable for 10x_visium_hd datasets. When enabled, the --units-per-um value will be ignored, and use --scale-json to indicate the input json file.')
-    key_params.add_argument('--scale-json', type=str, default="scalefactors_json.json", help="If --units-per-um-from-json is enabled, provide the path to the input json file for calculating units-per-um. Required for 10x_visium_hd platform (default: scalefactors_json.json)")
+    #key_params.add_argument('--units-per-um-from-json', action='store_true', default=False, help='For 10x_visium_hd datasets, cartloader support interpret the units per um from the json file (default: False). When enabled, the --units-per-um value will be ignored, and use --scale-json to indicate the input json file.')
+    key_params.add_argument('--scale-json', type=str, default=None, help="For 10x_visium_hd datasets, users could use --scale-json to provide the path to the scale json file for calculating units-per-um (default: None). Typical naming convention: scalefactors_json.json")
     key_params.add_argument('--precision-um', type=int, default=2, help='Number of digits to store the transcript coordinates (only if --px_to_um is in use). Set it to 0 to round to integer (default: 2)')
     
     # Output dir/file params
@@ -116,22 +117,22 @@ def parse_arguments(_args):
     aux_output_params.add_argument('--colname-feature-name', type=str, default='gene', help='Column name for feature/gene name (default: gene)')
     aux_output_params.add_argument('--colname-feature-id', type=str, default=None, help='Column name for feature/gene ID. This is only required when --csv-colname-feature-id or --print-feature-id is applied (default: None)') 
 
-    # Aux other params
+    # Aux gene-filtering params
     aux_ftrfilter_params = parser.add_argument_group(
         "Feature Filtering Auxiliary Parameters", 
         """
-        Auxiliary parameters for filtering feature by feature name or feature type using an additional file or a substring or a regex pattern.
-        1) Use --*-feature-list, --*-feature-substr, and --*-feature-regex parameters to exclude or include the input data based on the feature name.
-        2) Use --*-feature-type-regex along with --csv-colname-genetype or --genetype-ref to filter the input data based on the feature type. 
+        Auxiliary parameters for filtering features by their name or type using an additional file, substring, or regex pattern:
+        1) Use the ---feature-list, ---feature-substr, and --*-feature-regex parameters to exclude or include input data based on feature names.
+        2) Use the --*-feature-type-regex parameter in conjunction with --csv-colname-feature-type or --feature-type-ref to filter input data based on feature type.
         """)
     aux_ftrfilter_params.add_argument('--include-feature-list', type=str, default=None, help='A file containing a list of input genes to be included (feature name of IDs) (default: None)')
     aux_ftrfilter_params.add_argument('--exclude-feature-list', type=str, default=None, help='A file containing a list of input genes to be excluded (feature name of IDs) (default: None)')
     aux_ftrfilter_params.add_argument('--include-feature-substr', type=str, default=None, help='A substring of feature/gene names to be included (default: None)')
     aux_ftrfilter_params.add_argument('--exclude-feature-substr', type=str, default=None, help='A substring of feature/gene names to be excluded (default: None)')
     aux_ftrfilter_params.add_argument('--include-feature-regex', type=str, default=None, help='A regex pattern of feature/gene names to be included (default: None)')
-    aux_ftrfilter_params.add_argument('--exclude-feature-regex', type=str, default="BLANK\|NegCon\|NegPrb", help='A regex pattern of feature/gene names to be excluded (default: None)')
-    aux_ftrfilter_params.add_argument('--include-feature-type-regex', type=str, default=None, help='A regex pattern of feature/gene type to be included (default: None).') # (e.g. protein_coding|lncRNA)
-    aux_ftrfilter_params.add_argument('--csv-colname-feature-type', type=str, default=None, help='The input column name in the input that corresponding to the gene type information, if your input file has gene type information(default: None)')
+    aux_ftrfilter_params.add_argument('--exclude-feature-regex', type=str, default="^(BLANK|NegCon|NegPrb)", help='A regex pattern of feature/gene names to be excluded (default: "^(BLANK|NegCon|NegPrb)"). To avoid filtering features by name using regex, use --exclude-feature-regex "". ')
+    aux_ftrfilter_params.add_argument('--include-feature-type-regex', type=str, default=None, help='A regex pattern of feature/gene type to be included (default: None). To enable filtering genes by gene types, users must specify --csv-colname-feature-type or --feature-type-ref to provide gene type information') # (e.g. protein_coding|lncRNA)
+    aux_ftrfilter_params.add_argument('--csv-colname-feature-type', type=str, default=None, help='The input column name in the input that corresponding to the gene type information, if your input file has gene type information (default: None)')
     aux_ftrfilter_params.add_argument('--feature-type-ref', type=str, default=None, help='Specify the path to a tab-separated gene information reference file to provide gene type information. The format should be: chrom, start position, end position, gene id, gene name, gene type (default: None)')
 
     # env params
@@ -142,9 +143,7 @@ def parse_arguments(_args):
     
     # not in use 
     #aux_ftrfilter_params.add_argument('--unique', action='store_true', default=False, help='Merge pixels with (almost?) identical coordinates. Applies to cosmx_smi only.')
-    #bas_params.add_argument('--dummy-genes', type=str, default="BLANK\|NegCon\|NegPrb", help='Name of the negative controls, could pass regex to match multiple name patterns.')
-    #aux_output_params.add_argument('--colname-molecule-id', type=str, default=None, help='Specify the output column name for molecule ID. If provided, the molecule ID will be added to the output file (default: None)')
-
+ 
     if len(_args) == 0:
         parser.print_help()
         sys.exit(1)
@@ -181,7 +180,8 @@ def extract_unit2px_from_json(scale_json):
     # purpose: Extract the microns per pixel value from the scale json file and calculate the units per um.
     print(f"As --units-per-um-from-json is enabled, calculating units per um based on the microns per pixel value...")
     assert os.path.exists(scale_json), f"The scale json file ({scale_json}) does not exist. Please provide the correct path using --scale-json."
-    scale_data = json.loads(scale_json)
+    with open(scale_json, 'r') as file:
+        scale_data = json.load(file)
     # Extract the value for 'microns_per_pixel'
     microns_per_pixel = scale_data['microns_per_pixel']
     # microns_per_pixel cannot be NA or zero
@@ -226,7 +226,7 @@ def convert_visiumhd(cmds, args):
     # 1) --in_parquet: convert parquet to csv
     cmds.append(f"{args.parquet_tools} csv {args.in_parquet} |  {args.gzip} -c > {tmp_parquet}")
     # 2) --scale_json: if applicable
-    if args.units_per_um_from_json:
+    if args.scale_json is not None:
         args.units_per_um = extract_unit2px_from_json(args.scale_json)
     # 3) --included_feature_type_regex
     if args.include_feature_type_regex is not None:
@@ -324,6 +324,8 @@ def convert_tsv(cmds, args):
 def sge_convert(_args):
     # args
     args=parse_arguments(_args)
+    if args.exclude_feature_regex == "":
+        args.exclude_feature_regex = None
     scheck_app(args.gzip)
     # input
     in_raw_filelist=convert_in_by_platform(args)
@@ -350,6 +352,8 @@ def sge_convert(_args):
         print(f"To execute the pipeline, run the following command:\nmake -f {args.out_dir}/{args.makefn} -j {args.n_jobs}")
     else:
         os.system(f"make -f {args.out_dir}/{args.makefn} -j {args.n_jobs}")
+    ## tbc: add a slurm version?
+
 
 if __name__ == "__main__":
     # get the cartloader path

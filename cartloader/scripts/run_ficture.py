@@ -14,17 +14,18 @@ def parse_arguments(_args):
     cmd_params.add_argument('--segment', action='store_true', default=False, help='Perform hexagon segmentation into FICTURE-compatible format')
     cmd_params.add_argument('--lda', action='store_true', default=False, help='Perform LDA model training')
     cmd_params.add_argument('--decode', action='store_true', default=False, help='Perform pixel-level decoding')
-    cmd_params.add_argument('--summary', action='store_true', default=False, help='Generate a summary yaml file')
+    cmd_params.add_argument('--summary', action='store_true', default=False, help='Generate a YAML file summarizing all fixture parameters for which outputs are available in the <out-dir>.')
 
     run_params = parser.add_argument_group("Run Options", "Run options for FICTURE commands")
     run_params.add_argument('--dry-run', action='store_true', default=False, help='Dry run. Generate only the Makefile without running it')
     run_params.add_argument('--restart', action='store_true', default=False, help='Restart the run. Ignore all intermediate files and start from the beginning')
     run_params.add_argument('--threads', type=int, default=1, help='Maximum number of threads to use in each process')
     run_params.add_argument('--n-jobs', type=int, default=1, help='Number of jobs (processes) to run in parallel')
-    run_params.add_argument('--makefn', type=str, default="Makefile", help='The name of the Makefile to generate')
+    run_params.add_argument('--makefn', type=str, default="run_ficture.mk", help='The name of the Makefile to generate (default: run_ficture.mk)')
 
     key_params = parser.add_argument_group("Key Parameters", "Key parameters that requires user's attention")
     key_params.add_argument('--out-dir', required= True, type=str, help='Output directory')
+    key_params.add_argument('--out-yaml', type=str, default=None, help="Output YAML file for summarizing the ficture parameters. Default: <out-dir>/ficture.params.yaml ")
     key_params.add_argument('--in-transcript', type=str, default=None, help='Input unsorted transcript-indexed SGE file in TSV format. Default to transcripts.unsorted.tsv.gz in the output directory')
     key_params.add_argument('--in-cstranscript', type=str, default=None, help='(Optional) If a coordinate-sorted transcript-indexed SGE file (sorted by x and y coordinates) exists, specify it by --in-cstranscript to skip the sorting step. Default to transcripts.sorted.tsv.gz in the output directory')
     key_params.add_argument('--in-minmax', type=str, default=None, help='Input coordinate minmax TSV file. Default to coordinate_minmax.tsv in the output directory')
@@ -64,9 +65,9 @@ def parse_arguments(_args):
     aux_params.add_argument('--lda-plot-um-per-pixel', type=float, default=1, help='Image resolution for LDA plot')
     aux_params.add_argument('--fit-plot-um-per-pixel', type=float, default=1, help='Image resolution for fit coarse plot')   # in Scopeflow, this is set to 2
     aux_params.add_argument('--decode-plot-um-per-pixel', type=float, default=0.5, help='Image resolution for pixel decoding plot')
-    # summary yaml params
-    aux_params.add_argument('--platform', type=str, default=None, help='Provide the information of platform to be added in the summary yaml file')
-    aux_params.add_argument('--data-id', type=str, default=None, help='Provide a data id or description to be added in the summary yaml file')
+    # # yaml params
+    # aux_params.add_argument('--platform', type=str, default=None, help='Provide the information of platform to be added in the --summary file')
+    # aux_params.add_argument('--data-id',  type=str, default=None,  help='Provide a data id or description to be added in the --summary file')
     # applications
     aux_params.add_argument('--bgzip', type=str, default="bgzip", help='Path to bgzip binary. For faster processing, use "bgzip -@ 4')
     aux_params.add_argument('--tabix', type=str, default="tabix", help='Path to tabix binary')
@@ -340,18 +341,16 @@ fi
                     mm.add_target(f"{decode_prefix}.done", [batch_mat, f"{lda_prefix}.done"], cmds)
 
     if args.summary:
-        # arg names (aux)
-        ans_description=["platform", "data_id"]
-        aux_argset = set(item for lst in [ans_description] for item in lst)
+        #
+        out_yaml = os.path.join(args.out_dir, f"ficture.params.yaml") 
+        # collect prerequisities
+        prerequisities = []
         for train_width in train_widths:
-            #print(f"trainwidth: {train_width}")
             for n_factor in n_factors:
-                #print(f"n_factor: {n_factor}")
                 if args.fit_width is None:
                     fit_widths = [train_width]
                 else:
                     fit_widths = [float(x) for x in args.fit_width.split(",")]
-                #print(f"fit_widths: {fit_widths}")
                 for fit_width in fit_widths:
                     # params
                     radius = args.anchor_res + 1
@@ -360,15 +359,7 @@ fi
                     # basenames
                     tsf_basename = f"{model_id}.{anchor_info}"
                     decode_basename = f"{model_id}.decode.{anchor_info}_{radius}"
-                    # out_yaml
-                    out_yaml = os.path.join(args.out_dir, f"ficture.{decode_basename}.yaml") 
-                    # cmds
-                    cmds = cmd_separator([], f"Summarizing output into {out_yaml} files...")
-                    yaml_cmds=f"cartloader write_yaml_for_ficture --out-dir {args.out_dir} --out-yaml {out_yaml} --in-transcript {args.in_transcript} --in-cstranscript {args.in_cstranscript} --in-minmax {args.in_minmax} --in-feature {args.in_feature} --train-width {train_width} --n-factor {n_factor} --fit-width {fit_width} --anchor-res {args.anchor_res} "
-                    yaml_cmds = add_param_to_cmd(yaml_cmds, args, aux_argset)
-                    cmds.append(yaml_cmds)
                     # prerequisities
-                    prerequisities = []
                     if args.segment:
                         prerequisities.append(f"{args.out_dir}/hexagon.d_{train_width}.tsv.gz")
                     if args.lda:
@@ -376,8 +367,10 @@ fi
                     if args.decode:
                         prerequisities.append(f"{args.out_dir}/{tsf_basename}.done")
                         prerequisities.append(f"{args.out_dir}/{decode_basename}.done")
-                    #print(f"prerequisities: {prerequisities}")
-                    mm.add_target(out_yaml, prerequisities, cmds)
+        # cmds
+        cmds = cmd_separator([], f"Summarizing output into {out_yaml} files...")
+        cmds.append(f"cartloader write_yaml_for_ficture --out-dir {args.out_dir} --out-yaml {out_yaml}")
+        mm.add_target(out_yaml, prerequisities, cmds)
 
     if len(mm.targets) == 0:
         logging.error("There is no target to run. Please make sure that at least one run option was turned on")
