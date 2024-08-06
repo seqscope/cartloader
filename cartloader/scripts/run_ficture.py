@@ -14,7 +14,7 @@ def parse_arguments(_args):
     cmd_params.add_argument('--segment', action='store_true', default=False, help='Perform hexagon segmentation into FICTURE-compatible format')
     cmd_params.add_argument('--lda', action='store_true', default=False, help='Perform LDA model training')
     cmd_params.add_argument('--decode', action='store_true', default=False, help='Perform pixel-level decoding')
-    cmd_params.add_argument('--summary', action='store_true', default=False, help='Generate a YAML file summarizing all fixture parameters for which outputs are available in the <out-dir>.')
+    cmd_params.add_argument('--summary', action='store_true', default=False, help='Generate a JSON file summarizing all fixture parameters for which outputs are available in the <out-dir>.')
 
     run_params = parser.add_argument_group("Run Options", "Run options for FICTURE commands")
     run_params.add_argument('--dry-run', action='store_true', default=False, help='Dry run. Generate only the Makefile without running it')
@@ -25,7 +25,7 @@ def parse_arguments(_args):
 
     key_params = parser.add_argument_group("Key Parameters", "Key parameters that requires user's attention")
     key_params.add_argument('--out-dir', required= True, type=str, help='Output directory')
-    key_params.add_argument('--out-yaml', type=str, default=None, help="Output YAML file for summarizing the ficture parameters. Default: <out-dir>/ficture.params.yaml ")
+    key_params.add_argument('--out-json', type=str, default=None, help="Output JSON file for summarizing the ficture parameters. Default: <out-dir>/ficture.params.json ")
     key_params.add_argument('--in-transcript', type=str, default=None, help='Input unsorted transcript-indexed SGE file in TSV format. Default to transcripts.unsorted.tsv.gz in the output directory')
     key_params.add_argument('--in-cstranscript', type=str, default=None, help='(Optional) If a coordinate-sorted transcript-indexed SGE file (sorted by x and y coordinates) exists, specify it by --in-cstranscript to skip the sorting step. Default to transcripts.sorted.tsv.gz in the output directory')
     key_params.add_argument('--in-minmax', type=str, default=None, help='Input coordinate minmax TSV file. Default to coordinate_minmax.tsv in the output directory')
@@ -65,7 +65,7 @@ def parse_arguments(_args):
     aux_params.add_argument('--lda-plot-um-per-pixel', type=float, default=1, help='Image resolution for LDA plot')
     aux_params.add_argument('--fit-plot-um-per-pixel', type=float, default=1, help='Image resolution for fit coarse plot')   # in Scopeflow, this is set to 2
     aux_params.add_argument('--decode-plot-um-per-pixel', type=float, default=0.5, help='Image resolution for pixel decoding plot')
-    # # yaml params
+    # # json params
     # aux_params.add_argument('--platform', type=str, default=None, help='Provide the information of platform to be added in the --summary file')
     # aux_params.add_argument('--data-id',  type=str, default=None,  help='Provide a data id or description to be added in the --summary file')
     # applications
@@ -342,7 +342,7 @@ fi
 
     if args.summary:
         #
-        out_yaml = os.path.join(args.out_dir, f"ficture.params.yaml") 
+        out_json = os.path.join(args.out_dir, f"ficture.params.json") 
         # collect prerequisities
         prerequisities = []
         for train_width in train_widths:
@@ -368,9 +368,9 @@ fi
                         prerequisities.append(f"{args.out_dir}/{tsf_basename}.done")
                         prerequisities.append(f"{args.out_dir}/{decode_basename}.done")
         # cmds
-        cmds = cmd_separator([], f"Summarizing output into {out_yaml} files...")
-        cmds.append(f"cartloader write_yaml_for_ficture --out-dir {args.out_dir} --out-yaml {out_yaml}")
-        mm.add_target(out_yaml, prerequisities, cmds)
+        cmds = cmd_separator([], f"Summarizing output into {out_json} files...")
+        cmds.append(f"cartloader write_json_for_ficture --out-dir {args.out_dir} --out-json {out_json}")
+        mm.add_target(out_json, prerequisities, cmds)
 
     if len(mm.targets) == 0:
         logging.error("There is no target to run. Please make sure that at least one run option was turned on")

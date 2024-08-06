@@ -250,14 +250,14 @@ def update_csvformat_by_platform(args):
         "x":{
             "10x_xenium": "x_location",
             "bgi_stereoseq": "x",
-            "cosmx_smi": "x_local_px",
+            "cosmx_smi": "x_global_px",
             "vizgen_merscope": "global_x",
             "pixel_seq": "xcoord"
         },
         "y":{
             "10x_xenium": "y_location",
             "bgi_stereoseq": "y",
-            "cosmx_smi": "y_local_px",
+            "cosmx_smi": "y_global_px",
             "vizgen_merscope": "global_y",
             "pixel_seq": "ycoord"
         },
@@ -320,6 +320,10 @@ def convert_tsv(cmds, args):
     return cmds
 
 #================================================================================================
+#
+# main functions
+#
+#================================================================================================
 
 def sge_convert(_args):
     # args
@@ -346,14 +350,12 @@ def sge_convert(_args):
         logging.error("There is no target to run. Please make sure that at least one run option was turned on")
         sys.exit(1)
     mm.write_makefile(f"{args.out_dir}/{args.makefn}")
-    ## run makefile
+    # run makefile
     if args.dry_run:
         os.system(f"make -f {args.out_dir}/{args.makefn} -n")
         print(f"To execute the pipeline, run the following command:\nmake -f {args.out_dir}/{args.makefn} -j {args.n_jobs}")
     else:
         os.system(f"make -f {args.out_dir}/{args.makefn} -j {args.n_jobs}")
-    ## tbc: add a slurm version?
-
 
 if __name__ == "__main__":
     # get the cartloader path

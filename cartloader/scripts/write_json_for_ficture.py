@@ -7,9 +7,9 @@ def parse_arguments(_args):
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", 
                                      description="""
-                                     Write the YAML file for the parameters.""")
+                                     Write a JSON file to summarize the parameters.""")
     parser.add_argument('--out-dir', required= True, type=str, help='Output directory')
-    parser.add_argument('--out-yaml', type=str, default=None, help='The output YAML file summarizing the output files. Default: <out-dir>/ficture.params.yaml')
+    parser.add_argument('--out-json', type=str, default=None, help='Path to the output JSON file. Default: <out-dir>/ficture.params.json')
     
     if len(_args) == 0:
         parser.print_help()
@@ -100,10 +100,10 @@ def write_json(data, filename):
     with open(filename, 'w') as file:
         json.dump(data, file, indent=4, sort_keys=False)
 
-def write_yaml_for_ficture(_args):
+def write_json_for_ficture(_args):
     args = parse_arguments(_args)
-    if args.out_yaml is None:
-      args.out_yaml = os.path.join(args.out_dir, "ficture.params.yaml")
+    if args.out_json is None:
+      args.out_json = os.path.join(args.out_dir, "ficture.params.json")
     # Note we used de files here
     all_de_paths = os.path.join(args.out_dir, "*.bulk_chisq.tsv")
     all_de_fn = [os.path.basename(x) for x in glob.glob(all_de_paths)]
@@ -114,8 +114,8 @@ def write_yaml_for_ficture(_args):
     json_data = {
         "train_params": train_params
     }
-    write_json(json_data, args.out_yaml)
-    print(f'Data has been written to {args.out_yaml}')
+    write_json(json_data, args.out_json)
+    print(f'Data has been written to {args.out_json}')
 
 if __name__ == "__main__":
     # get the cartloader path
