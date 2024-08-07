@@ -86,6 +86,7 @@ def run_tsv2pmtiles(_args):
 
     # create output directory if needed
     out_dir = os.path.dirname(args.out_prefix)
+    out_base = os.path.basename(args.out_prefix)
     if not os.path.exists(out_dir):
         os.makedirs(out_dir, exist_ok=True)
     
@@ -178,7 +179,7 @@ def run_tsv2pmtiles(_args):
             logger.error("Error in splitting the input TSV file into CSV files")
             sys.exit(1)
 
-    # 3. clean the intermediate files
+    # 3. clean the intermediate files and write new output files
     if args.clean:
         logger.info("Cleaning intermediate files")
 
@@ -192,6 +193,10 @@ def run_tsv2pmtiles(_args):
             if os.path.exists(ftr_path):
                 os.remove(ftr_path)
 
+        df_out = df.drop(columns=['molecules_path','features_path'])
+        df_out['pmtiles_path'] = [f"{out_base}_all.pmtiles" if x == "all" else f"{out_base}_bin{x}.pmtiles" for x in df_out['bin_id']]
+        df_out.to_csv(f"{args.out_prefix}_pmtiles_index.tsv", sep="\t", index=False)
+    
     logger.info("Analysis Finished")
 
 if __name__ == "__main__":

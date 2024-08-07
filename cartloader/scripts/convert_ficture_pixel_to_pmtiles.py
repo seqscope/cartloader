@@ -125,7 +125,7 @@ def convert_ficture_pixel_to_pmtiles(_args):
 
     ## Remove the intermediate CSV file
     if not args.keep_intermediate_files:
-        logger.info("Removing the intermediate CSV file {args.out_prefix}{args.out_csv_suffix}...")
+        logger.info(f"Removing the intermediate CSV file {args.out_prefix}{args.out_csv_suffix}...")
         os.remove(f"{args.out_prefix}{args.out_csv_suffix}")
 
     logger.info("Analysis Finished")
