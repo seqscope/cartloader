@@ -235,12 +235,14 @@ def format_generic(_args):
         chunk=chunk[unit_info+[args.colnames_count]]
         # 3) replace NaN with a placeholder
         for col in chunk.columns:
-            chunk[col].fillna('NA', inplace=True)
+            #chunk[col].fillna('NA', inplace=True) # avoiding chained assignments due to FutureWarning
+            chunk[col] = chunk[col].fillna('NA')
         # 4) group by
         chunk = chunk.groupby(by = unit_info).agg({args.colnames_count:'sum'}).reset_index()
         # 5) replace back
         for col in chunk.columns:
-            chunk[col].replace('NA', np.nan, inplace=True)
+            #chunk[col].replace('NA', np.nan, inplace=True) # avoiding chained assignments due to FutureWarning
+            chunk[col] = chunk[col].replace('NA', np.nan)
         
         # write down
         chunk[oheader].to_csv(out_transcript_path, sep='\t',mode='a',index=False,header=False, float_format=float_format, na_rep="NA")
@@ -265,7 +267,7 @@ def format_generic(_args):
 
     # print out the removed features
     filtered_out_df = pd.concat(filtered_out_rows, ignore_index=True)
-    if args.print_removed_features:
+    if args.print_removed_transcripts:
         filtered_out_df.to_csv(os.path.join(args.out_dir, "filtered_out_transcripts.tsv"), sep='\t', index=False)
 
     # feature

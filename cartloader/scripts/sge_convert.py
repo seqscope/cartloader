@@ -105,8 +105,8 @@ def parse_arguments(_args):
     aux_in_csv_params.add_argument('--csv-colnames-count', type=str, default=None, help='Column name for gene id (e.g.: transcript_id). If not provided, a count of 1 will be added for a feature in a pixel (default: None)')
     aux_in_csv_params.add_argument('--csv-colname-feature-id', type=str, default=None, help='Column name for gene id (default: None)')
     aux_in_csv_params.add_argument('--csv-colnames-others', nargs='+', default=[], help='Columns names to keep (e.g., cell_id, overlaps_nucleus) (default: None)')
-    aux_in_csv_params.add_argument('--csv-colname-phredscore', type=str, default=None, help='Column name for Phred-scaled quality value (Q-Score) estimating the probability of incorrect call (default: qv for 10x_xenium and None for big_stereoseq/cosmx_smi/vizgen_merscope/pixel_seq).') # qv
-    aux_in_csv_params.add_argument('--min-phred-score', type=float, default=None, help='Specify the Phred-scaled quality score cutoff (default: 13 for 10x_xenium and None for big_stereoseq/cosmx_smi/vizgen_merscope/pixel_seq).') # ficture used 13
+    aux_in_csv_params.add_argument('--csv-colname-phredscore', type=str, default=None, help='Column name for Phred-scaled quality value (Q-Score) estimating the probability of incorrect call (default: qv for 10x_xenium and None for bgi_stereoseq/cosmx_smi/vizgen_merscope/pixel_seq).') # qv
+    aux_in_csv_params.add_argument('--min-phred-score', type=float, default=None, help='Specify the Phred-scaled quality score cutoff (default: 20 for 10x_xenium and None for bgi_stereoseq/cosmx_smi/vizgen_merscope/pixel_seq).') # ficture used 13
     aux_in_csv_params.add_argument('--add-molecule-id', action='store_true', default=False, help='If enabled, a column of "molecule_id" will be added to the output file to track the index of the original input will be stored in (default: False).')
 
    # AUX output params
@@ -125,6 +125,7 @@ def parse_arguments(_args):
         1) Use the ---feature-list, ---feature-substr, and --*-feature-regex parameters to exclude or include input data based on feature names.
         2) Use the --*-feature-type-regex parameter in conjunction with --csv-colname-feature-type or --feature-type-ref to filter input data based on feature type.
         """)
+    # regex: 
     aux_ftrfilter_params.add_argument('--include-feature-list', type=str, default=None, help='A file containing a list of input genes to be included (feature name of IDs) (default: None)')
     aux_ftrfilter_params.add_argument('--exclude-feature-list', type=str, default=None, help='A file containing a list of input genes to be excluded (feature name of IDs) (default: None)')
     aux_ftrfilter_params.add_argument('--include-feature-substr', type=str, default=None, help='A substring of feature/gene names to be included (default: None)')
@@ -134,6 +135,7 @@ def parse_arguments(_args):
     aux_ftrfilter_params.add_argument('--include-feature-type-regex', type=str, default=None, help='A regex pattern of feature/gene type to be included (default: None). To enable filtering genes by gene types, users must specify --csv-colname-feature-type or --feature-type-ref to provide gene type information') # (e.g. protein_coding|lncRNA)
     aux_ftrfilter_params.add_argument('--csv-colname-feature-type', type=str, default=None, help='The input column name in the input that corresponding to the gene type information, if your input file has gene type information (default: None)')
     aux_ftrfilter_params.add_argument('--feature-type-ref', type=str, default=None, help='Specify the path to a tab-separated gene information reference file to provide gene type information. The format should be: chrom, start position, end position, gene id, gene name, gene type (default: None)')
+    aux_ftrfilter_params.add_argument('--print-removed-transcripts', action='store_true', default=False, help='For debugging purposes, print the list of features removed based on the filtering criteria (default: False). Currently it only works for datasets from 10x_xenium, bgi_stereoseq, cosmx_smi, vizgen_merscope or pixel_seq.')
 
     # env params
     env_params = parser.add_argument_group("ENV Parameters", "Environment parameters for the tools.")
@@ -306,12 +308,13 @@ def convert_tsv(cmds, args):
         if args.csv_colname_phredscore is None:
             args.csv_colname_phredscore = "qv"
         if args.min_phred_score is None:
-            args.min_phred_score = 13
+            args.min_phred_score = 20
     # main commands
     transcript_tsv = args.out_transcript.replace(".gz", "")
     format_cmd=f"cartloader format_generic --input {args.in_csv} --out-dir {args.out_dir} --out-transcript {transcript_tsv} --out-feature {args.out_feature} --out-minmax {args.out_minmax}"
     # aux args
     aux_argset = set(item for lst in [ans_out, ans_incsv, ans_ftrname, ans_ftrtype] for item in lst)
+    aux_argset.add('print_removed_transcripts')
     format_cmd = add_param_to_cmd(format_cmd, args, aux_argset)
     # append to cmds
     cmds.append(format_cmd)
@@ -343,6 +346,7 @@ def sge_convert(_args):
         cmds = convert_visiumhd(cmds, args)
     elif args.platform in ["10x_xenium", "cosmx_smi", "bgi_stereoseq", "vizgen_merscope", "pixel_seq"]:
         cmds = convert_tsv(cmds, args)
+    #print(cmds)
     # mm
     mm = minimake()
     mm.add_target(args.out_transcript, in_raw_filelist, cmds) 

@@ -1,4 +1,4 @@
-import logging, os, shutil, sys, importlib, csv, yaml
+import logging, os, shutil, sys, importlib, csv, yaml, shlex
 
 def cmd_separator(cmds, info):
     """
@@ -96,6 +96,22 @@ def find_major_axis(filename, format):
     else:
         return "Y"
     
+# def add_param_to_cmd(cmd, args, aux_argset):
+#     aux_args = {k: v for k, v in vars(args).items() if k in aux_argset}
+#     for arg, value in aux_args.items():
+#         if value or isinstance(value, bool):
+#             arg_name = arg.replace('_', '-')
+#             if isinstance(value, bool) and value:
+#                 cmd += f" --{arg_name}"
+#             elif isinstance(value, list):
+#                 cmd += f" --{arg_name} {' '.join(value)}"
+#             elif not isinstance(value, bool):
+#                 if "regex" in arg_name:
+#                     cmd += f" --{arg_name} '{value}'"
+#                 else:
+#                     cmd += f" --{arg_name} {value}"
+#     return cmd
+
 def add_param_to_cmd(cmd, args, aux_argset):
     aux_args = {k: v for k, v in vars(args).items() if k in aux_argset}
     for arg, value in aux_args.items():
@@ -104,10 +120,12 @@ def add_param_to_cmd(cmd, args, aux_argset):
             if isinstance(value, bool) and value:
                 cmd += f" --{arg_name}"
             elif isinstance(value, list):
-                cmd += f" --{arg_name} {' '.join(value)}"
+                cmd += f" --{arg_name} {' '.join(map(str, value))}"
             elif not isinstance(value, bool):
+                # Ensure regex patterns are properly quoted
                 if "regex" in arg_name:
-                    cmd += f" --{arg_name} '{value}'"
+                    quoted_value = shlex.quote(str(value))
+                    cmd += f" --{arg_name} {quoted_value}"
                 else:
                     cmd += f" --{arg_name} {value}"
     return cmd

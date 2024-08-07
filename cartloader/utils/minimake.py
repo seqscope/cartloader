@@ -1,4 +1,4 @@
-import re, os, sys
+import re, os, sys, shlex
 
 class minimake:
     def __init__(self):
@@ -31,7 +31,14 @@ class minimake:
                 file.write(f"{target}: {' '.join(sources)}\n")
                 # Write each command prefixed by a tab character
                 for command in commands:
-                    file.write(f"\t{command}\n")
+                    #file.write(f"\t{command}\n")
+                    #update 20240807: Whenever the regex contains $, the Makefile cannot interpret $ properly because Make interprets special characters (used for referencing variables) and escapes them.
+                    #                 To escape the $ character, updated the function to double it ($$) so that Make interprets it as a literal $ character.
+                    if "regex" in command:
+                        escaped_command = command.replace('$', '$$')
+                        file.write(f"\t{escaped_command}\n")
+                    else:
+                        file.write(f"\t{command}\n")
                 file.write("\n")  # add a newline for readability between targets
 
 # Example usage
