@@ -64,7 +64,6 @@ def parse_arguments(_args):
     # - Arguments for other platforms
     input_params.add_argument('--in-csv', type=str, default=None, help='Path to the input raw CSV/TSV file. Required for 10x_xenium, bgi_stereoseq, cosmx_smi, vizgen_merscope, and pixel_seq platforms (default: None).')
 
-
     # AUX input SGE params
     aux_in_sge_params = parser.add_argument_group(
         "IN-SGE Auxiliary Parameters",
@@ -73,8 +72,7 @@ def parse_arguments(_args):
         1) Use --icol-* parameters to specify the column indices in the input SGE files.
         2) Use --pos-* parameters to specify the column names and the delimiter for an additional barcode position file when required.
         3) Use --print-feature-id and --allow-duplicate-gene-names to customize the output.
-        """
-    )
+        """)
     aux_in_sge_params.add_argument('--icols-mtx', type=str, default='1,2,3,4,5', help='Input column indices (comma-separated 1-based) in the SGE matrix file (default: 1,2,3,4,5).')
     aux_in_sge_params.add_argument('--icol-bcd-barcode', type=int, default=1, help='1-based column index of barcode in the SGE barcode file (default: 1).')
     aux_in_sge_params.add_argument('--icol-bcd-x', type=int, default=6, help='1-based column index of x coordinate in the SGE barcode file (default: 6).')
@@ -97,7 +95,6 @@ def parse_arguments(_args):
         2) Use --csv-colname-phredscore with --min-phred-score to filter the input data based on the Phred-scaled quality score.
         Please note --csv-columns-x, --csv-columns-y, --csv-columns-feature-name are mandatory when the input file is in CSV format.
         """)
-
     aux_in_csv_params.add_argument('--csv-delim', type=str, default=None, help='Delimiter for the additional input tsv/csv file. Required if not using the default: 1) "," for 10x_xenium, cosmx_smi, and vizgen_merscope; 2)"\\t" for bgi_stereoseq, and pixel_seq.')
     aux_in_csv_params.add_argument('--csv-colname-x',  type=str, default=None, help='Column name for X-axis (default: x_location for 10x_xenium; x for bgi_stereoseq, x_local_px for cosmx_smi; global_x for vizgen_merscope; xcoord for pixel_seq)')
     aux_in_csv_params.add_argument('--csv-colname-y',  type=str, default=None, help='Column name for Y-axis (default: y_location for 10x_xenium; y for bgi_stereoseq, y_local_px for cosmx_smi; global_y for vizgen_merscope; ycoord for pixel_seq)')
@@ -108,9 +105,11 @@ def parse_arguments(_args):
     aux_in_csv_params.add_argument('--csv-colname-phredscore', type=str, default=None, help='Column name for Phred-scaled quality value (Q-Score) estimating the probability of incorrect call (default: qv for 10x_xenium and None for bgi_stereoseq/cosmx_smi/vizgen_merscope/pixel_seq).') # qv
     aux_in_csv_params.add_argument('--min-phred-score', type=float, default=None, help='Specify the Phred-scaled quality score cutoff (default: 20 for 10x_xenium and None for bgi_stereoseq/cosmx_smi/vizgen_merscope/pixel_seq).') # ficture used 13
     aux_in_csv_params.add_argument('--add-molecule-id', action='store_true', default=False, help='If enabled, a column of "molecule_id" will be added to the output file to track the index of the original input will be stored in (default: False).')
-
-   # AUX output params
-    aux_output_params = parser.add_argument_group("Output Column Auxiliary Parameters",  "Auxiliary Output column parameters for the output files.")
+    
+    # AUX output params
+    aux_output_params = parser.add_argument_group(
+        "Output Column Auxiliary Parameters",  
+        "Auxiliary Output column parameters for the output files.")
     aux_output_params.add_argument('--colname-x', type=str, default='X', help='Column name for X (default: X)')
     aux_output_params.add_argument('--colname-y', type=str, default='Y', help='Column name for Y (default: Y)')
     aux_output_params.add_argument('--colnames-count', type=str, default='gn', help='Comma-separate column names for Count (default: gn)')
@@ -131,7 +130,7 @@ def parse_arguments(_args):
     aux_ftrfilter_params.add_argument('--include-feature-substr', type=str, default=None, help='A substring of feature/gene names to be included (default: None)')
     aux_ftrfilter_params.add_argument('--exclude-feature-substr', type=str, default=None, help='A substring of feature/gene names to be excluded (default: None)')
     aux_ftrfilter_params.add_argument('--include-feature-regex', type=str, default=None, help='A regex pattern of feature/gene names to be included (default: None)')
-    aux_ftrfilter_params.add_argument('--exclude-feature-regex', type=str, default="^(BLANK|Blank-|NegCon|NegPrb)", help='A regex pattern of feature/gene names to be excluded (default: "^(BLANK|NegCon|NegPrb)"). To avoid filtering features by name using regex, use --exclude-feature-regex "". ')
+    aux_ftrfilter_params.add_argument('--exclude-feature-regex', type=str, default="^(BLANK|Blank-|NegCon|NegPrb)", help='A regex pattern of feature/gene names to be excluded (default: "^(BLANK|Blank-|NegCon|NegPrb)"). To avoid filtering features by name using regex, use --exclude-feature-regex "". ')
     aux_ftrfilter_params.add_argument('--include-feature-type-regex', type=str, default=None, help='A regex pattern of feature/gene type to be included (default: None). To enable filtering genes by gene types, users must specify --csv-colname-feature-type or --feature-type-ref to provide gene type information') # (e.g. protein_coding|lncRNA)
     aux_ftrfilter_params.add_argument('--csv-colname-feature-type', type=str, default=None, help='The input column name in the input that corresponding to the gene type information, if your input file has gene type information (default: None)')
     aux_ftrfilter_params.add_argument('--feature-type-ref', type=str, default=None, help='Specify the path to a tab-separated gene information reference file to provide gene type information. The format should be: chrom, start position, end position, gene id, gene name, gene type (default: None)')
