@@ -182,25 +182,25 @@ def format_generic(_args):
             filtered_out_rows.append(removed)
             chunk = chunk[~chunk[args.csv_colname_feature_name].isin(ftrs_exclude_name)]
         if args.include_feature_substr is not None:
-            removed = chunk[~chunk[args.csv_colname_feature_name].str.contains(args.include_feature_substr, flags=re.IGNORECASE, regex=False)].copy()
+            removed = chunk[~chunk[args.csv_colname_feature_name].str.contains(args.include_feature_substr, regex=False)].copy() # should be case-sensitive, removed `flags=re.IGNORECASE`
             removed['reason'] = 'include_feature_substr'
             filtered_out_rows.append(removed)
-            chunk = chunk[chunk[args.csv_colname_feature_name].str.contains(args.include_feature_substr, flags=re.IGNORECASE, regex=False)]
+            chunk = chunk[chunk[args.csv_colname_feature_name].str.contains(args.include_feature_substr, regex=False)]           # should be case-sensitive, removed `flags=re.IGNORECASE`
         if args.exclude_feature_substr is not None:
-            removed = chunk[chunk[args.csv_colname_feature_name].str.contains(args.exclude_feature_substr, flags=re.IGNORECASE, regex=False)].copy()
+            removed = chunk[chunk[args.csv_colname_feature_name].str.contains(args.exclude_feature_substr, regex=False)].copy()  # should be case-sensitive, removed `flags=re.IGNORECASE`
             removed['reason'] = 'exclude_feature_substr'
             filtered_out_rows.append(removed)
-            chunk = chunk[~chunk[args.csv_colname_feature_name].str.contains(args.exclude_feature_substr, flags=re.IGNORECASE, regex=False)]
+            chunk = chunk[~chunk[args.csv_colname_feature_name].str.contains(args.exclude_feature_substr, regex=False)]          # should be case-sensitive, removed `flags=re.IGNORECASE`
         if args.include_feature_regex is not None:
-            removed = chunk[~chunk[args.csv_colname_feature_name].str.contains(args.include_feature_regex, flags=re.IGNORECASE, regex=True)].copy()
+            removed = chunk[~chunk[args.csv_colname_feature_name].str.contains(args.include_feature_regex, regex=True)].copy()   # should be case-sensitive, removed `flags=re.IGNORECASE`
             removed['reason'] = 'include_feature_regex'
             filtered_out_rows.append(removed)
-            chunk = chunk[chunk[args.csv_colname_feature_name].str.contains(args.include_feature_regex, flags=re.IGNORECASE, regex=True)]
+            chunk = chunk[chunk[args.csv_colname_feature_name].str.contains(args.include_feature_regex, regex=True)]             # should be case-sensitive, removed `flags=re.IGNORECASE`
         if args.exclude_feature_regex is not None:
-            removed = chunk[chunk[args.csv_colname_feature_name].str.contains(args.exclude_feature_regex, flags=re.IGNORECASE, regex=True)].copy()
+            removed = chunk[chunk[args.csv_colname_feature_name].str.contains(args.exclude_feature_regex, regex=True)].copy()    # should be case-sensitive, removed `flags=re.IGNORECASE`
             removed['reason'] = 'exclude_feature_regex'
             filtered_out_rows.append(removed)
-            chunk = chunk[~chunk[args.csv_colname_feature_name].str.contains(args.exclude_feature_regex, flags=re.IGNORECASE, regex=True)]
+            chunk = chunk[~chunk[args.csv_colname_feature_name].str.contains(args.exclude_feature_regex, regex=True)]            # should be case-sensitive, removed `flags=re.IGNORECASE`
         
         # filter by phred scores (low-quality reads)
         if args.csv_colname_phredscore is not None and args.min_phred_score is not None:
