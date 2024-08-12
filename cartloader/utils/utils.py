@@ -1,4 +1,4 @@
-import logging, os, shutil, sys, importlib, csv, yaml, shlex
+import logging, os, shutil, sys, importlib, csv, shlex, subprocess
 
 def cmd_separator(cmds, info):
     """
@@ -129,3 +129,34 @@ def add_param_to_cmd(cmd, args, aux_argset):
                 else:
                     cmd += f" --{arg_name} {value}"
     return cmd
+
+
+# def run_bash_command(command):
+#     try:
+#         result = subprocess.run(command, 
+#                   shell=True, 
+#                   stdout=subprocess.PIPE, 
+#                   stderr=subprocess.PIPE, 
+#                   text=True, 
+#                   check=True)
+#         return result.stdout
+#     except subprocess.CalledProcessError as e:
+#         print(f"Command failed with error:\n\t{command}\n\t{e.stderr}\n")
+#         raise
+
+def run_command(command, use_bash=False):
+    executable_shell = "/bin/bash" if use_bash else "/bin/sh"
+    try:
+        result = subprocess.run(
+            command, 
+            shell=True, 
+            executable=executable_shell,  # Choose the shell based on the use_bash flag
+            stdout=subprocess.PIPE, 
+            stderr=subprocess.PIPE, 
+            text=True, 
+            check=True
+        )
+        return result.stdout
+    except subprocess.CalledProcessError as e:
+        print(f"Command failed with error:\n{e.stderr}")
+        raise

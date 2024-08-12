@@ -33,7 +33,7 @@ def parse_arguments(_args):
         1) Use --units-per-um directly.
         2) For 10x_visium_hd datasets, use --scale-json to provide a scale json valid file to calculate the units per um.
         """)
-    key_params.add_argument('--platform', type=str, choices=["10x_visium_hd", "10x_xenium", "bgi_stereoseq", "cosmx_smi", "vizgen_merscope", "pixel_seq"], required=True, help='Platform of the raw input file to infer the format of the input file.')
+    key_params.add_argument('--platform', type=str, choices=["10x_visium_hd", "seqscope", "10x_xenium", "bgi_stereoseq", "cosmx_smi", "vizgen_merscope", "pixel_seq"], required=True, help='Platform of the raw input file to infer the format of the input file.')
     key_params.add_argument('--units-per-um', type=float, default=1.00, help='Coordinate unit per um (conversion factor) (default: 1.00)') 
     #key_params.add_argument('--units-per-um-from-json', action='store_true', default=False, help='For 10x_visium_hd datasets, cartloader support interpret the units per um from the json file (default: False). When enabled, the --units-per-um value will be ignored, and use --scale-json to indicate the input json file.')
     key_params.add_argument('--scale-json', type=str, default=None, help="For 10x_visium_hd datasets, users could use --scale-json to provide the path to the scale json file for calculating units-per-um (default: None). Typical naming convention: scalefactors_json.json")
@@ -52,12 +52,13 @@ def parse_arguments(_args):
         """
         Specify the input paths for the required files based on the platform you are using.
         1) For 10x_visium_hd: Specify the input paths for the SGE directory and parquet file. Additionally, provide the file names for barcode, feature, and matrix files in the SGE directory, if they differ from the defaults.
-        2) For 10x_xenium, bgi_stereoseq, cosmx_smi, vizgen_merscope, and pixel_seq: Specify the path to the input raw CSV/TSV file use .
+        2) For seqscope, specify the input path for the SGE directory.
+        2) For 10x_xenium, bgi_stereoseq, cosmx_smi, vizgen_merscope, and pixel_seq: Specify the path to the input raw CSV/TSV file.
         """
     )
     # - Arguments for 10x_visium_hd platform
     input_params.add_argument('--in-parquet', type=str, default="tissue_positions.parquet", help='Path to the input raw parquet file for spatial coordinates. Required for 10x_visium_hd platform (default: tissue_positions.parquet).') # naming convention: tissue_positions.parquet
-    input_params.add_argument('--in-sge', type=str, default=os.getcwd(), help='Path to the input SGE directory. Required for 10x_visium_hd platform. Defaults to the current working directory.')
+    input_params.add_argument('--in-sge', type=str, default=os.getcwd(), help='Path to the input SGE directory. Required for 10x_visium_hd and seqscope platform. Defaults to the current working directory.')
     input_params.add_argument('--sge-bcd', type=str, default="barcodes.tsv.gz", help='Barcode file name in the SGE directory. Required for 10x_visium_hd platform if not using the default (barcodes.tsv.gz).')
     input_params.add_argument('--sge-ftr', type=str, default="features.tsv.gz", help='Feature file name in the SGE directory. Required for 10x_visium_hd platform if not using the default (features.tsv.gz).')
     input_params.add_argument('--sge-mtx', type=str, default="matrix.mtx.gz", help='Matrix file name in the SGE directory. Required for 10x_visium_hd platform if not using the default (matrix.mtx.gz).')
@@ -68,7 +69,7 @@ def parse_arguments(_args):
     aux_in_sge_params = parser.add_argument_group(
         "IN-SGE Auxiliary Parameters",
         """
-        Auxiliary parameters for processing input files when input files are SGE files. This applies to 10x_visium_hd datasets.
+        Auxiliary parameters for processing input files when input files are SGE files. This applies to 10x_visium_hd and seqscope datasets.
         1) Use --icol-* parameters to specify the column indices in the input SGE files.
         2) Use --pos-* parameters to specify the column names and the delimiter for an additional barcode position file when required.
         3) Use --print-feature-id and --allow-duplicate-gene-names to customize the output.
@@ -85,6 +86,7 @@ def parse_arguments(_args):
     aux_in_sge_params.add_argument('--pos-delim', type=str, default=',', help='Delimiter for the additional barcode position file (default: ",").')
     aux_in_sge_params.add_argument('--print-feature-id', action='store_true', help='Print feature ID in the output file (default: False).')
     aux_in_sge_params.add_argument('--allow-duplicate-gene-names', action='store_true', help='Allow duplicate gene names in the output file (default: False).')
+    aux_in_sge_params.add_argument('--keep-mismatches', action='store_true', help='Keep mismatches in the output file (default: False). This applies to seqscope datasets only.')
 
     # AUX input csv params
     aux_in_csv_params = parser.add_argument_group(
@@ -154,6 +156,8 @@ def parse_arguments(_args):
 def convert_in_by_platform(args):
     if args.platform == "10x_visium_hd":
         required_files = [os.path.join(args.in_sge, f) for f in [args.sge_bcd, args.sge_ftr, args.sge_mtx]] + [args.in_parquet]
+    elif args.platform == "seqscope":
+        required_files = [os.path.join(args.in_sge, f) for f in [args.sge_bcd, args.sge_ftr, args.sge_mtx]]
     elif args.platform in ["10x_xenium", "cosmx_smi", "bgi_stereoseq", "vizgen_merscope", "pixel_seq"]:
         required_files = [args.in_csv]
     return required_files
@@ -165,15 +169,17 @@ def create_minmax(cmds, args):
     return cmds
 
 # arg names
-ans_out    =   ['units_per_um', 'precision_um'] + ['colname_x', 'colname_y', 'colnames_count', 'colname_feature_name', 'colname_feature_id']
-ans_insge  =   ['sge_bcd', 'sge_ftr', 'sge_mtx']+ ['icols_mtx', 'icol_bcd_barcode', 'icol_bcd_x', 'icol_bcd_y', 'icol_ftr_id', 'icol_ftr_name', 'pos_colname_barcode', 'pos_colname_x', 'pos_colname_y', 'pos_delim',  'print_feature_id', 'allow_duplicate_gene_names']
-ans_incsv  =   ['csv_delim', 'csv_colname_x', 'csv_colname_y', 'csv_colname_feature_name', 'csv_colnames_count', 'csv_colname_feature_id', 'csv_colnames_others', 'csv_colname_phredscore', 'min_phred_score', 'add_molecule_id']
-ans_ftrname =  ['include_feature_list', 'exclude_feature_list', 'include_feature_substr', 'exclude_feature_substr', 'include_feature_regex', 'exclude_feature_regex'] 
-ans_ftrtype =  ['include_feature_type_regex',  'csv_colname_feature_type', 'feature_type_ref']
+ans_out      = ['units_per_um', 'precision_um'] + ['colname_x', 'colname_y', 'colnames_count', 'colname_feature_name', 'colname_feature_id']
+ans_insge    = ['sge_bcd', 'sge_ftr', 'sge_mtx']+ ['icols_mtx', 'icol_bcd_barcode', 'icol_bcd_x', 'icol_bcd_y', 'icol_ftr_id', 'icol_ftr_name',]
+ans_inpos    = ['pos_colname_barcode', 'pos_colname_x', 'pos_colname_y', 'pos_delim']
+ans_spatula  = ['print_feature_id', 'allow_duplicate_gene_names']
+ans_incsv    = ['csv_delim', 'csv_colname_x', 'csv_colname_y', 'csv_colname_feature_name', 'csv_colnames_count', 'csv_colname_feature_id', 'csv_colnames_others', 'csv_colname_phredscore', 'min_phred_score', 'add_molecule_id']
+ans_ftrname  = ['include_feature_list', 'exclude_feature_list', 'include_feature_substr', 'exclude_feature_substr', 'include_feature_regex', 'exclude_feature_regex'] 
+ans_ftrtype  = ['include_feature_type_regex',  'csv_colname_feature_type', 'feature_type_ref']
 
 #================================================================================================
 #
-# 10x_visium_hd
+# 10x_visium_hd and seqscope
 #
 #================================================================================================
 
@@ -234,10 +240,33 @@ def convert_visiumhd(cmds, args):
         args.include_feature_list = write_ftrlist_from_ftrtype(args)
     # 4) convert sge to tsv (output: out_transcript, out_minmax, out_feature, (optional) out_sge)
     format_cmd=f"{args.spatula} convert-sge --in-sge {args.in_sge} --out-tsv {args.out_dir} --pos {tmp_parquet} --tsv-mtx {args.out_transcript} --tsv-ftr {args.out_feature} --tsv-minmax {args.out_minmax}"
-    aux_argset = set(item for lst in [ans_out, ans_insge, ans_ftrname] for item in lst)
+    aux_argset = set(item for lst in [ans_out, ans_insge, ans_inpos, ans_spatula, ans_ftrname] for item in lst)
     format_cmd = add_param_to_cmd(format_cmd, args, aux_argset)
     cmds.append(format_cmd)
     cmds.append(f"rm {tmp_parquet}")
+    return cmds
+
+def convert_seqscope(cmds, args):
+    # tools:
+    # 1) spatula
+    if args.spatula is None:
+        args.spatula = os.path.join(cartloader_repo, "submodules", "spatula", "bin", "spatula")
+        print(f"Given spatula is not provided, using the spatula from submodules: {args.spatula}.")
+    scheck_app(args.spatula)
+    # input: in_sge
+    # output: out_transcript, out_minmax, out_feature
+    # 1) --included_feature_type_regex
+    if args.include_feature_type_regex is not None:
+        args.include_feature_list = write_ftrlist_from_ftrtype(args)
+    # 2) convert sge to tsv (output: out_transcript, out_minmax, out_feature
+    format_cmd=f"{args.spatula} convert-sge --in-sge {args.in_sge} --out-tsv {args.out_dir} --tsv-mtx {args.out_transcript} --tsv-ftr {args.out_feature} --tsv-minmax {args.out_minmax}"
+    aux_argset = set(item for lst in [ans_out, ans_insge, ans_ftrname] for item in lst)
+    format_cmd = add_param_to_cmd(format_cmd, args, aux_argset)
+    cmds.append(format_cmd)
+    # 3) drop mismatches if --keep-mismatches is not enabled
+    if not args.keep_mismatches:   
+        drop_cmd = f"cartloader sge_drop_mismatches --in-dir {args.out_dir} --transcript {args.out_transcript} --feature {args.out_feature} --minmax {args.out_minmax} --gzip {args.gzip}"    
+        cmds.append(drop_cmd)
     return cmds
 
 #================================================================================================
@@ -333,26 +362,37 @@ def sge_convert(_args):
     if args.exclude_feature_regex == "":
         args.exclude_feature_regex = None
     scheck_app(args.gzip)
+
     # input
     in_raw_filelist=convert_in_by_platform(args)
     for f in in_raw_filelist:
         assert f is not None, f"Missing input file for {f}. Please provide --{f}"
     # output
     os.makedirs(args.out_dir, exist_ok=True)
+
     # cmds
     cmds = cmd_separator([], f"Converting input for raw data from: {args.platform}...")
     if args.platform == "10x_visium_hd":
         cmds = convert_visiumhd(cmds, args)
+    elif args.platform == "seqscope":
+        cmds = convert_seqscope(cmds, args)
     elif args.platform in ["10x_xenium", "cosmx_smi", "bgi_stereoseq", "vizgen_merscope", "pixel_seq"]:
         cmds = convert_tsv(cmds, args)
-    #print(cmds)
+    # add done if out_transcript, out_minmax, out_feature are generated
+    sge_convert_flag = os.path.join(args.out_dir, "sge_convert.done")
+    cmds.append(f"[ -f {os.path.join(args.out_dir, args.out_transcript)} ] && [ -f {os.path.join(args.out_dir, args.out_feature)} ] && [ -f {os.path.join(args.out_dir, args.out_minmax)} ] && touch {sge_convert_flag}")
+
     # mm
     mm = minimake()
-    mm.add_target(args.out_transcript, in_raw_filelist, cmds) 
+    mm.add_target(sge_convert_flag, in_raw_filelist, cmds) 
     if len(mm.targets) == 0:
         logging.error("There is no target to run. Please make sure that at least one run option was turned on")
         sys.exit(1)
-    mm.write_makefile(f"{args.out_dir}/{args.makefn}")
+    if args.platform == "seqscope":
+        mm.write_makefile(f"{args.out_dir}/{args.makefn}") #, use_bash=True)
+    else:
+        mm.write_makefile(f"{args.out_dir}/{args.makefn}")
+
     # run makefile
     if args.dry_run:
         os.system(f"make -f {args.out_dir}/{args.makefn} -n")
