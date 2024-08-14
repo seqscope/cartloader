@@ -8,13 +8,14 @@ def parse_arguments(_args):
     parser = argparse.ArgumentParser(prog=f"cartloader run_ficture", description="Run FICTURE")
 
     cmd_params = parser.add_argument_group("Commands", "FICTURE commands to run together")
-    cmd_params.add_argument('--all', action='store_true', default=False, help='Run all FICTURE commands (minibatch, segment, lda, decode)')
+    cmd_params.add_argument('--all', action='store_true', default=False, help='Run the main FICTURE commands (sorttsv, minibatch, segment, lda, decode, summary)')
     cmd_params.add_argument('--sorttsv', action='store_true', default=False, help='Sort the input tsv file')
     cmd_params.add_argument('--minibatch', action='store_true', default=False, help='Perform minibatch step')
     cmd_params.add_argument('--segment', action='store_true', default=False, help='Perform hexagon segmentation into FICTURE-compatible format')
     cmd_params.add_argument('--lda', action='store_true', default=False, help='Perform LDA model training')
     cmd_params.add_argument('--decode', action='store_true', default=False, help='Perform pixel-level decoding')
     cmd_params.add_argument('--summary', action='store_true', default=False, help='Generate a JSON file summarizing all fixture parameters for which outputs are available in the <out-dir>.')
+    cmd_params.add_argument('--viz-per-factor', action='store_true', default=False, help='Generate pixel-level visualization for each factor')
 
     run_params = parser.add_argument_group("Run Options", "Run options for FICTURE commands")
     run_params.add_argument('--dry-run', action='store_true', default=False, help='Dry run. Generate only the Makefile without running it')
@@ -144,6 +145,8 @@ def run_ficture(_args):
         args.in_cstranscript = os.path.join(args.out_dir, "transcripts.sorted.tsv.gz")
     if args.in_minmax is None:
         args.in_minmax = os.path.join(args.out_dir, "coordinate_minmax.tsv")
+    if args.out_json is None:
+        args.out_json = os.path.join(args.out_dir, f"ficture.params.json") 
     # no default value for in_feature given that it is optional
     assert os.path.exists(args.in_transcript) or os.path.exists(args.in_cstranscript), "Provide a valid input transcript-indexed SGE file by --in-transcript or --in-cstranscript"
     assert os.path.exists(args.in_minmax), "Provide a valid input coordinate minmax file by --in-minmax"
@@ -341,8 +344,6 @@ fi
                     mm.add_target(f"{decode_prefix}.done", [batch_mat, f"{lda_prefix}.done"], cmds)
 
     if args.summary:
-        #
-        out_json = os.path.join(args.out_dir, f"ficture.params.json") 
         # collect prerequisities
         prerequisities = []
         for train_width in train_widths:
@@ -368,9 +369,37 @@ fi
                         prerequisities.append(f"{args.out_dir}/{tsf_basename}.done")
                         prerequisities.append(f"{args.out_dir}/{decode_basename}.done")
         # cmds
-        cmds = cmd_separator([], f"Summarizing output into {out_json} files...")
-        cmds.append(f"cartloader write_json_for_ficture --out-dir {args.out_dir} --out-json {out_json}")
-        mm.add_target(out_json, prerequisities, cmds)
+        cmds = cmd_separator([], f"Summarizing output into {args.out_json} files...")
+        cmds.append(f"cartloader write_json_for_ficture --out-dir {args.out_dir} --out-json {args.out_json}")
+        mm.add_target(args.out_json, prerequisities, cmds)
+
+    if args.viz_per_factor:
+        for train_width in train_widths:
+            for n_factor in n_factors:
+                model_id=f"nF{n_factor}.d_{train_width}"
+                if args.fit_width is None:
+                    fit_widths = [train_width]
+                else:
+                    fit_widths = [float(x) for x in args.fit_width.split(",")]
+                for fit_width in fit_widths:
+                    # params
+                    anchor_info=f"prj_{fit_width}.r_{args.anchor_res}"
+                    radius = args.anchor_res + 1
+                    # prefix 
+                    decode_basename=f"{model_id}.decode.{anchor_info}_{radius}"
+                    decode_prefix = os.path.join(args.out_dir, decode_basename)
+                    # files
+                    decode_spixel=f"{decode_prefix}.pixel.sorted.tsv.gz"
+                    # 1) pixel-plot
+                    cmds=cmd_separator([], f"Visializing single factor at pixel level ({train_width}um and {n_factor} factors, at {fit_width}um)")
+                    cmds.append(f"ficture plot_pixel_single --input {decode_spixel}  --output {decode_prefix}.pixel --plot_um_per_pixel {args.decode_plot_um_per_pixel} --full --all")
+                    # done & target
+                    viz_list=[]
+                    for i in range(n_factor):
+                        viz_list.append(f"{decode_prefix}.pixel.F_{i}.png")
+                    check_vizperfactor_cmd = " && ".join([f"-f {file}" for file in viz_list])
+                    cmds.append(f"[ {check_vizperfactor_cmd} ] && touch {decode_prefix}.viz_per_factor.done")
+                    mm.add_target(f"{decode_prefix}.viz_per_factor.done", [f"{decode_prefix}.done"], cmds)
 
     if len(mm.targets) == 0:
         logging.error("There is no target to run. Please make sure that at least one run option was turned on")
