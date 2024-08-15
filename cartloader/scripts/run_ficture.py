@@ -44,38 +44,39 @@ def parse_arguments(_args):
     # input column indexes
     aux_params.add_argument('--csv-colidx-x',  type=int, default=1, help='Column index for X-axis in the --in-transcript (default: 1)')
     aux_params.add_argument('--csv-colidx-y',  type=int, default=2, help='Column index for Y-axis in the --in-transcript (default: 2)')
-    # train epoch
     aux_params.add_argument('--key-col', type=str, default="Count", help='Columns from the input file to be used as key')
-    aux_params.add_argument('--train-epoch', type=int, default=3, help='Training epoch for LDA model')
-    aux_params.add_argument('--train-epoch-id-len', type=int, default=2, help='Training epoch ID length')
+    # segmentation - ficture
     aux_params.add_argument('--hexagon-n-move', type=int, default=1, help='Level of hexagonal sliding when creating hexagon-indexed SGE in FICTURE compatible format')
+    aux_params.add_argument('--hexagon-precision', type=float, default=2, help='Output precision of hexagon coordinates for FICTURE compatible format')
+    aux_params.add_argument('--min-ct-unit-hexagon', type=int, default=50, help='Minimum count per hexagon in hexagon segmentation in FICTURE compatible format')
+    # segmentation - 10x
     aux_params.add_argument('--hexagon-n-move-10x', type=int, default=1, help='Level of hexagonal sliding when creating hexagon-indexed SGE in 10x Genomics format')
-    # aux_params.add_argument('--train-n-move', type=int, default=1, help='Level of hexagonal sliding during training')
-    aux_params.add_argument('--fit-width', type=float, help='Hexagon flat-to-flat width (in um) during model fitting (default: same to train-width)')
+    aux_params.add_argument('--hexagon-precision-10x', type=float, default=2, help='Output precision of hexagon coordinates for 10x Genomics format')
+    aux_params.add_argument('--min-ct-unit-hexagon-10x', type=int, default=1, help='Minimum count per hexagon in hexagon segmentation in 10x Genomics format')
+    # minibatch
     aux_params.add_argument('--minibatch-size', type=int, default=500, help='Batch size used in minibatch processing')
     aux_params.add_argument('--minibatch-buffer', type=int, default=30, help='Batch buffer used in minibatch processing')
-    aux_params.add_argument('--min-ct-unit-hexagon', type=int, default=50, help='Minimum count per hexagon in hexagon segmentation in FICTURE compatible format')
-    aux_params.add_argument('--min-ct-unit-hexagon-10x', type=int, default=1, help='Minimum count per hexagon in hexagon segmentation in 10x Genomics format')
-    aux_params.add_argument('--min-ct-feature', type=int, default=20, help='Minimum count per feature during LDA training')
-    aux_params.add_argument('--min-ct-unit-fit', type=int, default=20, help='Minimum count per hexagon unit during model fitting')
+    # train 
+    aux_params.add_argument('--train-epoch', type=int, default=3, help='Training epoch for LDA model')
+    aux_params.add_argument('--train-epoch-id-len', type=int, default=2, help='Training epoch ID length')
     aux_params.add_argument('--lda-rand-init', type=int, default=10, help='Number of random initialization during model training')
+    aux_params.add_argument('--lda-plot-um-per-pixel', type=float, default=1, help='Image resolution for LDA plot')
+    # fit 
+    aux_params.add_argument('--fit-width', type=float, help='Hexagon flat-to-flat width (in um) during model fitting (default: same to train-width)')
+    aux_params.add_argument('--fit-precision', type=float, default=2, help='Output precision of model fitting')
+    aux_params.add_argument('--min-ct-unit-fit', type=int, default=20, help='Minimum count per hexagon unit during model fitting')
+    aux_params.add_argument('--fit-plot-um-per-pixel', type=float, default=1, help='Image resolution for fit coarse plot')   # in Scopeflow, this is set to 2
+    # decode
     aux_params.add_argument('--decode-top-k', type=int, default=3, help='Top K columns to output in pixel-level decoding results')
     aux_params.add_argument('--decode-block-size', type=int, default=100, help='Block size for pixel decoding output')
     aux_params.add_argument('--decode-scale', type=int, default=100, help='Scale parameters for pixel decoding output')
-    aux_params.add_argument('--cmap-name', type=str, default="turbo", help='Name of color map')
-    # precision
-    aux_params.add_argument('--hexagon-precision', type=float, default=2, help='Output precision of hexagon coordinates')
-    aux_params.add_argument('--hexagon-precision-10x', type=float, default=2, help='Output precision of hexagon coordinates for 10x Genomics format')
-    aux_params.add_argument('--fit-precision', type=float, default=2, help='Output precision of model fitting')
     aux_params.add_argument('--decode-precision', type=float, default=0.01, help='Precision of pixel level decoding')
-    aux_params.add_argument('--lda-plot-um-per-pixel', type=float, default=1, help='Image resolution for LDA plot')
-    aux_params.add_argument('--fit-plot-um-per-pixel', type=float, default=1, help='Image resolution for fit coarse plot')   # in Scopeflow, this is set to 2
     aux_params.add_argument('--decode-plot-um-per-pixel', type=float, default=0.5, help='Image resolution for pixel decoding plot')
+    # others
+    aux_params.add_argument('--min-ct-feature', type=int, default=20, help='Minimum count per feature during LDA training')
+    aux_params.add_argument('--cmap-name', type=str, default="turbo", help='Name of color map')
     aux_params.add_argument('--de-max-pval', type=float, default=1e-3, help='p-value cutoff for differential expression')
     aux_params.add_argument('--de-min-fold', type=float, default=1.5, help='Fold-change cutoff for differential expression')
-    # # json params
-    # aux_params.add_argument('--platform', type=str, default=None, help='Provide the information of platform to be added in the --summary file')
-    # aux_params.add_argument('--data-id',  type=str, default=None,  help='Provide a data id or description to be added in the --summary file')
     # applications
     aux_params.add_argument('--bgzip', type=str, default="bgzip", help='Path to bgzip binary. For faster processing, use "bgzip -@ 4')
     aux_params.add_argument('--tabix', type=str, default="tabix", help='Path to tabix binary')
