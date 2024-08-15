@@ -8,7 +8,8 @@ def parse_arguments(_args):
     parser = argparse.ArgumentParser(prog=f"cartloader run_ficture", description="Run FICTURE")
 
     cmd_params = parser.add_argument_group("Commands", "FICTURE commands to run together")
-    cmd_params.add_argument('--all', action='store_true', default=False, help='Run the main FICTURE commands (sorttsv, minibatch, segment, lda, decode, summary)')
+    cmd_params.add_argument('--main', action='store_true', default=False, help='Run the main steps (sorttsv, minibatch, segment, lda, decode, summary). Note this does not include segment-10x and viz-per-factor')
+    cmd_params.add_argument('--plus', action='store_true', default=False, help='Run the main steps (sorttsv, minibatch, segment, lda, decode, summary) and additional steps (segment-10x and viz-per-factor)')
     cmd_params.add_argument('--sorttsv', action='store_true', default=False, help='Sort the input tsv file')
     cmd_params.add_argument('--minibatch', action='store_true', default=False, help='Perform minibatch step')
     cmd_params.add_argument('--segment', action='store_true', default=False, help='Perform hexagon segmentation into FICTURE-compatible format')
@@ -16,6 +17,7 @@ def parse_arguments(_args):
     cmd_params.add_argument('--decode', action='store_true', default=False, help='Perform pixel-level decoding')
     cmd_params.add_argument('--summary', action='store_true', default=False, help='Generate a JSON file summarizing all fixture parameters for which outputs are available in the <out-dir>.')
     cmd_params.add_argument('--viz-per-factor', action='store_true', default=False, help='Generate pixel-level visualization for each factor')
+    cmd_params.add_argument('--segment-10x', action='store_true', default=False, help='Perform hexagon segmentation into 10x Genomics format')
 
     run_params = parser.add_argument_group("Run Options", "Run options for FICTURE commands")
     run_params.add_argument('--dry-run', action='store_true', default=False, help='Dry run. Generate only the Makefile without running it')
@@ -34,38 +36,43 @@ def parse_arguments(_args):
     key_params.add_argument('--major-axis', type=str, default=None, help='Axis where transcripts.tsv.gz are sorted. If not provided, it will be automatically defined by the longer axis. Options: X, Y')
     key_params.add_argument('--mu-scale', type=float, default=1.0, help='Scale factor for mu (pixels per um)')
     key_params.add_argument('--train-width', type=str, default="12", help='Hexagon flat-to-flat width (in um) during training. Use comma to specify multiple values')
+    key_params.add_argument('--hexagon-width-10x', type=str, default="12", help='Hexagon flat-to-flat width (in µm) used for creating hexagon-indexed SGE in 10x Genomics format. Separate multiple values with commas.')
     key_params.add_argument('--n-factor', type=str, default="12", help='Number of factors to train. Use comma to specify multiple values')
     key_params.add_argument('--anchor-res', type=float, default=4, help='Anchor resolution for decoding')
 
     aux_params = parser.add_argument_group("Auxiliary Parameters", "Auxiliary parameters (using default is recommended)")
-    # ficture params
+    # input column indexes
     aux_params.add_argument('--csv-colidx-x',  type=int, default=1, help='Column index for X-axis in the --in-transcript (default: 1)')
     aux_params.add_argument('--csv-colidx-y',  type=int, default=2, help='Column index for Y-axis in the --in-transcript (default: 2)')
+    # train epoch
+    aux_params.add_argument('--key-col', type=str, default="Count", help='Columns from the input file to be used as key')
     aux_params.add_argument('--train-epoch', type=int, default=3, help='Training epoch for LDA model')
     aux_params.add_argument('--train-epoch-id-len', type=int, default=2, help='Training epoch ID length')
-    aux_params.add_argument('--train-n-move', type=int, default=1, help='Level of hexagonal sliding during training')
-    aux_params.add_argument('--sge-n-move', type=int, default=1, help='Level of hexagonal sliding during SGE generation')
+    aux_params.add_argument('--hexagon-n-move', type=int, default=1, help='Level of hexagonal sliding when creating hexagon-indexed SGE in FICTURE compatible format')
+    aux_params.add_argument('--hexagon-n-move-10x', type=int, default=1, help='Level of hexagonal sliding when creating hexagon-indexed SGE in 10x Genomics format')
+    # aux_params.add_argument('--train-n-move', type=int, default=1, help='Level of hexagonal sliding during training')
     aux_params.add_argument('--fit-width', type=float, help='Hexagon flat-to-flat width (in um) during model fitting (default: same to train-width)')
-    aux_params.add_argument('--key-col', type=str, default="Count", help='Columns from the input file to be used as key')
     aux_params.add_argument('--minibatch-size', type=int, default=500, help='Batch size used in minibatch processing')
     aux_params.add_argument('--minibatch-buffer', type=int, default=30, help='Batch buffer used in minibatch processing')
-    aux_params.add_argument('--min-ct-unit-dge', type=int, default=50, help='Minimum count per hexagon in DGE generation')
-    aux_params.add_argument('--min-ct-unit-sge', type=int, default=1, help='Minimum count per hexagon in SGE generation')
+    aux_params.add_argument('--min-ct-unit-hexagon', type=int, default=50, help='Minimum count per hexagon in hexagon segmentation in FICTURE compatible format')
+    aux_params.add_argument('--min-ct-unit-hexagon-10x', type=int, default=1, help='Minimum count per hexagon in hexagon segmentation in 10x Genomics format')
     aux_params.add_argument('--min-ct-feature', type=int, default=20, help='Minimum count per feature during LDA training')
     aux_params.add_argument('--min-ct-unit-fit', type=int, default=20, help='Minimum count per hexagon unit during model fitting')
     aux_params.add_argument('--lda-rand-init', type=int, default=10, help='Number of random initialization during model training')
     aux_params.add_argument('--decode-top-k', type=int, default=3, help='Top K columns to output in pixel-level decoding results')
-    aux_params.add_argument('--de-max-pval', type=float, default=1e-3, help='p-value cutoff for differential expression')
-    aux_params.add_argument('--de-min-fold', type=float, default=1.5, help='Fold-change cutoff for differential expression')
     aux_params.add_argument('--decode-block-size', type=int, default=100, help='Block size for pixel decoding output')
     aux_params.add_argument('--decode-scale', type=int, default=100, help='Scale parameters for pixel decoding output')
     aux_params.add_argument('--cmap-name', type=str, default="turbo", help='Name of color map')
-    aux_params.add_argument('--dge-precision', type=float, default=2, help='Output precision of hexagon coordinates')
+    # precision
+    aux_params.add_argument('--hexagon-precision', type=float, default=2, help='Output precision of hexagon coordinates')
+    aux_params.add_argument('--hexagon-precision-10x', type=float, default=2, help='Output precision of hexagon coordinates for 10x Genomics format')
     aux_params.add_argument('--fit-precision', type=float, default=2, help='Output precision of model fitting')
-    aux_params.add_argument('--decode-precision', type=float, default=0.1, help='Precision of pixel level decoding')
+    aux_params.add_argument('--decode-precision', type=float, default=0.01, help='Precision of pixel level decoding')
     aux_params.add_argument('--lda-plot-um-per-pixel', type=float, default=1, help='Image resolution for LDA plot')
     aux_params.add_argument('--fit-plot-um-per-pixel', type=float, default=1, help='Image resolution for fit coarse plot')   # in Scopeflow, this is set to 2
     aux_params.add_argument('--decode-plot-um-per-pixel', type=float, default=0.5, help='Image resolution for pixel decoding plot')
+    aux_params.add_argument('--de-max-pval', type=float, default=1e-3, help='p-value cutoff for differential expression')
+    aux_params.add_argument('--de-min-fold', type=float, default=1.5, help='Fold-change cutoff for differential expression')
     # # json params
     # aux_params.add_argument('--platform', type=str, default=None, help='Provide the information of platform to be added in the --summary file')
     # aux_params.add_argument('--data-id',  type=str, default=None,  help='Provide a data id or description to be added in the --summary file')
@@ -125,7 +132,7 @@ def run_ficture(_args):
     # args
     args=parse_arguments(_args)
 
-    if args.all:
+    if args.main:
         args.sorttsv = True
         args.minibatch = True
         args.segment=True
@@ -136,6 +143,7 @@ def run_ficture(_args):
     # parse input parameters
     train_widths = [int(x) for x in args.train_width.split(",")]
     n_factors = [int(x) for x in args.n_factor.split(",")]
+    hexagon_widths_10x = [int(x) for x in args.hexagon_width_10x.split(",")]
     
     # output
     os.makedirs(args.out_dir, exist_ok=True)
@@ -203,11 +211,22 @@ def run_ficture(_args):
         for train_width in train_widths:
             hexagon_tsv=f"{args.out_dir}/hexagon.d_{train_width}.tsv"
             hexagon=f"{args.out_dir}/hexagon.d_{train_width}.tsv.gz"
-            cmds = cmd_separator([], f"Creating DGE for {train_width}um...")
-            cmds.append(f"ficture make_dge --key {args.key_col} --input {args.in_cstranscript} --output {hexagon_tsv} --hex_width {train_width} --n_move {args.train_n_move} --min_ct_per_unit {args.min_ct_unit_dge} --mu_scale {args.mu_scale} --precision {args.dge_precision} --major_axis {major_axis}")
+            cmds = cmd_separator([], f"Creating hexagon-indexed SGE for {train_width}um...")
+            cmds.append(f"ficture make_dge --key {args.key_col} --input {args.in_cstranscript}  --major_axis {major_axis} --key {args.key_col} --output {hexagon_tsv} --hex_width {train_width} --n_move {args.hexagon_n_move} --mu_scale {args.mu_scale} --precision {args.hexagon_precision} --min_ct_per_unit {args.min_ct_unit_hexagon} ")
             cmds.append(f"{args.sort} -S {args.sort_mem} -k 1,1n {hexagon_tsv} | {args.gzip} -c > {hexagon}")
             cmds.append(f"rm {hexagon_tsv}")
             mm.add_target(f"{hexagon}", [args.in_cstranscript], cmds)
+
+    if args.segment_10x:
+        major_axis=define_major_axis(args)
+        for hexagon_width in hexagon_widths_10x:
+            hexagon_dir=f"{args.out_dir}/hexagon.d_{hexagon_width}.10x"
+            cmds=cmd_separator([], f"Creating hexagon-indexed SGE in 10x Genomics format for {hexagon_width}um...")
+            cmds.append(f"mkdir -p {hexagon_dir}")
+            cmds.append(f"ficture make_sge_by_hexagon --input {args.in_cstranscript} --feature {args.in_feature} --major_axis {major_axis} --key {args.key_col} --output_path {hexagon_dir} --hex_width {hexagon_width} --n_move {args.hexagon_n_move_10x} --mu_scale {args.mu_scale} --precision {args.hexagon_precision_10x} --min_ct_per_unit {args.min_ct_unit_hexagon_10x} --transfer_gene_prefix")
+            # done & target
+            cmds.append(f"[ -f {hexagon_dir}/barcodes.tsv.gz ] && [ -f {hexagon_dir}/features.tsv.gz ] && [ -f {hexagon_dir}/matrix.mtx.gz ] && touch {args.out_dir}/hexagon.d_{hexagon_width}.10x.done")
+            mm.add_target(f"{args.out_dir}/hexagon.d_{hexagon_width}.10x.done", [args.in_cstranscript, args.in_feature], cmds)
 
     # 4. lda
     if args.lda:
@@ -300,7 +319,7 @@ fi
                     fit_widths = [float(x) for x in args.fit_width.split(",")]
                 for fit_width in fit_widths:
                     # params
-                    fit_nmove = int(fit_width / args.anchor_res)
+                    fit_n_move = int(fit_width / args.anchor_res)
                     anchor_info=f"prj_{fit_width}.r_{args.anchor_res}"
                     fit_fillr = int(args.anchor_res//2+1)
                     radius = args.anchor_res + 1
@@ -314,7 +333,7 @@ fi
                     decode_spixel=f"{decode_prefix}.pixel.sorted.tsv.gz"
                     # 1) transform/fit
                     cmds=cmd_separator([], f"Creating projection for {train_width}um and {n_factor} factors, at {fit_width}um")
-                    cmds.append(f"ficture transform --input {args.in_cstranscript} --output_pref {tsf_prefix} --model {model_mat} --key {args.key_col} --major_axis {major_axis} --hex_width {fit_width} --n_move {fit_nmove} --min_ct_per_unit {args.min_ct_unit_fit} --mu_scale {args.mu_scale} --thread {args.threads} --precision {args.fit_precision}")
+                    cmds.append(f"ficture transform --input {args.in_cstranscript} --output_pref {tsf_prefix} --model {model_mat} --key {args.key_col} --major_axis {major_axis} --hex_width {fit_width} --n_move {fit_n_move} --min_ct_per_unit {args.min_ct_unit_fit} --mu_scale {args.mu_scale} --thread {args.threads} --precision {args.fit_precision}")
                     # - transform-DE
                     cmds.append(f"ficture de_bulk --input {tsf_prefix}.posterior.count.tsv.gz --output {tsf_prefix}.bulk_chisq.tsv --min_ct_per_feature {args.min_ct_feature} --max_pval_output {args.de_max_pval} --min_fold_output {args.de_min_fold} --thread {args.threads}")
                     # - transform-report
