@@ -37,6 +37,8 @@ def parse_arguments(_args):
     aux_params = parser.add_argument_group("Auxiliary Parameters", "Auxiliary parameters (using default is recommended)")
     aux_params.add_argument('--rename-x', type=str, default='X:lon', help='tippecanoe parameters to rename X axis')  
     aux_params.add_argument('--rename-y', type=str, default='Y:lat', help='tippecanoe parameters to rename Y axis')  
+    aux_params.add_argument('--colname-feature', type=str, default='gene', help='Input/output Column name for gene name (default: gene)')
+    aux_params.add_argument('--colname-count', type=str, default='gn', help='Column name for feature counts')
     aux_params.add_argument('--out-molecules-prefix', type=str, default='genes', help='Prefix of output molecules PMTiles files')
     aux_params.add_argument('--tippecanoe', type=str, default=f"{repo_dir}/submodules/tippecanoe/tippecanoe", help='Path to tippecanoe binary')
     aux_params.add_argument('--in-fic-params', type=str, default="ficture.params.json", help='The YAML/JSON file containing FICTURE parameters')
@@ -113,6 +115,8 @@ def run_cartload(_args):
             "--in-tsv", in_fit_tsvf, 
             "--out-prefix", f"{args.out_dir}/{out_prefix}",
             "--rename-column", "x:lon", "y:lat",
+            "--colname-feature", args.colname_feature,
+            "--colname-count", args.colname_count,
             "--log"
         ])
         cmds.append(cmd)
