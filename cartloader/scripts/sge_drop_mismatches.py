@@ -72,7 +72,8 @@ def sge_drop_mismatches(_args):
         tsv_cmd = f"{args.gzip} -cd {temp_transcript_path} | awk '$1!=0 || $2!=0' | {args.gzip} -c > {transcript_path}"
         run_command(tsv_cmd)
 
-        ftr_cmd = f"{args.gzip} -cd {temp_mismatch_path} | awk 'NR==FNR {{a[$1]=$2; next}} {{if($1 in a) $3=$3-a[$1]; print}}' - <(zcat {temp_feature_path}) | {args.gzip} -c > {feature_path}"
+        ftr_cmd = f"{args.gzip} -cd {temp_mismatch_path} | awk 'BEGIN{{OFS=\"\\t\"}} NR==FNR {{a[$1]=$2; next}} {{if($1 in a) $3=$3-a[$1]; print}}' - <(zcat {temp_feature_path}) | {args.gzip} -c > {feature_path}"
+        #ftr_cmd = f"{args.gzip} -cd {temp_mismatch_path} | awk 'NR==FNR {{a[$1]=$2; next}} {{if($1 in a) $3=$3-a[$1]; print}}' - <(zcat {temp_feature_path}) | {args.gzip} -c > {feature_path}"
         run_command(ftr_cmd, use_bash=True)
 
         # Recalculate min and max
