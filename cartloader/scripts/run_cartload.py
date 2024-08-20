@@ -78,6 +78,8 @@ def run_cartload(_args):
         "--in-molecules", args.in_molecules,
         "--in-features", args.in_features,
         "--out-prefix", f"{args.out_dir}/{args.out_molecules_prefix}",
+        "--colname-feature", args.colname_feature,
+        "--colname-count", args.colname_count,
         "--all",
         "--n-jobs", str(args.n_jobs),
     ])
@@ -115,8 +117,6 @@ def run_cartload(_args):
             "--in-tsv", in_fit_tsvf, 
             "--out-prefix", f"{args.out_dir}/{out_prefix}",
             "--rename-column", "x:lon", "y:lat",
-            "--colname-feature", args.colname_feature,
-            "--colname-count", args.colname_count,
             "--log"
         ])
         cmds.append(cmd)
