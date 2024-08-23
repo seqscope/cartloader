@@ -90,7 +90,7 @@ def format_generic(_args):
     feature_cols=[args.colname_feature_name] if args.csv_colname_feature_id is None else [args.colname_feature_name, args.colname_feature_id]
     other_cols = args.csv_colnames_others + ["molecule_id"] if args.add_molecule_id else args.csv_colnames_others 
     
-    iheader = pd.read_csv(args.input, nrows=1, sep=args.csv_delim).columns.tolist()
+    iheader = pd.read_csv(args.input, nrows=1, sep=args.csv_delim, comment="#").columns.tolist()
     icols = [args.csv_colname_x, args.csv_colname_y, args.csv_colname_feature_name] + args.csv_colnames_others
     for j in [args.csv_colname_feature_id, args.csv_colname_feature_type, args.csv_colname_phredscore]:
         if j is not None:
@@ -151,7 +151,10 @@ def format_generic(_args):
     filtered_out_rows = []
     
     # processing
-    for chunk in pd.read_csv(args.input, header=0, chunksize=500000, index_col=None, sep=args.csv_delim):
+    for chunk in pd.read_csv(args.input, header=0, chunksize=500000, index_col=None, sep=args.csv_delim, comment='#'):
+        # drop the lines starts with '#' (novast start with '#')
+        #chunk = chunk[~chunk[args.csv_colname_x].str.startswith('#')]
+
         Rraw=chunk.shape[0]
         if args.csv_colnames_count is not None:
             Craw=chunk[args.csv_colnames_count].sum()

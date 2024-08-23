@@ -10,7 +10,7 @@ def parse_arguments(_args):
     parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", 
                                     description="""
                                      Standardize Spatial Transcriptomics (ST) datasets into a transcript-indexed SGE in TSV format for downstream analysis.  
-                                     1) Platform Support: 10X Visium HD, 10X Xenium, BGI Stereoseq, Cosmx SMI, Vizgen Merscope, Pixel-Seq.
+                                     1) Platform Support: 10X Visium HD, SeqScope, 10X Xenium, BGI Stereoseq, Cosmx SMI, Vizgen Merscope, Pixel-Seq, and Nova-ST
                                      2) Main functions: it generates a Makefile for a transcript-indexed SGE file in TSV format, a coordinate minmax TSV file, and a feature file counting UMIs per gene. 
                                      When executed with --dry-run, it generates only the Makefile without running it. 
                                      3) Additional Features: Includes options for filtering based on Phred-scaled quality score, gene name, and gene type, as well as converting pixel coordinates to micrometers
@@ -33,7 +33,7 @@ def parse_arguments(_args):
         1) Use --units-per-um directly.
         2) For 10x_visium_hd datasets, use --scale-json to provide a scale json valid file to calculate the units per um.
         """)
-    key_params.add_argument('--platform', type=str, choices=["10x_visium_hd", "seqscope", "10x_xenium", "bgi_stereoseq", "cosmx_smi", "vizgen_merscope", "pixel_seq"], required=True, help='Platform of the raw input file to infer the format of the input file.')
+    key_params.add_argument('--platform', type=str, choices=["10x_visium_hd", "seqscope", "10x_xenium", "bgi_stereoseq", "cosmx_smi", "vizgen_merscope", "pixel_seq", "nova_st"], required=True, help='Platform of the raw input file to infer the format of the input file.')
     key_params.add_argument('--units-per-um', type=float, default=1.00, help='Coordinate unit per um (conversion factor) (default: 1.00)') 
     #key_params.add_argument('--units-per-um-from-json', action='store_true', default=False, help='For 10x_visium_hd datasets, cartloader support interpret the units per um from the json file (default: False). When enabled, the --units-per-um value will be ignored, and use --scale-json to indicate the input json file.')
     key_params.add_argument('--scale-json', type=str, default=None, help="For 10x_visium_hd datasets, users could use --scale-json to provide the path to the scale json file for calculating units-per-um (default: None). Typical naming convention: scalefactors_json.json")
@@ -53,7 +53,7 @@ def parse_arguments(_args):
         Specify the input paths for the required files based on the platform you are using.
         1) For 10x_visium_hd: Specify the input paths for the SGE directory and parquet file. Additionally, provide the file names for barcode, feature, and matrix files in the SGE directory, if they differ from the defaults.
         2) For seqscope, specify the input path for the SGE directory.
-        2) For 10x_xenium, bgi_stereoseq, cosmx_smi, vizgen_merscope, and pixel_seq: Specify the path to the input raw CSV/TSV file.
+        2) For 10x_xenium, bgi_stereoseq, cosmx_smi, vizgen_merscope, pixel_seq, nova_st: Specify the path to the input raw CSV/TSV file.
         """
     )
     # - Arguments for 10x_visium_hd platform
@@ -63,7 +63,7 @@ def parse_arguments(_args):
     input_params.add_argument('--sge-ftr', type=str, default="features.tsv.gz", help='Feature file name in the SGE directory. Required for 10x_visium_hd platform if not using the default (features.tsv.gz).')
     input_params.add_argument('--sge-mtx', type=str, default="matrix.mtx.gz", help='Matrix file name in the SGE directory. Required for 10x_visium_hd platform if not using the default (matrix.mtx.gz).')
     # - Arguments for other platforms
-    input_params.add_argument('--in-csv', type=str, default=None, help='Path to the input raw CSV/TSV file. Required for 10x_xenium, bgi_stereoseq, cosmx_smi, vizgen_merscope, and pixel_seq platforms (default: None).')
+    input_params.add_argument('--in-csv', type=str, default=None, help='Path to the input raw CSV/TSV file. Required for 10x_xenium, bgi_stereoseq, cosmx_smi, vizgen_merscope, pixel_seq, and nova_st platforms (default: None).')
 
     # AUX input SGE params
     aux_in_sge_params = parser.add_argument_group(
@@ -92,20 +92,20 @@ def parse_arguments(_args):
     aux_in_csv_params = parser.add_argument_group(
         "IN-CSV Auxiliary Parameters", 
         """
-        Auxiliary parameters for processing input files when input files are in TSV/CSV format. This applies to datasets from 10x_xenium, bgi_stereoseq, cosmx_smi, vizgen_merscope or pixel_seq.
+        Auxiliary parameters for processing input files when input files are in TSV/CSV format. This applies to datasets from 10x_xenium, bgi_stereoseq, cosmx_smi, vizgen_merscope, pixel_seq or nova_st.
         1) Use --csv-colname-* parameters to specify the column names in the input CSV/TSV files.
         2) Use --csv-colname-phredscore with --min-phred-score to filter the input data based on the Phred-scaled quality score.
         Please note --csv-columns-x, --csv-columns-y, --csv-columns-feature-name are mandatory when the input file is in CSV format.
         """)
-    aux_in_csv_params.add_argument('--csv-delim', type=str, default=None, help='Delimiter for the additional input tsv/csv file. Required if not using the default: 1) "," for 10x_xenium, cosmx_smi, and vizgen_merscope; 2)"\\t" for bgi_stereoseq, and pixel_seq.')
-    aux_in_csv_params.add_argument('--csv-colname-x',  type=str, default=None, help='Column name for X-axis (default: x_location for 10x_xenium; x for bgi_stereoseq, x_local_px for cosmx_smi; global_x for vizgen_merscope; xcoord for pixel_seq)')
-    aux_in_csv_params.add_argument('--csv-colname-y',  type=str, default=None, help='Column name for Y-axis (default: y_location for 10x_xenium; y for bgi_stereoseq, y_local_px for cosmx_smi; global_y for vizgen_merscope; ycoord for pixel_seq)')
-    aux_in_csv_params.add_argument('--csv-colname-feature-name', type=str, default=None, help='Column name for gene name (default: feature_name for 10x_xenium; geneID for bgi_stereoseq, target for cosmx_smi; gene for vizgen_merscope; geneName for pixel_seq)')
-    aux_in_csv_params.add_argument('--csv-colnames-count', type=str, default=None, help='Column name for gene id (e.g.: transcript_id). If not provided, a count of 1 will be added for a feature in a pixel (default: None)')
+    aux_in_csv_params.add_argument('--csv-delim', type=str, default=None, help='Delimiter for the additional input tsv/csv file. Required if not using the default: 1) "," for 10x_xenium, cosmx_smi, and vizgen_merscope; 2)"\\t" for bgi_stereoseq, pixel_seq, and nova_st.')
+    aux_in_csv_params.add_argument('--csv-colname-x',  type=str, default=None, help='Column name for X-axis (default: x_location for 10x_xenium; x for bgi_stereoseq; x_local_px for cosmx_smi; global_x for vizgen_merscope; xcoord for pixel_seq; x for nova_st)')
+    aux_in_csv_params.add_argument('--csv-colname-y',  type=str, default=None, help='Column name for Y-axis (default: y_location for 10x_xenium; y for bgi_stereoseq; y_local_px for cosmx_smi; global_y for vizgen_merscope; ycoord for pixel_seq; y for nova_st)')
+    aux_in_csv_params.add_argument('--csv-colname-feature-name', type=str, default=None, help='Column name for gene name (default: feature_name for 10x_xenium; geneID for bgi_stereoseq; target for cosmx_smi; gene for vizgen_merscope; geneName for pixel_seq; geneID for nova_st)')
+    aux_in_csv_params.add_argument('--csv-colnames-count', type=str, default=None, help='Column name for feature expression count. If not provided, a count of 1 will be added for a feature in a pixel (default: MIDCounts for bgi_stereoseq; MIDCount for nova_st; None for the rest platforms).')
     aux_in_csv_params.add_argument('--csv-colname-feature-id', type=str, default=None, help='Column name for gene id (default: None)')
     aux_in_csv_params.add_argument('--csv-colnames-others', nargs='+', default=[], help='Columns names to keep (e.g., cell_id, overlaps_nucleus) (default: None)')
-    aux_in_csv_params.add_argument('--csv-colname-phredscore', type=str, default=None, help='Column name for Phred-scaled quality value (Q-Score) estimating the probability of incorrect call (default: qv for 10x_xenium and None for bgi_stereoseq/cosmx_smi/vizgen_merscope/pixel_seq).') # qv
-    aux_in_csv_params.add_argument('--min-phred-score', type=float, default=None, help='Specify the Phred-scaled quality score cutoff (default: 20 for 10x_xenium and None for bgi_stereoseq/cosmx_smi/vizgen_merscope/pixel_seq).') # ficture used 13
+    aux_in_csv_params.add_argument('--csv-colname-phredscore', type=str, default=None, help='Column name for Phred-scaled quality value (Q-Score) estimating the probability of incorrect call (default: qv for 10x_xenium and None for the rest platforms).') # qv
+    aux_in_csv_params.add_argument('--min-phred-score', type=float, default=None, help='Specify the Phred-scaled quality score cutoff (default: 20 for 10x_xenium and None for the rest platforms).')
     aux_in_csv_params.add_argument('--add-molecule-id', action='store_true', default=False, help='If enabled, a column of "molecule_id" will be added to the output file to track the index of the original input will be stored in (default: False).')
     
     # AUX output params
@@ -158,7 +158,7 @@ def convert_in_by_platform(args):
         required_files = [os.path.join(args.in_sge, f) for f in [args.sge_bcd, args.sge_ftr, args.sge_mtx]] + [args.in_parquet]
     elif args.platform == "seqscope":
         required_files = [os.path.join(args.in_sge, f) for f in [args.sge_bcd, args.sge_ftr, args.sge_mtx]]
-    elif args.platform in ["10x_xenium", "cosmx_smi", "bgi_stereoseq", "vizgen_merscope", "pixel_seq"]:
+    elif args.platform in ["10x_xenium", "cosmx_smi", "bgi_stereoseq", "vizgen_merscope", "pixel_seq", "nova_st"]:
         required_files = [args.in_csv]
     return required_files
 
@@ -282,28 +282,32 @@ def update_csvformat_by_platform(args):
             "bgi_stereoseq": "x",
             "cosmx_smi": "x_global_px",
             "vizgen_merscope": "global_x",
-            "pixel_seq": "xcoord"
+            "pixel_seq": "xcoord",
+            "nova_st": "x"
         },
         "y":{
             "10x_xenium": "y_location",
             "bgi_stereoseq": "y",
             "cosmx_smi": "y_global_px",
             "vizgen_merscope": "global_y",
-            "pixel_seq": "ycoord"
+            "pixel_seq": "ycoord",
+            "nova_st": "y"
         },
         "feature_name":{
             "10x_xenium": "feature_name",
             "bgi_stereoseq": "geneID",
             "cosmx_smi": "target",
             "vizgen_merscope": "gene",
-            "pixel_seq": "geneName"
+            "pixel_seq": "geneName",
+            "nova_st": "geneID"
         },
         "count":{
             "10x_xenium": None,
             "bgi_stereoseq": "MIDCounts",
             "cosmx_smi": None,
             "vizgen_merscope": None,
-            "pixel_seq": None
+            "pixel_seq": None,
+            "nova_st": "MIDCount"
         }
     }
     platform_csvdelim_mapping={
@@ -312,7 +316,8 @@ def update_csvformat_by_platform(args):
         "bgi_stereoseq": None,
         "cosmx_smi": ",",
         "vizgen_merscope":  ",",
-        "pixel_seq": None
+        "pixel_seq": None,
+        "nova_st": None
     }
     if args.csv_colname_x is None:
         args.csv_colname_x = platform_colnames_mapping["x"][args.platform]
@@ -376,7 +381,7 @@ def sge_convert(_args):
         cmds = convert_visiumhd(cmds, args)
     elif args.platform == "seqscope":
         cmds = convert_seqscope(cmds, args)
-    elif args.platform in ["10x_xenium", "cosmx_smi", "bgi_stereoseq", "vizgen_merscope", "pixel_seq"]:
+    elif args.platform in ["10x_xenium", "cosmx_smi", "bgi_stereoseq", "vizgen_merscope", "pixel_seq", "nova_st"]:
         cmds = convert_tsv(cmds, args)
     # add done if out_transcript, out_minmax, out_feature are generated
     sge_convert_flag = os.path.join(args.out_dir, "sge_convert.done")
