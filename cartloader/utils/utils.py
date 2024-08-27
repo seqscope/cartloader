@@ -160,3 +160,38 @@ def run_command(command, use_bash=False):
     except subprocess.CalledProcessError as e:
         print(f"Command failed with error:\n{e.stderr}")
         raise
+
+import os
+
+def create_symlink(A, B):
+    # Purpose: Create a soft link from A to B
+
+    # Step 0: Check if A and B are the same
+    if A == B:
+        print("A is the same as B. No need to create a soft link.")
+        return
+
+    # Step 1: Check if A exists
+    if not os.path.exists(A):
+        raise FileNotFoundError(f"The source path {A} does not exist.")
+    
+    # Step 2: Check if B exist
+    if os.path.islink(B) and not os.path.exists(os.path.realpath(B)): # If B is a broken link, remove it
+        os.remove(B)
+    elif os.path.exists(B):                                           # If B is a valid file or valid link.
+        real_B = os.path.realpath(B)
+        real_A = os.path.realpath(A)
+        
+        if real_A == real_B:
+            print("The source and destination files are the same. No need to create a soft link.")
+            return
+        else:
+            if os.path.isfile(B):
+                raise FileExistsError(f"The destination path {B} exists as a regular file. Please take action before creating a soft link.")
+            elif os.path.islink(B):
+                os.remove(B) 
+        
+    # Step 3: Create the soft link
+    os.symlink(A, B)
+    print(f"Soft link created from {A} to {B}.")
+    

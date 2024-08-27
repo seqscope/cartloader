@@ -7,6 +7,13 @@ def parse_arguments(_args):
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(prog=f"cartloader run_ficture", description="Run FICTURE")
 
+    run_params = parser.add_argument_group("Run Options", "Run options for FICTURE commands")
+    run_params.add_argument('--dry-run', action='store_true', default=False, help='Dry run. Generate only the Makefile without running it')
+    run_params.add_argument('--restart', action='store_true', default=False, help='Restart the run. Ignore all intermediate files and start from the beginning')
+    run_params.add_argument('--threads', type=int, default=1, help='Maximum number of threads to use in each process')
+    run_params.add_argument('--n-jobs', type=int, default=1, help='Number of jobs (processes) to run in parallel')
+    run_params.add_argument('--makefn', type=str, default="run_ficture.mk", help='The name of the Makefile to generate (default: run_ficture.mk)')
+
     cmd_params = parser.add_argument_group("Commands", "FICTURE commands to run together")
     cmd_params.add_argument('--main', action='store_true', default=False, help='Run the main functions (sorttsv, minibatch, segment, lda, decode, summary). Note this does NOT include segment-10x and viz-per-factor')
     cmd_params.add_argument('--plus', action='store_true', default=False, help='Run the main functions (sorttsv, minibatch, segment, lda, decode, summary) and additional functions (segment-10x and viz-per-factor)')
@@ -19,13 +26,6 @@ def parse_arguments(_args):
     cmd_params.add_argument('--summary', action='store_true', default=False, help='(Main function) Generate a JSON file summarizing all fixture parameters for which outputs are available in the <out-dir>.')
     cmd_params.add_argument('--viz-per-factor', action='store_true', default=False, help='(Additional function) Generate pixel-level visualization for each factor')
     cmd_params.add_argument('--segment-10x', action='store_true', default=False, help='(Additional function) Perform hexagon segmentation into 10x Genomics format')
-
-    run_params = parser.add_argument_group("Run Options", "Run options for FICTURE commands")
-    run_params.add_argument('--dry-run', action='store_true', default=False, help='Dry run. Generate only the Makefile without running it')
-    run_params.add_argument('--restart', action='store_true', default=False, help='Restart the run. Ignore all intermediate files and start from the beginning')
-    run_params.add_argument('--threads', type=int, default=1, help='Maximum number of threads to use in each process')
-    run_params.add_argument('--n-jobs', type=int, default=1, help='Number of jobs (processes) to run in parallel')
-    run_params.add_argument('--makefn', type=str, default="run_ficture.mk", help='The name of the Makefile to generate (default: run_ficture.mk)')
 
     key_params = parser.add_argument_group("Key Parameters", "Key parameters that requires user's attention")
     key_params.add_argument('--out-dir', required= True, type=str, help='Output directory')
@@ -63,7 +63,7 @@ def parse_arguments(_args):
     aux_params.add_argument('--lda-rand-init', type=int, default=10, help='Number of random initialization during model training')
     aux_params.add_argument('--lda-plot-um-per-pixel', type=float, default=1, help='Image resolution for LDA plot')
     # fit 
-    aux_params.add_argument('--fit-width', type=float, help='Hexagon flat-to-flat width (in um) during model fitting (default: same to train-width)')
+    aux_params.add_argument('--fit-width',  type=str, help='Hexagon flat-to-flat width (in um) during model fitting (default: same to train-width)')
     aux_params.add_argument('--fit-precision', type=float, default=2, help='Output precision of model fitting')
     aux_params.add_argument('--min-ct-per-unit-fit', type=int, default=20, help='Minimum count per hexagon unit during model fitting')
     aux_params.add_argument('--fit-plot-um-per-pixel', type=float, default=1, help='Image resolution for fit coarse plot')   # in Scopeflow, this is set to 2
@@ -74,7 +74,7 @@ def parse_arguments(_args):
     aux_params.add_argument('--decode-precision', type=float, default=0.01, help='Precision of pixel level decoding')
     aux_params.add_argument('--decode-plot-um-per-pixel', type=float, default=0.5, help='Image resolution for pixel decoding plot')
     # others
-    aux_params.add_argument('--min-ct-per-feature', type=int, default=20, help='Minimum count per feature during LDA training')
+    aux_params.add_argument('--min-ct-per-feature', type=int, default=20, help='Minimum count per feature during LDA training, transform and decoding')
     aux_params.add_argument('--cmap-name', type=str, default="turbo", help='Name of color map')
     aux_params.add_argument('--de-max-pval', type=float, default=1e-3, help='p-value cutoff for differential expression')
     aux_params.add_argument('--de-min-fold', type=float, default=1.5, help='Fold-change cutoff for differential expression')
@@ -137,6 +137,11 @@ def run_ficture(_args):
     # args
     args=parse_arguments(_args)
 
+    if args.plus:
+        args.main = True
+        args.segment_10x = True
+        args.viz_per_factor = True
+        
     if args.main:
         args.sorttsv = True
         args.minibatch = True
@@ -144,21 +149,25 @@ def run_ficture(_args):
         args.lda = True
         args.decode = True
         args.summary = True
-        #args.merge_by_pixel = True
+        args.merge_by_pixel = True
 
-    # parse input parameters
+
+    # parse parameters
     train_widths = [int(x) for x in args.train_width.split(",")]
     n_factors = [int(x) for x in args.n_factor.split(",")]
     hexagon_widths_10x = [int(x) for x in args.hexagon_width_10x.split(",")]
     
-    # output
+    # input/output
+    # dirs
     os.makedirs(args.out_dir, exist_ok=True)
+    # in files
     if args.in_transcript is None:
         args.in_transcript = os.path.join(args.out_dir, "transcripts.unsorted.tsv.gz")
     if args.in_cstranscript is None:
         args.in_cstranscript = os.path.join(args.out_dir, "transcripts.sorted.tsv.gz")
     if args.in_minmax is None:
         args.in_minmax = os.path.join(args.out_dir, "coordinate_minmax.tsv")
+    # out files 
     if args.out_json is None:
         args.out_json = os.path.join(args.out_dir, f"ficture.params.json") 
     # no default value for in_feature given that it is optional
@@ -225,14 +234,15 @@ def run_ficture(_args):
 
     if args.segment_10x:
         major_axis=define_major_axis(args)
+        feature_arg = f"--feature {args.in_feature}" if args.in_feature is not None else ""
         for hexagon_width in hexagon_widths_10x:
             hexagon_dir=f"{args.out_dir}/hexagon.d_{hexagon_width}.10x"
             cmds=cmd_separator([], f"Creating hexagon-indexed SGE in 10x Genomics format for {hexagon_width}um...")
             cmds.append(f"mkdir -p {hexagon_dir}")
-            cmds.append(f"ficture make_sge_by_hexagon --input {args.in_cstranscript} --feature {args.in_feature} --major_axis {major_axis} --key {args.key_col} --output_path {hexagon_dir} --hex_width {hexagon_width} --n_move {args.hexagon_n_move_10x} --mu_scale {args.mu_scale} --precision {args.hexagon_precision_10x} --min_ct_per_unit {args.min_ct_per_unit_hexagon_10x} --transfer_gene_prefix")
+            cmds.append(f"ficture make_sge_by_hexagon --input {args.in_cstranscript} feature_arg --major_axis {major_axis} --key {args.key_col} --output_path {hexagon_dir} --hex_width {hexagon_width} --n_move {args.hexagon_n_move_10x} --mu_scale {args.mu_scale} --precision {args.hexagon_precision_10x} --min_ct_per_unit {args.min_ct_per_unit_hexagon_10x} --transfer_gene_prefix")
             # done & target
             cmds.append(f"[ -f {hexagon_dir}/barcodes.tsv.gz ] && [ -f {hexagon_dir}/features.tsv.gz ] && [ -f {hexagon_dir}/matrix.mtx.gz ] && touch {args.out_dir}/hexagon.d_{hexagon_width}.10x.done")
-            mm.add_target(f"{args.out_dir}/hexagon.d_{hexagon_width}.10x.done", [args.in_cstranscript, args.in_feature], cmds)
+            mm.add_target(f"{args.out_dir}/hexagon.d_{hexagon_width}.10x.done", [args.in_cstranscript], cmds)
 
     # 4. lda
     if args.lda:
@@ -286,6 +296,7 @@ tabix=${10}
 sort=${11}
 sort_mem=${12}
 
+# 1) x y limits
 while IFS=$'\t' read -r r_key r_val; do
     export "${r_key}"="${r_val}"
 done < ${coor}
@@ -295,20 +306,33 @@ offsetx=${xmin}
 offsety=${ymin}
 rangex=$( echo "(${xmax} - ${xmin} + 0.5)/1+1" | bc )
 rangey=$( echo "(${ymax} - ${ymin} + 0.5)/1+1" | bc )
-header="##K=${n_factor};TOPK=${topk}\n##BLOCK_SIZE=${bsize};BLOCK_AXIS=X;INDEX_AXIS=Y\n##OFFSET_X=${offsetx};OFFSET_Y=${offsety};SIZE_X=${rangex};SIZE_Y=${rangey};SCALE=${scale}\n#BLOCK\tX\tY\tK1\tK2\tK3\tP1\tP2\tP3"
+                    
 
-# if [ "${major_axis}" == "X" ]; then
-#     (echo -e "${header}" && gzip -cd "${input}" | tail -n +2 | perl -slane '$F[0]=int(($F[1]-$offx)/$bsize) * $bsize; $F[1]=int(($F[1]-$offx)*$scale); $F[1]=($F[1]>=0)?$F[1]:0; $F[2]=int(($F[2]-$offy)*$scale); $F[2]=($F[2]>=0)?$F[2]:0; print join("\t", @F);' -- -bsize="${bsize}" -scale="${scale}" -offx="${offsetx}" -offy="${offsety}" | ${sort} -S ${sort_mem} -k1,1g -k2,2g ) | ${bgzip} -c > ${output}
-#     ${tabix} -f -s1 -b2 -e2 ${output}
-# else
-#     (echo -e "${header}" && gzip -cd "${input}" | tail -n +2 | perl -slane '$F[0]=int(($F[1]-$offx)/$bsize) * $bsize; $F[1]=int(($F[1]-$offx)*$scale); $F[1]=($F[1]>=0)?$F[1]:0; $F[2]=int(($F[2]-$offy)*$scale); $F[2]=($F[2]>=0)?$F[2]:0; print join("\t", @F);' -- -bsize="${bsize}" -scale="${scale}" -offx="${offsetx}" -offy="${offsety}" | ${sort} -S ${sort_mem} -k1,1g -k3,3g ) | ${bgzip} -c > ${output}
-#     ${tabix} -f -s1 -b3 -e3 ${output}
-# fi
+# 2) define the block and sort axis
+declare -A axis2col
+axis2col["X"]=2
+axis2col["Y"]=3
 
-(echo -e "${header}" && gzip -cd "${input}" | tail -n +2 | perl -slane '$F[0]=int(($F[1]-$offx)/$bsize) * $bsize; $F[1]=int(($F[1]-$offx)*$scale); $F[1]=($F[1]>=0)?$F[1]:0; $F[2]=int(($F[2]-$offy)*$scale); $F[2]=($F[2]>=0)?$F[2]:0; print join("\t", @F);' -- -bsize="${bsize}" -scale="${scale}" -offx="${offsetx}" -offy="${offsety}" | ${sort} -S ${sort_mem} -k1,1g -k3,3g ) | ${bgzip} -c > ${output}
-${tabix} -f -s1 -b3 -e3 ${output}
+if [[ ${major_axis} == "Y" ]]; then
+    block_axis="X"
+    offblock="${offsetx}"
+else
+    block_axis="Y"
+    offblock="${offsety}"
+fi
+
+blockidx0=$( echo "${axis2col[${block_axis}]} - 1" | bc )   # perl is 0-based
+sortidx=${axis2col[${major_axis}]}
+                    
+# echo
+echo -e "block_axis: ${block_axis}\noffblock: ${offblock}\nblockidx in perl: ${blockidx0}\nsortidx: ${sortidx}"
+        
+header="##K=${n_factor};TOPK=${topk}\n##BLOCK_SIZE=${bsize};BLOCK_AXIS=${block_axis};INDEX_AXIS=${major_axis}\n##OFFSET_X=${offsetx};OFFSET_Y=${offsety};SIZE_X=${rangex};SIZE_Y=${rangey};SCALE=${scale}\n#BLOCK\tX\tY\tK1\tK2\tK3\tP1\tP2\tP3"
+
+(echo -e "${header}" && gzip -cd "${input}" | tail -n +2 | perl -slane '$F[0]=int(($F[$bidx]-$offb)/$bsize) * $bsize; $F[1]=int(($F[1]-$offx)*$scale); $F[1]=($F[1]>=0)?$F[1]:0; $F[2]=int(($F[2]-$offy)*$scale); $F[2]=($F[2]>=0)?$F[2]:0; print join("\t", @F);' -- -bsize="${bsize}" -scale="${scale}" -offx="${offsetx}" -offy="${offsety}" -bidx="${blockidx0}" -offb="${offblock}"|  ${sort} -S ${sort_mem} -k1,1g -k"${sortidx},${sortidx}g") | ${bgzip} -c > ${output}
+
+${tabix} -f -s1 -b"${sortidx}" -e"${sortidx}" ${output}
                                     
-#rm ${input}
 """)
 
         for train_width in train_widths:
@@ -325,7 +349,7 @@ ${tabix} -f -s1 -b3 -e3 ${output}
                 if args.fit_width is None:
                     fit_widths = [train_width]
                 else:
-                    fit_widths = [float(x) for x in args.fit_width.split(",")]
+                    fit_widths = [int(x) for x in args.fit_width.split(",")]
                 for fit_width in fit_widths:
                     # params
                     fit_n_move = int(fit_width / args.anchor_res)
@@ -342,6 +366,10 @@ ${tabix} -f -s1 -b3 -e3 ${output}
                     # 1) transform/fit
                     cmds=cmd_separator([], f"Creating projection for {train_width}um and {n_factor} factors, at {fit_width}um")
                     cmds.append(f"ficture transform --input {args.in_cstranscript} --output_pref {tsf_prefix} --model {model_mat} --key {args.key_col} --major_axis {major_axis} --hex_width {fit_width} --n_move {fit_n_move} --min_ct_per_unit {args.min_ct_per_unit_fit} --mu_scale {args.mu_scale} --thread {args.threads} --precision {args.fit_precision}")
+                    # - transform-cmap if cmap from lda does not exist
+                    if not os.path.exists(cmap):
+                        cmds.append(f"ficture choose_color --input {tsf_fitres} --output {tsf_prefix} --cmap_name {args.cmap_name}")
+                        cmap=f"{tsf_prefix}.rgb.tsv"
                     # - transform-DE
                     cmds.append(f"ficture de_bulk --input {tsf_prefix}.posterior.count.tsv.gz --output {tsf_prefix}.bulk_chisq.tsv --min_ct_per_feature {args.min_ct_per_feature} --max_pval_output {args.de_max_pval} --min_fold_output {args.de_min_fold} --thread {args.threads}")
                     # - transform-report
@@ -358,7 +386,7 @@ ${tabix} -f -s1 -b3 -e3 ${output}
                     # - decode-sort
                     #cmds=cmd_separator(cmds, f"Creating pixel-level output image for {train_width}um and {n_factor} factors, at {fit_width}um")
                     cmds.append(f"bash {script_path} {decode_prefix}.pixel.tsv.gz {decode_spixel} {args.in_minmax} {n_factor} {args.decode_block_size} {args.decode_scale} {args.decode_top_k} {major_axis} {args.bgzip} {args.tabix} {args.sort} {args.sort_mem}")
-                    cmds.append(f"rm {decode_prefix}.pixel.tsv.gz")
+                    #cmds.append(f"rm {decode_prefix}.pixel.tsv.gz")
                     # - decode-de & report
                     #cmds=cmd_separator(cmds, f"Performing pseudo-bulk differential expression analysis for {train_width}um and {n_factor} factors, at {fit_width}um")
                     cmds.append(f"ficture de_bulk --input {decode_prefix}.posterior.count.tsv.gz --output {decode_prefix}.bulk_chisq.tsv --min_ct_per_feature {args.min_ct_per_feature} --max_pval_output {args.de_max_pval} --min_fold_output {args.de_min_fold} --thread {args.threads}")
@@ -473,6 +501,9 @@ ${tabix} -f -s1 -b3 -e3 ${output}
         os.system(f"make -f {args.out_dir}/{args.makefn} -j {args.n_jobs}")
 
 if __name__ == "__main__":
+    # Get the path to the cartloader repository
+    cartloader_repo=os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+
     # Get the base file name without extension
     script_name = os.path.splitext(os.path.basename(__file__))[0]
 
