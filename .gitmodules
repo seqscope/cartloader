@@ -10,3 +10,6 @@
 [submodule "submodules/tippecanoe"]
 	path = submodules/tippecanoe
 	url = https://github.com/felt/tippecanoe
+[submodule "submodules/factor_viz"]
+	path = submodules/factor_viz
+	url = git@github.com:seqscope/factor_viz.git

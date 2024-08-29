@@ -12,7 +12,7 @@ def parse_arguments(_args):
     key_params.add_argument('--out-dir', required= True, type=str, help='Output directory')
     key_params.add_argument('--yaml-file', default=None, type=str, help='If missing, the yaml file will be named as catalog.yaml and saved in the output directory')
     key_params.add_argument('--lda-ids', nargs='*', type=str, help='Training IDs for LDA model')
-    key_params.add_argument('--decode-ids', nargs='*', type=str, help='Projection IDs for pixel-level decoding')
+    key_params.add_argument('--decode-ids', nargs='*', type=str, help='Decoding IDs for pixel-level decoding')
     key_params.add_argument('--all-ids', type=str, help='Write down all results into the yaml file')
 
     desc_params = parser.add_argument_group("Description Parameters", "Description parameters for the input data")
@@ -44,7 +44,6 @@ def ini_yaml(_args):
                 "fullDepth": None,
                 "perBin": None,
                 "statBin": None,
-
             },
             "basemap": []
         }

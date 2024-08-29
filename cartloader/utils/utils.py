@@ -1,4 +1,4 @@
-import logging, os, shutil, sys, importlib, csv, json, yaml
+import logging, os, shutil, sys, importlib, csv, shlex, subprocess
 
 def cmd_separator(cmds, info):
     """
@@ -96,6 +96,22 @@ def find_major_axis(filename, format):
     else:
         return "Y"
     
+# def add_param_to_cmd(cmd, args, aux_argset):
+#     aux_args = {k: v for k, v in vars(args).items() if k in aux_argset}
+#     for arg, value in aux_args.items():
+#         if value or isinstance(value, bool):
+#             arg_name = arg.replace('_', '-')
+#             if isinstance(value, bool) and value:
+#                 cmd += f" --{arg_name}"
+#             elif isinstance(value, list):
+#                 cmd += f" --{arg_name} {' '.join(value)}"
+#             elif not isinstance(value, bool):
+#                 if "regex" in arg_name:
+#                     cmd += f" --{arg_name} '{value}'"
+#                 else:
+#                     cmd += f" --{arg_name} {value}"
+#     return cmd
+
 def add_param_to_cmd(cmd, args, aux_argset):
     aux_args = {k: v for k, v in vars(args).items() if k in aux_argset}
     for arg, value in aux_args.items():
@@ -104,10 +120,12 @@ def add_param_to_cmd(cmd, args, aux_argset):
             if isinstance(value, bool) and value:
                 cmd += f" --{arg_name}"
             elif isinstance(value, list):
-                cmd += f" --{arg_name} {' '.join(value)}"
+                cmd += f" --{arg_name} {' '.join(map(str, value))}"
             elif not isinstance(value, bool):
+                # Ensure regex patterns are properly quoted
                 if "regex" in arg_name:
-                    cmd += f" --{arg_name} '{value}'"
+                    quoted_value = shlex.quote(str(value))
+                    cmd += f" --{arg_name} {quoted_value}"
                 else:
                     cmd += f" --{arg_name} {value}"
     return cmd
@@ -165,3 +183,67 @@ def write_dict_to_file(data, file_path, file_type=None):
             yaml.safe_dump(data, file, default_flow_style=False)
     else:
         raise ValueError("Unsupported file type. Please provide 'json' or 'yaml'/'yml' as file_type.")
+
+# def run_bash_command(command):
+#     try:
+#         result = subprocess.run(command, 
+#                   shell=True, 
+#                   stdout=subprocess.PIPE, 
+#                   stderr=subprocess.PIPE, 
+#                   text=True, 
+#                   check=True)
+#         return result.stdout
+#     except subprocess.CalledProcessError as e:
+#         print(f"Command failed with error:\n\t{command}\n\t{e.stderr}\n")
+#         raise
+
+def run_command(command, use_bash=False):
+    executable_shell = "/bin/bash" if use_bash else "/bin/sh"
+    try:
+        result = subprocess.run(
+            command, 
+            shell=True, 
+            executable=executable_shell,  # Choose the shell based on the use_bash flag
+            stdout=subprocess.PIPE, 
+            stderr=subprocess.PIPE, 
+            text=True, 
+            check=True
+        )
+        return result.stdout
+    except subprocess.CalledProcessError as e:
+        print(f"Command failed with error:\n{e.stderr}")
+        raise
+
+import os
+
+def create_symlink(A, B):
+    # Purpose: Create a soft link from A to B
+
+    # Step 0: Check if A and B are the same
+    if A == B:
+        print("A is the same as B. No need to create a soft link.")
+        return
+
+    # Step 1: Check if A exists
+    if not os.path.exists(A):
+        raise FileNotFoundError(f"The source path {A} does not exist.")
+    
+    # Step 2: Check if B exist
+    if os.path.islink(B) and not os.path.exists(os.path.realpath(B)): # If B is a broken link, remove it
+        os.remove(B)
+    elif os.path.exists(B):                                           # If B is a valid file or valid link.
+        real_B = os.path.realpath(B)
+        real_A = os.path.realpath(A)
+        
+        if real_A == real_B:
+            print("The source and destination files are the same. No need to create a soft link.")
+            return
+        else:
+            if os.path.isfile(B):
+                raise FileExistsError(f"The destination path {B} exists as a regular file. Please take action before creating a soft link.")
+            elif os.path.islink(B):
+                os.remove(B) 
+        
+    # Step 3: Create the soft link
+    os.symlink(A, B)
+    print(f"Soft link created from {A} to {B}.")
