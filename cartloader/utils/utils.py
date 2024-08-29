@@ -130,6 +130,59 @@ def add_param_to_cmd(cmd, args, aux_argset):
                     cmd += f" --{arg_name} {value}"
     return cmd
 
+## code suggested by ChatGPT
+def load_file_to_dict(file_path, file_type=None):
+    """
+    Load a JSON or YAML file into a dictionary.
+
+    Parameters:
+    file_path (str): Path to the JSON or YAML file.
+    file_type (str, optional): The type of the file ('json' or 'yaml'). If None, the type is inferred from the file extension.
+
+    Returns:
+    dict: Dictionary containing the file's data.
+    """
+    if not os.path.isfile(file_path):
+        raise FileNotFoundError(f"The file {file_path} does not exist.")
+    
+    if file_type is None:
+        _, file_extension = os.path.splitext(file_path)
+        file_type = file_extension.lower()[1:]  # Strip the dot and use the extension
+
+    if file_type == 'json':
+        with open(file_path, 'r') as file:
+            return json.load(file)
+    elif file_type in ['yaml', 'yml']:
+        with open(file_path, 'r') as file:
+            return yaml.safe_load(file)
+    else:
+        raise ValueError("Unsupported file type. Please provide 'json' or 'yaml'/'yml' as file_type.")
+
+## code suggested by ChatGPT
+def write_dict_to_file(data, file_path, file_type=None):
+    """
+    Write a dictionary to a JSON or YAML file.
+
+    Parameters:
+    data (dict): The dictionary to write to the file.
+    file_path (str): Path to the output file.
+    file_type (str, optional): The type of the file ('json' or 'yaml'). If None, the type is inferred from the file extension.
+
+    Raises:
+    ValueError: If the file type is unsupported.
+    """
+    if file_type is None:
+        _, file_extension = os.path.splitext(file_path)
+        file_type = file_extension.lower()[1:]  # Strip the dot and use the extension
+
+    if file_type == 'json':
+        with open(file_path, 'w') as file:
+            json.dump(data, file, indent=4)
+    elif file_type in ['yaml', 'yml']:
+        with open(file_path, 'w') as file:
+            yaml.safe_dump(data, file, default_flow_style=False)
+    else:
+        raise ValueError("Unsupported file type. Please provide 'json' or 'yaml'/'yml' as file_type.")
 
 # def run_bash_command(command):
 #     try:
@@ -194,4 +247,3 @@ def create_symlink(A, B):
     # Step 3: Create the soft link
     os.symlink(A, B)
     print(f"Soft link created from {A} to {B}.")
-    

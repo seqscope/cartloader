@@ -86,6 +86,7 @@ def run_tsv2pmtiles(_args):
 
     # create output directory if needed
     out_dir = os.path.dirname(args.out_prefix)
+    out_base = os.path.basename(args.out_prefix)
     if not os.path.exists(out_dir):
         os.makedirs(out_dir, exist_ok=True)
     
@@ -161,7 +162,7 @@ def run_tsv2pmtiles(_args):
             else:
                 pmtiles_path = args.out_prefix + "_bin" + bin_id + ".pmtiles"
             cmds = cmd_separator([], f"Converting bin {bin_id} to pmtiles")
-            cmds.append(f"{args.tippecanoe} -o {pmtiles_path} -Z {args.min_zoom} -z {args.max_zoom} --force -s EPSG:3857 -M {args.max_tile_bytes} --drop-densest-as-needed --extend-zooms-if-still-dropping '--preserve-point-density-threshold={args.preserve_point_density_thres}' --no-duplication {csv_path}")
+            cmds.append(f"{args.tippecanoe} -o {pmtiles_path} -Z {args.min_zoom} -z {args.max_zoom} --force -s EPSG:3857 -M {args.max_tile_bytes} --drop-densest-as-needed --extend-zooms-if-still-dropping '--preserve-point-density-threshold={args.preserve_point_density_thres}' --no-duplication --no-clipping --buffer 0 {csv_path}")
             mm.add_target(pmtiles_path, [csv_path], cmds)
 
         if len(mm.targets) == 0:
@@ -178,7 +179,7 @@ def run_tsv2pmtiles(_args):
             logger.error("Error in splitting the input TSV file into CSV files")
             sys.exit(1)
 
-    # 3. clean the intermediate files
+    # 3. clean the intermediate files and write new output files
     if args.clean:
         logger.info("Cleaning intermediate files")
 
@@ -192,6 +193,10 @@ def run_tsv2pmtiles(_args):
             if os.path.exists(ftr_path):
                 os.remove(ftr_path)
 
+        df_out = df.drop(columns=['molecules_path','features_path'])
+        df_out['pmtiles_path'] = [f"{out_base}_all.pmtiles" if x == "all" else f"{out_base}_bin{x}.pmtiles" for x in df_out['bin_id']]
+        df_out.to_csv(f"{args.out_prefix}_pmtiles_index.tsv", sep="\t", index=False)
+    
     logger.info("Analysis Finished")
 
 if __name__ == "__main__":
