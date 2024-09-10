@@ -6,6 +6,40 @@ from collections import Counter
 from cartloader.utils.utils import create_custom_logger
 
 # Function to get log2 bins from the first file
+def get_equal_bins(n_bins, in_features, out_prefix, out_features_suffix, delim, colname_feature, colname_count, skip_original):
+    #print(f"delim = {delim} {len(delim)}")
+    df = pd.read_csv(in_features, sep=delim)
+
+    df = df.sort_values(by=colname_count).reset_index(drop=True)
+
+    # Calculate the cumulative sum of 'count'
+    df['cumulative_sum'] = df[colname_count].cumsum()
+
+    # Define the total sum and target sum for each bin
+    total_sum = df[colname_count].sum()
+    target_sum = total_sum / n_bins
+
+    # Create the bin edges, but exclude the last edge to ensure n_bins bins
+    bin_edges = np.linspace(0, total_sum, n_bins + 1)[1:]  # Skip the first edge
+
+    # Assign each cumulative sum to a bin
+    df['bin'] = (np.digitize(df['cumulative_sum'], bin_edges, right=True) + 1).astype(int)
+
+    equal_bins = df.set_index(colname_feature)['bin'].to_dict()
+
+    df = df.drop(columns=['cumulative_sum'])
+
+    if not skip_original:
+        df.to_csv(f"{out_prefix}_all_{out_features_suffix}", sep='\t', index=False, na_rep='NA')
+    df.to_json(f"{out_prefix}_bin_counts.json", orient='records')
+
+    for equal_bin, group in df.groupby('bin'):
+        output_file = f"{out_prefix}_bin{equal_bin}_{out_features_suffix}"
+        group.drop('bin', axis=1).to_csv(output_file, sep='\t', index=False, na_rep='NA')
+    
+    return equal_bins
+
+# Function to get log2 bins from the first file
 def get_log2_bins(multiplier, in_features, out_prefix, out_features_suffix, delim, colname_feature, colname_count, skip_original):
     #print(f"delim = {delim} {len(delim)}")
     df = pd.read_csv(in_features, sep=delim)
@@ -23,13 +57,13 @@ def get_log2_bins(multiplier, in_features, out_prefix, out_features_suffix, deli
     return log2_bins
 
 # Function to process chunks of the second file
-def process_chunk(chunk, log2_bins, colname_feature, out_prefix, out_tsv_suffix, out_tsv_delim, rename_dict):
+def process_chunk(chunk, bins, colname_feature, out_prefix, out_tsv_suffix, out_tsv_delim, rename_dict):
     bin2nmols = {}
-    for log2_bin, group in chunk.groupby(chunk[colname_feature].map(log2_bins)):
-        bin2nmols[log2_bin] = group.shape[0]
-        output_file = f"{out_prefix}_bin{log2_bin}_{out_tsv_suffix}"
+    for bin_id, group in chunk.groupby(chunk[colname_feature].map(bins)):
+        bin2nmols[bin_id] = group.shape[0]
+        output_file = f"{out_prefix}_bin{bin_id}_{out_tsv_suffix}"
         mode = 'a' if os.path.exists(output_file) else 'w'
-        group.rename(columns=rename_dict).to_csv(output_file, sep=out_tsv_delim, index=False, mode=mode, header=(mode == 'w'))
+        group.rename(columns=rename_dict).to_csv(output_file, sep=out_tsv_delim, index=False, mode=mode, header=(mode == 'w'), na_rep='NA')
     return bin2nmols
 
 def split_molecule_counts(_args):
@@ -54,7 +88,9 @@ def split_molecule_counts(_args):
     iocol_params.add_argument('--col-rename', type=str, nargs='+', help='Columns to rename in the output file. Format: old_name1:new_name1 old_name2:new_name2 ...')
 
     key_params = parser.add_argument_group("Key Parameters", "Key parameters frequently used by users")
-    key_params.add_argument('--bin-multiplier', type=float, default=1.0, help='Multiplier used to determine the bin. Bin is determined as [multiplier] * log2(total_count). Default is 1.0')
+    key_params.add_argument('--equal-bins', action='store_true', default=False, help='Use equal bins instead of log2 bins')
+    key_params.add_argument('--bin-count', type=int, default=50, help='When --equal-bins is used, determine the number of bins to split the data into the same bin')
+    key_params.add_argument('--log2-multiplier', type=float, default=1.0, help='Multiplier used to determine the log2 bin. Bin is determined as [multiplier] * log2(total_count). Default is 1.0')
     key_params.add_argument('--dummy-genes', type=str, default='', help='A single name or a regex describing the names of negative control probes')
     key_params.add_argument('--chunk-size', type=int, default=1000000, help='Number of rows to read at a time. Default is 1000000')
     key_params.add_argument('--skip-original', action='store_true', default=False, help='Skip writing the original file')
@@ -67,7 +103,10 @@ def split_molecule_counts(_args):
 
     logger.info("Reading the feature counts and splitting into bins")
     # Get log2 bins from the tsv file
-    log2_bins = get_log2_bins(args.bin_multiplier, args.in_features, args.out_prefix, args.out_features_suffix, args.in_features_delim, args.colname_feature, args.colname_count, args.skip_original)
+    if args.equal_bins:
+        bins = get_equal_bins(args.bin_count, args.in_features, args.out_prefix, args.out_features_suffix, args.in_features_delim, args.colname_feature, args.colname_count, args.skip_original)
+    else:
+        bins = get_log2_bins(args.log2_multiplier, args.in_features, args.out_prefix, args.out_features_suffix, args.in_features_delim, args.colname_feature, args.colname_count, args.skip_original)
 
     # set the column names to be renamed
     rename_dict = {}
@@ -81,18 +120,18 @@ def split_molecule_counts(_args):
     # Process the second file in chunks
     nchunks = 0
     bin2mols = {}
-    for chunk in pd.read_csv(args.in_molecules, sep=args.in_molecules_delim, chunksize=args.chunk_size):
-        bin2mols_chunk = process_chunk(chunk, log2_bins, args.colname_feature, args.out_prefix, args.out_molecules_suffix, args.out_molecules_delim, rename_dict)
+    for chunk in pd.read_csv(args.in_molecules, sep=args.in_molecules_delim, chunksize=args.chunk_size, keep_default_na=False, na_values=[]):
+        bin2mols_chunk = process_chunk(chunk, bins, args.colname_feature, args.out_prefix, args.out_molecules_suffix, args.out_molecules_delim, rename_dict)
         for bin_id, nmols in bin2mols_chunk.items():
             bin2mols[bin_id] = bin2mols.get(bin_id, 0) + nmols
             bin2mols["all"] = bin2mols.get("all", 0) + nmols
         if not args.skip_original:
-            chunk.rename(columns=rename_dict).to_csv(f"{args.out_prefix}_all_{args.out_molecules_suffix}", sep=args.out_molecules_delim, index=False, mode='a', header=(nchunks == 0))
+            chunk.rename(columns=rename_dict).to_csv(f"{args.out_prefix}_all_{args.out_molecules_suffix}", sep=args.out_molecules_delim, index=False, mode='a', header=(nchunks == 0),na_rep='NA')
         nchunks += 1
         logger.info(f"Finished processing chunk {nchunks} of size {args.chunk_size}...")
 
-    bin2nftrs = Counter(log2_bins.values())
-    bin2nftrs["all"] = len(log2_bins)
+    bin2nftrs = Counter(bins.values())
+    bin2nftrs["all"] = len(bins)
 
     ## write the index file
     logger.info("Writing the index file...")  
@@ -103,7 +142,7 @@ def split_molecule_counts(_args):
             nmols = bin2mols.get("all", 0)
             nftrs = bin2nftrs.get("all", 0)
             wf.write(f"all\t{nmols}\t{nftrs}\t{out_basename}_all_{args.out_molecules_suffix}\t{out_basename}_all_{args.out_features_suffix}\n")
-        for bin_id in sorted(list(set(log2_bins.values()))):
+        for bin_id in sorted(list(set(bins.values()))):
             nmols = bin2mols.get(bin_id, 0)
             nftrs = bin2nftrs.get(bin_id, 0)
             wf.write(f"{bin_id}\t{nmols}\t{nftrs}\t{out_basename}_bin{bin_id}_{args.out_molecules_suffix}\t{out_basename}_bin{bin_id}_{args.out_features_suffix}\n")

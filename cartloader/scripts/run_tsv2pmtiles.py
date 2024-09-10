@@ -27,7 +27,8 @@ def parse_arguments(_args):
     inout_params.add_argument('--col-rename', type=str, nargs='+', help='Columns to rename in the output file. Format: old_name1:new_name1 old_name2:new_name2 ...')
 
     key_params = parser.add_argument_group("Key Parameters", "Key parameters frequently used by users")
-    key_params.add_argument('--bin-multiplier', type=float, default=1.0, help='Multiplier used to determine the bin. Bin is determined as [multiplier] * log2(total_count). Default is 1.0')
+    key_params.add_argument('--bin-count', type=int, default=50, help='Number of bins to equally divide the genes into (default: 50)')
+#    key_params.add_argument('--log2-multiplier', type=float, default=1.0, help='Multiplier used to determine the log2 bin. Bin is determined as [multiplier] * log2(total_count). Default is 1.0')
     key_params.add_argument('--dummy-genes', type=str, default='', help='A single name or a regex describing the names of negative control probes')
     key_params.add_argument('--chunk-size', type=int, default=1000000, help='Number of rows to read at a time. Default is 1000000')
     key_params.add_argument('--skip-original', action='store_true', default=False, help='Skip writing the original file')
@@ -86,6 +87,7 @@ def run_tsv2pmtiles(_args):
 
     # create output directory if needed
     out_dir = os.path.dirname(args.out_prefix)
+    out_base = os.path.basename(args.out_prefix)
     if not os.path.exists(out_dir):
         os.makedirs(out_dir, exist_ok=True)
     
@@ -132,7 +134,8 @@ def run_tsv2pmtiles(_args):
                 --colname-feature {args.colname_feature} \\
                 --colname-count {args.colname_count} \\
                 --col-rename {" ".join(args.col_rename)} \\
-                --bin-multiplier {args.bin_multiplier} \\
+                --bin-count {args.bin_count} \\
+                --equal-bins \\
                 --dummy-genes \"{args.dummy_genes}\" \\
                 --chunk-size {args.chunk_size} \\
                 --log-suffix {args.log_suffix} \\
@@ -161,7 +164,7 @@ def run_tsv2pmtiles(_args):
             else:
                 pmtiles_path = args.out_prefix + "_bin" + bin_id + ".pmtiles"
             cmds = cmd_separator([], f"Converting bin {bin_id} to pmtiles")
-            cmds.append(f"{args.tippecanoe} -o {pmtiles_path} -Z {args.min_zoom} -z {args.max_zoom} --force -s EPSG:3857 -M {args.max_tile_bytes} --drop-densest-as-needed --extend-zooms-if-still-dropping '--preserve-point-density-threshold={args.preserve_point_density_thres}' --no-duplication {csv_path}")
+            cmds.append(f"{args.tippecanoe} -o {pmtiles_path} -Z {args.min_zoom} -z {args.max_zoom} --force -s EPSG:3857 -M {args.max_tile_bytes} --drop-densest-as-needed --extend-zooms-if-still-dropping '--preserve-point-density-threshold={args.preserve_point_density_thres}' --no-duplication --no-clipping --buffer 0 {csv_path}")
             mm.add_target(pmtiles_path, [csv_path], cmds)
 
         if len(mm.targets) == 0:
@@ -178,20 +181,23 @@ def run_tsv2pmtiles(_args):
             logger.error("Error in splitting the input TSV file into CSV files")
             sys.exit(1)
 
-    # 3. clean the intermediate files
-    if args.clean:
-        logger.info("Cleaning intermediate files")
+    # 3. clean the intermediate files and write new output files
+    logger.info("Cleaning intermediate files")
 
-        df = pd.read_csv(f"{args.out_prefix}_index.tsv", sep="\t")
-        for i, row in df.iterrows():
-            bin_id = row["bin_id"]
-            csv_path = out_dir + "/" + row["molecules_path"]
-            if os.path.exists(csv_path):
-                os.remove(csv_path)
-            ftr_path = out_dir + "/" + row["features_path"]
-            if os.path.exists(ftr_path):
-                os.remove(ftr_path)
+    df = pd.read_csv(f"{args.out_prefix}_index.tsv", sep="\t")
+    for i, row in df.iterrows():
+        bin_id = row["bin_id"]
+        csv_path = out_dir + "/" + row["molecules_path"]
+        if args.clean and os.path.exists(csv_path):
+            os.remove(csv_path)
+        ftr_path = out_dir + "/" + row["features_path"]
+        if args.clean and os.path.exists(ftr_path):
+            os.remove(ftr_path)
 
+    df_out = df.drop(columns=['molecules_path','features_path'])
+    df_out['pmtiles_path'] = [f"{out_base}_all.pmtiles" if x == "all" else f"{out_base}_bin{x}.pmtiles" for x in df_out['bin_id']]
+    df_out.to_csv(f"{args.out_prefix}_pmtiles_index.tsv", sep="\t", index=False)
+    
     logger.info("Analysis Finished")
 
 if __name__ == "__main__":
