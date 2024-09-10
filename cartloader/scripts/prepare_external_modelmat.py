@@ -11,8 +11,8 @@ def parse_arguments(_args):
                                      Helper script to prepare a directory for running FICTURE with external model and target data.
                                      """)
     key_params = parser.add_argument_group("Key Parameters", "Key parameters that requires user's attention")
-    key_params.add_argument('--model', type=str, default=None, help='Path to the external model file')
-    key_params.add_argument('--train-width', type=str, default="0", help='If the external model has a training width, specify it here. Default: 0')
+    key_params.add_argument('--model', type=str, default=None, help='(Optional) Path to the external model file')
+    key_params.add_argument('--train-width', type=str, default="0", help='(Optional) If the external model has a training width, specify it here. Default: 0')
     key_params.add_argument('--target-dir', type=str, default=None, help='Path to the directory containing the projection files. We assume the cartloader run_ficture has been applied to the target data, including sorttsv, minibatch')
     key_params.add_argument('--target-cstranscript', type=str, default=None, help='Path to the coordinate-sorted transcript-indexed SGE file in TSV format')
     key_params.add_argument('--target-minmax', type=str, default=None, help='Path to the coordinate minmax TSV file')
@@ -46,16 +46,17 @@ def prepare_external_modelmat(_args):
 
     # input/output
     # 1. input external model
-    # * start with read the number of factors from the model file
-    print(f"Reading the number of factors from the model file {args.model}...")
-    model_header = pd.read_csv(args.model, sep="\t", nrows=1)
-    n_factor = len(model_header.columns) - 1
-    print(f"Number of factors in the model: {n_factor}")
-    # * create a soft link from the model file to the output directory
-    model_prefix=f"t{args.train_width}_f{n_factor}"
-    model_stdfn = f"{model_prefix}.model_matrix.tsv.gz"
-    model_ln = os.path.join(args.out_dir, model_stdfn)
-    create_symlink(args.model, model_ln)
+    if args.model is not None:
+        # * start with read the number of factors from the model file
+        print(f"Reading the number of factors from the model file {args.model}...")
+        model_header = pd.read_csv(args.model, sep="\t", nrows=1)
+        n_factor = len(model_header.columns) - 1
+        print(f"Number of factors in the model: {n_factor}")
+        # * create a soft link from the model file to the output directory
+        model_prefix=f"t{args.train_width}_f{n_factor}"
+        model_stdfn = f"{model_prefix}.model_matrix.tsv.gz"
+        model_ln = os.path.join(args.out_dir, model_stdfn)
+        create_symlink(args.model, model_ln)
 
     # 2. output dirs and files
     os.makedirs(args.out_dir, exist_ok=True)

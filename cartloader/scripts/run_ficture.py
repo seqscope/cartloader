@@ -17,10 +17,12 @@ def parse_arguments(_args):
     cmd_params = parser.add_argument_group("Commands", "FICTURE commands to run together")
     cmd_params.add_argument('--main', action='store_true', default=False, help='Run the main functions (sorttsv, minibatch, segment, lda, decode, summary). Note this does NOT include segment-10x and viz-per-factor')
     cmd_params.add_argument('--plus', action='store_true', default=False, help='Run the main functions (sorttsv, minibatch, segment, lda, decode, summary) and additional functions (segment-10x and viz-per-factor)')
+    cmd_params.add_argument('--viz-only', action='store_true', default=False, help='For lda, decode functions, only regenerate the visualization and report without running LDA analysis, decode')
     cmd_params.add_argument('--sorttsv', action='store_true', default=False, help='(Main function) Sort the input tsv file')
     cmd_params.add_argument('--minibatch', action='store_true', default=False, help='(Main function) Perform minibatch step')
     cmd_params.add_argument('--segment', action='store_true', default=False, help='(Main function) Perform hexagon segmentation into FICTURE-compatible format')
     cmd_params.add_argument('--lda', action='store_true', default=False, help='(Main function) Perform LDA model training')
+    cmd_params.add_argument('--projection', action='store_true', default=False, help='(Main function) Perform projection/Transform')
     cmd_params.add_argument('--decode', action='store_true', default=False, help='(Main function) Perform pixel-level decoding')
     cmd_params.add_argument('--merge-by-pixel', action='store_true', default=False, help='(Main function) Merge pixel-level decoding results with the input TSV SGE into a single file')
     cmd_params.add_argument('--summary', action='store_true', default=False, help='(Main function) Generate a JSON file summarizing all fixture parameters for which outputs are available in the <out-dir>.')
@@ -73,14 +75,16 @@ def parse_arguments(_args):
     aux_params.add_argument('--decode-scale', type=int, default=100, help='Scale parameters for pixel decoding output')
     aux_params.add_argument('--decode-precision', type=float, default=0.01, help='Precision of pixel level decoding')
     aux_params.add_argument('--decode-plot-um-per-pixel', type=float, default=0.5, help='Image resolution for pixel decoding plot')
-    # others
-    aux_params.add_argument('--min-ct-per-feature', type=int, default=20, help='Minimum count per feature during LDA training, transform and decoding')
-    aux_params.add_argument('--cmap-name', type=str, default="turbo", help='Name of color map')
-    aux_params.add_argument('--de-max-pval', type=float, default=1e-3, help='p-value cutoff for differential expression')
-    aux_params.add_argument('--de-min-fold', type=float, default=1.5, help='Fold-change cutoff for differential expression')
+    # merge_by_pixel
     aux_params.add_argument('--merge-max-dist-um', type=float, default=0.1, help='Maximum distance in um for merging pixel-level decoding results') 
     aux_params.add_argument('--merge-max-k', type=int, default=1, help='Maximum number of K columns to output in merged pixel-level decoding results')
     aux_params.add_argument('--merge-max-p', type=int, default=1, help='Maximum number of P columns to output in merged pixel-level decoding results')
+    # others parameters shared across steps
+    aux_params.add_argument('--min-ct-per-feature', type=int, default=20, help='Minimum count per feature during LDA training, transform and decoding')
+    aux_params.add_argument('--cmap-name', type=str, default="turbo", help='Name of color map')
+    aux_params.add_argument('--extra-cmap', type=str, default=None, help='Extra color map for LDA visualization')
+    aux_params.add_argument('--de-max-pval', type=float, default=1e-3, help='p-value cutoff for differential expression')
+    aux_params.add_argument('--de-min-fold', type=float, default=1.5, help='Fold-change cutoff for differential expression')
     # env params
     env_params = parser.add_argument_group("ENV Parameters", "Environment parameters for the tools.")
     env_params.add_argument('--spatula', type=str, default=None, help='Path to spatula binary. When not provided, it will use the spatula from the submodules.')    
@@ -147,9 +151,10 @@ def run_ficture(_args):
         args.minibatch = True
         args.segment=True
         args.lda = True
+        args.projection = True
         args.decode = True
         args.summary = True
-        args.merge_by_pixel = True
+        #args.merge_by_pixel = True
 
 
     # parse parameters
@@ -255,22 +260,81 @@ def run_ficture(_args):
                 lda_basename=f"t{train_width}_f{n_factor}"
                 lda_prefix=os.path.join(args.out_dir, lda_basename)
                 # 1) fit model
-                cmds = cmd_separator([], f"Creating LDA for {train_width}um and {n_factor} factors...")
-                cmds.append(f"ficture fit_model --input {hexagon} --output {lda_prefix} {feature_arg} --nFactor {n_factor} --epoch {args.train_epoch} --epoch_id_length {args.train_epoch_id_len} --unit_attr X Y --key {args.key_col} --min_ct_per_feature {args.min_ct_per_feature} --test_split 0.5 --R {args.lda_rand_init} --thread {args.threads}")
-                # 2) cmap
                 lda_fit_tsv=f"{lda_prefix}.fit_result.tsv.gz"
-                cmds.append(f"ficture choose_color --input {lda_fit_tsv} --output {lda_prefix} --cmap_name {args.cmap_name}")
-                # 3) coarse plot
+                lda_model_tsv=f"{lda_prefix}.model_matrix.tsv.gz"
+                lda_postcount_tsv=f"{lda_prefix}.posterior.count.tsv.gz"
+                cmds = cmd_separator([], f" LDA training for {train_width}um and {n_factor} factors...")
+                cmds.append(f"ficture fit_model --input {hexagon} --output {lda_prefix} {feature_arg} --nFactor {n_factor} --epoch {args.train_epoch} --epoch_id_length {args.train_epoch_id_len} --unit_attr X Y --key {args.key_col} --min_ct_per_feature {args.min_ct_per_feature} --test_split 0.5 --R {args.lda_rand_init} --thread {args.threads}")
+                cmds.append(f"[ -f {lda_fit_tsv} ] && [ -f {lda_model_tsv} ] && [ -f {lda_postcount_tsv} ] && touch {lda_prefix}.done" )
+                mm.add_target(f"{lda_prefix}.done", [args.in_cstranscript, hexagon], cmds)
+                # 2) visualization and report
                 lda_fillr = (train_width / 2 + 1)
                 cmap=f"{lda_prefix}.rgb.tsv"
+                cmds = cmd_separator([], f" LDA visualization and report for {train_width}um and {n_factor} factors...")
+                # - choose_color
+                if not os.path.exists(cmap):
+                    cmds.append(f"ficture choose_color --input {lda_fit_tsv} --output {lda_prefix} --cmap_name {args.cmap_name}")
+                # - coarse plot
                 cmds.append(f"ficture plot_base --input {lda_fit_tsv} --output {lda_prefix}.coarse --fill_range {lda_fillr} --color_table {cmap} --plot_um_per_pixel {args.lda_plot_um_per_pixel} --plot_discretized")
-                # 4) DE
+                # - DE
                 cmds.append(f"ficture de_bulk --input {lda_prefix}.posterior.count.tsv.gz --output {lda_prefix}.bulk_chisq.tsv --min_ct_per_feature {args.min_ct_per_feature} --max_pval_output {args.de_max_pval} --min_fold_output {args.de_min_fold} --thread {args.threads}")
-                # 5) report
+                # - report
                 cmds.append(f"ficture factor_report --path {args.out_dir} --pref {lda_basename} --color_table {cmap}")
                 # done & target
-                cmds.append(f"[ -f {lda_fit_tsv} ] && [ -f {cmap} ] && [ -f {lda_prefix}.coarse.png ] && [ -f {lda_prefix}.model_matrix.tsv.gz ] && [ -f {lda_prefix}.bulk_chisq.tsv ] && [ -f {lda_prefix}.factor.info.html ] && touch {lda_prefix}.done")
-                mm.add_target(f"{lda_prefix}.done", [args.in_cstranscript, hexagon], cmds)
+                cmds.append(f"[ -f {lda_prefix}.coarse.png ] && [ -f {lda_prefix}.bulk_chisq.tsv ] && [ -f {lda_prefix}.factor.info.html ] && touch {lda_prefix}_summary.done")
+                mm.add_target(f"{lda_prefix}_summary.done", [f"{lda_prefix}.done"], cmds)
+    
+    if args.projection:
+        scheck_app(args.bgzip)
+        scheck_app(args.tabix)
+        scheck_app(args.sort)
+        major_axis=define_major_axis(args)
+        for train_width in train_widths:
+            for n_factor in n_factors:
+                # prefix
+                lda_basename=f"t{train_width}_f{n_factor}"
+                lda_prefix=f"{args.out_dir}/{lda_basename}"
+                # input
+                #hexagon = f"{args.out_dir}/hexagon.d_{train_width}.tsv.gz"
+                cmap=f"{lda_prefix}.rgb.tsv"
+                model_mat=f"{lda_prefix}.model_matrix.tsv.gz"
+                batch_mat = f"{args.out_dir}/batched.matrix.tsv.gz"
+                # fit_width
+                if args.fit_width is None:
+                    fit_widths = [train_width]
+                else:
+                    fit_widths = [int(x) for x in args.fit_width.split(",")]
+                for fit_width in fit_widths:
+                    # params
+                    fit_n_move = int(fit_width / args.anchor_res)
+                    fit_fillr = int(args.anchor_res//2+1)
+                    # prefix 
+                    tsf_basename=f"{lda_basename}_p{fit_width}_a{args.anchor_res}"
+                    tsf_prefix = os.path.join(args.out_dir, tsf_basename)
+                    # files
+                    tsf_fitres=f"{tsf_prefix}.fit_result.tsv.gz"
+                    tsf_postcount=f"{tsf_prefix}.posterior.count.tsv.gz"
+                    # 1) transform/fit
+                    if not args.viz_only:
+                        cmds=cmd_separator([], f"Creating projection for {train_width}um and {n_factor} factors, at {fit_width}um")
+                        cmds.append(f"ficture transform --input {args.in_cstranscript} --output_pref {tsf_prefix} --model {model_mat} --key {args.key_col} --major_axis {major_axis} --hex_width {fit_width} --n_move {fit_n_move} --min_ct_per_unit {args.min_ct_per_unit_fit} --mu_scale {args.mu_scale} --thread {args.threads} --precision {args.fit_precision}")
+                        cmds.append(f"[ -f {tsf_fitres} ] && [ -f {tsf_postcount} ] && touch {tsf_prefix}.done" )
+                        mm.add_target(f"{tsf_prefix}.done", [f"{lda_prefix}.done"], cmds)
+                    # 2) Transform visualization and report
+                    cmds=cmd_separator([], f"Projection visualization and report for {train_width}um and {n_factor} factors, at {fit_width}um")
+                    # - transform-cmap if cmap from lda does not exist
+                    if not os.path.exists(cmap):
+                        cmds.append(f"ficture choose_color --input {tsf_fitres} --output {tsf_prefix} --cmap_name {args.cmap_name}")
+                        cmap=f"{tsf_prefix}.rgb.tsv"
+                    # - transform-DE
+                    cmds.append(f"ficture de_bulk --input {tsf_prefix}.posterior.count.tsv.gz --output {tsf_prefix}.bulk_chisq.tsv --min_ct_per_feature {args.min_ct_per_feature} --max_pval_output {args.de_max_pval} --min_fold_output {args.de_min_fold} --thread {args.threads}")
+                    # - transform-report
+                    cmds.append(f"ficture factor_report --path {args.out_dir} --pref {tsf_basename} --color_table {cmap}")
+                    # - transform-coarse-plot (add this step to be consistent with Scopeflow and NEDA)
+                    cmds.append(f"ficture plot_base --input {tsf_prefix}.fit_result.tsv.gz --output {tsf_prefix}.coarse --fill_range {fit_fillr} --color_table {cmap} --plot_um_per_pixel {args.fit_plot_um_per_pixel} --plot_discretized")
+                    # - done & target
+                    cmds.append(f"[ -f {tsf_prefix}.bulk_chisq.tsv ] && [ -f {tsf_prefix}.factor.info.html ] && [ -f {tsf_prefix}.coarse.png ] && [ -f {tsf_prefix}.coarse.top.png ] && touch {tsf_prefix}_summary.done")
+                    mm.add_target(f"{tsf_prefix}_summary.done", [f"{tsf_prefix}.done"], cmds)  
 
     if args.decode:
         scheck_app(args.bgzip)
@@ -279,8 +343,9 @@ def run_ficture(_args):
         major_axis=define_major_axis(args)
         script_path = f"{args.out_dir}/sort_decode.sh"
         
-        with open(script_path, "w") as f:
-            f.write(r"""#!/bin/bash
+        if not args.viz_only:
+            with open(script_path, "w") as f:
+                f.write(r"""#!/bin/bash
 input=$1
 output=$2
 coor=$3
@@ -300,7 +365,7 @@ sort_mem=${12}
 while IFS=$'\t' read -r r_key r_val; do
     export "${r_key}"="${r_val}"
 done < ${coor}
-echo -e "${xmin}, ${xmax}; ${ymin}, ${ymax}"
+echo -e "x: ${xmin}, ${xmax}\ny: ${ymin}, ${ymax}"
 
 offsetx=${xmin}
 offsety=${ymin}
@@ -352,8 +417,6 @@ ${tabix} -f -s1 -b"${sortidx}" -e"${sortidx}" ${output}
                     fit_widths = [int(x) for x in args.fit_width.split(",")]
                 for fit_width in fit_widths:
                     # params
-                    fit_n_move = int(fit_width / args.anchor_res)
-                    fit_fillr = int(args.anchor_res//2+1)
                     radius = args.anchor_res + 1
                     # prefix 
                     tsf_basename=f"{lda_basename}_p{fit_width}_a{args.anchor_res}"
@@ -363,40 +426,28 @@ ${tabix} -f -s1 -b"${sortidx}" -e"${sortidx}" ${output}
                     # files
                     tsf_fitres=f"{tsf_prefix}.fit_result.tsv.gz"
                     decode_spixel=f"{decode_prefix}.pixel.sorted.tsv.gz"
-                    # 1) transform/fit
-                    cmds=cmd_separator([], f"Creating projection for {train_width}um and {n_factor} factors, at {fit_width}um")
-                    cmds.append(f"ficture transform --input {args.in_cstranscript} --output_pref {tsf_prefix} --model {model_mat} --key {args.key_col} --major_axis {major_axis} --hex_width {fit_width} --n_move {fit_n_move} --min_ct_per_unit {args.min_ct_per_unit_fit} --mu_scale {args.mu_scale} --thread {args.threads} --precision {args.fit_precision}")
-                    # - transform-cmap if cmap from lda does not exist
-                    if not os.path.exists(cmap):
-                        cmds.append(f"ficture choose_color --input {tsf_fitres} --output {tsf_prefix} --cmap_name {args.cmap_name}")
-                        cmap=f"{tsf_prefix}.rgb.tsv"
-                    # - transform-DE
-                    cmds.append(f"ficture de_bulk --input {tsf_prefix}.posterior.count.tsv.gz --output {tsf_prefix}.bulk_chisq.tsv --min_ct_per_feature {args.min_ct_per_feature} --max_pval_output {args.de_max_pval} --min_fold_output {args.de_min_fold} --thread {args.threads}")
-                    # - transform-report
-                    cmds.append(f"ficture factor_report --path {args.out_dir} --pref {tsf_basename} --color_table {cmap}")
-                    # - transform-coarse-plot (add this step to be consistent with Scopeflow and NEDA)
-                    cmds.append(f"ficture plot_base --input {tsf_prefix}.fit_result.tsv.gz --output {tsf_prefix}.coarse --fill_range {fit_fillr} --color_table {cmap} --plot_um_per_pixel {args.fit_plot_um_per_pixel} --plot_discretized")
-                    # done & target
-                    cmds.append(f"[ -f {tsf_fitres} ] && [ -f {tsf_prefix}.bulk_chisq.tsv ] && [ -f {tsf_prefix}.factor.info.html ] && [ -f {tsf_prefix}.coarse.png ] && [ -f {tsf_prefix}.coarse.top.png ] && touch {tsf_prefix}.done")
-                    mm.add_target(f"{tsf_prefix}.done", [f"{lda_prefix}.done"], cmds)
-                    #
-                    # 2) decode
-                    cmds=cmd_separator([], f"Performing pixel-level decoding for {train_width}um and {n_factor} factors, at {fit_width}um")
-                    cmds.append(f"ficture slda_decode --input {batch_mat} --output {decode_prefix} --model {model_mat} --anchor {tsf_fitres} --anchor_in_um --neighbor_radius {radius} --mu_scale {args.mu_scale} --key {args.key_col} --precision {args.decode_precision} --lite_topk_output_pixel {args.decode_top_k} --lite_topk_output_anchor {args.decode_top_k} --thread {args.threads}")
-                    # - decode-sort
-                    #cmds=cmd_separator(cmds, f"Creating pixel-level output image for {train_width}um and {n_factor} factors, at {fit_width}um")
-                    cmds.append(f"bash {script_path} {decode_prefix}.pixel.tsv.gz {decode_spixel} {args.in_minmax} {n_factor} {args.decode_block_size} {args.decode_scale} {args.decode_top_k} {major_axis} {args.bgzip} {args.tabix} {args.sort} {args.sort_mem}")
-                    #cmds.append(f"rm {decode_prefix}.pixel.tsv.gz")
-                    # - decode-de & report
-                    #cmds=cmd_separator(cmds, f"Performing pseudo-bulk differential expression analysis for {train_width}um and {n_factor} factors, at {fit_width}um")
+                    decode_postcount=f"{decode_prefix}.posterior.count.tsv.gz"
+                    decode_anchor=f"{decode_prefix}.anchor.tsv.gz"
+                    # 3) decode
+                    if not args.viz_only:
+                        cmds=cmd_separator([], f"Performing pixel-level decoding for {train_width}um and {n_factor} factors, at {fit_width}um")
+                        cmds.append(f"ficture slda_decode --input {batch_mat} --output {decode_prefix} --model {model_mat} --anchor {tsf_fitres} --anchor_in_um --neighbor_radius {radius} --mu_scale {args.mu_scale} --key {args.key_col} --precision {args.decode_precision} --lite_topk_output_pixel {args.decode_top_k} --lite_topk_output_anchor {args.decode_top_k} --thread {args.threads}")
+                        # - decode-sort
+                        cmds.append(f"bash {script_path} {decode_prefix}.pixel.tsv.gz {decode_spixel} {args.in_minmax} {n_factor} {args.decode_block_size} {args.decode_scale} {args.decode_top_k} {major_axis} {args.bgzip} {args.tabix} {args.sort} {args.sort_mem}")
+                        cmds.append(f"[ -f {decode_spixel} ] && [ -f {decode_postcount} ] && [ -f {decode_anchor} ] && touch {decode_prefix}.done")
+                        #cmds.append(f"rm {decode_prefix}.pixel.tsv.gz")
+                        mm.add_target(f"{decode_prefix}.done", [batch_mat, f"{tsf_prefix}.done"], cmds)
+
+                    # 4) decode-visualization and report
+                    cmds=cmd_separator([], f"Pixel-level decoding visualization and report for {train_width}um and {n_factor} factors, at {fit_width}um")
                     cmds.append(f"ficture de_bulk --input {decode_prefix}.posterior.count.tsv.gz --output {decode_prefix}.bulk_chisq.tsv --min_ct_per_feature {args.min_ct_per_feature} --max_pval_output {args.de_max_pval} --min_fold_output {args.de_min_fold} --thread {args.threads}")
                     cmds.append(f"ficture factor_report --path {args.out_dir} --pref {decode_basename} --color_table {cmap}")
                     # - decode-pixel-plot
                     #cmds=cmd_separator(cmds, f"Drawing pixel-level output image for {train_width}um and {n_factor} factors, at {fit_width}um")
                     cmds.append(f"ficture plot_pixel_full --input {decode_spixel} --color_table {cmap} --output {decode_prefix}.pixel.png --plot_um_per_pixel {args.decode_plot_um_per_pixel} --full")
                     # done & target
-                    cmds.append(f"[ -f {decode_spixel} ] && [ -f {decode_prefix}.bulk_chisq.tsv ] && [ -f {decode_prefix}.factor.info.html ] && [ -f {decode_prefix}.pixel.png ] && touch {decode_prefix}.done")
-                    mm.add_target(f"{decode_prefix}.done", [batch_mat, f"{lda_prefix}.done"], cmds)
+                    cmds.append(f"[ -f {decode_prefix}.bulk_chisq.tsv ] && [ -f {decode_prefix}.factor.info.html ] && [ -f {decode_prefix}.pixel.png ] && touch {decode_prefix}_summary.done")
+                    mm.add_target(f"{decode_prefix}_summary.done", [batch_mat, f"{decode_prefix}.done"], cmds)
     
     if args.merge_by_pixel:
         # tools:
@@ -405,6 +456,8 @@ ${tabix} -f -s1 -b"${sortidx}" -e"${sortidx}" ${output}
             args.spatula = os.path.join(cartloader_repo, "submodules", "spatula", "bin", "spatula")
             print(f"Given spatula is not provided, using the spatula from submodules: {args.spatula}.")
         scheck_app(args.spatula)
+        # major axis
+        major_axis=define_major_axis(args)
         # collect params
         prerequisities = []
         decode_basename_list=[]
@@ -435,7 +488,7 @@ ${tabix} -f -s1 -b"${sortidx}" -e"${sortidx}" ${output}
                 if args.fit_width is None:
                     fit_widths = [train_width]
                 else:
-                    fit_widths = [float(x) for x in args.fit_width.split(",")]
+                    fit_widths = [int(x) for x in args.fit_width.split(",")]
                 for fit_width in fit_widths:
                     # params
                     radius = args.anchor_res + 1
@@ -463,7 +516,7 @@ ${tabix} -f -s1 -b"${sortidx}" -e"${sortidx}" ${output}
                 if args.fit_width is None:
                     fit_widths = [train_width]
                 else:
-                    fit_widths = [float(x) for x in args.fit_width.split(",")]
+                    fit_widths = [int(x) for x in args.fit_width.split(",")]
                 for fit_width in fit_widths:
                     # params
                     radius = args.anchor_res + 1
@@ -481,8 +534,8 @@ ${tabix} -f -s1 -b"${sortidx}" -e"${sortidx}" ${output}
                     viz_list=[]
                     for i in range(n_factor):
                         viz_list.append(f"{decode_prefix}.pixel.F_{i}.png")
-                    check_vizperfactor_cmd = " && ".join([f"-f {file}" for file in viz_list])
-                    cmds.append(f"[ {check_vizperfactor_cmd} ] && touch {decode_prefix}.viz_per_factor.done")
+                    check_vizperfactor_cmd = " && ".join([f"[ -f {file} ]" for file in viz_list])
+                    cmds.append(f"{check_vizperfactor_cmd} && touch {decode_prefix}.viz_per_factor.done")
                     mm.add_target(f"{decode_prefix}.viz_per_factor.done", [f"{decode_prefix}.done"], cmds)
 
     if len(mm.targets) == 0:
