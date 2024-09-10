@@ -18,10 +18,11 @@ def parse_arguments(_args):
 
 def extract_parameters(filename):
     """Extract parameters from the filename using regular expressions."""
-    pattern = re.compile(r'nF(\d+)\.d_(\d+)(?:\.decode)?(?:\.prj_(\d+)\.r_(\d+)(?:_(\d+))?)?\.bulk_chisq\.tsv')
+    #pattern = re.compile(r'nF(\d+)\.d_(\d+)(?:\.decode)?(?:\.prj_(\d+)\.r_(\d+)(?:_(\d+))?)?\.bulk_chisq\.tsv')
+    pattern = re.compile(r't(\d+)_f(\d+)(?:_p(\d+)_a(\d+))?(?:_r(\d+))?\.done')
     match = pattern.search(filename)
     if match:
-        n_factor, train_width, fit_width, anchor_res, radius = match.groups()
+        train_width, n_factor, fit_width, anchor_res, radius = match.groups()
         return {
             "n_factor": int(n_factor),
             "train_width": int(train_width),
@@ -88,12 +89,24 @@ def convert_to_ordered_list_structure(train_dict):
 #         train_params.append(train_entry)
 #     return train_params
 
-def order_files(files):
-    train_files=[x for x in files if "prj" not in x]
-    proj_files=[x for x in files if "prj" in x and "decode" not in x] 
-    decode_files=[x for x in files if "decode" in x]
-    ordered_files=train_files+proj_files+decode_files
-    return ordered_files   
+# def order_files(files):
+#     train_files=[x for x in files if "prj" not in x]
+#     proj_files=[x for x in files if "prj" in x and "decode" not in x] 
+#     decode_files=[x for x in files if "decode" in x]
+#     ordered_files=train_files+proj_files+decode_files
+#     return ordered_files   
+
+def rank_file(file_name):
+    parts = file_name.split('_')
+    if len(parts) == 2:  # Only t*_f*.done
+        return 1
+    elif len(parts) == 4:  # t*_f*_p*_a*.done
+        return 2
+    elif len(parts) == 5:  # t*_f*_p*_a*_r*.done
+        return 3
+    else:
+        return 4  # If it doesn't fit the above patterns
+
 
 def write_json(data, filename):
     """Write the given data to a JSON file."""
@@ -105,11 +118,11 @@ def write_json_for_ficture(_args):
     if args.out_json is None:
       args.out_json = os.path.join(args.out_dir, "ficture.params.json")
     # Note we used de files here
-    all_de_paths = os.path.join(args.out_dir, "*.bulk_chisq.tsv")
-    all_de_fn = [os.path.basename(x) for x in glob.glob(all_de_paths)]
+    flag_paths = os.path.join(args.out_dir, "*.done")
+    flag_fn = [os.path.basename(x) for x in glob.glob(flag_paths)]
     # order the files by train, proj, and decode parameters
-    all_de_fn_ordered = order_files(all_de_fn)
-    train_dict = categorize_files(all_de_fn_ordered)
+    flag_fn_ordered = sorted(flag_fn, key=rank_file) 
+    train_dict = categorize_files(flag_fn_ordered)
     train_params = convert_to_ordered_list_structure(train_dict)
     json_data = {
         "train_params": train_params
