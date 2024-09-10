@@ -294,7 +294,7 @@ def run_cartload_join(_args):
         "--out-prefix", f"{args.out_dir}/{args.out_molecules_prefix}",
         "--colname-feature", args.colname_feature,
         "--colname-count", args.colname_count,
-        "--all"
+        "--all",
         "--n-jobs", str(args.n_jobs),
     ])
     cmds.append(cmd)
