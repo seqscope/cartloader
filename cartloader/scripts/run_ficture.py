@@ -147,7 +147,10 @@ def run_ficture(_args):
         args.viz_per_factor = True
         
     if args.main:
-        args.sorttsv = True
+        if args.in_cstranscript is not None: ## coordinate-sorted transcript is already available
+            args.sorttsv = False
+        else:
+            args.sorttsv = True
         args.minibatch = True
         args.segment=True
         args.lda = True
