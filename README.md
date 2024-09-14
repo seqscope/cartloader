@@ -4,7 +4,7 @@
 
 ```bash
 ## install cartloader locally
-git clone --recursive -b hyun https://github.com/seqscope/cartloader.git
+git clone --recursive https://github.com/seqscope/cartloader.git
 cd cartloader
 pip install -e .
 
