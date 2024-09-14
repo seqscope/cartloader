@@ -36,6 +36,7 @@ def parse_arguments(_args):
     run_params.add_argument('--n-jobs', type=int, default=1, help='Number of jobs (processes) to run in parallel')
 
     aux_params = parser.add_argument_group("Auxiliary Parameters", "Auxiliary parameters (using default is recommended)")
+    aux_params.add_argument('--major-axis', type=str, default=None, help='Specify major axis (X or Y) for the data')
     aux_params.add_argument('--rename-x', type=str, default='X:lon', help='tippecanoe parameters to rename X axis')  
     aux_params.add_argument('--rename-y', type=str, default='Y:lat', help='tippecanoe parameters to rename Y axis')  
     aux_params.add_argument('--colname-feature', type=str, default='gene', help='Input/output Column name for gene name (default: gene)')
@@ -94,7 +95,10 @@ def run_cartload_join(_args):
         os.makedirs(args.out_dir, exist_ok=True)
 
     ## identify the major axis of the data
-    major_axis = find_major_axis(args.in_minmax, "row")
+    if args.major_axis is None:
+        major_axis = find_major_axis(args.in_minmax, "row")
+    else:
+        major_axis = args.major_axis
     
     # # 1. Run tsv2pmtiles
     # cmds = cmd_separator([], f"Running tsv2pmtiles TSV file")
