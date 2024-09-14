@@ -81,7 +81,7 @@ def parse_arguments(_args):
     aux_params.add_argument('--merge-max-p', type=int, default=1, help='Maximum number of P columns to output in merged pixel-level decoding results')
     # color map
     aux_params.add_argument('--cmap-name', type=str, default="turbo", help='Name of color map')
-    aux_params.add_argument('--static-cmap-file', type=str, default=None, help='Default file for fixed color map [assets/fixed_color_map_52.tsv]')
+    aux_params.add_argument('--static-cmap-file', type=str, help='Default file for fixed color map [assets/fixed_color_map_52.tsv]')
     aux_params.add_argument('--cmap-static', action='store_true', default=False, help='Use a fixed color map for factor visualization')
     # others parameters shared across steps
     aux_params.add_argument('--min-ct-per-feature', type=int, default=20, help='Minimum count per feature during LDA training, transform and decoding')
@@ -89,7 +89,7 @@ def parse_arguments(_args):
     aux_params.add_argument('--de-min-fold', type=float, default=1.5, help='Fold-change cutoff for differential expression')
     # env params
     env_params = parser.add_argument_group("ENV Parameters", "Environment parameters for the tools.")
-    env_params.add_argument('--spatula', type=str, default=None, help='Path to spatula binary. When not provided, it will use the spatula from the submodules.')    
+    env_params.add_argument('--spatula', type=str, help='Path to spatula binary. When not provided, it will use the spatula from the submodules.')    
     env_params.add_argument('--bgzip', type=str, default="bgzip", help='Path to bgzip binary. For faster processing, use "bgzip -@ 4')
     env_params.add_argument('--tabix', type=str, default="tabix", help='Path to tabix binary')
     env_params.add_argument('--gzip', type=str, default="gzip", help='Path to gzip binary. For faster processing, use "pigz -p 4"')
@@ -342,7 +342,7 @@ def run_ficture(_args):
                     # - transform-cmap if cmap from lda does not exist
                     if not os.path.exists(cmap):
                         cmap=f"{tsf_prefix}.rgb.tsv"
-                        if args.cmap_static is not None:
+                        if args.cmap_static:
                             cmds.append(f"head -n {n_factor+1} {args.static_cmap_file} > {cmap}")
                         else:
                             cmds.append(f"ficture choose_color --input {tsf_fitres} --output {tsf_prefix} --cmap_name {args.cmap_name}")
