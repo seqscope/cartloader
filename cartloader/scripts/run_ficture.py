@@ -15,19 +15,22 @@ def parse_arguments(_args):
     run_params.add_argument('--makefn', type=str, default="run_ficture.mk", help='The name of the Makefile to generate (default: run_ficture.mk)')
 
     cmd_params = parser.add_argument_group("Commands", "FICTURE commands to run together")
+    # options
     cmd_params.add_argument('--main', action='store_true', default=False, help='Run the main functions (sorttsv, minibatch, segment, lda, decode, summary). Note this does NOT include segment-10x and viz-per-factor')
     cmd_params.add_argument('--plus', action='store_true', default=False, help='Run the main functions (sorttsv, minibatch, segment, lda, decode, summary) and additional functions (segment-10x and viz-per-factor)')
     cmd_params.add_argument('--viz-only', action='store_true', default=False, help='For lda, decode functions, only regenerate the visualization and report without running LDA analysis, decode')
+    # each function
     cmd_params.add_argument('--sorttsv', action='store_true', default=False, help='(Main function) Sort the input tsv file')
     cmd_params.add_argument('--minibatch', action='store_true', default=False, help='(Main function) Perform minibatch step')
     cmd_params.add_argument('--segment', action='store_true', default=False, help='(Main function) Perform hexagon segmentation into FICTURE-compatible format')
     cmd_params.add_argument('--lda', action='store_true', default=False, help='(Main function) Perform LDA model training')
     cmd_params.add_argument('--projection', action='store_true', default=False, help='(Main function) Perform projection/Transform')
     cmd_params.add_argument('--decode', action='store_true', default=False, help='(Main function) Perform pixel-level decoding')
-    cmd_params.add_argument('--merge-by-pixel', action='store_true', default=False, help='(Main function) Merge pixel-level decoding results with the input TSV SGE into a single file')
+    #cmd_params.add_argument('--merge-by-pixel', action='store_true', default=False, help='(Main function) Merge pixel-level decoding results with the input TSV SGE into a single file')
     cmd_params.add_argument('--summary', action='store_true', default=False, help='(Main function) Generate a JSON file summarizing all fixture parameters for which outputs are available in the <out-dir>.')
-    cmd_params.add_argument('--viz-per-factor', action='store_true', default=False, help='(Additional function) Generate pixel-level visualization for each factor')
     cmd_params.add_argument('--segment-10x', action='store_true', default=False, help='(Additional function) Perform hexagon segmentation into 10x Genomics format')
+    cmd_params.add_argument('--viz-per-factor', action='store_true', default=False, help='(Additional function) Generate pixel-level visualization for each factor')
+    cmd_params.add_argument('--viz-dotplot', action='store_true', default=False, help='(Additional function) Generate dotplot visualization')
 
     key_params = parser.add_argument_group("Key Parameters", "Key parameters that requires user's attention")
     key_params.add_argument('--out-dir', required= True, type=str, help='Output directory')
@@ -145,6 +148,7 @@ def run_ficture(_args):
         args.main = True
         args.segment_10x = True
         args.viz_per_factor = True
+        args.viz_dotplot = True
         
     if args.main:
         args.sorttsv = True
@@ -155,7 +159,6 @@ def run_ficture(_args):
         args.decode = True
         args.summary = True
         #args.merge_by_pixel = True
-
 
     # parse parameters
     train_widths = [int(x) for x in args.train_width.split(",")]
@@ -283,7 +286,7 @@ def run_ficture(_args):
                 # done & target
                 cmds.append(f"[ -f {lda_prefix}.coarse.png ] && [ -f {lda_prefix}.bulk_chisq.tsv ] && [ -f {lda_prefix}.factor.info.html ] && touch {lda_prefix}_summary.done")
                 mm.add_target(f"{lda_prefix}_summary.done", [f"{lda_prefix}.done"], cmds)
-    
+
     if args.projection:
         scheck_app(args.bgzip)
         scheck_app(args.tabix)
@@ -449,36 +452,36 @@ ${tabix} -f -s1 -b"${sortidx}" -e"${sortidx}" ${output}
                     cmds.append(f"[ -f {decode_prefix}.bulk_chisq.tsv ] && [ -f {decode_prefix}.factor.info.html ] && [ -f {decode_prefix}.pixel.png ] && touch {decode_prefix}_summary.done")
                     mm.add_target(f"{decode_prefix}_summary.done", [batch_mat, f"{decode_prefix}.done"], cmds)
     
-    if args.merge_by_pixel:
-        # tools:
-        # - spatula
-        if args.spatula is None:
-            args.spatula = os.path.join(cartloader_repo, "submodules", "spatula", "bin", "spatula")
-            print(f"Given spatula is not provided, using the spatula from submodules: {args.spatula}.")
-        scheck_app(args.spatula)
-        # major axis
-        major_axis=define_major_axis(args)
-        # collect params
-        prerequisities = []
-        decode_basename_list=[]
-        prerequisities.append(args.in_cstranscript)
-        for train_width in train_widths:
-            for n_factor in n_factors:
-                if args.fit_width is None:
-                    fit_widths = [train_width]
-                else:
-                    fit_widths = [float(x) for x in args.fit_width.split(",")]
-                for fit_width in fit_widths:
-                    radius = args.anchor_res + 1
-                    decode_basename=f"t{train_width}_f{n_factor}_p{fit_width}_a{args.anchor_res}_r{radius}"
-                    decode_basename_list.append(decode_basename)
-                    prerequisities.append(f"{args.out_dir}/{decode_basename}.done")     
-        # cmds
-        cmds = cmd_separator([], f"Merging pixel-level decoding results with the sorted SGE in TSV format...")
-        pix_prefix_tsv_list=[f"--pix-prefix-tsv {decode_basename}__,{args.out_dir}/{decode_basename}.pixel.sorted.tsv.gz" for decode_basename in decode_basename_list]
-        out_merge_prefix=f"{args.out_dir}/transcripts_pixel_join_K{args.merge_max_k}P{args.merge_max_p}.sorted"
-        cmds.append(f"{args.spatula} join-pixel-tsv --mol-tsv {args.in_cstranscript} {' '.join(pix_prefix_tsv_list)} --out-prefix {out_merge_prefix} --max-dist-um {args.merge_max_dist_um} --out-max-k {args.merge_max_k} --out-max-p {args.merge_max_p}")
-        mm.add_target(f"{out_merge_prefix}.tsv.gz", prerequisities, cmds)
+    # if args.merge_by_pixel:
+    #     # tools:
+    #     # - spatula
+    #     if args.spatula is None:
+    #         args.spatula = os.path.join(cartloader_repo, "submodules", "spatula", "bin", "spatula")
+    #         print(f"Given spatula is not provided, using the spatula from submodules: {args.spatula}.")
+    #     scheck_app(args.spatula)
+    #     # major axis
+    #     major_axis=define_major_axis(args)
+    #     # collect params
+    #     prerequisities = []
+    #     decode_basename_list=[]
+    #     prerequisities.append(args.in_cstranscript)
+    #     for train_width in train_widths:
+    #         for n_factor in n_factors:
+    #             if args.fit_width is None:
+    #                 fit_widths = [train_width]
+    #             else:
+    #                 fit_widths = [float(x) for x in args.fit_width.split(",")]
+    #             for fit_width in fit_widths:
+    #                 radius = args.anchor_res + 1
+    #                 decode_basename=f"t{train_width}_f{n_factor}_p{fit_width}_a{args.anchor_res}_r{radius}"
+    #                 decode_basename_list.append(decode_basename)
+    #                 prerequisities.append(f"{args.out_dir}/{decode_basename}.done")     
+    #     # cmds
+    #     cmds = cmd_separator([], f"Merging pixel-level decoding results with the sorted SGE in TSV format...")
+    #     pix_prefix_tsv_list=[f"--pix-prefix-tsv {decode_basename}__,{args.out_dir}/{decode_basename}.pixel.sorted.tsv.gz" for decode_basename in decode_basename_list]
+    #     out_merge_prefix=f"{args.out_dir}/transcripts_pixel_join_K{args.merge_max_k}P{args.merge_max_p}.sorted"
+    #     cmds.append(f"{args.spatula} join-pixel-tsv --mol-tsv {args.in_cstranscript} {' '.join(pix_prefix_tsv_list)} --out-prefix {out_merge_prefix} --max-dist-um {args.merge_max_dist_um} --out-max-k {args.merge_max_k} --out-max-p {args.merge_max_p}")
+    #     mm.add_target(f"{out_merge_prefix}.tsv.gz", prerequisities, cmds)
 
     if args.summary:
         # collect prerequisities
@@ -537,6 +540,35 @@ ${tabix} -f -s1 -b"${sortidx}" -e"${sortidx}" ${output}
                     check_vizperfactor_cmd = " && ".join([f"[ -f {file} ]" for file in viz_list])
                     cmds.append(f"{check_vizperfactor_cmd} && touch {decode_prefix}.viz_per_factor.done")
                     mm.add_target(f"{decode_prefix}.viz_per_factor.done", [f"{decode_prefix}.done"], cmds)
+
+    if args.viz_dotplot:
+        for train_width in train_widths:
+            for n_factor in n_factors:
+                # lda dotplot
+                lda_basename=f"t{train_width}_f{n_factor}"
+                lda_prefix=os.path.join(args.out_dir, lda_basename)
+                cmds = cmd_separator([], f" Dotplot visualization and report for LDA: {train_width}um and {n_factor} factors...")
+                cmds.append(f"factor_viz dotplot --post_count_file {lda_prefix}.posterior.count.tsv.gz --meta_data_file {lda_prefix}.factor.info.tsv --output {lda_prefix}.dotplot.pdf")
+                mm.add_target(f"{lda_prefix}_summary.done", [f"{lda_prefix}.dotplot.pdf"], cmds)
+                # proj & decode dotplot
+                if args.fit_width is None:
+                    fit_widths = [train_width]
+                else:
+                    fit_widths = [int(x) for x in args.fit_width.split(",")]
+                for fit_width in fit_widths:
+                    radius = args.anchor_res + 1
+                    tsf_basename=f"{lda_basename}_p{fit_width}_a{args.anchor_res}"
+                    tsf_prefix = os.path.join(args.out_dir, tsf_basename)
+                    decode_basename=f"{tsf_basename}_r{radius}"
+                    decode_prefix = os.path.join(args.out_dir, decode_basename)
+                    # proj
+                    cmds = cmd_separator([], f" Dotplot visualization and report for projection: {train_width}um and {n_factor} factors, at {fit_width}um")
+                    cmds.append(f"factor_viz dotplot --post_count_file {tsf_prefix}.posterior.count.tsv.gz --meta_data_file {tsf_prefix}.factor.info.tsv --output {tsf_prefix}.dotplot.pdf")
+                    mm.add_target(f"{tsf_prefix}_summary.done", [f"{tsf_prefix}.dotplot.pdf"], cmds)
+                    # decode
+                    cmds = cmd_separator([], f" Dotplot visualization and report for decoding: {train_width}um and {n_factor} factors, at {fit_width}um")
+                    cmds.append(f"factor_viz dotplot --post_count_file {decode_prefix}.posterior.count.tsv.gz --meta_data_file {decode_prefix}.factor.info.tsv --output {decode_prefix}.dotplot.pdf")
+                    mm.add_target(f"{decode_prefix}_summary.done", [f"{decode_prefix}.dotplot.pdf"], cmds)
 
     if len(mm.targets) == 0:
         logging.error("There is no target to run. Please make sure that ast least one run option was turned on")
