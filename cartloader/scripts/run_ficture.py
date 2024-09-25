@@ -82,15 +82,17 @@ def parse_arguments(_args):
     aux_params.add_argument('--merge-max-dist-um', type=float, default=0.1, help='Maximum distance in um for merging pixel-level decoding results') 
     aux_params.add_argument('--merge-max-k', type=int, default=1, help='Maximum number of K columns to output in merged pixel-level decoding results')
     aux_params.add_argument('--merge-max-p', type=int, default=1, help='Maximum number of P columns to output in merged pixel-level decoding results')
+    # color map
+    aux_params.add_argument('--cmap-name', type=str, default="turbo", help='Name of color map')
+    aux_params.add_argument('--static-cmap-file', type=str, help='Default file for fixed color map [assets/fixed_color_map_52.tsv]')
+    aux_params.add_argument('--cmap-static', action='store_true', default=False, help='Use a fixed color map for factor visualization')
     # others parameters shared across steps
     aux_params.add_argument('--min-ct-per-feature', type=int, default=20, help='Minimum count per feature during LDA training, transform and decoding')
-    aux_params.add_argument('--cmap-name', type=str, default="turbo", help='Name of color map')
-    aux_params.add_argument('--extra-cmap', type=str, default=None, help='Extra color map for LDA visualization')
     aux_params.add_argument('--de-max-pval', type=float, default=1e-3, help='p-value cutoff for differential expression')
     aux_params.add_argument('--de-min-fold', type=float, default=1.5, help='Fold-change cutoff for differential expression')
     # env params
     env_params = parser.add_argument_group("ENV Parameters", "Environment parameters for the tools.")
-    env_params.add_argument('--spatula', type=str, default=None, help='Path to spatula binary. When not provided, it will use the spatula from the submodules.')    
+    env_params.add_argument('--spatula', type=str, help='Path to spatula binary. When not provided, it will use the spatula from the submodules.')    
     env_params.add_argument('--bgzip', type=str, default="bgzip", help='Path to bgzip binary. For faster processing, use "bgzip -@ 4')
     env_params.add_argument('--tabix', type=str, default="tabix", help='Path to tabix binary')
     env_params.add_argument('--gzip', type=str, default="gzip", help='Path to gzip binary. For faster processing, use "pigz -p 4"')
@@ -151,7 +153,10 @@ def run_ficture(_args):
         args.viz_dotplot = True
         
     if args.main:
-        args.sorttsv = True
+        if args.in_cstranscript is not None: ## coordinate-sorted transcript is already available
+            args.sorttsv = False
+        else:
+            args.sorttsv = True
         args.minibatch = True
         args.segment=True
         args.lda = True
@@ -181,6 +186,15 @@ def run_ficture(_args):
     # no default value for in_feature given that it is optional
     assert os.path.exists(args.in_transcript) or os.path.exists(args.in_cstranscript), "Provide a valid input transcript-indexed SGE file by --in-transcript or --in-cstranscript"
     assert os.path.exists(args.in_minmax), "Provide a valid input coordinate minmax file by --in-minmax"
+
+    # check static cmap file
+    if args.cmap_static:
+        if args.static_cmap_file is None:
+            scriptdir = os.path.dirname(os.path.realpath(__file__))
+            progdir = os.path.dirname(os.path.dirname(scriptdir))
+            args.static_cmap_file = os.path.join(progdir,"assets","fixed_color_map_52.tsv")
+        if not os.path.exists(args.static_cmap_file):
+            raise ValueError("Static color map file {args.static_cmap_file} does not exist")
 
     # start mm
     mm = minimake()
@@ -272,11 +286,14 @@ def run_ficture(_args):
                 mm.add_target(f"{lda_prefix}.done", [args.in_cstranscript, hexagon], cmds)
                 # 2) visualization and report
                 lda_fillr = (train_width / 2 + 1)
-                cmap=f"{lda_prefix}.rgb.tsv"
+                cmap=f"{lda_prefix}.rgb.tsv" 
                 cmds = cmd_separator([], f" LDA visualization and report for {train_width}um and {n_factor} factors...")
                 # - choose_color
                 if not os.path.exists(cmap):
-                    cmds.append(f"ficture choose_color --input {lda_fit_tsv} --output {lda_prefix} --cmap_name {args.cmap_name}")
+                    if args.cmap_static:
+                        cmds.append(f"head -n {n_factor+1} {args.static_cmap_file} > {cmap}")
+                    else:
+                        cmds.append(f"ficture choose_color --input {lda_fit_tsv} --output {lda_prefix} --cmap_name {args.cmap_name}")
                 # - coarse plot
                 cmds.append(f"ficture plot_base --input {lda_fit_tsv} --output {lda_prefix}.coarse --fill_range {lda_fillr} --color_table {cmap} --plot_um_per_pixel {args.lda_plot_um_per_pixel} --plot_discretized")
                 # - DE
@@ -327,8 +344,11 @@ def run_ficture(_args):
                     cmds=cmd_separator([], f"Projection visualization and report for {train_width}um and {n_factor} factors, at {fit_width}um")
                     # - transform-cmap if cmap from lda does not exist
                     if not os.path.exists(cmap):
-                        cmds.append(f"ficture choose_color --input {tsf_fitres} --output {tsf_prefix} --cmap_name {args.cmap_name}")
                         cmap=f"{tsf_prefix}.rgb.tsv"
+                        if args.cmap_static:
+                            cmds.append(f"head -n {n_factor+1} {args.static_cmap_file} > {cmap}")
+                        else:
+                            cmds.append(f"ficture choose_color --input {tsf_fitres} --output {tsf_prefix} --cmap_name {args.cmap_name}")
                     # - transform-DE
                     cmds.append(f"ficture de_bulk --input {tsf_prefix}.posterior.count.tsv.gz --output {tsf_prefix}.bulk_chisq.tsv --min_ct_per_feature {args.min_ct_per_feature} --max_pval_output {args.de_max_pval} --min_fold_output {args.de_min_fold} --thread {args.threads}")
                     # - transform-report
