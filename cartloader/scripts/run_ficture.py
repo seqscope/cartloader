@@ -571,7 +571,11 @@ ${tabix} -f -s1 -b"${sortidx}" -e"${sortidx}" ${output}
         os.system(f"make -f {args.out_dir}/{args.makefn} -n")
         print(f"To execute the pipeline, run the following command:\nmake -f {args.out_dir}/{args.makefn} -j {args.n_jobs}")
     else:
-        os.system(f"make -f {args.out_dir}/{args.makefn} -j {args.n_jobs}")
+        exit_code = os.system(f"make -f {args.out_dir}/{args.makefn} -j {args.n_jobs}")
+        if exit_code != 0:
+            logging.error(f"Error in running make -f {args.out_dir}/{args.makefn} -j {args.n_jobs}")
+            sys.exit(1)
+
 
 if __name__ == "__main__":
     # Get the path to the cartloader repository

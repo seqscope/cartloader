@@ -49,7 +49,7 @@ def parse_arguments(_args):
     aux_params.add_argument('--out-fic-assets', type=str, default="ficture_assets.json", help='The YAML/JSON file containing FICTURE output assets')
     aux_params.add_argument('--out-catalog', type=str, default="catalog.yaml", help='The YAML file containing the output catalog')
     aux_params.add_argument('--background-assets', type=str, help='The JSON/YAML file containing background assets')
-    aux_params.add_argument('--makefn', type=str, default="Makefile", help='The name of the Makefile to generate')
+    aux_params.add_argument('--makefn', type=str, default="run_cartload.mk", help='The name of the Makefile to generate')
     aux_params.add_argument('--default-molecules', type=str, default="transcripts.sorted.tsv.gz", help='Default molecules file to use if the input molecules file is empty') 
     aux_params.add_argument('--default-features', type=str, default="feature.clean.tsv.gz", help='Default molecules file to use if the input molecules file is empty') 
     aux_params.add_argument('--default-minmax', type=str, default="coordinate_minmax.tsv", help='The minmax file containing the coordinates of the image')
@@ -352,7 +352,10 @@ def run_cartload_join(_args):
         os.system(f"make -f {args.out_dir}/{args.makefn} -n")
         print(f"To execute the pipeline, run the following command:\nmake -f {args.out_dir}/{args.makefn} -j {args.n_jobs}")
     else:
-        os.system(f"make -f {args.out_dir}/{args.makefn} -j {args.n_jobs}")
+        exit_code = os.system(f"make -f {args.out_dir}/{args.makefn} -j {args.n_jobs}")
+        if exit_code != 0:
+            logging.error(f"Error in running make -f {args.out_dir}/{args.makefn} -j {args.n_jobs}")
+            sys.exit(1)
 
     logger.info("Analysis Finished")
 
