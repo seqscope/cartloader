@@ -39,7 +39,7 @@ def parse_arguments(_args):
     conv_params.add_argument('--min-zoom', type=int, default=10, help='Minimum zoom level')
     conv_params.add_argument('--max-zoom', type=int, default=18, help='Maximum zoom level')
     conv_params.add_argument('--max-tile-bytes', type=int, default=1500000, help='Maximum bytes for each tile')
-    conv_params.add_argument('--preserve-point-density-thres', type=int, default=64, help='Threshold for preserving point density')
+    conv_params.add_argument('--preserve-point-density-thres', type=int, default=16384, help='Threshold for preserving point density')
 
     run_params = parser.add_argument_group("Run Options", "Run options for FICTURE commands")
     run_params.add_argument('--restart', action='store_true', default=False, help='Restart the run. Ignore all intermediate files and start from the beginning')

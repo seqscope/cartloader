@@ -42,7 +42,7 @@ def convert_ficture_pixel_to_pmtiles(_args):
     aux_params.add_argument('--min-zoom', type=int, default=10, help='Minimum zoom level')
     aux_params.add_argument('--max-zoom', type=int, default=18, help='Maximum zoom level')
     aux_params.add_argument('--max-tile-bytes', type=int, default=1500000, help='Maximum bytes for each tile')
-    aux_params.add_argument('--preserve-point-density-thres', type=int, default=64, help='Threshold for preserving point density')
+    aux_params.add_argument('--preserve-point-density-thres', type=int, default=16384, help='Threshold for preserving point density')
 
     args = parser.parse_args(_args)
 
