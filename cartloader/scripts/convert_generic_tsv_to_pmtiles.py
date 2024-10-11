@@ -129,7 +129,7 @@ def convert_generic_tsv_to_pmtiles(_args):
     ## Converting the output to pmtiles
     if not args.skip_pmtiles:
         logger.info("Converting the CSV file to PMTiles format")
-        cmd = f"{args.tippecanoe} -o {args.out_prefix}{args.out_pmtiles_suffix} -Z {args.min_zoom} -z {args.max_zoom} --force -s EPSG:3857 -M {args.max_tile_bytes} --drop-densest-as-needed --extend-zooms-if-still-dropping '--preserve-point-density-threshold={args.preserve_point_density_thres}' --no-duplication --no-clipping --no-tile-size-limit --no-feature-limit --buffer 0 {args.out_prefix}{args.out_csv_suffix}"
+        cmd = f"{args.tippecanoe} -o {args.out_prefix}{args.out_pmtiles_suffix} -Z {args.min_zoom} -z {args.max_zoom} --force -s EPSG:3857 -M {args.max_tile_bytes} --drop-densest-as-needed --extend-zooms-if-still-dropping '--preserve-point-density-threshold={args.preserve_point_density_thres}' --no-duplication --no-clipping --no-tile-size-limit --buffer 0 {args.out_prefix}{args.out_csv_suffix}"
         print("Command to run:" + cmd)
         result = subprocess.run(cmd, shell=True)
         if result.returncode != 0:
