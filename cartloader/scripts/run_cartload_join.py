@@ -184,6 +184,9 @@ def run_cartload_join(_args):
                 "--in-tsv", in_fit_tsvf, 
                 "--out-prefix", f"{args.out_dir}/{out_prefix}",
                 "--rename-column", "x:lon", "y:lat",
+                "--max-tile-bytes", str(args.max_tile_bytes),
+                "--max-feature-counts", str(args.max_feature_counts),
+                "--preserve-point-density-thres", str(args.preserve_point_density_thres),
                 "--log"
             ])
             cmds.append(cmd)
