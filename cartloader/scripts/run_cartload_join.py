@@ -53,6 +53,9 @@ def parse_arguments(_args):
     aux_params.add_argument('--default-molecules', type=str, default="transcripts.sorted.tsv.gz", help='Default molecules file to use if the input molecules file is empty') 
     aux_params.add_argument('--default-features', type=str, default="feature.clean.tsv.gz", help='Default molecules file to use if the input molecules file is empty') 
     aux_params.add_argument('--default-minmax', type=str, default="coordinate_minmax.tsv", help='The minmax file containing the coordinates of the image')
+    aux_params.add_argument('--max-tile-bytes', type=int, default=1500000, help='Maximum bytes for each tile in PMTiles')
+    aux_params.add_argument('--max-feature-counts', type=int, default=200000, help='Max feature limits per tile in PMTiles')
+    aux_params.add_argument('--preserve-point-density-thres', type=int, default=16384, help='Threshold for preserving point density in PMTiles')
 
     if len(_args) == 0:
         parser.print_help()
@@ -100,22 +103,6 @@ def run_cartload_join(_args):
     else:
         major_axis = args.major_axis
     
-    # # 1. Run tsv2pmtiles
-    # cmds = cmd_separator([], f"Running tsv2pmtiles TSV file")
-    # cmd = " ".join([
-    #     "cartloader", "run_tsv2pmtiles",
-    #     "--in-molecules", args.in_molecules,
-    #     "--in-features", args.in_features,
-    #     "--out-prefix", f"{args.out_dir}/{args.out_molecules_prefix}",
-    #     "--colname-feature", args.colname_feature,
-    #     "--colname-count", args.colname_count,
-    #     "--all",
-    #     "--n-jobs", str(args.n_jobs),
-    # ])
-    # cmds.append(cmd)
-    # mm.add_target(f"{args.out_dir}/{args.out_molecules_prefix}_bin_counts.json", [args.in_molecules, args.in_features], cmds)
-    # logger.info("Wrote commands for tsv2pmtiles")
-
     # 2. Load FICTURE output metadata
     # Assume that the parameters have 
     in_fic_params = {}
@@ -151,6 +138,9 @@ def run_cartload_join(_args):
             "--in-tsv", in_fit_tsvf, 
             "--out-prefix", f"{args.out_dir}/{out_prefix}",
             "--rename-column", "x:lon", "y:lat",
+            "--max-tile-bytes", str(args.max_tile_bytes),
+            "--max-feature-counts", str(args.max_feature_counts),
+            "--preserve-point-density-thres", str(args.preserve_point_density_thres),
             "--log"
         ])
         cmds.append(cmd)
@@ -227,13 +217,6 @@ def run_cartload_join(_args):
                 out_prefix = f"t{train_width}-f{n_factor}-p{fit_width}-a{anchor_res}-r{radius}"
 
                 cmds = cmd_separator([], f"Converting pixel-level factors {in_prefix} into PMTiles and copying relevant files..")
-                # cmd = " ".join([
-                #     "cartloader", "convert_ficture_pixel_to_pmtiles",
-                #     "--in-pixel", in_pixel_tsvf, 
-                #     "--out-prefix", f"{args.out_dir}/{out_prefix}",
-                #     "--log"
-                # ])
-                # cmds.append(cmd)
                 cmds.append(f"cp {in_de_tsvf} {args.out_dir}/{out_prefix}-bulk-de.tsv")
                 cmds.append(f"cp {in_post_tsvf} {args.out_dir}/{out_prefix}-posterior-counts.tsv.gz")
                 cmds.append(f"cp {in_info_tsvf} {args.out_dir}/{out_prefix}-info.tsv")
@@ -245,14 +228,12 @@ def run_cartload_join(_args):
 
                 out_decode_assets.append({
                     "prefix": out_prefix,
-#                    "pmtiles" : f"{out_prefix}.pmtiles",
                     "post" : f"{out_prefix}-posterior-counts.tsv.gz",
                     "de" : f"{out_prefix}-bulk-de.tsv",
                     "info" : f"{out_prefix}-info.tsv"
                 })
 
         out_prefix = f"t{train_width}-f{n_factor}"
-        #out_prefix = f"factor-hexagon-nF{n_factor}-d{train_width}"
         cmds = cmd_separator([], f"Finishing up for train parameters {out_prefix}")
         cmds.append(f"touch {args.out_dir}/{out_prefix}.alldone")
         mm.add_target(f"{args.out_dir}/{out_prefix}.alldone", sources, cmds)
@@ -298,6 +279,9 @@ def run_cartload_join(_args):
         "--out-prefix", f"{args.out_dir}/{args.out_molecules_prefix}",
         "--colname-feature", args.colname_feature,
         "--colname-count", args.colname_count,
+        "--max-tile-bytes", str(args.max_tile_bytes),
+        "--max-feature-counts", str(args.max_feature_counts),
+        "--preserve-point-density-thres", str(args.preserve_point_density_thres),
         "--all",
         "--n-jobs", str(args.n_jobs),
     ])
