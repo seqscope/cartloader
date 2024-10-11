@@ -96,32 +96,6 @@ def run_tsv2pmtiles(_args):
     if args.split:
         logger.info("Splitting the input cross-platform TSV file into CSV files")
 
-        # cmd = [
-        #     "cartloader", "split_molecule_counts",
-        #     "--in-molecules", args.in_molecules,
-        #     "--in-features", args.in_features,
-        #     "--out-prefix", args.out_prefix,
-        #     "--in-molecule-delim", repr(args.in_molecules_delim),
-        #     "--in-features-delim", repr(args.in_features_delim),
-        #     "--out-molecule_suffix", args.out_molecules_suffix,
-        #     "--out-molecule-delim", repr(args.out_molecules_delim),
-        #     "--out-features-suffix", args.out_features_suffix,
-        #     "--out-features-delim", repr(args.out_features_delim),
-        #     "--colname-feature", args.colname_feature,
-        #     "--colname-count", args.colname_count,
-        #     "--col_rename", " ".join(args.col_rename),
-        #     "--bin_multiplier", str(args.bin_multiplier),
-        #     "--chunk-size", str(args.chunk_size),
-        #     "--log-suffix", args.log_suffix
-        # ]
-
-        # if args.dummy_genes != '':
-        #     cmd.append("--dummy-genes", args.dummy_genes)
-        # if args.log:
-        #     cmd.append("--log")
-        # if args.skip_original:
-        #     cmd.append("--skip-original")
-
         cmd = f"""cartloader split_molecule_counts \\
                 --in-molecules {args.in_molecules} \\
                 --in-features {args.in_features} \\
@@ -145,8 +119,6 @@ def run_tsv2pmtiles(_args):
         print(cmd)
         result = subprocess.run(cmd, shell=True)
 
-#        cmd_str = " ".join(cmd)
-#        result = subprocess.run(cmd_str, shell=True)
         if result.returncode != 0:
             logger.error("Error in splitting the input TSV file into CSV files")
             sys.exit(1)
@@ -165,7 +137,7 @@ def run_tsv2pmtiles(_args):
             else:
                 pmtiles_path = args.out_prefix + "_bin" + bin_id + ".pmtiles"
             cmds = cmd_separator([], f"Converting bin {bin_id} to pmtiles")
-            cmds.append(f"{args.tippecanoe} -o {pmtiles_path} -Z {args.min_zoom} -z {args.max_zoom} --force -s EPSG:3857 -M {args.max_tile_bytes} --drop-densest-as-needed --extend-zooms-if-still-dropping '--preserve-point-density-threshold={args.preserve_point_density_thres}' --no-duplication --no-clipping --no-tile-size-limit --buffer 0 {csv_path}")
+            cmds.append(f"{args.tippecanoe} -o {pmtiles_path} -Z {args.min_zoom} -z {args.max_zoom} --force -s EPSG:3857 -M {args.max_tile_bytes} -O {args.max_feature_counts} --drop-densest-as-needed --extend-zooms-if-still-dropping '--preserve-point-density-threshold={args.preserve_point_density_thres}' --no-duplication --no-clipping --no-tile-size-limit --buffer 0 {csv_path}")
             mm.add_target(pmtiles_path, [csv_path], cmds)
 
         if len(mm.targets) == 0:
