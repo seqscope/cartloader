@@ -34,9 +34,9 @@ def convert_generic_tsv_to_pmtiles(_args):
     aux_params.add_argument('--tippecanoe', type=str, default=f"{repo_dir}/submodules/tippecanoe/tippecanoe", help='Path to tippecanoe binary')
     aux_params.add_argument('--min-zoom', type=int, default=10, help='Minimum zoom level')
     aux_params.add_argument('--max-zoom', type=int, default=18, help='Maximum zoom level')
-    aux_params.add_argument('--max-tile-bytes', type=int, default=1500000, help='Maximum bytes for each tile')
-    aux_params.add_argument('--max-feature', type=int, default=200000, help='Max feature limits per tile')
-    aux_params.add_argument('--preserve-point-density-thres', type=int, default=16384, help='Threshold for preserving point density for tippercanoe')
+    aux_params.add_argument('--max-tile-bytes', type=int, default=1500000, help='Maximum bytes for each tile in PMTiles')
+    aux_params.add_argument('--max-feature-counts', type=int, default=200000, help='Max feature limits per tile in PMTiles')
+    aux_params.add_argument('--preserve-point-density-thres', type=int, default=16384, help='Threshold for preserving point density in PMTiles')
 
     args = parser.parse_args(_args)
 
