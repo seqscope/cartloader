@@ -35,7 +35,7 @@ def convert_generic_tsv_to_pmtiles(_args):
     aux_params.add_argument('--min-zoom', type=int, default=10, help='Minimum zoom level')
     aux_params.add_argument('--max-zoom', type=int, default=18, help='Maximum zoom level')
     aux_params.add_argument('--max-tile-bytes', type=int, default=1500000, help='Maximum bytes for each tile')
-    aux_params.add_argument('--preserve-point-density-thres', type=int, default=64, help='Threshold for preserving point density')
+    aux_params.add_argument('--preserve-point-density-thres', type=int, default=16384, help='Threshold for preserving point density')
 
     args = parser.parse_args(_args)
 
@@ -129,7 +129,7 @@ def convert_generic_tsv_to_pmtiles(_args):
     ## Converting the output to pmtiles
     if not args.skip_pmtiles:
         logger.info("Converting the CSV file to PMTiles format")
-        cmd = f"{args.tippecanoe} -o {args.out_prefix}{args.out_pmtiles_suffix} -Z {args.min_zoom} -z {args.max_zoom} --force -s EPSG:3857 -M {args.max_tile_bytes} --drop-densest-as-needed --extend-zooms-if-still-dropping '--preserve-point-density-threshold={args.preserve_point_density_thres}' --no-duplication --no-clipping --buffer 0 {args.out_prefix}{args.out_csv_suffix}"
+        cmd = f"{args.tippecanoe} -o {args.out_prefix}{args.out_pmtiles_suffix} -Z {args.min_zoom} -z {args.max_zoom} --force -s EPSG:3857 -M {args.max_tile_bytes} --drop-densest-as-needed --extend-zooms-if-still-dropping '--preserve-point-density-threshold={args.preserve_point_density_thres}' --no-duplication --no-clipping --no-tile-size-limit --no-feature-limit --buffer 0 {args.out_prefix}{args.out_csv_suffix}"
         print("Command to run:" + cmd)
         result = subprocess.run(cmd, shell=True)
         if result.returncode != 0:
