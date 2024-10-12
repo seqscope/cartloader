@@ -38,9 +38,9 @@ def parse_arguments(_args):
     conv_params = parser.add_argument_group("Parameters for pmtiles conversion")
     conv_params.add_argument('--min-zoom', type=int, default=10, help='Minimum zoom level')
     conv_params.add_argument('--max-zoom', type=int, default=18, help='Maximum zoom level')
-    conv_params.add_argument('--max-tile-bytes', type=int, default=1500000, help='Maximum bytes for each tile in PMTiles')
-    conv_params.add_argument('--max-feature-counts', type=int, default=200000, help='Max feature limits per tile in PMTiles')
-    conv_params.add_argument('--preserve-point-density-thres', type=int, default=16384, help='Threshold for preserving point density in PMTiles')
+    conv_params.add_argument('--max-tile-bytes', type=int, default=20000000, help='Maximum bytes for each tile in PMTiles')
+    conv_params.add_argument('--max-feature-counts', type=int, default=2000000, help='Max feature limits per tile in PMTiles')
+    conv_params.add_argument('--preserve-point-density-thres', type=int, default=4096, help='Threshold for preserving point density in PMTiles')
 
     run_params = parser.add_argument_group("Run Options", "Run options for FICTURE commands")
     run_params.add_argument('--restart', action='store_true', default=False, help='Restart the run. Ignore all intermediate files and start from the beginning')
