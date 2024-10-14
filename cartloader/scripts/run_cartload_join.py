@@ -53,9 +53,9 @@ def parse_arguments(_args):
     aux_params.add_argument('--default-molecules', type=str, default="transcripts.sorted.tsv.gz", help='Default molecules file to use if the input molecules file is empty') 
     aux_params.add_argument('--default-features', type=str, default="feature.clean.tsv.gz", help='Default molecules file to use if the input molecules file is empty') 
     aux_params.add_argument('--default-minmax', type=str, default="coordinate_minmax.tsv", help='The minmax file containing the coordinates of the image')
-    aux_params.add_argument('--max-tile-bytes', type=int, default=20000000, help='Maximum bytes for each tile in PMTiles')
-    aux_params.add_argument('--max-feature-counts', type=int, default=2000000, help='Max feature limits per tile in PMTiles')
-    aux_params.add_argument('--preserve-point-density-thres', type=int, default=4096, help='Threshold for preserving point density in PMTiles')
+    aux_params.add_argument('--max-tile-bytes', type=int, default=5000000, help='Maximum bytes for each tile in PMTiles')
+    aux_params.add_argument('--max-feature-counts', type=int, default=500000, help='Max feature limits per tile in PMTiles')
+    aux_params.add_argument('--preserve-point-density-thres', type=int, default=1024, help='Threshold for preserving point density in PMTiles')
 
     if len(_args) == 0:
         parser.print_help()
