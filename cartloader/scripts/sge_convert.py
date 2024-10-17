@@ -393,10 +393,11 @@ def sge_convert(_args):
     if len(mm.targets) == 0:
         logging.error("There is no target to run. Please make sure that at least one run option was turned on")
         sys.exit(1)
-    if args.platform == "seqscope":
-        mm.write_makefile(f"{args.out_dir}/{args.makefn}") #, use_bash=True)
-    else:
-        mm.write_makefile(f"{args.out_dir}/{args.makefn}")
+    mm.write_makefile(f"{args.out_dir}/{args.makefn}")
+    # if args.platform == "seqscope":
+    #     mm.write_makefile(f"{args.out_dir}/{args.makefn}") #, use_bash=True)
+    # else:
+    #     mm.write_makefile(f"{args.out_dir}/{args.makefn}")
 
     # run makefile
     if args.dry_run:
