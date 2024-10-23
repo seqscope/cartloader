@@ -12,7 +12,7 @@ def parse_arguments(_args):
     parser = argparse.ArgumentParser(prog=f"cartloader update_yaml_for_basemap", description="Update the yaml file to include the pmtiles to basemap in the assets")
 
     inout_params = parser.add_argument_group("Input/Output Parameters", "Input/output directory/files.")
-    inout_params.add_argument('--catalog', type=str, required=True, help='JSON/YAML file containing the output assets')
+    inout_params.add_argument('--yaml', type=str, required=True, help='JSON/YAML file containing the output assets')
     # add a list of basemaps pmtiles
     inout_params.add_argument('--pmtiles', type=str, nargs='+', required=True, help='List of pmtiles to add to the basemap')
 
@@ -29,7 +29,7 @@ def update_yaml_for_basemap(_args):
     args = parse_arguments(_args)
 
     # Load the catalog YAML file while preserving order
-    with open(args.catalog, 'r') as stream:
+    with open(args.yaml, 'r') as stream:
         catalog = yaml.load(stream, Loader=yaml.FullLoader)  # Preserves order
 
     # Add the pmtiles to the basemap
@@ -39,7 +39,7 @@ def update_yaml_for_basemap(_args):
     catalog["assets"]["basemap"] = basemap_list
 
     # Write the updated catalog YAML file, preserving order
-    with open(args.catalog, 'w') as stream:
+    with open(args.yaml, 'w') as stream:
         yaml.dump(catalog, stream, Dumper=yaml.SafeDumper, default_flow_style=False, sort_keys=False)
 
 

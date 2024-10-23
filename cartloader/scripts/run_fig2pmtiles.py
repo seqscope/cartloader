@@ -18,20 +18,21 @@ def parse_arguments(_args):
     cmd_params.add_argument('--georeference', action='store_true', default=False, help='Create a geotiff file from PNG or TIF file. If enabled, the user must provide georeferenced bounds using --in-tsv or --in-bounds.')
     cmd_params.add_argument('--geotif2mbtiles', action='store_true', default=False, help='Convert a geotiff file to mbtiles')
     cmd_params.add_argument('--mbtiles2pmtiles', action='store_true', default=False, help='Convert mbtiles to pmtiles')
-    cmd_params.add_argument('--upload-aws', action='store_true', default=False, help='Upload the new pmtiles and updated catalog.yaml file to the AWS S3 bucket')
-
+    cmd_params.add_argument('--upload-aws', action='store_true', default=False, help='Upload the new pmtiles to the AWS S3 bucket')
+    cmd_params.add_argument('--update-yaml', action='store_true', default=False, help='Update the catalog.yaml file with the new pmtiles and upload to AWS')
+ 
     inout_params = parser.add_argument_group("Input/Output Parameters", "Define the input file according to the user's needs.")
     inout_params.add_argument('--in-fig', type=str, help='The input figure file (PNG or TIF) to be converted to pmTiles')
     inout_params.add_argument('--in-tsv', type=str, default=None, help='If --georeference is required, use the *.pixel.sorted.tsv.gz from run_ficture to provide georeferenced bounds.')
     inout_params.add_argument('--in-bounds', type=str, default=None, help='If --georeference is required, provide the bounds in the format of "<ulx>,<uly>,<lrx>,<lry>", which represents upper-left X, upper-left Y, lower-right X, lower-right Y.')
-    inout_params.add_argument('--out-prefix', required=True, type=str, help='The output prefix. New directory will be created if needed')
+    inout_params.add_argument('--out-prefix', required=True, type=str, help='The output prefix. TNew directory will be created if needed')
 
     key_params = parser.add_argument_group("Key parameters")
     key_params.add_argument('--srs', type=str, default='EPSG:3857', help='For the georeference and geo2tiff steps, define the spatial reference system (default: EPSG:3857)')
-    key_params.add_argument('--resample', type=str, default='nearest', help='For the geo2tiff step, define the resampling method (default: nearest)')
+    key_params.add_argument('--resample', type=str, default='cubic', help='For the geo2tiff step, define the resampling method (default: cubic). Options: near, bilinear, cubic, etc.')
     key_params.add_argument('--blocksize', type=int, default='512', help='For the geo2tiff step, define the blocksize (default: 512)')
     key_params.add_argument('--aws-bucket', type=str, default=None, help='For the update-aws step, define the path to the AWS S3 bucket')
-    key_params.add_argument('--catalog', type=str, default=None, help='For the update-aws step, define the yaml file to update (default: catalog.yaml in the output directory specified by --out-prefix)')
+    key_params.add_argument('--yaml', type=str, default=None, help='For the update-aws step, define the yaml file to update (default: catalog.yaml in the output directory specified by --out-prefix)')
 
     aux_params = parser.add_argument_group("Auxiliary Parameters", "Auxiliary parameters (using default is recommended)")
     aux_params.add_argument('--tippecanoe', type=str, default=f"{repo_dir}/submodules/tippecanoe/tippecanoe", help='Path to tippecanoe binary')
@@ -51,18 +52,6 @@ def parse_arguments(_args):
 
 def run_fig2pmtiles(_args):
 
-    '''
-    # a test code
-    hist_dir=/nfs/turbo/sph-hmkang/index/data/weiqiuc/testruns/testcases/umst_mouse_brain/nova_st/histology
-    deploy_dir=/nfs/turbo/sph-hmkang/index/data/weiqiuc/testruns/testcases/umst_mouse_brain/nova_st/deploy4
-    cartloader run_fig2pmtiles --geotif2mbtiles --mbtiles2pmtiles \
-        --in-fig ${hist_dir}/GSM8093729_Replicate_1_flippedbyps_modified2.tif \
-        --out-prefix ${deploy_dir}/histology_20241015 \
-        --tippecanoe /nfs/turbo/sph-hmkang/weiqiuc/tools/tippecanoe/tippecanoe \
-        --pmtiles  /nfs/turbo/sph-hmkang/weiqiuc/tools/go-pmtiles_1.10.0_Linux_x86_64/pmtiles \
-        --dry-run
-    '''
-
     args=parse_arguments(_args)
 
     if args.all:
@@ -70,6 +59,7 @@ def run_fig2pmtiles(_args):
         args.geotif2mbtiles = True
         args.mbtiles2pmtiles = True
         args.upload_aws = True
+        args.update_yaml = True
 
     # files
     out_dir = os.path.dirname(args.out_prefix)
@@ -81,7 +71,7 @@ def run_fig2pmtiles(_args):
     mbtile_f_ann=f"{args.out_prefix}.pmtiles.{args.resample}.mbtiles"
     # - pmtiles
     pmtiles_f=f"{args.out_prefix}.pmtiles"
-    catalog_f = f"{out_dir}/catalog.yaml" if args.catalog is None else args.catalog
+    catalog_f = f"{out_dir}/catalog.yaml" if args.yaml is None else args.yaml
 
     # start mm
     mm = minimake()
@@ -109,7 +99,7 @@ def run_fig2pmtiles(_args):
 
     # 2. Convert a geotiff file to mbtiles
     if args.geotif2mbtiles:
-        cmds = cmd_separator([], f"Converting a geotif to mbtiles")
+        cmds = cmd_separator([], f"Converting from geotif to mbtiles: {args.in_fig}")
         cmd = " ".join([
             "gdal_translate", 
             "-b", "1", 
@@ -117,13 +107,14 @@ def run_fig2pmtiles(_args):
             "-b", "3",
             "-strict",
             "-co", "\"ZOOM_LEVEL_STRATEGY=UPPER\"",
-            "-co", "\"RESAMPLING={args.resample}\"",
-            "-co", "\"BLOCKSIZE={args.blocksize}\"",
+            "-co", f"\"RESAMPLING={args.resample}\"",
+            "-co", f"\"BLOCKSIZE={args.blocksize}\"",
             "-ot", "Byte",
             "-scale", "0", "255",
             "-of", "mbtiles",
             "-a_srs", args.srs,
-            "geotiff_f", mbtile_f
+            geotiff_f, 
+            mbtile_f
         ])
         cmds.append(cmd)
         #cmds.append(f"gdal_translate -b 1 -b 2 -b 3 -strict -co \"ZOOM_LEVEL_STRATEGY=UPPER\" -co \"RESAMPLING={args.resample}\" -co \"BLOCKSIZE={args.blocksize}\" -ot Byte -scale 0 255 -of mbtiles -a_srs {args.srs} {geotiff_f} {mbtile_f}")
@@ -131,23 +122,30 @@ def run_fig2pmtiles(_args):
     
     # 3. Convert mbtiles to pmtiles
     if args.mbtiles2pmtiles:
-        cmds = cmd_separator([], f"Resampling mbtiles and converting to pmtiles")
+        cmds = cmd_separator([], f"Resampling mbtiles and converting to pmtiles: {args.in_fig}")
         cmds.append(f"cp {mbtile_f} {mbtile_f_ann}")
         cmds.append(f"gdaladdo {mbtile_f_ann} -r {args.resample} 2 4 8 16 32 64 128 256")
         cmds.append(f"{args.pmtiles} convert --force {mbtile_f_ann} {pmtiles_f}")
-        cmds.append(f"rm {mbtile_f_ann}")
+        #cmds.append(f"rm {mbtile_f_ann}")
         mm.add_target(pmtiles_f, [mbtile_f], cmds)
 
-    # 4. Update to catalog and upload to AWS
+    # 4. Upload new PMtiles to AWS
     if args.upload_aws:
-        cmds = cmd_separator([], f"Updating the pmtiles to the catalog and uploading to AWS")
-        cmds.append(f"cartloader update_yaml_for_basemap --catalog {catalog_f} --pmtiles {pmtiles_f}")
-        cmds.append(f"aws s3 cp {pmtiles_f} {args.aws_bucket}")
-        cmds.append(f"aws s3 cp {catalog_f} {args.aws_bucket}/catalog.yaml")
-        # touch a done file
+        assert args.aws_bucket is not None, "Please provide the AWS S3 bucket path using --aws-bucket"
+        cmds = cmd_separator([], f"Uploading pmtiles to AWS: {args.in_fig}")
+        pmtiles_fn=os.path.basename(pmtiles_f)
+        cmds.append(f"aws s3 cp {pmtiles_f} {args.aws_bucket}/{pmtiles_fn}")
         cmds.append(f"touch {pmtiles_f}.done")
-        mm.add_target(f"{out_dir}/{pmtiles_f}.done", [pmtiles_f], cmds)
+        mm.add_target(f"{pmtiles_f}.done", [pmtiles_f], cmds)
 
+    # 5. Update the catalog.yaml file with the new pmtiles and upload to AWS
+    if args.update_yaml:
+        cmds = cmd_separator([], f"Updating yaml and uploading to AWS: {args.in_fig}")
+        cmds.append(f"cartloader update_yaml_for_basemap --yaml {catalog_f} --pmtiles {pmtiles_f}")
+        cmds.append(f"aws s3 cp {catalog_f} {args.aws_bucket}/catalog.yaml")
+        cmds.append(f"touch {pmtiles_f}.yaml.done")
+        mm.add_target(f"{pmtiles_f}.yaml.done", [pmtiles_f, catalog_f], cmds)
+    
     ## write makefile
     make_f=os.path.join(out_dir, args.makefn) if args.makefn is not None else f"{args.out_prefix}.mk"
     mm.write_makefile(make_f)
