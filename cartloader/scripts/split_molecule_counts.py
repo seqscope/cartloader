@@ -5,12 +5,48 @@ from collections import Counter
 
 from cartloader.utils.utils import create_custom_logger
 
-# Function to get log2 bins from the first file
-def get_equal_bins(n_bins, in_features, out_prefix, out_features_suffix, delim, colname_feature, colname_count, skip_original):
-    #print(f"delim = {delim} {len(delim)}")
-    df = pd.read_csv(in_features, sep=delim)
+# # Function to get log2 bins from the first file
+# def get_equal_bins(n_bins, in_features, out_prefix, out_features_suffix, delim, colname_feature, colname_count, skip_original):
+#     ## read the feature data frame
+#     df = pd.read_csv(in_features, sep=delim)
 
-    df = df.sort_values(by=colname_count).reset_index(drop=True)
+#     ## sort by smallest to largest
+#     df = df.sort_values(by=colname_count).reset_index(drop=True)
+
+#     # Calculate the cumulative sum of 'count'
+#     df['cumulative_sum'] = df[colname_count].cumsum()
+
+#     # Define the total sum and target sum for each bin
+#     total_sum = df[colname_count].sum()
+#     target_sum = total_sum / n_bins
+
+#     # Create the bin edges, but exclude the last edge to ensure n_bins bins
+#     bin_edges = np.linspace(0, total_sum, n_bins + 1)[1:]  # Skip the first edge
+
+#     # Assign each cumulative sum to a bin
+#     df['bin'] = (np.digitize(df['cumulative_sum'], bin_edges, right=True) + 1).astype(int)
+
+#     equal_bins = df.set_index(colname_feature)['bin'].to_dict()
+
+#     df = df.drop(columns=['cumulative_sum'])
+
+#     if not skip_original:
+#         df.to_csv(f"{out_prefix}_all_{out_features_suffix}", sep='\t', index=False, na_rep='NA')
+#     df.to_json(f"{out_prefix}_bin_counts.json", orient='records')
+
+#     for equal_bin, group in df.groupby('bin'):
+#         output_file = f"{out_prefix}_bin{equal_bin}_{out_features_suffix}"
+#         group.drop('bin', axis=1).to_csv(output_file, sep='\t', index=False, na_rep='NA')
+    
+#     return equal_bins
+
+# Function to get equal bins from the first file
+def get_equal_bins(n_bins, in_features, out_prefix, out_features_suffix, delim, colname_feature, colname_count, skip_original):
+    ## read the feature data frame
+    df = pd.read_csv(in_features, sep=delim)
+    
+    ## sort by smallest to largest
+    df = df.sort_values(by=colname_count, ascending=False).reset_index(drop=True)
 
     # Calculate the cumulative sum of 'count'
     df['cumulative_sum'] = df[colname_count].cumsum()
@@ -18,12 +54,25 @@ def get_equal_bins(n_bins, in_features, out_prefix, out_features_suffix, delim, 
     # Define the total sum and target sum for each bin
     total_sum = df[colname_count].sum()
     target_sum = total_sum / n_bins
-
-    # Create the bin edges, but exclude the last edge to ensure n_bins bins
-    bin_edges = np.linspace(0, total_sum, n_bins + 1)[1:]  # Skip the first edge
-
-    # Assign each cumulative sum to a bin
-    df['bin'] = (np.digitize(df['cumulative_sum'], bin_edges, right=True) + 1).astype(int)
+    
+    df['bin'] = 0
+    current_sum = 0
+    current_bin = 1
+    for index, row in df.iterrows():
+#        print("***", total_sum, target_sum, current_sum, current_bin, row[colname_count])
+        if current_sum + row[colname_count] < target_sum: # keep adding more features
+            current_sum += row[colname_count]
+            df.at[index, 'bin'] = current_bin
+        else: # stop here
+            current_sum += row[colname_count]
+            df.at[index, 'bin'] = current_bin
+            current_bin += 1
+            ## update target_sum
+            total_sum -= current_sum
+            if current_bin <= n_bins:
+              target_sum = total_sum / (n_bins - current_bin + 1)
+              current_sum = 0
+    
 
     equal_bins = df.set_index(colname_feature)['bin'].to_dict()
 
