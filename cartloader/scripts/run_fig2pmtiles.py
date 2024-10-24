@@ -86,10 +86,10 @@ def run_fig2pmtiles(_args):
                 for i in range(3):
                     line = f.readline()
             ann2val = {x.split("=")[0]:x.split("=")[1] for x in line.strip().replace("##", "").split(";")}
-            ulx = float(ann2val["OFFSET_X"])
-            uly = float(ann2val["OFFSET_Y"])
-            lrx = float(ann2val["SIZE_X"])+1+ulx
-            lrx = float(ann2val["SIZE_Y"])+1+uly
+            ulx = float(ann2val["OFFSET_X"]) # Upper left X-coordinate
+            uly = float(ann2val["OFFSET_Y"]) # Upper left Y-coordinate
+            lrx = float(ann2val["SIZE_X"])+1+ulx # Lower Right X-coordinate
+            lry = float(ann2val["SIZE_Y"])+1+uly # Lower Right Y-coordinate 
         else:
             raise ValueError("Please provide either --in-bounds or --in-tsv to georeference the figure")
         
