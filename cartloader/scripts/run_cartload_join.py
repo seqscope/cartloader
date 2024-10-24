@@ -34,6 +34,7 @@ def parse_arguments(_args):
     run_params.add_argument('--dry-run', action='store_true', default=False, help='Dry run. Generate only the Makefile without running it')
     run_params.add_argument('--restart', action='store_true', default=False, help='Restart the run. Ignore all intermediate files and start from the beginning')
     run_params.add_argument('--n-jobs', type=int, default=1, help='Number of jobs (processes) to run in parallel')
+    run_params.add_argument('--makefn', type=str, default="run_cartload_join.mk", help='The name of the Makefile to generate')
 
     aux_params = parser.add_argument_group("Auxiliary Parameters", "Auxiliary parameters (using default is recommended)")
     aux_params.add_argument('--major-axis', type=str, default=None, help='Specify major axis (X or Y) for the data')
@@ -49,7 +50,6 @@ def parse_arguments(_args):
     aux_params.add_argument('--out-fic-assets', type=str, default="ficture_assets.json", help='The YAML/JSON file containing FICTURE output assets')
     aux_params.add_argument('--out-catalog', type=str, default="catalog.yaml", help='The YAML file containing the output catalog')
     aux_params.add_argument('--background-assets', type=str, help='The JSON/YAML file containing background assets')
-    aux_params.add_argument('--makefn', type=str, default="run_cartload.mk", help='The name of the Makefile to generate')
     aux_params.add_argument('--default-molecules', type=str, default="transcripts.sorted.tsv.gz", help='Default molecules file to use if the input molecules file is empty') 
     aux_params.add_argument('--default-features', type=str, default="feature.clean.tsv.gz", help='Default molecules file to use if the input molecules file is empty') 
     aux_params.add_argument('--default-minmax', type=str, default="coordinate_minmax.tsv", help='The minmax file containing the coordinates of the image')
