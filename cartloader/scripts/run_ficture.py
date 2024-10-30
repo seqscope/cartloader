@@ -26,7 +26,6 @@ def parse_arguments(_args):
     cmd_params.add_argument('--lda', action='store_true', default=False, help='(Main function) Perform LDA model training')
     cmd_params.add_argument('--projection', action='store_true', default=False, help='(Main function) Perform projection/Transform')
     cmd_params.add_argument('--decode', action='store_true', default=False, help='(Main function) Perform pixel-level decoding')
-    #cmd_params.add_argument('--merge-by-pixel', action='store_true', default=False, help='(Main function) Merge pixel-level decoding results with the input TSV SGE into a single file')
     cmd_params.add_argument('--summary', action='store_true', default=False, help='(Main function) Generate a JSON file summarizing all fixture parameters for which outputs are available in the <out-dir>.')
     cmd_params.add_argument('--segment-10x', action='store_true', default=False, help='(Additional function) Perform hexagon segmentation into 10x Genomics format')
     cmd_params.add_argument('--viz-per-factor', action='store_true', default=False, help='(Additional function) Generate pixel-level visualization for each factor')
@@ -36,7 +35,7 @@ def parse_arguments(_args):
     key_params.add_argument('--out-dir', required= True, type=str, help='Output directory')
     key_params.add_argument('--out-json', type=str, default=None, help="Output JSON file for summarizing the ficture parameters. Default: <out-dir>/ficture.params.json ")
     key_params.add_argument('--in-transcript', type=str, default=None, help='Input unsorted transcript-indexed SGE file in TSV format. Default to transcripts.unsorted.tsv.gz in the output directory')
-    key_params.add_argument('--in-cstranscript', type=str, default=None, help='(Optional) If a coordinate-sorted transcript-indexed SGE file (sorted by x and y coordinates) exists, specify it by --in-cstranscript to skip the sorting step. Default to transcripts.sorted.tsv.gz in the output directory')
+    key_params.add_argument('--in-cstranscript', type=str, default=None, help='(Optional) If a coordinate-sorted transcript-indexed SGE file (sorted by x and y coordinates) exists, specify it by --in-cstranscript to skip the sorting step. Or use this to define the name of the sorted file. Default to transcripts.sorted.tsv.gz in the output directory')
     key_params.add_argument('--in-minmax', type=str, default=None, help='Input coordinate minmax TSV file. Default to coordinate_minmax.tsv in the output directory')
     key_params.add_argument('--in-feature', type=str, default=None,  help='(Optional) Input TSV file that specify which genes to use as input, e.g., feature.clean.tsv.gz. If absent, all genes will be used')
     key_params.add_argument('--major-axis', type=str, default=None, help='Axis where transcripts.tsv.gz are sorted. If not provided, it will be automatically defined by the longer axis. Options: X, Y')
@@ -146,31 +145,7 @@ def run_ficture(_args):
     # args
     args=parse_arguments(_args)
 
-    if args.plus:
-        args.main = True
-        args.segment_10x = True
-        args.viz_per_factor = True
-        args.viz_dotplot = True
-        
-    if args.main:
-        if args.in_cstranscript is not None: ## coordinate-sorted transcript is already available
-            args.sorttsv = False
-        else:
-            args.sorttsv = True
-        args.minibatch = True
-        args.segment=True
-        args.lda = True
-        args.projection = True
-        args.decode = True
-        args.summary = True
-        #args.merge_by_pixel = True
-
-    # parse parameters
-    train_widths = [int(x) for x in args.train_width.split(",")]
-    n_factors = [int(x) for x in args.n_factor.split(",")]
-    hexagon_widths_10x = [int(x) for x in args.hexagon_width_10x.split(",")]
-    
-    # input/output
+    # input/output/other files
     # dirs
     os.makedirs(args.out_dir, exist_ok=True)
     # in files
@@ -183,10 +158,8 @@ def run_ficture(_args):
     # out files 
     if args.out_json is None:
         args.out_json = os.path.join(args.out_dir, f"ficture.params.json") 
-    # no default value for in_feature given that it is optional
     assert os.path.exists(args.in_transcript) or os.path.exists(args.in_cstranscript), "Provide a valid input transcript-indexed SGE file by --in-transcript or --in-cstranscript"
     assert os.path.exists(args.in_minmax), "Provide a valid input coordinate minmax file by --in-minmax"
-
     # check static cmap file
     if args.cmap_static:
         if args.static_cmap_file is None:
@@ -195,6 +168,27 @@ def run_ficture(_args):
             args.static_cmap_file = os.path.join(progdir,"assets","fixed_color_map_52.tsv")
         if not os.path.exists(args.static_cmap_file):
             raise ValueError("Static color map file {args.static_cmap_file} does not exist")
+
+    # functions
+    if args.plus:
+        args.main = True
+        args.segment_10x = True
+        args.viz_per_factor = True
+        args.viz_dotplot = True
+        
+    if args.main:
+        args.sorttsv = True
+        args.minibatch = True
+        args.segment=True
+        args.lda = True
+        args.projection = True
+        args.decode = True
+        args.summary = True
+
+    # parse parameters
+    train_widths = [int(x) for x in args.train_width.split(",")]
+    n_factors = [int(x) for x in args.n_factor.split(",")]
+    hexagon_widths_10x = [int(x) for x in args.hexagon_width_10x.split(",")]
 
     # start mm
     mm = minimake()
@@ -472,37 +466,6 @@ ${tabix} -f -s1 -b"${sortidx}" -e"${sortidx}" ${output}
                     cmds.append(f"[ -f {decode_prefix}.bulk_chisq.tsv ] && [ -f {decode_prefix}.factor.info.html ] && [ -f {decode_prefix}.pixel.png ] && touch {decode_prefix}_summary.done")
                     mm.add_target(f"{decode_prefix}_summary.done", [batch_mat, f"{decode_prefix}.done"], cmds)
     
-    # if args.merge_by_pixel:
-    #     # tools:
-    #     # - spatula
-    #     if args.spatula is None:
-    #         args.spatula = os.path.join(cartloader_repo, "submodules", "spatula", "bin", "spatula")
-    #         print(f"Given spatula is not provided, using the spatula from submodules: {args.spatula}.")
-    #     scheck_app(args.spatula)
-    #     # major axis
-    #     major_axis=define_major_axis(args)
-    #     # collect params
-    #     prerequisities = []
-    #     decode_basename_list=[]
-    #     prerequisities.append(args.in_cstranscript)
-    #     for train_width in train_widths:
-    #         for n_factor in n_factors:
-    #             if args.fit_width is None:
-    #                 fit_widths = [train_width]
-    #             else:
-    #                 fit_widths = [float(x) for x in args.fit_width.split(",")]
-    #             for fit_width in fit_widths:
-    #                 radius = args.anchor_res + 1
-    #                 decode_basename=f"t{train_width}_f{n_factor}_p{fit_width}_a{args.anchor_res}_r{radius}"
-    #                 decode_basename_list.append(decode_basename)
-    #                 prerequisities.append(f"{args.out_dir}/{decode_basename}.done")     
-    #     # cmds
-    #     cmds = cmd_separator([], f"Merging pixel-level decoding results with the sorted SGE in TSV format...")
-    #     pix_prefix_tsv_list=[f"--pix-prefix-tsv {decode_basename}__,{args.out_dir}/{decode_basename}.pixel.sorted.tsv.gz" for decode_basename in decode_basename_list]
-    #     out_merge_prefix=f"{args.out_dir}/transcripts_pixel_join_K{args.merge_max_k}P{args.merge_max_p}.sorted"
-    #     cmds.append(f"{args.spatula} join-pixel-tsv --mol-tsv {args.in_cstranscript} {' '.join(pix_prefix_tsv_list)} --out-prefix {out_merge_prefix} --max-dist-um {args.merge_max_dist_um} --out-max-k {args.merge_max_k} --out-max-p {args.merge_max_p}")
-    #     mm.add_target(f"{out_merge_prefix}.tsv.gz", prerequisities, cmds)
-
     if args.summary:
         # collect prerequisities
         prerequisities = []

@@ -38,13 +38,15 @@ def parse_arguments(_args):
     #key_params.add_argument('--units-per-um-from-json', action='store_true', default=False, help='For 10x_visium_hd datasets, cartloader support interpret the units per um from the json file (default: False). When enabled, the --units-per-um value will be ignored, and use --scale-json to indicate the input json file.')
     key_params.add_argument('--scale-json', type=str, default=None, help="For 10x_visium_hd datasets, users could use --scale-json to provide the path to the scale json file for calculating units-per-um (default: None). Typical naming convention: scalefactors_json.json")
     key_params.add_argument('--precision-um', type=int, default=2, help='Number of digits to store the transcript coordinates (only if --px_to_um is in use). Set it to 0 to round to integer (default: 2)')
-    
+    key_params.add_argument('--filter-by-density', action='store_true', default=False, help='Filter the transcript-indexed SGE file by density (default: False)')
     # Output dir/file params
     output_params=parser.add_argument_group("Output Directory/File Parameters", "Output Parameters.")
     output_params.add_argument('--out-dir', type=str, required=True, help='The output directory, which will host the transcript-indexed SGE file/coordinate minmax TSV file/feature file, as well as the Makefile.')
-    output_params.add_argument('--out-transcript', type=str, default="transcripts.unsorted.tsv.gz", help='The output compressed transcript-indexed SGE file in TSV format (default: transcripts.unsorted.tsv.gz)')
-    output_params.add_argument('--out-minmax', type=str, default="coordinate_minmax.tsv", help='The output coordinate minmax TSV file (default: coordinate_minmax.tsv)')
-    output_params.add_argument('--out-feature', type=str, default="feature.clean.tsv.gz", help='The output file collects UMI counts on a per-gene basis (default: feature.clean.tsv.gz)')
+    output_params.add_argument('--out-transcript', type=str, default="transcripts.unsorted.tsv.gz", help='The converted compressed transcript-indexed SGE file in TSV format before filter_by_density (default: transcripts.unsorted.tsv.gz)')
+    output_params.add_argument('--out-minmax', type=str, default="coordinate_minmax.tsv", help='The converted coordinate minmax TSV file before filter_by_density (default: coordinate_minmax.tsv)')
+    output_params.add_argument('--out-feature', type=str, default="feature.clean.tsv.gz", help='The converted file collects UMI counts on a per-gene basis before filter_by_density(default: feature.clean.tsv.gz)')
+    output_params.add_argument('--out-filtered-transcript', type=str, default="filtered.transcripts.unsorted.tsv.gz", help='The filtered transcript-indexed SGE file in TSV format after filter_by_density')
+    output_params.add_argument('--out-filtered-prefix', type=str, default="filtered", help='The prefix for filtered files (default: filtered)')
 
     # Input dir/file params
     input_params = parser.add_argument_group(
@@ -118,7 +120,7 @@ def parse_arguments(_args):
     aux_output_params.add_argument('--colname-feature-name', type=str, default='gene', help='Column name for feature/gene name (default: gene)')
     aux_output_params.add_argument('--colname-feature-id', type=str, default=None, help='Column name for feature/gene ID. This is only required when --csv-colname-feature-id or --print-feature-id is applied (default: None)') 
 
-    # Aux gene-filtering params
+    # AUX gene-filtering params
     aux_ftrfilter_params = parser.add_argument_group(
         "Feature Filtering Auxiliary Parameters", 
         """
@@ -126,7 +128,6 @@ def parse_arguments(_args):
         1) Use the ---feature-list, ---feature-substr, and --*-feature-regex parameters to exclude or include input data based on feature names.
         2) Use the --*-feature-type-regex parameter in conjunction with --csv-colname-feature-type or --feature-type-ref to filter input data based on feature type.
         """)
-    # regex: 
     aux_ftrfilter_params.add_argument('--include-feature-list', type=str, default=None, help='A file containing a list of input genes to be included (feature name of IDs) (default: None)')
     aux_ftrfilter_params.add_argument('--exclude-feature-list', type=str, default=None, help='A file containing a list of input genes to be excluded (feature name of IDs) (default: None)')
     aux_ftrfilter_params.add_argument('--include-feature-substr', type=str, default=None, help='A substring of feature/gene names to be included (default: None)')
@@ -138,6 +139,16 @@ def parse_arguments(_args):
     aux_ftrfilter_params.add_argument('--feature-type-ref', type=str, default=None, help='Specify the path to a tab-separated gene information reference file to provide gene type information. The format should be: chrom, start position, end position, gene id, gene name, gene type (default: None)')
     aux_ftrfilter_params.add_argument('--print-removed-transcripts', action='store_true', default=False, help='For debugging purposes, print the list of features removed based on the filtering criteria (default: False). Currently it only works for datasets from 10x_xenium, bgi_stereoseq, cosmx_smi, vizgen_merscope or pixel_seq.')
 
+    # AUX polygon-filtering params
+    aux_polyfilter_params = parser.add_argument_group('Polygon Filtering Auxiliary Parameters','Auxiliary parameters for filtering polygons based on the number of vertices. Only applicable when --filter-by-density is enabled.')
+    aux_polyfilter_params.add_argument('--genomic-feature', type=str, default='gn', help='The column name of genomic feature for polygon-filtering.')
+    aux_polyfilter_params.add_argument('--mu-scale', type=int, default=1, help='The scale factor for the polygon area calculation (default: 1.0)')
+    aux_polyfilter_params.add_argument('--radius', type=int, default=15, help='The radius for the polygon area calculation (default: 15)')
+    aux_polyfilter_params.add_argument('--quartile', type=int, default=2, help='The quartile for the polygon area calculation (default: 2)')
+    aux_polyfilter_params.add_argument('--hex-n-move', type=int, default=1, help='The sliding step for polygon-filtering (default: 1)')
+    aux_polyfilter_params.add_argument('--polygon-min-size', type=int, default=500, help='The minimum polygon size to be included in the output file (default: 500)')
+    aux_polyfilter_params.add_argument('--gene-header', type=str, default='gene', help='The column name of gene name for polygon-filtering.')
+    aux_polyfilter_params.add_argument('--count-header', type=str, default='gn', help='The column name of count for polygon-filtering.')
     # env params
     env_params = parser.add_argument_group("ENV Parameters", "Environment parameters for the tools.")
     env_params.add_argument('--gzip', type=str, default="gzip", help='Path to gzip binary. For faster processing, use "pigz -p 4".')
@@ -375,7 +386,10 @@ def sge_convert(_args):
     # output
     os.makedirs(args.out_dir, exist_ok=True)
 
-    # cmds
+    # mm
+    mm = minimake()
+
+    # sge_convert
     cmds = cmd_separator([], f"Converting input for raw data from: {args.platform}...")
     if args.platform == "10x_visium_hd":
         cmds = convert_visiumhd(cmds, args)
@@ -386,13 +400,34 @@ def sge_convert(_args):
     # add done if out_transcript, out_minmax, out_feature are generated
     sge_convert_flag = os.path.join(args.out_dir, "sge_convert.done")
     cmds.append(f"[ -f {os.path.join(args.out_dir, args.out_transcript)} ] && [ -f {os.path.join(args.out_dir, args.out_feature)} ] && [ -f {os.path.join(args.out_dir, args.out_minmax)} ] && touch {sge_convert_flag}")
-
-    # mm
-    mm = minimake()
     mm.add_target(sge_convert_flag, in_raw_filelist, cmds) 
+
+    if args.filter_by_density:
+        cmds=cmd_separator([], "Filtering the converted data by density...")
+        cmd = " ".join([
+                "ficture", "filter_by_density",
+                f"--input {args.out_dir}/{args.out_transcript}",
+                f"--feature {args.out_dir}/{args.out_feature}",
+                f"--output {args.out_dir}/{args.out_filtered_transcript}",
+                f"--output_boundary {args.out_dir}/{args.out_filtered_prefix}",
+                f"--filter_based_on {args.genomic_feature}",
+                f"--mu_scale {args.mu_scale}",
+                f"--radius {args.radius}",
+                f"--quartile {args.quartile}",
+                f"--hex_n_move {args.hex_n_move}",
+                f"--remove_small_polygons {args.polygon_min_size}",
+                f"--gene_header \"{args.gene_header}\"",
+                f"--count_header \"{args.count_header}\""
+            ])
+        cmds.append(cmd)
+        mm.add_target(f"{args.out_dir}/{args.out_filtered_transcript}", [sge_convert_flag], cmds)
+
+
+    # write makefile
     if len(mm.targets) == 0:
         logging.error("There is no target to run. Please make sure that at least one run option was turned on")
         sys.exit(1)
+    
     mm.write_makefile(f"{args.out_dir}/{args.makefn}")
     # if args.platform == "seqscope":
     #     mm.write_makefile(f"{args.out_dir}/{args.makefn}") #, use_bash=True)

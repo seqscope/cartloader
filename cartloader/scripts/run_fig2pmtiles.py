@@ -1,9 +1,9 @@
-import sys, os, gzip, argparse, logging, warnings, shutil, subprocess, ast
+import sys, os, gzip, argparse, logging, warnings, shutil, subprocess, ast, re
 import pandas as pd
+import numpy as np
 
 from cartloader.utils.minimake import minimake
 from cartloader.utils.utils import cmd_separator, scheck_app, create_custom_logger
-
 
 def parse_arguments(_args):
     """
@@ -14,13 +14,14 @@ def parse_arguments(_args):
     parser = argparse.ArgumentParser(prog=f"cartloader run_fig2pmtiles", description="Convert a figure to pmtiles")
 
     cmd_params = parser.add_argument_group("Commands", "Commands to run together")
-    cmd_params.add_argument('--all', action='store_true', default=False, help='Run all commands (geo2tiff, mbtiles2pmtiles, mbtiles2pmtiles, update-aws)')
-    cmd_params.add_argument('--georeference', action='store_true', default=False, help='Create a geotiff file from PNG or TIF file. If enabled, the user must provide georeferenced bounds using --in-tsv or --in-bounds.')
+    cmd_params.add_argument('--all', action='store_true', default=False, help='Run main commands (mbtiles2pmtiles, mbtiles2pmtiles, update-aws)')
     cmd_params.add_argument('--geotif2mbtiles', action='store_true', default=False, help='Convert a geotiff file to mbtiles')
     cmd_params.add_argument('--mbtiles2pmtiles', action='store_true', default=False, help='Convert mbtiles to pmtiles')
     cmd_params.add_argument('--upload-aws', action='store_true', default=False, help='Upload the new pmtiles to the AWS S3 bucket')
     cmd_params.add_argument('--update-yaml', action='store_true', default=False, help='Update the catalog.yaml file with the new pmtiles and upload to AWS')
- 
+    cmd_params.add_argument('--georeference', action='store_true', default=False, help='Plus function. Create a geotiff file from PNG or TIF file. If enabled, the user must provide georeferenced bounds using --in-tsv or --in-bounds.')
+    cmd_params.add_argument('--flip-vertical', action='store_true', default=False, help='Plus function. Flip the image vertically')
+
     inout_params = parser.add_argument_group("Input/Output Parameters", "Define the input file according to the user's needs.")
     inout_params.add_argument('--in-fig', type=str, help='The input figure file (PNG or TIF) to be converted to pmTiles')
     inout_params.add_argument('--in-tsv', type=str, default=None, help='If --georeference is required, use the *.pixel.sorted.tsv.gz from run_ficture to provide georeferenced bounds.')
@@ -54,8 +55,7 @@ def run_fig2pmtiles(_args):
 
     args=parse_arguments(_args)
 
-    if args.all:
-        args.georeference = True
+    if args.main:
         args.geotif2mbtiles = True
         args.mbtiles2pmtiles = True
         args.upload_aws = True
@@ -64,8 +64,8 @@ def run_fig2pmtiles(_args):
     # files
     out_dir = os.path.dirname(args.out_prefix)
     os.makedirs(out_dir, exist_ok=True)
-    # - geotiff
-    geotiff_f = args.in_fig if not args.georeference else f"{args.out_prefix}.pmtiles.tif"
+    # - geotiff for 
+    geotif_f = args.in_fig 
     # - mbtiles
     mbtile_f=f"{args.out_prefix}.pmtiles.mbtiles"
     mbtile_f_ann=f"{args.out_prefix}.pmtiles.{args.resample}.mbtiles"
@@ -76,8 +76,9 @@ def run_fig2pmtiles(_args):
     # start mm
     mm = minimake()
 
-    # 1. Create a geotiff file from PNG or TIF file
+    # 0. Create a geotiff file from PNG or TIF file
     if args.georeference:
+        georef_f =f"{args.out_prefix}.pmtiles.tif"
         assert args.in_fig is not None and os.path.exists(args.in_fig), "Please provide a valid input figure file using --in-figure"
         if args.in_bounds is not None:
             ulx,uly,lrx,lry = args.in_bounds.split(",")
@@ -93,13 +94,45 @@ def run_fig2pmtiles(_args):
         else:
             raise ValueError("Please provide either --in-bounds or --in-tsv to georeference the figure")
         
-        cmds = cmd_separator([], f"Geo-referencing {args.in_fig} to {geotiff_f}")
-        cmds.append(f"gdal_translate -of GTiff -a_srs {args.srs} -a_ullr {ulx} {uly} {lrx} {lry} {args.in_fig} {geotiff_f}")
-        mm.add_target(geotiff_f, [args.in_fig], cmds)
+        cmds = cmd_separator([], f"Geo-referencing {args.in_fig} to {georef_f}")
+        cmds.append(f"gdal_translate -of GTiff -a_srs {args.srs} -a_ullr {ulx} {uly} {lrx} {lry} {args.in_fig} {georef_f}")
+        mm.add_target(georef_f, [args.in_fig], cmds)
+        # update geotif_f
+        geotif_f = georef_f
+
+    # 1. Flip the image when required 
+    if args.flip_vertical:
+        vflip_f = f"{args.out_prefix}.pmtiles.vflip.tif"
+        cmds = cmd_separator([], f"Flipping the geotif vertically: {geotif_f}")        
+        cmd = f'''
+        INFO=$(gdalinfo "{geotif_f}" 2>&1)
+        if [[ $INFO =~ Size\\ is\\ ([0-9]+),\\ ([0-9]+) ]]; then
+            WIDTH=${{BASH_REMATCH[1]}}
+            HEIGHT=${{BASH_REMATCH[2]}}
+            echo "width: ${{WIDTH}}, height: ${{HEIGHT}}"
+        else
+            echo "Failed to extract image dimensions."
+        fi
+        '''
+        cmds.append(cmd)
+        cmd = " ".join([
+                "gdalwarp",
+                f'"{geotif_f}"',  # Add quotes around file names to handle spaces
+                f'"{vflip_f}"',
+                "-b", "1",
+                "-b", "2",
+                "-b", "3",
+                "-ct", "\"+proj=pipeline +step +proj=axisswap +order=1,-2\"",
+                "-overwrite",
+                "-ts", "$WIDTH", "$HEIGHT"  # Use the WIDTH and HEIGHT from the previous command
+            ])
+        cmds.append(cmd)
+        # update geotif_f
+        geotif_f = vflip_f
 
     # 2. Convert a geotiff file to mbtiles
     if args.geotif2mbtiles:
-        cmds = cmd_separator([], f"Converting from geotif to mbtiles: {args.in_fig}")
+        cmds = cmd_separator([], f"Converting from geotif to mbtiles: {geotif_f}")
         cmd = " ".join([
             "gdal_translate", 
             "-b", "1", 
@@ -113,16 +146,16 @@ def run_fig2pmtiles(_args):
             "-scale", "0", "255",
             "-of", "mbtiles",
             "-a_srs", args.srs,
-            geotiff_f, 
+            geotif_f, 
             mbtile_f
         ])
         cmds.append(cmd)
-        #cmds.append(f"gdal_translate -b 1 -b 2 -b 3 -strict -co \"ZOOM_LEVEL_STRATEGY=UPPER\" -co \"RESAMPLING={args.resample}\" -co \"BLOCKSIZE={args.blocksize}\" -ot Byte -scale 0 255 -of mbtiles -a_srs {args.srs} {geotiff_f} {mbtile_f}")
-        mm.add_target(mbtile_f, [geotiff_f], cmds)
+        #cmds.append(f"gdal_translate -b 1 -b 2 -b 3 -strict -co \"ZOOM_LEVEL_STRATEGY=UPPER\" -co \"RESAMPLING={args.resample}\" -co \"BLOCKSIZE={args.blocksize}\" -ot Byte -scale 0 255 -of mbtiles -a_srs {args.srs} {geotif_f} {mbtile_f}")
+        mm.add_target(mbtile_f, [geotif_f], cmds)
     
     # 3. Convert mbtiles to pmtiles
     if args.mbtiles2pmtiles:
-        cmds = cmd_separator([], f"Resampling mbtiles and converting to pmtiles: {args.in_fig}")
+        cmds = cmd_separator([], f"Resampling mbtiles and converting to pmtiles: {geotif_f}")
         cmds.append(f"cp {mbtile_f} {mbtile_f_ann}")
         cmds.append(f"gdaladdo {mbtile_f_ann} -r {args.resample} 2 4 8 16 32 64 128 256")
         cmds.append(f"{args.pmtiles} convert --force {mbtile_f_ann} {pmtiles_f}")
@@ -132,7 +165,7 @@ def run_fig2pmtiles(_args):
     # 4. Upload new PMtiles to AWS
     if args.upload_aws:
         assert args.aws_bucket is not None, "Please provide the AWS S3 bucket path using --aws-bucket"
-        cmds = cmd_separator([], f"Uploading pmtiles to AWS: {args.in_fig}")
+        cmds = cmd_separator([], f"Uploading pmtiles to AWS: {geotif_f}")
         pmtiles_fn=os.path.basename(pmtiles_f)
         cmds.append(f"aws s3 cp {pmtiles_f} {args.aws_bucket}/{pmtiles_fn}")
         cmds.append(f"touch {pmtiles_f}.done")
@@ -140,7 +173,7 @@ def run_fig2pmtiles(_args):
 
     # 5. Update the catalog.yaml file with the new pmtiles and upload to AWS
     if args.update_yaml:
-        cmds = cmd_separator([], f"Updating yaml and uploading to AWS: {args.in_fig}")
+        cmds = cmd_separator([], f"Updating yaml and uploading to AWS: {geotif_f}")
         cmds.append(f"cartloader update_yaml_for_basemap --yaml {catalog_f} --pmtiles {pmtiles_f}")
         cmds.append(f"aws s3 cp {catalog_f} {args.aws_bucket}/catalog.yaml")
         cmds.append(f"touch {pmtiles_f}.yaml.done")
