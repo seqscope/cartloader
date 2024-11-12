@@ -6,107 +6,20 @@ from collections import defaultdict, OrderedDict
 def parse_arguments(_args):
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", 
-                                     description="""
-                                     Write a JSON file to summarize the parameters.""")
-    parser.add_argument('--out-dir', required= True, type=str, help='Output directory')
+                                     description="Write a JSON file to summarize the parameters.")
+    parser.add_argument('--out-dir', required=True, type=str, help='Output directory')
     parser.add_argument('--out-json', type=str, default=None, help='Path to the output JSON file. Default: <out-dir>/ficture.params.json')
+    parser.add_argument('--in-cstranscript', type=str, default=None, help='Path to the transcript file.')
+    parser.add_argument('--in-feature', type=str, default=None, help='Path to the feature file.')
+    parser.add_argument('--in-minmax', type=str, default=None, help='Path to the minmax file.')
+    parser.add_argument('--model', nargs='*', type=str, default=None, help='Model information: <model_type>,<model_path>,<model_id>,<train_width>,<n_factor>')
+    parser.add_argument('--projection', nargs='*', type=str, default=None, help='Projection information: <model_type>,<model_id>,<projection_id>,<fit_width>,<anchor_res>')
+    parser.add_argument('--decode', nargs='*', type=str, default=None, help='Decode information: <model_type>,<model_id>,<projection_id>,<decode_id>,<radius>')
     
     if len(_args) == 0:
         parser.print_help()
         sys.exit(1)
     return parser.parse_args(_args) 
-
-def extract_parameters(filename):
-    """Extract parameters from the filename using regular expressions."""
-    #pattern = re.compile(r'nF(\d+)\.d_(\d+)(?:\.decode)?(?:\.prj_(\d+)\.r_(\d+)(?:_(\d+))?)?\.bulk_chisq\.tsv')
-    pattern = re.compile(r't(\d+)_f(\d+)(?:_p(\d+)_a(\d+))?(?:_r(\d+))?\.done')
-    match = pattern.search(filename)
-    if match:
-        train_width, n_factor, fit_width, anchor_res, radius = match.groups()
-        return {
-            "n_factor": int(n_factor),
-            "train_width": int(train_width),
-            "fit_width": int(fit_width) if fit_width else None,
-            "anchor_res": int(anchor_res) if anchor_res else None,
-            "radius": int(radius) if radius else None,
-        }
-    return None
-
-def categorize_files(files):
-    """Categorize files into train, proj, and decode based on parameters."""
-    train_dict = defaultdict(lambda: {"proj_params": defaultdict(lambda: {"decode_params": []})})
-    
-    for file in files:
-        params = extract_parameters(file)
-        if params:
-            n_factor = params["n_factor"]
-            train_width = params["train_width"]
-            fit_width = params["fit_width"]
-            anchor_res = params["anchor_res"]
-            radius = params["radius"]
-            
-            if fit_width is None and anchor_res is None and radius is None:
-                train_dict[(n_factor, train_width)]["n_factor"] = n_factor
-                train_dict[(n_factor, train_width)]["train_width"] = train_width
-            elif radius is None:
-                train_dict[(n_factor, train_width)]["proj_params"][(fit_width, anchor_res)].update({
-                    "fit_width": fit_width,
-                    "anchor_res": anchor_res,
-                    "decode_params": []
-                })
-            else:
-                train_dict[(n_factor, train_width)]["proj_params"][(fit_width, anchor_res)]["decode_params"].append({"radius": radius})
-    
-    return train_dict
-
-def convert_to_ordered_list_structure(train_dict):
-    """Convert the nested dictionary structure to the required ordered list structure."""
-    train_params = []
-    for (n_factor, train_width), train_entry in train_dict.items():
-        proj_params = []
-        for (fit_width, anchor_res), proj_entry in train_entry["proj_params"].items():
-            proj_params.append(OrderedDict([
-                ("fit_width", proj_entry["fit_width"]),
-                ("anchor_res", proj_entry["anchor_res"]),
-                ("decode_params", proj_entry["decode_params"])
-            ]))
-        ordered_train_entry = OrderedDict([
-            ("train_width", train_entry["train_width"]),
-            ("n_factor", train_entry["n_factor"]),
-            ("proj_params", proj_params)
-        ])
-        train_params.append(ordered_train_entry)
-    return train_params
-
-# def convert_to_list_structure(train_dict):
-#     """Convert the nested dictionary structure to the required list structure."""
-#     train_params = []
-#     for (n_factor, train_width), train_entry in train_dict.items():
-#         proj_params = []
-#         for (fit_width, anchor_res), proj_entry in train_entry["proj_params"].items():
-#             proj_params.append(proj_entry)
-#         train_entry["proj_params"] = proj_params
-#         train_params.append(train_entry)
-#     return train_params
-
-# def order_files(files):
-#     train_files=[x for x in files if "prj" not in x]
-#     proj_files=[x for x in files if "prj" in x and "decode" not in x] 
-#     decode_files=[x for x in files if "decode" in x]
-#     ordered_files=train_files+proj_files+decode_files
-#     return ordered_files   
-
-def rank_file(file_name):
-    parts = file_name.split('_')
-    if len(parts) == 2:  # Only t*_f*.done
-        return 1
-    elif len(parts) == 4:  # t*_f*_p*_a*.done
-        return 2
-    elif len(parts) == 5:  # t*_f*_p*_a*_r*.done
-        return 3
-    else:
-        return 4  # If it doesn't fit the above patterns
-
 
 def write_json(data, filename):
     """Write the given data to a JSON file."""
@@ -117,16 +30,64 @@ def write_json_for_ficture(_args):
     args = parse_arguments(_args)
     if args.out_json is None:
       args.out_json = os.path.join(args.out_dir, "ficture.params.json")
-    # Note we used de files here
-    flag_paths = os.path.join(args.out_dir, "*.done")
-    flag_fn = [os.path.basename(x) for x in glob.glob(flag_paths)]
-    # order the files by train, proj, and decode parameters
-    flag_fn_ordered = sorted(flag_fn, key=rank_file) 
-    train_dict = categorize_files(flag_fn_ordered)
-    train_params = convert_to_ordered_list_structure(train_dict)
+    
+    # Input SGE data
+    sge_data={
+        "in_cstranscript": args.in_cstranscript,
+        "in_feature": args.in_feature,
+        "in_minmax": args.in_minmax
+    }
+    # Model data structure
+    train_params = []
+    model_dict = {}
+    # Process model data
+    if args.model is not None:
+        for model in args.model:
+            model_type, model_path, model_id, train_width, n_factor = model.split(',')
+            model_entry = {
+                "model_type": model_type,
+                "model_id": model_id,
+                "model_path": model_path,
+                "train_width": int(train_width),
+                "n_factor": int(n_factor),
+                "proj_params": []
+            }
+            model_dict[(model_type, model_id)] = model_entry
+            train_params.append(model_entry)
+    
+    # Process projection data
+    if args.projection is not None:
+        for proj in args.projection:
+            model_type, model_id, projection_id, fit_width, anchor_res = proj.split(',')
+            projection_entry = {
+                "proj_id": projection_id,
+                "fit_width": int(fit_width),
+                "anchor_res": int(anchor_res),
+                "decode_params": []
+            }
+            if (model_type, model_id) in model_dict:
+                model_dict[(model_type, model_id)]["proj_params"].append(projection_entry)
+    
+    # Process decode data
+    if args.decode is not None:
+        for dec in args.decode:
+            model_type, model_id, projection_id, decode_id, radius = dec.split(',')
+            decode_entry = {
+                "decode_id": decode_id,
+                "radius": int(radius)
+            }
+            # Find the right model and projection to add decode parameters
+            if (model_type, model_id) in model_dict:
+                for proj in model_dict[(model_type, model_id)]["proj_params"]:
+                    if proj["proj_id"] == projection_id:
+                        proj["decode_params"].append(decode_entry)
+
+    # Construct final JSON data
     json_data = {
+        "in_sge": sge_data,
         "train_params": train_params
     }
+
     write_json(json_data, args.out_json)
     print(f'Data has been written to {args.out_json}')
 

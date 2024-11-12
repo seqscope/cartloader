@@ -39,6 +39,7 @@ def parse_arguments(_args):
     key_params.add_argument('--scale-json', type=str, default=None, help="For 10x_visium_hd datasets, users could use --scale-json to provide the path to the scale json file for calculating units-per-um (default: None). Typical naming convention: scalefactors_json.json")
     key_params.add_argument('--precision-um', type=int, default=2, help='Number of digits to store the transcript coordinates (only if --px_to_um is in use). Set it to 0 to round to integer (default: 2)')
     key_params.add_argument('--filter-by-density', action='store_true', default=False, help='Filter the transcript-indexed SGE file by density (default: False)')
+    
     # Output dir/file params
     output_params=parser.add_argument_group("Output Directory/File Parameters", "Output Parameters.")
     output_params.add_argument('--out-dir', type=str, required=True, help='The output directory, which will host the transcript-indexed SGE file/coordinate minmax TSV file/feature file, as well as the Makefile.')
@@ -147,8 +148,9 @@ def parse_arguments(_args):
     aux_polyfilter_params.add_argument('--quartile', type=int, default=2, help='The quartile for the polygon area calculation (default: 2)')
     aux_polyfilter_params.add_argument('--hex-n-move', type=int, default=1, help='The sliding step for polygon-filtering (default: 1)')
     aux_polyfilter_params.add_argument('--polygon-min-size', type=int, default=500, help='The minimum polygon size to be included in the output file (default: 500)')
-    aux_polyfilter_params.add_argument('--gene-header', type=str, default='gene', help='The column name of gene name for polygon-filtering.')
-    aux_polyfilter_params.add_argument('--count-header', type=str, default='gn', help='The column name of count for polygon-filtering.')
+    aux_polyfilter_params.add_argument('--gene-header', type=str, default='gene', help='The column names of gene name in the input file for polygon-filtering.')
+    aux_polyfilter_params.add_argument('--count-header', type=str, default='gn', help='The column names of count in the input file for polygon-filtering.')
+   
     # env params
     env_params = parser.add_argument_group("ENV Parameters", "Environment parameters for the tools.")
     env_params.add_argument('--gzip', type=str, default="gzip", help='Path to gzip binary. For faster processing, use "pigz -p 4".')
