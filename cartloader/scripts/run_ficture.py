@@ -43,7 +43,7 @@ def parse_arguments(_args):
     inout_params.add_argument('--in-minmax', type=str, default=None, help='Input coordinate minmax TSV file. Default to coordinate_minmax.tsv in the output directory')
     inout_params.add_argument('--in-feature', type=str, default=None,  help='(Optional) Input TSV file that specify which genes to use as input, e.g., feature.clean.tsv.gz. If absent, all genes will be used')
 
-    external_params = parser.add_argument_group("External Model Parameters", """When --use-external-model, provide a pre-trained model by --external-model. Also, specify one of the following to name the output files: 1) --external-model-flag to mark output files. 2) For hexagoned-indexed SGE models, use --train-width (and optionally --n-factor) to name the output using training parameters.
+    external_params = parser.add_argument_group("External Model Parameters", """When --use-external-model, provide a pre-trained model by --external-model and specify the type using --external-model-type. Also, specify one of the following to name the output files: 1) --external-model-id to mark output files. 2) For hexagoned-indexed SGE models, use --train-width (and optionally --n-factor) to name the output using training parameters.
     """)
     external_params.add_argument('--external-model', type=str, default=None, help='Path to the external model file')
     external_params.add_argument('--external-model-type', type=str, default=None, help='The type of external model. Options: "lda", "seurat", "custom"')
@@ -655,12 +655,6 @@ ${tabix} -f -s1 -b"${sortidx}" -e"${sortidx}" ${output}
     if args.summary:
         prerequisities=[]
         summary_aux_args=[]
-        # first add sge
-        sge_data = {
-                "tsv": args.cstranscript,
-                "feature": args.feature,
-                "minmax": args.minmax
-            }
         # lda or external model
         if args.lda:
             summary_aux_args_model = []
@@ -697,7 +691,7 @@ ${tabix} -f -s1 -b"${sortidx}" -e"${sortidx}" ${output}
                 if args.projection:
                     summary_aux_args.append(f"--projection {model_type},{model_id},{proj_id},{fit_width},{args.anchor_res}")
                 if args.decode:
-                    summary_aux_args.append(f"--decode {model_type},{model_id},{proj_id},{decode_id},{fit_width},{radius}")
+                    summary_aux_args.append(f"--decode {model_type},{model_id},{proj_id},{decode_id},{radius}")
         cmds = cmd_separator([], f"Summarizing output into {args.out_json} files...")
         cmds.append(f"cartloader write_json_for_ficture --in-cstranscript {args.in_cstranscript} --in-feature {args.in_feature} --in-minmax {args.in_minmax} --out-dir {args.out_dir} --out-json {args.out_json} {' '.join(summary_aux_args)}")
         mm.add_target(args.out_json, prerequisities, cmds)
