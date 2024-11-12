@@ -277,16 +277,20 @@ def run_cartload_join(_args):
     ## Join pixel-level TSVs
     ## sort the pixel-level TSVs
     pixel_tsvs_to_be_joined = []
+    pixel_tsvs_to_be_joined_flags=[]
     for i in range(len(join_pixel_tsvs)):
         cmds = cmd_separator([], f"Sorting pixel-level TSV {join_pixel_tsvs[i]}")
         in_pixel_tsvf = join_pixel_tsvs[i]
         in_pixel_id = join_pixel_ids[i]
-        out_pixel_tsvf = os.path.join(args.out_dir, f"{in_pixel_id}.major_sorted.tsv.gz")
+        out_pixel_tsvprefix = os.path.join(args.out_dir, f"{in_pixel_id}.major_sorted")
+        out_pixel_tsvf = f"{out_pixel_tsvprefix}.tsv.gz"
         sort_cols = "2,2g" if major_axis == "X" else "3,3g"
-        cmd = f"(gzip -cd {in_pixel_tsvf} | head | grep ^#; gzip -cd {in_pixel_tsvf} | grep -v ^# | sort -k{sort_cols} -S 1G;) | gzip -c > {out_pixel_tsvf}"
+        # for sort commands, use a done file as target -- in case more than one job is running
+        cmd = f"(gzip -cd {in_pixel_tsvf} | head | grep ^#; gzip -cd {in_pixel_tsvf} | grep -v ^# | sort -k{sort_cols} -S 1G;) | gzip -c > {out_pixel_tsvf} && touch {out_pixel_tsvprefix}.done"
         cmds.append(cmd)
-        mm.add_target(out_pixel_tsvf, [in_pixel_tsvf], cmds)
+        mm.add_target(f"{out_pixel_tsvprefix}.done", [in_pixel_tsvf], cmds)
         pixel_tsvs_to_be_joined.append(out_pixel_tsvf)
+        pixel_tsvs_to_be_joined_flags.append(f"{out_pixel_tsvprefix}.done")
 
     ## create a joined pixel-level TSV
     if ( len(pixel_tsvs_to_be_joined) > 0 ):
@@ -301,7 +305,7 @@ def run_cartload_join(_args):
             [ f"--pix-prefix-tsv {in_pixel_id}_,{pixel_tsvs_to_be_joined[i]}" for i in range(len(pixel_tsvs_to_be_joined)) ]
         )
         cmds.append(cmd)
-        mm.add_target(f"{out_join_pixel_prefix}.tsv.gz", pixel_tsvs_to_be_joined + [in_molecules], cmds)
+        mm.add_target(f"{out_join_pixel_prefix}.tsv.gz", pixel_tsvs_to_be_joined_flags + [in_molecules], cmds)
     else:
         out_join_pixel_prefix = in_molecules.replace(".tsv.gz","") ## no joining needed
 
