@@ -29,7 +29,7 @@ def parse_arguments(_args):
     cmd_params.add_argument('--segment-10x', action='store_true', default=False, help='(Additional function) Perform hexagon segmentation into 10x Genomics format')
     cmd_params.add_argument('--viz-per-factor', action='store_true', default=False, help='(Additional function) Generate pixel-level visualization for each factor')
     cmd_params.add_argument('--viz-dotplot', action='store_true', default=False, help='(Additional function) Generate dotplot visualization')
-    cmd_params.add_argument('--use-external-model', action='store_true', default=False, help='Use an external model for projection. When --use-external-model, segment and lda steps will be skipped.')
+    cmd_params.add_argument('--use-external-model', action='store_true', default=False, help='Use an external model for projection. When --use-external-model, segment and lda steps will be skipped. Provide a color map for the external model by --cmap-static and --static-cmap-file')
     # three types of external model
     #   - existing lda model: has tw & nf, and all supplement files (such as de) for the model available
     #   - models trained from hexagon-indexed SGE using other tools such as Seurat: has tw & nf without supplement files
@@ -138,7 +138,8 @@ def define_cmap(args, model_id, proj_id):
     elif os.path.exists(model_cmap):
         cmap_path = model_cmap
     else:
-        cmap_path= os.path.join(args.out_dir, f"{proj_id}.rgb.tsv")
+        #cmap_path= os.path.join(args.out_dir, f"{proj_id}.rgb.tsv")
+        raise ValueError(f"No color map found for model: {model_id}. It is recommended to provide one color map per model. If your model doesn't come along with a color map, leverage the --cmap-static to use the prebuilt color map.")
     return cmap_path
 
 # def generate_cmap_from_static(out_cmap, static_cmap_file, n_factor):
@@ -666,12 +667,13 @@ ${tabix} -f -s1 -b"${sortidx}" -e"${sortidx}" ${output}
                 # prerequisities
                 prerequisities.append(f"{model_prefix}.done")
                 # args
-                summary_aux_args_model.append(f"lda,{model_prefix}.model_matrix.tsv.gz,{train_param['model_id']},{train_width},{n_factor}")
+                summary_cmap = args.static_cmap_file if args.cmap_static else f"{model_prefix}.rgb.tsv"
+                summary_aux_args_model.append(f"lda,{model_prefix}.model_matrix.tsv.gz,{train_param['model_id']},{train_width},{n_factor},{summary_cmap}")
             summary_aux_args.append(" ".join(summary_aux_args_model))
         elif args.use_external_model:
             #model_prefix = os.path.join(args.out_dir, args.external_model_id)
             train_width=args.train_width if args.train_width is not None else -9
-            summary_aux_args.append(f"--model {args.external_model_type},{args.external_model},{args.external_model_id},{train_width},{args.n_factor}")
+            summary_aux_args.append(f"--model {args.external_model_type},{args.external_model},{args.external_model_id},{train_width},{args.n_factor},{args.static_cmap_file}")
         # projection & decode
         if args.projection or args.decode:
             proj_runs = define_proj_runs(args)
@@ -707,7 +709,6 @@ ${tabix} -f -s1 -b"${sortidx}" -e"${sortidx}" ${output}
                 for fit_width in fit_widths:
                     # params
                     radius = args.anchor_res + 1
-                    # prefix 
                     # basenames
                     proj_id=f"{lda_id}_p{fit_width}_a{args.anchor_res}"
                     decode_id=f"{proj_id}_r{radius}"

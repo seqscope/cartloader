@@ -43,13 +43,14 @@ def write_json_for_ficture(_args):
     # Process model data
     if args.model is not None:
         for model in args.model:
-            model_type, model_path, model_id, train_width, n_factor = model.split(',')
+            model_type, model_path, model_id, train_width, n_factor, cmap = model.split(',')
             model_entry = {
                 "model_type": model_type,
                 "model_id": model_id,
                 "model_path": model_path,
                 "train_width": int(train_width),
                 "n_factor": int(n_factor),
+                "cmap": cmap,
                 "proj_params": []
             }
             model_dict[(model_type, model_id)] = model_entry
