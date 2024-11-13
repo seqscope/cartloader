@@ -1,7 +1,9 @@
+# Purpose: This will generate the new json file assuming no external model was used.
+# Usage example: 
+#   cartloader write_json_for_lda_ficture --sge-type filtered --out-dir /nfs/turbo/sph-hmkang/index/data/weiqiuc/testruns/testcases/umst_mouse_brain/nova_st/out4_filtered
+
 import sys, os, gzip, argparse, logging, warnings, shutil, re, inspect, warnings, glob, json
 from collections import defaultdict, OrderedDict
-# from cartloader.utils.minimake import minimake
-# from cartloader.utils.utils import cmd_separator, scheck_app
 
 def parse_arguments(_args):
     """Parse command-line arguments."""
@@ -10,13 +12,11 @@ def parse_arguments(_args):
                                      Write a JSON file to summarize the parameters.""")
     parser.add_argument('--out-dir', required= True, type=str, help='Output directory')
     parser.add_argument('--out-json', type=str, default=None, help='Path to the output JSON file. Default: <out-dir>/ficture.params.json')
-    parser.add_argument('--use-external', action='store_true', help='Use external model.')
-    parser.add_argument('--external-model', type=str, default=None, help='If --use-external, provide an external matrix model to use for projection.')
-    parser.add_argument('--external-model-flag', type=str, default=None, help='(Optional) Specify a flag to mark the output file for projection using an external model. If not provided, the flag will be automatically generated based on the first part of the model file name split by "."')
     parser.add_argument('--sge-type', type=str, default=None, help='(Optional) Type of SGE (options: "raw" or "filtered"). If specified, the script will automatically define the file name for transcript, feature and tsv using the default file name in sge_convert in cartloader. The path will be defined in the out-dir.')
-    parser.add_argument('--cstranscript', type=str, default=None, help='If --sge-type is not used, provide path to the transcript file used for run_ficture.')
-    parser.add_argument('--feature', type=str, default=None, help='If --sge-type is not used, provide path to the input feature file used for run_ficture.')
-    parser.add_argument('--minmax', type=str, default=None, help='If --sge-type is not used, provide path to the input minmax file used for run_ficture.')
+    parser.add_argument('--in-cstranscript', type=str, default=None, help='If --sge-type is not used, provide path to the transcript file used for run_ficture.')
+    parser.add_argument('--in-feature', type=str, default=None, help='If --sge-type is not used, provide path to the input feature file used for run_ficture.')
+    parser.add_argument('--in-minmax', type=str, default=None, help='If --sge-type is not used, provide path to the input minmax file used for run_ficture.')
+    parser.add_argument('--static-cmap-file', type=str, default=None, help='(Optional) If a static cmap was used here, provide the path to the static cmap file.')
 
     if len(_args) == 0:
         parser.print_help()
@@ -25,7 +25,6 @@ def parse_arguments(_args):
 
 def extract_parameters(filename):
     """Extract parameters from the filename using regular expressions."""
-    #pattern = re.compile(r'nF(\d+)\.d_(\d+)(?:\.decode)?(?:\.prj_(\d+)\.r_(\d+)(?:_(\d+))?)?\.bulk_chisq\.tsv')
     pattern = re.compile(r't(\d+)_f(\d+)(?:_p(\d+)_a(\d+))?(?:_r(\d+))?\.done')
     match = pattern.search(filename)
     if match:
@@ -39,7 +38,7 @@ def extract_parameters(filename):
         }
     return None
 
-def categorize_files(files):
+def categorize_files(files, out_dir, static_cmap_file):
     """Categorize files into train, proj, and decode based on parameters."""
     train_dict = defaultdict(lambda: {"proj_params": defaultdict(lambda: {"decode_params": []})})
     
@@ -53,17 +52,28 @@ def categorize_files(files):
             radius = params["radius"]
             
             if fit_width is None and anchor_res is None and radius is None:
-                train_dict[(n_factor, train_width)]["n_factor"] = n_factor
-                train_dict[(n_factor, train_width)]["train_width"] = train_width
+                model_path = os.path.join(out_dir, file.replace(".done", ".model_matrix.tsv.gz"))
+                cmap_path = os.path.join(out_dir, file.replace(".done", ".rgb.tsv")) if static_cmap_file is None else static_cmap_file
+                train_dict[(n_factor, train_width)].update({
+                    "model_type": "lda",
+                    "model_id": f"t{train_width}_f{n_factor}",
+                    "model_path": model_path,
+                    "n_factor": n_factor,
+                    "train_width": train_width,
+                    "cmap": cmap_path
+                })
             elif radius is None:
                 train_dict[(n_factor, train_width)]["proj_params"][(fit_width, anchor_res)].update({
+                    "proj_id": f"t{train_width}_f{n_factor}_p{fit_width}_a{anchor_res}",
                     "fit_width": fit_width,
                     "anchor_res": anchor_res,
                     "decode_params": []
                 })
             else:
-                train_dict[(n_factor, train_width)]["proj_params"][(fit_width, anchor_res)]["decode_params"].append({"radius": radius})
-    
+                train_dict[(n_factor, train_width)]["proj_params"][(fit_width, anchor_res)]["decode_params"].append({
+                    "decode_id": f"t{train_width}_f{n_factor}_p{fit_width}_a{anchor_res}_r{radius}",
+                    "radius": radius
+                })
     return train_dict
 
 def convert_to_ordered_list_structure(train_dict):
@@ -73,58 +83,44 @@ def convert_to_ordered_list_structure(train_dict):
         proj_params = []
         for (fit_width, anchor_res), proj_entry in train_entry["proj_params"].items():
             proj_params.append(OrderedDict([
+                ("proj_id", proj_entry["proj_id"]),
                 ("fit_width", proj_entry["fit_width"]),
                 ("anchor_res", proj_entry["anchor_res"]),
                 ("decode_params", proj_entry["decode_params"])
             ]))
         ordered_train_entry = OrderedDict([
+            ("model_type", train_entry["model_type"]),
+            ("model_id", train_entry["model_id"]),
+            ("model_path", train_entry["model_path"]),
             ("train_width", train_entry["train_width"]),
             ("n_factor", train_entry["n_factor"]),
+            ("cmap", train_entry["cmap"]),
             ("proj_params", proj_params)
         ])
         train_params.append(ordered_train_entry)
     return train_params
 
-# def convert_to_list_structure(train_dict):
-#     """Convert the nested dictionary structure to the required list structure."""
-#     train_params = []
-#     for (n_factor, train_width), train_entry in train_dict.items():
-#         proj_params = []
-#         for (fit_width, anchor_res), proj_entry in train_entry["proj_params"].items():
-#             proj_params.append(proj_entry)
-#         train_entry["proj_params"] = proj_params
-#         train_params.append(train_entry)
-#     return train_params
-
-# def order_files(files):
-#     train_files=[x for x in files if "prj" not in x]
-#     proj_files=[x for x in files if "prj" in x and "decode" not in x] 
-#     decode_files=[x for x in files if "decode" in x]
-#     ordered_files=train_files+proj_files+decode_files
-#     return ordered_files   
-
 def define_input_sge(args):
     if args.sge_type is not None:
         if args.sge_type == "raw":
-            args.cstranscript = os.path.join(args.out_dir, "transcripts.sorted.tsv.gz")
-            args.feature = os.path.join(args.out_dir, "feature.clean.tsv.gz")
-            args.minmax = os.path.join(args.out_dir, "coordinate_minmax.tsv")
+            args.in_cstranscript = os.path.join(args.out_dir, "transcripts.sorted.tsv.gz")
+            args.in_feature = os.path.join(args.out_dir, "feature.clean.tsv.gz")
+            args.in_minmax = os.path.join(args.out_dir, "coordinate_minmax.tsv")
         elif args.sge_type == "filtered":
-            args.cstranscript = os.path.join(args.out_dir, "filtered.transcripts.sorted.tsv.gz")
-            args.feature = os.path.join(args.out_dir, "filtered.feature.lenient.tsv.gz")
-            args.minmax = os.path.join(args.out_dir, "filtered.coordinate_minmax.tsv")
+            args.in_cstranscript = os.path.join(args.out_dir, "filtered.transcripts.sorted.tsv.gz")
+            args.in_feature = os.path.join(args.out_dir, "filtered.feature.lenient.tsv.gz")
+            args.in_minmax = os.path.join(args.out_dir, "filtered.coordinate_minmax.tsv")
         else:
             raise ValueError(f"Invalid SGE type: {args.sge_type}")
-    assert os.path.exists(args.cstranscript), f"Transcript file not found: {args.cstranscript}"
-    assert os.path.exists(args.feature), f"Feature file not found: {args.feature}"
-    assert os.path.exists(args.minmax), f"Minmax file not found: {args.minmax}"
+    assert os.path.exists(args.in_cstranscript), f"Transcript file not found: {args.in_cstranscript}"
+    assert os.path.exists(args.in_feature), f"Feature file not found: {args.in_feature}"
+    assert os.path.exists(args.in_minmax), f"Minmax file not found: {args.in_minmax}"
     sge_dict = {
-        "tsv": args.cstranscript,
-        "feature": args.feature,
-        "minmax": args.minmax
+        "in_cstranscript": args.in_cstranscript,
+        "in_feature": args.in_feature,
+        "in_minmax": args.in_minmax
     }
     return sge_dict
-        
 
 def rank_file(file_name):
     parts = file_name.split('_')
@@ -142,26 +138,22 @@ def write_json(data, filename):
     with open(filename, 'w') as file:
         json.dump(data, file, indent=4, sort_keys=False)
 
-def write_json_for_ficture(_args):
+def write_json_for_lda_ficture(_args):
     args = parse_arguments(_args)
+    args.out_dir = os.path.realpath(args.out_dir)
     if args.out_json is None:
       args.out_json = os.path.join(args.out_dir, "ficture.params.json")
-    # Note we used done files here
-    if args.use_external:
-        flag_paths = os.path.join(args.out_dir, "*.done")
-        # append the 
-    else:
-        flag_paths = os.path.join(args.out_dir, "*.done")
-        flag_fn = [os.path.basename(x) for x in glob.glob(flag_paths)]
-        flag_fn = [x.replace(".done", "") for x in flag_fn]
+    # Use done files to extract parameters
+    flag_paths = os.path.join(args.out_dir, "*.done")
+    flag_fn = [os.path.basename(x) for x in glob.glob(flag_paths)]
     # order the files by train, proj, and decode parameters
     flag_fn_ordered = sorted(flag_fn, key=rank_file) 
-    train_dict = categorize_files(flag_fn_ordered)
+    train_dict = categorize_files(flag_fn_ordered, args.out_dir, args.static_cmap_file)
     train_params = convert_to_ordered_list_structure(train_dict)
     # define the input files
     in_sge=define_input_sge(args)
     json_data = {
-        "input_sge": in_sge,
+        "in_sge": in_sge,
         "train_params": train_params
     }
     write_json(json_data, args.out_json)
