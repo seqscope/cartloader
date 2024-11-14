@@ -35,11 +35,9 @@ def parse_arguments(_args):
         """)
     key_params.add_argument('--platform', type=str, choices=["10x_visium_hd", "seqscope", "10x_xenium", "bgi_stereoseq", "cosmx_smi", "vizgen_merscope", "pixel_seq", "nova_st"], required=True, help='Platform of the raw input file to infer the format of the input file.')
     key_params.add_argument('--units-per-um', type=float, default=1.00, help='Coordinate unit per um (conversion factor) (default: 1.00)') 
-    #key_params.add_argument('--units-per-um-from-json', action='store_true', default=False, help='For 10x_visium_hd datasets, cartloader support interpret the units per um from the json file (default: False). When enabled, the --units-per-um value will be ignored, and use --scale-json to indicate the input json file.')
     key_params.add_argument('--scale-json', type=str, default=None, help="For 10x_visium_hd datasets, users could use --scale-json to provide the path to the scale json file for calculating units-per-um (default: None). Typical naming convention: scalefactors_json.json")
     key_params.add_argument('--precision-um', type=int, default=2, help='Number of digits to store the transcript coordinates (only if --px_to_um is in use). Set it to 0 to round to integer (default: 2)')
-    key_params.add_argument('--filter-by-density', action='store_true', default=False, help='Filter the transcript-indexed SGE file by density (default: False)')
-    key_params.add_argument('--model-matrix', type=str, default=None, help='(Optional) Provide a model matrix file to do gene filtering. If applied, filter the SGE to retain only the genes present in the model matrix (default: None)')
+    key_params.add_argument('--filter-by-density', action='store_true', default=False, help='(Optional) Filter the transcript-indexed SGE file by density (default: False)')
 
     # Output dir/file params
     output_params=parser.add_argument_group("Output Directory/File Parameters", "Output Parameters.")
