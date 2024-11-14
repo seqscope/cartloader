@@ -2,7 +2,7 @@ import sys, os, gzip, argparse, logging, warnings, shutil, subprocess, ast, json
 import pandas as pd
 
 from cartloader.utils.minimake import minimake
-from cartloader.utils.utils import cmd_separator, scheck_app, create_custom_logger, load_file_to_dict, write_dict_to_file, find_major_axis
+from cartloader.utils.utils import cmd_separator, scheck_app, create_custom_logger, load_file_to_dict, write_dict_to_file, find_major_axis, ficture_params_to_factor_assets
 
 def parse_arguments(_args):
     """
@@ -33,19 +33,25 @@ def parse_arguments(_args):
     run_params.add_argument('--n-jobs', type=int, default=1, help='Number of jobs (processes) to run in parallel')
     run_params.add_argument('--makefn', type=str, default="run_cartload_join.mk", help='The name of the Makefile to generate')
 
+    mod_params = parser.add_argument_group("Submodule Parameters", "Submodule parameters (using default is recommended)")
+    mod_params.add_argument('--magick', type=str, default=f"magick", help='Path to ImageMagick binary from go-pmtiles')
+    mod_params.add_argument('--pmtiles', type=str, default=f"pmtiles", help='Path to pmtiles binary from go-pmtiles')
+    mod_params.add_argument('--gdal_translate', type=str, default=f"gdal_translate", help='Path to gdal_translate binary')
+    mod_params.add_argument('--gdaladdo', type=str, default=f"gdaladdo", help='Path to gdaladdo binary')
+    mod_params.add_argument('--tippecanoe', type=str, default=f"{repo_dir}/submodules/tippecanoe/tippecanoe", help='Path to tippecanoe binary')
+    mod_params.add_argument('--spatula', type=str, default=f"{repo_dir}/submodules/spatula/bin/spatula", help='Path to spatula binary')
+
     aux_params = parser.add_argument_group("Auxiliary Parameters", "Auxiliary parameters (using default is recommended)")
     aux_params.add_argument('--in-fic-params', type=str, default="ficture.params.json", help='The YAML/JSON file containing both the SGE files and FICTURE parameters')
     aux_params.add_argument('--out-fic-assets', type=str, default="ficture_assets.json", help='The YAML/JSON file containing FICTURE output assets')
     aux_params.add_argument('--out-catalog', type=str, default="catalog.yaml", help='The YAML file containing the output catalog')
-    aux_params.add_argument('--background-assets', type=str, help='The JSON/YAML file containing background assets')
-    aux_params.add_argument('--major-axis', type=str, default=None, help='Specify major axis (X or Y) for the data')
+    aux_params.add_argument('--background-assets', type=str, nargs="+", help='The JSON/YAML file containing background assets in the form of [id:file] or [id1:id2:file]')
+    aux_params.add_argument('--major-axis', type=str, default="X", choices=['X', 'Y', 'auto'], help='Axis where transcripts.tsv.gz are sorted. Options: X, Y, auto. If "auto", it will be automatically defined by the longer axis. Default: X')
     aux_params.add_argument('--rename-x', type=str, default='X:lon', help='tippecanoe parameters to rename X axis')  
     aux_params.add_argument('--rename-y', type=str, default='Y:lat', help='tippecanoe parameters to rename Y axis')  
     aux_params.add_argument('--colname-feature', type=str, default='gene', help='Input/output Column name for gene name (default: gene)')
     aux_params.add_argument('--colname-count', type=str, default='gn', help='Column name for feature counts')
     aux_params.add_argument('--out-molecules-id', type=str, default='genes', help='Prefix of output molecules PMTiles files. No directory path should be included')
-    aux_params.add_argument('--tippecanoe', type=str, default=f"{repo_dir}/submodules/tippecanoe/tippecanoe", help='Path to tippecanoe binary')
-    aux_params.add_argument('--spatula', type=str, default=f"{repo_dir}/submodules/spatula/bin/spatula", help='Path to spatula binary')
     aux_params.add_argument('--max-join-dist-um', type=float, default=0.1, help='Maximum distance allowed to join molecules and pixel in micrometers')
     aux_params.add_argument('--max-tile-bytes', type=int, default=5000000, help='Maximum bytes for each tile in PMTiles')
     aux_params.add_argument('--max-feature-counts', type=int, default=500000, help='Max feature limits per tile in PMTiles')
@@ -70,6 +76,12 @@ def run_cartload_join(_args):
 
     # start mm
     mm = minimake()
+
+    scheck_app(args.spatula)
+    scheck_app(args.pmtiles)
+    scheck_app(args.gdal_translate)
+    scheck_app(args.gdaladdo)
+    scheck_app(args.magick)
 
     # create output directory if needed
     if not os.path.exists(args.out_dir):
@@ -97,28 +109,46 @@ def run_cartload_join(_args):
     assert in_minmax is not None and os.path.exists(in_minmax), "Provide a valid input minmax file in the json file"
     
     ## identify the major axis of the data
-    if args.major_axis is None:
+    if args.major_axis == "auto":
         major_axis = find_major_axis(in_minmax, "row")
     else:
         major_axis = args.major_axis
 
+    ## create raster mono pmtiles for SGE
+    cmds = cmd_separator([], f"Converting SGE counts into PMTiles")
+    cmd = " ".join([
+        "cartloader", "run_tsv2mono",
+        "--in-tsv", in_molecules,
+        "--in-minmax", in_minmax,
+        "--out-prefix", f"{args.out_dir}/sge-mono",
+        "--colname-count", args.colname_count,
+        "--main",
+        "--magick", args.magick,
+        "--pmtiles", args.pmtiles,
+        "--gdal_translate", args.gdal_translate,
+        "--gdaladdo", args.gdaladdo,
+        "--spatula", args.spatula
+    ])
+    cmds.append(cmd)
+    mm.add_target(f"{args.out_dir}/sge-mono-dark.pmtiles.done", [in_molecules, in_minmax], cmds)
+
     ## fic
     in_fic_params = in_data.get("train_params", [])
-    print(in_fic_params)
+    #print(in_fic_params)
     if len(in_fic_params) == 0: ## parameters are empty
         logging.error(f"The parameters are empty after loading {args.fic_dir}/{args.in_fic_params}")
 
-    out_fic_assets = {}
+    # create the output assets json
+    out_fic_assets = ficture_params_to_factor_assets(in_fic_params)
 
     train_targets = []
-    out_train_assets = []
-    out_fic_assets["train_assets"] = out_train_assets
+    # out_train_assets = []
+    # out_fic_assets["train_assets"] = out_train_assets
 
     join_pixel_tsvs = []
     join_pixel_ids = []
 
     for train_param in in_fic_params:
-
         # train_width = train_param["train_width"]
         # n_factor = train_param["n_factor"]
         model_id = train_param["model_id"]
@@ -162,9 +192,9 @@ def run_cartload_join(_args):
 
         prerequisites = []
         cmds = cmd_separator([], f"Converting LDA-trained factors {model_id} into PMTiles and copying relevant files..")
-        out_train_avails = {
-            "prefix": out_id,
-        }
+        #out_train_avails = {
+        #    "prefix": out_id,
+        #}
 
         # fit_results
         in_fit_tsvf = f"{in_prefix}.fit_result.tsv.gz"
@@ -181,22 +211,22 @@ def run_cartload_join(_args):
             ])
             cmds.append(cmd)
             prerequisites.append(in_fit_tsvf)
-            out_train_avails["pmtiles"] = f"{out_id}.pmtiles"
+            #out_train_avails["pmtiles"] = f"{out_id}.pmtiles"
 
         # mode/rgb/de/posterior/info
         for key, val in train_inout.items():
             if val["required"] or os.path.exists(val["in"]):
                 prerequisites.append(val["in"])
                 cmds.append(f"cp {val['in']} {val['out']}")
-                out_train_avails[key] = os.path.basename(val["out"])
+                #out_train_avails[key] = os.path.basename(val["out"])
         
         cmds.append(f"touch {out_prefix}.done")
         mm.add_target(f"{out_prefix}.done", prerequisites, cmds)
 
         ## add to the output asset json
         out_proj_assets = []
-        out_train_avails["proj_assets"] = out_proj_assets
-        out_train_assets.append(out_train_avails)
+        #out_train_avails["proj_assets"] = out_proj_assets
+        #out_train_assets.append(out_train_avails)
 
         sources = [f"{out_prefix}.done"]
 
@@ -230,21 +260,22 @@ def run_cartload_join(_args):
             mm.add_target(f"{out_prefix}.done", [in_fit_tsvf, in_de_tsvf, in_post_tsvf, model_rgb, in_info_tsvf], cmds)
             sources.append(f"{out_prefix}.done")
 
-            out_decode_assets = []
-            out_proj_assets.append({
-                "prefix": out_id,
-                "pmtiles" : f"{out_id}.pmtiles",
-                "post" : f"{out_id}-posterior-counts.tsv.gz",
-                "de" : f"{out_id}-bulk-de.tsv",
-                "info" : f"{out_id}-info.tsv",
-                "decode_assets": out_decode_assets
-            })
+            # out_decode_assets = []
+            # out_proj_assets.append({
+            #     "prefix": out_id,
+            #     "pmtiles" : f"{out_id}.pmtiles",
+            #     "post" : f"{out_id}-posterior-counts.tsv.gz",
+            #     "de" : f"{out_id}-bulk-de.tsv",
+            #     "info" : f"{out_id}-info.tsv",
+            #     "decode_assets": out_decode_assets
+            # })
 
             for decode_param in proj_param["decode_params"]:
                 in_id = decode_param["decode_id"]
                 assert in_id is not None, "Provide a valid decode_id in the json file"
                 in_prefix = f"{args.fic_dir}/{in_id}"
                 in_pixel_tsvf = f"{in_prefix}.pixel.sorted.tsv.gz"
+                in_pixel_png = f"{in_prefix}.pixel.png"
                 in_de_tsvf = f"{in_prefix}.bulk_chisq.tsv"
                 in_post_tsvf = f"{in_prefix}.posterior.count.tsv.gz"
                 in_info_tsvf = f"{in_prefix}.factor.info.tsv"
@@ -262,12 +293,27 @@ def run_cartload_join(_args):
                 join_pixel_tsvs.append(in_pixel_tsvf)
                 join_pixel_ids.append(out_id)
 
-                out_decode_assets.append({
-                    "prefix": out_id,
-                    "post" : f"{out_id}-posterior-counts.tsv.gz",
-                    "de" : f"{out_id}-bulk-de.tsv",
-                    "info" : f"{out_id}-info.tsv"
-                })
+                cmds = cmd_separator([], f"Creating raster pixel-level factor {in_prefix} into PMTiles...")
+                cmd = " ".join([
+                    "cartloader", "run_fig2pmtiles",
+                    "--georeference", "--geotif2mbtiles", "--mbtiles2pmtiles",
+                    "--in-fig", in_pixel_png,
+                    "--in-tsv", in_pixel_tsvf,
+                    "--out-prefix", f"{out_prefix}-pixel-raster",
+                    "--pmtiles", args.pmtiles,
+                    "--gdal_translate", args.gdal_translate,
+                    "--gdaladdo", args.gdaladdo
+                ])
+                cmds.append(cmd)
+                cmds.append(f"touch {out_prefix}-pixel-raster.done")
+                mm.add_target(f"{out_prefix}-pixel-raster.done", [in_pixel_png, in_pixel_tsvf], cmds)
+
+                # out_decode_assets.append({
+                #     "prefix": out_id,
+                #     "post" : f"{out_id}-posterior-counts.tsv.gz",
+                #     "de" : f"{out_id}-bulk-de.tsv",
+                #     "info" : f"{out_id}-info.tsv"
+                # })
 
         cmds = cmd_separator([], f"Finishing up for train parameters {out_train_id}")
         cmds.append(f"touch {out_train_prefix}.alldone")
@@ -343,10 +389,12 @@ def run_cartload_join(_args):
         "--sge-counts", f"{out_molecules_prefix}_bin_counts.json", 
         "--fic-assets", out_assets_f,
         "--out-catalog", f"{out_catalog_f}",
-        "--log"
-    ])
-    if ( args.background_assets is not None ):
-        cmd += f" --background-assets {args.background_assets}"
+        "--overview", f"sge-mono-dark.pmtiles",
+        "--log",
+        "--basemap", f"sge:dark:sge-mono-dark.pmtiles", f"sge:light:sge-mono-light.pmtiles"
+    ] + (args.background_assets if args.background_assets is not None else []))
+    # if ( args.background_assets is not None ):
+    #     cmd += f" --background-assets {args.background_assets}"
     if ( args.id is not None ):
         cmd += f" --id {args.id}"
 

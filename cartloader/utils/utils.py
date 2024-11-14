@@ -1,4 +1,4 @@
-import logging, os, shutil, sys, importlib, csv, shlex, subprocess, json, yaml
+import logging, os, shutil, sys, importlib, csv, shlex, subprocess, json, yaml, re
 
 def cmd_separator(cmds, info):
     """
@@ -96,6 +96,45 @@ def find_major_axis(filename, format):
     else:
         return "Y"
     
+def read_minmax(filename, format):
+    # purpose: find the longer axis of the image
+    # (1) detect from the "{uid}.coordinate_minmax.tsv"  
+    if format == "row":
+        data = {}
+        with open(filename, 'r') as file:
+            for line in file:
+                key, value = line.split()
+                data[key] = float(value)
+        if not all(k in data for k in ['xmin', 'xmax', 'ymin', 'ymax']):
+            raise ValueError("Missing one or more required keys (xmin, xmax, ymin, ymax)")
+        xmin = data['xmin']
+        xmax = data['xmax']
+        ymin = data['ymin']
+        ymax = data['ymax']
+    # (2) detect from the barcodes.minmax.tsv
+    elif format == "col":
+        with open(filename, 'r') as file:
+            reader = csv.DictReader(file, delimiter='\t')
+            try:
+                row = next(reader)  # Read the first row
+            except StopIteration:
+                raise ValueError("File is empty")
+            try:
+                next(reader)
+                raise ValueError("Error: More than one row of data found.")
+            except StopIteration:
+                pass  
+            xmin = int(row['xmin'])
+            xmax = int(row['xmax'])
+            ymin = int(row['ymin'])
+            ymax = int(row['ymax'])
+    return {
+        "xmin": xmin,
+        "xmax": xmax,
+        "ymin": ymin,
+        "ymax": ymax
+    }
+    
 # def add_param_to_cmd(cmd, args, aux_argset):
 #     aux_args = {k: v for k, v in vars(args).items() if k in aux_argset}
 #     for arg, value in aux_args.items():
@@ -157,6 +196,177 @@ def load_file_to_dict(file_path, file_type=None):
             return yaml.safe_load(file)
     else:
         raise ValueError("Unsupported file type. Please provide 'json' or 'yaml'/'yml' as file_type.")
+    
+def factor_id_to_name(factor_id):
+    pattern = re.compile(r"(?:(t\d+)-)?(?:(f\d+)-)?(?:(p\d+)-)?(?:(a\d+)-)?(?:(r\d+))?")
+    match = pattern.match(factor_id)
+    if match and match.group(0) == factor_id:
+        # Filter out None values and organize the result
+        res = {key: value for key, value in zip(['t', 'f', 'p', 'a', 'r'], match.groups()) if value}
+        if "t" in res and "f" in res:
+            if "p" in res: ## projection
+                if "a" in res:
+                    if "r" in res:
+                        return f"FICTURE {res['f']} factors - radius {res['r']}um / LDA {res['t']}-{res['p']}-{res['a']}um"
+                    else:
+                        return f"FICTURE {res['f']} factors / LDA {res['t']}-{res['p']}-{res['a']}um"
+                else:
+                    return f"FICTURE {res['f']} factors / LDA {res['t']}-{res['p']}um"
+            else:
+                return f"FICTURE {res['f']} factors / LDA {res['t']}um"
+        else: ## not parseable
+            return factor_id
+    else:
+        return factor_id
+
+## transform FICTURE parameters to FACTOR assets (new standard)
+def ficture_params_to_factor_assets(params):
+    ## model_id
+    ## proj_params -> proj_id
+    ## proj_params -> decode_params -> decode_id
+    suffix_de = "-bulk-de.tsv"
+    suffix_info = "-info.tsv"
+    suffix_model = "-model-matrix.tsv.gz"
+    suffix_post = "-posterior-counts.tsv.gz"
+    suffix_rgb = "-rgb.tsv"
+    suffix_hex_coarse = ".pmtiles"
+    suffix_hex_fine = ".pmtiles"
+    suffix_raster = "-pixel-raster.pmtiles"
+
+    out_assets = []
+    for param in params: ## train_params is a list of dictionaries
+        if not "model_id" in param:
+            raise ValueError(f"model_id is missing from FICTURE parameters")
+        model_id = param["model_id"].replace("_", "-")
+
+        len_proj_params = len(param["proj_params"])
+
+        if len_proj_params == 0: ## train_param only
+            out_assets.append({
+                "id": model_id,
+                "name": factor_id_to_name(model_id),
+                "model_id": model_id,
+                "de": model_id + suffix_de,
+                "info": model_id + suffix_info,
+                "model": model_id + suffix_model,
+                "post": model_id + suffix_post,
+                "pmtiles": {
+                    "hex_coarse": model_id + suffix_hex_coarse
+                }
+            })
+        elif len_proj_params == 1:
+            proj_param = param["proj_params"][0]
+            if not "proj_id" in proj_param:
+                raise ValueError(f"proj_id is missing from FICTURE parameter for {model_id}")
+            proj_id = proj_param["proj_id"].replace("_", "-")
+
+            len_decode_params = len(proj_param["decode_params"])
+
+            if len_decode_params == 0:
+                out_assets.append({
+                    "id": model_id,
+                    "name": factor_id_to_name(model_id),
+                    "model_id": model_id,
+                    "proj_id": proj_id,
+                    "de": model_id + suffix_de,
+                    "info": model_id + suffix_info,
+                    "model": model_id + suffix_model,
+                    "post": model_id + suffix_post,
+                    "pmtiles": {
+                        "hex_coarse": model_id + suffix_hex_coarse,
+                        "hex_fine": proj_id + suffix_hex_fine
+                    }
+                })
+            elif len_decode_params == 1:
+                decode_param = proj_param["decode_params"][0]
+                if not "decode_id" in decode_param:
+                    raise ValueError(f"decode_id is missing from FICTURE parameter for {model_id}-{proj_id}")
+                decode_id = decode_param["decode_id"].replace("_", "-")
+
+                out_assets.append({
+                    "id": model_id,
+                    "name": factor_id_to_name(model_id),
+                    "model_id": model_id,
+                    "proj_id": proj_id,
+                    "decode_id": decode_id,
+                    "de": decode_id + suffix_de,
+                    "info": decode_id + suffix_info,
+                    "model": model_id + suffix_model,
+                    "post": decode_id + suffix_post,
+                    "pmtiles": {
+                        "hex_coarse": model_id + suffix_hex_coarse,
+                        "hex_fine": proj_id + suffix_hex_fine,
+                        "raster": decode_id + suffix_raster
+                    }
+                })
+            else:
+                for decode_param in proj_param["decode_params"]:
+                    if not "decode_id" in decode_param:
+                        raise ValueError(f"decode_id is missing from FICTURE parameter for {model_id}-{proj_id}")
+                    decode_id = decode_param["decode_id"].replace("_", "-")
+
+                    out_assets.append({
+                        "id": decode_id,
+                        "name": factor_id_to_name(model_id),
+                        "model_id": model_id,
+                        "proj_id": proj_id,
+                        "decode_id": decode_id,
+                        "de": decode_id + suffix_de,
+                        "info": decode_id + suffix_info,
+                        "model": decode_id + suffix_model,
+                        "post": decode_id + suffix_post,
+                        "pmtiles": {
+                            "hex_coarse": model_id + suffix_hex_coarse,
+                            "hex_fine": proj_id + suffix_hex_fine,
+                            "raster": decode_id + suffix_raster
+                        }
+                    })
+        else: ## multiple proj_params
+            for proj_param in param["proj_params"]:
+                if not "proj_id" in proj_param:
+                    raise ValueError(f"proj_id is missing from FICTURE parameter for {model_id}")
+                proj_id = proj_param["proj_id"].replace("_", "-")
+
+                len_decode_params = len(proj_param["decode_params"])
+
+                if len_decode_params == 0: ## train and projection only
+                    out_assets.append({
+                        "id": model_id,
+                        "name": factor_id_to_name(model_id),
+                        "model_id": model_id,
+                        "proj_id": proj_id,
+                        "de": model_id + suffix_de,
+                        "info": model_id + suffix_info,
+                        "model": model_id + suffix_model,
+                        "post": model_id + suffix_post,
+                        "pmtiles": {
+                            "hex_coarse": model_id + suffix_hex_coarse,
+                            "hex_fine": proj_id + suffix_hex_fine
+                        }
+                    })
+                else:
+                    for decode_param in proj_param["decode_params"]:
+                        if not "decode_id" in decode_param:
+                            raise ValueError(f"decode_id is missing from FICTURE parameter for {model_id}-{proj_id}")
+                        decode_id = decode_param["decode_id"].replace("_", "-")
+
+                        out_assets.append({
+                            "id": decode_id,
+                            "name": factor_id_to_name(model_id),
+                            "model_id": model_id,
+                            "proj_id": proj_id,
+                            "decode_id": decode_id,
+                            "de": decode_id + suffix_de,
+                            "info": decode_id + suffix_info,
+                            "model": decode_id + suffix_model,
+                            "post": decode_id + suffix_post,
+                            "pmtiles": {
+                                "hex_coarse": model_id + suffix_hex_coarse,
+                                "hex_fine": proj_id + suffix_hex_fine,
+                                "raster": decode_id + suffix_raster
+                            }
+                        })
+    return out_assets
 
 ## code suggested by ChatGPT
 def write_dict_to_file(data, file_path, file_type=None):

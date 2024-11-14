@@ -10,13 +10,14 @@ def parse_arguments(_args):
     parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", 
                                      description="""
                                      Write a JSON file to summarize the parameters.""")
-    parser.add_argument('--out-dir', required= True, type=str, help='Output directory')
+    parser.add_argument('--fic-dir', required= True, type=str, help='run_ficture output directory')
     parser.add_argument('--out-json', type=str, default=None, help='Path to the output JSON file. Default: <out-dir>/ficture.params.json')
     parser.add_argument('--sge-type', type=str, default=None, help='(Optional) Type of SGE (options: "raw" or "filtered"). If specified, the script will automatically define the file name for transcript, feature and tsv using the default file name in sge_convert in cartloader. The path will be defined in the out-dir.')
     parser.add_argument('--in-cstranscript', type=str, default=None, help='If --sge-type is not used, provide path to the transcript file used for run_ficture.')
     parser.add_argument('--in-feature', type=str, default=None, help='If --sge-type is not used, provide path to the input feature file used for run_ficture.')
     parser.add_argument('--in-minmax', type=str, default=None, help='If --sge-type is not used, provide path to the input minmax file used for run_ficture.')
     parser.add_argument('--static-cmap-file', type=str, default=None, help='(Optional) If a static cmap was used here, provide the path to the static cmap file.')
+    parser.add_argument('--overwrite', action='store_true', default=False, help='Overwrite the existing JSON file.')
 
     if len(_args) == 0:
         parser.print_help()
@@ -156,6 +157,8 @@ def write_json_for_lda_ficture(_args):
         "in_sge": in_sge,
         "train_params": train_params
     }
+    if os.path.exists(args.out_json) and not args.overwrite:
+        raise FileExistsError(f"Output JSON file already exists: {args.out_json}. Please use --overwrite to overwrite the file.")
     write_json(json_data, args.out_json)
     print(f'Data has been written to {args.out_json}')
 

@@ -20,9 +20,7 @@ def parse_arguments(_args):
     inout_params.add_argument('--sge-index', type=str, required=True, help='Index TSV file containing the SGE output converted to PMTiles')
     inout_params.add_argument('--sge-counts', type=str, required=True, help='JSON file containing SGE counts per gene')
     inout_params.add_argument('--fic-assets', type=str, required=True, help='JSON/YAML file containing FICTURE output assets')
-#    inout_params.add_argument('--background-assets', type=str, help='JSON/YAML file containing background assets, if exists')
-    inout_params.add_argument('--overview', type=str, help='File containing the overview assets')
-    inout_params.add_argument('--basemap', type=str, nargs="+", help='[id:file] or [id1:id2:file] containing the basemap assets')    
+    inout_params.add_argument('--background-assets', type=str, help='JSON/YAML file containing background assets, if exists')
     inout_params.add_argument('--out-catalog', type=str, required=True, help='JSON/YAML file containing the output assets')
 
     key_params = parser.add_argument_group("Key Parameters", "Key parameters frequently used by users")
@@ -77,40 +75,12 @@ def write_yaml_for_assets(_args):
         out_dict["title"] = args.title
     if ( args.desc is not None ):
         out_dict["description"] = args.desc
-
     out_dict["assets"] = {
         "sge": sge_dict,
         "factors": fic_assets
     }
-
-    if ( args.overview is not None ):
-        out_dict["assets"]["overview"] = args.overview
-    if ( args.basemap is not None ):
-        basemap_dict = {}
-        for basemap in args.basemap:
-            toks = basemap.split(":")
-            if ( len(toks) == 2 ):
-                (basemap_id, basemap_file) = toks
-                if ( basemap_id in basemap_dict ):
-                    logger.error(f"Duplicate basemap id {basemap_id}")
-                    sys.exit(1)
-                basemap_dict[basemap_id] = basemap_file
-            elif ( len(toks) == 3 ):
-                (basemap_id1, basemap_id2, basemap_file) = toks
-                if ( basemap_id1 not in basemap_dict ):
-                    basemap_dict[basemap_id1] = {}
-                    basemap_dict[basemap_id1]["default"] = basemap_id2
-                if ( basemap_id2 in basemap_dict[basemap_id1] ):
-                    logger.error(f"Duplicate basemap id {basemap_id1}:{basemap_id2}")
-                    sys.exit(1)
-                basemap_dict[basemap_id1][basemap_id2] = basemap_file
-            else:
-                logger.error(f"Invalid basemap format {basemap}")
-                sys.exit(1)
-        out_dict["assets"]["basemap"] = basemap_dict
-
-    # if ( args.background_assets is not None ):
-    #     out_dict["assets"]["background"] = args.background_assets
+    if ( args.background_assets is not None ):
+        out_dict["assets"]["background"] = args.background_assets
 
     ## write the output catalog
     logger.info(f"Writing the output catalog file {args.out_catalog}")
