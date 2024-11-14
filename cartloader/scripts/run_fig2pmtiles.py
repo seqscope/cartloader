@@ -27,6 +27,7 @@ def parse_arguments(_args):
     inout_params.add_argument('--in-tsv', type=str, default=None, help='If --georeference is required, use the *.pixel.sorted.tsv.gz from run_ficture to provide georeferenced bounds.')
     inout_params.add_argument('--in-bounds', type=str, default=None, help='If --georeference is required, provide the bounds in the format of "<ulx>,<uly>,<lrx>,<lry>", which represents upper-left X, upper-left Y, lower-right X, lower-right Y.')
     inout_params.add_argument('--out-prefix', required=True, type=str, help='The output prefix. TNew directory will be created if needed')
+    inout_params.add_argument('--basemap-key', type=str, default=None, help='The key to use for updating the basemap in the catalog.yaml file')
 
     key_params = parser.add_argument_group("Key parameters")
     key_params.add_argument('--srs', type=str, default='EPSG:3857', help='For the georeference and geo2tiff steps, define the spatial reference system (default: EPSG:3857)')
@@ -36,8 +37,11 @@ def parse_arguments(_args):
     key_params.add_argument('--yaml', type=str, default=None, help='For the update-aws step, define the yaml file to update (default: catalog.yaml in the output directory specified by --out-prefix)')
 
     aux_params = parser.add_argument_group("Auxiliary Parameters", "Auxiliary parameters (using default is recommended)")
-    aux_params.add_argument('--tippecanoe', type=str, default=f"{repo_dir}/submodules/tippecanoe/tippecanoe", help='Path to tippecanoe binary')
-    aux_params.add_argument('--pmtiles', type=str, default=f"{repo_dir}/submodules/go-pmtiles/pmtiles", help='Path to pmtiles binary from go-pmtiles')
+    aux_params.add_argument('--pmtiles', type=str, default=f"pmtiles", help='Path to pmtiles binary from go-pmtiles')
+    aux_params.add_argument('--gdal_translate', type=str, default=f"gdal_translate", help='Path to gdal_translate binary')
+    aux_params.add_argument('--gdaladdo', type=str, default=f"gdaladdo", help='Path to gdaladdo binary')
+    aux_params.add_argument('--keep-files', action='store_true', default=False, help='Keep intermediate files')
+
     
     run_params = parser.add_argument_group("Run Options", "Run options for FICTURE commands")
     run_params.add_argument('--restart', action='store_true', default=False, help='Restart the run. Ignore all intermediate files and start from the beginning')
@@ -61,6 +65,13 @@ def run_fig2pmtiles(_args):
         args.upload_aws = True
         args.update_yaml = True
 
+    if args.update_yaml and args.basemap_key is None:
+        raise ValueError("Please provide the basemap key using --basemap-key for updating the catalog.yaml file")
+
+    scheck_app(args.pmtiles)
+    scheck_app(args.gdal_translate)
+    scheck_app(args.gdaladdo)
+
     # files
     out_dir = os.path.dirname(args.out_prefix)
     os.makedirs(out_dir, exist_ok=True)
@@ -75,6 +86,8 @@ def run_fig2pmtiles(_args):
 
     # start mm
     mm = minimake()
+
+    cmds_rm = cmd_separator([], f"Removing intermediate files")
 
     # 0. Create a geotiff file from PNG or TIF file
     if args.georeference:
@@ -95,10 +108,13 @@ def run_fig2pmtiles(_args):
             raise ValueError("Please provide either --in-bounds or --in-tsv to georeference the figure")
         
         cmds = cmd_separator([], f"Geo-referencing {args.in_fig} to {georef_f}")
-        cmds.append(f"gdal_translate -of GTiff -a_srs {args.srs} -a_ullr {ulx} {uly} {lrx} {lry} {args.in_fig} {georef_f}")
+        cmds.append(f"{args.gdal_translate} -of GTiff -a_srs {args.srs} -a_ullr {ulx} {uly} {lrx} {lry} {args.in_fig} {georef_f}")
         mm.add_target(georef_f, [args.in_fig], cmds)
         # update geotif_f
         geotif_f = georef_f
+
+        if args.mbtiles2pmtiles:
+            cmds_rm.append(f"rm -f {georef_f}")
 
     # 1. Flip the image when required 
     if args.flip_vertical:
@@ -130,11 +146,14 @@ def run_fig2pmtiles(_args):
         # update geotif_f
         geotif_f = vflip_f
 
+        if args.mbtiles2pmtiles:
+            cmds_rm.append(f"rm -f {geotif_f}")
+
     # 2. Convert a geotiff file to mbtiles
     if args.geotif2mbtiles:
         cmds = cmd_separator([], f"Converting from geotif to mbtiles: {geotif_f}")
         cmd = " ".join([
-            "gdal_translate", 
+            args.gdal_translate, 
             "-b", "1", 
             "-b", "2",
             "-b", "3",
@@ -152,14 +171,20 @@ def run_fig2pmtiles(_args):
         cmds.append(cmd)
         #cmds.append(f"gdal_translate -b 1 -b 2 -b 3 -strict -co \"ZOOM_LEVEL_STRATEGY=UPPER\" -co \"RESAMPLING={args.resample}\" -co \"BLOCKSIZE={args.blocksize}\" -ot Byte -scale 0 255 -of mbtiles -a_srs {args.srs} {geotif_f} {mbtile_f}")
         mm.add_target(mbtile_f, [geotif_f], cmds)
+        if args.mbtiles2pmtiles:
+            cmds_rm.append(f"rm -f {mbtile_f}")
     
     # 3. Convert mbtiles to pmtiles
     if args.mbtiles2pmtiles:
         cmds = cmd_separator([], f"Resampling mbtiles and converting to pmtiles: {geotif_f}")
         cmds.append(f"cp {mbtile_f} {mbtile_f_ann}")
-        cmds.append(f"gdaladdo {mbtile_f_ann} -r {args.resample} 2 4 8 16 32 64 128 256")
+        cmds.append(f"{args.gdaladdo} {mbtile_f_ann} -r {args.resample} 2 4 8 16 32 64 128 256")
         cmds.append(f"{args.pmtiles} convert --force {mbtile_f_ann} {pmtiles_f}")
-        #cmds.append(f"rm {mbtile_f_ann}")
+        cmds_rm.append(f"rm -f {mbtile_f_ann}")
+
+        if not args.keep_files:
+            cmds += cmds_rm ## remove intermediate files
+
         mm.add_target(pmtiles_f, [mbtile_f], cmds)
 
     # 4. Upload new PMtiles to AWS
@@ -174,7 +199,7 @@ def run_fig2pmtiles(_args):
     # 5. Update the catalog.yaml file with the new pmtiles and upload to AWS
     if args.update_yaml:
         cmds = cmd_separator([], f"Updating yaml and uploading to AWS: {geotif_f}")
-        cmds.append(f"cartloader update_yaml_for_basemap --yaml {catalog_f} --pmtiles {pmtiles_f}")
+        cmds.append(f"cartloader update_yaml_for_basemap --yaml {catalog_f} --pmtiles {args.basemap_key}:{pmtiles_f}")
         cmds.append(f"aws s3 cp {catalog_f} {args.aws_bucket}/catalog.yaml")
         cmds.append(f"touch {pmtiles_f}.yaml.done")
         mm.add_target(f"{pmtiles_f}.yaml.done", [pmtiles_f, catalog_f], cmds)
