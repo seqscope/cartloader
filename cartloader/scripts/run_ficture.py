@@ -39,23 +39,21 @@ def parse_arguments(_args):
     inout_params.add_argument('--out-dir', required= True, type=str, help='Output directory')
     inout_params.add_argument('--out-json', type=str, default=None, help="Output JSON file for summarizing the ficture parameters. Default: <out-dir>/ficture.params.json ")
     inout_params.add_argument('--in-transcript', type=str, default=None, help='Input unsorted transcript-indexed SGE file in TSV format. Default to transcripts.unsorted.tsv.gz in the output directory')
-    inout_params.add_argument('--in-cstranscript', type=str, default=None, help='(Optional) If a coordinate-sorted transcript-indexed SGE file (sorted by x and y coordinates) exists, specify it by --in-cstranscript to skip the sorting step. Or use this to define the name of the sorted file. Default to transcripts.sorted.tsv.gz in the output directory')
     inout_params.add_argument('--in-minmax', type=str, default=None, help='Input coordinate minmax TSV file. Default to coordinate_minmax.tsv in the output directory')
     inout_params.add_argument('--in-feature', type=str, default=None,  help='(Optional) Input TSV file that specify which genes to use as input, e.g., feature.clean.tsv.gz. If absent, all genes will be used')
+    inout_params.add_argument('--in-cstranscript', type=str, default=None, help='(Optional) If a coordinate-sorted transcript-indexed SGE file (sorted by x and y coordinates) exists, specify it by --in-cstranscript to skip the sorting step. Or use this to define the name of the sorted file. Default to transcripts.sorted.tsv.gz in the output directory')
 
-    external_params = parser.add_argument_group("External Model Parameters", """When --use-external-model, provide a pre-trained model by --external-model and specify the type using --external-model-type. Also, specify one of the following to name the output files: 1) --external-model-id to mark output files. 2) For hexagoned-indexed SGE models, use --train-width (and optionally --n-factor) to name the output using training parameters.
-    """)
+    external_params = parser.add_argument_group("External Model Parameters", """When --use-external-model, provide the pre-trained model, its type, and ID by --external-model, --external-model-type and --external-model-id. """)
     external_params.add_argument('--external-model', type=str, default=None, help='Path to the external model file')
     external_params.add_argument('--external-model-type', type=str, default=None, help='The type of external model. Options: "lda", "seurat", "custom"')
-    external_params.add_argument('--external-model-id', type=str, default=None, help='(Optional) Specify an ID to mark output files from external-model-based projection. If absent, the flag will be  first part of the model file name split by "."')
+    external_params.add_argument('--external-model-id', type=str, default=None, help='(Optional) Specify an ID to mark output files from external-model-based projection. For lda and seurat external models without an ID, use t<train_width>_f<n_factor> as ID.') 
     
     key_params = parser.add_argument_group("Key Parameters", "Key parameters that requires user's attention")
-    key_params.add_argument('--segment-format', type=str, default="ficture", help='Segmentation format. Options: "ficture", "10x", or "ficture,10x". Default: "ficture"')
     key_params.add_argument('--major-axis', type=str, default="X", choices=['X', 'Y', 'auto'], help='Axis where transcripts.tsv.gz are sorted. Options: X, Y, auto. If "auto", it will be automatically defined by the longer axis. Default: X')
     key_params.add_argument('--mu-scale', type=float, default=1.0, help='Scale factor for mu (pixels per um)')
-    key_params.add_argument('--train-width', type=str, default=None, help='Hexagon flat-to-flat width (in um) during training. This width will be used to create hexagon-indexed SGE in FICTURE compatible format for LDA training. Use comma to specify multiple values.')
-    key_params.add_argument('--hexagon-width', type=str, default=None, help='If only applies --segment without --lda, define hexagon flat-to-flat width (in µm) used for creating hexagon-indexed SGE. Separate multiple values with commas.')
+    key_params.add_argument('--hexagon-width', type=str, default=None, help='Hexagon flat-to-flat width (in µm) used for creating hexagon-indexed SGE. Separate multiple values with commas. If absent, it will use the train-width for segmentation')
     key_params.add_argument('--hexagon-width-10x', type=str, default="12", help='Hexagon flat-to-flat width (in µm) used for creating hexagon-indexed SGE in 10x Genomics format. Separate multiple values with commas.')
+    key_params.add_argument('--train-width', type=str, default=None, help='Hexagon flat-to-flat width (in um) during training. This width will be used to create hexagon-indexed SGE in FICTURE compatible format for LDA training. Use comma to specify multiple values.')
     key_params.add_argument('--n-factor', type=str, default=None, help='Number of factors to train. Use comma to specify multiple values')
     key_params.add_argument('--anchor-res', type=float, default=4, help='Anchor resolution for decoding')
 
@@ -138,8 +136,7 @@ def define_cmap(args, model_id, proj_id):
     elif os.path.exists(model_cmap):
         cmap_path = model_cmap
     else:
-        #cmap_path= os.path.join(args.out_dir, f"{proj_id}.rgb.tsv")
-        raise ValueError(f"No color map found for model: {model_id}. It is recommended to provide one color map per model. If your model doesn't come along with a color map, leverage the --cmap-static to use the prebuilt color map.")
+        raise ValueError(f"No color map found for model: {model_id}. It is recommended to provide one color map per model. If your model doesn't come along with a color map, leverage the --cmap-static to use a prebuilt color map.")
     return cmap_path
 
 # def generate_cmap_from_static(out_cmap, static_cmap_file, n_factor):
@@ -150,8 +147,8 @@ def define_cmap(args, model_id, proj_id):
 #     df_cmap.iloc[:n_factor].to_csv(out_cmap, sep="\t", index=False)
 
 def define_lda_runs(args):
-    train_widths = [int(x) for x in args.train_width.split(",")] if not (args.use_external_model and args.external_model_type == "custom") else []
-    n_factors = [int(x) for x in args.n_factor.split(",")]
+    train_widths = [int(x) for x in args.train_width.split(",")] if args.train_width else [] #and not (args.use_external_model and args.external_model_type == "custom") else []
+    n_factors = [int(x) for x in args.n_factor.split(",")] if args.n_factor else []  #and not (args.use_external_model and args.external_model_type == "custom") else []
 
     train_params= [
         {
@@ -258,6 +255,27 @@ def run_ficture(_args):
     # out files 
     if args.out_json is None:
         args.out_json = os.path.join(args.out_dir, f"ficture.params.json") 
+    # lda
+    if args.lda:
+        assert args.train_width is not None, "When --lda, provide at least one train width for LDA training using --train-width"
+        assert args.n_factor is not None, "When --lda, provide at least one n factor for LDA training using --n-factor"
+    # external model
+    if args.use_external_model:
+        args.external_model_type = args.external_model_type.lower()
+        assert args.external_model is not None, "When using an external model, provide the model file by --external-model"
+        # read n_factor from the external model
+        if args.n_factor is None:
+            with gzip.open(args.external_model, "rt") as f:
+                header = f.readline()
+            args.n_factor = len(header.strip().split("\t")) - 1
+        # a valid id            
+        if args.external_model_id is None:
+            if args.external_model_type in ["lda", "seurat"] and args.train_width is not None and args.n_factor is not None:
+                args.external_model_id = f"t{args.train_width}_f{args.n_factor}"
+            else:
+                raise ValueError("When using an external model, provide a valid ID by --external-model-id")
+    # major axis
+    major_axis = define_major_axis(args)
     # check static cmap file
     if args.cmap_static:
         if args.static_cmap_file is None:
@@ -265,26 +283,6 @@ def run_ficture(_args):
             progdir = os.path.dirname(os.path.dirname(scriptdir))
             args.static_cmap_file = os.path.join(progdir, "assets", "fixed_color_map_52.tsv")
         assert os.path.exists(args.static_cmap_file), f"Static color map file {args.static_cmap_file} does not exist"
-    
-    # external model
-    if args.use_external_model:
-        args.external_model_type = args.external_model_type.lower()
-        assert args.external_model is not None, "When using an external model, provide the model file by --external-model"
-
-        # read n_factor from the external model
-        if args.n_factor is None:
-            with gzip.open(args.external_model, "rt") as f:
-                header = f.readline()
-            args.n_factor = len(header.strip().split("\t")) - 1
-        if args.external_model_id is None:
-            if args.external_model_type in ["lda", "seurat"]:
-                if args.train_width is not None and args.n_factor is not None:
-                    args.external_model_id = f"t{args.train_width}_f{args.n_factor}"
-            elif args.external_model_type == "custom":
-                raise ValueError("When using an external model with --external-model-type custom, provide --external-model-flag to mark the output files")
-
-    train_widths = [int(x) for x in args.train_width.split(",")] if not (args.use_external_model and args.external_model_type == "custom") else []
-    n_factors = [int(x) for x in args.n_factor.split(",")]
 
     # if args.use_external_model:
     #     if args.external_model_type in ["LDA","Seurat"]:
@@ -332,30 +330,26 @@ def run_ficture(_args):
     if args.segment:
         scheck_app(args.gzip)
         scheck_app(args.sort)
-        major_axis = define_major_axis(args)
+        if args.hexagon_width is None:
+            args.hexagon_width = args.train_width
+        assert args.hexagon_width is not None, "When --segment, provide at least one hexagon width for segmentation in FICTURE-compatible format using --hexagon-width"
+        hexagon_widths=[int(x) for x in args.hexagon_width.split(",")]
 
-        hexagon_widths=[]
-        if args.hexagon_width is not None:
-            hexagon_widths.extend([int(x) for x in args.hexagon_width.split(",")])
-        if args.lda:
-            hexagon_widths.extend([int(x) for x in args.train_width.split(",")])
-
-        assert len(hexagon_widths) > 0, "Provide at least one hexagon width for segmentation in FICTURE-compatible forma using --hexagon-width"
         for hexagon_width in hexagon_widths:
             hexagon_tsv=f"{args.out_dir}/hexagon.d_{hexagon_width}.tsv"
             hexagon=f"{args.out_dir}/hexagon.d_{hexagon_width}.tsv.gz"
             cmds = cmd_separator([], f"Creating hexagon-indexed SGE in FICTURE-compatible format for {hexagon_width}um...")
             cmd = " ".join([
                 "ficture", "make_dge",
-                "--input", args.in_cstranscript,
-                "--major_axis", major_axis,
-                "--key", args.key_col,
-                "--output", hexagon_tsv,
-                "--hex_width", hexagon_width,
-                "--n_move", args.hexagon_n_move,
-                "--mu_scale", args.mu_scale,
-                "--precision", args.hexagon_precision,
-                "--min_ct_per_unit", args.min_ct_per_unit_hexagon
+                f"--input {args.in_cstranscript}",
+                f"--major_axis {major_axis}",
+                f"--key {args.key_col}",
+                f"--output {hexagon_tsv}",
+                f"--hex_width {hexagon_width}",
+                f"--n_move {args.hexagon_n_move}",
+                f"--mu_scale {args.mu_scale}",
+                f"--precision {args.hexagon_precision}",
+                f"--min_ct_per_unit {args.min_ct_per_unit_hexagon}"
                 ])
             cmds.append(cmd)                
             cmds.append(f"{args.sort} -S {args.sort_mem} -k 1,1n {hexagon_tsv} | {args.gzip} -c > {hexagon}")
@@ -363,11 +357,11 @@ def run_ficture(_args):
             mm.add_target(f"{hexagon}", [args.in_cstranscript], cmds)
     
     # segmentation - 10x
-    if args.segment_10x:
-        major_axis = define_major_axis(args)
+    if args.segment_10x:        
         feature_arg = f"--feature {args.in_feature}" if args.in_feature is not None else ""
+        
         hexagon_widths_10x = [int(x) for x in args.hexagon_width_10x.split(",")]
-        assert len(hexagon_widths_10x) > 0, "Provide at least one hexagon width for 10x Genomics format using --hexagon-width-10x"
+        assert len(hexagon_widths_10x) > 0, "When --segment-10x, Provide at least one hexagon width for s 10x Genomics format using --hexagon-width-10x"
         
         for hexagon_width in hexagon_widths_10x:
             hexagon_dir=f"{args.out_dir}/hexagon.d_{hexagon_width}.10x"
@@ -375,17 +369,16 @@ def run_ficture(_args):
             cmds.append(f"mkdir -p {hexagon_dir}")
             cmd = " ".join([
                 "ficture", "make_sge_by_hexagon",
-                "--input", args.in_cstranscript,
-                feature_arg,
-                "--major_axis", major_axis,
-                "--key", args.key_col,
-                "--output_path", hexagon_dir,
-                "--hex_width", hexagon_width,
-                "--n_move", args.hexagon_n_move_10x,
-                "--mu_scale", args.mu_scale,
-                "--precision", args.hexagon_precision_10x,
-                "--min_ct_per_unit", args.min_ct_per_unit_hexagon_10x,
-                "--transfer_gene_prefix"
+                f"--input {args.in_cstranscript} {feature_arg}",
+                f"--major_axis {major_axis}",
+                f"--key {args.key_col}",
+                f"--output_path", hexagon_dir,
+                f"--hex_width", hexagon_width,
+                f"--n_move {args.hexagon_n_move_10x}",
+                f"--mu_scale {args.mu_scale}",
+                f"--precision {args.hexagon_precision_10x}",
+                f"--min_ct_per_unit {args.min_ct_per_unit_hexagon_10x}",
+                f"--transfer_gene_prefix"
                 ])
             cmds.append(cmd)
             cmds.append(f"[ -f {hexagon_dir}/barcodes.tsv.gz ] && [ -f {hexagon_dir}/features.tsv.gz ] && [ -f {hexagon_dir}/matrix.mtx.gz ] && touch {args.out_dir}/hexagon.d_{hexagon_width}.10x.done")
@@ -396,34 +389,35 @@ def run_ficture(_args):
         lda_runs= define_lda_runs(args)
         for lda_params in lda_runs:
             # params & prefix
-            train_width=lda_params["train_width"]
-            n_factor=lda_params["n_factor"]
+            train_width = lda_params["train_width"]
+            n_factor = lda_params["n_factor"]
+
+            lda_id = lda_params["lda_id"]
+            lda_prefix = os.path.join(args.out_dir, lda_id)
+
             lda_fillr = (train_width / 2 + 1)
-            lda_id=lda_params["lda_id"]
-            lda_prefix=os.path.join(args.out_dir, lda_id)
             feature_arg = f"--feature {args.in_feature}" if args.in_feature is not None else ""
             # files
             hexagon = f"{args.out_dir}/hexagon.d_{train_width}.tsv.gz"
-            lda_model_matrix=f"{lda_prefix}.model_matrix.tsv.gz"
-            lda_fit_tsv=f"{lda_prefix}.fit_result.tsv.gz"
-            lda_postcount_tsv=f"{lda_prefix}.posterior.count.tsv.gz"
+            lda_model_matrix = f"{lda_prefix}.model_matrix.tsv.gz"
+            lda_fit_tsv = f"{lda_prefix}.fit_result.tsv.gz"
+            lda_postcount_tsv = f"{lda_prefix}.posterior.count.tsv.gz"
             lda_de = f"{lda_prefix}.bulk_chisq.tsv"
             # 1) fit model
-            cmds = cmd_separator([], f" LDA training for {train_width}um and {n_factor} factors...")
+            cmds = cmd_separator([], f"LDA training for {train_width}um and {n_factor} factors...")
             cmd = " ".join([
                 "ficture", "fit_model",
-                "--input", hexagon,
-                "--output", lda_prefix,
-                feature_arg,
-                "--nFactor", n_factor,
-                "--epoch", args.train_epoch,
-                "--epoch_id_length", args.train_epoch_id_len,
-                "--unit_attr", "X Y",
-                "--key", args.key_col,
-                "--min_ct_per_feature", args.min_ct_per_feature,
-                "--test_split", 0.5,
-                "--R", args.lda_rand_init,
-                "--thread", args.threads
+                f"--input {hexagon} {feature_arg}"
+                f"--output {lda_prefix}",
+                f"--nFactor {n_factor}",
+                f"--epoch {args.train_epoch}",
+                f"--epoch_id_length {args.train_epoch_id_len}",
+                f"--unit_attr X Y",
+                f"--key {args.key_col}",
+                f"--min_ct_per_feature {args.min_ct_per_feature}", 
+                f"--test_split 0.5",
+                f"--R {args.lda_rand_init}",
+                f"--thread {args.threads}",
                 ])
             cmds.append(cmd)
             cmds.append(f"[ -f {lda_fit_tsv} ] && [ -f {lda_model_matrix} ] && [ -f {lda_postcount_tsv} ] && touch {lda_prefix}.done" )
@@ -445,7 +439,6 @@ def run_ficture(_args):
         scheck_app(args.bgzip)
         scheck_app(args.tabix)
         scheck_app(args.sort)
-        major_axis = define_major_axis(args)
         batch_mat = f"{args.out_dir}/batched.matrix.tsv.gz"
         proj_runs = define_proj_runs(args)
         for proj_params in proj_runs:
@@ -457,34 +450,35 @@ def run_ficture(_args):
             fit_prereq = proj_params["prerequisite_path"]
             # params & prefix
             fit_width = proj_params["fit_width"]
-            fit_n_move = int(fit_width / args.anchor_res)
-            fit_fillr = int(args.anchor_res//2+1)
             proj_id = proj_params["proj_id"]
             proj_prefix = os.path.join(args.out_dir, proj_id)
+
+            fit_n_move = int(fit_width / args.anchor_res)
+            fit_fillr = int(args.anchor_res//2+1)
             # files
             proj_fit_tsv = f"{proj_prefix}.fit_result.tsv.gz"
             proj_postcount = f"{proj_prefix}.posterior.count.tsv.gz"
             proj_de = f"{proj_prefix}.bulk_chisq.tsv"
             #1) transform/fit
-            cmds=cmd_separator([], f"Creating projection, prefix: {proj_id}")
+            cmds=cmd_separator([], f"Creating projection, ID: {proj_id}")
             cmd = " ".join([
                 "ficture", "transform",
-                "--input", args.in_cstranscript,
-                "--output_pref", proj_prefix,
-                "--model", model_path,
-                "--key", args.key_col,
-                "--major_axis", major_axis,
-                "--hex_width",  str(fit_width),
-                "--n_move", str(fit_n_move),
-                "--min_ct_per_unit", str(args.min_ct_per_unit_fit),
-                "--mu_scale", str(args.mu_scale),
-                "--precision", str(args.fit_precision),
-                "--thread", str(args.threads)
+                f"--input {args.in_cstranscript}",
+                f"--output_pref {proj_prefix}",
+                f"--model {model_path}",
+                f"--key {args.key_col}",
+                f"--major_axis {major_axis}",
+                f"--hex_width {fit_width}",
+                f"--n_move {fit_n_move}",
+                f"--min_ct_per_unit {args.min_ct_per_unit_fit}",
+                f"--mu_scale {args.mu_scale}",
+                f"--precision {args.fit_precision}",
+                f"--thread {args.threads}",
                 ])
             cmds.append(cmd)
             cmds.append(f"[ -f {proj_fit_tsv} ] && [ -f {proj_postcount} ] && touch {proj_prefix}.done" )
             mm.add_target(f"{proj_prefix}.done", [fit_prereq], cmds)
-            cmds=cmd_separator([], f"Projection visualization and report, prefix: {proj_id}")
+            cmds=cmd_separator([], f"Projection visualization and report, ID: {proj_id}")
             # 2) choose color 
             if not os.path.exists(cmap_path):
                 cmds = run_choose_color(args, proj_fit_tsv, proj_params["n_factor"], proj_prefix)
@@ -493,23 +487,23 @@ def run_ficture(_args):
             # 3) visualization/DE/report
             cmd = " ".join([
                 "ficture", "plot_base",
-                "--input", proj_fit_tsv,
-                "--output", f"{proj_prefix}.coarse",
-                "--fill_range", str(fit_fillr),
-                "--color_table", cmap_path,
-                "--plot_um_per_pixel", str(args.fit_plot_um_per_pixel),
-                "--plot_discretized"
+                f"--input {proj_fit_tsv}",
+                f"--output {proj_prefix}.coarse",
+                f"--fill_range {fit_fillr}",
+                f"--color_table {cmap_path}",
+                f"--plot_um_per_pixel {args.fit_plot_um_per_pixel}",
+                f"--plot_discretized"
                 ])
             cmds.append(cmd)
             # - transform-DE
             cmd = " ".join([
                 "ficture", "de_bulk",
-                "--input", proj_postcount,
-                "--output", proj_de,
-                "--min_ct_per_feature", str(args.min_ct_per_feature),
-                "--max_pval_output", str(args.de_max_pval),
-                "--min_fold_output", str(args.de_min_fold),
-                "--thread", str(args.threads)
+                f"--input {proj_postcount}",
+                f"--output {proj_de}",
+                f"--min_ct_per_feature {args.min_ct_per_feature}",
+                f"--max_pval_output {args.de_max_pval}",
+                f"--min_fold_output {args.de_min_fold}",
+                f"--thread {args.threads}"
                 ])
             cmds.append(cmd)
             # - transform-report
@@ -603,21 +597,21 @@ ${tabix} -f -s1 -b"${sortidx}" -e"${sortidx}" ${output}
             decode_anchor=f"{decode_prefix}.anchor.tsv.gz"
             decode_de=f"{decode_prefix}.bulk_chisq.tsv"
             # 1) decode
-            cmds=cmd_separator([], f"Performing pixel-level decoding, prefix: {decode_id}")
+            cmds=cmd_separator([], f"Performing pixel-level decoding, ID: {decode_id}")
             cmd = " ".join([
                 "ficture", "slda_decode",
-                "--input", batch_mat,
-                "--output", decode_prefix,
-                "--model", model_path,
-                "--anchor", proj_fit_tsv,
-                "--anchor_in_um",
-                "--neighbor_radius", str(radius),
-                "--mu_scale", str(args.mu_scale),
-                "--key", args.key_col,
-                "--precision", str(args.decode_precision),
-                "--lite_topk_output_pixel", str(args.decode_top_k),
-                "--lite_topk_output_anchor", str(args.decode_top_k),
-                "--thread", str(args.threads)
+                f"--input {batch_mat}",
+                f"--output {decode_prefix}",
+                f"--model {model_path}",
+                f"--anchor {proj_fit_tsv}",
+                f"--anchor_in_um",
+                f"--neighbor_radius {radius}",
+                f"--mu_scale {args.mu_scale}",
+                f"--key {args.key_col}",
+                f"--precision {args.decode_precision}",
+                f"--lite_topk_output_pixel {args.decode_top_k}",
+                f"--lite_topk_output_anchor {args.decode_top_k}",
+                f"--thread {args.threads}"
                 ])
             cmds.append(cmd)
             # - decode-sort
@@ -626,26 +620,26 @@ ${tabix} -f -s1 -b"${sortidx}" -e"${sortidx}" ${output}
             #cmds.append(f"rm {decode_prefix}.pixel.tsv.gz")
             mm.add_target(f"{decode_prefix}.done", [batch_mat, f"{proj_prefix}.done"], cmds)
             # 2) decode-visualization and report
-            cmds = cmd_separator([], f"Pixel-level decoding visualization and report, prefix: {decode_id}")
+            cmds = cmd_separator([], f"Pixel-level decoding visualization and report, ID: {decode_id}")
             # - decode-pixel 
             cmd = " ".join([
                 "ficture", "plot_pixel_full",
-                "--input", decode_spixel,
-                "--color_table", cmap_path,
-                "--output", f"{decode_prefix}.pixel.png",
-                "--plot_um_per_pixel", str(args.decode_plot_um_per_pixel),
-                "--full"
+                f"--input {decode_spixel}",
+                f"--color_table {cmap_path}",
+                f"--output {decode_prefix}.pixel.png",
+                f"--plot_um_per_pixel {args.decode_plot_um_per_pixel}",
+                f"--full"
                 ])
             cmds.append(cmd)
             # - decode-DE
             cmd = " ".join([
                 "ficture", "de_bulk",
-                "--input", decode_postcount,
-                "--output", decode_de,
-                "--min_ct_per_feature", str(args.min_ct_per_feature),
-                "--max_pval_output", str(args.de_max_pval),
-                "--min_fold_output", str(args.de_min_fold),
-                "--thread", str(args.threads)
+                f"--input {decode_postcount}",
+                f"--output {decode_de}",
+                f"--min_ct_per_feature {args.min_ct_per_feature}",
+                f"--max_pval_output {args.de_max_pval}",
+                f"--min_fold_output {args.de_min_fold}",
+                f"--thread {args.threads}"
                 ])
             cmds.append(cmd)
             cmds.append(f"ficture factor_report --path {args.out_dir} --pref {decode_id} --color_table {cmap_path}")
@@ -699,59 +693,52 @@ ${tabix} -f -s1 -b"${sortidx}" -e"${sortidx}" ${output}
         mm.add_target(args.out_json, prerequisities, cmds)
 
     if args.viz_per_factor:
-        for train_width in train_widths:
-            for n_factor in n_factors:
-                lda_id=f"t{train_width}_f{n_factor}"
-                if args.fit_width is None:
-                    fit_widths = [train_width]
-                else:
-                    fit_widths = [int(x) for x in args.fit_width.split(",")]
-                for fit_width in fit_widths:
-                    # params
-                    radius = args.anchor_res + 1
-                    # basenames
-                    proj_id=f"{lda_id}_p{fit_width}_a{args.anchor_res}"
-                    decode_id=f"{proj_id}_r{radius}"
-                    decode_prefix = os.path.join(args.out_dir, decode_id)
-                    # files
-                    decode_spixel=f"{decode_prefix}.pixel.sorted.tsv.gz"
-                    # 1) pixel-plot
-                    cmds=cmd_separator([], f"Visualizing single factor at pixel level ({train_width}um and {n_factor} factors, at {fit_width}um)")
-                    cmds.append(f"ficture plot_pixel_single --input {decode_spixel}  --output {decode_prefix}.pixel --plot_um_per_pixel {args.decode_plot_um_per_pixel} --full --all")
-                    # done & target
-                    viz_list=[]
-                    for i in range(n_factor):
-                        viz_list.append(f"{decode_prefix}.pixel.F_{i}.png")
-                    check_vizperfactor_cmd = " && ".join([f"[ -f {file} ]" for file in viz_list])
-                    cmds.append(f"{check_vizperfactor_cmd} && touch {decode_prefix}.viz_per_factor.done")
-                    mm.add_target(f"{decode_prefix}.viz_per_factor.done", [f"{decode_prefix}.done"], cmds)
+        proj_runs = define_proj_runs(args)
+        for proj_params in proj_runs:
+            fit_width = proj_params["fit_width"]
+            proj_id = proj_params["proj_id"]
+            radius = args.anchor_res + 1
+            decode_id=f"{proj_id}_r{radius}"
+            decode_prefix = os.path.join(args.out_dir, decode_id)
+            # files
+            decode_spixel=f"{decode_prefix}.pixel.sorted.tsv.gz"
+            # cmds
+            cmds=cmd_separator([], f"Visualizing single factor at pixel level, ID: {decode_id}")
+            cmds.append(f"ficture plot_pixel_single --input {decode_spixel}  --output {decode_prefix}.pixel --plot_um_per_pixel {args.decode_plot_um_per_pixel} --full --all")
+            # done & target
+            viz_list=[]
+            for i in range(n_factor):
+                viz_list.append(f"{decode_prefix}.pixel.F_{i}.png")
+            check_vizperfactor_cmd = " && ".join([f"[ -f {file} ]" for file in viz_list])
+            cmds.append(f"{check_vizperfactor_cmd} && touch {decode_prefix}.viz_per_factor.done")
+            mm.add_target(f"{decode_prefix}.viz_per_factor.done", [f"{decode_prefix}.done"], cmds)
 
     if args.viz_dotplot:
-        for train_width in train_widths:
-            for n_factor in n_factors:
-                # lda dotplot
-                lda_id=f"t{train_width}_f{n_factor}"
-                lda_prefix=os.path.join(args.out_dir, lda_id)
-                cmds = cmd_separator([], f" Dotplot visualization and report for LDA: {train_width}um and {n_factor} factors...")
-                cmds.append(f"factor_viz dotplot --post_count_file {lda_prefix}.posterior.count.tsv.gz --meta_data_file {lda_prefix}.factor.info.tsv --output {lda_prefix}.dotplot.pdf")
-                mm.add_target(f"{lda_prefix}_summary.done", [f"{lda_prefix}.dotplot.pdf"], cmds)
-                # proj & decode dotplot
-                if args.fit_width is None:
-                    fit_widths = [train_width]
-                else:
-                    fit_widths = [int(x) for x in args.fit_width.split(",")]
-                for fit_width in fit_widths:
-                    radius = args.anchor_res + 1
-                    proj_id=f"{lda_id}_p{fit_width}_a{args.anchor_res}"
-                    proj_prefix = os.path.join(args.out_dir, proj_id)
-                    decode_id=f"{proj_id}_r{radius}"
-                    decode_prefix = os.path.join(args.out_dir, decode_id)
-                    # proj
-                    cmds = cmd_separator([], f" Dotplot visualization and report for projection: {train_width}um and {n_factor} factors, at {fit_width}um")
-                    cmds.append(f"factor_viz dotplot --post_count_file {proj_prefix}.posterior.count.tsv.gz --meta_data_file {proj_prefix}.factor.info.tsv --output {proj_prefix}.dotplot.pdf")
-                    mm.add_target(f"{proj_prefix}_summary.done", [f"{proj_prefix}.dotplot.pdf"], cmds)
-                    # decode
-                    cmds = cmd_separator([], f" Dotplot visualization and report for decoding: {train_width}um and {n_factor} factors, at {fit_width}um")
+        if args.lda:
+            train_params = define_lda_runs(args)
+            for train_param in train_params:
+                train_width = train_param["train_width"]
+                n_factor = train_param["n_factor"]
+                model_id = train_param["model_id"]
+                model_prefix = os.path.join(args.out_dir, train_param["model_id"])
+                cmds = cmd_separator([], f" Dotplot visualization and report for LDA, ID: {model_id}.")
+                cmds.append(f"factor_viz dotplot --post_count_file {model_prefix}.posterior.count.tsv.gz --meta_data_file {model_prefix}.factor.info.tsv --output {model_prefix}.dotplot.pdf")
+                mm.add_target(f"{model_prefix}_summary.done", [f"{model_prefix}.dotplot.pdf"], cmds)
+        if args.projection or args.decode:
+            proj_runs = define_proj_runs(args)
+            for proj_params in proj_runs:
+                fit_width = proj_params["fit_width"]
+                proj_id = proj_params["proj_id"]
+                radius = args.anchor_res + 1
+                decode_id=f"{proj_id}_r{radius}"
+                decode_prefix = os.path.join(args.out_dir, decode_id)
+                # proj
+                cmds = cmd_separator([], f" Dotplot visualization and report for projection, ID: {proj_id}")
+                cmds.append(f"factor_viz dotplot --post_count_file {proj_prefix}.posterior.count.tsv.gz --meta_data_file {proj_prefix}.factor.info.tsv --output {proj_prefix}.dotplot.pdf")
+                mm.add_target(f"{proj_prefix}_summary.done", [f"{proj_prefix}.dotplot.pdf"], cmds)
+                # decode
+                if args.decode:
+                    cmds = cmd_separator([], f" Dotplot visualization and report for decoding, ID: {decode_id}")
                     cmds.append(f"factor_viz dotplot --post_count_file {decode_prefix}.posterior.count.tsv.gz --meta_data_file {decode_prefix}.factor.info.tsv --output {decode_prefix}.dotplot.pdf")
                     mm.add_target(f"{decode_prefix}_summary.done", [f"{decode_prefix}.dotplot.pdf"], cmds)
 
