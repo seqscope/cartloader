@@ -403,7 +403,7 @@ def run_ficture(_args):
             cmds = cmd_separator([], f"LDA training for {train_width}um and {n_factor} factors...")
             cmd = " ".join([
                 "ficture", "fit_model",
-                f"--input {hexagon} {feature_arg}"
+                f"--input {hexagon} {feature_arg}",
                 f"--output {model_prefix}",
                 f"--nFactor {n_factor}",
                 f"--epoch {args.train_epoch}",
