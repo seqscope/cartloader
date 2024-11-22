@@ -17,8 +17,6 @@ def parse_arguments(_args):
 
     cmd_params = parser.add_argument_group("Commands", "FICTURE commands to run together")
     cmd_params.add_argument('--main', action='store_true', default=False, help='Run the main functions (sorttsv, minibatch, segment (in ficture-compatible format), lda, decode, summary).  If --use-external, segment and lda will be skipped')
-    #cmd_params.add_argument('--plus', action='store_true', default=False, help='Run the main functions (sorttsv, minibatch, segment, lda, decode, summary) and additional functions (viz-per-factor)')
-    #cmd_params.add_argument('--viz-only', action='store_true', default=False, help='For lda, decode functions, only regenerate the visualization and report without running LDA analysis, decode')
     cmd_params.add_argument('--sorttsv', action='store_true', default=False, help='(Main function) Sort the input tsv file')
     cmd_params.add_argument('--minibatch', action='store_true', default=False, help='(Main function) Perform minibatch step')
     cmd_params.add_argument('--segment', action='store_true', default=False, help='(Main function) Perform hexagon segmentation into FICTURE-compatible format')
@@ -129,14 +127,12 @@ def run_choose_color(args, fit_tsv, n_factor, prefix):
         cmds.append(f"ficture choose_color --input {fit_tsv} --output {prefix} --cmap_name {args.cmap_name}")
     return cmds
 
-def define_cmap(args, model_id, proj_id):
+def define_cmap(args, model_id):
     model_cmap = os.path.join(args.out_dir, f"{model_id}.rgb.tsv")
     if args.cmap_static:
         cmap_path = args.static_cmap_file 
-    elif os.path.exists(model_cmap):
-        cmap_path = model_cmap
     else:
-        raise ValueError(f"No color map found for model: {model_id}. It is recommended to provide one color map per model. If your model doesn't come along with a color map, leverage the --cmap-static to use a prebuilt color map.")
+        cmap_path = model_cmap
     return cmap_path
 
 # def generate_cmap_from_static(out_cmap, static_cmap_file, n_factor):
@@ -152,7 +148,7 @@ def define_lda_runs(args):
 
     train_params= [
         {
-         "model_type": args.external_model_type,
+         "model_type": "lda",
          "train_width": train_width, 
          "n_factor": n_factor,
          "model_id":f"t{train_width}_f{n_factor}",
@@ -168,6 +164,7 @@ def define_proj_runs_for_lda(args):
     train_params = define_lda_runs(args)
     for train_param in train_params:
         # lda
+        model_type = train_param["model_type"]
         train_width = train_param["train_width"]
         n_factor = train_param["n_factor"]
         model_id = train_param["model_id"]
@@ -177,9 +174,9 @@ def define_proj_runs_for_lda(args):
         fit_width= [train_width] if fit_widths is [] else fit_widths
         for fit_width in fit_widths:
             proj_id = f"{model_id}_p{fit_width}_a{args.anchor_res}"
-            cmap_path = define_cmap(args, model_id, proj_id)
+            cmap_path = define_cmap(args, model_id)
             proj_runs.append({
-                "model_type": train_params["model_type"],
+                "model_type": model_type,
                 "model_id": model_id,
                 "model_path": model_path,
                 "train_width": train_width,
@@ -198,7 +195,7 @@ def define_proj_runs_with_external(args):
     for fit_width in fit_widths:
         assert args.external_model_id is not None, "external_model_id is required or provide a valid train_width and a valid n_factor"
         proj_id = f"{args.external_model_id}_p{fit_width}_a{args.anchor_res}"
-        cmap_path = define_cmap(args, args.external_model_id, proj_id)
+        cmap_path = define_cmap(args, args.external_model_id)
         proj_runs.append({
             "model_type": args.external_model_type,
             "model_id": args.external_model_id,
@@ -250,9 +247,11 @@ def run_ficture(_args):
         args.in_cstranscript = os.path.join(args.out_dir, "transcripts.sorted.tsv.gz")
     if args.in_minmax is None:
         args.in_minmax = os.path.join(args.out_dir, "coordinate_minmax.tsv")
+    feature_arg = f"--feature {args.in_feature}" if args.in_feature is not None else ""
     assert os.path.exists(args.in_transcript) or os.path.exists(args.in_cstranscript), "Provide at least one valid input transcript-indexed SGE file by --in-transcript or --in-cstranscript"
     assert os.path.exists(args.in_minmax), "Provide a valid input coordinate minmax file by --in-minmax"
-    # out files 
+
+    # out files
     if args.out_json is None:
         args.out_json = os.path.join(args.out_dir, f"ficture.params.json") 
     # lda
@@ -358,10 +357,8 @@ def run_ficture(_args):
     
     # segmentation - 10x
     if args.segment_10x:        
-        feature_arg = f"--feature {args.in_feature}" if args.in_feature is not None else ""
-        
+        assert args.hexagon_width_10x is not None, "When --segment-10x, Provide at least one hexagon width for segmentation in 10x Genomics format using --hexagon-width-10x"
         hexagon_widths_10x = [int(x) for x in args.hexagon_width_10x.split(",")]
-        assert len(hexagon_widths_10x) > 0, "When --segment-10x, Provide at least one hexagon width for s 10x Genomics format using --hexagon-width-10x"
         
         for hexagon_width in hexagon_widths_10x:
             hexagon_dir=f"{args.out_dir}/hexagon.d_{hexagon_width}.10x"
@@ -392,23 +389,22 @@ def run_ficture(_args):
             train_width = lda_params["train_width"]
             n_factor = lda_params["n_factor"]
 
-            lda_id = lda_params["lda_id"]
-            lda_prefix = os.path.join(args.out_dir, lda_id)
+            model_id = lda_params["model_id"]
+            model_prefix = os.path.join(args.out_dir, model_id)
 
             lda_fillr = (train_width / 2 + 1)
-            feature_arg = f"--feature {args.in_feature}" if args.in_feature is not None else ""
             # files
             hexagon = f"{args.out_dir}/hexagon.d_{train_width}.tsv.gz"
-            lda_model_matrix = f"{lda_prefix}.model_matrix.tsv.gz"
-            lda_fit_tsv = f"{lda_prefix}.fit_result.tsv.gz"
-            lda_postcount_tsv = f"{lda_prefix}.posterior.count.tsv.gz"
-            lda_de = f"{lda_prefix}.bulk_chisq.tsv"
+            lda_model_matrix = f"{model_prefix}.model_matrix.tsv.gz"
+            lda_fit_tsv = f"{model_prefix}.fit_result.tsv.gz"
+            lda_postcount_tsv = f"{model_prefix}.posterior.count.tsv.gz"
+            lda_de = f"{model_prefix}.bulk_chisq.tsv"
             # 1) fit model
             cmds = cmd_separator([], f"LDA training for {train_width}um and {n_factor} factors...")
             cmd = " ".join([
                 "ficture", "fit_model",
                 f"--input {hexagon} {feature_arg}"
-                f"--output {lda_prefix}",
+                f"--output {model_prefix}",
                 f"--nFactor {n_factor}",
                 f"--epoch {args.train_epoch}",
                 f"--epoch_id_length {args.train_epoch_id_len}",
@@ -420,20 +416,20 @@ def run_ficture(_args):
                 f"--thread {args.threads}",
                 ])
             cmds.append(cmd)
-            cmds.append(f"[ -f {lda_fit_tsv} ] && [ -f {lda_model_matrix} ] && [ -f {lda_postcount_tsv} ] && touch {lda_prefix}.done" )
-            mm.add_target(f"{lda_prefix}.done", [args.in_cstranscript, hexagon], cmds)
+            cmds.append(f"[ -f {lda_fit_tsv} ] && [ -f {lda_model_matrix} ] && [ -f {lda_postcount_tsv} ] && touch {model_prefix}.done" )
+            mm.add_target(f"{model_prefix}.done", [args.in_cstranscript, hexagon], cmds)
             # 2) choose color 
-            cmap = args.static_cmap_file if args.cmap_static else f"{lda_prefix}.cmap.tsv"
-            cmds = run_choose_color(args, lda_fit_tsv, n_factor, lda_prefix)
+            cmap = args.static_cmap_file if args.cmap_static else f"{model_prefix}.cmap.tsv"
+            cmds = run_choose_color(args, lda_fit_tsv, n_factor, model_prefix)
             if len(cmds) > 0:
-                mm.add_target(cmap, [f"{lda_prefix}.done"], cmds)
+                mm.add_target(cmap, [f"{model_prefix}.done"], cmds)
             # 3) coarse plot/DE/report
             cmds = cmd_separator([], f" LDA visualization and report for {train_width}um and {n_factor} factors...")
-            cmds.append(f"ficture plot_base --input {lda_fit_tsv} --output {lda_prefix}.coarse --fill_range {lda_fillr} --color_table {cmap} --plot_um_per_pixel {args.lda_plot_um_per_pixel} --plot_discretized")
+            cmds.append(f"ficture plot_base --input {lda_fit_tsv} --output {model_prefix}.coarse --fill_range {lda_fillr} --color_table {cmap} --plot_um_per_pixel {args.lda_plot_um_per_pixel} --plot_discretized")
             cmds.append(f"ficture de_bulk --input {lda_postcount_tsv} --output {lda_de} --min_ct_per_feature {args.min_ct_per_feature} --max_pval_output {args.de_max_pval} --min_fold_output {args.de_min_fold} --thread {args.threads}")
-            cmds.append(f"ficture factor_report --path {args.out_dir} --pref {lda_id} --color_table {cmap}")
-            cmds.append(f"[ -f {lda_prefix}.coarse.png ] && [ -f {lda_de} ] && [ -f {lda_prefix}.factor.info.html ] && touch {lda_prefix}_summary.done")
-            mm.add_target(f"{lda_prefix}_summary.done", [f"{lda_prefix}.done"], cmds)
+            cmds.append(f"ficture factor_report --path {args.out_dir} --pref {model_id} --color_table {cmap}")
+            cmds.append(f"[ -f {model_prefix}.coarse.png ] && [ -f {lda_de} ] && [ -f {model_prefix}.factor.info.html ] && touch {model_prefix}_summary.done")
+            mm.add_target(f"{model_prefix}_summary.done", [f"{model_prefix}.done"], cmds)
 
     if args.projection:
         scheck_app(args.bgzip)
@@ -480,10 +476,15 @@ def run_ficture(_args):
             mm.add_target(f"{proj_prefix}.done", [fit_prereq], cmds)
             cmds=cmd_separator([], f"Projection visualization and report, ID: {proj_id}")
             # 2) choose color 
+            # if the cmap_path is the one generated from lda
+            lda_cmap = os.path.join(args.out_dir, f"{proj_params['model_id']}.rgb.tsv")
             if not os.path.exists(cmap_path):
-                cmds = run_choose_color(args, proj_fit_tsv, proj_params["n_factor"], proj_prefix)
-                if len(cmds) > 0:
-                    mm.add_target(cmap_path, [f"{proj_prefix}.done"], cmds)
+                if args.lda and cmap_path == lda_cmap:
+                    print(f"Using the color map from the LDA model: {cmap_path}")
+                else:
+                    cmds = run_choose_color(args, proj_fit_tsv, proj_params["n_factor"], proj_prefix)
+                    if len(cmds) > 0:
+                        mm.add_target(cmap_path, [f"{proj_prefix}.done"], cmds)
             # 3) visualization/DE/report
             cmd = " ".join([
                 "ficture", "plot_base",
@@ -688,7 +689,7 @@ ${tabix} -f -s1 -b"${sortidx}" -e"${sortidx}" ${output}
                     summary_aux_args.append(f"--projection {model_type},{model_id},{proj_id},{fit_width},{args.anchor_res}")
                 if args.decode:
                     summary_aux_args.append(f"--decode {model_type},{model_id},{proj_id},{decode_id},{radius}")
-        cmds = cmd_separator([], f"Summarizing output into {args.out_json} files...")
+        cmds = cmd_separator([], f"Summarizing output into to the <out_json> files...")
         cmds.append(f"cartloader write_json_for_ficture --in-cstranscript {args.in_cstranscript} --in-feature {args.in_feature} --in-minmax {args.in_minmax} --out-dir {args.out_dir} --out-json {args.out_json} {' '.join(summary_aux_args)}")
         mm.add_target(args.out_json, prerequisities, cmds)
 
