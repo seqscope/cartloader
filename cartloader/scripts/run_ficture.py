@@ -653,7 +653,7 @@ ${tabix} -f -s1 -b"${sortidx}" -e"${sortidx}" ${output}
         summary_aux_args=[]
         # lda or external model
         if args.lda:
-            summary_aux_args_model = []
+            summary_aux_args_models = ["--model"]
             train_params = define_lda_runs(args)
             for train_param in train_params:
                 train_width = train_param["train_width"]
@@ -663,8 +663,8 @@ ${tabix} -f -s1 -b"${sortidx}" -e"${sortidx}" ${output}
                 prerequisities.append(f"{model_prefix}.done")
                 # args
                 summary_cmap = args.static_cmap_file if args.cmap_static else f"{model_prefix}.rgb.tsv"
-                summary_aux_args_model.append(f"lda,{model_prefix}.model_matrix.tsv.gz,{train_param['model_id']},{train_width},{n_factor},{summary_cmap}")
-            summary_aux_args.append(" ".join(summary_aux_args_model))
+                summary_aux_args_models.append(f"lda,{model_prefix}.model_matrix.tsv.gz,{train_param['model_id']},{train_width},{n_factor},{summary_cmap}")
+            summary_aux_args.append(" ".join(summary_aux_args_models))
         elif args.use_external_model:
             #model_prefix = os.path.join(args.out_dir, args.external_model_id)
             train_width=args.train_width if args.train_width is not None else -9
