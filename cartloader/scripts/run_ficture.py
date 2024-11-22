@@ -419,7 +419,7 @@ def run_ficture(_args):
             cmds.append(f"[ -f {lda_fit_tsv} ] && [ -f {lda_model_matrix} ] && [ -f {lda_postcount_tsv} ] && touch {model_prefix}.done" )
             mm.add_target(f"{model_prefix}.done", [args.in_cstranscript, hexagon], cmds)
             # 2) choose color 
-            cmap = args.static_cmap_file if args.cmap_static else f"{model_prefix}.cmap.tsv"
+            cmap = args.static_cmap_file if args.cmap_static else f"{model_prefix}.rgb.tsv"
             cmds = run_choose_color(args, lda_fit_tsv, n_factor, model_prefix)
             if len(cmds) > 0:
                 mm.add_target(cmap, [f"{model_prefix}.done"], cmds)
