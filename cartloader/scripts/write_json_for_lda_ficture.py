@@ -19,7 +19,6 @@ def parse_arguments(_args):
     parser.add_argument('--static-cmap-file', type=str, default=None, help='(Optional) If a static cmap was used here, provide the path to the static cmap file.')
     parser.add_argument('--overwrite', action='store_true', default=False, help='Overwrite the existing JSON file.')
 
-
     if len(_args) == 0:
         parser.print_help()
         sys.exit(1)

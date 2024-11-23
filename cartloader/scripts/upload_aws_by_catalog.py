@@ -28,7 +28,7 @@ def upload_catalog(in_dir, catalog, s3_dir, ID, histology, dry_run):
                 commands.append(["aws", "s3", "cp", file_path, s3_file_path])
 
     # Step 2: If histology is provided, add additional commands
-    if histology:
+    if histology is not None:
         for hist_path in histology:
             hist_bn = os.path.basename(hist_path)
             s3_hist_path = f"s3://{s3_dir}/{hist_bn}"
@@ -37,7 +37,7 @@ def upload_catalog(in_dir, catalog, s3_dir, ID, histology, dry_run):
             commands.append(f"echo '============================================================================'")
             commands.append(f"echo 'Updating histology file to AWS...'")
             commands.append(f"echo '============================================================================'")
-            commands.append(f"echo 'Uploading {hist_prefix}.pmtiles to S3...'")
+            commands.append(f"echo 'Uploading {hist_bn}.pmtiles to S3...'")
             commands.append(["aws", "s3", "cp", hist_path, s3_hist_path])
             commands.append([
                 "cartloader", "update_yaml_for_basemap",
@@ -64,7 +64,7 @@ if __name__ == "__main__":
     parser.add_argument("--in_dir", help="Directory containing the files")
     parser.add_argument("--catalog", default="catalog.yaml", help="catalog yaml file")
     parser.add_argument("--s3_dir", help="S3 directory name. Typically, s3://<bucket>/<ID>")
-    parser.add_argument("--histology", nargs="+", help="List of histology pmtiles to upload")
+    parser.add_argument("--histology", nargs="*", default=None, help="List of histology pmtiles to upload")
     parser.add_argument("--dry-run", action="store_true", help="Print commands instead of running them. Default: False")
 
     args = parser.parse_args()
