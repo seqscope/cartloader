@@ -206,6 +206,20 @@ def extract_unit2px_from_json(scale_json):
     print(f"    - Microns per pixel: {microns_per_pixel}")
     return 1/microns_per_pixel
 
+def add_mexparam_to_cmd(format_cmd, args, arg_mapping):
+    'Add mex file names to the command'
+    for arg_name, cmd_option in arg_mapping.items():
+        arg_value = getattr(args, arg_name, None)
+        if arg_value is not None:
+            format_cmd = f"{format_cmd} {cmd_option} {arg_value}"
+    return format_cmd
+
+mexarg_mapping = {
+    "mex_bcd": "--sge-bcd",
+    "mex_ftr": "--sge-ftr",
+    "mex_mtx": "--sge-mtx"
+}
+
 def convert_visiumhd(cmds, args):
     # tools:
     # 1) spatula
@@ -213,7 +227,7 @@ def convert_visiumhd(cmds, args):
         args.spatula = os.path.join(cartloader_repo, "submodules", "spatula", "bin", "spatula")
         print(f"Given spatula is not provided, using the spatula from submodules: {args.spatula}.")
     scheck_app(args.spatula)
-    # input: in_sge, in_parquet, scale_json
+    # input: in_mex, in_parquet, scale_json
     # output: out_transcript, out_minmax, out_feature
     tmp_parquet = f"{args.out_dir}/tissue_positions.csv.gz"
     # 1) --in_parquet: convert parquet to csv
@@ -225,9 +239,10 @@ def convert_visiumhd(cmds, args):
     if args.include_feature_type_regex is not None:
         args.include_feature_list = write_ftrlist_from_ftrtype(args)
     # 4) convert sge to tsv (output: out_transcript, out_minmax, out_feature, (optional) out_sge)
-    format_cmd=f"{args.spatula} convert-sge --in-sge {args.in_sge} --out-tsv {args.out_dir} --pos {tmp_parquet} --tsv-mtx {args.out_transcript} --tsv-ftr {args.out_feature} --tsv-minmax {args.out_minmax}"
+    format_cmd=f"{args.spatula} convert-sge --in-sge {args.in_mex} --out-tsv {args.out_dir} --pos {tmp_parquet} --tsv-mtx {args.out_transcript} --tsv-ftr {args.out_feature} --tsv-minmax {args.out_minmax}"
     aux_argset = set(item for lst in [aux_args["out"], aux_args["inmex"], aux_args["inpos"], aux_args["spatula"], aux_args["ftrname"]] for item in lst)
     format_cmd = add_param_to_cmd(format_cmd, args, aux_argset)
+    format_cmd = add_mexparam_to_cmd(format_cmd, args, mexarg_mapping)
     cmds.append(format_cmd)
     cmds.append(f"rm {tmp_parquet}")
     return cmds
@@ -239,15 +254,16 @@ def convert_seqscope(cmds, args):
         args.spatula = os.path.join(cartloader_repo, "submodules", "spatula", "bin", "spatula")
         print(f"Given spatula is not provided, using the spatula from submodules: {args.spatula}.")
     scheck_app(args.spatula)
-    # input: in_sge
+    # input: in_mex
     # output: out_transcript, out_minmax, out_feature
     # 1) --included_feature_type_regex
     if args.include_feature_type_regex is not None:
         args.include_feature_list = write_ftrlist_from_ftrtype(args)
     # 2) convert sge to tsv (output: out_transcript, out_minmax, out_feature
-    format_cmd=f"{args.spatula} convert-sge --in-sge {args.in_sge} --out-tsv {args.out_dir} --tsv-mtx {args.out_transcript} --tsv-ftr {args.out_feature} --tsv-minmax {args.out_minmax}"
+    format_cmd=f"{args.spatula} convert-sge --in-sge {args.in_mex} --out-tsv {args.out_dir} --tsv-mtx {args.out_transcript} --tsv-ftr {args.out_feature} --tsv-minmax {args.out_minmax}"
     aux_argset = set(item for lst in [aux_args["out"], aux_args["inmex"], aux_args["ftrname"]] for item in lst)
     format_cmd = add_param_to_cmd(format_cmd, args, aux_argset)
+    format_cmd = add_mexparam_to_cmd(format_cmd, args, mexarg_mapping)
     cmds.append(format_cmd)
     # 3) drop mismatches if --keep-mismatches is not enabled
     if not args.keep_mismatches:   

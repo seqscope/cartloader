@@ -7,7 +7,7 @@ aux_args = {
         'colname_feature_name', 'colname_feature_id'
     ],
     "inmex": [
-        'mex_bcd', 'mex_ftr', 'mex_mtx',
+        #'mex_bcd', 'mex_ftr', 'mex_mtx',
         'icols_mtx', 'icol_bcd_barcode', 'icol_bcd_x',
         'icol_bcd_y', 'icol_ftr_id', 'icol_ftr_name'
     ],
@@ -34,16 +34,16 @@ aux_args = {
 def input_by_platform(args):
     if args.platform == "10x_visium_hd":
         in_dict = {
-            "sge_bcd": os.path.join(args.in_sge, args.sge_bcd),
-            "sge_ftr": os.path.join(args.in_sge, args.sge_ftr),
-            "sge_mtx": os.path.join(args.in_sge, args.sge_mtx),
+            "mex_bcd": os.path.join(args.in_mex, args.mex_bcd),
+            "mex_ftr": os.path.join(args.in_mex, args.mex_ftr),
+            "mex_mtx": os.path.join(args.in_mex, args.mex_mtx),
             "in_parquet": args.in_parquet,
         }
     elif args.platform == "seqscope":
         in_dict = {
-            "sge_bcd": os.path.join(args.in_sge, args.sge_bcd),
-            "sge_ftr": os.path.join(args.in_sge, args.sge_ftr),
-            "sge_mtx": os.path.join(args.in_sge, args.sge_mtx),
+            "mex_bcd": os.path.join(args.in_mex, args.mex_bcd),
+            "mex_ftr": os.path.join(args.in_mex, args.mex_ftr),
+            "mex_mtx": os.path.join(args.in_mex, args.mex_mtx),
         }
     elif args.platform in ["10x_xenium", "cosmx_smi", "bgi_stereoseq", "vizgen_merscope", "pixel_seq", "nova_st"]:
         in_dict={
