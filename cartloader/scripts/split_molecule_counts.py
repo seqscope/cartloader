@@ -110,7 +110,8 @@ def process_chunk(chunk, bins, colname_feature, out_prefix, out_tsv_suffix, out_
     bin2nmols = {}
     for bin_id, group in chunk.groupby(chunk[colname_feature].map(bins)):
         bin2nmols[bin_id] = group.shape[0]
-        output_file = f"{out_prefix}_bin{bin_id}_{out_tsv_suffix}"
+        # bin_id may be 1.0, 2.0, etc. Convert to int and then to str
+        output_file = f"{out_prefix}_bin{str(int(bin_id))}_{out_tsv_suffix}"
         mode = 'a' if os.path.exists(output_file) else 'w'
         group.rename(columns=rename_dict).to_csv(output_file, sep=out_tsv_delim, index=False, mode=mode, header=(mode == 'w'), na_rep='NA')
     return bin2nmols

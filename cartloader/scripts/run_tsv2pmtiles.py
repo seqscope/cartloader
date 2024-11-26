@@ -151,7 +151,7 @@ def run_tsv2pmtiles(_args):
 
         result = subprocess.run(f"make -f {args.out_prefix}.Makefile -j {args.n_jobs} {'-B' if args.restart else ''}", shell=True)
         if result.returncode != 0:
-            logger.error("Error in splitting the input TSV file into CSV files")
+            logger.error("Error in converting the CSV files to pmtiles")
             sys.exit(1)
 
     # 3. clean the intermediate files and write new output files
