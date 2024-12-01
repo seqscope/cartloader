@@ -16,18 +16,19 @@ def parse_arguments(_args):
     run_params.add_argument('--makefn', type=str, default="run_ficture.mk", help='The name of the Makefile to generate (default: run_ficture.mk)')
 
     cmd_params = parser.add_argument_group("Commands", "FICTURE commands to run together")
-    cmd_params.add_argument('--main', action='store_true', default=False, help='Run the main functions (sorttsv, minibatch, segment (in ficture-compatible format), lda, decode, summary).  If --use-external, segment and lda will be skipped')
+    cmd_params.add_argument('--main', action='store_true', default=False, help='Run the main functions (sorttsv, minibatch, segment, lda, decode, summary)')
+    cmd_params.add_argument('--main-ext', action='store_true', default=False, help='Run the main functions with external projections (sorttsv, minibatch, segment, ext-lda, decode, summary)')
     cmd_params.add_argument('--sorttsv', action='store_true', default=False, help='(Main function) Sort the input tsv file')
     cmd_params.add_argument('--minibatch', action='store_true', default=False, help='(Main function) Perform minibatch step')
     cmd_params.add_argument('--segment', action='store_true', default=False, help='(Main function) Perform hexagon segmentation into FICTURE-compatible format')
-    cmd_params.add_argument('--lda', action='store_true', default=False, help='(Main function) Perform LDA model training')
+    cmd_params.add_argument('--init-lda', action='store_true', default=False, help='(Main function) Initialize model with LDA model training')
+    cmd_params.add_argument('--init-ext', action='store_true', default=False, help='(Main-ext function) Initialize model from external reference')
     cmd_params.add_argument('--projection', action='store_true', default=False, help='(Main function) Perform projection/Transform')
     cmd_params.add_argument('--decode', action='store_true', default=False, help='(Main function) Perform pixel-level decoding')
     cmd_params.add_argument('--summary', action='store_true', default=False, help='(Main function) Generate a JSON file summarizing all fixture parameters for which outputs are available in the <out-dir>.')
     cmd_params.add_argument('--segment-10x', action='store_true', default=False, help='(Additional function) Perform hexagon segmentation into 10x Genomics format')
     cmd_params.add_argument('--viz-per-factor', action='store_true', default=False, help='(Additional function) Generate pixel-level visualization for each factor')
     cmd_params.add_argument('--viz-dotplot', action='store_true', default=False, help='(Additional function) Generate dotplot visualization')
-    cmd_params.add_argument('--use-external-model', action='store_true', default=False, help='Use an external model for projection. When --use-external-model, segment and lda steps will be skipped. Provide a color map for the external model by --cmap-static and --static-cmap-file')
     # three types of external model
     #   - existing lda model: has tw & nf, and all supplement files (such as de) for the model available
     #   - models trained from hexagon-indexed SGE using other tools such as Seurat: has tw & nf without supplement files
@@ -41,10 +42,10 @@ def parse_arguments(_args):
     inout_params.add_argument('--in-feature', type=str, default=None,  help='(Optional) Input TSV file that specify which genes to use as input, e.g., feature.clean.tsv.gz. If absent, all genes will be used')
     inout_params.add_argument('--in-cstranscript', type=str, default=None, help='(Optional) If a coordinate-sorted transcript-indexed SGE file (sorted by x and y coordinates) exists, specify it by --in-cstranscript to skip the sorting step. Or use this to define the name of the sorted file. Default to transcripts.sorted.tsv.gz in the output directory')
 
-    external_params = parser.add_argument_group("External Model Parameters", """When --use-external-model, provide the pre-trained model, its type, and ID by --external-model, --external-model-type and --external-model-id. """)
-    external_params.add_argument('--external-model', type=str, default=None, help='Path to the external model file')
-    external_params.add_argument('--external-model-type', type=str, default=None, help='The type of external model. Options: "lda", "seurat", "custom"')
-    external_params.add_argument('--external-model-id', type=str, default=None, help='(Optional) Specify an ID to mark output files from external-model-based projection. For lda and seurat external models without an ID, use t<train_width>_f<n_factor> as ID.') 
+    external_params = parser.add_argument_group("External Model Parameters", """When using --init-ext, provide the pre-trained model, its type, and ID by --ext-path, --ext-type and --ext-id. """)
+    external_params.add_argument('--ext-path', type=str, default=None, help='Path to the external model file')
+    external_params.add_argument('--ext-type', type=str, default="pseudobulk", help='The type of external model. Options: "pseudobulk", "cluster"')
+    external_params.add_argument('--ext-id', type=str, default=None, help='ID of the external model') 
     
     key_params = parser.add_argument_group("Key Parameters", "Key parameters that requires user's attention")
     key_params.add_argument('--major-axis', type=str, default="X", choices=['X', 'Y', 'auto'], help='Axis where transcripts.tsv.gz are sorted. Options: X, Y, auto. If "auto", it will be automatically defined by the longer axis. Default: X')
@@ -52,7 +53,7 @@ def parse_arguments(_args):
     key_params.add_argument('--hexagon-width', type=str, default=None, help='Hexagon flat-to-flat width (in µm) used for creating hexagon-indexed SGE. Separate multiple values with commas. If absent, it will use the train-width for segmentation')
     key_params.add_argument('--hexagon-width-10x', type=str, default="12", help='Hexagon flat-to-flat width (in µm) used for creating hexagon-indexed SGE in 10x Genomics format. Separate multiple values with commas.')
     key_params.add_argument('--train-width', type=str, default=None, help='Hexagon flat-to-flat width (in um) during training. This width will be used to create hexagon-indexed SGE in FICTURE compatible format for LDA training. Use comma to specify multiple values.')
-    key_params.add_argument('--n-factor', type=str, default=None, help='Number of factors to train. Use comma to specify multiple values')
+    key_params.add_argument('--n-factor', type=str, default=None, help='Number of factors to train. Use comma to specify multiple values (cannot be used with --init-ext)')
     key_params.add_argument('--anchor-res', type=float, default=4, help='Anchor resolution for decoding')
 
     aux_params = parser.add_argument_group("Auxiliary Parameters", "Auxiliary parameters (using default is recommended)")
@@ -143,6 +144,10 @@ def define_cmap(args, model_id):
 #     df_cmap.iloc[:n_factor].to_csv(out_cmap, sep="\t", index=False)
 
 def define_lda_runs(args):
+    assert args.init_lda, "--init-lda must be ON when running define_lda_runs()"
+    assert args.train_width is not None, "When --init-lda is ON, provide at least one train width for LDA training using --train-width"
+    assert args.n_factor is not None, "When --init-lda is ON, provide at least one n.factor for LDA training using --n-factor"
+
     train_widths = [int(x) for x in args.train_width.split(",")] if args.train_width else [] #and not (args.use_external_model and args.external_model_type == "custom") else []
     n_factors = [int(x) for x in args.n_factor.split(",")] if args.n_factor else []  #and not (args.use_external_model and args.external_model_type == "custom") else []
 
@@ -158,12 +163,50 @@ def define_lda_runs(args):
     ]
     return train_params
 
-def define_proj_runs_for_lda(args):
+def define_ext_runs(args):
+    assert args.init_ext, "--init-ext must be ON when running define_ext_runs()"
+    assert args.train_width is not None, "When --init-ext is ON, provide at least one train width for LDA training using --train-width"
+    assert args.n_factor is None, "When --init-ext is ON, --n-factors must NOT be used"
+    assert args.ext_path is not None, "When --init-ext is ON, provide external model path using --ext-path"
+    assert args.ext_id is not None, "When --init-ext is ON, provide external model type using --ext-id"
+    assert "_" not in args.ext_id, "External model ID must not contain '_'"
+    #assert args.ext_type == "pseudobulk", "In current implementation, --ext-type must be 'pseudobulk'"
+
+    train_widths = [int(x) for x in args.train_width.split(",")] if args.train_width else [] #and not (args.use_external_model and args.external_model_type == "custom") else []
+
+    # get the number of factors from the model path
+    with gzip.open(args.ext_path, "rt") as f:
+        header = f.readline()
+    n_factor = len(header.strip().split("\t")) - 1
+    #print(f"Number of factors in the external model: {n_factor}")
+
+    train_params= [
+        {
+            "model_type": args.ext_type,
+            "model_id": f"t{train_width}_x{args.ext_id}",
+            "model_path": f"{args.out_dir}/ref.{args.ext_id}.model_matrix.tsv.gz",
+            "train_width": train_width, 
+            "n_factor": n_factor,
+            "factor_map": f"{args.out_dir}/t{train_width}_x{args.ext_id}.factormap.tsv",
+        }
+        for train_width in train_widths
+    ]
+    return train_params
+
+def define_training_runs(args):
+    if args.init_lda:
+        train_params = define_lda_runs(args)
+    elif args.init_ext:
+        train_params = define_ext_runs(args)
+    return train_params
+
+def define_proj_runs(args):
     fit_widths= [] if args.fit_width is None else [int(x) for x in args.fit_width.split(",")]
     proj_runs = []
-    train_params = define_lda_runs(args)
+    train_params = define_training_runs(args)
+    print(f"Train params: {train_params}")
     for train_param in train_params:
-        # lda
+        # lda/ext
         model_type = train_param["model_type"]
         train_width = train_param["train_width"]
         n_factor = train_param["n_factor"]
@@ -171,7 +214,8 @@ def define_proj_runs_for_lda(args):
         model_prefix = os.path.join(args.out_dir, model_id)
         model_path= f"{model_prefix}.model_matrix.tsv.gz"
         # proj
-        fit_width= [train_width] if fit_widths is [] else fit_widths
+        fit_widths = [train_width] if len(fit_widths) == 0 else fit_widths
+        print(f"fit_width: {fit_widths}")
         for fit_width in fit_widths:
             proj_id = f"{model_id}_p{fit_width}_a{args.anchor_res}"
             cmap_path = define_cmap(args, model_id)
@@ -179,41 +223,15 @@ def define_proj_runs_for_lda(args):
                 "model_type": model_type,
                 "model_id": model_id,
                 "model_path": model_path,
-                "train_width": train_width,
-                "n_factor": n_factor,
                 "proj_id": proj_id,
+                "n_factor": n_factor,
                 "fit_width": fit_width,
                 "cmap_path": cmap_path,
                 "prerequisite_path": f"{model_prefix}.done"
             })
+            print(f"Projection runs: {proj_runs}")
+    print(f"Projection runs: {proj_runs}")
     return proj_runs
-
-# when run with external, only one model is used, so only one train_width, one n_factor, and multiple fit_widths
-def define_proj_runs_with_external(args):
-    fit_widths= [] if args.fit_width is None else [int(x) for x in args.fit_width.split(",")]
-    proj_runs = []
-    for fit_width in fit_widths:
-        assert args.external_model_id is not None, "external_model_id is required or provide a valid train_width and a valid n_factor"
-        proj_id = f"{args.external_model_id}_p{fit_width}_a{args.anchor_res}"
-        cmap_path = define_cmap(args, args.external_model_id)
-        proj_runs.append({
-            "model_type": args.external_model_type,
-            "model_id": args.external_model_id,
-            "model_path": args.external_model,
-            "train_width": args.train_width, # None if custom model
-            "n_factor": args.n_factor,
-            "proj_id": proj_id,
-            "fit_width": fit_width,
-            "cmap_path": cmap_path,
-            "prerequisite_path": args.external_model
-        })
-    return proj_runs
-
-def define_proj_runs(args):
-    if args.use_external_model:
-        return define_proj_runs_with_external(args)
-    else:
-        return define_proj_runs_for_lda(args)
 
 def run_ficture(_args):
     """Run all functions in FICTURE by using GNU Makefile
@@ -228,14 +246,26 @@ def run_ficture(_args):
     args=parse_arguments(_args)
 
     # functions
+    assert not (args.main and args.main_ext), "Cannot choose both --main and --main-ext"
+
     if args.main:
-        args.sorttsv = True
+        args.sorttsv = True if args.in_transcript is not None else False
         args.minibatch = True
-        args.segment=True if not args.use_external_model else False
-        args.lda = True if not args.use_external_model else False
+        args.segment=True
+        args.init_lda = True
         args.projection = True
         args.decode = True
         args.summary = True
+    elif args.main_ext:
+        args.sorttsv = True if args.in_transcript is not None else False
+        args.minibatch = True
+        args.segment=True
+        args.init_ext = True
+        args.projection = True
+        args.decode = True
+        args.summary = True
+
+    assert not (args.init_lda and args.init_ext), "Cannot choose both --init-lda and --init-ext"
 
     # input/output/other files
     # dirs
@@ -255,24 +285,24 @@ def run_ficture(_args):
     if args.out_json is None:
         args.out_json = os.path.join(args.out_dir, f"ficture.params.json") 
     # lda
-    if args.lda:
-        assert args.train_width is not None, "When --lda, provide at least one train width for LDA training using --train-width"
-        assert args.n_factor is not None, "When --lda, provide at least one n factor for LDA training using --n-factor"
+    # if args.init_lda:
+    #     assert args.train_width is not None, "When --lda, provide at least one train width for LDA training using --train-width"
+    #     assert args.n_factor is not None, "When --lda, provide at least one n factor for LDA training using --n-factor"
     # external model
-    if args.use_external_model:
-        args.external_model_type = args.external_model_type.lower()
-        assert args.external_model is not None, "When using an external model, provide the model file by --external-model"
-        # read n_factor from the external model
-        if args.n_factor is None:
-            with gzip.open(args.external_model, "rt") as f:
-                header = f.readline()
-            args.n_factor = len(header.strip().split("\t")) - 1
-        # a valid id            
-        if args.external_model_id is None:
-            if args.external_model_type in ["lda", "seurat"] and args.train_width is not None and args.n_factor is not None:
-                args.external_model_id = f"t{args.train_width}_f{args.n_factor}"
-            else:
-                raise ValueError("When using an external model, provide a valid ID by --external-model-id")
+    # if args.init_ext:
+    #     args.external_model_type = args.external_model_type.lower()
+    #     assert args.external_model is not None, "When using an external model, provide the model file by --external-model"
+    #     # read n_factor from the external model
+    #     if args.n_factor is None:
+    #         with gzip.open(args.external_model, "rt") as f:
+    #             header = f.readline()
+    #         args.n_factor = len(header.strip().split("\t")) - 1
+    #     # a valid id            
+    #     if args.external_model_id is None:
+    #         if args.external_model_type in ["lda", "seurat"] and args.train_width is not None and args.n_factor is not None:
+    #             args.external_model_id = f"t{args.train_width}_f{args.n_factor}"
+    #         else:
+    #             raise ValueError("When using an external model, provide a valid ID by --external-model-id")
     # major axis
     major_axis = define_major_axis(args)
     # check static cmap file
@@ -382,7 +412,7 @@ def run_ficture(_args):
             mm.add_target(f"{args.out_dir}/hexagon.d_{hexagon_width}.10x.done", [args.in_cstranscript], cmds)
 
     # 4. lda
-    if args.lda:
+    if args.init_lda:
         lda_runs= define_lda_runs(args)
         for lda_params in lda_runs:
             # params & prefix
@@ -426,9 +456,88 @@ def run_ficture(_args):
             # 3) coarse plot/DE/report
             cmds = cmd_separator([], f" LDA visualization and report for {train_width}um and {n_factor} factors...")
             cmds.append(f"ficture plot_base --input {lda_fit_tsv} --output {model_prefix}.coarse --fill_range {lda_fillr} --color_table {cmap} --plot_um_per_pixel {args.lda_plot_um_per_pixel} --plot_discretized")
-            cmds.append(f"ficture de_bulk --input {lda_postcount_tsv} --output {lda_de} --min_ct_per_feature {args.min_ct_per_feature} --max_pval_output {args.de_max_pval} --min_fold_output {args.de_min_fold} --thread {args.threads}")
+            cmds.append(f"ficture de_bulk --input {lda_postcount_tsv} --output {lda_de} --min_ct_per_feature {args.min_ct_per_feature} --max_pval_output {args.de_max_pval} --min_fold_output {args.de_min_fold}")
             cmds.append(f"ficture factor_report --path {args.out_dir} --pref {model_id} --color_table {cmap}")
             cmds.append(f"[ -f {model_prefix}.coarse.png ] && [ -f {lda_de} ] && [ -f {model_prefix}.factor.info.html ] && touch {model_prefix}_summary.done")
+            mm.add_target(f"{model_prefix}_summary.done", [f"{model_prefix}.done"], cmds)
+
+    # 5. init_ext
+    if args.init_ext:
+        ext_runs= define_ext_runs(args)
+
+        # get the number of factors from the model path
+        with gzip.open(args.ext_path, "rt") as f:
+            header = f.readline()
+        n_factor = len(header.strip().split("\t")) - 1
+        print(f"Number of factors in the external model: {n_factor}")
+
+        ## copy the reference model matrix to the output directory for reproducbility
+        print(f"Copying the external model to output directory")
+        shutil.copyfile(args.ext_path, f"{args.out_dir}/ref.{args.ext_id}.model_matrix.tsv.gz")
+
+        for ext_params in ext_runs:
+            # params & prefix
+            train_width = ext_params["train_width"]
+            model_id = ext_params["model_id"]
+            model_path = ext_params["model_path"]
+            model_type = ext_params["model_type"]
+            model_prefix = os.path.join(args.out_dir, model_id)
+
+            assert model_type == "pseudobulk", "In current implementation, --ext-type must be 'pseudobulk'"
+
+            ext_fillr = (train_width / 2 + 1)
+            # files
+            hexagon = f"{args.out_dir}/hexagon.d_{train_width}.tsv.gz"
+            init_postcount_tsv = f"{model_prefix}_ref.posterior.count.tsv.gz"
+            init_fit_tsv = f"{model_prefix}_ref.fit_result.tsv.gz"
+
+            # 1) fit model
+            cmds = cmd_separator([], f"Projecting {model_id} for {train_width}um...")
+            cmd = " ".join([
+                "ficture", "init_model_from_pseudobulk",
+                f"--input {hexagon} {feature_arg}",
+                f"--output {model_prefix}_ref",
+                f"--model {model_path}",
+                f"--epoch 0",
+                f"--scale_model_rel -1",
+                f"--reorder_factors",
+                f"--key {args.key_col}",
+                f"--min_ct_per_feature {args.min_ct_per_feature}", 
+                f"--thread {args.threads}",
+                ])
+            cmds.append(cmd)
+
+            ext_model_matrix = f"{model_prefix}.model_matrix.tsv.gz"
+            ext_postcount_tsv = f"{model_prefix}.posterior.count.tsv.gz"
+            ext_fit_tsv = f"{model_prefix}.fit_result.tsv.gz"
+            ext_de = f"{model_prefix}.bulk_chisq.tsv"
+            ext_factormap_tsv = f"{model_prefix}.factormap.tsv"
+
+            cmd = " ".join([
+                "cartloader", "reheader_factors_tsv",
+                f"--fit-tsv {init_fit_tsv}",
+                f"--postcount-tsv {init_postcount_tsv}",
+                f"--out {model_prefix}",
+                f"--gzip '{args.gzip}' "
+                f"--log"
+                ])
+            cmds.append(cmd)
+            cmds.append(f"rm -f {init_fit_tsv} {init_postcount_tsv}")
+            cmds.append(f"[ -f {ext_fit_tsv} ] && [ -f {ext_factormap_tsv} ] && [ -f {ext_model_matrix} ] && [ -f {ext_postcount_tsv} ] && touch {model_prefix}.done" )
+            mm.add_target(f"{model_prefix}.done", [args.in_cstranscript, hexagon], cmds)
+
+            # 2) choose color 
+            cmap = args.static_cmap_file if args.cmap_static else f"{model_prefix}.rgb.tsv"
+            cmds = run_choose_color(args, ext_fit_tsv, n_factor, model_prefix)
+            if len(cmds) > 0:
+                mm.add_target(cmap, [f"{model_prefix}.done"], cmds)
+
+            # 3) coarse plot/DE/report
+            cmds = cmd_separator([], f"LDA visualization and report for {train_width}um and {n_factor} factors...")
+            cmds.append(f"ficture plot_base --input {ext_fit_tsv} --output {model_prefix}.coarse --fill_range {ext_fillr} --color_table {cmap} --plot_um_per_pixel {args.lda_plot_um_per_pixel} --plot_discretized")
+            cmds.append(f"ficture de_bulk --input {ext_postcount_tsv} --output {ext_de} --min_ct_per_feature {args.min_ct_per_feature} --max_pval_output {args.de_max_pval} --min_fold_output {args.de_min_fold}")
+            cmds.append(f"ficture factor_report --path {args.out_dir} --pref {model_id} --color_table {cmap}")
+            cmds.append(f"[ -f {model_prefix}.coarse.png ] && [ -f {ext_de} ] && [ -f {model_prefix}.factor.info.html ] && touch {model_prefix}_summary.done")
             mm.add_target(f"{model_prefix}_summary.done", [f"{model_prefix}.done"], cmds)
 
     if args.projection:
@@ -479,8 +588,10 @@ def run_ficture(_args):
             # if the cmap_path is the one generated from lda
             lda_cmap = os.path.join(args.out_dir, f"{proj_params['model_id']}.rgb.tsv")
             if not os.path.exists(cmap_path):
-                if args.lda and cmap_path == lda_cmap:
+                if args.init_lda and cmap_path == lda_cmap:
                     print(f"Using the color map from the LDA model: {cmap_path}")
+                elif args.init_ext and cmap_path == lda_cmap:
+                    print(f"Using the color map from the external model: {cmap_path}")
                 else:
                     cmds = run_choose_color(args, proj_fit_tsv, proj_params["n_factor"], proj_prefix)
                     if len(cmds) > 0:
@@ -503,8 +614,7 @@ def run_ficture(_args):
                 f"--output {proj_de}",
                 f"--min_ct_per_feature {args.min_ct_per_feature}",
                 f"--max_pval_output {args.de_max_pval}",
-                f"--min_fold_output {args.de_min_fold}",
-                f"--thread {args.threads}"
+                f"--min_fold_output {args.de_min_fold}"
                 ])
             cmds.append(cmd)
             # - transform-report
@@ -553,9 +663,8 @@ rangey=$( echo "(${ymax} - ${ymin} + 0.5)/1+1" | bc )
                     
 
 # 2) define the block and sort axis
-declare -A axis2col
-axis2col["X"]=2
-axis2col["Y"]=3
+axis2col_X=2
+axis2col_Y=3
 
 if [[ ${major_axis} == "Y" ]]; then
     block_axis="X"
@@ -565,8 +674,8 @@ else
     offblock="${offsety}"
 fi
 
-blockidx0=$( echo "${axis2col[${block_axis}]} - 1" | bc )   # perl is 0-based
-sortidx=${axis2col[${major_axis}]}
+blockidx0=$( echo "$(eval echo \${axis2col_${block_axis}}) - 1" | bc )   # perl is 0-based
+sortidx=$(eval echo \${axis2col_${major_axis}})
                     
 # echo
 echo -e "block_axis: ${block_axis}\noffblock: ${offblock}\nblockidx in perl: ${blockidx0}\nsortidx: ${sortidx}"
@@ -578,7 +687,6 @@ header="##K=${n_factor};TOPK=${topk}\n##BLOCK_SIZE=${bsize};BLOCK_AXIS=${block_a
 ${tabix} -f -s1 -b"${sortidx}" -e"${sortidx}" ${output}
                                     
 """)
-        
         proj_runs = define_proj_runs(args)
         #print(f"Projection runs: {proj_runs}")
         #print(proj_runs)
@@ -639,8 +747,7 @@ ${tabix} -f -s1 -b"${sortidx}" -e"${sortidx}" ${output}
                 f"--output {decode_de}",
                 f"--min_ct_per_feature {args.min_ct_per_feature}",
                 f"--max_pval_output {args.de_max_pval}",
-                f"--min_fold_output {args.de_min_fold}",
-                f"--thread {args.threads}"
+                f"--min_fold_output {args.de_min_fold}"
                 ])
             cmds.append(cmd)
             cmds.append(f"ficture factor_report --path {args.out_dir} --pref {decode_id} --color_table {cmap_path}")
@@ -652,8 +759,8 @@ ${tabix} -f -s1 -b"${sortidx}" -e"${sortidx}" ${output}
         prerequisities=[]
         summary_aux_args=[]
         # lda or external model
-        if args.lda:
-            summary_aux_args_models = ["--model"]
+        if args.init_lda:
+            summary_aux_args_models = ["--lda-model"]
             train_params = define_lda_runs(args)
             for train_param in train_params:
                 train_width = train_param["train_width"]
@@ -665,12 +772,25 @@ ${tabix} -f -s1 -b"${sortidx}" -e"${sortidx}" ${output}
                 summary_cmap = args.static_cmap_file if args.cmap_static else f"{model_prefix}.rgb.tsv"
                 summary_aux_args_models.append(f"lda,{model_prefix}.model_matrix.tsv.gz,{train_param['model_id']},{train_width},{n_factor},{summary_cmap}")
             summary_aux_args.append(" ".join(summary_aux_args_models))
-        elif args.use_external_model:
-            #model_prefix = os.path.join(args.out_dir, args.external_model_id)
-            train_width=args.train_width if args.train_width is not None else -9
-            summary_aux_args.append(f"--model {args.external_model_type},{args.external_model},{args.external_model_id},{train_width},{args.n_factor},{args.static_cmap_file}")
+        elif args.init_ext:
+            summary_aux_args_models = ["--ext-model"]
+            train_params = define_ext_runs(args)
+            for train_param in train_params:
+                train_width = train_param["train_width"]
+                factor_map = train_param["factor_map"]
+                model_type = train_param["model_type"]
+                model_path = train_param["model_path"]
+                model_prefix = os.path.join(args.out_dir, train_param["model_id"])
+                # prerequisities
+                prerequisities.append(f"{model_prefix}.done")
+                # args
+                summary_cmap = args.static_cmap_file if args.cmap_static else f"{model_prefix}.rgb.tsv"
+                summary_aux_args_models.append(f"{model_type},{model_path},{train_param['model_id']},{train_width},{factor_map},{summary_cmap}")
+            summary_aux_args.append(" ".join(summary_aux_args_models))
         # projection & decode
         if args.projection or args.decode:
+            summary_aux_args_projection = ["--projection"]
+            summary_aux_args_decode = ["--decode"]
             proj_runs = define_proj_runs(args)
             for proj_params in proj_runs:
                 model_type = proj_params["model_type"]
@@ -686,11 +806,15 @@ ${tabix} -f -s1 -b"${sortidx}" -e"${sortidx}" ${output}
                     prerequisities.append(f"{args.out_dir}/{decode_id}.done")
                 # args
                 if args.projection:
-                    summary_aux_args.append(f"--projection {model_type},{model_id},{proj_id},{fit_width},{args.anchor_res}")
+                    summary_aux_args_projection.append(f"{model_type},{model_id},{proj_id},{fit_width},{args.anchor_res}")
                 if args.decode:
-                    summary_aux_args.append(f"--decode {model_type},{model_id},{proj_id},{decode_id},{radius}")
+                    summary_aux_args_decode.append(f"{model_type},{model_id},{proj_id},{decode_id},{radius}")
+            if args.projection and len(summary_aux_args_projection) > 1:
+                summary_aux_args.append(" ".join(summary_aux_args_projection))
+            if args.decode and len(summary_aux_args_decode) > 1:
+                summary_aux_args.append(" ".join(summary_aux_args_decode))
         cmds = cmd_separator([], f"Summarizing output into to the <out_json> files...")
-        cmds.append(f"cartloader write_json_for_ficture --in-cstranscript {args.in_cstranscript} --in-feature {args.in_feature} --in-minmax {args.in_minmax} --out-dir {args.out_dir} --out-json {args.out_json} {' '.join(summary_aux_args)}")
+        cmds.append(f"cartloader write_json_for_ficture --merge --in-cstranscript {args.in_cstranscript} --in-feature {args.in_feature} --in-minmax {args.in_minmax} --out-dir {args.out_dir} --out-json {args.out_json} {' '.join(summary_aux_args)}")
         mm.add_target(args.out_json, prerequisities, cmds)
 
     if args.viz_per_factor:

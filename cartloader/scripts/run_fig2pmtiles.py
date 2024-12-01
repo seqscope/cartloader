@@ -178,8 +178,8 @@ def run_fig2pmtiles(_args):
     if args.mbtiles2pmtiles:
         cmds = cmd_separator([], f"Resampling mbtiles and converting to pmtiles: {geotif_f}")
         cmds.append(f"cp {mbtile_f} {mbtile_f_ann}")
-        cmds.append(f"{args.gdaladdo} {mbtile_f_ann} -r {args.resample} 2 4 8 16 32 64 128 256")
-        cmds.append(f"{args.pmtiles} convert --force {mbtile_f_ann} {pmtiles_f}")
+        cmds.append(f"'{args.gdaladdo}' {mbtile_f_ann} -r {args.resample} 2 4 8 16 32 64 128 256")
+        cmds.append(f"'{args.pmtiles}' convert --force {mbtile_f_ann} {pmtiles_f}")
         cmds_rm.append(f"rm -f {mbtile_f_ann}")
 
         if not args.keep_files:

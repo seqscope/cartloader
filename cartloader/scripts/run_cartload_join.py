@@ -123,11 +123,11 @@ def run_cartload_join(_args):
         "--out-prefix", f"{args.out_dir}/sge-mono",
         "--colname-count", args.colname_count,
         "--main",
-        "--magick", args.magick,
-        "--pmtiles", args.pmtiles,
-        "--gdal_translate", args.gdal_translate,
-        "--gdaladdo", args.gdaladdo,
-        "--spatula", args.spatula
+        f"--magick '{args.magick}'",
+        f"--pmtiles '{args.pmtiles}'",
+        f"--gdal_translate '{args.gdal_translate}'",
+        f"--gdaladdo '{args.gdaladdo}'",
+        f"--spatula '{args.spatula}'"
     ])
     cmds.append(cmd)
     mm.add_target(f"{args.out_dir}/sge-mono-dark.pmtiles.done", [in_molecules, in_minmax], cmds)
@@ -152,7 +152,8 @@ def run_cartload_join(_args):
         # train_width = train_param["train_width"]
         # n_factor = train_param["n_factor"]
         model_id = train_param["model_id"]
-        model_path = train_param["model_path"]
+        #model_path = train_param["model_path"]
+        factormap_path = train_param.get("factor_map", None)
         model_rgb = train_param["cmap"]
 
         in_prefix = f"{args.fic_dir}/{model_id}"
@@ -165,7 +166,7 @@ def run_cartload_join(_args):
         train_inout ={
             "model":{
                 "required": True,
-                "in":  model_path,
+                "in":  f"{in_prefix}.model_matrix.tsv.gz",
                 "out": f"{out_prefix}-model-matrix.tsv.gz"
             },
             "rgb":{
@@ -189,6 +190,12 @@ def run_cartload_join(_args):
                 "out": f"{out_prefix}-info.tsv"
             }
         }
+        if factormap_path is not None:
+            train_inout["factor_map"] = {
+                "required": False,
+                "in":  factormap_path,
+                "out": f"{out_prefix}-factor-map.tsv"
+            }
 
         prerequisites = []
         cmds = cmd_separator([], f"Converting LDA-trained factors {model_id} into PMTiles and copying relevant files..")
@@ -300,9 +307,9 @@ def run_cartload_join(_args):
                     "--in-fig", in_pixel_png,
                     "--in-tsv", in_pixel_tsvf,
                     "--out-prefix", f"{out_prefix}-pixel-raster",
-                    "--pmtiles", args.pmtiles,
-                    "--gdal_translate", args.gdal_translate,
-                    "--gdaladdo", args.gdaladdo
+                    f"--pmtiles '{args.pmtiles}'",
+                    f"--gdal_translate '{args.gdal_translate}'",
+                    f"--gdaladdo '{args.gdaladdo}'"
                 ])
                 cmds.append(cmd)
                 cmds.append(f"touch {out_prefix}-pixel-raster.done")
@@ -343,7 +350,7 @@ def run_cartload_join(_args):
         cmds = cmd_separator([], f"Joining pixel-level TSVs")
         out_join_pixel_prefix = f"{args.out_dir}/transcripts_pixel_joined.sorted"
         cmd = " ".join([
-            args.spatula, "join-pixel-tsv",
+            f"'{args.spatula}'", "join-pixel-tsv",
             "--mol-tsv", in_molecules,
             "--out-prefix", out_join_pixel_prefix, 
             "--max-dist-um", str(args.max_join_dist_um),

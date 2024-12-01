@@ -84,7 +84,7 @@ def run_tsv2mono(_args):
     minmax = read_minmax(args.in_minmax, "row")
 
     cmd_drawxy = " ".join([
-        args.spatula,
+        f"'{args.spatula}'",
         "draw-xy",
         "--tsv", args.in_tsv,
         "--icol-x", str(icol_x),
@@ -104,7 +104,8 @@ def run_tsv2mono(_args):
 
     ## create TIF files
     cmd_tif = " ".join([
-        "gdal_translate", "-of", "GTiff", "-a_srs", args.srs,
+        f"'{args.gdal_translate}'", 
+        "-of", "GTiff", "-a_srs", args.srs,
         f"-a_ullr {minmax['xmin']} {minmax['ymin']} {minmax['xmax']} {minmax['ymax']}"
     ])
     cmds_dark.append(f"{cmd_tif} {args.out_prefix}-dark.png {args.out_prefix}-dark.pmtiles.tif")
@@ -112,7 +113,7 @@ def run_tsv2mono(_args):
 
     ## create MBTiles files
     cmd_mbt = " ".join([
-        args.gdal_translate, "-b", "1", "-strict",
+        f"'{args.gdal_translate}'", "-b", "1", "-strict",
         "-co", "\"ZOOM_LEVEL_STRATEGY=UPPER\"",
         "-co", f"\"RESAMPLING={args.resample.upper()}\"",
         "-co", f"\"BLOCKSIZE={args.blocksize}\"",
@@ -122,11 +123,11 @@ def run_tsv2mono(_args):
     cmds_dark.append(f"{cmd_mbt} {args.out_prefix}-dark.pmtiles.tif {args.out_prefix}-dark.pmtiles.mbtiles")
     cmds_light.append(f"{cmd_mbt} {args.out_prefix}-light.pmtiles.tif {args.out_prefix}-light.pmtiles.mbtiles")
 
-    cmds_dark.append(f"{args.gdaladdo} {args.out_prefix}-dark.pmtiles.mbtiles -r {args.resample.lower()} 2 4 8 16 32 64 128 256")
-    cmds_light.append(f"{args.gdaladdo} {args.out_prefix}-light.pmtiles.mbtiles -r {args.resample.lower()} 2 4 8 16 32 64 128 256")
+    cmds_dark.append(f"'{args.gdaladdo}' {args.out_prefix}-dark.pmtiles.mbtiles -r {args.resample.lower()} 2 4 8 16 32 64 128 256")
+    cmds_light.append(f"'{args.gdaladdo}' {args.out_prefix}-light.pmtiles.mbtiles -r {args.resample.lower()} 2 4 8 16 32 64 128 256")
 
-    cmds_dark.append(f"{args.pmtiles} convert --force {args.out_prefix}-dark.pmtiles.mbtiles {args.out_prefix}-dark.pmtiles")
-    cmds_light.append(f"{args.pmtiles} convert --force {args.out_prefix}-light.pmtiles.mbtiles {args.out_prefix}-light.pmtiles")
+    cmds_dark.append(f"'{args.pmtiles}' convert --force {args.out_prefix}-dark.pmtiles.mbtiles {args.out_prefix}-dark.pmtiles")
+    cmds_light.append(f"'{args.pmtiles}' convert --force {args.out_prefix}-light.pmtiles.mbtiles {args.out_prefix}-light.pmtiles")
 
     cmds_dark.append(f"rm {args.out_prefix}-dark.pmtiles.mbtiles {args.out_prefix}-dark.pmtiles.tif {args.out_prefix}-dark.png")
     cmds_light.append(f"rm {args.out_prefix}-light.pmtiles.mbtiles {args.out_prefix}-light.pmtiles.tif {args.out_prefix}-light.png")

@@ -13,7 +13,8 @@ def scheck_app(app_cmd):
     """
     Check if the specified application is available
     """
-    if not shutil.which(app_cmd.split(" ")[0]):
+    #if not shutil.which(app_cmd.split(" ")[0]):
+    if not shutil.which(app_cmd):
         logging.error(f"Cannot find {app_cmd}. Please make sure that the path to specify {app_cmd} is correct")
         sys.exit(1)
 
@@ -224,6 +225,7 @@ def ficture_params_to_factor_assets(params):
     ## model_id
     ## proj_params -> proj_id
     ## proj_params -> decode_params -> decode_id
+    suffix_factormap = "-factor-map.tsv"
     suffix_de = "-bulk-de.tsv"
     suffix_info = "-info.tsv"
     suffix_model = "-model-matrix.tsv.gz"
@@ -242,7 +244,7 @@ def ficture_params_to_factor_assets(params):
         len_proj_params = len(param["proj_params"])
 
         if len_proj_params == 0: ## train_param only
-            out_assets.append({
+            out_asset = {
                 "id": model_id,
                 "name": factor_id_to_name(model_id),
                 "model_id": model_id,
@@ -253,7 +255,10 @@ def ficture_params_to_factor_assets(params):
                 "pmtiles": {
                     "hex_coarse": model_id + suffix_hex_coarse
                 }
-            })
+            }
+            if "factor_map" in param:
+                out_asset["factor_map"] = model_id + suffix_factormap
+            out_assets.append(out_asset)
         elif len_proj_params == 1:
             proj_param = param["proj_params"][0]
             if not "proj_id" in proj_param:
@@ -263,7 +268,7 @@ def ficture_params_to_factor_assets(params):
             len_decode_params = len(proj_param["decode_params"])
 
             if len_decode_params == 0:
-                out_assets.append({
+                out_asset = {
                     "id": model_id,
                     "name": factor_id_to_name(model_id),
                     "model_id": model_id,
@@ -276,14 +281,17 @@ def ficture_params_to_factor_assets(params):
                         "hex_coarse": model_id + suffix_hex_coarse,
                         "hex_fine": proj_id + suffix_hex_fine
                     }
-                })
+                }
+                if "factor_map" in param:
+                    out_asset["factor_map"] = model_id + suffix_factormap
+                out_assets.append(out_asset)
             elif len_decode_params == 1:
                 decode_param = proj_param["decode_params"][0]
                 if not "decode_id" in decode_param:
                     raise ValueError(f"decode_id is missing from FICTURE parameter for {model_id}-{proj_id}")
                 decode_id = decode_param["decode_id"].replace("_", "-")
 
-                out_assets.append({
+                out_asset = {
                     "id": model_id,
                     "name": factor_id_to_name(model_id),
                     "model_id": model_id,
@@ -298,14 +306,17 @@ def ficture_params_to_factor_assets(params):
                         "hex_fine": proj_id + suffix_hex_fine,
                         "raster": decode_id + suffix_raster
                     }
-                })
+                }
+                if "factor_map" in param:
+                    out_asset["factor_map"] = model_id + suffix_factormap
+                out_assets.append(out_asset)
             else:
                 for decode_param in proj_param["decode_params"]:
                     if not "decode_id" in decode_param:
                         raise ValueError(f"decode_id is missing from FICTURE parameter for {model_id}-{proj_id}")
                     decode_id = decode_param["decode_id"].replace("_", "-")
 
-                    out_assets.append({
+                    out_asset = {
                         "id": decode_id,
                         "name": factor_id_to_name(model_id),
                         "model_id": model_id,
@@ -320,7 +331,10 @@ def ficture_params_to_factor_assets(params):
                             "hex_fine": proj_id + suffix_hex_fine,
                             "raster": decode_id + suffix_raster
                         }
-                    })
+                    }
+                    if "factor_map" in param:
+                        out_asset["factor_map"] = model_id + suffix_factormap
+                    out_assets.append(out_asset)
         else: ## multiple proj_params
             for proj_param in param["proj_params"]:
                 if not "proj_id" in proj_param:
@@ -330,7 +344,7 @@ def ficture_params_to_factor_assets(params):
                 len_decode_params = len(proj_param["decode_params"])
 
                 if len_decode_params == 0: ## train and projection only
-                    out_assets.append({
+                    out_asset = {
                         "id": model_id,
                         "name": factor_id_to_name(model_id),
                         "model_id": model_id,
@@ -343,14 +357,17 @@ def ficture_params_to_factor_assets(params):
                             "hex_coarse": model_id + suffix_hex_coarse,
                             "hex_fine": proj_id + suffix_hex_fine
                         }
-                    })
+                    }
+                    if "factor_map" in param:
+                        out_asset["factor_map"] = model_id + suffix_factormap
+                    out_assets.append(out_asset)
                 else:
                     for decode_param in proj_param["decode_params"]:
                         if not "decode_id" in decode_param:
                             raise ValueError(f"decode_id is missing from FICTURE parameter for {model_id}-{proj_id}")
                         decode_id = decode_param["decode_id"].replace("_", "-")
 
-                        out_assets.append({
+                        out_asset = {
                             "id": decode_id,
                             "name": factor_id_to_name(model_id),
                             "model_id": model_id,
@@ -365,7 +382,10 @@ def ficture_params_to_factor_assets(params):
                                 "hex_fine": proj_id + suffix_hex_fine,
                                 "raster": decode_id + suffix_raster
                             }
-                        })
+                        }
+                        if "factor_map" in param:
+                            out_asset["factor_map"] = model_id + suffix_factormap
+                        out_assets.append(out_asset)
     return out_assets
 
 ## code suggested by ChatGPT
