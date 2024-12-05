@@ -78,7 +78,7 @@ def parse_arguments(_args):
     aux_params.add_argument('--lda-rand-init', type=int, default=10, help='Number of random initialization during model training')
     aux_params.add_argument('--lda-plot-um-per-pixel', type=float, default=1, help='Image resolution for LDA plot')
     # fit 
-    aux_params.add_argument('--fit-width',  type=str, help='Hexagon flat-to-flat width (in um) during model fitting (default: same to train-width)')
+    aux_params.add_argument('--fit-width',  type=str, default=None, help='Hexagon flat-to-flat width (in um) during model fitting (default: same to train-width)')
     aux_params.add_argument('--fit-precision', type=float, default=2, help='Output precision of model fitting')
     aux_params.add_argument('--min-ct-per-unit-fit', type=int, default=20, help='Minimum count per hexagon unit during model fitting')
     aux_params.add_argument('--fit-plot-um-per-pixel', type=float, default=1, help='Image resolution for fit coarse plot')   # in Scopeflow, this is set to 2
@@ -201,10 +201,9 @@ def define_training_runs(args):
     return train_params
 
 def define_proj_runs(args):
-    fit_widths= [] if args.fit_width is None else [int(x) for x in args.fit_width.split(",")]
     proj_runs = []
     train_params = define_training_runs(args)
-    print(f"Train params: {train_params}")
+    #print(f"Train params: {train_params}")
     for train_param in train_params:
         # lda/ext
         model_type = train_param["model_type"]
@@ -214,8 +213,8 @@ def define_proj_runs(args):
         model_prefix = os.path.join(args.out_dir, model_id)
         model_path= f"{model_prefix}.model_matrix.tsv.gz"
         # proj
-        fit_widths = [train_width] if len(fit_widths) == 0 else fit_widths
-        print(f"fit_width: {fit_widths}")
+        fit_widths = [train_width] if args.fit_width is None else [int(x) for x in args.fit_width.split(",")]
+        #print(f"fit_width: {fit_widths}")
         for fit_width in fit_widths:
             proj_id = f"{model_id}_p{fit_width}_a{args.anchor_res}"
             cmap_path = define_cmap(args, model_id)
@@ -229,8 +228,9 @@ def define_proj_runs(args):
                 "cmap_path": cmap_path,
                 "prerequisite_path": f"{model_prefix}.done"
             })
-            print(f"Projection runs: {proj_runs}")
-    print(f"Projection runs: {proj_runs}")
+            print(f"proj_id: {proj_id}")
+            #print(f"Projection runs: {proj_runs}")
+    #print(f"Projection runs: {proj_runs}")
     return proj_runs
 
 def run_ficture(_args):
