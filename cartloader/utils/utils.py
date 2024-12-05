@@ -252,6 +252,7 @@ def ficture_params_to_factor_assets(params):
                 "info": model_id + suffix_info,
                 "model": model_id + suffix_model,
                 "post": model_id + suffix_post,
+                "rgb": model_id + suffix_rgb,
                 "pmtiles": {
                     "hex_coarse": model_id + suffix_hex_coarse
                 }
@@ -277,6 +278,7 @@ def ficture_params_to_factor_assets(params):
                     "info": model_id + suffix_info,
                     "model": model_id + suffix_model,
                     "post": model_id + suffix_post,
+                    "rgb": model_id + suffix_rgb,
                     "pmtiles": {
                         "hex_coarse": model_id + suffix_hex_coarse,
                         "hex_fine": proj_id + suffix_hex_fine
@@ -301,6 +303,7 @@ def ficture_params_to_factor_assets(params):
                     "info": decode_id + suffix_info,
                     "model": model_id + suffix_model,
                     "post": decode_id + suffix_post,
+                    "rgb": model_id + suffix_rgb,
                     "pmtiles": {
                         "hex_coarse": model_id + suffix_hex_coarse,
                         "hex_fine": proj_id + suffix_hex_fine,
@@ -326,6 +329,7 @@ def ficture_params_to_factor_assets(params):
                         "info": decode_id + suffix_info,
                         "model": decode_id + suffix_model,
                         "post": decode_id + suffix_post,
+                        "rgb": model_id + suffix_rgb,
                         "pmtiles": {
                             "hex_coarse": model_id + suffix_hex_coarse,
                             "hex_fine": proj_id + suffix_hex_fine,
@@ -353,6 +357,7 @@ def ficture_params_to_factor_assets(params):
                         "info": model_id + suffix_info,
                         "model": model_id + suffix_model,
                         "post": model_id + suffix_post,
+                        "rgb": model_id + suffix_rgb,
                         "pmtiles": {
                             "hex_coarse": model_id + suffix_hex_coarse,
                             "hex_fine": proj_id + suffix_hex_fine
@@ -377,6 +382,7 @@ def ficture_params_to_factor_assets(params):
                             "info": decode_id + suffix_info,
                             "model": decode_id + suffix_model,
                             "post": decode_id + suffix_post,
+                            "rgb": model_id + suffix_rgb,
                             "pmtiles": {
                                 "hex_coarse": model_id + suffix_hex_coarse,
                                 "hex_fine": proj_id + suffix_hex_fine,
