@@ -228,7 +228,7 @@ def define_proj_runs(args):
                 "cmap_path": cmap_path,
                 "prerequisite_path": f"{model_prefix}.done"
             })
-            print(f"proj_id: {proj_id}")
+            #print(f"proj_id: {proj_id}")
             #print(f"Projection runs: {proj_runs}")
     #print(f"Projection runs: {proj_runs}")
     return proj_runs
