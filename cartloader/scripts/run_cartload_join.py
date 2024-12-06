@@ -331,6 +331,7 @@ def run_cartload_join(_args):
     ## sort the pixel-level TSVs
     pixel_tsvs_to_be_joined = []
     pixel_tsvs_to_be_joined_flags=[]
+    in_pixel_ids_to_be_joined = []
     for i in range(len(join_pixel_tsvs)):
         cmds = cmd_separator([], f"Sorting pixel-level TSV {join_pixel_tsvs[i]}")
         in_pixel_tsvf = join_pixel_tsvs[i]
@@ -343,6 +344,7 @@ def run_cartload_join(_args):
         cmds.append(cmd)
         mm.add_target(f"{out_pixel_tsvprefix}.done", [in_pixel_tsvf], cmds)
         pixel_tsvs_to_be_joined.append(out_pixel_tsvf)
+        in_pixel_ids_to_be_joined.append(in_pixel_id)
         pixel_tsvs_to_be_joined_flags.append(f"{out_pixel_tsvprefix}.done")
 
     ## create a joined pixel-level TSV
@@ -355,7 +357,7 @@ def run_cartload_join(_args):
             "--out-prefix", out_join_pixel_prefix, 
             "--max-dist-um", str(args.max_join_dist_um),
             "--sort-axis", major_axis ] + 
-            [ f"--pix-prefix-tsv {in_pixel_id}_,{pixel_tsvs_to_be_joined[i]}" for i in range(len(pixel_tsvs_to_be_joined)) ]
+            [ f"--pix-prefix-tsv {in_pixel_ids_to_be_joined[i]}_,{pixel_tsvs_to_be_joined[i]}" for i in range(len(pixel_tsvs_to_be_joined)) ]
         )
         cmds.append(cmd)
         mm.add_target(f"{out_join_pixel_prefix}.tsv.gz", pixel_tsvs_to_be_joined_flags + [in_molecules], cmds)
