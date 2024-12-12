@@ -131,7 +131,8 @@ def run_cartload_join(_args):
             f"--pmtiles '{args.pmtiles}'",
             f"--gdal_translate '{args.gdal_translate}'",
             f"--gdaladdo '{args.gdaladdo}'",
-            f"--spatula '{args.spatula}'"
+            f"--spatula '{args.spatula}'",
+            "--keep-intermediate-files" if args.keep_intermediate_files else ""
         ])
         cmds.append(cmd)
         mm.add_target(f"{args.out_dir}/sge-mono-dark.pmtiles.done", [in_molecules, in_minmax], cmds)
@@ -146,8 +147,6 @@ def run_cartload_join(_args):
     out_fic_assets = ficture_params_to_factor_assets(in_fic_params, args.skip_raster)
 
     train_targets = []
-    # out_train_assets = []
-    # out_fic_assets["train_assets"] = out_train_assets
 
     join_pixel_tsvs = []
     join_pixel_ids = []
@@ -304,7 +303,8 @@ def run_cartload_join(_args):
                         "--out-prefix", f"{out_prefix}-pixel-raster",
                         f"--pmtiles '{args.pmtiles}'",
                         f"--gdal_translate '{args.gdal_translate}'",
-                        f"--gdaladdo '{args.gdaladdo}'"
+                        f"--gdaladdo '{args.gdaladdo}'",
+                        "--keep-intermediate-files" if args.keep_intermediate_files else ""
                     ])
                     cmds.append(cmd)
                     cmds.append(f"touch {out_prefix}-pixel-raster.done")
