@@ -72,8 +72,8 @@ def merge_params(params1, params2, keynames, nodenames):
 
 def write_json_for_ficture(_args):
     args = parse_arguments(_args)
-    if args.overwrite and args.append:
-        raise ValueError("Cannot use both --overwrite and --append options.")
+    if args.overwrite and args.merge:
+        raise ValueError("Cannot use both --overwrite and --merge options.")
     if args.out_json is None:
       args.out_json = os.path.join(args.out_dir, "ficture.params.json")
     
