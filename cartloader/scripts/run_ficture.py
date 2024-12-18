@@ -476,7 +476,7 @@ def run_ficture(_args):
                     "ficture", "transform",
                     f"--input {args.in_cstranscript}",
                     f"--feature {args.in_feature}" if args.in_feature is not None else "",
-                    f"--output_pref {proj_prefix}",
+                    f"--output_pref {model_prefix}",
                     f"--model {model_path}",
                     f"--key {args.key_col}",
                     f"--major_axis {major_axis}",
