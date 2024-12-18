@@ -480,7 +480,7 @@ def run_ficture(_args):
                     f"--model {model_path}",
                     f"--key {args.key_col}",
                     f"--major_axis {major_axis}",
-                    f"--hex_width {fit_width}",
+                    f"--hex_width {train_width}",
                     f"--n_move 1",
                     f"--min_ct_per_unit {args.min_ct_per_unit_fit}",
                     f"--mu_scale {args.mu_scale}",
