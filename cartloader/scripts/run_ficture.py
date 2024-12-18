@@ -54,7 +54,8 @@ def parse_arguments(_args):
     key_params.add_argument('--hexagon-width-10x', type=str, default="12", help='Hexagon flat-to-flat width (in µm) used for creating hexagon-indexed SGE in 10x Genomics format. Separate multiple values with commas.')
     key_params.add_argument('--train-width', type=str, default=None, help='Hexagon flat-to-flat width (in um) during training. This width will be used to create hexagon-indexed SGE in FICTURE compatible format for LDA training. Use comma to specify multiple values.')
     key_params.add_argument('--n-factor', type=str, default=None, help='Number of factors to train. Use comma to specify multiple values (cannot be used with --init-ext)')
-    key_params.add_argument('--anchor-res', type=float, default=4, help='Anchor resolution for decoding')
+    key_params.add_argument('--anchor-res', type=int, default=4, help='Anchor resolution for decoding')
+    key_params.add_argument('--radius-buffer', type=int, default=1, help='Buffer to radius(=anchor_res + radius_buffer) for pixel-level decoding')
 
     aux_params = parser.add_argument_group("Auxiliary Parameters", "Auxiliary parameters (using default is recommended)")
     # input column indexes
@@ -284,26 +285,6 @@ def run_ficture(_args):
     # out files
     if args.out_json is None:
         args.out_json = os.path.join(args.out_dir, f"ficture.params.json") 
-    # lda
-    # if args.init_lda:
-    #     assert args.train_width is not None, "When --lda, provide at least one train width for LDA training using --train-width"
-    #     assert args.n_factor is not None, "When --lda, provide at least one n factor for LDA training using --n-factor"
-    # external model
-    # if args.init_ext:
-    #     args.external_model_type = args.external_model_type.lower()
-    #     assert args.external_model is not None, "When using an external model, provide the model file by --external-model"
-    #     # read n_factor from the external model
-    #     if args.n_factor is None:
-    #         with gzip.open(args.external_model, "rt") as f:
-    #             header = f.readline()
-    #         args.n_factor = len(header.strip().split("\t")) - 1
-    #     # a valid id            
-    #     if args.external_model_id is None:
-    #         if args.external_model_type in ["lda", "seurat"] and args.train_width is not None and args.n_factor is not None:
-    #             args.external_model_id = f"t{args.train_width}_f{args.n_factor}"
-    #         else:
-    #             raise ValueError("When using an external model, provide a valid ID by --external-model-id")
-    # major axis
     major_axis = define_major_axis(args)
     # check static cmap file
     if args.cmap_static:
@@ -312,12 +293,6 @@ def run_ficture(_args):
             progdir = os.path.dirname(os.path.dirname(scriptdir))
             args.static_cmap_file = os.path.join(progdir, "assets", "fixed_color_map_52.tsv")
         assert os.path.exists(args.static_cmap_file), f"Static color map file {args.static_cmap_file} does not exist"
-
-    # if args.use_external_model:
-    #     if args.external_model_type in ["LDA","Seurat"]:
-    #         assert len(train_widths) ==1 , "When using an external model from LDA or Seurat, provide --train-width with a single value"
-    #     assert len(n_factors) == 1, "When specifying using an external model, provide --n_factor with a single value"
-    #     assert len(fit_widths) > 0, "When specifying using an external model, provide --fit_widths to perform projection"
     
     # start mm
     mm = minimake()
@@ -503,7 +478,7 @@ def run_ficture(_args):
                 f"--reorder_factors",
                 f"--key {args.key_col}",
                 f"--min_ct_per_feature {args.min_ct_per_feature}", 
-                f"--thread {args.threads}",
+                f"--thread 1",  ## use thread 1 because multithreading somehow does not work
                 ])
             cmds.append(cmd)
 
@@ -557,9 +532,12 @@ def run_ficture(_args):
             fit_width = proj_params["fit_width"]
             proj_id = proj_params["proj_id"]
             proj_prefix = os.path.join(args.out_dir, proj_id)
+            
+            if ( fit_width % args.anchor_res ) != 0:
+                raise ValueError(f"fit_width {fit_width} must be divisible by anchor_res {args.anchor_res}")
 
             fit_n_move = int(fit_width / args.anchor_res)
-            fit_fillr = int(args.anchor_res//2+1)
+            fit_fillr = int(args.anchor_res / 2 + 1)
             # files
             proj_fit_tsv = f"{proj_prefix}.fit_result.tsv.gz"
             proj_postcount = f"{proj_prefix}.posterior.count.tsv.gz"
@@ -694,7 +672,7 @@ ${tabix} -f -s1 -b"${sortidx}" -e"${sortidx}" ${output}
             model_path = proj_params["model_path"]
             cmap_path  = proj_params["cmap_path"] # None or cmap path
             # params
-            radius = args.anchor_res + 1
+            radius = int(args.anchor_res + args.radius_buffer)
             proj_id = proj_params["proj_id"]
             proj_prefix = os.path.join(args.out_dir, proj_id)
             decode_id=f"{proj_id}_r{radius}"
@@ -797,7 +775,7 @@ ${tabix} -f -s1 -b"${sortidx}" -e"${sortidx}" ${output}
                 model_id = proj_params["model_id"]                
                 fit_width = proj_params["fit_width"]
                 proj_id = proj_params["proj_id"]
-                radius = args.anchor_res + 1 if args.decode else None
+                radius = int(args.anchor_res + args.radius_buffer) if args.decode else None
                 decode_id=f"{proj_id}_r{radius}" if args.decode else None
                 # prerequisities
                 if args.projection:
@@ -822,7 +800,7 @@ ${tabix} -f -s1 -b"${sortidx}" -e"${sortidx}" ${output}
         for proj_params in proj_runs:
             fit_width = proj_params["fit_width"]
             proj_id = proj_params["proj_id"]
-            radius = args.anchor_res + 1
+            radius = int(args.anchor_res + args.radius_buffer)
             decode_id=f"{proj_id}_r{radius}"
             decode_prefix = os.path.join(args.out_dir, decode_id)
             # files
@@ -854,7 +832,7 @@ ${tabix} -f -s1 -b"${sortidx}" -e"${sortidx}" ${output}
             for proj_params in proj_runs:
                 fit_width = proj_params["fit_width"]
                 proj_id = proj_params["proj_id"]
-                radius = args.anchor_res + 1
+                radius = int(args.anchor_res + args.radius_buffer)
                 decode_id=f"{proj_id}_r{radius}"
                 decode_prefix = os.path.join(args.out_dir, decode_id)
                 # proj
