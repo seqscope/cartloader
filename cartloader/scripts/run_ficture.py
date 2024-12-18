@@ -470,7 +470,7 @@ def run_ficture(_args):
             # 1) fit model
             cmds = cmd_separator([], f"Projecting {model_id} for {train_width}um...")
             if ( args.copy_ext_model ):
-                cmd = "cp -f {model_path} {model_prefix}.model_matrix.tsv.gz"
+                cmd = f"cp -f {model_path} {model_prefix}.model_matrix.tsv.gz"
                 cmds.append(cmd)
                 cmd = " ".join([
                     "ficture", "transform",
