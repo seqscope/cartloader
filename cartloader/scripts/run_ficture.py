@@ -547,6 +547,7 @@ def run_ficture(_args):
             cmd = " ".join([
                 "ficture", "transform",
                 f"--input {args.in_cstranscript}",
+                f"--feature {args.in_feature}" if args.in_feature is not None else "",
                 f"--output_pref {proj_prefix}",
                 f"--model {model_path}",
                 f"--key {args.key_col}",
@@ -688,6 +689,7 @@ ${tabix} -f -s1 -b"${sortidx}" -e"${sortidx}" ${output}
             cmd = " ".join([
                 "ficture", "slda_decode",
                 f"--input {batch_mat}",
+                f"--feature {args.in_feature}" if args.in_feature is not None else "",
                 f"--output {decode_prefix}",
                 f"--model {model_path}",
                 f"--anchor {proj_fit_tsv}",
