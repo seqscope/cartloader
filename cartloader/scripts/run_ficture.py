@@ -29,6 +29,7 @@ def parse_arguments(_args):
     cmd_params.add_argument('--segment-10x', action='store_true', default=False, help='(Additional function) Perform hexagon segmentation into 10x Genomics format')
     cmd_params.add_argument('--viz-per-factor', action='store_true', default=False, help='(Additional function) Generate pixel-level visualization for each factor')
     cmd_params.add_argument('--viz-dotplot', action='store_true', default=False, help='(Additional function) Generate dotplot visualization')
+    cmd_params.add_argument('--copy-ext-model', action='store_true', default=False, help='(Main-ext function) When running with --init-ext, copy the external model instead of running --init-from-pseudobulk. This requires that the gene lists match exactly')
     # three types of external model
     #   - existing lda model: has tw & nf, and all supplement files (such as de) for the model available
     #   - models trained from hexagon-indexed SGE using other tools such as Seurat: has tw & nf without supplement files
@@ -468,19 +469,39 @@ def run_ficture(_args):
 
             # 1) fit model
             cmds = cmd_separator([], f"Projecting {model_id} for {train_width}um...")
-            cmd = " ".join([
-                "ficture", "init_model_from_pseudobulk",
-                f"--input {hexagon} {feature_arg}",
-                f"--output {model_prefix}_ref",
-                f"--model {model_path}",
-                f"--epoch 0",
-                f"--scale_model_rel -1",
-                f"--reorder_factors",
-                f"--key {args.key_col}",
-                f"--min_ct_per_feature {args.min_ct_per_feature}", 
-                f"--thread 1",  ## use thread 1 because multithreading somehow does not work
-                ])
-            cmds.append(cmd)
+            if ( args.copy_ext_model ):
+                cmd = "cp -f {model_path} {model_prefix}.model_matrix.tsv.gz"
+                cmds.append(cmd)
+                cmd = " ".join([
+                    "ficture", "transform",
+                    f"--input {args.in_cstranscript}",
+                    f"--feature {args.in_feature}" if args.in_feature is not None else "",
+                    f"--output_pref {proj_prefix}",
+                    f"--model {model_path}",
+                    f"--key {args.key_col}",
+                    f"--major_axis {major_axis}",
+                    f"--hex_width {fit_width}",
+                    f"--n_move 1",
+                    f"--min_ct_per_unit {args.min_ct_per_unit_fit}",
+                    f"--mu_scale {args.mu_scale}",
+                    f"--precision {args.fit_precision}",
+                    f"--thread {args.threads}",
+                    ])
+                cmds.append(cmd)
+            else:
+                cmd = " ".join([
+                    "ficture", "init_model_from_pseudobulk",
+                    f"--input {hexagon} {feature_arg}",
+                    f"--output {model_prefix}_ref",
+                    f"--model {model_path}",
+                    f"--epoch 0",
+                    f"--scale_model_rel -1",
+                    f"--reorder_factors",
+                    f"--key {args.key_col}",
+                    f"--min_ct_per_feature {args.min_ct_per_feature}", 
+                    f"--thread 1",  ## use thread 1 because multithreading somehow does not work
+                    ])
+                cmds.append(cmd)
 
             ext_model_matrix = f"{model_prefix}.model_matrix.tsv.gz"
             ext_postcount_tsv = f"{model_prefix}.posterior.count.tsv.gz"
