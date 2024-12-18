@@ -467,6 +467,12 @@ def run_ficture(_args):
             init_postcount_tsv = f"{model_prefix}_ref.posterior.count.tsv.gz"
             init_fit_tsv = f"{model_prefix}_ref.fit_result.tsv.gz"
 
+            ext_model_matrix = f"{model_prefix}.model_matrix.tsv.gz"
+            ext_postcount_tsv = f"{model_prefix}.posterior.count.tsv.gz"
+            ext_fit_tsv = f"{model_prefix}.fit_result.tsv.gz"
+            ext_de = f"{model_prefix}.bulk_chisq.tsv"
+            ext_factormap_tsv = f"{model_prefix}.factormap.tsv"
+
             # 1) fit model
             cmds = cmd_separator([], f"Projecting {model_id} for {train_width}um...")
             if ( args.copy_ext_model ):
@@ -477,7 +483,7 @@ def run_ficture(_args):
                     f"--input {args.in_cstranscript}",
                     f"--feature {args.in_feature}" if args.in_feature is not None else "",
                     f"--output_pref {model_prefix}",
-                    f"--model {model_path}",
+                    f"--model {model_prefix}.model_matrix.tsv.gz",
                     f"--key {args.key_col}",
                     f"--major_axis {major_axis}",
                     f"--hex_width {train_width}",
@@ -488,6 +494,18 @@ def run_ficture(_args):
                     f"--thread {args.threads}",
                     ])
                 cmds.append(cmd)
+                
+                cmd = " ".join([
+                    "cartloader", "reheader_factors_tsv",
+                    f"--fit-tsv {ext_fit_tsv}",
+                    f"--postcount-tsv {model_prefix}.model_matrix.tsv.gz",
+                    f"--out {model_prefix}",
+                    f"--gzip '{args.gzip}' "
+                    f"--log"
+                    ])
+                cmds.append(cmd)
+                cmds.append(f"[ -f {ext_fit_tsv} ] && [ -f {ext_factormap_tsv} ] && [ -f {ext_model_matrix} ] && [ -f {ext_postcount_tsv} ] && touch {model_prefix}.done" )
+
             else:
                 cmd = " ".join([
                     "ficture", "init_model_from_pseudobulk",
@@ -502,14 +520,8 @@ def run_ficture(_args):
                     f"--thread 1",  ## use thread 1 because multithreading somehow does not work
                     ])
                 cmds.append(cmd)
-
-            ext_model_matrix = f"{model_prefix}.model_matrix.tsv.gz"
-            ext_postcount_tsv = f"{model_prefix}.posterior.count.tsv.gz"
-            ext_fit_tsv = f"{model_prefix}.fit_result.tsv.gz"
-            ext_de = f"{model_prefix}.bulk_chisq.tsv"
-            ext_factormap_tsv = f"{model_prefix}.factormap.tsv"
-
-            cmd = " ".join([
+                
+                cmd = " ".join([
                 "cartloader", "reheader_factors_tsv",
                 f"--fit-tsv {init_fit_tsv}",
                 f"--postcount-tsv {init_postcount_tsv}",
@@ -517,9 +529,10 @@ def run_ficture(_args):
                 f"--gzip '{args.gzip}' "
                 f"--log"
                 ])
-            cmds.append(cmd)
-            cmds.append(f"rm -f {init_fit_tsv} {init_postcount_tsv}")
-            cmds.append(f"[ -f {ext_fit_tsv} ] && [ -f {ext_factormap_tsv} ] && [ -f {ext_model_matrix} ] && [ -f {ext_postcount_tsv} ] && touch {model_prefix}.done" )
+                cmds.append(cmd)
+                cmds.append(f"rm -f {init_fit_tsv} {init_postcount_tsv}")
+                cmds.append(f"[ -f {ext_fit_tsv} ] && [ -f {ext_factormap_tsv} ] && [ -f {ext_model_matrix} ] && [ -f {ext_postcount_tsv} ] && touch {model_prefix}.done" )
+
             mm.add_target(f"{model_prefix}.done", [args.in_cstranscript, hexagon], cmds)
 
             # 2) choose color 
