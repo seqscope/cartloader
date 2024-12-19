@@ -110,7 +110,7 @@ def write_json_for_ficture(_args):
                 "model_id": model_id,
                 "model_path": model_path,
                 "train_width": int(train_width),
-                "factor_map": factor_map,
+                **({"factor_map": factor_map} if factor_map != "None" else {}),
                 "cmap": cmap,
                 "proj_params": []
             }

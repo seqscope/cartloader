@@ -781,7 +781,7 @@ ${tabix} -f -s1 -b"${sortidx}" -e"${sortidx}" ${output}
             train_params = define_ext_runs(args)
             for train_param in train_params:
                 train_width = train_param["train_width"]
-                factor_map = train_param["factor_map"]
+                factor_map = train_param.get("factor_map", None)
                 model_type = train_param["model_type"]
                 model_path = train_param["model_path"]
                 model_prefix = os.path.join(args.out_dir, train_param["model_id"])
