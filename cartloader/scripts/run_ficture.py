@@ -398,7 +398,7 @@ def run_ficture(_args):
             model_id = lda_params["model_id"]
             model_prefix = os.path.join(args.out_dir, model_id)
 
-            lda_fillr = (train_width / 2 + 1)
+            lda_fillr = int(train_width // 2 + 1)
             # files
             hexagon = f"{args.out_dir}/hexagon.d_{train_width}.tsv.gz"
             lda_model_matrix = f"{model_prefix}.model_matrix.tsv.gz"
@@ -461,7 +461,7 @@ def run_ficture(_args):
 
             assert model_type == "pseudobulk", "In current implementation, --ext-type must be 'pseudobulk'"
 
-            ext_fillr = (train_width / 2 + 1)
+            ext_fillr = int(train_width // 2 + 1)
             # files
             hexagon = f"{args.out_dir}/hexagon.d_{train_width}.tsv.gz"
             init_postcount_tsv = f"{model_prefix}_ref.posterior.count.tsv.gz"
@@ -483,7 +483,7 @@ def run_ficture(_args):
                     f"--input {args.in_cstranscript}",
                     f"--feature {args.in_feature}" if args.in_feature is not None else "",
                     f"--output_pref {model_prefix}",
-                    f"--model {model_prefix}.model_matrix.tsv.gz",
+                    f"--model {model_path}",
                     f"--key {args.key_col}",
                     f"--major_axis {major_axis}",
                     f"--hex_width {train_width}",
@@ -571,7 +571,7 @@ def run_ficture(_args):
                 raise ValueError(f"fit_width {fit_width} must be divisible by anchor_res {args.anchor_res}")
 
             fit_n_move = int(fit_width / args.anchor_res)
-            fit_fillr = int(args.anchor_res / 2 + 1)
+            fit_fillr = int(args.anchor_res // 2 + 1)
             # files
             proj_fit_tsv = f"{proj_prefix}.fit_result.tsv.gz"
             proj_postcount = f"{proj_prefix}.posterior.count.tsv.gz"
