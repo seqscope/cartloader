@@ -189,7 +189,7 @@ def define_ext_runs(args):
             "model_path": f"{args.out_dir}/ref.{args.ext_id}.model_matrix.tsv.gz",
             "train_width": train_width, 
             "n_factor": n_factor,
-            "factor_map": f"{args.out_dir}/t{train_width}_x{args.ext_id}.factormap.tsv",
+            **({"factor_map": f"{args.out_dir}/t{train_width}_x{args.ext_id}.factormap.tsv"} if not args.copy_ext_model else {})
         }
         for train_width in train_widths
     ]
@@ -494,17 +494,7 @@ def run_ficture(_args):
                     f"--thread {args.threads}",
                     ])
                 cmds.append(cmd)
-                
-                cmd = " ".join([
-                    "cartloader", "reheader_factors_tsv",
-                    f"--fit-tsv {ext_fit_tsv}",
-                    f"--postcount-tsv {model_prefix}.model_matrix.tsv.gz",
-                    f"--out {model_prefix}",
-                    f"--gzip '{args.gzip}' "
-                    f"--log"
-                    ])
-                cmds.append(cmd)
-                cmds.append(f"[ -f {ext_fit_tsv} ] && [ -f {ext_factormap_tsv} ] && [ -f {ext_model_matrix} ] && [ -f {ext_postcount_tsv} ] && touch {model_prefix}.done" )
+                cmds.append(f"[ -f {ext_fit_tsv} ] && [ -f {ext_model_matrix} ] && [ -f {ext_postcount_tsv} ] && touch {model_prefix}.done" )
 
             else:
                 cmd = " ".join([
