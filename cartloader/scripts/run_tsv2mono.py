@@ -118,7 +118,7 @@ def run_tsv2mono(_args):
         "-co", "\"ZOOM_LEVEL_STRATEGY=UPPER\"",
         "-co", f"\"RESAMPLING={args.resample.upper()}\"",
         "-co", f"\"BLOCKSIZE={args.blocksize}\"",
-        "-ot", "Byte", "-scale", "0", "255", "-of", "mbtiles",
+        "-ot", "Byte", "-scale", "-of", "mbtiles",
         "-a_srs", args.srs
     ])
     cmds_dark.append(f"{cmd_mbt} {args.out_prefix}-dark.pmtiles.tif {args.out_prefix}-dark.pmtiles.mbtiles")

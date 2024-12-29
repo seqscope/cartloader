@@ -162,7 +162,7 @@ def run_fig2pmtiles(_args):
             "-co", f"\"RESAMPLING={args.resample}\"",
             "-co", f"\"BLOCKSIZE={args.blocksize}\"",
             "-ot", "Byte",
-            "-scale", "0", "255",
+            "-scale", 
             "-of", "mbtiles",
             "-a_srs", args.srs,
             geotif_f, 
