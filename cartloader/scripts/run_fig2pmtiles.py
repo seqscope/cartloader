@@ -40,7 +40,7 @@ def parse_arguments(_args):
     aux_params.add_argument('--pmtiles', type=str, default=f"pmtiles", help='Path to pmtiles binary from go-pmtiles')
     aux_params.add_argument('--gdal_translate', type=str, default=f"gdal_translate", help='Path to gdal_translate binary')
     aux_params.add_argument('--gdaladdo', type=str, default=f"gdaladdo", help='Path to gdaladdo binary')
-    aux_params.add_argument('--keep-files', action='store_true', default=False, help='Keep intermediate files')
+    aux_params.add_argument('--keep-intermediate-files', action='store_true', default=False, help='Keep intermediate files')
 
     
     run_params = parser.add_argument_group("Run Options", "Run options for FICTURE commands")
@@ -162,7 +162,7 @@ def run_fig2pmtiles(_args):
             "-co", f"\"RESAMPLING={args.resample}\"",
             "-co", f"\"BLOCKSIZE={args.blocksize}\"",
             "-ot", "Byte",
-            "-scale", "0", "255",
+            "-scale", 
             "-of", "mbtiles",
             "-a_srs", args.srs,
             geotif_f, 
@@ -182,7 +182,7 @@ def run_fig2pmtiles(_args):
         cmds.append(f"'{args.pmtiles}' convert --force {mbtile_f_ann} {pmtiles_f}")
         cmds_rm.append(f"rm -f {mbtile_f_ann}")
 
-        if not args.keep_files:
+        if not args.keep_intermediate_files:
             cmds += cmds_rm ## remove intermediate files
 
         mm.add_target(pmtiles_f, [mbtile_f], cmds)

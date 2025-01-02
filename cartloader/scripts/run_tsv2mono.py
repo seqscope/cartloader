@@ -34,7 +34,8 @@ def parse_arguments(_args):
     aux_params.add_argument('--pmtiles', type=str, default=f"pmtiles", help='Path to pmtiles binary from go-pmtiles')
     aux_params.add_argument('--gdal_translate', type=str, default=f"gdal_translate", help='Path to gdal_translate binary')
     aux_params.add_argument('--gdaladdo', type=str, default=f"gdaladdo", help='Path to gdaladdo binary')
-    aux_params.add_argument('--magick', type=str, default=f"magick", help='Path to ImageMagick binary from go-pmtiles')
+    aux_params.add_argument('--magick', type=str, default=f"magick", help='Path to ImageMagick binary')
+    aux_params.add_argument('--keep-intermediate-files', action='store_true', default=False, help='Keep intermediate output files')
     
     run_params = parser.add_argument_group("Run Options", "Run options for FICTURE commands")
     run_params.add_argument('--restart', action='store_true', default=False, help='Restart the run. Ignore all intermediate files and start from the beginning')
@@ -117,7 +118,7 @@ def run_tsv2mono(_args):
         "-co", "\"ZOOM_LEVEL_STRATEGY=UPPER\"",
         "-co", f"\"RESAMPLING={args.resample.upper()}\"",
         "-co", f"\"BLOCKSIZE={args.blocksize}\"",
-        "-ot", "Byte", "-scale", "0", "255", "-of", "mbtiles",
+        "-ot", "Byte", "-scale", "-of", "mbtiles",
         "-a_srs", args.srs
     ])
     cmds_dark.append(f"{cmd_mbt} {args.out_prefix}-dark.pmtiles.tif {args.out_prefix}-dark.pmtiles.mbtiles")
@@ -129,8 +130,9 @@ def run_tsv2mono(_args):
     cmds_dark.append(f"'{args.pmtiles}' convert --force {args.out_prefix}-dark.pmtiles.mbtiles {args.out_prefix}-dark.pmtiles")
     cmds_light.append(f"'{args.pmtiles}' convert --force {args.out_prefix}-light.pmtiles.mbtiles {args.out_prefix}-light.pmtiles")
 
-    cmds_dark.append(f"rm {args.out_prefix}-dark.pmtiles.mbtiles {args.out_prefix}-dark.pmtiles.tif {args.out_prefix}-dark.png")
-    cmds_light.append(f"rm {args.out_prefix}-light.pmtiles.mbtiles {args.out_prefix}-light.pmtiles.tif {args.out_prefix}-light.png")
+    if not args.keep_intermediate_files:
+        cmds_dark.append(f"rm {args.out_prefix}-dark.pmtiles.mbtiles {args.out_prefix}-dark.pmtiles.tif {args.out_prefix}-dark.png")
+        cmds_light.append(f"rm {args.out_prefix}-light.pmtiles.mbtiles {args.out_prefix}-light.pmtiles.tif {args.out_prefix}-light.png")
 
     #cmds_dark.append(f"rm {args.out_prefix}-dark.pmtiles.mbtiles {args.out_prefix}-dark.pmtiles.tif")
     #cmds_light.append(f"rm {args.out_prefix}-light.pmtiles.mbtiles {args.out_prefix}-light.pmtiles.tif")
