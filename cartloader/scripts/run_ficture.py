@@ -29,6 +29,7 @@ def parse_arguments(_args):
     cmd_params.add_argument('--segment-10x', action='store_true', default=False, help='(Additional function) Perform hexagon segmentation into 10x Genomics format')
     cmd_params.add_argument('--viz-per-factor', action='store_true', default=False, help='(Additional function) Generate pixel-level visualization for each factor')
     cmd_params.add_argument('--viz-dotplot', action='store_true', default=False, help='(Additional function) Generate dotplot visualization')
+    cmd_params.add_argument('--copy-ext-model', action='store_true', default=False, help='(Main-ext function) When running with --init-ext, copy the external model instead of running --init-from-pseudobulk. This requires that the gene lists match exactly')
     # three types of external model
     #   - existing lda model: has tw & nf, and all supplement files (such as de) for the model available
     #   - models trained from hexagon-indexed SGE using other tools such as Seurat: has tw & nf without supplement files
@@ -54,7 +55,8 @@ def parse_arguments(_args):
     key_params.add_argument('--hexagon-width-10x', type=str, default="12", help='Hexagon flat-to-flat width (in µm) used for creating hexagon-indexed SGE in 10x Genomics format. Separate multiple values with commas.')
     key_params.add_argument('--train-width', type=str, default=None, help='Hexagon flat-to-flat width (in um) during training. This width will be used to create hexagon-indexed SGE in FICTURE compatible format for LDA training. Use comma to specify multiple values.')
     key_params.add_argument('--n-factor', type=str, default=None, help='Number of factors to train. Use comma to specify multiple values (cannot be used with --init-ext)')
-    key_params.add_argument('--anchor-res', type=float, default=4, help='Anchor resolution for decoding')
+    key_params.add_argument('--anchor-res', type=int, default=4, help='Anchor resolution for decoding')
+    key_params.add_argument('--radius-buffer', type=int, default=1, help='Buffer to radius(=anchor_res + radius_buffer) for pixel-level decoding')
 
     aux_params = parser.add_argument_group("Auxiliary Parameters", "Auxiliary parameters (using default is recommended)")
     # input column indexes
@@ -187,7 +189,7 @@ def define_ext_runs(args):
             "model_path": f"{args.out_dir}/ref.{args.ext_id}.model_matrix.tsv.gz",
             "train_width": train_width, 
             "n_factor": n_factor,
-            "factor_map": f"{args.out_dir}/t{train_width}_x{args.ext_id}.factormap.tsv",
+            **({"factor_map": f"{args.out_dir}/t{train_width}_x{args.ext_id}.factormap.tsv"} if not args.copy_ext_model else {})
         }
         for train_width in train_widths
     ]
@@ -284,26 +286,6 @@ def run_ficture(_args):
     # out files
     if args.out_json is None:
         args.out_json = os.path.join(args.out_dir, f"ficture.params.json") 
-    # lda
-    # if args.init_lda:
-    #     assert args.train_width is not None, "When --lda, provide at least one train width for LDA training using --train-width"
-    #     assert args.n_factor is not None, "When --lda, provide at least one n factor for LDA training using --n-factor"
-    # external model
-    # if args.init_ext:
-    #     args.external_model_type = args.external_model_type.lower()
-    #     assert args.external_model is not None, "When using an external model, provide the model file by --external-model"
-    #     # read n_factor from the external model
-    #     if args.n_factor is None:
-    #         with gzip.open(args.external_model, "rt") as f:
-    #             header = f.readline()
-    #         args.n_factor = len(header.strip().split("\t")) - 1
-    #     # a valid id            
-    #     if args.external_model_id is None:
-    #         if args.external_model_type in ["lda", "seurat"] and args.train_width is not None and args.n_factor is not None:
-    #             args.external_model_id = f"t{args.train_width}_f{args.n_factor}"
-    #         else:
-    #             raise ValueError("When using an external model, provide a valid ID by --external-model-id")
-    # major axis
     major_axis = define_major_axis(args)
     # check static cmap file
     if args.cmap_static:
@@ -312,12 +294,6 @@ def run_ficture(_args):
             progdir = os.path.dirname(os.path.dirname(scriptdir))
             args.static_cmap_file = os.path.join(progdir, "assets", "fixed_color_map_52.tsv")
         assert os.path.exists(args.static_cmap_file), f"Static color map file {args.static_cmap_file} does not exist"
-
-    # if args.use_external_model:
-    #     if args.external_model_type in ["LDA","Seurat"]:
-    #         assert len(train_widths) ==1 , "When using an external model from LDA or Seurat, provide --train-width with a single value"
-    #     assert len(n_factors) == 1, "When specifying using an external model, provide --n_factor with a single value"
-    #     assert len(fit_widths) > 0, "When specifying using an external model, provide --fit_widths to perform projection"
     
     # start mm
     mm = minimake()
@@ -422,7 +398,7 @@ def run_ficture(_args):
             model_id = lda_params["model_id"]
             model_prefix = os.path.join(args.out_dir, model_id)
 
-            lda_fillr = (train_width / 2 + 1)
+            lda_fillr = int(train_width // 2 + 1)
             # files
             hexagon = f"{args.out_dir}/hexagon.d_{train_width}.tsv.gz"
             lda_model_matrix = f"{model_prefix}.model_matrix.tsv.gz"
@@ -485,27 +461,11 @@ def run_ficture(_args):
 
             assert model_type == "pseudobulk", "In current implementation, --ext-type must be 'pseudobulk'"
 
-            ext_fillr = (train_width / 2 + 1)
+            ext_fillr = int(train_width // 2 + 1)
             # files
             hexagon = f"{args.out_dir}/hexagon.d_{train_width}.tsv.gz"
             init_postcount_tsv = f"{model_prefix}_ref.posterior.count.tsv.gz"
             init_fit_tsv = f"{model_prefix}_ref.fit_result.tsv.gz"
-
-            # 1) fit model
-            cmds = cmd_separator([], f"Projecting {model_id} for {train_width}um...")
-            cmd = " ".join([
-                "ficture", "init_model_from_pseudobulk",
-                f"--input {hexagon} {feature_arg}",
-                f"--output {model_prefix}_ref",
-                f"--model {model_path}",
-                f"--epoch 0",
-                f"--scale_model_rel -1",
-                f"--reorder_factors",
-                f"--key {args.key_col}",
-                f"--min_ct_per_feature {args.min_ct_per_feature}", 
-                f"--thread {args.threads}",
-                ])
-            cmds.append(cmd)
 
             ext_model_matrix = f"{model_prefix}.model_matrix.tsv.gz"
             ext_postcount_tsv = f"{model_prefix}.posterior.count.tsv.gz"
@@ -513,7 +473,45 @@ def run_ficture(_args):
             ext_de = f"{model_prefix}.bulk_chisq.tsv"
             ext_factormap_tsv = f"{model_prefix}.factormap.tsv"
 
-            cmd = " ".join([
+            # 1) fit model
+            cmds = cmd_separator([], f"Projecting {model_id} for {train_width}um...")
+            if ( args.copy_ext_model ):
+                cmd = f"cp -f {model_path} {model_prefix}.model_matrix.tsv.gz"
+                cmds.append(cmd)
+                cmd = " ".join([
+                    "ficture", "transform",
+                    f"--input {args.in_cstranscript}",
+                    f"--feature {args.in_feature}" if args.in_feature is not None else "",
+                    f"--output_pref {model_prefix}",
+                    f"--model {model_path}",
+                    f"--key {args.key_col}",
+                    f"--major_axis {major_axis}",
+                    f"--hex_width {train_width}",
+                    f"--n_move 1",
+                    f"--min_ct_per_unit {args.min_ct_per_unit_fit}",
+                    f"--mu_scale {args.mu_scale}",
+                    f"--precision {args.fit_precision}",
+                    f"--thread {args.threads}",
+                    ])
+                cmds.append(cmd)
+                cmds.append(f"[ -f {ext_fit_tsv} ] && [ -f {ext_model_matrix} ] && [ -f {ext_postcount_tsv} ] && touch {model_prefix}.done" )
+
+            else:
+                cmd = " ".join([
+                    "ficture", "init_model_from_pseudobulk",
+                    f"--input {hexagon} {feature_arg}",
+                    f"--output {model_prefix}_ref",
+                    f"--model {model_path}",
+                    f"--epoch 0",
+                    f"--scale_model_rel -1",
+                    f"--reorder_factors",
+                    f"--key {args.key_col}",
+                    f"--min_ct_per_feature {args.min_ct_per_feature}", 
+                    f"--thread 1",  ## use thread 1 because multithreading somehow does not work
+                    ])
+                cmds.append(cmd)
+                
+                cmd = " ".join([
                 "cartloader", "reheader_factors_tsv",
                 f"--fit-tsv {init_fit_tsv}",
                 f"--postcount-tsv {init_postcount_tsv}",
@@ -521,9 +519,10 @@ def run_ficture(_args):
                 f"--gzip '{args.gzip}' "
                 f"--log"
                 ])
-            cmds.append(cmd)
-            cmds.append(f"rm -f {init_fit_tsv} {init_postcount_tsv}")
-            cmds.append(f"[ -f {ext_fit_tsv} ] && [ -f {ext_factormap_tsv} ] && [ -f {ext_model_matrix} ] && [ -f {ext_postcount_tsv} ] && touch {model_prefix}.done" )
+                cmds.append(cmd)
+                cmds.append(f"rm -f {init_fit_tsv} {init_postcount_tsv}")
+                cmds.append(f"[ -f {ext_fit_tsv} ] && [ -f {ext_factormap_tsv} ] && [ -f {ext_model_matrix} ] && [ -f {ext_postcount_tsv} ] && touch {model_prefix}.done" )
+
             mm.add_target(f"{model_prefix}.done", [args.in_cstranscript, hexagon], cmds)
 
             # 2) choose color 
@@ -557,9 +556,12 @@ def run_ficture(_args):
             fit_width = proj_params["fit_width"]
             proj_id = proj_params["proj_id"]
             proj_prefix = os.path.join(args.out_dir, proj_id)
+            
+            if ( fit_width % args.anchor_res ) != 0:
+                raise ValueError(f"fit_width {fit_width} must be divisible by anchor_res {args.anchor_res}")
 
             fit_n_move = int(fit_width / args.anchor_res)
-            fit_fillr = int(args.anchor_res//2+1)
+            fit_fillr = int(args.anchor_res // 2 + 1)
             # files
             proj_fit_tsv = f"{proj_prefix}.fit_result.tsv.gz"
             proj_postcount = f"{proj_prefix}.posterior.count.tsv.gz"
@@ -569,6 +571,7 @@ def run_ficture(_args):
             cmd = " ".join([
                 "ficture", "transform",
                 f"--input {args.in_cstranscript}",
+                f"--feature {args.in_feature}" if args.in_feature is not None else "",
                 f"--output_pref {proj_prefix}",
                 f"--model {model_path}",
                 f"--key {args.key_col}",
@@ -694,7 +697,7 @@ ${tabix} -f -s1 -b"${sortidx}" -e"${sortidx}" ${output}
             model_path = proj_params["model_path"]
             cmap_path  = proj_params["cmap_path"] # None or cmap path
             # params
-            radius = args.anchor_res + 1
+            radius = int(args.anchor_res + args.radius_buffer)
             proj_id = proj_params["proj_id"]
             proj_prefix = os.path.join(args.out_dir, proj_id)
             decode_id=f"{proj_id}_r{radius}"
@@ -710,6 +713,7 @@ ${tabix} -f -s1 -b"${sortidx}" -e"${sortidx}" ${output}
             cmd = " ".join([
                 "ficture", "slda_decode",
                 f"--input {batch_mat}",
+                f"--feature {args.in_feature}" if args.in_feature is not None else "",
                 f"--output {decode_prefix}",
                 f"--model {model_path}",
                 f"--anchor {proj_fit_tsv}",
@@ -777,7 +781,7 @@ ${tabix} -f -s1 -b"${sortidx}" -e"${sortidx}" ${output}
             train_params = define_ext_runs(args)
             for train_param in train_params:
                 train_width = train_param["train_width"]
-                factor_map = train_param["factor_map"]
+                factor_map = train_param.get("factor_map", None)
                 model_type = train_param["model_type"]
                 model_path = train_param["model_path"]
                 model_prefix = os.path.join(args.out_dir, train_param["model_id"])
@@ -797,7 +801,7 @@ ${tabix} -f -s1 -b"${sortidx}" -e"${sortidx}" ${output}
                 model_id = proj_params["model_id"]                
                 fit_width = proj_params["fit_width"]
                 proj_id = proj_params["proj_id"]
-                radius = args.anchor_res + 1 if args.decode else None
+                radius = int(args.anchor_res + args.radius_buffer) if args.decode else None
                 decode_id=f"{proj_id}_r{radius}" if args.decode else None
                 # prerequisities
                 if args.projection:
@@ -822,7 +826,7 @@ ${tabix} -f -s1 -b"${sortidx}" -e"${sortidx}" ${output}
         for proj_params in proj_runs:
             fit_width = proj_params["fit_width"]
             proj_id = proj_params["proj_id"]
-            radius = args.anchor_res + 1
+            radius = int(args.anchor_res + args.radius_buffer)
             decode_id=f"{proj_id}_r{radius}"
             decode_prefix = os.path.join(args.out_dir, decode_id)
             # files
@@ -854,7 +858,7 @@ ${tabix} -f -s1 -b"${sortidx}" -e"${sortidx}" ${output}
             for proj_params in proj_runs:
                 fit_width = proj_params["fit_width"]
                 proj_id = proj_params["proj_id"]
-                radius = args.anchor_res + 1
+                radius = int(args.anchor_res + args.radius_buffer)
                 decode_id=f"{proj_id}_r{radius}"
                 decode_prefix = os.path.join(args.out_dir, decode_id)
                 # proj

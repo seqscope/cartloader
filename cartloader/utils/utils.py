@@ -221,7 +221,7 @@ def factor_id_to_name(factor_id):
         return factor_id
 
 ## transform FICTURE parameters to FACTOR assets (new standard)
-def ficture_params_to_factor_assets(params):
+def ficture_params_to_factor_assets(params, skip_raster=False):
     ## model_id
     ## proj_params -> proj_id
     ## proj_params -> decode_params -> decode_id
@@ -307,7 +307,7 @@ def ficture_params_to_factor_assets(params):
                     "pmtiles": {
                         "hex_coarse": model_id + suffix_hex_coarse,
                         "hex_fine": proj_id + suffix_hex_fine,
-                        "raster": decode_id + suffix_raster
+                        **({"raster": decode_id + suffix_raster} if not skip_raster else {})
                     }
                 }
                 if "factor_map" in param:
@@ -333,7 +333,7 @@ def ficture_params_to_factor_assets(params):
                         "pmtiles": {
                             "hex_coarse": model_id + suffix_hex_coarse,
                             "hex_fine": proj_id + suffix_hex_fine,
-                            "raster": decode_id + suffix_raster
+                            **({"raster": decode_id + suffix_raster} if not skip_raster else {})
                         }
                     }
                     if "factor_map" in param:
@@ -386,7 +386,7 @@ def ficture_params_to_factor_assets(params):
                             "pmtiles": {
                                 "hex_coarse": model_id + suffix_hex_coarse,
                                 "hex_fine": proj_id + suffix_hex_fine,
-                                "raster": decode_id + suffix_raster
+                                **({"raster": decode_id + suffix_raster} if not skip_raster else {})
                             }
                         }
                         if "factor_map" in param:
