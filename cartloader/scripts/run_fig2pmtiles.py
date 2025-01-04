@@ -31,6 +31,7 @@ def parse_arguments(_args):
 
     key_params = parser.add_argument_group("Key parameters")
     key_params.add_argument('--srs', type=str, default='EPSG:3857', help='For the georeference and geo2tiff steps, define the spatial reference system (default: EPSG:3857)')
+    key_params.add_argument('--mono', action='store_true', default=False, help='Black-and-white, single-banded image (default: False)')
     key_params.add_argument('--resample', type=str, default='cubic', help='For the geo2tiff step, define the resampling method (default: cubic). Options: near, bilinear, cubic, etc.')
     key_params.add_argument('--blocksize', type=int, default='512', help='For the geo2tiff step, define the blocksize (default: 512)')
     key_params.add_argument('--aws-bucket', type=str, default=None, help='For the update-aws step, define the path to the AWS S3 bucket')
@@ -42,7 +43,6 @@ def parse_arguments(_args):
     aux_params.add_argument('--gdaladdo', type=str, default=f"gdaladdo", help='Path to gdaladdo binary')
     aux_params.add_argument('--keep-intermediate-files', action='store_true', default=False, help='Keep intermediate files')
 
-    
     run_params = parser.add_argument_group("Run Options", "Run options for FICTURE commands")
     run_params.add_argument('--restart', action='store_true', default=False, help='Restart the run. Ignore all intermediate files and start from the beginning')
     run_params.add_argument('--n-jobs', type=int, default=1, help='Number of jobs (processes) to run in parallel')
@@ -74,7 +74,8 @@ def run_fig2pmtiles(_args):
 
     # files
     out_dir = os.path.dirname(args.out_prefix)
-    os.makedirs(out_dir, exist_ok=True)
+    if out_dir != "":
+        os.makedirs(out_dir, exist_ok=True)
     # - geotiff for 
     geotif_f = args.in_fig 
     # - mbtiles
@@ -154,9 +155,7 @@ def run_fig2pmtiles(_args):
         cmds = cmd_separator([], f"Converting from geotif to mbtiles: {geotif_f}")
         cmd = " ".join([
             args.gdal_translate, 
-            "-b", "1", 
-            "-b", "2",
-            "-b", "3",
+            "-b 1 -b 2 -b 3" if not args.mono else "-b 1",
             "-strict",
             "-co", "\"ZOOM_LEVEL_STRATEGY=UPPER\"",
             "-co", f"\"RESAMPLING={args.resample}\"",
