@@ -5,7 +5,7 @@ import tifffile, json
 from PIL import Image
 
 from cartloader.utils.minimake import minimake
-from cartloader.utils.utils import cmd_separator, scheck_app, create_custom_logger, read_minmax
+from cartloader.utils.utils import cmd_separator, scheck_app, create_custom_logger, read_minmax, hex_to_rgb
 
 def parse_arguments(_args):
     """
@@ -26,6 +26,7 @@ def parse_arguments(_args):
     inout_params.add_argument("--upper-thres-intensity", type=float, default=255, help='Intensity-based capped value for rescaling the image. Cannot be used with --upper-thres-quantile')
     inout_params.add_argument("--lower-thres-quantile", type=float, help='Quantile-based floored value for rescaling the image. Cannot be used with --lower-thres-intensity')
     inout_params.add_argument("--lower-thres-intensity", type=float, default=0, help='Intensity-based floored value for rescaling the image. Cannot be used with --lower-thres-quantile')
+    inout_params.add_argument("--colorize", type=str, help='Colorize the black-and-white image using a specific RGB code as a max value (does not work with RGB images)')
 
     aux_params = parser.add_argument_group("Auxiliary Parameters", "Additional parameters for the script")    
     aux_params.add_argument('--skip-pmtiles', action='store_true', default=False, help='Create PMTiles in addition to png')
@@ -87,6 +88,10 @@ def transform_aligned_histology(_args):
             is_mono = False
         else:
             is_mono = True
+            
+        if args.colorize is not None and is_mono is False:
+            logger.error("Cannot colorize the RGB-colored image")
+            sys.exit(1)
 
         if is_ome:
             meta = tifffile.xml2dict(tif.ome_metadata) ## extract metadata
@@ -147,7 +152,13 @@ def transform_aligned_histology(_args):
                 args.lower_thres_intensity = quantile_values[6]
         
         logger.info(f"Rescaling the image into 8 bits using [{args.lower_thres_intensity}, {args.upper_thres_intensity}] as clipping thresholds")
-        image = ((np.clip(image, a_min=args.lower_thres_intensity, a_max=args.upper_thres_intensity) - args.lower_thres_intensity) / (args.upper_thres_intensity - args.lower_thres_intensity) * 255.0).astype(np.uint8)
+        image = ((np.clip(image, a_min=args.lower_thres_intensity, a_max=args.upper_thres_intensity) - args.lower_thres_intensity) / (args.upper_thres_intensity - args.lower_thres_intensity))
+        if args.colorize is not None:
+            r, g, b = hex_to_rgb(args.colorize)            
+            image = np.stack([image * r, image * g, image * b], axis=-1).astype(np.uint8)
+            is_mono = False
+        else:
+            image = (image * 255.0).astype(np.uint8)
         # #image[image > args.thres_intensity] = args.thres_intensity
         # if args.thres_intensity == 255:
         #     image = image.astype(np.uint8)            

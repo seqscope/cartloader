@@ -219,6 +219,16 @@ def factor_id_to_name(factor_id):
             return factor_id
     else:
         return factor_id
+    
+def hex_to_rgb(hex_code):
+    """
+    Parse an RGB hex code (e.g., "#FFA500") to three integer values (R, G, B).
+    """
+    hex_code = hex_code.lstrip('#')  # Remove the '#' character if present
+    r = int(hex_code[0:2], 16)  # First two characters -> Red
+    g = int(hex_code[2:4], 16)  # Next two characters -> Green
+    b = int(hex_code[4:6], 16)  # Last two characters -> Blue
+    return r, g, b
 
 ## transform FICTURE parameters to FACTOR assets (new standard)
 def ficture_params_to_factor_assets(params, skip_raster=False):
