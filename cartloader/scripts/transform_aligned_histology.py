@@ -22,8 +22,10 @@ def parse_arguments(_args):
     inout_params.add_argument("--page", type=int, help='For 3D (X/Y/Z) OME file, specify the z-value to extract the image from')
     inout_params.add_argument("--level", type=int, default=0, help='Specify the level to extract from the OME-TIFF file')
     inout_params.add_argument("--series", type=int, default=0, help='Specify the index of series to extract from the OME-TIFF file')
-    inout_params.add_argument("--thres-quantile", type=float, help='Quantile-based threshold value for rescaling the image. Cannot be used with --thres-intensity')
-    inout_params.add_argument("--thres-intensity", type=float, default=255, help='Intensity-based threshold value for rescaling the image. Cannot be used with --thres-quantile')
+    inout_params.add_argument("--upper-thres-quantile", type=float, help='Quantile-based capped value for rescaling the image. Cannot be used with --upper-thres-intensity')
+    inout_params.add_argument("--upper-thres-intensity", type=float, default=255, help='Intensity-based capped value for rescaling the image. Cannot be used with --upper-thres-quantile')
+    inout_params.add_argument("--lower-thres-quantile", type=float, help='Quantile-based floored value for rescaling the image. Cannot be used with --lower-thres-intensity')
+    inout_params.add_argument("--lower-thres-intensity", type=float, default=0, help='Intensity-based floored value for rescaling the image. Cannot be used with --lower-thres-quantile')
 
     aux_params = parser.add_argument_group("Auxiliary Parameters", "Additional parameters for the script")    
     aux_params.add_argument('--skip-pmtiles', action='store_true', default=False, help='Create PMTiles in addition to png')
@@ -129,22 +131,29 @@ def transform_aligned_histology(_args):
         logger.info(f"Extracted image shape: {image.shape}")
         #logger.info(f"Extracted image type: {type(image.shape)}")
         
-        if args.thres_quantile is not None:        
-            quantile_values = np.quantile(image, [0, 0.25, 0.5, 0.75, 1, args.thres_quantile])
+        if args.upper_thres_quantile is not None or args.lower_thres_quantile is not None:
+            upper_thres_quantile = args.upper_thres_quantile if args.upper_thres_quantile is not None else 1
+            lower_thres_quantile = args.lower_thres_quantile if args.lower_thres_quantile is not None else 0
+            quantile_values = np.quantile(image, [0, 0.25, 0.5, 0.75, 1, upper_thres_quantile, lower_thres_quantile])
             logger.info(f"Minimum pixel intensity: {quantile_values[0]}")
             logger.info(f"Maximum pixel intensity: {quantile_values[4]}")
             logger.info(f"Median pixel intensity: {quantile_values[2]}")
             logger.info(f"IQR of pixel intensity: [{quantile_values[1]}, {quantile_values[3]}]")
-            logger.info(f"{args.thres_quantile} quantile threshold to cap the intensities: {quantile_values[5]}")
-            args.thres_intensity = quantile_values[5]
+            logger.info(f"{args.upper_thres_quantile} quantile threshold to cap the intensities: {quantile_values[5]}")
+            logger.info(f"{args.lower_thres_quantile} quantile threshold to cap the intensities: {quantile_values[6]}")
+            if args.upper_thres_quantile is not None:
+                args.upper_thres_intensity = quantile_values[5]
+            if args.lower_thres_quantile is not None:
+                args.lower_thres_intensity = quantile_values[6]
         
-        logger.info(f"Rescaling the image into 8 bits using {args.thres_intensity} as threshold")
-        #image[image > args.thres_intensity] = args.thres_intensity
-        if args.thres_intensity == 255:
-            image = image.astype(np.uint8)            
-        else:
-            image = (image * 255 / args.thres_intensity).astype(np.uint8)
-        #image = image.astype(np.uint8)
+        logger.info(f"Rescaling the image into 8 bits using [{args.lower_thres_intensity}, {args.upper_thres_intensity}] as clipping thresholds")
+        image = ((np.clip(image, a_min=args.lower_thres_intensity, a_max=args.upper_thres_intensity) - args.lower_thres_intensity) / (args.upper_thres_intensity - args.lower_thres_intensity) * 255.0).astype(np.uint8)
+        # #image[image > args.thres_intensity] = args.thres_intensity
+        # if args.thres_intensity == 255:
+        #     image = image.astype(np.uint8)            
+        # else:
+        #     image = (image * 255 / args.thres_intensity).astype(np.uint8)
+        # #image = image.astype(np.uint8)
                 
         logger.info(f"Converting the image to PNG using PIL..")
         image = Image.fromarray(image)
