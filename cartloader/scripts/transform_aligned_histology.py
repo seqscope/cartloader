@@ -168,14 +168,16 @@ def transform_aligned_histology(_args):
         #     image = (image * 255 / args.thres_intensity).astype(np.uint8)
         # #image = image.astype(np.uint8)
                 
-        logger.info(f"Converting the image to PNG using PIL..")
-        #print(image)
         
         if args.flip_horizontal:
+            logger.info(f"Performing horizontal flip in memory...")
             image = np.fliplr(image)                
         if args.flip_vertical:
+            logger.info(f"Performing vertical flip in memory...")
             image = np.flipud(image)                
-            
+
+        logger.info(f"Converting the image to PNG using PIL..")
+        #print(image)            
         image = Image.fromarray(image)
         
         logger.info(f"Saving the image...")
