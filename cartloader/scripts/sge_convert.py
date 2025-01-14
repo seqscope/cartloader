@@ -116,7 +116,7 @@ def parse_arguments(_args):
         "Auxiliary Output column parameters for the output files.")
     aux_output_params.add_argument('--colname-x', type=str, default='X', help='Column name for X (default: X)')
     aux_output_params.add_argument('--colname-y', type=str, default='Y', help='Column name for Y (default: Y)')
-    aux_output_params.add_argument('--colnames-count', type=str, default='gn', help='Comma-separate column names for Count (default: gn)')
+    aux_output_params.add_argument('--colnames-count', type=str, default='count', help='Comma-separate column names for Count (default: count)')
     aux_output_params.add_argument('--colname-feature-name', type=str, default='gene', help='Column name for feature/gene name (default: gene)')
     aux_output_params.add_argument('--colname-feature-id', type=str, default=None, help='Column name for feature/gene ID. This is only required when --csv-colname-feature-id or --print-feature-id is applied (default: None)') 
 

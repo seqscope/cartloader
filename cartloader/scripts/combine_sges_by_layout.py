@@ -7,7 +7,6 @@ def parse_minmax(file_path):
     with open(file_path, "r") as f:
         return {k: float(v) for k, v in (line.strip().split("\t") for line in f)}
 
-
 def combine_ftr_across_sge(file_list, colnames_count, colname_feature_name, colname_feature_id=None):
     data_frames = [pd.read_csv(file, sep="\t") for file in file_list]
     df_ftr_concat = pd.concat(data_frames)
@@ -106,7 +105,7 @@ def combine_sges_by_layout(_args):
     parser.add_argument("--input", type=str, nargs='*', default=[], help="List of input information in a specific format.")
     parser.add_argument("--outdir", type=str, help="Output directory.")
     parser.add_argument("--outid", type=str, default=None, help="Output ID.")
-    parser.add_argument("--colnames-count", type=str, nargs='*', help="Columns to sum.", default=['gn', 'gt', 'spl', 'unspl', 'ambig'])
+    parser.add_argument("--colnames-count", type=str, nargs='*', help="Columns to sum (default: count).", default=['count'])
     parser.add_argument('--colname-feature-name', type=str, default='gene', help='Feature name column (default: gene)')
     parser.add_argument('--colname-feature-id', type=str, default=None, help='Feature ID column (default: None)')
     parser.add_argument('--colname-x', type=str, default="X", help='X column name (default: X)')
