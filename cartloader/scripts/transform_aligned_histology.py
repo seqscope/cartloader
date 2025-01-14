@@ -173,9 +173,11 @@ def transform_aligned_histology(_args):
         if args.rotate_clockwise:
             logger.info(f"Performing 90-degree clockwise rotation in memory...")
             image = np.rot90(image, k=1, axes=(0, 1))
+            (ul[0], ul[1], lr[0], lr[1]) = (ul[1], ul[0], lr[1], lr[0])
         if args.rotate_counter:
             logger.info(f"Performing 90-degree counterclockwise rotation in memory...")
             image = np.rot90(image, k=-1, axes=(0, 1))
+            (ul[0], ul[1], lr[0], lr[1]) = (ul[1], ul[0], lr[1], lr[0])
         if args.flip_horizontal:
             logger.info(f"Performing horizontal flip in memory...")
             image = np.fliplr(image)                
