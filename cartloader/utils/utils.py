@@ -96,7 +96,28 @@ def find_major_axis(filename, format):
         return "X"
     else:
         return "Y"
-    
+
+
+def log_dataframe(df, log_message="DataFrame Info:", indentation=""): 
+    ## purpose:format the log messages so that each column value occupies a fixed width
+
+    # Calculate column widths
+    col_widths = {col: max(df[col].astype(str).apply(len).max(), len(col)) for col in df.columns}
+
+    # Prepare the header string with column names aligned
+    header = ' | '.join([col.ljust(col_widths[col]) for col in df.columns])
+
+    # Log the header
+    logging.info(f"{log_message}")
+    logging.info(indentation+header)
+    logging.info(indentation+"-" * len(header))  # Divider line
+
+    # Iterate over DataFrame rows and log each, maintaining alignment
+    for _, row in df.iterrows():
+        row_str = ' | '.join([str(row[col]).ljust(col_widths[col]) for col in df.columns])
+        logging.info(indentation+row_str)
+
+
 def read_minmax(filename, format):
     # purpose: find the longer axis of the image
     # (1) detect from the "{uid}.coordinate_minmax.tsv"  

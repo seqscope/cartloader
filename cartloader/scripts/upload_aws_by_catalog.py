@@ -8,7 +8,7 @@ def run_command(command, dry_run):
     else:
         subprocess.run(command, check=True)
 
-def upload_catalog(in_dir, catalog, s3_dir, ID, histology, dry_run):
+def upload_catalog(in_dir, catalog, s3_dir, histology, dry_run):
     commands = []
     catalog_path = os.path.join(in_dir, catalog)
     s3_catalog_path = f"s3://{s3_dir}/{catalog}"
