@@ -121,8 +121,8 @@ def transform_aligned_histology(_args):
             offset_um_x = 0 - offset_px_x / px_per_um_x
             offset_um_y = 0 - offset_px_y / px_per_um_y
             
-        ul = (offset_um_x, offset_um_y)
-        lr = (offset_um_x + px_size_x * page.shape[1], offset_um_y + px_size_y * page.shape[0])
+        ul = [offset_um_x, offset_um_y]
+        lr = [offset_um_x + px_size_x * page.shape[1], offset_um_y + px_size_y * page.shape[0]]
 
         logger.info(f"OME-TIFF mode: {is_ome}")        
         logger.info(f"Number of pages: {n_pages}")
