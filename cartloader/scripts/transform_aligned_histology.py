@@ -27,6 +27,8 @@ def parse_arguments(_args):
     inout_params.add_argument("--lower-thres-quantile", type=float, help='Quantile-based floored value for rescaling the image. Cannot be used with --lower-thres-intensity')
     inout_params.add_argument("--lower-thres-intensity", type=float, default=0, help='Intensity-based floored value for rescaling the image. Cannot be used with --lower-thres-quantile')
     inout_params.add_argument("--colorize", type=str, help='Colorize the black-and-white image using a specific RGB code as a max value (does not work with RGB images)')
+    inout_params.add_argument('--flip-horizontal', action='store_true', default=False, help='Create PMTiles in addition to png')
+    inout_params.add_argument('--flip-vertical', action='store_true', default=False, help='Create PMTiles in addition to png')
 
     aux_params = parser.add_argument_group("Auxiliary Parameters", "Additional parameters for the script")    
     aux_params.add_argument('--skip-pmtiles', action='store_true', default=False, help='Create PMTiles in addition to png')
@@ -175,6 +177,10 @@ def transform_aligned_histology(_args):
         
         if not args.skip_pmtiles:
             logger.info(f"Creating PMTiles with run_fig2pmtiles...")
+            if args.flip_horizontal:
+                (ul[0], lr[0]) = (lr[0], ul[0])
+            if args.flip_vertical:
+                (ul[1], lr[1]) = (lr[1], ul[1])
             if ul[0] < 0:
                 ul0 = f"\\{ul[0]}"
             else:
