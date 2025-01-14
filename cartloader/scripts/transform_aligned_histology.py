@@ -29,6 +29,8 @@ def parse_arguments(_args):
     inout_params.add_argument("--colorize", type=str, help='Colorize the black-and-white image using a specific RGB code as a max value (does not work with RGB images)')
     inout_params.add_argument('--flip-horizontal', action='store_true', default=False, help='Create PMTiles in addition to png')
     inout_params.add_argument('--flip-vertical', action='store_true', default=False, help='Create PMTiles in addition to png')
+    inout_params.add_argument('--rotate-clockwise', action='store_true', default=False, help='Rotate by 90 degree by clockwise direction (before flip)')
+    inout_params.add_argument('--rotate-counter', action='store_true', default=False, help='Rotate by 90 degree by counterclockwise direction (before flip)')
 
     aux_params = parser.add_argument_group("Auxiliary Parameters", "Additional parameters for the script")    
     aux_params.add_argument('--skip-pmtiles', action='store_true', default=False, help='Create PMTiles in addition to png')
@@ -168,7 +170,12 @@ def transform_aligned_histology(_args):
         #     image = (image * 255 / args.thres_intensity).astype(np.uint8)
         # #image = image.astype(np.uint8)
                 
-        
+        if args.rotate_clockwise:
+            logger.info(f"Performing 90-degree clockwise rotation in memory...")
+            image = np.rot90(image, k=1, axes=(0, 1))
+        if args.rotate_counter:
+            logger.info(f"Performing 90-degree counterclockwise rotation in memory...")
+            image = np.rot90(image, k=-1, axes=(0, 1))
         if args.flip_horizontal:
             logger.info(f"Performing horizontal flip in memory...")
             image = np.fliplr(image)                
