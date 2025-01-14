@@ -169,18 +169,24 @@ def transform_aligned_histology(_args):
         # #image = image.astype(np.uint8)
                 
         logger.info(f"Converting the image to PNG using PIL..")
-        image = Image.fromarray(image)
         #print(image)
+        
+        if args.flip_horizontal:
+            image = np.fliplr(image)                
+        if args.flip_vertical:
+            image = np.flipud(image)                
+            
+        image = Image.fromarray(image)
         
         logger.info(f"Saving the image...")
         image.save(f"{args.out_prefix}.png")
         
         if not args.skip_pmtiles:
             logger.info(f"Creating PMTiles with run_fig2pmtiles...")
-            if args.flip_horizontal:
-                (ul[0], lr[0]) = (lr[0], ul[0])
-            if args.flip_vertical:
-                (ul[1], lr[1]) = (lr[1], ul[1])
+            # if args.flip_horizontal:
+            #     (ul[0], lr[0]) = (lr[0], ul[0])
+            # if args.flip_vertical:
+            #     (ul[1], lr[1]) = (lr[1], ul[1])
             if ul[0] < 0:
                 ul0 = f"\\{ul[0]}"
             else:
