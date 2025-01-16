@@ -7,16 +7,21 @@ def parse_minmax(file_path):
     with open(file_path, "r") as f:
         return {k: float(v) for k, v in (line.strip().split("\t") for line in f)}
 
-def combine_ftr_across_sge(file_list, colnames_count, colname_feature_name, colname_feature_id=None):
+def combine_ftr_across_sge(file_list, colnames_count, colname_feature_name, colname_feature_id=None, test_mode=False):
     data_frames = [pd.read_csv(file, sep="\t") for file in file_list]
     df_ftr_concat = pd.concat(data_frames)
     group_columns = [colname_feature_name]
     if colname_feature_id and colname_feature_id in df_ftr_concat.columns:
         group_columns.append(colname_feature_id)
     df_ftr_combined = df_ftr_concat.groupby(group_columns)[colnames_count].sum().reset_index()
+    # drop rows with all zero counts
+    if test_mode:
+        df_ftr_combined_empty= df_ftr_combined.loc[(df_ftr_combined[colnames_count] == 0).all(axis=1)]
+        df_ftr_combined_empty.to_csv("empty_feature.tsv", sep="\t", index=False)
+    df_ftr_combined = df_ftr_combined.loc[~(df_ftr_combined[colnames_count] == 0).all(axis=1)]
     return df_ftr_combined
 
-def combine_transcript_across_sge(df, out_transcript, colx, coly, outcols, units_per_um, out_in_um, chunksize=100000, test_mode=False):
+def combine_transcript_across_sge(df, out_transcript, colx, coly, colnames_count, outcols, units_per_um, out_in_um, chunksize=100000, test_mode=False):
     logging.info("Merging transcripts...")
     with gzip.open(out_transcript, "wt") as out_file:
         for idx, row in df.iterrows():
@@ -50,6 +55,8 @@ def combine_transcript_across_sge(df, out_transcript, colx, coly, outcols, units
 
                         chunk["index"] = idx
                         header = idx == 0 and chunk.index[0] == 0
+                        # drop rows with all zero counts
+                        chunk = chunk.loc[~(chunk[colnames_count] == 0).all(axis=1)]
                         chunk[outcols].to_csv(out_file, sep="\t", index=False, header=header)
 
                         if test_mode:
@@ -228,12 +235,12 @@ def combine_sges_by_layout(_args):
     # feature
     out_ftr = os.path.join(args.outdir, f"{args.outid}.feature.tsv.gz" if args.outid else "feature.clean.tsv.gz")
     in_ftrs = df["feature_path"].tolist()
-    df_ftr_combined = combine_ftr_across_sge(in_ftrs, args.colnames_count, args.colname_feature_name, args.colname_feature_id)
-    df_ftr_combined.to_csv(out_ftr, sep="\t", index=False)
+    df_ftr_combined = combine_ftr_across_sge(in_ftrs, args.colnames_count, args.colname_feature_name, args.colname_feature_id, test_mode=args.test_mode)
+    df_ftr_combined.to_csv(out_ftr, sep="\t", index=False, compression="gzip")
     logging.info(f"Feature file written to {out_ftr}")
 
     out_transcript = os.path.join(args.outdir, f"{args.outid}.transcripts.unsorted.tsv.gz" if args.outid else "transcripts.unsorted.tsv.gz")
-    combine_transcript_across_sge(df, out_transcript, args.colname_x, args.colname_y, outcols=outcols, units_per_um=args.units_per_um, out_in_um=args.convert_to_um, test_mode=args.test_mode)
+    combine_transcript_across_sge(df, out_transcript, args.colname_x, args.colname_y, args.colnames_count, outcols=outcols, units_per_um=args.units_per_um, out_in_um=args.convert_to_um, test_mode=args.test_mode)
     logging.info(f"Transcript file written to {out_transcript}")
     
     if args.test_mode:

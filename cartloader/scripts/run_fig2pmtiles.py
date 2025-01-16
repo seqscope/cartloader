@@ -17,7 +17,7 @@ def parse_arguments(_args):
     cmd_params.add_argument('--main', action='store_true', default=False, help='Run main commands (geotif2mbtiles, mbtiles2pmtiles, upload-aws, update-yaml)')
     cmd_params.add_argument('--geotif2mbtiles', action='store_true', default=False, help='Convert a geotiff file to mbtiles')
     cmd_params.add_argument('--mbtiles2pmtiles', action='store_true', default=False, help='Convert mbtiles to pmtiles')
-    cmd_params.add_argument('--upload-aws', action='store_true', default=False, help='Upload the new pmtiles to the AWS S3 bucket')
+    cmd_params.add_argument('--upload-aws', action='store_true', default=False, help='Upload the new pmtiles to the AWS S3')
     cmd_params.add_argument('--update-yaml', action='store_true', default=False, help='Update the catalog.yaml file with the new pmtiles and upload to AWS')
     cmd_params.add_argument('--georeference', action='store_true', default=False, help='Plus function. Create a geotiff file from PNG or TIF file. If enabled, the user must provide georeferenced bounds using --in-tsv or --in-bounds.')
     cmd_params.add_argument('--flip-vertical', action='store_true', default=False, help='Plus function. Flip the image vertically')
@@ -33,8 +33,8 @@ def parse_arguments(_args):
     key_params.add_argument('--srs', type=str, default='EPSG:3857', help='For the georeference and geo2tiff steps, define the spatial reference system (default: EPSG:3857)')
     key_params.add_argument('--resample', type=str, default='cubic', help='For the geo2tiff step, define the resampling method (default: cubic). Options: near, bilinear, cubic, etc.')
     key_params.add_argument('--blocksize', type=int, default='512', help='For the geo2tiff step, define the blocksize (default: 512)')
-    key_params.add_argument('--aws-bucket', type=str, default=None, help='For the update-aws step, define the path to the AWS S3 bucket')
-    key_params.add_argument('--yaml', type=str, default=None, help='For the update-aws step, define the yaml file to update (default: catalog.yaml in the output directory specified by --out-prefix)')
+    key_params.add_argument('--aws-dir', type=str, default=None, help='For the update-aws step, define the path to the AWS S3 directory')
+    key_params.add_argument('--catalog-yaml', type=str, default=None, help='For the update-aws step, define the catalog yaml file to update (default: catalog.yaml in the output directory specified by --out-prefix)')
 
     aux_params = parser.add_argument_group("Auxiliary Parameters", "Auxiliary parameters (using default is recommended)")
     aux_params.add_argument('--pmtiles', type=str, default=f"pmtiles", help='Path to pmtiles binary from go-pmtiles')
@@ -42,7 +42,6 @@ def parse_arguments(_args):
     aux_params.add_argument('--gdaladdo', type=str, default=f"gdaladdo", help='Path to gdaladdo binary')
     aux_params.add_argument('--keep-intermediate-files', action='store_true', default=False, help='Keep intermediate files')
 
-    
     run_params = parser.add_argument_group("Run Options", "Run options for FICTURE commands")
     run_params.add_argument('--restart', action='store_true', default=False, help='Restart the run. Ignore all intermediate files and start from the beginning')
     run_params.add_argument('--n-jobs', type=int, default=1, help='Number of jobs (processes) to run in parallel')
@@ -82,7 +81,7 @@ def run_fig2pmtiles(_args):
     mbtile_f_ann=f"{args.out_prefix}.pmtiles.{args.resample}.mbtiles"
     # - pmtiles
     pmtiles_f=f"{args.out_prefix}.pmtiles"
-    catalog_f = f"{out_dir}/catalog.yaml" if args.yaml is None else args.yaml
+    catalog_f = f"{out_dir}/catalog.yaml" if args.catalog_yaml is None else args.catalog_yaml
 
     # start mm
     mm = minimake()
@@ -189,10 +188,10 @@ def run_fig2pmtiles(_args):
 
     # 4. Upload new PMtiles to AWS
     if args.upload_aws:
-        assert args.aws_bucket is not None, "Please provide the AWS S3 bucket path using --aws-bucket"
+        assert args.aws_dir is not None, "Please provide the AWS S3 bucket path using --aws-bucket"
         cmds = cmd_separator([], f"Uploading pmtiles to AWS: {geotif_f}")
         pmtiles_fn=os.path.basename(pmtiles_f)
-        cmds.append(f"aws s3 cp {pmtiles_f} {args.aws_bucket}/{pmtiles_fn}")
+        cmds.append(f"aws s3 cp {pmtiles_f} {args.aws_dir}/{pmtiles_fn}")
         cmds.append(f"touch {pmtiles_f}.done")
         mm.add_target(f"{pmtiles_f}.done", [pmtiles_f], cmds)
 
@@ -200,7 +199,7 @@ def run_fig2pmtiles(_args):
     if args.update_yaml:
         cmds = cmd_separator([], f"Updating yaml and uploading to AWS: {geotif_f}")
         cmds.append(f"cartloader update_yaml_for_basemap --yaml {catalog_f} --pmtiles {args.basemap_key}:{pmtiles_f}")
-        cmds.append(f"aws s3 cp {catalog_f} {args.aws_bucket}/catalog.yaml")
+        cmds.append(f"aws s3 cp {catalog_f} {args.aws_dir}/catalog.yaml")
         cmds.append(f"touch {pmtiles_f}.yaml.done")
         mm.add_target(f"{pmtiles_f}.yaml.done", [pmtiles_f, catalog_f], cmds)
     

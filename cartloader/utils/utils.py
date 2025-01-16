@@ -173,11 +173,14 @@ def read_minmax(filename, format):
 #                     cmd += f" --{arg_name} {value}"
 #     return cmd
 
-def add_param_to_cmd(cmd, args, aux_argset):
+def add_param_to_cmd(cmd, args, aux_argset, underscore2dash=True):
     aux_args = {k: v for k, v in vars(args).items() if k in aux_argset}
     for arg, value in aux_args.items():
         if value or isinstance(value, bool):
-            arg_name = arg.replace('_', '-')
+            if underscore2dash:
+                arg_name = arg.replace('_', '-')
+            else:
+                arg_name = arg
             if isinstance(value, bool) and value:
                 cmd += f" --{arg_name}"
             elif isinstance(value, list):

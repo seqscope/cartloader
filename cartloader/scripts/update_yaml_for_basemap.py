@@ -13,7 +13,7 @@ def parse_arguments(_args):
 
     inout_params = parser.add_argument_group("Input/Output Parameters", "Input/output directory/files.")
     inout_params.add_argument('--in-yaml', type=str, required=True, help='Input JSON/YAML file containing the assets')
-    inout_params.add_argument('--out-yaml', type=str, required=True, help='Output JSON/YAML file containing the assets')
+    inout_params.add_argument('--out-yaml', type=str,  default=None, help='Output JSON/YAML file containing the assets. If not provided, the input file will be overwritten')
     # add a list of basemaps pmtiles
     inout_params.add_argument('--pmtiles', type=str, nargs='+', required=True, help='List of pmtiles to add to the basemap')
 
@@ -59,6 +59,8 @@ def update_yaml_for_basemap(_args):
     catalog["assets"]["basemap"] = basemap_dict
 
     # Write the updated catalog YAML file, preserving order
+    if args.out_yaml is None:
+        args.out_yaml = args.in_yaml
     with open(args.out_yaml, 'w') as stream:
         yaml.dump(catalog, stream, Dumper=yaml.SafeDumper, default_flow_style=False, sort_keys=False)
 
