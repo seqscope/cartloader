@@ -385,7 +385,7 @@ def run_cartload_join(_args):
     # 3. Create a yaml for all output assets
     cmds = cmd_separator([], f"Writing a YAML file for all output assets")
     cmd = " ".join([
-        "cartloader", "write_yaml_for_assets",
+        "cartloader", "write_catalog_for_assets",
         "--sge-index", f"{out_molecules_prefix}_pmtiles_index.tsv", 
         "--sge-counts", f"{out_molecules_prefix}_bin_counts.json", 
         "--fic-assets", out_assets_f,

@@ -22,7 +22,8 @@ def parse_arguments(_args):
     inout_params.add_argument('--fic-assets', type=str, required=True, help='JSON/YAML file containing FICTURE output assets')
 #    inout_params.add_argument('--background-assets', type=str, help='JSON/YAML file containing background assets, if exists')
     inout_params.add_argument('--overview', type=str, help='File containing the overview assets')
-    inout_params.add_argument('--basemap', type=str, nargs="+", help='[id:file] or [id1:id2:file] containing the basemap assets')    
+    inout_params.add_argument('--basemap', type=str, nargs="+", help='[type:filename] or [type:id:filename] containing the basemap assets, where the id is the identifier of the basemap, for example hist_id in the yaml file.')    
+    inout_params.add_argument('--basemap-dir', type=str, default=None, help='Directory containing the basemap files. By default, use the directory of the out-catalog file')
     inout_params.add_argument('--out-catalog', type=str, required=True, help='JSON/YAML file containing the output assets')
 
     key_params = parser.add_argument_group("Key Parameters", "Key parameters frequently used by users")
@@ -49,6 +50,7 @@ def write_yaml_for_assets(_args):
     logger = create_custom_logger(__name__, args.out_catalog + args.log_suffix if args.log else None)
     logger.info("Analysis Started")
 
+
     ## read the SGE index file
     logger.info(f"Reading the SGE index file {args.sge_index}")
 
@@ -67,7 +69,7 @@ def write_yaml_for_assets(_args):
     fic_assets = load_file_to_dict(args.fic_assets)
 
     ## load json of background assets
-    background_assets = None
+    # background_assets = None
 
     ## create output directory
     out_dict = {}
@@ -85,29 +87,37 @@ def write_yaml_for_assets(_args):
 
     if ( args.overview is not None ):
         out_dict["assets"]["overview"] = args.overview
+    
+    if args.basemap_dir is None:
+        args.basemap_dir = os.path.dirname(args.out_catalog)
+
+    basemap_flags =[]
     if ( args.basemap is not None ):
         basemap_dict = {}
         for basemap in args.basemap:
             toks = basemap.split(":")
             if ( len(toks) == 2 ):
-                (basemap_id, basemap_file) = toks
-                if ( basemap_id in basemap_dict ):
-                    logger.error(f"Duplicate basemap id {basemap_id}")
+                (basemap_type, basemap_fn) = toks
+                if ( basemap_type in basemap_dict ):
+                    logger.error(f"Duplicate basemap id {basemap_type}")
                     sys.exit(1)
-                basemap_dict[basemap_id] = basemap_file
+                basemap_dict[basemap_type] = basemap_fn
             elif ( len(toks) == 3 ):
-                (basemap_id1, basemap_id2, basemap_file) = toks
-                if ( basemap_id1 not in basemap_dict ):
-                    basemap_dict[basemap_id1] = {}
-                    basemap_dict[basemap_id1]["default"] = basemap_id2
-                if ( basemap_id2 in basemap_dict[basemap_id1] ):
-                    logger.error(f"Duplicate basemap id {basemap_id1}:{basemap_id2}")
+                (basemap_type, basemap_id, basemap_fn) = toks
+                if ( basemap_type not in basemap_dict ):
+                    basemap_dict[basemap_type] = {}
+                    basemap_dict[basemap_type]["default"] = basemap_id
+                if ( basemap_id in basemap_dict[basemap_type] ):
+                    logger.error(f"Duplicate basemap 'type:id' : {basemap_type}:{basemap_id}")
                     sys.exit(1)
-                basemap_dict[basemap_id1][basemap_id2] = basemap_file
+                basemap_dict[basemap_type][basemap_id] = basemap_fn
             else:
                 logger.error(f"Invalid basemap format {basemap}")
                 sys.exit(1)
+            if basemap_type != "sge":
+                basemap_flags.append(os.path.join(args.basemap_dir, f"{basemap_fn}.yaml.done"))
         out_dict["assets"]["basemap"] = basemap_dict
+
 
     # if ( args.background_assets is not None ):
     #     out_dict["assets"]["background"] = args.background_assets
@@ -115,6 +125,10 @@ def write_yaml_for_assets(_args):
     ## write the output catalog
     logger.info(f"Writing the output catalog file {args.out_catalog}")
     write_dict_to_file(out_dict, args.out_catalog)
+
+    if ( len(basemap_flags) > 0 ):
+        for flag_file in basemap_flags:
+            subprocess.run(["touch", flag_file])
 
     logger.info("Analysis Finished")
 
