@@ -112,7 +112,7 @@ def parse_arguments(_args):
     env_params.add_argument('--gzip', type=str, default="gzip", help='Path to gzip binary. For faster processing, use "pigz -p 4"')
     env_params.add_argument('--sort', type=str, default="sort", help='Path to sort binary. For faster processing, you may add arguments like "sort -T /path/to/new/tmpdir --parallel=20 -S 10G"')
     env_params.add_argument('--sort-mem', type=str, default="5G", help='Memory size for each process')
-    env_params.add_argument('--ficture', type=str, default="ficture", help='Path to ficture repository')
+    #env_params.add_argument('--ficture', type=str, default="ficture", help='Path to ficture repository')
     if len(_args) == 0:
         parser.print_help()
         sys.exit(1)

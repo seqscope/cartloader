@@ -119,113 +119,113 @@ def run_fig2pmtiles(_args):
         # if args.mbtiles2pmtiles:
         #     cmds_rm.append(f"rm -f {georef_f}")
 
-    # 1. Flip the image when required 
-    if args.flip_vertical:
-        vflip_f = geotif_f.replace(".tif","") + ".vflip.tif"
-        cmds = cmd_separator([], f"Flipping the geotif vertically: {geotif_f}")        
-        cmd = f'''
-        INFO=$(gdalinfo "{geotif_f}" 2>&1)
-        if [[ $INFO =~ Size\\ is\\ ([0-9]+),\\ ([0-9]+) ]]; then
-            WIDTH1=${{BASH_REMATCH[1]}}
-            HEIGHT1=${{BASH_REMATCH[2]}}
-            echo "width: ${{WIDTH1}}, height: ${{HEIGHT1}}"
-        else
-            echo "Failed to extract image dimensions."
-        fi
-        '''
-        cmds.append(cmd)
-        cmd = " ".join([
-                "gdalwarp",
-                f'"{geotif_f}"',  # Add quotes around file names to handle spaces
-                f'"{vflip_f}"',
-                "-b", "1",
-                "-b", "2",
-                "-b", "3",
-                "-ct", "\"+proj=pipeline +step +proj=axisswap +order=1,-2\"",
-                "-overwrite",
-                "-ts", "$WIDTH1", "$HEIGHT1"  # Use the WIDTH and HEIGHT from the previous command
-            ])
-        cmds.append(cmd)
-        mm.add_target(vflip_f, [geotif_f], cmds)
-        # update geotif_f
-        geotif_f = vflip_f
-        # if args.mbtiles2pmtiles:
-        #     cmds_rm.append(f"rm -f {geotif_f}")
+    # # 1. Flip the image when required 
+    # if args.flip_vertical:
+    #     vflip_f = geotif_f.replace(".tif","") + ".vflip.tif"
+    #     cmds = cmd_separator([], f"Flipping the geotif vertically: {geotif_f}")        
+    #     cmd = f'''
+    #     INFO=$(gdalinfo "{geotif_f}" 2>&1)
+    #     if [[ $INFO =~ Size\\ is\\ ([0-9]+),\\ ([0-9]+) ]]; then
+    #         WIDTH1=${{BASH_REMATCH[1]}}
+    #         HEIGHT1=${{BASH_REMATCH[2]}}
+    #         echo "width: ${{WIDTH1}}, height: ${{HEIGHT1}}"
+    #     else
+    #         echo "Failed to extract image dimensions."
+    #     fi
+    #     '''
+    #     cmds.append(cmd)
+    #     cmd = " ".join([
+    #             "gdalwarp",
+    #             f'"{geotif_f}"',  # Add quotes around file names to handle spaces
+    #             f'"{vflip_f}"',
+    #             "-b", "1",
+    #             "-b", "2",
+    #             "-b", "3",
+    #             "-ct", "\"+proj=pipeline +step +proj=axisswap +order=1,-2\"",
+    #             "-overwrite",
+    #             "-ts", "$WIDTH1", "$HEIGHT1"  # Use the WIDTH and HEIGHT from the previous command
+    #         ])
+    #     cmds.append(cmd)
+    #     mm.add_target(vflip_f, [geotif_f], cmds)
+    #     # update geotif_f
+    #     geotif_f = vflip_f
+    #     # if args.mbtiles2pmtiles:
+    #     #     cmds_rm.append(f"rm -f {geotif_f}")
     
-    if args.flip_horizontal:
-        hflip_f = geotif_f.replace(".tif","") + ".hflip.tif"
-        cmds = cmd_separator([], f"Flipping the geotif horizontally: {geotif_f}")        
-        cmd = f'''
-        INFO=$(gdalinfo "{geotif_f}" 2>&1)
-        if [[ $INFO =~ Size\\ is\\ ([0-9]+),\\ ([0-9]+) ]]; then
-            WIDTH2=${{BASH_REMATCH[1]}}
-            HEIGHT2=${{BASH_REMATCH[2]}}
-            echo "width: ${{WIDTH2}}, height: ${{HEIGHT2}}"
-        else
-            echo "Failed to extract image dimensions."
-        fi
-        '''
-        cmds.append(cmd)
-        cmd = " ".join([
-                "gdalwarp",
-                f'"{geotif_f}"',  # Add quotes around file names to handle spaces
-                f'"{hflip_f}"',
-                "-b", "1",
-                "-b", "2",
-                "-b", "3",
-                "-ct", "\"+proj=pipeline +step +proj=axisswap +order=-1,2\"",
-                "-overwrite",
-                "-ts", "$WIDTH2", "$HEIGHT2"  # Use the WIDTH and HEIGHT from the previous command
-            ])
-        cmds.append(cmd)
-        mm.add_target(hflip_f, [geotif_f], cmds)
+    # if args.flip_horizontal:
+    #     hflip_f = geotif_f.replace(".tif","") + ".hflip.tif"
+    #     cmds = cmd_separator([], f"Flipping the geotif horizontally: {geotif_f}")        
+    #     cmd = f'''
+    #     INFO=$(gdalinfo "{geotif_f}" 2>&1)
+    #     if [[ $INFO =~ Size\\ is\\ ([0-9]+),\\ ([0-9]+) ]]; then
+    #         WIDTH2=${{BASH_REMATCH[1]}}
+    #         HEIGHT2=${{BASH_REMATCH[2]}}
+    #         echo "width: ${{WIDTH2}}, height: ${{HEIGHT2}}"
+    #     else
+    #         echo "Failed to extract image dimensions."
+    #     fi
+    #     '''
+    #     cmds.append(cmd)
+    #     cmd = " ".join([
+    #             "gdalwarp",
+    #             f'"{geotif_f}"',  # Add quotes around file names to handle spaces
+    #             f'"{hflip_f}"',
+    #             "-b", "1",
+    #             "-b", "2",
+    #             "-b", "3",
+    #             "-ct", "\"+proj=pipeline +step +proj=axisswap +order=-1,2\"",
+    #             "-overwrite",
+    #             "-ts", "$WIDTH2", "$HEIGHT2"  # Use the WIDTH and HEIGHT from the previous command
+    #         ])
+    #     cmds.append(cmd)
+    #     mm.add_target(hflip_f, [geotif_f], cmds)
 
-        # update geotif_f
-        geotif_f = hflip_f
+    #     # update geotif_f
+    #     geotif_f = hflip_f
 
-        # if args.mbtiles2pmtiles:
-        #     cmds_rm.append(f"rm -f {geotif_f}")
+    #     # if args.mbtiles2pmtiles:
+    #     #     cmds_rm.append(f"rm -f {geotif_f}")
 
-    if args.rotate_left or args.rotate_right:
-        # Determine the output file for rotation
-        direction = "left" if args.rotate_left else "right"
-        rotated_f = f"{args.out_prefix}.pmtiles.lrotate.tif" if args.rotate_left else f"{args.out_prefix}.pmtiles.rrotate.tif"
-        cmds = cmd_separator([], f"Rotating the GeoTIFF {direction}: {geotif_f}")
+    # if args.rotate_left or args.rotate_right:
+    #     # Determine the output file for rotation
+    #     direction = "left" if args.rotate_left else "right"
+    #     rotated_f = f"{args.out_prefix}.pmtiles.lrotate.tif" if args.rotate_left else f"{args.out_prefix}.pmtiles.rrotate.tif"
+    #     cmds = cmd_separator([], f"Rotating the GeoTIFF {direction}: {geotif_f}")
 
-        # Extract the dimensions of the input file
-        cmd = f'''
-        INFO=$(gdalinfo "{geotif_f}" 2>&1)
-        if [[ $INFO =~ Size\\ is\\ ([0-9]+),\\ ([0-9]+) ]]; then
-            WIDTH3=${{BASH_REMATCH[1]}}
-            HEIGHT3=${{BASH_REMATCH[2]}}
-            echo "width: ${{WIDTH3}}, height: ${{HEIGHT3}}"
-        else
-            echo "Failed to extract image dimensions."
-            exit 1
-        fi
-        '''
-        cmds.append(cmd)
+    #     # Extract the dimensions of the input file
+    #     cmd = f'''
+    #     INFO=$(gdalinfo "{geotif_f}" 2>&1)
+    #     if [[ $INFO =~ Size\\ is\\ ([0-9]+),\\ ([0-9]+) ]]; then
+    #         WIDTH3=${{BASH_REMATCH[1]}}
+    #         HEIGHT3=${{BASH_REMATCH[2]}}
+    #         echo "width: ${{WIDTH3}}, height: ${{HEIGHT3}}"
+    #     else
+    #         echo "Failed to extract image dimensions."
+    #         exit 1
+    #     fi
+    #     '''
+    #     cmds.append(cmd)
 
-        # Apply the appropriate rotation using gdalwarp
-        if args.rotate_left:
-            # Rotate left: Transpose (swap X/Y) and vertically flip
-            rotation_pipeline = "\"+proj=pipeline +step +proj=transpose +step +proj=axeswap +order=2,-1\""
-        elif args.rotate_right:
-            # Rotate right: Transpose (swap X/Y) and horizontally flip
-            rotation_pipeline = "\"+proj=pipeline +step +proj=transpose +step +proj=axeswap +order=-2,1\""
+    #     # Apply the appropriate rotation using gdalwarp
+    #     if args.rotate_left:
+    #         # Rotate left: Transpose (swap X/Y) and vertically flip
+    #         rotation_pipeline = "\"+proj=pipeline +step +proj=transpose +step +proj=axeswap +order=2,-1\""
+    #     elif args.rotate_right:
+    #         # Rotate right: Transpose (swap X/Y) and horizontally flip
+    #         rotation_pipeline = "\"+proj=pipeline +step +proj=transpose +step +proj=axeswap +order=-2,1\""
 
-        cmd = " ".join([
-            "gdalwarp",
-            f'"{geotif_f}"',  # Input GeoTIFF file
-            f'"{rotated_f}"',  # Output rotated file
-            "-b", "1",
-            "-b", "2",
-            "-b", "3",
-            "-ct", rotation_pipeline,  # Apply transformation pipeline
-            "-overwrite",
-            "-ts", "$HEIGHT3", "$WIDTH3"  # Swap dimensions for rotation
-        ])
-        cmds.append(cmd)
+    #     cmd = " ".join([
+    #         "gdalwarp",
+    #         f'"{geotif_f}"',  # Input GeoTIFF file
+    #         f'"{rotated_f}"',  # Output rotated file
+    #         "-b", "1",
+    #         "-b", "2",
+    #         "-b", "3",
+    #         "-ct", rotation_pipeline,  # Apply transformation pipeline
+    #         "-overwrite",
+    #         "-ts", "$HEIGHT3", "$WIDTH3"  # Swap dimensions for rotation
+    #     ])
+    #     cmds.append(cmd)
 
         mm.add_target(rotated_f, [geotif_f], cmds)
 
