@@ -5,11 +5,22 @@ import numpy as np
 from cartloader.utils.minimake import minimake
 from cartloader.utils.utils import cmd_separator, scheck_app, create_custom_logger
 
+# get the current path
+current_path = os.path.realpath(__file__)
+cartloader_dir=os.path.dirname(os.path.dirname(os.path.dirname(current_path)))
+gdal_get_size_script = os.path.join(cartloader_dir, 'cartloader', "utils", "gdal_get_size.sh")
+
+def cmds_for_dimensions(geotif_f, dim_f):
+    cmds = cmd_separator([], f"Extract dimensions from: {geotif_f}")
+    dim_f = geotif_f.replace(".tif",".dim.tsv") 
+    cmds.append(f"{gdal_get_size_script} {geotif_f} {dim_f}")
+    return cmds
+    
 def parse_arguments(_args):
     """
     Parse command-line arguments.
     """
-    repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+    # repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 
     parser = argparse.ArgumentParser(prog=f"cartloader run_fig2pmtiles", description="Convert a figure to pmtiles")
 
@@ -119,117 +130,105 @@ def run_fig2pmtiles(_args):
         # if args.mbtiles2pmtiles:
         #     cmds_rm.append(f"rm -f {georef_f}")
 
-    # # 1. Flip the image when required 
-    # if args.flip_vertical:
-    #     vflip_f = geotif_f.replace(".tif","") + ".vflip.tif"
-    #     cmds = cmd_separator([], f"Flipping the geotif vertically: {geotif_f}")        
-    #     cmd = f'''
-    #     INFO=$(gdalinfo "{geotif_f}" 2>&1)
-    #     if [[ $INFO =~ Size\\ is\\ ([0-9]+),\\ ([0-9]+) ]]; then
-    #         WIDTH1=${{BASH_REMATCH[1]}}
-    #         HEIGHT1=${{BASH_REMATCH[2]}}
-    #         echo "width: ${{WIDTH1}}, height: ${{HEIGHT1}}"
-    #     else
-    #         echo "Failed to extract image dimensions."
-    #     fi
-    #     '''
-    #     cmds.append(cmd)
-    #     cmd = " ".join([
-    #             "gdalwarp",
-    #             f'"{geotif_f}"',  # Add quotes around file names to handle spaces
-    #             f'"{vflip_f}"',
-    #             "-b", "1",
-    #             "-b", "2",
-    #             "-b", "3",
-    #             "-ct", "\"+proj=pipeline +step +proj=axisswap +order=1,-2\"",
-    #             "-overwrite",
-    #             "-ts", "$WIDTH1", "$HEIGHT1"  # Use the WIDTH and HEIGHT from the previous command
-    #         ])
-    #     cmds.append(cmd)
-    #     mm.add_target(vflip_f, [geotif_f], cmds)
-    #     # update geotif_f
-    #     geotif_f = vflip_f
-    #     # if args.mbtiles2pmtiles:
-    #     #     cmds_rm.append(f"rm -f {geotif_f}")
+    # 1. Orientation
+    if args.flip_vertical or args.flip_horizontal or args.rotate_left or args.rotate_right:
+        dim_f=geotif_f.replace(".tif","") + ".dim.tsv"
+        cmds=cmds_for_dimensions(geotif_f, dim_f)
+        mm.add_target(dim_f, [geotif_f], cmds)
     
-    # if args.flip_horizontal:
-    #     hflip_f = geotif_f.replace(".tif","") + ".hflip.tif"
-    #     cmds = cmd_separator([], f"Flipping the geotif horizontally: {geotif_f}")        
-    #     cmd = f'''
-    #     INFO=$(gdalinfo "{geotif_f}" 2>&1)
-    #     if [[ $INFO =~ Size\\ is\\ ([0-9]+),\\ ([0-9]+) ]]; then
-    #         WIDTH2=${{BASH_REMATCH[1]}}
-    #         HEIGHT2=${{BASH_REMATCH[2]}}
-    #         echo "width: ${{WIDTH2}}, height: ${{HEIGHT2}}"
-    #     else
-    #         echo "Failed to extract image dimensions."
-    #     fi
-    #     '''
-    #     cmds.append(cmd)
-    #     cmd = " ".join([
-    #             "gdalwarp",
-    #             f'"{geotif_f}"',  # Add quotes around file names to handle spaces
-    #             f'"{hflip_f}"',
-    #             "-b", "1",
-    #             "-b", "2",
-    #             "-b", "3",
-    #             "-ct", "\"+proj=pipeline +step +proj=axisswap +order=-1,2\"",
-    #             "-overwrite",
-    #             "-ts", "$WIDTH2", "$HEIGHT2"  # Use the WIDTH and HEIGHT from the previous command
-    #         ])
-    #     cmds.append(cmd)
-    #     mm.add_target(hflip_f, [geotif_f], cmds)
+    # 1. Flip the image when required 
+    if args.flip_vertical:
+        # vflip file
+        vflip_f = geotif_f.replace(".tif","") + ".vflip.tif" 
+        cmds = cmd_separator([], f"Flipping the geotif vertically: {geotif_f}") 
+        cmds.append(f"WIDTH1=$(awk '/WIDTH/' {dim_f}|cut -f 2) && \\")
+        cmds.append(f"HEIGHT1=$(awk '/HEIGHT/' {dim_f}|cut -f 2) && \\")
+        cmd = " ".join([
+                "gdalwarp",
+                f'"{geotif_f}"',  # Add quotes around file names to handle spaces
+                f'"{vflip_f}"',
+                "-b", "1",
+                "-b", "2",
+                "-b", "3",
+                "-ct", "\"+proj=pipeline +step +proj=axisswap +order=1,-2\"",
+                "-overwrite",
+                "-ts", "$WIDTH1", "$HEIGHT1"  # Use the WIDTH and HEIGHT from the previous command
+            ])
+        cmds.append(cmd)
+        mm.add_target(vflip_f, [geotif_f, dim_f], cmds)
 
-    #     # update geotif_f
-    #     geotif_f = hflip_f
+        # dim for vflip
+        vflip_dim_f = vflip_f.replace(".tif","") + ".dim.tsv"
+        cmds=cmds_for_dimensions(vflip_f, vflip_dim_f)
+        mm.add_target(vflip_dim_f, [vflip_f], cmds)
 
-    #     # if args.mbtiles2pmtiles:
-    #     #     cmds_rm.append(f"rm -f {geotif_f}")
+        # update files
+        geotif_f = vflip_f
+        dim_f = vflip_dim_f
+        # if args.mbtiles2pmtiles:
+        #     cmds_rm.append(f"rm -f {geotif_f}")     
+    
+    if args.flip_horizontal:
+        # hflip file
+        hflip_f = geotif_f.replace(".tif","") + ".hflip.tif"
+        cmds = cmd_separator([], f"Flipping the geotif horizontally: {geotif_f}")
+        cmds.append(f"WIDTH1=$(awk '/WIDTH/' {dim_f}|cut -f 2) && \\")
+        cmds.append(f"HEIGHT1=$(awk '/HEIGHT/' {dim_f}|cut -f 2) && \\")
+        cmd = " ".join([
+                "gdalwarp",
+                f'"{geotif_f}"',  # Add quotes around file names to handle spaces
+                f'"{hflip_f}"',
+                "-b", "1",
+                "-b", "2",
+                "-b", "3",
+                "-ct", "\"+proj=pipeline +step +proj=axisswap +order=-1,2\"",
+                "-overwrite",
+                "-ts", "$WIDTH2", "$HEIGHT2"  # Use the WIDTH and HEIGHT from the previous command
+            ])
+        cmds.append(cmd)
+        mm.add_target(hflip_f, [geotif_f, dim_f], cmds)
 
-    # if args.rotate_left or args.rotate_right:
-    #     # Determine the output file for rotation
-    #     direction = "left" if args.rotate_left else "right"
-    #     rotated_f = f"{args.out_prefix}.pmtiles.lrotate.tif" if args.rotate_left else f"{args.out_prefix}.pmtiles.rrotate.tif"
-    #     cmds = cmd_separator([], f"Rotating the GeoTIFF {direction}: {geotif_f}")
+        # dim for hflip
+        hflip_dim_f = hflip_f.replace(".tif","")+ ".dim.tsv"
+        cmds=cmds_for_dimensions(hflip_f, hflip_dim_f)
+        mm.add_target(hflip_dim_f, [hflip_f], cmds)
 
-    #     # Extract the dimensions of the input file
-    #     cmd = f'''
-    #     INFO=$(gdalinfo "{geotif_f}" 2>&1)
-    #     if [[ $INFO =~ Size\\ is\\ ([0-9]+),\\ ([0-9]+) ]]; then
-    #         WIDTH3=${{BASH_REMATCH[1]}}
-    #         HEIGHT3=${{BASH_REMATCH[2]}}
-    #         echo "width: ${{WIDTH3}}, height: ${{HEIGHT3}}"
-    #     else
-    #         echo "Failed to extract image dimensions."
-    #         exit 1
-    #     fi
-    #     '''
-    #     cmds.append(cmd)
+        # update 
+        geotif_f = hflip_f
+        dim_f = hflip_dim_f
+        # if args.mbtiles2pmtiles:
+        #     cmds_rm.append(f"rm -f {geotif_f}")
 
-    #     # Apply the appropriate rotation using gdalwarp
-    #     if args.rotate_left:
-    #         # Rotate left: Transpose (swap X/Y) and vertically flip
-    #         rotation_pipeline = "\"+proj=pipeline +step +proj=transpose +step +proj=axeswap +order=2,-1\""
-    #     elif args.rotate_right:
-    #         # Rotate right: Transpose (swap X/Y) and horizontally flip
-    #         rotation_pipeline = "\"+proj=pipeline +step +proj=transpose +step +proj=axeswap +order=-2,1\""
+    if args.rotate_left or args.rotate_right:
+        # Determine the output file for rotation
+        direction = "left" if args.rotate_left else "right"
+        rotated_f = f"{args.out_prefix}.pmtiles.lrotate.tif" if args.rotate_left else f"{args.out_prefix}.pmtiles.rrotate.tif"
+        cmds = cmd_separator([], f"Rotating the GeoTIFF {direction}: {geotif_f}")
+        cmds.append(f"WIDTH1=$(awk '/WIDTH/' {dim_f}|cut -f 2) && \\")
+        cmds.append(f"HEIGHT1=$(awk '/HEIGHT/' {dim_f}|cut -f 2) && \\")
 
-    #     cmd = " ".join([
-    #         "gdalwarp",
-    #         f'"{geotif_f}"',  # Input GeoTIFF file
-    #         f'"{rotated_f}"',  # Output rotated file
-    #         "-b", "1",
-    #         "-b", "2",
-    #         "-b", "3",
-    #         "-ct", rotation_pipeline,  # Apply transformation pipeline
-    #         "-overwrite",
-    #         "-ts", "$HEIGHT3", "$WIDTH3"  # Swap dimensions for rotation
-    #     ])
-    #     cmds.append(cmd)
+        # Apply the appropriate rotation using gdalwarp
+        if args.rotate_left:
+            # Rotate left: Transpose (swap X/Y) and vertically flip
+            rotation_pipeline = "\"+proj=pipeline +step +proj=transpose +step +proj=axeswap +order=2,-1\""
+        elif args.rotate_right:
+            # Rotate right: Transpose (swap X/Y) and horizontally flip
+            rotation_pipeline = "\"+proj=pipeline +step +proj=transpose +step +proj=axeswap +order=-2,1\""
 
-        mm.add_target(rotated_f, [geotif_f], cmds)
+        cmd = " ".join([
+            "gdalwarp",
+            f'"{geotif_f}"',  # Input GeoTIFF file
+            f'"{rotated_f}"',  # Output rotated file
+            "-b", "1",
+            "-b", "2",
+            "-b", "3",
+            "-ct", rotation_pipeline,  # Apply transformation pipeline
+            "-overwrite",
+            "-ts", "$HEIGHT3", "$WIDTH3"  # Swap dimensions for rotation
+        ])
+        cmds.append(cmd)
+        mm.add_target(rotated_f, [geotif_f, dim_f], cmds)
 
-        # Update the GeoTIFF file to the rotated version
         geotif_f = rotated_f
 
         # Optionally clean up if `mbtiles2pmtiles` is set
