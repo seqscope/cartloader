@@ -1,8 +1,6 @@
 import sys, os, gzip, argparse, logging, warnings, shutil, subprocess, ast, json, yaml
 import pandas as pd
 
-from cartloader.utils.utils import cmd_separator, scheck_app, create_custom_logger, load_file_to_dict, write_dict_to_file
-
 def parse_arguments(_args):
     """
     Update the YAML file to add basemap in the assets
@@ -25,7 +23,7 @@ def parse_arguments(_args):
     return parser.parse_args(_args)
 
 
-def update_yaml_for_basemap(_args):
+def update_catalog_for_basemap(_args):
 
     # parse argument
     args = parse_arguments(_args)
