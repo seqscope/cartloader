@@ -11,9 +11,6 @@ from cartloader.utils.utils import add_param_to_cmd
 histology_suffixes=[".tif", ".tiff"]
 histology_suffixes.extend([suffix.upper() for suffix in histology_suffixes])
 
-
-
-
 local_aux_env_args = {
         "run_ficture": ['spatula', 'bgzip', "tabix", "gzip", "sort", "sort_mem"],
         "run_cartload_join": ['magick', 'pmtiles', 'gdal_translate', 'gdaladdo', 'tippecanoe', 'spatula'],
@@ -50,9 +47,6 @@ def merge_config(base_config, args, keys, prefix=None):
         if val is not None:
             config[key] = val
     return SimpleNamespace(**config)
-
-
-
 
 def check_file(file_path):
     """Check if a file exists or is a valid symlink."""
@@ -206,8 +200,8 @@ def submit_job(jobname, jobpref, cmds, slurm, args):
             except subprocess.CalledProcessError as e:
                 print("Error submitting job:\n", e.stderr)
         elif args.submit_mode == "slurm":
-            #missing_params = [k for k in ["account", "partition", "mail_user", "cpus_per_task", "mem", "hours"] if not slurm.get(k)]
-            missing_params = [k for k in ["account", "partition", "mail_user", "cpus_per_task", "mem", "hours"] if not getattr(slurm, k, None)]
+            # ?? The minimum required SLURM parameters
+            missing_params = [k for k in [ "cpus_per_task", "mem"] if not getattr(slurm, k, None)]
             if missing_params:
                 print(f"Error: Missing required SLURM parameters: {', '.join(missing_params)}")
                 return
