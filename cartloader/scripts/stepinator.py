@@ -227,7 +227,7 @@ def cmd_run_ficture(run_i, args, env):
         assert run_i["ext_id"] is not None, "Error: --ext-id is required when running ficture with an external model"
         assert os.path.exists(run_i["ext_path"]), f"Error: --ext-path is defined with a missing file: {run_i['ext_path']}"
         mod_args = [
-            f"--ext-path {run_i["ext_path"]}",
+            f"--ext-path {run_i['ext_path']}",
             f"--ext-id {run_i['ext_id']}",
             "--main-ext" if not args.init_ext else "--init-ext",
             "--copy-ext-model" if run_i.get("copy_ext_model") else "",
@@ -320,11 +320,8 @@ def cmd_run_fig2pmtiles(run_i, args, env):
             elif histology["flip"] == "horizontal":
                 reorient_args+=" --flip-horizontal"
         if histology.get("rotate", None) is not None:
-            if histology["rotate"] == "left":
-                reorient_args+=" --rotate-left"
-            elif histology["rotate"] == "right":
-                reorient_args+=" --rotate-right"
-        
+            reorient_args+=f" --rotate {histology['rotate']}"
+
         if os.path.exists(catalog_yaml):
             assert basemap_key is not None, "Error: At least, provide histology type."
         
@@ -380,10 +377,17 @@ def stepinator(_args):
     action_params.add_argument("--run-ficture", action="store_true", help="Run --run-ficture. Only the main function is executed.")
     action_params.add_argument("--run-cartload-join", action="store_true", help="Run --run-cartload-join")
     action_params.add_argument("--run-fig2pmtiles", action="store_true", help="Run --run-fig2pmtiles. Only works when histology is provided")
-    action_params.add_argument("--upload-aws", action="store_true", help="Submit a slurm job")
-    action_params.add_argument("--copy-ext-model", action="store_true", help="Copy external model when running FICTURE with an external model")
-    action_params.add_argument("--init-ext", action="store_true", help="Only Initialize external model without run main-ext")
-    action_params.add_argument("--skip-coarse-report", action="store_true", help="Skip coarse report")
+    action_params.add_argument("--upload-aws", action="store_true", help="Upload files to AWS S3 bucket")
+    action_params.add_argument("--copy-ext-model", action="store_true", help="Auxiliary action parameters for --run-ficture. Copy external model when running FICTURE with an external model")
+    action_params.add_argument("--init-ext", action="store_true", help="Auxiliary action parameters for --run-ficture. Only Initialize external model without run main-ext")
+    action_params.add_argument("--skip-coarse-report", action="store_true", help="Auxiliary action parameters for --run-ficture. Skip coarse report")
+
+    # * mode
+    run_params = parser.add_argument_group("Run", "Run mode")
+    run_params.add_argument("--submit", action="store_true",  help="Submit a slurm job")
+    run_params.add_argument('--submit-mode', type=str,  default="slurm", choices=["slurm", "local"], help='When choosing "slurm", it will submit a slurm job. When choosing "local", it will run the job locally.')
+    run_params.add_argument("--dry-run", action="store_true", help="Perform a dry run")
+
 
     input_params = parser.add_argument_group("Input Configuration", 
         "Provide input data and settings. You can choose one of these methods to define inputs:\n"
@@ -405,7 +409,7 @@ def stepinator(_args):
     input_params.add_argument('--anchor-res', type=int, default=None, help='Anchor resolution for decoding. If absent, run_ficture will use the default value: 4.')
     input_params.add_argument('--radius-buffer', type=int, default=None, help='Buffer to radius(=anchor_res + radius_buffer) for pixel-level decoding. If absent, run_ficture will use the default value: 1.')
     input_params.add_argument("--cmap", '-c', type=str, default=None, help="(Optional) The path to color map (Default: None)")
-    input_params.add_argument("--histology", type=str, nargs="?", default=[], help="(Optional) The histology information in the format of <histology_type>,<histology_path>,<histology_ID> (Default: [])")
+    input_params.add_argument("--histology", type=str, nargs="?", default=[], help="(Optional) The histology information in the format of <type>,<path>,<ID>,<rotate_degree>,<flip_direction>. It requires at least provide <histology_type>,<histology_path>. (Default: [])")
     input_params.add_argument('--aws-bucket', type=str, default=None, help='AWS bucket name')
 
     # * tools
@@ -416,7 +420,6 @@ def stepinator(_args):
     #"3. If there is a separate YAML file available with reusable environment settings, use --env-yaml to reuse it. This leverage one YAML across multiple jobs and batches." 
     )
     #env_params.add_argument('--env-yaml', type=str, default=None, help='Environment YAML file defining tool paths and settings.')
-    env_params.add_argument('--submit-mode', type=str,  default="slurm", choices=["slurm", "local"], help='When choosing "slurm", it will submit a slurm job. When choosing "local", it will run the job locally.')
     env_params.add_argument('--slurm-account', type=str, default=None, help='If --submit-mode slurm, provide a SLURM account')
     env_params.add_argument('--slurm-partition', type=str, default=None, help='If --submit-mode slurm, provide a SLURM partition')
     env_params.add_argument('--slurm-mail-user', type=str, default=None, help='If --submit-mode slurm, provide a SLURM mail user')
@@ -435,12 +438,11 @@ def stepinator(_args):
     env_params.add_argument('--gdal-translate', type=str, default=None, help='Path to gdal_translate binary')
     env_params.add_argument('--gdaladdo', type=str, default=None, help='Path to gdaladdo binary')
 
-    # * mode
-    run_params = parser.add_argument_group("Run", "")
-    run_params.add_argument("--submit", action="store_true",  help="Submit a slurm job")
-    run_params.add_argument("--dry-run", action="store_true", help="Submit a slurm job")
 
-    ficture_aux_params = parser.add_argument_group("Auxiliary Parameters for run_ficture", "Auxiliary parameters for run_ficture. Only required when --run-ficture is provided and a value other than default is needed.")
+    ficture_aux_params = parser.add_argument_group(
+        "Auxiliary Parameters for run_ficture", 
+        "Parameters for run_ficture, required only if --run-ficture is used with non-default values. Default values are recommended."
+    )    
     # input column indexes
     ficture_aux_params.add_argument('--csv-colidx-x',  type=int, default=1, help='Column index for X-axis in the --in-transcript (default: 1)')
     ficture_aux_params.add_argument('--csv-colidx-y',  type=int, default=2, help='Column index for Y-axis in the --in-transcript (default: 2)')
@@ -475,7 +477,6 @@ def stepinator(_args):
     ficture_aux_params.add_argument('--min-ct-per-feature', type=int, default=None, help='Minimum count per feature during LDA training, transform and decoding')
     ficture_aux_params.add_argument('--de-max-pval', type=float, default=None, help='p-value cutoff for differential expression')
     ficture_aux_params.add_argument('--de-min-fold', type=float, default=None, help='Fold-change cutoff for differential expression')
-
     args = parser.parse_args(_args)
 
     assert args.run_ficture or args.run_cartload_join or args.upload_aws or args.run_fig2pmtiles, "Error: at least one action is required"
@@ -531,8 +532,14 @@ def stepinator(_args):
         ] 
         if len(args.histology) > 0:
             for histology in args.histology:
-                hist_type, hist_path, hist_id = histology.split(",")
-                runinfo[0]["histology"].append({"type":hist_type, "path": hist_path, "hist_id": hist_id})
+                hist_info = histology.split(",")
+                assert len(hist_info) > 2, "Error: --histology should at least have <histology_type> and <histology_path>."
+                hist_type = hist_info[0]
+                hist_path = hist_info[1]
+                hist_id = hist_info[2] if len(hist_info) > 3 else None
+                rotate_degree = hist_info[3] if len(hist_info) > 4 else None
+                flip_direction = hist_info[4] if len(hist_info) > 5 else None
+                runinfo[0]["histology"].append({"type":hist_type, "path": hist_path, "hist_id": hist_id, "flip": flip_direction, "rotate": rotate_degree})
     # env
     # # * tools (collect from yaml and args)
     # for action, aux_args in local_aux_env_args.items():

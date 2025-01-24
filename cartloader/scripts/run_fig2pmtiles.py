@@ -15,7 +15,33 @@ def cmds_for_dimensions(geotif_f, dim_f):
     dim_f = geotif_f.replace(".tif",".dim.tsv") 
     cmds.append(f"{gdal_get_size_script} {geotif_f} {dim_f}")
     return cmds
-    
+
+rotation_flip_map = {
+    # rotate, flip_vertical, flip_horizontal: order_arg
+    # no rotation,
+    (None, False, True): "-1,2",     # Flip X-axis
+    (None, True, False): "1,-2",     # Flip Y-axis
+    (None, True, True): "-1,-2",     # Flip both axes
+
+    # Rotate 90° clockwise
+    ("90", False, False): "2,-1",    # Rotate 90° clockwise
+    ("90", False, True): "-2,-1",    # Rotate 90°, then flip X
+    ("90", True, False): "2,1",      # Rotate 90°, then flip Y
+    ("90", True, True): "-2,1",      # Rotate 90°, then flip both
+
+    # Rotate 180° clockwise
+    ("180", False, False): "-1,-2",  # Rotate 180° clockwise
+    ("180", False, True): "1,-2",    # Rotate 180°, then flip X
+    ("180", True, False): "-1,2",    # Rotate 180°, then flip Y
+    ("180", True, True): "1,2",      # Rotate 180°, then flip both (cancels out)
+
+    # Rotate 270° clockwise
+    ("270", False, False): "-2,1",   # Rotate 270° clockwise
+    ("270", False, True): "2,1",     # Rotate 270°, then flip X
+    ("270", True, False): "-2,-1",   # Rotate 270°, then flip Y
+    ("270", True, True): "2,-1",     # Rotate 270°, then flip both
+}
+
 def parse_arguments(_args):
     """
     Parse command-line arguments.
@@ -31,10 +57,11 @@ def parse_arguments(_args):
     #cmd_params.add_argument('--upload-aws', action='store_true', default=False, help='Upload the new pmtiles to the AWS S3') # Stop supporting this option
     cmd_params.add_argument('--update-catalog', action='store_true', default=False, help='Update the catalog.yaml file with the new pmtiles and upload to AWS')
     cmd_params.add_argument('--georeference', action='store_true', default=False, help='Plus function. Create a geotiff file from PNG or TIF file. If enabled, the user must provide georeferenced bounds using --in-tsv or --in-bounds.')
-    cmd_params.add_argument('--flip-vertical', action='store_true', default=False, help='Plus function. Flip the image vertically')
-    cmd_params.add_argument('--flip-horizontal', action='store_true', default=False, help='Plus function. Flip the image horizontally')
-    cmd_params.add_argument('--rotate-left', action='store_true', default=False, help='Plus function. Rotate the image 90 degrees to the left')
-    cmd_params.add_argument('--rotate-right', action='store_true', default=False, help='Plus function. Rotate the image 90 degrees to the right')
+    cmd_params.add_argument('--rotate', type=str, default=None, choices=["90", "180", "270"],  help='Plus function. Rotate the image by 90, 180, or 270 degrees clockwise. If both rotate and flip options are provided, the rotation is applied first. ')
+    cmd_params.add_argument('--flip-vertical', action='store_true', default=False, help='Plus function. Flip the image vertically (flipped along Y-axis). If both rotate and flip options are provided, the rotation is applied first. ')
+    cmd_params.add_argument('--flip-horizontal', action='store_true', default=False, help='Plus function. Flip the image horizontally (flipped along X-axis). If both rotate and flip options are provided, the rotation is applied first.')
+    # cmd_params.add_argument('--rotate-left', action='store_true', default=False, help='Plus function. Rotate the image 90 degrees to the left')
+    # cmd_params.add_argument('--rotate-right', action='store_true', default=False, help='Plus function. Rotate the image 90 degrees to the right')
 
     inout_params = parser.add_argument_group("Input/Output Parameters", "Define the input file according to the user's needs.")
     inout_params.add_argument('--in-fig', type=str, help='The input figure file (PNG or TIF) to be converted to pmTiles')
@@ -131,115 +158,87 @@ def run_fig2pmtiles(_args):
         #     cmds_rm.append(f"rm -f {georef_f}")
 
     # 1. Orientation
-    if args.flip_vertical or args.flip_horizontal or args.rotate_left or args.rotate_right:
+    if args.flip_vertical or args.flip_horizontal or args.rotate is not None:
+        # 0) Extract dimensions
         dim_f=geotif_f.replace(".tif","") + ".dim.tsv"
         cmds=cmds_for_dimensions(geotif_f, dim_f)
         mm.add_target(dim_f, [geotif_f], cmds)
     
-    # 1. Flip the image when required 
-    if args.flip_vertical:
-        # vflip file
-        vflip_f = geotif_f.replace(".tif","") + ".vflip.tif" 
-        cmds = cmd_separator([], f"Flipping the geotif vertically: {geotif_f}") 
-        cmds.append(f"WIDTH1=$(awk '/WIDTH/' {dim_f}|cut -f 2) && \\")
-        cmds.append(f"HEIGHT1=$(awk '/HEIGHT/' {dim_f}|cut -f 2) && \\")
+        # 1) Output FILENAME
+        ort_suffix=[]
+        if args.rotate is not None:
+            ort_suffix.append(f"rot{args.rotate}")
+        if args.flip_vertical :
+            ort_suffix.append("vflip")
+        if args.flip_horizontal:
+            ort_suffix.append("hflip")
+
+        ort_f = geotif_f.replace(".tif","") + "." + ".".join(ort_suffix) + ".tif"
+
+        # 2) Order argument
+        # if args.rotate == "90" and not args.flip_vertical and not args.flip_horizontal:
+        #     order_arg = "2,1"
+        # elif args.rotate == "180" and not args.flip_vertical and not args.flip_horizontal:
+        #     order_arg = "-1,-2"  
+        # elif args.rotate is None and args.flip_vertical and args.flip_horizontal:  
+        #     order_arg = "-1,-2"  
+        # elif args.rotate == "270" and not args.flip_vertical and not args.flip_horizontal:
+        #     order_arg = "2,-1"
+        # elif args.flip_horizontal and not args.flip_vertical and args.rotate is None:
+        #     order_arg = "-1,2"
+        # elif args.flip_vertical and not args.flip_horizontal and args.rotate is None:
+        #     order_arg = "1,-2"
+        # elif args.rotate == "90" and args.flip_horizontal and not args.flip_vertical:
+        #     order_arg = "-2,1"
+        # elif args.rotate == "90" and args.flip_vertical and not args.flip_horizontal:
+        #     order_arg = "-2,-1"
+        # else:
+        #     raise ValueError("Invalid combination of rotation and flip options.")
+
+        order_arg = rotation_flip_map.get(
+            (args.rotate, args.flip_vertical, args.flip_horizontal)
+        )
+
+        if order_arg is None:
+            raise ValueError("Invalid combination of rotation and flip options.")
+
+        # 3) Output Dimensions
+        if order_arg.startswith("1") or order_arg.startswith("-1"):
+            out_dim="$WIDTH $HEIGHT"
+        else:
+            out_dim="$HEIGHT $WIDTH"
+        
+        # 4) cmds
+        msg=" ".join([f"Orientate the geotif, including ",
+                "vertical flip;" if args.flip_vertical else "",
+                "horizontal flip;" if args.flip_horizontal else "",
+                f"rotate {args.rotate} degree clockwise;" if args.rotate is not None else "",
+                geotif_f])
+        cmds = cmd_separator([], msg) 
+        cmds.append(f"WIDTH=$(awk '/WIDTH/' {dim_f}|cut -f 2) && \\")
+        cmds.append(f"HEIGHT=$(awk '/HEIGHT/' {dim_f}|cut -f 2) && \\")
         cmd = " ".join([
                 "gdalwarp",
                 f'"{geotif_f}"',  # Add quotes around file names to handle spaces
-                f'"{vflip_f}"',
+                f'"{ort_f}"',
                 "-b", "1",
                 "-b", "2",
                 "-b", "3",
-                "-ct", "\"+proj=pipeline +step +proj=axisswap +order=1,-2\"",
+                "-ct", f"\"+proj=pipeline +step +proj=axisswap +order={order_arg}\"",
                 "-overwrite",
-                "-ts", "$WIDTH1", "$HEIGHT1"  # Use the WIDTH and HEIGHT from the previous command
+                "-ts", f"{out_dim}"
             ])
         cmds.append(cmd)
-        mm.add_target(vflip_f, [geotif_f, dim_f], cmds)
+        mm.add_target(ort_f, [geotif_f, dim_f], cmds)
 
-        # dim for vflip
-        vflip_dim_f = vflip_f.replace(".tif","") + ".dim.tsv"
-        cmds=cmds_for_dimensions(vflip_f, vflip_dim_f)
-        mm.add_target(vflip_dim_f, [vflip_f], cmds)
-
-        # update files
-        geotif_f = vflip_f
-        dim_f = vflip_dim_f
-        # if args.mbtiles2pmtiles:
-        #     cmds_rm.append(f"rm -f {geotif_f}")     
-    
-    if args.flip_horizontal:
-        # hflip file
-        hflip_f = geotif_f.replace(".tif","") + ".hflip.tif"
-        cmds = cmd_separator([], f"Flipping the geotif horizontally: {geotif_f}")
-        cmds.append(f"WIDTH1=$(awk '/WIDTH/' {dim_f}|cut -f 2) && \\")
-        cmds.append(f"HEIGHT1=$(awk '/HEIGHT/' {dim_f}|cut -f 2) && \\")
-        cmd = " ".join([
-                "gdalwarp",
-                f'"{geotif_f}"',  # Add quotes around file names to handle spaces
-                f'"{hflip_f}"',
-                "-b", "1",
-                "-b", "2",
-                "-b", "3",
-                "-ct", "\"+proj=pipeline +step +proj=axisswap +order=-1,2\"",
-                "-overwrite",
-                "-ts", "$WIDTH2", "$HEIGHT2"  # Use the WIDTH and HEIGHT from the previous command
-            ])
-        cmds.append(cmd)
-        mm.add_target(hflip_f, [geotif_f, dim_f], cmds)
-
-        # dim for hflip
-        hflip_dim_f = hflip_f.replace(".tif","")+ ".dim.tsv"
-        cmds=cmds_for_dimensions(hflip_f, hflip_dim_f)
-        mm.add_target(hflip_dim_f, [hflip_f], cmds)
-
-        # update 
-        geotif_f = hflip_f
-        dim_f = hflip_dim_f
-        # if args.mbtiles2pmtiles:
-        #     cmds_rm.append(f"rm -f {geotif_f}")
-
-    if args.rotate_left or args.rotate_right:
-        # Determine the output file for rotation
-        direction = "left" if args.rotate_left else "right"
-        rotated_f = f"{args.out_prefix}.pmtiles.lrotate.tif" if args.rotate_left else f"{args.out_prefix}.pmtiles.rrotate.tif"
-        cmds = cmd_separator([], f"Rotating the GeoTIFF {direction}: {geotif_f}")
-        cmds.append(f"WIDTH1=$(awk '/WIDTH/' {dim_f}|cut -f 2) && \\")
-        cmds.append(f"HEIGHT1=$(awk '/HEIGHT/' {dim_f}|cut -f 2) && \\")
-
-        # Apply the appropriate rotation using gdalwarp
-        if args.rotate_left:
-            # Rotate left: Transpose (swap X/Y) and vertically flip
-            rotation_pipeline = "\"+proj=pipeline +step +proj=transpose +step +proj=axeswap +order=2,-1\""
-        elif args.rotate_right:
-            # Rotate right: Transpose (swap X/Y) and horizontally flip
-            rotation_pipeline = "\"+proj=pipeline +step +proj=transpose +step +proj=axeswap +order=-2,1\""
-
-        cmd = " ".join([
-            "gdalwarp",
-            f'"{geotif_f}"',  # Input GeoTIFF file
-            f'"{rotated_f}"',  # Output rotated file
-            "-b", "1",
-            "-b", "2",
-            "-b", "3",
-            "-ct", rotation_pipeline,  # Apply transformation pipeline
-            "-overwrite",
-            "-ts", "$HEIGHT3", "$WIDTH3"  # Swap dimensions for rotation
-        ])
-        cmds.append(cmd)
-        mm.add_target(rotated_f, [geotif_f, dim_f], cmds)
-
-        geotif_f = rotated_f
-
-        # Optionally clean up if `mbtiles2pmtiles` is set
-        # if args.mbtiles2pmtiles:
-        #     cmds_rm.append(f"rm -f {geotif_f}")
+        # update geotif_f to the oriented file
+        geotif_f = ort_f
 
     # 2. Convert a geotiff file to mbtiles
     if args.geotif2mbtiles:
         cmds = cmd_separator([], f"Converting from geotif to mbtiles: {geotif_f}")
         cmd = " ".join([
-            args.gdal_translate, 
+            "gdal_translate", 
             "-b", "1", 
             "-b", "2",
             "-b", "3",
@@ -248,7 +247,7 @@ def run_fig2pmtiles(_args):
             "-co", f"\"RESAMPLING={args.resample}\"",
             "-co", f"\"BLOCKSIZE={args.blocksize}\"",
             "-ot", "Byte",
-            "-scale", 
+            "-scale", "0", "255",
             "-of", "mbtiles",
             "-a_srs", args.srs,
             geotif_f, 
@@ -257,8 +256,6 @@ def run_fig2pmtiles(_args):
         cmds.append(cmd)
         #cmds.append(f"gdal_translate -b 1 -b 2 -b 3 -strict -co \"ZOOM_LEVEL_STRATEGY=UPPER\" -co \"RESAMPLING={args.resample}\" -co \"BLOCKSIZE={args.blocksize}\" -ot Byte -scale 0 255 -of mbtiles -a_srs {args.srs} {geotif_f} {mbtile_f}")
         mm.add_target(mbtile_f, [geotif_f], cmds)
-        # if args.mbtiles2pmtiles:
-        #     cmds_rm.append(f"rm -f {mbtile_f}")
     
     # 3. Convert mbtiles to pmtiles
     if args.mbtiles2pmtiles:
@@ -285,7 +282,9 @@ def run_fig2pmtiles(_args):
     # 5. Update the catalog.yaml file with the new pmtiles and upload to AWS
     if args.update_catalog:
         cmds = cmd_separator([], f"Updating yaml: {geotif_f}")
-        cmds.append(f"cartloader update_catalog_for_basemap --yaml {catalog_f} --basemap {args.basemap_key}:{pmtiles_f}")
+        pmtiles_name=os.path.basename(pmtiles_f)
+        pmtiles_dir=os.path.dirname(pmtiles_f)
+        cmds.append(f"cartloader update_catalog_for_basemap --in-yaml {catalog_f} --basemap {args.basemap_key}:{pmtiles_name} --basemap-dir {pmtiles_dir} --overwrite")
         #cmds.append(f"aws s3 cp {catalog_f} {args.aws_dir}/catalog.yaml")
         cmds.append(f"touch {pmtiles_f}.yaml.done")
         mm.add_target(f"{pmtiles_f}.yaml.done", [pmtiles_f, catalog_f], cmds)
