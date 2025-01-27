@@ -64,7 +64,7 @@ def parse_arguments(_args):
     # input column indexes
     aux_params.add_argument('--csv-colidx-x',  type=int, default=1, help='Column index for X-axis in the --in-transcript (default: 1)')
     aux_params.add_argument('--csv-colidx-y',  type=int, default=2, help='Column index for Y-axis in the --in-transcript (default: 2)')
-    aux_params.add_argument('--key-col', type=str, default="Count", help='Columns from the input file to be used as key')
+    aux_params.add_argument('--colname-count', type=str, default="count", help='Columns from the input file to be used as key')
     # segmentation - ficture
     aux_params.add_argument('--hexagon-n-move', type=int, default=1, help='Level of hexagonal sliding when creating hexagon-indexed SGE in FICTURE compatible format')
     aux_params.add_argument('--hexagon-precision', type=float, default=2, help='Output precision of hexagon coordinates for FICTURE compatible format')
@@ -350,7 +350,7 @@ def run_ficture(_args):
                 "ficture", "make_dge",
                 f"--input {args.in_cstranscript}",
                 f"--major_axis {major_axis}",
-                f"--key {args.key_col}",
+                f"--key {args.colname_count}",
                 f"--output {hexagon_tsv}",
                 f"--hex_width {hexagon_width}",
                 f"--n_move {args.hexagon_n_move}",
@@ -376,7 +376,7 @@ def run_ficture(_args):
                 "ficture", "make_sge_by_hexagon",
                 f"--input {args.in_cstranscript} {feature_arg}",
                 f"--major_axis {major_axis}",
-                f"--key {args.key_col}",
+                f"--key {args.colname_count}",
                 f"--output_path", hexagon_dir,
                 f"--hex_width", hexagon_width,
                 f"--n_move {args.hexagon_n_move_10x}",
@@ -417,7 +417,7 @@ def run_ficture(_args):
                 f"--epoch {args.train_epoch}",
                 f"--epoch_id_length {args.train_epoch_id_len}",
                 f"--unit_attr X Y",
-                f"--key {args.key_col}",
+                f"--key {args.colname_count}",
                 f"--min_ct_per_feature {args.min_ct_per_feature}", 
                 f"--test_split 0.5",
                 f"--R {args.lda_rand_init}",
@@ -495,7 +495,7 @@ def run_ficture(_args):
                     f"--feature {args.in_feature}" if args.in_feature is not None else "",
                     f"--output_pref {model_prefix}",
                     f"--model {model_prefix}.model_matrix.tsv.gz",
-                    f"--key {args.key_col}",
+                    f"--key {args.colname_count}",
                     f"--major_axis {major_axis}",
                     f"--hex_width {train_width}",
                     f"--n_move 1",
@@ -516,7 +516,7 @@ def run_ficture(_args):
                     f"--epoch 0",
                     f"--scale_model_rel -1",
                     f"--reorder_factors",
-                    f"--key {args.key_col}",
+                    f"--key {args.colname_count}",
                     f"--min_ct_per_feature {args.min_ct_per_feature}", 
                     f"--thread 1",  ## use thread 1 because multithreading somehow does not work
                     ])
@@ -587,7 +587,7 @@ def run_ficture(_args):
                 f"--feature {args.in_feature}" if args.in_feature is not None else "",
                 f"--output_pref {proj_prefix}",
                 f"--model {model_path}",
-                f"--key {args.key_col}",
+                f"--key {args.colname_count}",
                 f"--major_axis {major_axis}",
                 f"--hex_width {fit_width}",
                 f"--n_move {fit_n_move}",
@@ -734,7 +734,7 @@ ${tabix} -f -s1 -b"${sortidx}" -e"${sortidx}" ${output}
                 f"--anchor_in_um",
                 f"--neighbor_radius {radius}",
                 f"--mu_scale {args.mu_scale}",
-                f"--key {args.key_col}",
+                f"--key {args.colname_count}",
                 f"--precision {args.decode_precision}",
                 f"--lite_topk_output_pixel {args.decode_top_k}",
                 f"--lite_topk_output_anchor {args.decode_top_k}",

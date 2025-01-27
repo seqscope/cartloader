@@ -248,7 +248,7 @@ def cmd_run_ficture(run_i, args, env):
         f"--out-dir {fic_dir}",
         sge_arg,
         f"--major-axis {run_i.get('major_axis', 'X')}",
-        f"--key-col {run_i['colname_count']}" if run_i['colname_count'] else "",
+        f"--colname-count {run_i['colname_count']}" if run_i['colname_count'] else "",
         " ".join(mod_args),
         "--skip-coarse-report" if args.skip_coarse_report else "",
         cmap_arg,
@@ -278,6 +278,7 @@ def cmd_run_cartload_join(run_i, args, env):
         f"--out-dir {cartload_dir}",
         f"--id {run_i['id']}",
         f"--major-axis {run_i.get('major_axis', 'X')}",
+        f"--colname-count {run_i['colname_count']}" if run_i['colname_count'] else "",
         "--spatula /nfs/turbo/sph-hmkang/tools/dev/spatula/bin/spatula",
         "--pmtiles /nfs/turbo/sph-hmkang/weiqiuc/tools/go-pmtiles_1.10.0_Linux_x86_64/pmtiles",
         "--n-jobs 10"])
@@ -395,7 +396,7 @@ def stepinator(_args):
     input_params.add_argument("--out-dir", '-o', type=str, help="The directory")
     input_params.add_argument("--sge-dir",  type=str, default=None, help="SGE directory (Default: <out-dir>/sge)")
     input_params.add_argument("--sge-label", '-s', type=str, default="raw", help="SGE label")
-    input_params.add_argument("--colname-count", type=str, default="Count", help="")
+    input_params.add_argument("--colname-count", type=str, default="count", help="")
     input_params.add_argument("--major-axis", type=str, default="X", help="Major axis")
     input_params.add_argument("--ext-path", type=str, default=None, help="(Optional) The path for the external model. Required when running FICTURE with an external model")
     input_params.add_argument("--ext-id", type=str, default=None, help="(Optional) The ID for the external model. Required when running FICTURE with an external model")
