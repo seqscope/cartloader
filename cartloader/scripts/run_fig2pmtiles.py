@@ -60,8 +60,6 @@ def parse_arguments(_args):
     cmd_params.add_argument('--rotate', type=str, default=None, choices=["90", "180", "270"],  help='Plus function. Rotate the image by 90, 180, or 270 degrees clockwise. If both rotate and flip options are provided, the rotation is applied first. ')
     cmd_params.add_argument('--flip-vertical', action='store_true', default=False, help='Plus function. Flip the image vertically (flipped along Y-axis). If both rotate and flip options are provided, the rotation is applied first. ')
     cmd_params.add_argument('--flip-horizontal', action='store_true', default=False, help='Plus function. Flip the image horizontally (flipped along X-axis). If both rotate and flip options are provided, the rotation is applied first.')
-    # cmd_params.add_argument('--rotate-left', action='store_true', default=False, help='Plus function. Rotate the image 90 degrees to the left')
-    # cmd_params.add_argument('--rotate-right', action='store_true', default=False, help='Plus function. Rotate the image 90 degrees to the right')
 
     inout_params = parser.add_argument_group("Input/Output Parameters", "Define the input file according to the user's needs.")
     inout_params.add_argument('--in-fig', type=str, help='The input figure file (PNG or TIF) to be converted to pmTiles')
@@ -72,6 +70,7 @@ def parse_arguments(_args):
 
     key_params = parser.add_argument_group("Key parameters")
     key_params.add_argument('--srs', type=str, default='EPSG:3857', help='For the georeference and geo2tiff steps, define the spatial reference system (default: EPSG:3857)')
+    key_params.add_argument('--mono', action='store_true', default=False, help='Black-and-white, single-banded image (default: False)')
     key_params.add_argument('--resample', type=str, default='cubic', help='For the geo2tiff step, define the resampling method (default: cubic). Options: near, bilinear, cubic, etc.')
     key_params.add_argument('--blocksize', type=int, default='512', help='For the geo2tiff step, define the blocksize (default: 512)')
     #key_params.add_argument('--aws-dir', type=str, default=None, help='For the update-aws step, define the path to the AWS S3 directory')
@@ -81,7 +80,6 @@ def parse_arguments(_args):
     aux_params.add_argument('--pmtiles', type=str, default=f"pmtiles", help='Path to pmtiles binary from go-pmtiles')
     aux_params.add_argument('--gdal_translate', type=str, default=f"gdal_translate", help='Path to gdal_translate binary')
     aux_params.add_argument('--gdaladdo', type=str, default=f"gdaladdo", help='Path to gdaladdo binary')
-    # aux_params.add_argument('--keep-intermediate-files', action='store_true', default=False, help='Keep intermediate files')
 
     run_params = parser.add_argument_group("Run Options", "Run options for FICTURE commands")
     run_params.add_argument('--restart', action='store_true', default=False, help='Restart the run. Ignore all intermediate files and start from the beginning')
@@ -114,7 +112,8 @@ def run_fig2pmtiles(_args):
 
     # files
     out_dir = os.path.dirname(args.out_prefix)
-    os.makedirs(out_dir, exist_ok=True)
+    if out_dir != "":
+        os.makedirs(out_dir, exist_ok=True)
     # - geotiff 
     geotif_f = args.in_fig 
 
@@ -127,8 +126,6 @@ def run_fig2pmtiles(_args):
 
     # start mm
     mm = minimake()
-
-    # cmds_rm = cmd_separator([], f"Removing intermediate files")
 
     # 0. Create a geotiff file from PNG or TIF file
     if args.georeference:
@@ -154,9 +151,6 @@ def run_fig2pmtiles(_args):
         # update geotif_f
         geotif_f = georef_f
 
-        # if args.mbtiles2pmtiles:
-        #     cmds_rm.append(f"rm -f {georef_f}")
-
     # 1. Orientation
     if args.flip_vertical or args.flip_horizontal or args.rotate is not None:
         # 0) Extract dimensions
@@ -173,7 +167,7 @@ def run_fig2pmtiles(_args):
         if args.flip_horizontal:
             ort_suffix.append("hflip")
 
-        ort_f = geotif_f.replace(".tif","") + "." + ".".join(ort_suffix) + ".tif"
+        ort_f = f"{args.out_prefix}-{"-".join(ort_suffix)}.tif"
 
         # 2) Order argument
         # if args.rotate == "90" and not args.flip_vertical and not args.flip_horizontal:
@@ -221,9 +215,7 @@ def run_fig2pmtiles(_args):
                 "gdalwarp",
                 f'"{geotif_f}"',  # Add quotes around file names to handle spaces
                 f'"{ort_f}"',
-                "-b", "1",
-                "-b", "2",
-                "-b", "3",
+                "-b 1 -b 2 -b 3" if not args.mono else "-b 1",
                 "-ct", f"\"+proj=pipeline +step +proj=axisswap +order={order_arg}\"",
                 "-overwrite",
                 "-ts", f"{out_dim}"
@@ -239,22 +231,19 @@ def run_fig2pmtiles(_args):
         cmds = cmd_separator([], f"Converting from geotif to mbtiles: {geotif_f}")
         cmd = " ".join([
             "gdal_translate", 
-            "-b", "1", 
-            "-b", "2",
-            "-b", "3",
+            "-b 1 -b 2 -b 3" if not args.mono else "-b 1",
             "-strict",
             "-co", "\"ZOOM_LEVEL_STRATEGY=UPPER\"",
             "-co", f"\"RESAMPLING={args.resample}\"",
             "-co", f"\"BLOCKSIZE={args.blocksize}\"",
             "-ot", "Byte",
-            "-scale", "0", "255",
+            "-scale", 
             "-of", "mbtiles",
             "-a_srs", args.srs,
             geotif_f, 
             mbtile_f
         ])
         cmds.append(cmd)
-        #cmds.append(f"gdal_translate -b 1 -b 2 -b 3 -strict -co \"ZOOM_LEVEL_STRATEGY=UPPER\" -co \"RESAMPLING={args.resample}\" -co \"BLOCKSIZE={args.blocksize}\" -ot Byte -scale 0 255 -of mbtiles -a_srs {args.srs} {geotif_f} {mbtile_f}")
         mm.add_target(mbtile_f, [geotif_f], cmds)
     
     # 3. Convert mbtiles to pmtiles
@@ -263,42 +252,30 @@ def run_fig2pmtiles(_args):
         cmds.append(f"cp {mbtile_f} {mbtile_f_ann}")
         cmds.append(f"'{args.gdaladdo}' {mbtile_f_ann} -r {args.resample} 2 4 8 16 32 64 128 256")
         cmds.append(f"'{args.pmtiles}' convert --force {mbtile_f_ann} {pmtiles_f}")
-        # cmds_rm.append(f"rm -f {mbtile_f_ann}")
-
-        # if not args.keep_intermediate_files:
-        #     cmds += cmds_rm ## remove intermediate files
-
         mm.add_target(pmtiles_f, [mbtile_f], cmds)
 
-    # # 4. Upload new PMtiles to AWS
-    # if args.upload_aws:
-    #     assert args.aws_dir is not None, "Please provide the AWS S3 bucket path using --aws-bucket"
-    #     cmds = cmd_separator([], f"Uploading pmtiles to AWS: {geotif_f}")
-    #     pmtiles_fn=os.path.basename(pmtiles_f)
-    #     cmds.append(f"aws s3 cp {pmtiles_f} {args.aws_dir}/{pmtiles_fn}")
-    #     cmds.append(f"touch {pmtiles_f}.aws.done")
-    #     mm.add_target(f"{pmtiles_f}.aws.done", [pmtiles_f], cmds)
-
-    # 5. Update the catalog.yaml file with the new pmtiles and upload to AWS
+    # 4. Update the catalog.yaml file with the new pmtiles and upload to AWS
     if args.update_catalog:
         cmds = cmd_separator([], f"Updating yaml: {geotif_f}")
         pmtiles_name=os.path.basename(pmtiles_f)
         pmtiles_dir=os.path.dirname(pmtiles_f)
         cmds.append(f"cartloader update_catalog_for_basemap --in-yaml {catalog_f} --basemap {args.basemap_key}:{pmtiles_name} --basemap-dir {pmtiles_dir} --overwrite")
-        #cmds.append(f"aws s3 cp {catalog_f} {args.aws_dir}/catalog.yaml")
         cmds.append(f"touch {pmtiles_f}.yaml.done")
         mm.add_target(f"{pmtiles_f}.yaml.done", [pmtiles_f, catalog_f], cmds)
-    
+
+    # 5. Upload new PMtiles to AWS
+    # if args.upload_aws:
+    #     assert args.aws_dir is not None, "Please provide the AWS S3 bucket path using --aws-bucket"
+    #     cmds = cmd_separator([], f"Uploading pmtiles to AWS: {geotif_f}")
+    #     pmtiles_fn=os.path.basename(pmtiles_f)
+    #     cmds.append(f"aws s3 cp {pmtiles_f} {args.aws_dir}/{pmtiles_fn}")
+    #     cmds.append(f"aws s3 cp {catalog_f} {args.aws_dir}/{catalog_f}")
+    #     cmds.append(f"touch {pmtiles_f}.aws.done")
+    #     mm.add_target(f"{pmtiles_f}.aws.done", [pmtiles_f], cmds)
+
     ## write makefile
     make_f=os.path.join(out_dir, args.makefn) if args.makefn is not None else f"{args.out_prefix}.mk"
     mm.write_makefile(make_f)
-
-    # run makefile
-    # if args.dry_run:
-    #     os.system(f"make -f {args.out_dir}/{args.makefn} -n")
-    #     print(f"To execute the pipeline, run the following command:\nmake -f {args.out_dir}/{args.makefn} -j {args.n_jobs}")
-    # else:
-    #     os.system(f"make -f {args.out_dir}/{args.makefn} -j {args.n_jobs}")
 
     if args.dry_run:
         os.system(f"make -f {make_f} -n")

@@ -283,8 +283,8 @@ def cmd_run_cartload_join(run_i, args, env):
         "--pmtiles /nfs/turbo/sph-hmkang/weiqiuc/tools/go-pmtiles_1.10.0_Linux_x86_64/pmtiles",
         "--n-jobs 10"])
     # add aux tools
-    cartload_cmd = add_param_to_cmd(cartload_cmd, env, local_aux_env_args["run_cartload_join"])
-    cartload_cmd = add_param_to_cmd(cartload_cmd, env, ["gdal_translate"], underscore2dash=False)
+    # remove "gdal_translate" from the list of local_aux_env_args["run_cartload_join"]
+    cartload_cmd = add_param_to_cmd(cartload_cmd, env, local_aux_env_args["run_cartload_join"], underscore2dash=False)
     # dry-run
     if args.dry_run:
         cartload_cmd_dry = f"{cartload_cmd} --dry-run"
@@ -292,52 +292,164 @@ def cmd_run_cartload_join(run_i, args, env):
 
     return cartload_cmd
 
+# Simplified map of equivalent transformations
+ort_map = {
+    # No transformation
+    (None, False, False): (None, False, False),
+
+    # Flip X-axis
+    (None, False, True): (None, False, True),
+    ("180", True, False): (None, False, True),  # Equivalent to flip X-axis
+
+    # Flip Y-axis
+    (None, True, False): (None, True, False),
+    ("180", False, True): (None, True, False),  # Equivalent to flip Y-axis
+
+    # Flip both axes (equivalent to 180° rotation)
+    (None, True, True): (None, True, True),
+    ("180", False, False): (None, True, True),  # Equivalent to flipping both axes
+
+    # Rotate 90° clockwise
+    ("90", False, False): ("90", False, False),
+    ("270", True, True): ("90", False, False),  # Equivalent to Rotate 90°
+
+    # Rotate 90° clockwise, then flip X
+    ("90", False, True): ("90", False, True),
+    ("270", True, False): ("90", False, True),  # Equivalent to Rotate 90° + flip X
+
+    # Rotate 90° clockwise, then flip Y
+    ("90", True, False): ("90", True, False),
+    ("270", False, True): ("90", True, False),  # Equivalent to Rotate 90° + flip Y
+
+    # Rotate 90° clockwise, then flip both
+    ("90", True, True): ("90", True, True),
+    ("270", False, False): ("90", True, True),  # Equivalent to Rotate 90° + flip both
+}
+
+def update_ort(histology):
+    hist_path = histology["path"]
+
+    rotation = histology.get("rotate", None)
+    if rotation is not None:
+        if isinstance(rotation, int):
+            rotation = str(rotation)
+        if rotation not in ["90", "180", "270"]:
+            raise ValueError(f"Error: Invalid rotate value ({rotation}) for {hist_path}. Rotation must be None, 90, 180, or 270.")
+
+    flip = histology.get("flip", None)
+    
+    flip_vertical = flip == "vertical"
+    flip_horizontal = flip == "horizontal"
+
+    new_rot, new_vflip, new_hflip = ort_map.get(
+        (rotation, flip_vertical, flip_horizontal)
+    )
+
+    # Update the histology dictionary with the best solution
+    histology["rotate"] = new_rot
+    if new_vflip and new_hflip:
+        histology["flip"] = "both"
+    elif new_vflip:
+        histology["flip"] = "vertical"
+    elif new_hflip:
+        histology["flip"] = "horizontal"
+    else:
+        histology["flip"] = None
+
+    return histology
+
+
+def fig2pmtiles_wo_transform(histology, hist_prefix):
+    # inpath
+    hist_path = histology["path"]
+    # rotation
+    if histology.get("rotate", None) is not None:
+        rot_args+=f" --rotate {histology['rotate']}"
+    else:
+        rot_args=""
+    # cmd
+    hist_cmd= " ".join([
+            "cartloader", "run_fig2pmtiles", 
+            "--geotif2mbtiles", 
+            "--mbtiles2pmtiles", 
+            f"--in-fig {hist_path}",
+            f"--out-prefix {hist_prefix}",
+            rot_args,
+        ])
+    return hist_cmd
+
+
+def fig2pmtiles_transform(histology, hist_prefix):
+    # inpath
+    hist_path = histology["path"]
+    # rotation
+    if histology.get("rotate", None) is not None:
+        if histology.get("rotate") == "90" or histology.get("rotate") == 90:
+            rot_args =" --rotate-clockwise"
+        elif histology.get("rotate") == "270" or histology.get("rotate") == 270:
+            rot_args =" --rotate-counter"        
+    else:
+        rot_args=""
+    # cmd
+    hist_cmd= " ".join([
+            "cartloader", "transform_aligned_histology", 
+            f"--tif {hist_path}",
+            f"--out-prefix {hist_prefix}",
+            rot_args,
+        ])
+    return hist_cmd
+
 def cmd_run_fig2pmtiles(run_i, args, env):
     assert len(run_i.get("histology", [])) > 0, "Error: --histology is required when running fig2pmtiles"
     hist_cmds=[]
+    update_catalog_cmds=[]
     cartload_dir=os.path.join(run_i["out_dir"], "cartload")
     catalog_yaml=os.path.join(cartload_dir, "catalog.yaml")
     for histology in run_i.get("histology", []):
-        hist_type = histology["type"]
+        # 1. histology tif to pmtiles
         hist_path = histology["path"]
-        hist_id = histology.get("hist_id", None)
-        basemap_key = f"{hist_type}:{hist_id}" if hist_id is not None else hist_type
         # prefix
-        hist_inname = os.path.basename(hist_path)
+        hist_inname = os.path.basename(hist_path).replace("_", "-")
         for suffix in histology_suffixes:
             if hist_inname.endswith(suffix):
                 hist_inname = hist_inname[:-len(suffix)]
                 break
         hist_prefix = os.path.join(cartload_dir, hist_inname)
-        reorient_args=""
+        # update the orientation
+        histology = update_ort(histology)
+        # cmd by transform or not
+        hist_tran = histology.get("transform", False)
+        if hist_tran:
+            hist_cmd=fig2pmtiles_transform(histology, hist_prefix)
+        else:
+            hist_cmd=fig2pmtiles_wo_transform(histology, hist_prefix)
+        # add flip args
         if histology.get("flip", None) is not None:
             if histology["flip"] == "vertical":
-                reorient_args+=" --flip-vertical"
+                flip_arg =" --flip-vertical"
             elif histology["flip"] == "horizontal":
-                reorient_args+=" --flip-horizontal"
-        if histology.get("rotate", None) is not None:
-            reorient_args+=f" --rotate {histology['rotate']}"
-
-        if os.path.exists(catalog_yaml):
-            assert basemap_key is not None, "Error: At least, provide histology type."
-        
-        hist_cmd= " ".join([
-            "cartloader", "run_fig2pmtiles", 
-            "--geotif2mbtiles", 
-            "--mbtiles2pmtiles", 
-            f"--update-catalog --basemap-key {basemap_key}" if os.path.exists(catalog_yaml) else "",
-            f"--in-fig {hist_path}",
-            f"--out-prefix {hist_prefix}",
-            f"--makefn run_fig2pmtiles_{hist_inname}.mk",
-            reorient_args,
-        ])
-        hist_cmd = add_param_to_cmd(hist_cmd, env, local_aux_env_args["run_fig2pmtiles"]) 
+                flip_arg =" --flip-horizontal"
+            elif histology["flip"] == "both":
+                flip_arg =" --flip-vertical --flip-horizontal"
+        else: 
+            flip_arg = ""
+        hist_cmd = hist_cmd + flip_arg
+        # add aux tools
+        hist_cmd = add_param_to_cmd(hist_cmd, env, local_aux_env_args["run_fig2pmtiles"], underscore2dash=False)
         hist_cmds.append(hist_cmd)
+
+        # 2. update catalog.yaml
+        if os.path.exists(catalog_yaml):
+            hist_type = histology["type"]
+            hist_id = histology.get("hist_id", None)
+            hist_basemap_key = f"{hist_type}:{hist_id}" if hist_id is not None else hist_type
+        update_catalog_cmds.append(f"cartloader update_catalog_for_basemap --in-yaml {catalog_yaml} --basemap {hist_basemap_key}:{hist_inname}.pmtiles --basemap-dir {cartload_dir} --overwrite")
+
     if args.dry_run:
         for hist_cmd in hist_cmds:
             hist_cmd_dry = f"{hist_cmd} --dry-run"
             subprocess.run(hist_cmd_dry, shell=True)
-    return hist_cmds
+    return hist_cmds + update_catalog_cmds
 
 def cmd_upload_aws(run_i, args, env):
     cartload_dir=os.path.join(run_i["out_dir"], "cartload")
@@ -402,7 +514,7 @@ def stepinator(_args):
     input_params.add_argument("--ext-id", type=str, default=None, help="(Optional) The ID for the external model. Required when running FICTURE with an external model")
     input_params.add_argument("--train-width", '-w', type=str, default=None, help="Train width. Required when running FICTURE")
     input_params.add_argument("--n-factor", '-n', type=str, default=None, help="Number of factors. Only required when running FICTURE with LDA")
-    input_params.add_argument("--histology", type=str, nargs="?", default=[], help="(Optional) The histology information in the format of <type>,<path>,<ID>,<rotate_degree>,<flip_direction>. It requires at least provide <histology_type>,<histology_path>. (Default: [])")
+    input_params.add_argument("--histology", type=str, nargs="?", default=[], help="(Optional) Provide each histology information in the format of <type>,<path>,<ID>,<transform>,<rotate_degree>,<flip_direction>. It requires at least provide <histology_type>,<histology_path>, which will skip transform and orientation. It allows multiple histology files. (Default: [])")
     input_params.add_argument('--aws-bucket', type=str, default=None, help='AWS bucket name')
 
     # * tools
@@ -536,9 +648,10 @@ def stepinator(_args):
                 hist_type = hist_info[0]
                 hist_path = hist_info[1]
                 hist_id = hist_info[2] if len(hist_info) > 3 else None
-                rotate_degree = hist_info[3] if len(hist_info) > 4 else None
-                flip_direction = hist_info[4] if len(hist_info) > 5 else None
-                runinfo[0]["histology"].append({"type":hist_type, "path": hist_path, "hist_id": hist_id, "flip": flip_direction, "rotate": rotate_degree})
+                hist_transform = hist_info[3] if len(hist_info) > 4 else None
+                rotate_degree = hist_info[4] if len(hist_info) > 5 else None
+                flip_direction = hist_info[5] if len(hist_info) > 6 else None
+                runinfo[0]["histology"].append({"type":hist_type, "path": hist_path, "hist_id": hist_id, 'transform':hist_transform, "flip": flip_direction, "rotate": rotate_degree})
     # env
     # # * tools (collect from yaml and args)
     # for action, aux_args in local_aux_env_args.items():

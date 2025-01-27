@@ -39,7 +39,7 @@ def parse_arguments(_args):
 
     return parser.parse_args(_args)
 
-def write_yaml_for_assets(_args):
+def write_catalog_for_assets(_args):
     """
     Build resources for CartoScope
     """

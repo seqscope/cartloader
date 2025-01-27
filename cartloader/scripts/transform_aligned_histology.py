@@ -36,6 +36,10 @@ def parse_arguments(_args):
     aux_params.add_argument('--skip-pmtiles', action='store_true', default=False, help='Create PMTiles in addition to png')
     aux_params.add_argument('--log', action='store_true', default=False, help='Write log to file')
     aux_params.add_argument('--log-suffix', type=str, default=".log", help='The suffix for the log file (appended to the output directory). Default: .log')
+    aux_params.add_argument('--pmtiles', type=str, default=f"pmtiles", help='Path to pmtiles binary from go-pmtiles')
+    aux_params.add_argument('--gdal_translate', type=str, default=f"gdal_translate", help='Path to gdal_translate binary')
+    aux_params.add_argument('--gdaladdo', type=str, default=f"gdaladdo", help='Path to gdaladdo binary')
+    # aux_params.add_argument('--keep-intermediate-files', action='store_true', default=False, help='Keep intermediate files')
 
     if len(_args) == 0:
         parser.print_help()
@@ -202,7 +206,7 @@ def transform_aligned_histology(_args):
                 ul0 = f"\\{ul[0]}"
             else:
                 ul0 = f"{ul[0]}"
-            cmd = f"cartloader run_fig2pmtiles --in-bounds '{ul0},{ul[1]},{lr[0]},{lr[1]}' --in-fig {args.out_prefix}.png --out-prefix {args.out_prefix} --geotif2mbtiles --mbtiles2pmtiles --georeference"
+            cmd = f"cartloader run_fig2pmtiles --in-bounds '{ul0},{ul[1]},{lr[0]},{lr[1]}' --in-fig {args.out_prefix}.png --out-prefix {args.out_prefix} --geotif2mbtiles --mbtiles2pmtiles --georeference --pmtiles {args.pmtiles} --gdal_translate {args.gdal_translate} --gdaladdo {args.gdaladdo}"
             if is_mono:
                 cmd += " --mono"
             print(cmd)
