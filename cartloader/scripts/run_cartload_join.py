@@ -207,6 +207,7 @@ def run_cartload_join(_args):
         #}
 
         # fit_results
+        #print(f"--tippecanoe '{args.tippecanoe}'")
         in_fit_tsvf = f"{in_prefix}.fit_result.tsv.gz"
         if os.path.exists(in_fit_tsvf):
             cmd = " ".join([
@@ -218,8 +219,8 @@ def run_cartload_join(_args):
                 "--max-tile-bytes", str(args.max_tile_bytes),
                 "--max-feature-counts", str(args.max_feature_counts),
                 "--preserve-point-density-thres", str(args.preserve_point_density_thres),
-                f"--log --log-suffix '{args.log_suffix}'" if args.log else "",
                 f"--tippecanoe '{args.tippecanoe}'",
+                f"--log --log-suffix '{args.log_suffix}'" if args.log else "",
                 "--keep-intermediate-files" if args.keep_intermediate_files else ""
             ])
             cmds.append(cmd)
@@ -260,6 +261,7 @@ def run_cartload_join(_args):
                 "--max-tile-bytes", str(args.max_tile_bytes),
                 "--max-feature-counts", str(args.max_feature_counts),
                 "--preserve-point-density-thres", str(args.preserve_point_density_thres),
+                f"--tippecanoe '{args.tippecanoe}'",
                 f"--log --log-suffix '{args.log_suffix}'" if args.log else "",
             ])
             cmds.append(cmd)

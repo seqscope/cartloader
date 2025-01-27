@@ -192,25 +192,20 @@ def submit_job(jobname, jobpref, cmds, slurm, args):
 
     # Submit job if requested
     if args.submit:
-        if args.submit_mode == "local":
-            print("Submitting job locally")
-            try:
+        try:
+            if args.submit_mode == "local":
                 result = subprocess.run(f"bash {job_file}", shell=True, check=True, capture_output=True, text=True)
-                print("Job submitted successfully:\n", result.stdout)
-            except subprocess.CalledProcessError as e:
-                print("Error submitting job:\n", e.stderr)
-        elif args.submit_mode == "slurm":
-            # ?? The minimum required SLURM parameters
-            missing_params = [k for k in [ "cpus_per_task", "mem"] if not getattr(slurm, k, None)]
-            if missing_params:
-                print(f"Error: Missing required SLURM parameters: {', '.join(missing_params)}")
-                return
-
-            try:
+                print("Job executed successfully:\n", result.stdout)
+            elif args.submit_mode == "slurm":
+                # ?? The minimum required SLURM parameters
+                missing_params = [k for k in [ "cpus_per_task", "mem"] if not getattr(slurm, k, None)]
+                if missing_params:
+                    print(f"Error: Missing required SLURM parameters: {', '.join(missing_params)}")
+                    return
                 result = subprocess.run(f"sbatch {job_file}", shell=True, check=True, capture_output=True, text=True)
                 print("Job submitted successfully:\n", result.stdout)
-            except subprocess.CalledProcessError as e:
-                print("Error submitting job:\n", e.stderr)
+        except subprocess.CalledProcessError as e:
+            print("Error submitting job:\n", e.stderr)
 
 def cmd_run_ficture(run_i, args, env):
     # makefile 
@@ -374,18 +369,18 @@ def stepinator(_args):
                                      """)
     # * actions
     action_params = parser.add_argument_group("Actions", "Actions to be performed")
-    action_params.add_argument("--run-ficture", action="store_true", help="Run --run-ficture. Only the main function is executed.")
-    action_params.add_argument("--run-cartload-join", action="store_true", help="Run --run-cartload-join")
-    action_params.add_argument("--run-fig2pmtiles", action="store_true", help="Run --run-fig2pmtiles. Only works when histology is provided")
-    action_params.add_argument("--upload-aws", action="store_true", help="Upload files to AWS S3 bucket")
-    action_params.add_argument("--copy-ext-model", action="store_true", help="Auxiliary action parameters for --run-ficture. Copy external model when running FICTURE with an external model")
-    action_params.add_argument("--init-ext", action="store_true", help="Auxiliary action parameters for --run-ficture. Only Initialize external model without run main-ext")
-    action_params.add_argument("--skip-coarse-report", action="store_true", help="Auxiliary action parameters for --run-ficture. Skip coarse report")
+    action_params.add_argument("--run-ficture", action="store_true", help="Run run-ficture in cartloader. Only the main function is executed.")
+    action_params.add_argument("--run-cartload-join", action="store_true", help="Run run-cartload-join in cartloader")
+    action_params.add_argument("--run-fig2pmtiles", action="store_true", help="Run run-fig2pmtiles in cartloader. This requires provide histology using --in-yaml or --histology.")
+    action_params.add_argument("--upload-aws", action="store_true", help="Upload files to AWS S3 bucket. This requires provide AWS bucket name using --in-yaml or --aws-bucket.")
+    action_params.add_argument("--copy-ext-model", action="store_true", help="Auxiliary action parameters for run-ficture. Copy external model when running FICTURE with an external model")
+    action_params.add_argument("--init-ext", action="store_true", help="Auxiliary action parameters for run-ficture. Only Initialize external model without run main-ext")
+    action_params.add_argument("--skip-coarse-report", action="store_true", help="Auxiliary action parameters for run-ficture. Skip coarse report")
 
     # * mode
     run_params = parser.add_argument_group("Run", "Run mode")
-    run_params.add_argument("--submit", action="store_true",  help="Submit a slurm job")
-    run_params.add_argument('--submit-mode', type=str,  default="slurm", choices=["slurm", "local"], help='When choosing "slurm", it will submit a slurm job. When choosing "local", it will run the job locally.')
+    run_params.add_argument("--submit", action="store_true",  help="Submit the job")
+    run_params.add_argument('--submit-mode', type=str,  default="local", choices=["slurm", "local"], help='Specify how the job should be executed. Choose "slurm" for SLURM, "local" for local execution')
     run_params.add_argument("--dry-run", action="store_true", help="Perform a dry run")
 
 
@@ -405,10 +400,7 @@ def stepinator(_args):
     input_params.add_argument("--ext-path", type=str, default=None, help="(Optional) The path for the external model. Required when running FICTURE with an external model")
     input_params.add_argument("--ext-id", type=str, default=None, help="(Optional) The ID for the external model. Required when running FICTURE with an external model")
     input_params.add_argument("--train-width", '-w', type=str, default=None, help="Train width. Required when running FICTURE")
-    input_params.add_argument("--n-factor", '-n', type=str, default=None, help="Number of factors. Required when running FICTURE with LDA")
-    input_params.add_argument('--anchor-res', type=int, default=None, help='Anchor resolution for decoding. If absent, run_ficture will use the default value: 4.')
-    input_params.add_argument('--radius-buffer', type=int, default=None, help='Buffer to radius(=anchor_res + radius_buffer) for pixel-level decoding. If absent, run_ficture will use the default value: 1.')
-    input_params.add_argument("--cmap", '-c', type=str, default=None, help="(Optional) The path to color map (Default: None)")
+    input_params.add_argument("--n-factor", '-n', type=str, default=None, help="Number of factors. Only required when running FICTURE with LDA")
     input_params.add_argument("--histology", type=str, nargs="?", default=[], help="(Optional) The histology information in the format of <type>,<path>,<ID>,<rotate_degree>,<flip_direction>. It requires at least provide <histology_type>,<histology_path>. (Default: [])")
     input_params.add_argument('--aws-bucket', type=str, default=None, help='AWS bucket name')
 
@@ -425,7 +417,10 @@ def stepinator(_args):
     env_params.add_argument('--slurm-mail-user', type=str, default=None, help='If --submit-mode slurm, provide a SLURM mail user')
     env_params.add_argument('--slurm-cpus-per-task', type=int, default=10, help='If --submit-mode slurm, provide a SLURM cpus per task')
     env_params.add_argument('--slurm-mem', type=str, default="65000mb", help='If --submit-mode slurm, provide a SLURM memory')
+    # modules & env
     env_params.add_argument('--hpc-modules', type=str, default=None, help='(Optional) HPC modules to load, separated by comma. When a version is required, use the format: <module>/<version>')
+    env_params.add_argument('--conda', type=str, default=None, help='(Optional) Conda environment to activate')
+    # tools
     env_params.add_argument('--spatula', type=str,  default=None,  help='Path to spatula binary. When not provided, it will use the spatula from the submodules.')    
     env_params.add_argument('--pmtiles', type=str,  default=None,  help='Path to pmtiles binary. When not provided, it will use the pmtiles from the submodules.')
     env_params.add_argument('--tippecanoe', type=str,  default=None,  help='Path to tippecanoe binary. When not provided, it will use the tippecanoe from the submodules.')
@@ -443,6 +438,7 @@ def stepinator(_args):
         "Auxiliary Parameters for run_ficture", 
         "Parameters for run_ficture, required only if --run-ficture is used with non-default values. Default values are recommended."
     )    
+    ficture_aux_params.add_argument("--cmap", '-c', type=str, default=None, help="The path to color map (Default: None)")
     # input column indexes
     ficture_aux_params.add_argument('--csv-colidx-x',  type=int, default=1, help='Column index for X-axis in the --in-transcript (default: 1)')
     ficture_aux_params.add_argument('--csv-colidx-y',  type=int, default=2, help='Column index for Y-axis in the --in-transcript (default: 2)')
@@ -464,6 +460,8 @@ def stepinator(_args):
     ficture_aux_params.add_argument('--min-ct-per-unit-fit', type=int, default=None, help='Minimum count per hexagon unit during model fitting')
     ficture_aux_params.add_argument('--fit-plot-um-per-pixel', type=float, default=None, help='Image resolution for fit coarse plot')   # in Scopeflow, this is set to 2
     # decode
+    ficture_aux_params.add_argument('--anchor-res', type=int, default=None, help='Anchor resolution for decoding. If absent, run_ficture will use the default value: 4.')
+    ficture_aux_params.add_argument('--radius-buffer', type=int, default=None, help='Buffer to radius(=anchor_res + radius_buffer) for pixel-level decoding. If absent, run_ficture will use the default value: 1.')
     ficture_aux_params.add_argument('--decode-top-k', type=int, default=None, help='Top K columns to output in pixel-level decoding results')
     ficture_aux_params.add_argument('--decode-block-size', type=int, default=None, help='Block size for pixel decoding output')
     ficture_aux_params.add_argument('--decode-scale', type=int, default=None, help='Scale parameters for pixel decoding output')
@@ -551,7 +549,8 @@ def stepinator(_args):
     aux_env_args = []
     for action, aux_env_args_i in local_aux_env_args.items():
         aux_env_args.extend(aux_env_args_i)
-    env   = merge_config(yml, args, aux_env_args,  prefix="env")   
+    env   = merge_config(yml, args, aux_env_args,  prefix="env")  
+    #print(env) 
 
     # # * slurm (collect from yaml and args)
     # slurm = yml.get("slurm", {})
@@ -572,10 +571,19 @@ def stepinator(_args):
 
     if len(hpc_modules) > 0:
         module_load_cmds="module load "+ " ".join(hpc_modules)
-        if args.submit or args.dry_run:
-            subprocess.run(module_load_cmds, shell=True)
+        # if args.submit or args.dry_run:
+        #     subprocess.run(module_load_cmds, shell=True)
     else:
         module_load_cmds=""
+
+    # * conda env
+    conda_env = yml.get("env", {}).get("conda", None)
+    if args.conda is not None:
+        conda_env = args.conda
+    if conda_env is not None:
+        conda_cmd=f"conda activate {conda_env}"
+        # if args.submit or args.dry_run:
+        #     subprocess.run(conda_cmd, shell=True)
 
 
     for run_i in runinfo:
@@ -589,6 +597,7 @@ def stepinator(_args):
         # cmds
         cmds =  []
         cmds.append(module_load_cmds) 
+        cmds.append(conda_cmd)
         if args.run_ficture:
             cmds.append(cmd_run_ficture(run_i, args, env))
         if args.run_cartload_join:
