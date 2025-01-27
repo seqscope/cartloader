@@ -279,8 +279,6 @@ def cmd_run_cartload_join(run_i, args, env):
         f"--id {run_i['id']}",
         f"--major-axis {run_i.get('major_axis', 'X')}",
         f"--colname-count {run_i['colname_count']}" if run_i['colname_count'] else "",
-        "--spatula /nfs/turbo/sph-hmkang/tools/dev/spatula/bin/spatula",
-        "--pmtiles /nfs/turbo/sph-hmkang/weiqiuc/tools/go-pmtiles_1.10.0_Linux_x86_64/pmtiles",
         "--n-jobs 10"])
     # add aux tools
     # remove "gdal_translate" from the list of local_aux_env_args["run_cartload_join"]
@@ -395,7 +393,7 @@ def fig2pmtiles_transform(histology, hist_prefix):
             "cartloader", "transform_aligned_histology", 
             f"--tif {hist_path}",
             f"--out-prefix {hist_prefix}",
-            rot_args,
+            rot_args
         ])
     return hist_cmd
 
@@ -478,7 +476,6 @@ def stepinator(_args):
     Stepinator: A tool to run steps in cartloader.
     The input, actions, parameters, and tools can be provided in two ways: 1) using a YAML file or 2) using individual command-line arguments.
     It also allows the job execution in two modes: local and slurm.
-                                
                                      """)
     # * actions
     action_params = parser.add_argument_group("Actions", "Actions to be performed")
