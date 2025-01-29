@@ -7,18 +7,20 @@ import datetime
 from types import SimpleNamespace
 
 from cartloader.utils.utils import add_param_to_cmd
+from cartloader.utils.image_helper import update_orient
 
-histology_suffixes=[".tif", ".tiff"]
+histology_suffixes=[".tif", ".tiff", ".png"]
 histology_suffixes.extend([suffix.upper() for suffix in histology_suffixes])
 
-local_aux_env_args = {
+aux_env_args = {
         "run_ficture": ['spatula', 'bgzip', "tabix", "gzip", "sort", "sort_mem"],
         "run_cartload_join": ['magick', 'pmtiles', 'gdal_translate', 'gdaladdo', 'tippecanoe', 'spatula'],
         "run_fig2pmtiles": ['pmtiles', 'gdal_translate', 'gdaladdo']
 }
 
-local_aux_params_args = {
-     "run_ficture": ['csv_colidx_x', 'csv_colidx_y',
+aux_params_args = {
+     "run_ficture": ['anchor_res', 'radius_buffer', 
+                     'csv_colidx_x', 'csv_colidx_y',
                      'hexagon_n_move', 'hexagon_precision', 'min_ct_per_unit_hexagon',
                      'minibatch_size', 'minibatch_buffer',
                      'train_epoch', 'train_epoch_id_len', 'lda_rand_init', 'lda_plot_um_per_pixel',
@@ -31,13 +33,11 @@ local_aux_params_args = {
 def merge_config(base_config, args, keys, prefix=None):
     """
     Merges parameters from a base configuration dictionary and command-line arguments.
-
     Args:
         base_config (dict): Dictionary containing default values.
         args (argparse.Namespace): Parsed command-line arguments.
         keys (list): Keys to be merged from args and base_config.
         prefix (str, optional): Prefix to be added to keys in args.
-
     Returns:
         SimpleNamespace: Merged configuration.
     """
@@ -49,7 +49,6 @@ def merge_config(base_config, args, keys, prefix=None):
     return SimpleNamespace(**config)
 
 def check_file(file_path):
-    """Check if a file exists or is a valid symlink."""
     if not (os.path.isfile(file_path) or os.path.islink(file_path)):
         print(f"Input file not found: {file_path}")
         sys.exit(1)
@@ -222,14 +221,13 @@ def cmd_run_ficture(run_i, args, env):
         assert run_i["ext_id"] is not None, "Error: --ext-id is required when running ficture with an external model"
         assert os.path.exists(run_i["ext_path"]), f"Error: --ext-path is defined with a missing file: {run_i['ext_path']}"
         mod_args = [
+            "--main-ext" if not args.init_ext else "--init-ext",
             f"--ext-path {run_i['ext_path']}",
             f"--ext-id {run_i['ext_id']}",
-            "--main-ext" if not args.init_ext else "--init-ext",
             "--copy-ext-model" if run_i.get("copy_ext_model") else "",
         ]
     else:
         assert run_i['n_factor'] is not None, "Error: --n-factor is required when running standard ficture"
-        #mod_arg = f"--main --n-factor {run_i.get('n_factor', '12,24')}"
         mod_args = [
             "--main",
             f"--n-factor {run_i['n_factor']}",
@@ -256,14 +254,15 @@ def cmd_run_ficture(run_i, args, env):
         "--n-jobs 10",
     ])
     # add aux tools
-    ficture_cmd = add_param_to_cmd(ficture_cmd, env, local_aux_params_args["run_ficture"])
-    
-    ficture_aug = merge_config(run_i, args, local_aux_params_args["run_ficture"], prefix=None)
-    ficture_cmd = add_param_to_cmd(ficture_cmd, ficture_aug, local_aux_env_args["run_ficture"])
+    ficture_cmd = add_param_to_cmd(ficture_cmd, env, aux_env_args["run_ficture"])
+    # add aux parameters
+    ficture_aug = merge_config(run_i, args, aux_params_args["run_ficture"], prefix=None)  # merge auxiliary parameters
+    ficture_cmd = add_param_to_cmd(ficture_cmd, ficture_aug, aux_params_args["run_ficture"])
 
     # dry-run
     if args.dry_run:
         ficture_cmd_dry = f"{ficture_cmd} --dry-run"
+        print(f"Dry-run: {ficture_cmd_dry}")
         subprocess.run(ficture_cmd_dry, shell=True)
     return ficture_cmd
 
@@ -281,67 +280,45 @@ def cmd_run_cartload_join(run_i, args, env):
         f"--colname-count {run_i['colname_count']}" if run_i['colname_count'] else "",
         "--n-jobs 10"])
     # add aux tools
-    # remove "gdal_translate" from the list of local_aux_env_args["run_cartload_join"]
-    cartload_cmd = add_param_to_cmd(cartload_cmd, env, local_aux_env_args["run_cartload_join"], underscore2dash=False)
+    # remove "gdal_translate" from the list of aux_env_args["run_cartload_join"]
+    cartload_cmd = add_param_to_cmd(cartload_cmd, env, aux_env_args["run_cartload_join"], underscore2dash=False)
     # dry-run
     if args.dry_run:
         cartload_cmd_dry = f"{cartload_cmd} --dry-run"
+        print(f"Dry-run: {cartload_cmd_dry}")
         subprocess.run(cartload_cmd_dry, shell=True)
 
     return cartload_cmd
 
-# Simplified map of equivalent transformations
-ort_map = {
-    # No transformation
-    (None, False, False): (None, False, False),
+def parse_histology_args(histology_args):
+    hist_input = []
+    for histology in histology_args:
+        hist_info = histology.split(";")
+        if len(hist_info) < 2:
+            raise ValueError("Error: --histology should at least have <histology_type> and <histology_path>.")
+        
+        keys = [
+            "hist_id", "path",
+            "transform", 
+            "georeference", "georef_tsv", "georef_bounds", 
+            "rotate", "flip"
+        ]
+        
+        hist_dict = {key: hist_info[i] if i < len(hist_info) else None for i, key in enumerate(keys)}
+        hist_input.append(hist_dict)
 
-    # Flip X-axis
-    (None, False, True): (None, False, True),
-    ("180", True, False): (None, False, True),  # Equivalent to flip X-axis
+    return hist_input
 
-    # Flip Y-axis
-    (None, True, False): (None, True, False),
-    ("180", False, True): (None, True, False),  # Equivalent to flip Y-axis
-
-    # Flip both axes (equivalent to 180° rotation)
-    (None, True, True): (None, True, True),
-    ("180", False, False): (None, True, True),  # Equivalent to flipping both axes
-
-    # Rotate 90° clockwise
-    ("90", False, False): ("90", False, False),
-    ("270", True, True): ("90", False, False),  # Equivalent to Rotate 90°
-
-    # Rotate 90° clockwise, then flip X
-    ("90", False, True): ("90", False, True),
-    ("270", True, False): ("90", False, True),  # Equivalent to Rotate 90° + flip X
-
-    # Rotate 90° clockwise, then flip Y
-    ("90", True, False): ("90", True, False),
-    ("270", False, True): ("90", True, False),  # Equivalent to Rotate 90° + flip Y
-
-    # Rotate 90° clockwise, then flip both
-    ("90", True, True): ("90", True, True),
-    ("270", False, False): ("90", True, True),  # Equivalent to Rotate 90° + flip both
-}
-
-def update_ort(histology):
+def update_orient_in_histology(histology):
     hist_path = histology["path"]
 
     rotation = histology.get("rotate", None)
-    if rotation is not None:
-        if isinstance(rotation, int):
-            rotation = str(rotation)
-        if rotation not in ["90", "180", "270"]:
-            raise ValueError(f"Error: Invalid rotate value ({rotation}) for {hist_path}. Rotation must be None, 90, 180, or 270.")
-
-    flip = histology.get("flip", None)
     
-    flip_vertical = flip == "vertical"
-    flip_horizontal = flip == "horizontal"
+    flip = histology.get("flip", None)
+    flip_vertical = flip in [ "vertical", "both"]
+    flip_horizontal = flip in ["horizontal", "both"]
 
-    new_rot, new_vflip, new_hflip = ort_map.get(
-        (rotation, flip_vertical, flip_horizontal)
-    )
+    new_rot, new_vflip, new_hflip = update_orient(rotation, flip_vertical, flip_horizontal, hist_path)
 
     # Update the histology dictionary with the best solution
     histology["rotate"] = new_rot
@@ -356,51 +333,30 @@ def update_ort(histology):
 
     return histology
 
-
-def fig2pmtiles_wo_transform(histology, hist_prefix):
-    # inpath
-    hist_path = histology["path"]
-    # rotation
-    if histology.get("rotate", None) is not None:
-        rot_args+=f" --rotate {histology['rotate']}"
-    else:
-        rot_args=""
-    # cmd
-    hist_cmd= " ".join([
-            "cartloader", "run_fig2pmtiles", 
-            "--geotif2mbtiles", 
-            "--mbtiles2pmtiles", 
-            f"--in-fig {hist_path}",
-            f"--out-prefix {hist_prefix}",
-            rot_args,
-        ])
-    return hist_cmd
-
-
-def fig2pmtiles_transform(histology, hist_prefix):
-    # inpath
-    hist_path = histology["path"]
-    # rotation
-    if histology.get("rotate", None) is not None:
-        if histology.get("rotate") == "90" or histology.get("rotate") == 90:
-            rot_args =" --rotate-clockwise"
-        elif histology.get("rotate") == "270" or histology.get("rotate") == 270:
-            rot_args =" --rotate-counter"        
-    else:
-        rot_args=""
-    # cmd
-    hist_cmd= " ".join([
-            "cartloader", "transform_aligned_histology", 
-            f"--tif {hist_path}",
-            f"--out-prefix {hist_prefix}",
-            rot_args
-        ])
-    return hist_cmd
+# def fig2pmtiles_transform(histology, hist_prefix):
+#     # inpath
+#     hist_path = histology["path"]
+#     # rotation
+#     if histology.get("rotate", None) is not None:
+#         if histology.get("rotate") == "90" or histology.get("rotate") == 90:
+#             rot_args =" --rotate-clockwise"
+#         elif histology.get("rotate") == "270" or histology.get("rotate") == 270:
+#             rot_args =" --rotate-counter"        
+#     else:
+#         rot_args=""
+#     # cmd
+#     hist_cmd= " ".join([
+#             "cartloader", "transform_aligned_histology", 
+#             f"--tif {hist_path}",
+#             f"--out-prefix {hist_prefix}",
+#             rot_args
+#         ])
+#     return hist_cmd
 
 def cmd_run_fig2pmtiles(run_i, args, env):
     assert len(run_i.get("histology", [])) > 0, "Error: --histology is required when running fig2pmtiles"
     hist_cmds=[]
-    update_catalog_cmds=[]
+
     cartload_dir=os.path.join(run_i["out_dir"], "cartload")
     catalog_yaml=os.path.join(cartload_dir, "catalog.yaml")
     for histology in run_i.get("histology", []):
@@ -413,41 +369,35 @@ def cmd_run_fig2pmtiles(run_i, args, env):
                 hist_inname = hist_inname[:-len(suffix)]
                 break
         hist_prefix = os.path.join(cartload_dir, hist_inname)
+        # basemap key
         # update the orientation
-        histology = update_ort(histology)
-        # cmd by transform or not
-        hist_tran = histology.get("transform", False)
-        if hist_tran:
-            hist_cmd=fig2pmtiles_transform(histology, hist_prefix)
-        else:
-            hist_cmd=fig2pmtiles_wo_transform(histology, hist_prefix)
-        # add flip args
-        if histology.get("flip", None) is not None:
-            if histology["flip"] == "vertical":
-                flip_arg =" --flip-vertical"
-            elif histology["flip"] == "horizontal":
-                flip_arg =" --flip-horizontal"
-            elif histology["flip"] == "both":
-                flip_arg =" --flip-vertical --flip-horizontal"
-        else: 
-            flip_arg = ""
-        hist_cmd = hist_cmd + flip_arg
-        # add aux tools
-        hist_cmd = add_param_to_cmd(hist_cmd, env, local_aux_env_args["run_fig2pmtiles"], underscore2dash=False)
+        histology = update_orient_in_histology(histology)
+        # cmds
+        hist_cmd= " ".join([
+            "cartloader", "run_fig2pmtiles", 
+            "--transform" if histology.get("transform", False) else "",
+            "--georeference" if histology.get("georeference", False) else "",
+            "--geotif2mbtiles", 
+            "--mbtiles2pmtiles", 
+            f"--update-catalog --basemap-key {histology["hist_id"]}" if os.path.exists(catalog_yaml) else "",
+            f"--in-fig {hist_path}",
+            f"--out-prefix {hist_prefix}",
+            "--flip-vertical" if histology["flip"] in ["vertical", "both"] else "",
+            "--flip-horizontal" if histology["flip"] in ["horizontal", "both"] else "",
+            f"--rotate {histology['rotate']}" if histology.get("rotate", None) is not None else "",
+            f"--in-tsv {histology.get('georef_tsv', None)}" if histology.get("georef_tsv", None) is not None else "",
+            f"--in-bounds {histology.get('georef_bounds', None)}" if histology.get("georef_bounds", None) is not None else "",
+        ])
+        hist_cmd = add_param_to_cmd(hist_cmd, env, aux_env_args["run_fig2pmtiles"], underscore2dash=False)
         hist_cmds.append(hist_cmd)
-
-        # 2. update catalog.yaml
-        if os.path.exists(catalog_yaml):
-            hist_type = histology["type"]
-            hist_id = histology.get("hist_id", None)
-            hist_basemap_key = f"{hist_type}:{hist_id}" if hist_id is not None else hist_type
-        update_catalog_cmds.append(f"cartloader update_catalog_for_basemap --in-yaml {catalog_yaml} --basemap {hist_basemap_key}:{hist_inname}.pmtiles --basemap-dir {cartload_dir} --overwrite")
 
     if args.dry_run:
         for hist_cmd in hist_cmds:
             hist_cmd_dry = f"{hist_cmd} --dry-run"
+            print(f"Dry-run: {hist_cmd_dry}")
             subprocess.run(hist_cmd_dry, shell=True)
-    return hist_cmds + update_catalog_cmds
+    return hist_cmds
+    #return hist_cmds + update_catalog_cmds
 
 def cmd_upload_aws(run_i, args, env):
     cartload_dir=os.path.join(run_i["out_dir"], "cartload")
@@ -493,7 +443,6 @@ def stepinator(_args):
     run_params.add_argument('--submit-mode', type=str,  default="local", choices=["slurm", "local"], help='Specify how the job should be executed. Choose "slurm" for SLURM, "local" for local execution')
     run_params.add_argument("--dry-run", action="store_true", help="Perform a dry run")
 
-
     input_params = parser.add_argument_group("Input Configuration", 
         "Provide input data and settings. You can choose one of these methods to define inputs:\n"
         "1. Use --in-yaml and --ids-from-yaml to provide inputs in an input YAML file. This allows to handle more than one runs at once.\n"
@@ -511,7 +460,12 @@ def stepinator(_args):
     input_params.add_argument("--ext-id", type=str, default=None, help="(Optional) The ID for the external model. Required when running FICTURE with an external model")
     input_params.add_argument("--train-width", '-w', type=str, default=None, help="Train width. Required when running FICTURE")
     input_params.add_argument("--n-factor", '-n', type=str, default=None, help="Number of factors. Only required when running FICTURE with LDA")
-    input_params.add_argument("--histology", type=str, nargs="?", default=[], help="(Optional) Provide each histology information in the format of <type>,<path>,<ID>,<transform>,<rotate_degree>,<flip_direction>. It requires at least provide <histology_type>,<histology_path>, which will skip transform and orientation. It allows multiple histology files. (Default: [])")
+    input_params.add_argument("--histology", type=str, nargs="?", default=[], help="""
+                              (Optional) Provide histology info as <hist_id>;<path>;<transform>;<georeference>;<georef_tsv>;<georef_bounds>;<rotate_degree>;<flip_direction>. 
+                              Only <hist_id> and <path> are required. Supports multiple files; use <hist_id> to distinguish them. (Default: [])
+                              Define <transform> and <georeference> by True or False. If georeference=True, specify <georef_tsv> or <georef_bounds>. 
+                              Orientation allows rotation (90, 180, 270) and flipping (vertical, horizontal, both). 
+                            """)
     input_params.add_argument('--aws-bucket', type=str, default=None, help='AWS bucket name')
 
     # * tools
@@ -519,9 +473,7 @@ def stepinator(_args):
     "Specify paths to environment tools and settings using one of the following methods:\n" 
     "1. Provide all environment settings in the input YAML file (--in-yaml).\n" 
     "2. Provide individual tool paths and environment variables directly as command-line arguments.\n"  
-    #"3. If there is a separate YAML file available with reusable environment settings, use --env-yaml to reuse it. This leverage one YAML across multiple jobs and batches." 
     )
-    #env_params.add_argument('--env-yaml', type=str, default=None, help='Environment YAML file defining tool paths and settings.')
     env_params.add_argument('--slurm-account', type=str, default=None, help='If --submit-mode slurm, provide a SLURM account')
     env_params.add_argument('--slurm-partition', type=str, default=None, help='If --submit-mode slurm, provide a SLURM partition')
     env_params.add_argument('--slurm-mail-user', type=str, default=None, help='If --submit-mode slurm, provide a SLURM mail user')
@@ -529,7 +481,8 @@ def stepinator(_args):
     env_params.add_argument('--slurm-mem', type=str, default="65000mb", help='If --submit-mode slurm, provide a SLURM memory')
     # modules & env
     env_params.add_argument('--hpc-modules', type=str, default=None, help='(Optional) HPC modules to load, separated by comma. When a version is required, use the format: <module>/<version>')
-    env_params.add_argument('--conda', type=str, default=None, help='(Optional) Conda environment to activate')
+    env_params.add_argument('--conda-base', type=str, default=None, help='(Optional) Conda base path')
+    env_params.add_argument('--conda-env', type=str, default=None, help='(Optional) Conda environment to activate. If it is installed in the default location, i.e., within the base path, provide the environment name. Otherwise, provide the full path to the environment.')
     # tools
     env_params.add_argument('--spatula', type=str,  default=None,  help='Path to spatula binary. When not provided, it will use the spatula from the submodules.')    
     env_params.add_argument('--pmtiles', type=str,  default=None,  help='Path to pmtiles binary. When not provided, it will use the pmtiles from the submodules.')
@@ -540,15 +493,14 @@ def stepinator(_args):
     env_params.add_argument('--sort', type=str, default=None, help='Path to sort binary. For faster processing, you may add arguments like "sort -T /path/to/new/tmpdir --parallel=20 -S 10G"')
     env_params.add_argument('--sort-mem', type=str, default=None, help='Memory size for each process')
     env_params.add_argument('--magick', type=str, default=None, help='Path to magick binary')
-    env_params.add_argument('--gdal-translate', type=str, default=None, help='Path to gdal_translate binary')
+    env_params.add_argument('--gdal_translate', type=str, default=None, help='Path to gdal_translate binary')
     env_params.add_argument('--gdaladdo', type=str, default=None, help='Path to gdaladdo binary')
-
 
     ficture_aux_params = parser.add_argument_group(
         "Auxiliary Parameters for run_ficture", 
         "Parameters for run_ficture, required only if --run-ficture is used with non-default values. Default values are recommended."
     )    
-    ficture_aux_params.add_argument("--cmap", '-c', type=str, default=None, help="The path to color map (Default: None)")
+    ficture_aux_params.add_argument("--cmap", '-c', type=str, default=None, help="Only required if the user prefers to use a pre-built color map (Default: None)")
     # input column indexes
     ficture_aux_params.add_argument('--csv-colidx-x',  type=int, default=1, help='Column index for X-axis in the --in-transcript (default: 1)')
     ficture_aux_params.add_argument('--csv-colidx-y',  type=int, default=2, help='Column index for Y-axis in the --in-transcript (default: 2)')
@@ -589,12 +541,6 @@ def stepinator(_args):
 
     assert args.run_ficture or args.run_cartload_join or args.upload_aws or args.run_fig2pmtiles, "Error: at least one action is required"
 
-    # if args.env_yaml is not None:
-    #     with open(args.env_yaml, "r") as f:
-    #         yml = yaml.safe_load(f)
-    # else:
-    #     yml = {} 
-
     if args.in_yaml is not None:
         with open(args.in_yaml, "r") as f:
              #yml.update(yaml.safe_load(f))
@@ -628,52 +574,31 @@ def stepinator(_args):
                 "ext_id": args.ext_id,
                 "ext_path": args.ext_path,
                 "copy_ext_model": args.copy_ext_model,
-                # color map path
                 "cmap": args.cmap,
                 # analysis parameters
                 "train_width": args.train_width,
                 "n_factor": args.n_factor,
-                "anchor_res": args.anchor_res,
-                "radius_buffer": args.radius_buffer,
                 "histology":[],
             }
         ] 
+        # histology
         if len(args.histology) > 0:
-            for histology in args.histology:
-                hist_info = histology.split(",")
-                assert len(hist_info) > 2, "Error: --histology should at least have <histology_type> and <histology_path>."
-                hist_type = hist_info[0]
-                hist_path = hist_info[1]
-                hist_id = hist_info[2] if len(hist_info) > 3 else None
-                hist_transform = hist_info[3] if len(hist_info) > 4 else None
-                rotate_degree = hist_info[4] if len(hist_info) > 5 else None
-                flip_direction = hist_info[5] if len(hist_info) > 6 else None
-                runinfo[0]["histology"].append({"type":hist_type, "path": hist_path, "hist_id": hist_id, 'transform':hist_transform, "flip": flip_direction, "rotate": rotate_degree})
+            runinfo[0]["histology"].extend(parse_histology_args(args.histology))
+
     # env
-    # # * tools (collect from yaml and args)
-    # for action, aux_args in local_aux_env_args.items():
-    #     for aux_arg_key in aux_args:
-    #         aux_arg_value = getattr(args, aux_arg_key, None)  # Check if an aux arg is provided in args
-    #         if aux_arg_value:
-    #             env[aux_arg_key] = aux_arg_value  # Update or add 
-    # env = SimpleNamespace(**env)
+    # * tools (collect from yaml and args)
     aux_env_args = []
-    for action, aux_env_args_i in local_aux_env_args.items():
+    for action, aux_env_args_i in aux_env_args:
         aux_env_args.extend(aux_env_args_i)
     env   = merge_config(yml, args, aux_env_args,  prefix="env")  
-    #print(env) 
+    # * tools with submodules
+    if env.spatula is None:
+        env.spatula  = os.path.join(cartloader_repo, "submodules", "spatula", "bin", "spatula")
+    if env.tippecanoe is None:
+        env.tippecanoe = os.path.join(cartloader_repo, "submodules", "tippecanoe", "bin", "tippecanoe")
 
-    # # * slurm (collect from yaml and args)
-    # slurm = yml.get("slurm", {})
-    # for slurm_key in ["account", "partition", "mail_user", "cpus_per_task", "mem"]:
-    #     val = getattr(args, "slurm_"+slurm_key, None) # Check if slurm parameter is provided in args
-    #     if val:
-    #         slurm[slurm_key] = val 
+    # * slurm (collect from yaml and args)
     slurm = merge_config(yml, args, ["account", "partition", "mail_user", "cpus_per_task", "mem", "hours"], prefix="slurm")
-    
-    # * aws 
-    if args.aws_bucket is None:
-        args.aws_bucket = yml.get("aws_bucket", None)
     
     # * hpc modules
     hpc_modules =  yml.get("env", {}).get("hpc_modules", [])
@@ -682,21 +607,23 @@ def stepinator(_args):
 
     if len(hpc_modules) > 0:
         module_load_cmds="module load "+ " ".join(hpc_modules)
-        # if args.submit or args.dry_run:
-        #     subprocess.run(module_load_cmds, shell=True)
     else:
         module_load_cmds=""
 
     # * conda env
-    conda_env = yml.get("env", {}).get("conda", None)
-    if args.conda is not None:
-        conda_env = args.conda
-    if conda_env is not None:
-        conda_cmd=f"conda activate {conda_env}"
-        # if args.submit or args.dry_run:
-        #     subprocess.run(conda_cmd, shell=True)
+    conda_base = args.conda_base if args.conda_base else yml.get("env", {}).get("conda", {}).get("base_path", None)
+    conda_env  = args.conda_env  if args.conda_env  else yml.get("env", {}).get("conda", {}).get("env_prefix", None)
 
+    conda_cmd=[]
+    if conda_base:
+        conda_cmd.append(f"source {conda_base}/etc/profile.d/conda.sh")
+    if conda_env:
+        conda_cmd.append(f"conda activate {conda_env}")
 
+    # * aws 
+    if args.aws_bucket is None:
+        args.aws_bucket = yml.get("aws_bucket", None)
+    
     for run_i in runinfo:
         print("====================================")
         print(f"  ID: {run_i['id']} ")
@@ -708,7 +635,7 @@ def stepinator(_args):
         # cmds
         cmds =  []
         cmds.append(module_load_cmds) 
-        cmds.append(conda_cmd)
+        cmds.extend(conda_cmd)
         if args.run_ficture:
             cmds.append(cmd_run_ficture(run_i, args, env))
         if args.run_cartload_join:
@@ -725,7 +652,7 @@ def stepinator(_args):
         if args.run_cartload_join:
             sjobfns.append("cartload")
         if args.run_fig2pmtiles:
-            sjobfns.append("histology")
+            sjobfns.append("fig2pmtiles")
         if args.upload_aws:
             sjobfns.append("aws")
 
@@ -734,7 +661,6 @@ def stepinator(_args):
         os.makedirs(os.path.join(run_i["out_dir"], "worklog"), exist_ok=True)
         jobpref=os.path.join(run_i["out_dir"], "worklog", sjobfn) 
         submit_job(run_i["id"], jobpref, cmds, slurm, args)
-
 
 if __name__ == "__main__":
     # Get the path to the cartloader repository

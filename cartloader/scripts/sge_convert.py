@@ -2,7 +2,7 @@ import sys, os, gzip, argparse, logging, warnings, shutil, re, copy, time, pickl
 import pandas as pd
 from cartloader.utils.minimake import minimake
 from cartloader.utils.utils import cmd_separator, scheck_app, add_param_to_cmd
-from cartloader.utils.sge_helper import aux_args, input_by_platform, update_csvformat_by_platform
+from cartloader.utils.sge_helper import aux_sge_args, input_by_platform, update_csvformat_by_platform
 
 # get the path of the cu
 
@@ -240,7 +240,7 @@ def convert_visiumhd(cmds, args):
         args.include_feature_list = write_ftrlist_from_ftrtype(args)
     # 4) convert sge to tsv (output: out_transcript, out_minmax, out_feature, (optional) out_sge)
     format_cmd=f"{args.spatula} convert-sge --in-sge {args.in_mex} --out-tsv {args.out_dir} --pos {tmp_parquet} --tsv-mtx {args.out_transcript} --tsv-ftr {args.out_feature} --tsv-minmax {args.out_minmax}"
-    aux_argset = set(item for lst in [aux_args["out"], aux_args["inmex"], aux_args["inpos"], aux_args["spatula"], aux_args["ftrname"]] for item in lst)
+    aux_argset = set(item for lst in [aux_sge_args["out"], aux_sge_args["inmex"], aux_sge_args["inpos"], aux_sge_args["spatula"], aux_sge_args["ftrname"]] for item in lst)
     format_cmd = add_param_to_cmd(format_cmd, args, aux_argset)
     format_cmd = add_mexparam_to_cmd(format_cmd, args, mexarg_mapping)
     cmds.append(format_cmd)
@@ -261,7 +261,7 @@ def convert_seqscope(cmds, args):
         args.include_feature_list = write_ftrlist_from_ftrtype(args)
     # 2) convert sge to tsv (output: out_transcript, out_minmax, out_feature
     format_cmd=f"{args.spatula} convert-sge --in-sge {args.in_mex} --out-tsv {args.out_dir} --tsv-mtx {args.out_transcript} --tsv-ftr {args.out_feature} --tsv-minmax {args.out_minmax}"
-    aux_argset = set(item for lst in [aux_args["out"], aux_args["inmex"], aux_args["ftrname"]] for item in lst)
+    aux_argset = set(item for lst in [aux_sge_args["out"], aux_sge_args["inmex"], aux_sge_args["ftrname"]] for item in lst)
     format_cmd = add_param_to_cmd(format_cmd, args, aux_argset)
     format_cmd = add_mexparam_to_cmd(format_cmd, args, mexarg_mapping)
     cmds.append(format_cmd)
@@ -291,7 +291,7 @@ def convert_tsv(cmds, args):
     transcript_tsv = args.out_transcript.replace(".gz", "")
     format_cmd=f"cartloader format_generic --input {args.in_csv} --out-dir {args.out_dir} --out-transcript {transcript_tsv} --out-feature {args.out_feature} --out-minmax {args.out_minmax}"
     # aux args
-    aux_argset = set(item for lst in [aux_args["out"], aux_args["incsv"], aux_args["ftrname"], aux_args["ftrtype"]] for item in lst)
+    aux_argset = set(item for lst in [aux_sge_args["out"], aux_sge_args["incsv"], aux_sge_args["ftrname"], aux_sge_args["ftrtype"]] for item in lst)
     aux_argset.add('print_removed_transcripts')
     format_cmd = add_param_to_cmd(format_cmd, args, aux_argset)
     # append to cmds

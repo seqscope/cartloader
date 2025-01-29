@@ -1,6 +1,6 @@
 import os
 
-aux_args = {
+aux_sge_args = {
     "out": [
         'units_per_um', 'precision_um',
         'colname_x', 'colname_y', 'colnames_count',

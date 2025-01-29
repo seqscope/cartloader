@@ -11,8 +11,6 @@ def parse_arguments(_args):
     """
     Parse command-line arguments.
     """
-    repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-
     parser = argparse.ArgumentParser(prog=f"cartloader transform_aligned_histology", description="Convert Aligned Histology from 10x Xenium or Vizgen MERSCOPE")
 
     inout_params = parser.add_argument_group("Input/Output Parameters", "Define the input file according to the user's needs.")
@@ -33,12 +31,14 @@ def parse_arguments(_args):
     inout_params.add_argument('--rotate-counter', action='store_true', default=False, help='Rotate by 90 degree by counterclockwise direction (before flip)')
 
     aux_params = parser.add_argument_group("Auxiliary Parameters", "Additional parameters for the script")    
-    aux_params.add_argument('--skip-pmtiles', action='store_true', default=False, help='Create PMTiles in addition to png')
+    aux_params.add_argument('--skip-pmtiles', action='store_true', default=False, help='Skip creating PMTiles in addition to png')
+    aux_params.add_argument('--write-mono', action='store_true', default=False, help='Write the is_mono flag in a separate file')
+    aux_params.add_argument('--write-bounds', action='store_true', default=False, help='Write the bounds of <ulx>,<uly>,<lrx>,<lry> in a separate file')
     aux_params.add_argument('--log', action='store_true', default=False, help='Write log to file')
     aux_params.add_argument('--log-suffix', type=str, default=".log", help='The suffix for the log file (appended to the output directory). Default: .log')
-    aux_params.add_argument('--pmtiles', type=str, default=f"pmtiles", help='Path to pmtiles binary from go-pmtiles')
-    aux_params.add_argument('--gdal_translate', type=str, default=f"gdal_translate", help='Path to gdal_translate binary')
-    aux_params.add_argument('--gdaladdo', type=str, default=f"gdaladdo", help='Path to gdaladdo binary')
+    aux_params.add_argument('--pmtiles', type=str, default=f"pmtiles", help='If not --skip-pmtile, path to pmtiles binary from go-pmtiles')
+    aux_params.add_argument('--gdal_translate', type=str, default=f"gdal_translate", help='If not --skip-pmtile, path to gdal_translate binary')
+    aux_params.add_argument('--gdaladdo', type=str, default=f"gdaladdo", help='If not --skip-pmtile, path to gdaladdo binary')
     # aux_params.add_argument('--keep-intermediate-files', action='store_true', default=False, help='Keep intermediate files')
 
     if len(_args) == 0:
@@ -57,6 +57,14 @@ def transform_aligned_histology(_args):
     logger = create_custom_logger(__name__, args.out_prefix + args.log_suffix if args.log else None)
     logger.info("Analysis Started")
     
+    # replace is_ome = True with check_ome_tiff ??
+    # def check_ome_tiff(tiff_path):
+    #     assert os.path.exists(tiff_path), f"The file '{tiff_path}' does not exist."
+    #     with tifffile.TiffFile(tiff_path) as tif:
+    #         if tif.is_ome:
+    #             return True
+    #         else:
+    #             return False
     is_ome = True
     px_per_um_x = None
     px_per_um_y = None
@@ -81,13 +89,21 @@ def transform_aligned_histology(_args):
         logger.info(f"Successfully loaded the OME-TIFF file {args.tif}")
         n_pages = len(tif.pages)
         n_series = len(tif.series)
+        # ?? Why using tif.series[0] throughout the script while args.series exists?
+        # ?? replace it with `n_levels = len(tif.series[args.series].levels)` given `page = tif.series[args.series].levels[args.level].pages[args.page]`
         n_levels = len(tif.series[0].levels)
         
-        if n_pages > 1 and args.page is None:
-            logger.error("Multiple pages detected. Please specify the page number to extract the image from")
-            sys.exit(1)
+        # ??
+        # args.page = 0
+        if args.page is None:
+            if n_pages > 1:
+                logger.error("Multiple pages detected. Please specify the page number to extract the image from")
+                sys.exit(1)
+            elif n_pages == 1:
+                args.page = 0
+            else:
+                raise ValueError("In --transform, no pages detected in the OME-TIFF file")
 
-        args.page = 0
         page = tif.series[args.series].levels[args.level].pages[args.page]
         if len(page.shape) == 3:
             if page.shape[2] != 3:
@@ -194,8 +210,16 @@ def transform_aligned_histology(_args):
         image = Image.fromarray(image)
         
         logger.info(f"Saving the image...")
-        image.save(f"{args.out_prefix}.png")
-        
+        image.save(f"{args.out_prefix}.png") 
+
+        if args.write_bounds:
+            if ul[0] < 0:
+                ul0 = f"\\{ul[0]}"
+            else:
+                ul0 = f"{ul[0]}"
+            with open(f"{args.out_prefix}.bounds.csv", 'w') as f:
+                f.write(f"{ul[0]},{ul[1]},{lr[0]},{lr[1]}\n")
+
         if not args.skip_pmtiles:
             logger.info(f"Creating PMTiles with run_fig2pmtiles...")
             # if args.flip_horizontal:
@@ -207,6 +231,7 @@ def transform_aligned_histology(_args):
             else:
                 ul0 = f"{ul[0]}"
             cmd = f"cartloader run_fig2pmtiles --in-bounds '{ul0},{ul[1]},{lr[0]},{lr[1]}' --in-fig {args.out_prefix}.png --out-prefix {args.out_prefix} --geotif2mbtiles --mbtiles2pmtiles --georeference --pmtiles {args.pmtiles} --gdal_translate {args.gdal_translate} --gdaladdo {args.gdaladdo}"
+
             if is_mono:
                 cmd += " --mono"
             print(cmd)
