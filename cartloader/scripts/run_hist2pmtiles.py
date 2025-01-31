@@ -211,8 +211,23 @@ def run_hist2pmtiles(_args):
         
         # Handle PMTiles conversion
         if not args.skip_pmtiles:
-            # [PMTiles conversion code remains the same]
-            pass
+            logger.info(f"Creating PMTiles with run_fig2pmtiles...")
+            # if args.flip_horizontal:
+            #     (ul[0], lr[0]) = (lr[0], ul[0])
+            # if args.flip_vertical:
+            #     (ul[1], lr[1]) = (lr[1], ul[1])
+            if ul[0] < 0:
+                ul0 = f"\\{ul[0]}"
+            else:
+                ul0 = f"{ul[0]}"
+            cmd = f"cartloader run_fig2pmtiles --in-bounds '{ul0},{ul[1]},{lr[0]},{lr[1]}' --in-fig {args.out_prefix}.png --out-prefix {args.out_prefix} --geotif2mbtiles --mbtiles2pmtiles --georeference"
+            if is_mono:
+                cmd += " --mono"
+            print(cmd)
+            result = subprocess.run(cmd, shell=True)
+            if result.returncode != 0:
+                print(f"Error in converting the PNG to pmtiles")
+                sys.exit(1)
 
     logger.info("Analysis Completed")
 
