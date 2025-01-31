@@ -71,7 +71,7 @@ def transform_aligned_histology(_args):
                 raise ValueError(f"The CSV file {args.csv} contains non-zero values at off-diagonal elements")
             
     ## output basic information, such as number of pages
-    with tifffile.TiffFile(args.tif) as tif:
+    with tifffile.TiffFile(args.tif, _multifile=False) as tif:
         logger.info(f"Successfully loaded the OME-TIFF file {args.tif}")
         n_pages = len(tif.pages)
         n_series = len(tif.series)
@@ -87,22 +87,24 @@ def transform_aligned_histology(_args):
 ## This is a test code for handle the tiled TIFF      
         if page.is_tiled:            
             print(f"This is a tiled TIFF with chunk size {page.chunks}")
-            # print(f"chunks = {page.chunks}")
-            # print(f"tilelength = {page.tilelength}")
-            # print(f"tilewidth = {page.tilewidth}")
-            # print(f"tiledepth = {page.tiledepth}")
-            # print(f"samplesperpixel = {page.samplesperpixel}")
-            # print(f"imagewidth = {page.imagewidth}")
-            # print(f"imagelength = {page.imagelength}")
-            # print(f"imagedepth = {page.imagedepth}")
-            # print(f"rowsperstrip = {page.rowsperstrip}")
-            # print(f"sampleformat = {page.sampleformat}")
-            # print(f"compression = {page.compression}")
-            # print(f"photometric = {page.photometric}")
-            # segments = page.segments()
-            # for i, segment in enumerate(segments):
-            #     (data, offset, bytecount) = segment
-            #     print(f"{i}, {data.shape}, {offset}, {bytecount}, {np.squeeze(data).shape}")
+            print(f"chunks = {page.chunks}")
+            print(f"tilelength = {page.tilelength}")
+            print(f"tilewidth = {page.tilewidth}")
+            print(f"tiledepth = {page.tiledepth}")
+            print(f"samplesperpixel = {page.samplesperpixel}")
+            print(f"imagewidth = {page.imagewidth}")
+            print(f"imagelength = {page.imagelength}")
+            print(f"imagedepth = {page.imagedepth}")
+            print(f"rowsperstrip = {page.rowsperstrip}")
+            print(f"sampleformat = {page.sampleformat}")
+            print(f"compression = {page.compression}")
+            print(f"photometric = {page.photometric}")
+            segments = page.segments()
+            for i, segment in enumerate(segments):
+                (data, offset, bytecount) = segment
+                print(f"{i}, {data.shape}, {offset}, {bytecount}, {np.squeeze(data).shape}")
+                if i > 10:
+                    break
         else:
             # It's not tiled, so check how many strips there are
             n_strips = len(page.strip_offsets) if page.strip_offsets is not None else 0
@@ -110,6 +112,8 @@ def transform_aligned_histology(_args):
                 print(f"This is a striped TIFF with {n_strips} strips.")
             else:
                 print("This is a single-strip (scanline-based) TIFF.")
+        
+        sys.exit(1)
             
         if len(page.shape) == 3:
             if page.shape[2] != 3:

@@ -5,6 +5,7 @@ import tifffile, json
 from PIL import Image
 import psutil
 from typing import Tuple
+from collections import Counter
 import gc
 
 from cartloader.utils.minimake import minimake
@@ -53,17 +54,6 @@ def get_memory_usage():
     process = psutil.Process()
     return process.memory_info().rss / (1024 * 1024 * 1024)
 
-# class ChunkedTiffReader:
-#     def __init__(self, tiff_page, chunk_size):
-#         self.page = tiff_page
-#         self.chunk_size = chunk_size
-#         self.shape = tiff_page.shape
-#         self.dtype = tiff_page.dtype
-
-#     def read_chunk(self, y_start, y_end, x_start, x_end):
-#         """Read a chunk of the TIFF file directly"""
-#         return self.page.asarray(out='memmap')[y_start:y_end, x_start:x_end]
-
 def process_image_chunk(chunk: np.ndarray, args, r=None, g=None, b=None) -> np.ndarray:
     """Process a chunk of the image with the specified transformations"""
     # Clip and normalize
@@ -78,14 +68,45 @@ def process_image_chunk(chunk: np.ndarray, args, r=None, g=None, b=None) -> np.n
     
     return chunk.astype(np.uint8)
 
+def compute_quantiles_from_histogram(histogram, total_count, quantile):
+    """
+    Given a histogram (a mapping from integer values to counts) and the total count of values,
+    compute the integer corresponding to each quantile in the list `quantiles`.
+    
+    Args:
+        histogram: Counter mapping integer values to counts.
+        total_count: Total number of elements processed.
+        quantiles: A list of quantile levels (floats between 0 and 1).
+        
+    Returns:
+        A dictionary mapping each quantile level to the corresponding integer value.
+    """
+    # Sort the keys (the integer values) in increasing order
+    sorted_keys = sorted(histogram.keys())
+    # Create a cumulative count array
+    cum_counts = []
+    running_total = 0
+    for key in sorted_keys:
+        running_total += histogram[key]
+        cum_counts.append(running_total)
+    
+    # For each desired quantile, find the corresponding integer value
+    quantile_values = {}
+    target = quantile * total_count
+        
+    # Find the first index where the cumulative count is >= target.
+    # np.searchsorted does exactly that.
+    idx = np.searchsorted(cum_counts, target, side='left')
+    # The corresponding integer value is:
+    return sorted_keys[idx]
+
 def run_hist2pmtiles(_args):
     args = parse_arguments(_args)
     logger = create_custom_logger(__name__, args.out_prefix + args.log_suffix if args.log else None)
     logger.info("Analysis Started")
 
     # [CSV processing and metadata extraction remain the same]
-    
-    with tifffile.TiffFile(args.tif) as tif:
+    with tifffile.TiffFile(args.tif, _multifile=False) as tif:
         logger.info(f"Loaded OME-TIFF file {args.tif}")
         
         # Get page and validate
@@ -96,6 +117,7 @@ def run_hist2pmtiles(_args):
         
         ## iterate over the segment and extract the image by tile
         (chunk_height, chunk_width) = page.chunks
+        n_chunks = ((page.imagelength + chunk_height - 1) // chunk_height) * ((page.imagewidth + chunk_width - 1) // chunk_width)
         logger.info(f"Processing in chunks of {chunk_height}x{chunk_width} pixels")
 
         pixel_bytes = 4 if args.colorize else 1  # Account for RGB vs grayscale
@@ -106,6 +128,32 @@ def run_hist2pmtiles(_args):
         # Prepare output file
         output_shape = (*page.shape[:2], 3) if args.colorize else page.shape[:2]
         output_dtype = np.uint8
+        
+        ## if needed, get the overall distribution of pixel values for quantile-based thresholding
+        if args.upper_thres_quantile is not None or args.lower_thres_quantile is not None:
+            logger.info("Calculating pixel value distribution...")
+            histogram = Counter()
+            total_count = 0
+            segments = page.segments()
+            for i, segment in enumerate(segments):
+                if i % 100 == 0:
+                    logger.info(f"Processing segment {i+1}/{n_chunks}...")
+                data = np.squeeze(segment[0])
+                flat = data.ravel()
+                histogram.update(flat.tolist())
+                total_count += flat.size
+            
+            if args.upper_thres_quantile is not None:
+                #args.upper_thres_intensity = np.quantile(pixel_values, args.upper_thres_quantile)
+                args.upper_thres_intensity = compute_quantiles_from_histogram(histogram, total_count, args.upper_thres_quantile)
+                logger.info(f"Upper threshold for quantile {args.upper_thres_quantile} is set to {args.upper_thres_intensity}")
+                
+            if args.lower_thres_quantile is not None:
+                #args.lower_thres_intensity = np.quantile(pixel_values, args.lower_thres_quantile)
+                args.lower_thres_intensity = compute_quantiles_from_histogram(histogram, total_count, args.lower_thres_quantile)
+                logger.info(f"Lower threshold for quantile {args.lower_thres_quantile} is set to {args.lower_thres_intensity}")
+            del histogram
+            gc.collect()
     
         # Create memory-mapped output file
         output = np.memmap(f"{args.out_prefix}_output.npy", dtype=output_dtype,
@@ -118,7 +166,10 @@ def run_hist2pmtiles(_args):
 
         segments = page.segments()
         for i, segment in enumerate(segments):
-            logger.info(f"Processing segment {i}...")
+            if i % 100 == 0:
+                current_memory = get_memory_usage()
+                logger.info(f"Processing segment {i+1}/{n_chunks}, using {current_memory:.2f} GB memory...")
+
             # [Segment processing code remains the same]
             (data, offset, bytecount) = segment
             offset_y, offset_x = offset[-3], offset[-2]
@@ -137,7 +188,7 @@ def run_hist2pmtiles(_args):
             data = np.squeeze(data)
             processed = process_image_chunk(data, args, r, g, b)
             
-            print(f"Chunk {i}: shape: {data.shape}, {processed.shape}, {offset_x}, {offset_y}, {width}, {height}, {page.imagewidth}, {page.imagelength}")
+            #print(f"Chunk {i}: shape: {data.shape}, {processed.shape}, {offset_x}, {offset_y}, {width}, {height}, {page.imagewidth}, {page.imagelength}")
                 
             # Write to output
             if args.colorize:
@@ -146,11 +197,8 @@ def run_hist2pmtiles(_args):
                 output[offset_y:(offset_y+height), offset_x:(offset_x+width)] = processed[0:height, 0:width]
             
             del data, processed, segment
-            gc.collect()
-            output.flush()
-            
-            current_memory = get_memory_usage()
-            logger.info(f"Current memory usage: {current_memory:.2f} GB")
+            #gc.collect()
+            #output.flush()            
                 
         # Save final image
         logger.info("Saving final image...")
