@@ -183,7 +183,7 @@ def add_param_to_cmd(cmd, args, aux_argset, underscore2dash=True):
                 arg_name = arg
             if isinstance(value, bool) and value:
                 cmd += f" --{arg_name}"
-            elif isinstance(value, list):
+            elif isinstance(value, list) and len(value) > 0:
                 cmd += f" --{arg_name} {' '.join(map(str, value))}"
             elif not isinstance(value, bool):
                 # Ensure regex patterns are properly quoted

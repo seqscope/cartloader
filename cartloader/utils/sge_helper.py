@@ -6,10 +6,14 @@ aux_sge_args = {
         'colname_x', 'colname_y', 'colnames_count',
         'colname_feature_name', 'colname_feature_id'
     ],
-    "inmex": [
-        #'mex_bcd', 'mex_ftr', 'mex_mtx',
-        'icols_mtx', 'icol_bcd_barcode', 'icol_bcd_x',
-        'icol_bcd_y', 'icol_ftr_id', 'icol_ftr_name'
+    "inbcd": [
+        'icol_bcd_barcode', 'icol_bcd_x', 'icol_bcd_y'
+    ],
+    "inftr": [
+        'icol_ftr_id', 'icol_ftr_name'
+    ],
+    "inmtx": [
+        'icols_mtx'
     ],
     "inpos": [
         'pos_colname_barcode', 'pos_colname_x', 'pos_colname_y', 'pos_delim'

@@ -28,14 +28,18 @@ def traverse_dict(d, parent_key=''):
 
 def upload_aws_by_catalog(_args):
     parser = argparse.ArgumentParser(description="Upload files to S3 as specified in catalog.yaml. All files must be in the input directory.")
-    parser.add_argument("--in-dir", help="Path to the input directory (e.g., /<in_dir>/cartload/).")
-    parser.add_argument("--s3-dir", help="S3 directory path (e.g., s3://<bucket_name>/<ID>).")
-    parser.add_argument("--catalog-yaml", default=None, help="Path to the catalog.yaml file (default: /<in_dir>/catalog.yaml).")
-    # parser.add_argument("--histology", nargs="*", default=None, help="List of histology pmtiles to upload (default: None).")
-    parser.add_argument('--restart', action='store_true', default=False, help='Restart the run. Ignore all intermediate files and start from the beginning')
-    parser.add_argument('--n-jobs', type=int, default=1, help='Number of jobs (processes) to run in parallel')
-    parser.add_argument('--makefn', type=str, default="upload_aws_by_catalog.mk", help='The file name of the Makefile to generate (default: {out-prefix}.mk)')
-    parser.add_argument('--dry-run', action='store_true', default=False, help='Dry run. Generate only the Makefile without running it (default: False)')
+    run_params = parser.add_argument_group("Run Options", "Run options for FICTURE commands")
+    run_params.add_argument('--dry-run', action='store_true', default=False, help='Dry run. Generate only the Makefile without running it')
+    run_params.add_argument('--restart', action='store_true', default=False, help='Restart the run. Ignore all intermediate files and start from the beginning')
+    run_params.add_argument('--n-jobs', type=int, default=1, help='Number of jobs (processes) to run in parallel')
+    run_params.add_argument('--makefn', type=str, default="run_ficture.mk", help='The name of the Makefile to generate (default: run_ficture.mk)')
+    run_params.add_argument('--append-makefile', type=str, default=None, help='For stepinator only. Specifies an existing Makefile to append new targets. Do not use.')
+
+    key_params = parser.add_argument_group("Key Parameters", "Key parameters that requires user's attention")
+    key_params.add_argument("--in-dir", help="Path to the input directory (e.g., /<main_dir>/cartload/).")
+    key_params.add_argument("--s3-dir", help="S3 directory path (e.g., s3://<bucket_name>/<ID>).")
+    key_params.add_argument("--catalog-yaml", default=None, help="Path to the catalog.yaml file (default: /<in_dir>/catalog.yaml).")
+    key_params.add_argument('--aws', type=str, default="aws", help='The path to aws (default: aws)')
     args = parser.parse_args(_args)
 
     # catalog files
@@ -92,10 +96,10 @@ def upload_aws_by_catalog(_args):
     for filename in cartload_files:
         file_path=os.path.join(args.in_dir, filename)
         s3_file_path = os.path.join(args.s3_dir, filename) 
-        cmds.append(f"aws s3 cp {file_path} {s3_file_path}")
+        cmds.append(f"{args.aws} s3 cp {file_path} {s3_file_path}")
     cartload_flag=os.path.join(args.in_dir, "cartload.aws.done")
     # upload catalog.yaml to AWS
-    cmds.append(f"aws s3 cp  {catalog_f} {s3_catalog_f}")
+    cmds.append(f"{args.aws} s3 cp  {catalog_f} {s3_catalog_f}")
     cmds.append(f"touch {cartload_flag}")
     mm.add_target(cartload_flag, cartload_prerequisites, cmds)
 
@@ -104,9 +108,9 @@ def upload_aws_by_catalog(_args):
         cmds=cmd_separator([], f"Uploading additional basemaps to AWS: {filename}...")
         file_path=os.path.join(args.in_dir, filename)
         s3_file_path = os.path.join(args.s3_dir, filename) 
-        cmds.append(f"aws s3 cp {file_path} {s3_file_path}")
+        cmds.append(f"{args.aws} s3 cp {file_path} {s3_file_path}")
          # upload catalog.yaml to AWS
-        cmds.append(f"aws s3 cp  {catalog_f} {s3_catalog_f}")
+        cmds.append(f"{args.aws} s3 cp  {catalog_f} {s3_catalog_f}")
         cmds.append(f"touch {file_path}.aws.done")
         mm.add_target(f"{file_path}.aws.done", [file_path], cmds)
 
@@ -136,21 +140,26 @@ def upload_aws_by_catalog(_args):
     # #         # mm.add_target(hist_yaml_flag, [hist_copy], cmds)
             
     # #         # uploading histology files to AWS
-    # #         cmds.append(f"aws s3 cp {hist_copy} {s3_hist_f}")
+    # #         cmds.append(f"{args.aws} s3 cp {hist_copy} {s3_hist_f}")
     # #         cmds.append(f"touch {hist_flag}")
     # #         mm.add_target(hist_flag, [hist_copy], cmds)
 
     ## write makefile
-    make_f=os.path.join(args.in_dir, args.makefn)
-    mm.write_makefile(make_f)
+    if args.append_makefile is None:
+        make_f = os.path.join(args.out_dir, args.makefn)
+        mm.write_makefile(make_f)
+    else:
+        mm.append_to_makefile(args.append_makefile)
 
     if args.dry_run:
-        os.system(f"make -f {make_f} -n")
+        dry_cmd=f"make -f {make_f} -n {'-B' if args.restart else ''} "
+        os.system(dry_cmd)
         print(f"To execute the pipeline, run the following command:\nmake -f {make_f} -j {args.n_jobs}")
     else:
-        result = subprocess.run(f"make -f {make_f} -j {args.n_jobs} {'-B' if args.restart else ''}", shell=True)
+        exe_cmd=f"make -f {make_f} -j {args.n_jobs} {'-B' if args.restart else ''}"
+        result = subprocess.run(exe_cmd, shell=True)
         if result.returncode != 0:
-            print(f"Error in executing the pipeline. Check the log files for more details.")
+            print(f"Error in executing: {exe_cmd}")
             sys.exit(1)
 
     # # Execute or print all commands

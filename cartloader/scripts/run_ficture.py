@@ -1,4 +1,4 @@
-import sys, os, gzip, argparse, logging, warnings, shutil
+import sys, os, gzip, argparse, logging, shutil, subprocess
 import pandas as pd
 from cartloader.utils.minimake import minimake
 from cartloader.utils.utils import cmd_separator, scheck_app, find_major_axis, add_param_to_cmd
@@ -14,6 +14,7 @@ def parse_arguments(_args):
     run_params.add_argument('--threads', type=int, default=1, help='Maximum number of threads to use in each process')
     run_params.add_argument('--n-jobs', type=int, default=1, help='Number of jobs (processes) to run in parallel')
     run_params.add_argument('--makefn', type=str, default="run_ficture.mk", help='The name of the Makefile to generate (default: run_ficture.mk)')
+    run_params.add_argument('--mm-action', type=str, default="write", choices=["write", "return"], help='For stepinator use. Do not use.')
 
     cmd_params = parser.add_argument_group("Commands", "FICTURE commands to run together")
     cmd_params.add_argument('--main', action='store_true', default=False, help='Run the main functions (sorttsv, minibatch, segment, lda, decode, summary)')
@@ -60,6 +61,17 @@ def parse_arguments(_args):
     key_params.add_argument('--anchor-res', type=int, default=4, help='Anchor resolution for decoding')
     key_params.add_argument('--radius-buffer', type=int, default=1, help='Buffer to radius(=anchor_res + radius_buffer) for pixel-level decoding')
 
+    # env params
+    env_params = parser.add_argument_group("ENV Parameters", "Environment parameters, e.g., tools.")
+    env_params.add_argument('--spatula', type=str, help='Path to spatula binary. When not provided, it will use the spatula from the submodules.')    
+    env_params.add_argument('--bgzip', type=str, default="bgzip", help='Path to bgzip binary. For faster processing, use "bgzip -@ 4')
+    env_params.add_argument('--tabix', type=str, default="tabix", help='Path to tabix binary')
+    env_params.add_argument('--gzip', type=str, default="gzip", help='Path to gzip binary. For faster processing, use "pigz -p 4"')
+    env_params.add_argument('--sort', type=str, default="sort", help='Path to sort binary. For faster processing, you may add arguments like "sort -T /path/to/new/tmpdir --parallel=20 -S 10G"')
+    env_params.add_argument('--sort-mem', type=str, default="5G", help='Memory size for each process')
+    #env_params.add_argument('--ficture', type=str, default="ficture", help='Path to ficture repository')
+
+    # aux params
     aux_params = parser.add_argument_group("Auxiliary Parameters", "Auxiliary parameters (using default is recommended)")
     # input column indexes
     aux_params.add_argument('--csv-colidx-x',  type=int, default=1, help='Column index for X-axis in the --in-transcript (default: 1)')
@@ -104,15 +116,7 @@ def parse_arguments(_args):
     aux_params.add_argument('--min-ct-per-feature', type=int, default=20, help='Minimum count per feature during LDA training, transform and decoding')
     aux_params.add_argument('--de-max-pval', type=float, default=1e-3, help='p-value cutoff for differential expression')
     aux_params.add_argument('--de-min-fold', type=float, default=1.5, help='Fold-change cutoff for differential expression')
-    # env params
-    env_params = parser.add_argument_group("ENV Parameters", "Environment parameters for the tools.")
-    env_params.add_argument('--spatula', type=str, help='Path to spatula binary. When not provided, it will use the spatula from the submodules.')    
-    env_params.add_argument('--bgzip', type=str, default="bgzip", help='Path to bgzip binary. For faster processing, use "bgzip -@ 4')
-    env_params.add_argument('--tabix', type=str, default="tabix", help='Path to tabix binary')
-    env_params.add_argument('--gzip', type=str, default="gzip", help='Path to gzip binary. For faster processing, use "pigz -p 4"')
-    env_params.add_argument('--sort', type=str, default="sort", help='Path to sort binary. For faster processing, you may add arguments like "sort -T /path/to/new/tmpdir --parallel=20 -S 10G"')
-    env_params.add_argument('--sort-mem', type=str, default="5G", help='Memory size for each process')
-    #env_params.add_argument('--ficture', type=str, default="ficture", help='Path to ficture repository')
+
     if len(_args) == 0:
         parser.print_help()
         sys.exit(1)
@@ -274,6 +278,7 @@ def run_ficture(_args):
     # input/output/other files
     # dirs
     os.makedirs(args.out_dir, exist_ok=True)
+
     # in files
     if args.in_transcript is None:
         args.in_transcript = os.path.join(args.out_dir, "transcripts.unsorted.tsv.gz")
@@ -289,6 +294,7 @@ def run_ficture(_args):
     if args.out_json is None:
         args.out_json = os.path.join(args.out_dir, f"ficture.params.json") 
     major_axis = define_major_axis(args)
+
     # check static cmap file
     if args.cmap_static:
         if args.static_cmap_file is None:
@@ -885,24 +891,23 @@ ${tabix} -f -s1 -b"${sortidx}" -e"${sortidx}" ${output}
                     cmds.append(f"factor_viz dotplot --post_count_file {decode_prefix}.posterior.count.tsv.gz --meta_data_file {decode_prefix}.factor.info.tsv --output {decode_prefix}.dotplot.pdf")
                     mm.add_target(f"{decode_prefix}_summary.done", [f"{decode_prefix}.dotplot.pdf"], cmds)
 
-    if len(mm.targets) == 0:
-        logging.error("There is no target to run. Please make sure that ast least one run option was turned on")
-        sys.exit(1)
-
     ## write makefile
-    mm.write_makefile(f"{args.out_dir}/{args.makefn}")
-
-    ## run makefile
-    if args.dry_run:
-        ## run makefile
-        os.system(f"make -f {args.out_dir}/{args.makefn} -n")
-        print(f"To execute the pipeline, run the following command:\nmake -f {args.out_dir}/{args.makefn} -j {args.n_jobs}")
-    else:
-        exit_code = os.system(f"make -f {args.out_dir}/{args.makefn} -j {args.n_jobs}")
-        if exit_code != 0:
-            logging.error(f"Error in running make -f {args.out_dir}/{args.makefn} -j {args.n_jobs}")
+    if len(mm.targets) == 0:
+            logging.error("There is no target to run. Please make sure that ast least one run option was turned on")
             sys.exit(1)
-
+    make_f = os.path.join(args.out_dir, args.makefn)
+    
+    mm.write_makefile(make_f)
+    if args.dry_run:
+        dry_cmd=f"make -f {make_f} -n {'-B' if args.restart else ''} "
+        os.system(dry_cmd)
+        print(f"To execute the pipeline, run the following command:\nmake -f {make_f} -j {args.n_jobs} {'-B' if args.restart else ''}")
+    else:
+        exe_cmd=f"make -f {make_f} -j {args.n_jobs} {'-B' if args.restart else ''}"
+        result = subprocess.run(exe_cmd, shell=True)
+        if result.returncode != 0:
+            print(f"Error in executing: {exe_cmd}")
+            sys.exit(1)
 
 if __name__ == "__main__":
     # Get the path to the cartloader repository

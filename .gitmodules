@@ -13,3 +13,13 @@
 [submodule "submodules/factor_viz"]
 	path = submodules/factor_viz
 	url = https://github.com/seqscope/factor_viz
+[submodule "submodules/ficture"]
+	path = submodules/ficture
+	url = git@github.com:seqscope/ficture.git
+	branch = dev
+[submodule "submodules/ImageMagick"]
+	path = submodules/ImageMagick
+	url = git@github.com:ImageMagick/ImageMagick.git
+[submodule "submodules/go-pmtiles"]
+	path = submodules/go-pmtiles
+	url = git@github.com:protomaps/go-pmtiles.git

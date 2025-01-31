@@ -1,3 +1,6 @@
+# TODO: Currently stepinator can only allow dry-run for one step. For example, if requested --run-ficture and --run-cartload-join with --dry-run, it can only process --run-ficture while 
+# the dry-run for --run-cartload-join will failed given its input is from run-ficture and run-ficture is not executed.
+
 import os
 import sys
 import subprocess
@@ -8,19 +11,22 @@ from types import SimpleNamespace
 
 from cartloader.utils.utils import add_param_to_cmd
 from cartloader.utils.image_helper import update_orient
+from cartloader.utils.sge_helper import aux_sge_args
 
 histology_suffixes=[".tif", ".tiff", ".png"]
 histology_suffixes.extend([suffix.upper() for suffix in histology_suffixes])
 
 aux_env_args = {
+        "sge_convert": ["spatula", "gzip", "parquet_tools"],
         "run_ficture": ['spatula', 'bgzip', "tabix", "gzip", "sort", "sort_mem"],
         "run_cartload_join": ['magick', 'pmtiles', 'gdal_translate', 'gdaladdo', 'tippecanoe', 'spatula'],
-        "run_fig2pmtiles": ['pmtiles', 'gdal_translate', 'gdaladdo']
+        "run_fig2pmtiles": ['pmtiles', 'gdal_translate', 'gdaladdo'],
+        "upload_aws": ['aws']
 }
 
 aux_params_args = {
-     "run_ficture": ['anchor_res', 'radius_buffer', 
-                     'csv_colidx_x', 'csv_colidx_y',
+    "sge_convert": [item for sublist in aux_sge_args.values() for item in sublist] + ["mu_scale", "radius", "quartil", "hex_n_move", "polygon_min_size"],
+    "run_ficture": ['anchor_res', 'radius_buffer', 
                      'hexagon_n_move', 'hexagon_precision', 'min_ct_per_unit_hexagon',
                      'minibatch_size', 'minibatch_buffer',
                      'train_epoch', 'train_epoch_id_len', 'lda_rand_init', 'lda_plot_um_per_pixel',
@@ -44,7 +50,9 @@ def merge_config(base_config, args, keys, prefix=None):
     config = base_config.get(prefix, {}).copy() if prefix else base_config.copy()
     for key in keys:
         val = getattr(args, f"{prefix}_{key}" if prefix else key, None)
-        if val is not None:
+        if isinstance(val, str) and val is not None:
+            config[key] = val
+        elif isinstance(val, list) and len(val) > 0:
             config[key] = val
     return SimpleNamespace(**config)
 
@@ -55,47 +63,53 @@ def check_file(file_path):
     else:
         print(f"Checked: {file_path}")
 
-def define_sge(sgelab, out_dir, sge_dir):
-    # file names by sge lab
-    tsvfn    = "transcripts.unsorted.tsv.gz" if sgelab == "raw" else "filtered.transcripts.unsorted.tsv.gz"
-    cstsvfn  = "transcripts.sorted.tsv.gz" if sgelab == "raw" else "filtered.transcripts.sorted.tsv.gz"
-    ftrfn    = "feature.clean.tsv.gz" if sgelab == "raw" else "filtered.feature.lenient.tsv.gz"
-    minmaxfn = "coordinate_minmax.tsv" if sgelab == "raw" else "filtered.coordinate_minmax.tsv"
+def define_sge(filter_by_density, filtered_prefix, run_dir, sge_dir, create_softlink=False):
+    if filter_by_density:
+        assert filtered_prefix is not None, "Error: --filtered-prefix is Required when --filter-by-density is applied"
+    tsvfn    = "transcripts.unsorted.tsv.gz" if not filter_by_density else f"{filtered_prefix}.transcripts.unsorted.tsv.gz"
+    cstsvfn  = "transcripts.sorted.tsv.gz" if not filter_by_density else f"{filtered_prefix}.transcripts.sorted.tsv.gz"
+    ftrfn    = "feature.clean.tsv.gz" if not filter_by_density else f"{filtered_prefix}.feature.lenient.tsv.gz"
+    minmaxfn = "coordinate_minmax.tsv" if not filter_by_density else f"{filtered_prefix}.coordinate_minmax.tsv"
 
     if sge_dir is None:
-        sge_dir = out_dir
+        sge_dir = run_dir
 
+    tsv = os.path.join(sge_dir, tsvfn)
+    cstsv = os.path.join(sge_dir, cstsvfn)
+    ftr = os.path.join(sge_dir, ftrfn)
+    minmax = os.path.join(sge_dir, minmaxfn)
+
+    # # tsv or cstsv
+    # if os.path.isfile(cstsv) or os.path.islink(cstsv):
+    #     sge_arg=f"--in-cstranscript {cstsv} --in-feature {ftr} --in-minmax {minmax}"
+    # elif os.path.isfile(tsv) or os.path.islink(tsv):
+    #     sge_arg=f"--in-transcript {tsv} --in-feature {ftr} --in-minmax {minmax}" 
+    # else:
+    #     print(f"Input file not found: {tsv} or {cstsv}")
+    #     sys.exit(1)
+    sge_arg=f"--in-cstranscript {cstsv} --in-transcript {tsv} --in-feature {ftr} --in-minmax {minmax}"
     # link files 
-    fic_dir=os.path.join(out_dir, "ficture")
-    os.makedirs(fic_dir, exist_ok=True)
-    if sge_dir != fic_dir:
-        for infn in [cstsvfn, tsvfn, ftrfn, minmaxfn]:
-            src = os.path.join(sge_dir, infn) # source
-            dst = os.path.join(fic_dir, infn) # destination
-            if infn == cstsvfn and not os.path.exists(os.path.abspath(src)):
-                continue
-            if not os.path.isfile(dst) and not os.path.exists(dst):
-                os.symlink(src, dst)
-                print(f"Creating symlink for {infn}")
+    if create_softlink:
+        # check if the files exist
+        for infile in [ftr, minmax]:
+            check_file(infile)
+        # tsv or cstsv
+        if os.path.isfile(cstsv) or os.path.islink(cstsv):
+            check_file(cstsv)
+        elif os.path.isfile(tsv) or os.path.islink(tsv):
+                check_file(tsv)
+        # create softlink
+        fic_dir=os.path.join(run_dir, "ficture")
+        if sge_dir != fic_dir:
+            for infn in [cstsvfn, tsvfn, ftrfn, minmaxfn]:
+                src = os.path.join(sge_dir, infn) # source
+                dst = os.path.join(fic_dir, infn) # destination
+                if infn == cstsvfn and not os.path.exists(os.path.abspath(src)):
+                    continue
+                if not os.path.isfile(dst) and not os.path.exists(dst):
+                    os.symlink(src, dst)
+                    print(f"Creating symlink for {infn}")
 
-    tsv = os.path.join(fic_dir, tsvfn)
-    cstsv = os.path.join(fic_dir, cstsvfn)
-    ftr = os.path.join(fic_dir, ftrfn)
-    minmax = os.path.join(fic_dir, minmaxfn)
-
-    # check if the files exist
-    for infile in [ftr, minmax]:
-        check_file(infile)
-    # tsv or cstsv
-    if os.path.isfile(cstsv) or os.path.islink(cstsv):
-        check_file(cstsv)
-        sge_arg=f"--in-cstranscript {cstsv} --in-feature {ftr} --in-minmax {minmax}"
-    elif os.path.isfile(tsv) or os.path.islink(tsv):
-        check_file(tsv)
-        sge_arg=f"--in-transcript {tsv} --in-feature {ftr} --in-minmax {minmax}" 
-    else:
-        print(f"Input file not found: {tsv} or {cstsv}")
-        sys.exit(1)
     return sge_arg
 
 def define_args_rgb(rgbpath):
@@ -134,7 +148,6 @@ def define_args_rgb(rgbpath):
 #         subprocess.run(submit_cmd, shell=True)
 #     # else:
 #     #     print("debug:", submit_cmd)
-
 
 def submit_job(jobname, jobpref, cmds, slurm, args):
     """
@@ -206,39 +219,73 @@ def submit_job(jobname, jobpref, cmds, slurm, args):
         except subprocess.CalledProcessError as e:
             print("Error submitting job:\n", e.stderr)
 
+
+def cmd_sge_convert(sgeinfo, args, env):
+    mkbn = "sge_convert"
+
+    platform= sgeinfo.get("platform", None)
+    assert platform is not None, "Please provide a platform for sge_convert"
+
+    if platform == "10x_visium_hd":
+        assert sgeinfo.get("in_mex", None) is not None, "Please provide --in-mex for 10x_visium_hd"
+        assert sgeinfo.get("in_parquet", None) is not None, "Please provide --in-parquet for 10x_visium_hd"
+        in_arg= " ".join([
+            f"--in-mex {sgeinfo['in_mex']}", 
+            f"--in-parquet {sgeinfo['in_parquet']}",
+            f"--scale-json {sgeinfo['scale_json']}" if sgeinfo.get("scale_json", None) is not None else "",
+        ])
+    elif platform == "seqscope":
+        assert sgeinfo.get("in_mex", None) is not None, "Please provide --in-mex for seqscope"
+        in_arg= f"--in-mex {sgeinfo['in_mex']}"
+    elif platform in ["10x_xenium", "bgi_stereoseq", "cosmx_smi", "vizgen_merscope", "pixel_seq", "nova_st"]:
+        assert sgeinfo.get("in_csv", None) is not None, f"Please provide --in-csv for {platform}"
+        in_arg= f"--in-csv {sgeinfo['in_csv']}"
+
+    sge_cmd = " ".join([
+        "cartloader", "sge_convert",
+        f"--makefn {mkbn}.mk",
+        f"--platform {sgeinfo['platform']}",
+        in_arg,
+        f"--out-dir {sgeinfo['sge_dir']}",
+        f"--precision-um {args.precision_um}" if args.precision_um else "",
+        f"--units-per-um {args.units_per_um}" if args.units_per_um else "",
+        f"--filter-by-density" if args.filter_by_density else "",
+        f"--out-filtered-prefix {args.filtered_prefix}" if args.filter_by_density and args.filtered_prefix else "",
+        f"--colnames-count {args.colname_count}" if args.colname_count else "",
+        f"--n-jobs {args.n_jobs}" if args.n_jobs else "",
+        f"--restart" if args.restart else ""
+    ])
+    # add aux tools
+    sge_cmd = add_param_to_cmd(sge_cmd, env, aux_env_args["sge_convert"])
+    # add aux parameters
+    sge_aug = merge_config(sgeinfo, args, aux_params_args["sge_convert"], prefix=None)
+    sge_cmd = add_param_to_cmd(sge_cmd, sge_aug, aux_params_args["sge_convert"])
+    return sge_cmd
+
 def cmd_run_ficture(run_i, args, env):
+    
+    ext_path = run_i.get("ext_path", None)
+    ext_id   = run_i.get("ext_id", None)
+
     # makefile 
-    mkbn = "run_ficture" if run_i["ext_path"] is None else f"run_ficture_{run_i['ext_id']}"
+    mkbn = "run_ficture" if ext_path is None else f"run_ficture_{ext_id}"
 
     # sge and rgb
-    fic_dir=os.path.join(run_i["out_dir"], "ficture")
-    sge_arg = define_sge(run_i["sge_label"], run_i["out_dir"], run_i.get("sge_dir", None))
-    cmap_arg = define_args_rgb(run_i["cmap"])
+    fic_dir=os.path.join(run_i["run_dir"], "ficture")
+
+    create_softlink = False if args.sge_convert else True
+    sge_arg = define_sge(run_i.get("filter_by_density", False), run_i.get("filtered_prefix", None), run_i["run_dir"], run_i.get("sge_dir", None), create_softlink)
+
+    cmap_arg = define_args_rgb(run_i.get("cmap", None))
     
     # model & parameters
-    assert run_i["train_width"] is not None, "Error: --train-width is required"
-    if run_i["ext_path"] is not None:
-        assert run_i["ext_id"] is not None, "Error: --ext-id is required when running ficture with an external model"
-        assert os.path.exists(run_i["ext_path"]), f"Error: --ext-path is defined with a missing file: {run_i['ext_path']}"
-        mod_args = [
-            "--main-ext" if not args.init_ext else "--init-ext",
-            f"--ext-path {run_i['ext_path']}",
-            f"--ext-id {run_i['ext_id']}",
-            "--copy-ext-model" if run_i.get("copy_ext_model") else "",
-        ]
+    assert run_i.get("train_width", None) is not None, "Error: --train-width is d"
+    if ext_path:
+        assert ext_id is not None, "Error: --ext-id is Required when running ficture with an external model"
+        assert os.path.exists(ext_path), f"Error: --ext-path is defined with a missing file: {ext_path}"
     else:
-        assert run_i['n_factor'] is not None, "Error: --n-factor is required when running standard ficture"
-        mod_args = [
-            "--main",
-            f"--n-factor {run_i['n_factor']}",
-        ]
-
-    mod_args.append(f"--train-width {run_i['train_width']}")
-    if run_i.get("anchor_res") is not None:
-        mod_args.append(f"--anchor-res {run_i['anchor_res']}")
-    if run_i.get("radius_buffer") is not None:
-        mod_args.append(f"--radius-buffer {run_i['radius_buffer']}")
-
+        assert run_i.get("n_factor", None) is not None, "Error: --n-factor is Required when running standard ficture"
+    
     # cmd
     ficture_cmd = " ".join([
         "cartloader", "run_ficture",
@@ -247,11 +294,17 @@ def cmd_run_ficture(run_i, args, env):
         sge_arg,
         f"--major-axis {run_i.get('major_axis', 'X')}",
         f"--colname-count {run_i['colname_count']}" if run_i['colname_count'] else "",
-        " ".join(mod_args),
+        f"{'--init-ext' if ext_path and args.init_ext else '--main-ext' if ext_path else '--main'}",
+        f"--ext-path {ext_path}" if ext_path else "",
+        f"--ext-id {ext_id}" if ext_path else "",
+        "--copy-ext-model" if ext_path and run_i.get("copy_ext_model", False) else "",
+        f"--n-factor {run_i['n_factor']}" if ext_path is None else "",
+        f"--train-width {run_i['train_width']}",
         "--skip-coarse-report" if args.skip_coarse_report else "",
         cmap_arg,
-        "--threads 10",
-        "--n-jobs 10",
+        f"--n-jobs {args.n_jobs}" if args.n_jobs else "",
+        f"--restart" if args.restart else "",
+        f"--threads {args.threads}"
     ])
     # add aux tools
     ficture_cmd = add_param_to_cmd(ficture_cmd, env, aux_env_args["run_ficture"])
@@ -259,34 +312,26 @@ def cmd_run_ficture(run_i, args, env):
     ficture_aug = merge_config(run_i, args, aux_params_args["run_ficture"], prefix=None)  # merge auxiliary parameters
     ficture_cmd = add_param_to_cmd(ficture_cmd, ficture_aug, aux_params_args["run_ficture"])
 
-    # dry-run
-    if args.dry_run:
-        ficture_cmd_dry = f"{ficture_cmd} --dry-run"
-        print(f"Dry-run: {ficture_cmd_dry}")
-        subprocess.run(ficture_cmd_dry, shell=True)
     return ficture_cmd
 
 def cmd_run_cartload_join(run_i, args, env):
-    fic_dir = os.path.join(run_i["out_dir"], "ficture")
-    cartload_dir = os.path.join(run_i["out_dir"], "cartload")
+    fic_dir = os.path.join(run_i["run_dir"], "ficture")
+    cartload_dir = os.path.join(run_i["run_dir"], "cartload")
     os.makedirs(cartload_dir, exist_ok=True)
     cartload_cmd=" ".join([
         "cartloader", "run_cartload_join", 
-        "--makefn run_cartload_join.mk", 
+        "--makefn run_cartload_join.mk",
         f"--fic-dir {fic_dir}", 
         f"--out-dir {cartload_dir}",
-        f"--id {run_i['id']}",
+        f"--id {run_i['run_id']}",
         f"--major-axis {run_i.get('major_axis', 'X')}",
         f"--colname-count {run_i['colname_count']}" if run_i['colname_count'] else "",
-        "--n-jobs 10"])
+        f"--n-jobs {args.n_jobs}" if args.n_jobs else "",
+        f"--restart" if args.restart else "",
+        f"--threads {args.threads}"
+    ])
     # add aux tools
-    # remove "gdal_translate" from the list of aux_env_args["run_cartload_join"]
     cartload_cmd = add_param_to_cmd(cartload_cmd, env, aux_env_args["run_cartload_join"], underscore2dash=False)
-    # dry-run
-    if args.dry_run:
-        cartload_cmd_dry = f"{cartload_cmd} --dry-run"
-        print(f"Dry-run: {cartload_cmd_dry}")
-        subprocess.run(cartload_cmd_dry, shell=True)
 
     return cartload_cmd
 
@@ -354,10 +399,10 @@ def update_orient_in_histology(histology):
 #     return hist_cmd
 
 def cmd_run_fig2pmtiles(run_i, args, env):
-    assert len(run_i.get("histology", [])) > 0, "Error: --histology is required when running fig2pmtiles"
+    assert len(run_i.get("histology", [])) > 0, "Error: --histology is Required when running fig2pmtiles"
     hist_cmds=[]
 
-    cartload_dir=os.path.join(run_i["out_dir"], "cartload")
+    cartload_dir=os.path.join(run_i["run_dir"], "cartload")
     catalog_yaml=os.path.join(cartload_dir, "catalog.yaml")
     for histology in run_i.get("histology", []):
         # 1. histology tif to pmtiles
@@ -387,24 +432,21 @@ def cmd_run_fig2pmtiles(run_i, args, env):
             f"--rotate {histology['rotate']}" if histology.get("rotate", None) is not None else "",
             f"--in-tsv {histology.get('georef_tsv', None)}" if histology.get("georef_tsv", None) is not None else "",
             f"--in-bounds {histology.get('georef_bounds', None)}" if histology.get("georef_bounds", None) is not None else "",
+            f"--n-jobs {args.n_jobs}" if args.n_jobs else "",
+            f"--restart" if args.restart else ""
         ])
         hist_cmd = add_param_to_cmd(hist_cmd, env, aux_env_args["run_fig2pmtiles"], underscore2dash=False)
         hist_cmds.append(hist_cmd)
 
-    if args.dry_run:
-        for hist_cmd in hist_cmds:
-            hist_cmd_dry = f"{hist_cmd} --dry-run"
-            print(f"Dry-run: {hist_cmd_dry}")
-            subprocess.run(hist_cmd_dry, shell=True)
     return hist_cmds
     #return hist_cmds + update_catalog_cmds
 
 def cmd_upload_aws(run_i, args, env):
-    cartload_dir=os.path.join(run_i["out_dir"], "cartload")
+    cartload_dir=os.path.join(run_i["run_dir"], "cartload")
     # Option 1: use "." to locate the file and handle by perl -lane
     # aws_cmd="\n".join([
     #     f"out={cartload_dir}",
-    #     f"id={run_i['id']}",
+    #     f"id={run_i['run_id']}",
     #     f"aws_bucket={args.aws_bucket}",
     #     "aws s3 cp ${out}/catalog.yaml s3://${aws_bucket}/${id}/catalog.yaml",
     #     "grep -E '\.' ${out}/catalog.yaml | perl -lane 'print $F[$#F]' | xargs -I {} aws s3 cp ${out}/{} s3://${aws_bucket}/${id}/{}"
@@ -413,97 +455,158 @@ def cmd_upload_aws(run_i, args, env):
     aws_cmd=" ".join([
         "cartloader", "upload_aws_by_catalog",
         f"--in-dir {cartload_dir}",
-        f"--s3-dir \"s3://{args.aws_bucket}/{run_i['id']}\""
+        f"--s3-dir \"s3://{args.aws_bucket}/{run_i['run_id']}\"",
+        f"--n-jobs {args.n_jobs}" if args.n_jobs else "",
+        f"--restart" if args.restart else ""
     ])
-    # dry-run
-    if args.dry_run:
-        aws_cmd_dry = f"{aws_cmd} --dry-run"
-        subprocess.run(aws_cmd_dry, shell=True)
+    aws_cmd=add_param_to_cmd(aws_cmd, env, aux_env_args["upload_aws"])
+
     return aws_cmd
 
 def stepinator(_args):
     parser = argparse.ArgumentParser(description="""
-    Stepinator: A tool to run steps in cartloader.
-    The input, actions, parameters, and tools can be provided in two ways: 1) using a YAML file or 2) using individual command-line arguments.
+    Stepinator: A tool to run steps in cartloader to do SGE format conversion (--sge-convert) or downstream process (--run-ficture, --run-cartload-join, --run-fig2pmtiles, --upload-aws) in cartloader.
+    The input, actions, parameters, and tools can be provided in two ways: 1) using a YAML file or 2) using individual command-line arguments in IN/OUT Configuration, Environment Configuration, and Auxiliary Parameters for FICTURE.
     It also allows the job execution in two modes: local and slurm.
                                      """)
-    # * actions
-    action_params = parser.add_argument_group("Actions", "Actions to be performed")
-    action_params.add_argument("--run-ficture", action="store_true", help="Run run-ficture in cartloader. Only the main function is executed.")
-    action_params.add_argument("--run-cartload-join", action="store_true", help="Run run-cartload-join in cartloader")
-    action_params.add_argument("--run-fig2pmtiles", action="store_true", help="Run run-fig2pmtiles in cartloader. This requires provide histology using --in-yaml or --histology.")
-    action_params.add_argument("--upload-aws", action="store_true", help="Upload files to AWS S3 bucket. This requires provide AWS bucket name using --in-yaml or --aws-bucket.")
-    action_params.add_argument("--copy-ext-model", action="store_true", help="Auxiliary action parameters for run-ficture. Copy external model when running FICTURE with an external model")
-    action_params.add_argument("--init-ext", action="store_true", help="Auxiliary action parameters for run-ficture. Only Initialize external model without run main-ext")
-    action_params.add_argument("--skip-coarse-report", action="store_true", help="Auxiliary action parameters for run-ficture. Skip coarse report")
 
     # * mode
     run_params = parser.add_argument_group("Run", "Run mode")
+    run_params.add_argument("--dry-run", action="store_true", help="Perform a dry run")
+    run_params.add_argument('--restart', action='store_true', default=False, help='Restart the run. Ignore all intermediate files and start from the beginning')
+    run_params.add_argument('--n-jobs', '-j', type=int, default=None, help='Number of jobs (processes) to run in parallel (default: 1)')
+    run_params.add_argument('--threads', type=int, default=10, help='Maximum number of threads per job (for tippecanoe)')
     run_params.add_argument("--submit", action="store_true",  help="Submit the job")
     run_params.add_argument('--submit-mode', type=str,  default="local", choices=["slurm", "local"], help='Specify how the job should be executed. Choose "slurm" for SLURM, "local" for local execution')
-    run_params.add_argument("--dry-run", action="store_true", help="Perform a dry run")
+    run_params.add_argument('--job-id', type=str, default=None, help='Filename for the job script. It not provided, it will use the commands as the job name')
 
-    input_params = parser.add_argument_group("Input Configuration", 
-        "Provide input data and settings. You can choose one of these methods to define inputs:\n"
-        "1. Use --in-yaml and --ids-from-yaml to provide inputs in an input YAML file. This allows to handle more than one runs at once.\n"
-        "2. Use individual command-line arguments to specify input files and settings."
+    # * commands
+    cmd_params = parser.add_argument_group("Commands", "Commands to be performed")
+    cmd_params.add_argument("--all", action="store_true", help="Run sge-convert, run_ficture, run_cartload_join, run_fig2pmtiles, and upload_aws in sequence")
+    cmd_params.add_argument("--sge-convert", action="store_true", help="Run sge-convert in cartloader")
+    cmd_params.add_argument("--run-ficture", action="store_true", help="Run run-ficture in cartloader. Only the main function is executed.")
+    cmd_params.add_argument("--run-cartload-join", action="store_true", help="Run run-cartload-join in cartloader")
+    cmd_params.add_argument("--run-fig2pmtiles", action="store_true", help="Run run-fig2pmtiles in cartloader. This s provide histology using --in-yaml or --histology.")
+    cmd_params.add_argument("--upload-aws", action="store_true", help="Upload files to AWS S3 bucket. This s provide AWS bucket name using --in-yaml or --aws-bucket.")
+    cmd_params.add_argument("--copy-ext-model", action="store_true", help="Auxiliary action parameters for run-ficture. Copy external model when running FICTURE with an external model")
+    cmd_params.add_argument("--init-ext", action="store_true", help="Auxiliary action parameters for run-ficture. Only Initialize external model without run main-ext")
+    cmd_params.add_argument("--skip-coarse-report", action="store_true", help="Auxiliary action parameters for run-ficture. Skip coarse report")
+
+    # * Key
+    key_params = parser.add_argument_group(
+    "IN/OUT Configuration",
+    "Specify input data and settings using one of the following methods:\n"
+    "1. Use --in-yaml (and --run-ids for downstream processing) to provide inputs via a YAML file, enabling batch processing of multiple runs.\n"
+    "2. Use individual command-line arguments to specify input files and settings, allowing processing of a single run at a time."
     )
-    input_params.add_argument("--in-yaml", '-i', type=str, default=None, help="Input yaml file")
-    input_params.add_argument("--ids-from-yaml", nargs="*", default=[], help="Define one or more run ID.") #  We suggest to name a run ID as <data_id>_<version_id>.
-    input_params.add_argument("--id", type=str, default=None, help="Data ID")
-    input_params.add_argument("--out-dir", '-o', type=str, help="The directory")
-    input_params.add_argument("--sge-dir",  type=str, default=None, help="SGE directory (Default: <out-dir>/sge)")
-    input_params.add_argument("--sge-label", '-s', type=str, default="raw", help="SGE label")
-    input_params.add_argument("--colname-count", type=str, default="count", help="")
-    input_params.add_argument("--major-axis", type=str, default="X", help="Major axis")
-    input_params.add_argument("--ext-path", type=str, default=None, help="(Optional) The path for the external model. Required when running FICTURE with an external model")
-    input_params.add_argument("--ext-id", type=str, default=None, help="(Optional) The ID for the external model. Required when running FICTURE with an external model")
-    input_params.add_argument("--train-width", '-w', type=str, default=None, help="Train width. Required when running FICTURE")
-    input_params.add_argument("--n-factor", '-n', type=str, default=None, help="Number of factors. Only required when running FICTURE with LDA")
-    input_params.add_argument("--histology", type=str, nargs="?", default=[], help="""
+    key_params.add_argument("--in-yaml", '-i', type=str, default=None, help="Input yaml file")
+    key_params.add_argument("--run-ids",  nargs="*", default=[], help="Run IDs. Required if --run-ficture, --run-cartload-join, --run-fig2pmtiles, or --upload-aws is applied")
+    key_params.add_argument("--out-dir",  type=str, default=None, help="Output directory. It will have 3 subdirectories: sge (output from --sge-convert), ficture (output from --run-ficture), and cartload (output from --run-cartload-join and --run-fig2pmtiles)")
+    # for sge_convert
+    key_params.add_argument('--platform', type=str, choices=["10x_visium_hd", "seqscope", "10x_xenium", "bgi_stereoseq", "cosmx_smi", "vizgen_merscope", "pixel_seq", "nova_st"], help='Required if --sge-convert. Platform of the raw input file to infer the format of the input file. ')
+    # - input for 10x_visium_hd, seqscope 
+    key_params.add_argument('--in-mex', type=str, default=None, help='Required if --sge-convert on 10x_visium_hd and seqscope datasets. Directory path to input files in Market Exchange (MEX) format.')
+    key_params.add_argument('--in-parquet', type=str, default=None, help='Required if --sge-convert on 10x_visium_hd datasets. Path to the input raw parquet file for spatial coordinates (default: None, typical naming convention: tissue_positions.parquet)')
+    # - input for 10x_xenium, bgi_stereoseq, cosmx_smi, vizgen_merscope, pixel_seq, and nova_st
+    key_params.add_argument('--in-csv', type=str, default=None, help='(10x_xenium, bgi_stereoseq, cosmx_smi, vizgen_merscope, pixel_seq, and nova_st only) Path to the input raw CSV/TSV file (default: None).')
+    key_params.add_argument('--units-per-um', type=float, default=None, help='Applicable if --sge-convert. Coordinate unit per um (conversion factor) (default: 1.00)') 
+    key_params.add_argument('--scale-json', type=str, default=None, help="Applicable if --sge-convert on 10x_visium_hd datasets. Coordinate unit per um using the scale json file (default: None, typical naming convention: scalefactors_json.json)")
+    key_params.add_argument('--precision-um', type=int, default=None, help='Required if --sge-convert. Number of digits of transcript coordinates (default: 2)')
+    key_params.add_argument('--filter-by-density', action='store_true', default=False, help='Required if --sge-convert or --run-ficture. If --sge-convert, it enables density-filtering. If --run-ficture, it defines the density-filtered SGE as input (default: False)')
+    key_params.add_argument('--filtered-prefix', type=str, default=None, help='Required if --filtered-by-density. The prefix for density-filtered SGE (default: filtered)')
+    key_params.add_argument("--colname-count", type=str, default="count", help="Required if --sge-convert, --run-ficture or --run-cartload-join. Column name for count (default: count)")
+    # for run_ficture
+    key_params.add_argument("--major-axis", type=str, default="X", help="Major axis")
+    key_params.add_argument("--ext-path", type=str, default=None, help="Required when --run-ficture with an external model. The path for the external model.")
+    key_params.add_argument("--ext-id", type=str, default=None, help="Required when --run-ficture  with an external model. The ID for the external model.")
+    key_params.add_argument("--train-width", '-w', type=str, default=None, help="Required if --run-ficture. Train width.")
+    key_params.add_argument("--n-factor", '-n', type=str, default=None, help="Required if --run-ficture with LDA. Number of factors. ")
+    key_params.add_argument("--histology", type=str, nargs="?", default=[], help="""
                               (Optional) Provide histology info as <hist_id>;<path>;<transform>;<georeference>;<georef_tsv>;<georef_bounds>;<rotate_degree>;<flip_direction>. 
                               Only <hist_id> and <path> are required. Supports multiple files; use <hist_id> to distinguish them. (Default: [])
                               Define <transform> and <georeference> by True or False. If georeference=True, specify <georef_tsv> or <georef_bounds>. 
                               Orientation allows rotation (90, 180, 270) and flipping (vertical, horizontal, both). 
                             """)
-    input_params.add_argument('--aws-bucket', type=str, default=None, help='AWS bucket name')
+    key_params.add_argument('--aws-bucket', type=str, default=None, help='Required if --upload-aws. AWS bucket name')
 
     # * tools
-    env_params = parser.add_argument_group("Environment and Tools", 
-    "Specify paths to environment tools and settings using one of the following methods:\n" 
+    env_params = parser.add_argument_group("Environment Configuration", 
+    "Specify paths to tools and environment settings using one of the following methods:\n" 
     "1. Provide all environment settings in the input YAML file (--in-yaml).\n" 
     "2. Provide individual tool paths and environment variables directly as command-line arguments.\n"  
     )
-    env_params.add_argument('--slurm-account', type=str, default=None, help='If --submit-mode slurm, provide a SLURM account')
-    env_params.add_argument('--slurm-partition', type=str, default=None, help='If --submit-mode slurm, provide a SLURM partition')
-    env_params.add_argument('--slurm-mail-user', type=str, default=None, help='If --submit-mode slurm, provide a SLURM mail user')
-    env_params.add_argument('--slurm-cpus-per-task', type=int, default=10, help='If --submit-mode slurm, provide a SLURM cpus per task')
-    env_params.add_argument('--slurm-mem', type=str, default="65000mb", help='If --submit-mode slurm, provide a SLURM memory')
+    env_params.add_argument('--slurm-account', type=str, default=None, help='If "--submit-mode slurm", provide a SLURM account')
+    env_params.add_argument('--slurm-partition', type=str, default=None, help='If "--submit-mode slurm", provide a SLURM partition')
+    env_params.add_argument('--slurm-mail-user', type=str, default=None, help='If "--submit-mode slurm", provide a SLURM mail user')
+    env_params.add_argument('--slurm-cpus-per-task', type=int, default=10, help='If "--submit-mode slurm", provide a SLURM cpus per task')
+    env_params.add_argument('--slurm-mem', type=str, default="65000mb", help='If "--submit-mode slurm", provide a SLURM memory')
     # modules & env
-    env_params.add_argument('--hpc-modules', type=str, default=None, help='(Optional) HPC modules to load, separated by comma. When a version is required, use the format: <module>/<version>')
-    env_params.add_argument('--conda-base', type=str, default=None, help='(Optional) Conda base path')
-    env_params.add_argument('--conda-env', type=str, default=None, help='(Optional) Conda environment to activate. If it is installed in the default location, i.e., within the base path, provide the environment name. Otherwise, provide the full path to the environment.')
-    # tools
-    env_params.add_argument('--spatula', type=str,  default=None,  help='Path to spatula binary. When not provided, it will use the spatula from the submodules.')    
-    env_params.add_argument('--pmtiles', type=str,  default=None,  help='Path to pmtiles binary. When not provided, it will use the pmtiles from the submodules.')
-    env_params.add_argument('--tippecanoe', type=str,  default=None,  help='Path to tippecanoe binary. When not provided, it will use the tippecanoe from the submodules.')
-    env_params.add_argument('--bgzip', type=str, default=None, help='Path to bgzip binary. For faster processing, use "bgzip -@ 4')
-    env_params.add_argument('--tabix', type=str, default=None, help='Path to tabix binary')
+    env_params.add_argument('--hpc-modules', type=str, default=None, help='Comma-separated HPC modules to load. When a version is required, use the format: <module>/<version>')
+    env_params.add_argument('--conda-base', type=str, default=None, help='Conda base path')
+    env_params.add_argument('--conda-env', type=str, default=None, help='Conda environment to activate. If it is installed in the default location, i.e., within the base path, provide the environment name. Otherwise, provide the full path to the environment.')
+    # app
     env_params.add_argument('--gzip', type=str, default=None, help='Path to gzip binary. For faster processing, use "pigz -p 4"')
+    env_params.add_argument('--spatula', type=str,  default=None,  help='Path to spatula binary. When not provided, it will use the spatula from the submodules.')    
+    env_params.add_argument('--parquet-tools', type=str, default="parquet-tools", help='Path to parquet-tools binary')
     env_params.add_argument('--sort', type=str, default=None, help='Path to sort binary. For faster processing, you may add arguments like "sort -T /path/to/new/tmpdir --parallel=20 -S 10G"')
     env_params.add_argument('--sort-mem', type=str, default=None, help='Memory size for each process')
+    env_params.add_argument('--bgzip', type=str, default=None, help='Path to bgzip binary. For faster processing, use "bgzip -@ 4')
+    env_params.add_argument('--tabix', type=str, default=None, help='Path to tabix binary')
+    env_params.add_argument('--pmtiles', type=str,  default=None,  help='Path to pmtiles binary. When not provided, it will use the pmtiles from the submodules.')
+    env_params.add_argument('--tippecanoe', type=str,  default=None,  help='Path to tippecanoe binary. When not provided, it will use the tippecanoe from the submodules.')
     env_params.add_argument('--magick', type=str, default=None, help='Path to magick binary')
     env_params.add_argument('--gdal_translate', type=str, default=None, help='Path to gdal_translate binary')
     env_params.add_argument('--gdaladdo', type=str, default=None, help='Path to gdaladdo binary')
-
+    env_params.add_argument('--aws', type=str, default=None, help='Path to aws binary')
+    
+    sge_aux_params = parser.add_argument_group(
+        "Auxiliary Parameters for sge_convert", 
+        "Parameters for sge_convert. Required if --sge-convert is used with non-default values."
+    )
+    # IN-MEX
+    sge_aux_params.add_argument('--icols-mtx', type=str, default=None, help='Input column indices (comma-separated 1-based) in the input matrix file (default: 1,2,3,4,5)')
+    sge_aux_params.add_argument('--icol-bcd-barcode', type=int, default=None, help='(seqscope only) 1-based column index of barcode in the input barcode file (default: 1)')
+    sge_aux_params.add_argument('--icol-bcd-x', type=int, default=None, help='(seqscope only) 1-based column index of x coordinate in the input barcode file (default: 6)')
+    sge_aux_params.add_argument('--icol-bcd-y', type=int, default=None, help='(seqscope only) 1-based column index of y coordinate in the input barcode file (default: 7)')
+    sge_aux_params.add_argument('--icol-ftr-id', type=int, default=None, help='1-based column index of feature ID in the input feature file (default: 1)')
+    sge_aux_params.add_argument('--icol-ftr-name', type=int, default=None, help='1-based column index of feature name in the input feature file (default: 2)')
+    sge_aux_params.add_argument('--pos-colname-barcode', type=str, default=None, help='(10x_visium_hd only) Column name for barcode in the input parquet file (default: barcode)')
+    sge_aux_params.add_argument('--pos-colname-x', type=str, default=None, help='(10x_visium_hd only) Column name for X-axis in the input parquet file (default: pxl_row_in_fullres)')
+    sge_aux_params.add_argument('--pos-colname-y', type=str, default=None, help='(10x_visium_hd only) Column name for Y-axis in the input parquet file (default: pxl_col_in_fullres)')
+    sge_aux_params.add_argument('--pos-delim', type=str, default=None, help='(10x_visium_hd only) Delimiter for the input parquet file (default: ",")')
+    # IN-CSV
+    sge_aux_params.add_argument('--csv-delim', type=str, default=None, help='Delimiter for the additional input tsv/csv file (default: "," for 10x_xenium, cosmx_smi, and vizgen_merscope; "\\t" for bgi_stereoseq, pixel_seq, and nova_st) ')
+    sge_aux_params.add_argument('--csv-colname-x',  type=str, default=None, help='Column name for X-axis (default: x_location for 10x_xenium; x for bgi_stereoseq; x_local_px for cosmx_smi; global_x for vizgen_merscope; xcoord for pixel_seq; x for nova_st)')
+    sge_aux_params.add_argument('--csv-colname-y',  type=str, default=None, help='Column name for Y-axis (default: y_location for 10x_xenium; y for bgi_stereoseq; y_local_px for cosmx_smi; global_y for vizgen_merscope; ycoord for pixel_seq; y for nova_st)')
+    sge_aux_params.add_argument('--csv-colname-feature-name', type=str, default=None, help='Column name for gene name (default: feature_name for 10x_xenium; geneID for bgi_stereoseq; target for cosmx_smi; gene for vizgen_merscope; geneName for pixel_seq; geneID for nova_st)')
+    sge_aux_params.add_argument('--csv-colnames-count', type=str, default=None, help='Column name for expression count. If not provided, a count of 1 will be added for a feature in a pixel (default: MIDCounts for bgi_stereoseq; MIDCount for nova_st; None for the rest platforms).')
+    sge_aux_params.add_argument('--csv-colname-feature-id', type=str, default=None, help='Column name for gene id (default: None)')
+    sge_aux_params.add_argument('--csv-colnames-others', nargs='+', default=[], help='Columns names to keep (e.g., cell_id, overlaps_nucleus) (default: None)')
+    sge_aux_params.add_argument('--csv-colname-phredscore', type=str, default=None, help='Column name for Phred-scaled quality value (Q-Score) estimating the probability of incorrect call (default: qv for 10x_xenium and None for the rest platforms).') # qv
+    sge_aux_params.add_argument('--min-phred-score', type=float, default=None, help='Specify the Phred-scaled quality score cutoff (default: 20 for 10x_xenium and None for the rest platforms).')
+    # feature-filtering
+    sge_aux_params.add_argument('--include-feature-list', type=str, default=None, help='A file provides a list of gene names to include (default: None)')
+    sge_aux_params.add_argument('--exclude-feature-list', type=str, default=None, help='A file provides a list of gene names to exclude (default: None)')
+    sge_aux_params.add_argument('--include-feature-regex', type=str, default=None, help='Regex pattern for gene names to include (default: None)')
+    sge_aux_params.add_argument('--exclude-feature-regex', type=str, default=None, help='Regex pattern for gene names to exclude (default: "^(BLANK|Blank-|NegCon|NegPrb)"). To skip this, use --exclude-feature-regex "".')
+    sge_aux_params.add_argument('--include-feature-type-regex', type=str, default=None, help='Regex pattern for gene type to include (default: None). Requires --csv-colname-feature-type or --feature-type-ref for gene type info') # (e.g. protein_coding|lncRNA)
+    sge_aux_params.add_argument('--csv-colname-feature-type', type=str, default=None, help='If --include-feature-type-regex is used and the input file has gene type, define the column name for gene type info (default: None)')
+    sge_aux_params.add_argument('--feature-type-ref', type=str, default=None, help='Path to a tab-separated gene reference file containing gene type information. The format should be: chrom, start position, end position, gene id, gene name, gene type (default: None)')
+    # Polygon-filtering
+    sge_aux_params.add_argument('--mu-scale', type=int, default=None, help='Scale factor for the polygon area calculation (default: 1.0)')
+    sge_aux_params.add_argument('--radius', type=int, default=None, help='Radius for the polygon area calculation (default: 15)')
+    sge_aux_params.add_argument('--quartile', type=int, default=None, help='Quartile for the polygon area calculation (default: 2)')
+    sge_aux_params.add_argument('--hex-n-move', type=int, default=None, help='Sliding step (default: 1)')
+    sge_aux_params.add_argument('--polygon-min-size', type=int, default=None, help='The minimum polygon size (default: 500)')
+    
     ficture_aux_params = parser.add_argument_group(
-        "Auxiliary Parameters for run_ficture", 
-        "Parameters for run_ficture, required only if --run-ficture is used with non-default values. Default values are recommended."
-    )    
-    ficture_aux_params.add_argument("--cmap", '-c', type=str, default=None, help="Only required if the user prefers to use a pre-built color map (Default: None)")
+        "Auxiliary Parameters for FICTURE", 
+        "Parameters for run_ficture. Required if --run-ficture is used with non-default values. Default values are recommended."
+    )
+    ficture_aux_params.add_argument("--cmap", '-c', type=str, default=None, help="Required if the user prefers to use a pre-built color map (Default: None)")
     # input column indexes
-    ficture_aux_params.add_argument('--csv-colidx-x',  type=int, default=1, help='Column index for X-axis in the --in-transcript (default: 1)')
-    ficture_aux_params.add_argument('--csv-colidx-y',  type=int, default=2, help='Column index for Y-axis in the --in-transcript (default: 2)')
+    # ficture_aux_params.add_argument('--csv-colidx-x',  type=int, default=1, help='Column index for X-axis in the --in-transcript (default: 1)')
+    # ficture_aux_params.add_argument('--csv-colidx-y',  type=int, default=2, help='Column index for Y-axis in the --in-transcript (default: 2)')
     # segmentation - ficture
     ficture_aux_params.add_argument('--hexagon-n-move', type=int, default=None, help='Level of hexagonal sliding when creating hexagon-indexed SGE in FICTURE compatible format')
     ficture_aux_params.add_argument('--hexagon-precision', type=float, default=None, help='Output precision of hexagon coordinates for FICTURE compatible format')
@@ -539,59 +642,65 @@ def stepinator(_args):
     ficture_aux_params.add_argument('--de-min-fold', type=float, default=None, help='Fold-change cutoff for differential expression')
     args = parser.parse_args(_args)
 
-    assert args.run_ficture or args.run_cartload_join or args.upload_aws or args.run_fig2pmtiles, "Error: at least one action is required"
+    # =========
+    #  actions
+    # =========
+    if args.all:
+        args.sge_convert=True
+        args.run_ficture=True
+        args.run_cartload_join=True
+        args.run_fig2pmtiles=True
+        args.upload_aws=True
+        
+    assert args.sge_convert or args.run_ficture or args.run_cartload_join or args.run_fig2pmtiles or args.upload_aws , "Error: at least one command is d!"
+
+    # =========
+    #  Read YAML/args
+    # =========
 
     if args.in_yaml is not None:
         with open(args.in_yaml, "r") as f:
              #yml.update(yaml.safe_load(f))
             yml = yaml.safe_load(f)
-        # run info
-        if args.ids_from_yaml==["all"]:
-            in_ids = [item.get("id") for item in yml.get("id2param", []) if "id" in item] 
-        else:
-            in_ids = args.ids_from_yaml
-        assert len(in_ids) > 0, "Error: --id or --all-ids is required"
-        runinfo=[]
-        for run_i in yml.get("id2param", []):
-            if run_i.get("id") in in_ids:
-                runinfo.append(run_i)
-    else:
-        yml={}
-        args.out_dir=os.path.abspath(args.out_dir)
-        # create a dictionary for the input    
-        runinfo=[
-            {   
-                # run ID
-                "id": args.id,
-                # in/out directory
-                "sge_dir": args.sge_dir,
-                "out_dir": args.out_dir,
-                # sge info
-                "sge_label": args.sge_label,
-                "major_axis": args.major_axis,
-                "colname_count": args.colname_count,
-                # external model when applied
-                "ext_id": args.ext_id,
-                "ext_path": args.ext_path,
-                "copy_ext_model": args.copy_ext_model,
-                "cmap": args.cmap,
-                # analysis parameters
-                "train_width": args.train_width,
-                "n_factor": args.n_factor,
-                "histology":[],
-            }
-        ] 
-        # histology
-        if len(args.histology) > 0:
-            runinfo[0]["histology"].extend(parse_histology_args(args.histology))
 
-    # env
+    # output dir
+    out_dir = args.out_dir if args.out_dir else yml.get("out_dir", None)
+    out_dir = os.path.abspath(out_dir)
+    os.makedirs(out_dir, exist_ok=True)
+
+    # sge infomation - shared across actions
+    if args.in_yaml:
+        sgeinfo=yml.get("SGE", {})
+    else:
+        sgeinfo={
+            "platform": args.platform,
+            "in_mex": args.in_mex,
+            "in_parquet": args.in_parquet,
+            "in_csv": args.in_csv,
+            "units_per_um": args.units_per_um,
+            "scale_json": args.scale_json,
+            "precision_um": args.precision_um,
+            "filter_by_density": args.filter_by_density,
+            "filtered_prefix": args.filtered_prefix,
+            "colname_count": args.colname_count,
+        }
+    sgeinfo["sge_dir"]=os.path.join(out_dir, "sge")
+    os.makedirs(sgeinfo['sge_dir'], exist_ok=True)
+
+    # worklog dir
+    log_dir = os.path.join(out_dir, "worklog")
+    os.makedirs(log_dir, exist_ok=True)
+
+    # =========
+    #  env
+    # =========
+    timestamp = datetime.datetime.now().strftime("%y%m%d_%H%M")
     # * tools (collect from yaml and args)
     aux_env_args = []
     for action, aux_env_args_i in aux_env_args:
         aux_env_args.extend(aux_env_args_i)
-    env   = merge_config(yml, args, aux_env_args,  prefix="env")  
-    # * tools with submodules
+    env = merge_config(yml, args, aux_env_args,  prefix="env")  
+
     if env.spatula is None:
         env.spatula  = os.path.join(cartloader_repo, "submodules", "spatula", "bin", "spatula")
     if env.tippecanoe is None:
@@ -623,44 +732,103 @@ def stepinator(_args):
     # * aws 
     if args.aws_bucket is None:
         args.aws_bucket = yml.get("aws_bucket", None)
+
+    # =========
+    #  init 
+    # =========
+    env_cmds=[module_load_cmds] + conda_cmd
+    cmds = []
+
+    # =========
+    #  SGE Convert
+    # =========
+    if args.sge_convert:
+        cmds.append(cmd_sge_convert(sgeinfo, args, env))
+
+    # =========
+    #  Downstream
+    # =========
     
-    for run_i in runinfo:
-        print("====================================")
-        print(f"  ID: {run_i['id']} ")
-        print("====================================")
-        
-        # create out_dir if not exist
-        os.makedirs(run_i["out_dir"], exist_ok=True)
+    if args.run_ficture or args.run_cartload_join or args.run_fig2pmtiles or args.upload_aws:
+        runinfo=[]
+        if args.in_yaml:
+            avail_runs=[run_i.get("run_id") for run_i in yml.get("RUNS", [])]
+            if len(args.run_ids) == 0 and len(avail_runs) == 1:
+                args.run_ids = avail_runs
+            assert len(args.run_ids) > 0, "When --run-ficture, --run-cartload-join, --run-fig2pmtiles, or --upload-aws is enabled, --run-ids is required"
 
-        # cmds
-        cmds =  []
-        cmds.append(module_load_cmds) 
-        cmds.extend(conda_cmd)
-        if args.run_ficture:
-            cmds.append(cmd_run_ficture(run_i, args, env))
-        if args.run_cartload_join:
-            cmds.append(cmd_run_cartload_join(run_i, args, env))
-        if args.run_fig2pmtiles:
-            cmds.extend(cmd_run_fig2pmtiles(run_i, args, env))
-        if args.upload_aws:
-            cmds.append(cmd_upload_aws(run_i, args, env))
-        
-        # job/err/out file names
-        sjobfns=[]
-        if args.run_ficture:
-            sjobfns.append("ficture")
-        if args.run_cartload_join:
-            sjobfns.append("cartload")
-        if args.run_fig2pmtiles:
-            sjobfns.append("fig2pmtiles")
-        if args.upload_aws:
-            sjobfns.append("aws")
+            for run_i in yml.get("RUNS", []):
+                if run_i.get("run_id") in args.run_ids:
+                    # update the shared parameters from SGE field
+                    run_i["sge_dir"]=sgeinfo["sge_dir"]
+                    run_i["filter_by_density"]=sgeinfo.get("filter_by_density", False)
+                    run_i["filtered_prefix"]=sgeinfo.get("filtered_prefix", "filtered")
+                    run_i["colname_count"]=sgeinfo.get("colname_count", "count")
+                    run_i["run_dir"]=os.path.join(out_dir, run_i["run_id"])
+                    runinfo.append(run_i)
+        else:
+            assert len(args.run_ids) == 1, "When --in-yaml is not provided, only one run ID is allowed"            
+            # create a dictionary for the input    
+            runinfo=[
+                {   
+                    # run ID
+                    "run_id": args.run_ids,
+                    # in/out directory
+                    "sge_dir": args.sge_dir,
+                    "run_dir": os.path.join(out_dir, args.run_ids), 
+                    # sge info
+                    "filter_by_density": args.filter_by_density,
+                    "filtered_prefix": args.filtered_prefix,
+                    "major_axis": args.major_axis,
+                    "colname_count": args.colname_count,
+                    # external model when applied
+                    "ext_id": args.ext_id,
+                    "ext_path": args.ext_path,
+                    "copy_ext_model": args.copy_ext_model,
+                    "cmap": args.cmap,
+                    # analysis parameters
+                    "train_width": args.train_width,
+                    "n_factor": args.n_factor,
+                    "histology":[],
+                }
+            ] 
+            # histology
+            if len(args.histology) > 0:
+                runinfo[0]["histology"].extend(parse_histology_args(args.histology))
 
-        sjobfn="_".join(sjobfns)
-        
-        os.makedirs(os.path.join(run_i["out_dir"], "worklog"), exist_ok=True)
-        jobpref=os.path.join(run_i["out_dir"], "worklog", sjobfn) 
-        submit_job(run_i["id"], jobpref, cmds, slurm, args)
+        for run_i in runinfo:
+            os.makedirs(run_i["run_dir"], exist_ok=True)
+            if args.run_ficture:
+                os.makedirs(os.path.join(run_i["run_dir"], "ficture"), exist_ok=True)
+                cmds.append(cmd_run_ficture(run_i, args, env))
+            if args.run_cartload_join:
+                os.makedirs(os.path.join(run_i["run_dir"], "cartload"), exist_ok=True)
+                cmds.append(cmd_run_cartload_join(run_i, args, env))
+            if args.run_fig2pmtiles:
+                cmds.extend(cmd_run_fig2pmtiles(run_i, args, env))
+            if args.upload_aws:
+                cmds.append(cmd_upload_aws(run_i, args, env))
+
+    if args.dry_run:
+        for cmd in cmds:
+            print("="*10)
+            print(f"Command: {cmd}")
+            print("="*10)
+            os.system(f"{cmd} --dry-run")
+
+    # TODO: Find a better way to automatically generate the job ID
+    if args.job_id is None:
+        action_str = "_".join(filter(None, ["sge" if args.sge_convert else "", "ficture" if args.run_ficture else "", "cartload" if args.run_cartload_join else "", "fig2pmtiles" if args.run_fig2pmtiles else "", "aws" if args.upload_aws else ""]))
+        if len(args.run_ids) == 1:
+            args.job_id = f"{runinfo[0]['run_id']}_{action_str}_{timestamp}"
+        else:
+            shared_text = os.path.commonprefix(args.run_ids)
+            indiv_text = [run_id.replace(shared_text, "") for run_id in args.run_ids]
+            args.job_id = f"{shared_text}-{'.'.join(indiv_text)}_{action_str}_{timestamp}"
+
+    jobpref=os.path.join(log_dir, args.job_id) 
+
+    submit_job(args.job_id, jobpref, env_cmds+cmds, slurm, args)
 
 if __name__ == "__main__":
     # Get the path to the cartloader repository
@@ -674,4 +842,4 @@ if __name__ == "__main__":
 
     # Call the function with command line arguments
     #print(sys.argv)
-    func(sys.argv[1:])
+    func(sys.argv[1:]) 

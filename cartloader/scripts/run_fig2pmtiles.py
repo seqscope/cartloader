@@ -1,4 +1,4 @@
-import sys, os, gzip, argparse, logging, warnings, shutil, subprocess, ast, re
+import sys, os, gzip, argparse, subprocess
 import pandas as pd
 import numpy as np
 import tifffile
@@ -60,6 +60,13 @@ def parse_arguments(_args):
     """
     parser = argparse.ArgumentParser(prog=f"cartloader run_fig2pmtiles", description="Convert a figure to pmtiles")
 
+    run_params = parser.add_argument_group("Run Options", "Run options for FICTURE commands")
+    run_params.add_argument('--dry-run', action='store_true', default=False, help='Dry run. Generate only the Makefile without running it (default: False)')
+    run_params.add_argument('--restart', action='store_true', default=False, help='Restart the run. Ignore all intermediate files and start from the beginning')
+    run_params.add_argument('--n-jobs', type=int, default=1, help='Number of jobs (processes) to run in parallel')
+    run_params.add_argument('--makefn', type=str, default=None, help='The file name of the Makefile to generate (default: {out-prefix}.mk)')
+    run_params.add_argument('--append-makefile', type=str, default=None, help='For stepinator only. Specifies an existing Makefile to append new targets. Do not use.')
+
     cmd_params = parser.add_argument_group("Commands", "Commands to run. If all functions were enabled, the steps will be executed in this order: transform, georeference, rotate, flip-vertical/horizontal, geotif2mbtiles, mbtiles2pmtiles, update-catalog")
     cmd_params.add_argument('--main', action='store_true', default=False, help='Run main commands (geotif2mbtiles, mbtiles2pmtiles, upload-aws, update-yaml)')
     cmd_params.add_argument('--geotif2mbtiles', action='store_true', default=False, help='Convert a geotiff file to mbtiles')
@@ -78,6 +85,11 @@ def parse_arguments(_args):
     inout_params.add_argument('--in-tsv', type=str, default=None, help='If --georeference is required without --transform, use the *.pixel.sorted.tsv.gz from run_ficture to provide georeferenced bounds.')
     inout_params.add_argument('--in-bounds', type=str, default=None, help='If --georeference is required without --transform, provide the bounds in the format of "<ulx>,<uly>,<lrx>,<lry>", which represents upper-left X, upper-left Y, lower-right X, lower-right Y.')
     
+    env_params = parser.add_argument_group("Env Parameters", "Environment parameters, e.g., tools.")
+    env_params.add_argument('--pmtiles', type=str, default=f"pmtiles", help='Path to pmtiles binary from go-pmtiles')
+    env_params.add_argument('--gdal_translate', type=str, default=f"gdal_translate", help='Path to gdal_translate binary')
+    env_params.add_argument('--gdaladdo', type=str, default=f"gdaladdo", help='Path to gdaladdo binary')
+
     aux_params = parser.add_argument_group("Auxiliary Parameters", "Auxiliary parameters for steps, and tools")
     aux_params.add_argument('--srs', type=str, default='EPSG:3857', help='For --georeference and --geotif2mbtiles, define the spatial reference system (default: EPSG:3857)')
     aux_params.add_argument('--mono', action='store_true', default=False, help='For --rotate, --flip-vertical/horizontal, and --geotif2mbtiles without --transform, define if the input image is black-and-white and single-banded. (default: False)')
@@ -94,15 +106,6 @@ def parse_arguments(_args):
     aux_params.add_argument("--lower-thres-quantile", type=float, help='For --transform, quantile-based floored value for rescaling the image. Cannot be used with --lower-thres-intensity')
     aux_params.add_argument("--lower-thres-intensity", type=float, help='For --transform, intensity-based floored value for rescaling the image. Cannot be used with --lower-thres-quantile')
     aux_params.add_argument("--colorize", type=str, help='For --transform, colorize the black-and-white image using a specific RGB code as a max value (does not work with RGB images)')
-    aux_params.add_argument('--pmtiles', type=str, default=f"pmtiles", help='Path to pmtiles binary from go-pmtiles')
-    aux_params.add_argument('--gdal_translate', type=str, default=f"gdal_translate", help='Path to gdal_translate binary')
-    aux_params.add_argument('--gdaladdo', type=str, default=f"gdaladdo", help='Path to gdaladdo binary')
-
-    run_params = parser.add_argument_group("Run Options", "Run options for FICTURE commands")
-    run_params.add_argument('--restart', action='store_true', default=False, help='Restart the run. Ignore all intermediate files and start from the beginning')
-    run_params.add_argument('--n-jobs', type=int, default=1, help='Number of jobs (processes) to run in parallel')
-    run_params.add_argument('--makefn', type=str, default=None, help='The file name of the Makefile to generate (default: {out-prefix}.mk)')
-    run_params.add_argument('--dry-run', action='store_true', default=False, help='Dry run. Generate only the Makefile without running it (default: False)')
 
     if len(_args) == 0:
         parser.print_help()
@@ -310,16 +313,21 @@ def run_fig2pmtiles(_args):
     #     mm.add_target(f"{pmtiles_f}.aws.done", [pmtiles_f], cmds)
 
     ## write makefile
-    make_f=os.path.join(out_dir, args.makefn) if args.makefn is not None else f"{args.out_prefix}.mk"
-    mm.write_makefile(make_f)
+    if args.append_makefile is None:
+        make_f=os.path.join(out_dir, args.makefn) if args.makefn is not None else f"{args.out_prefix}.mk"
+        mm.write_makefile(make_f)
+    else:
+        mm.append_to_makefile(args.append_makefile)
 
     if args.dry_run:
-        os.system(f"make -f {make_f} -n")
+        dry_cmd=f"make -f {make_f} -n {'-B' if args.restart else ''} "
+        os.system(dry_cmd)
         print(f"To execute the pipeline, run the following command:\nmake -f {make_f} -j {args.n_jobs}")
     else:
-        result = subprocess.run(f"make -f {make_f} -j {args.n_jobs} {'-B' if args.restart else ''}", shell=True)
+        exe_cmd=f"make -f {make_f} -j {args.n_jobs} {'-B' if args.restart else ''}"
+        result = subprocess.run(exe_cmd, shell=True)
         if result.returncode != 0:
-            print(f"Error in converting the figure ({args.in_fig}) to pmtiles ({pmtiles_f})")
+            print(f"Error in executing: {exe_cmd}")
             sys.exit(1)
 
 if __name__ == "__main__":
