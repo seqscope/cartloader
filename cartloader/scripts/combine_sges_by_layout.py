@@ -134,20 +134,10 @@ def combine_sges_by_layout(_args):
     )
 
     input_list = args.input
-    # if args.input:
-    #     input_list = args.input
-    # elif args.unit_ids and args.analy_dir:
-    #     input_list = []
-    #     for idx, input_id in enumerate(args.unit_ids):
-    #         row = idx // 2 + 1
-    #         col = idx % 2 + 1
-    #         run_id = "-".join(input_id.split("-")[:5])
-    #         minmax = f"{args.analy_dir}/{run_id}/{input_id}/preprocess/{input_id}.gn.raw.coordinate_minmax.tsv"
-    #         feature = f"{args.analy_dir}/{run_id}/{input_id}/preprocess/{input_id}.feature.tsv.gz"
-    #         transcript = f"{args.analy_dir}/{run_id}/{input_id}/preprocess/{input_id}.unsorted.transcripts.tsv.gz"
-    #         input_list.append(f"{transcript},{feature},{minmax},{row},{col}")
-    # else:
-    #     raise ValueError("Invalid input configuration.")
+
+    # log
+    logging.info("="*30)
+    logging.info(f"Commands:")
 
     cmd=" ".join([f"cartloader combine_sges_by_layout",
         f"--input {' '.join(input_list)} ",
@@ -163,8 +153,6 @@ def combine_sges_by_layout(_args):
         '--convert-to-um' if args.convert_to_um else '',
         f'--test-mode' if args.test_mode else ''])
     
-    logging.info("="*30)
-    logging.info(f"Commands:")
     logging.info(cmd)
     logging.info("="*30)
     logging.info(f"  - Output directory: {args.outdir}")

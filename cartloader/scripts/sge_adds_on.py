@@ -11,7 +11,7 @@ def parse_arguments(_args):
     parser.add_argument("--add-minmax", action='store_true', help="Add minmax to the input file.")
 
     # feature args
-    parser.add_argument("--out-feature", type=str, help="Input file.", default=None)
+    parser.add_argument("--out-feature", type=str, help="Output file for feature.", default=None)
     parser.add_argument("--index-col", type=str, nargs='*', help="Column names to be used as index.", default=['gene_id', 'gene'])
     parser.add_argument("--count-col", type=str, nargs='*', help="Column names to be used as count.", default=['gn', 'gt', 'spl', 'unspl', 'ambig'])
     # minmax args
@@ -31,7 +31,7 @@ def sge_add_feature(args):
     # Determine the output file path if not provided
     if args.out_feature is None:
         in_dir = os.path.dirname(args.in_transcript)
-        in_id = os.path.basename(args.in_transcript).split('.')[0]
+        in_id = os.path.basename(args.in_transcript).replace('.tsv.gz', '').replace(".transcripts", "").replace(".transcript", "")
         args.out_feature = os.path.join(in_dir, f"{in_id}.feature.tsv.gz")
 
     # Read the input transcript file
@@ -50,13 +50,16 @@ def sge_add_feature(args):
     with gzip.open(args.out_feature, 'wt') as f:
         feature_summary.to_csv(f, sep='\t', index=False)
 
-    print(f"Feature summary saved to {args.out_feature}")
+    print(f"Feature saved to {args.out_feature}")
 
 def sge_add_minmax(args):
     """Extract, scale, and compute min/max for X and Y coordinates."""
     # Determine the output file path if not provided
     if args.out_minmax is None:
-        raise ValueError("Output file for minmax must be provided.")
+        #raise ValueError("Output file for minmax must be provided.")
+        in_dir = os.path.dirname(args.in_transcript)
+        in_id = os.path.basename(args.in_transcript).replace('.tsv.gz', '').replace(".transcripts", "").replace(".transcript", "")
+        args.out_minmax = os.path.join(in_dir, f"{in_id}.minmax.tsv")
 
     with gzip.open(args.in_transcript, 'rt') as f:
         transcripts = pd.read_csv(f, sep="\t")
@@ -82,13 +85,14 @@ def sge_add_minmax(args):
         with open(args.out_minmax, "w") as f:
             for key, value in minmax_dict.items():
                 f.write(f"{key}\t{value}\n")
+    print(f"Minmax saved to {args.out_minmax}")
 
 def sge_adds_on(_args):
     """Generate a feature file for the SGE."""
     args = parse_arguments(_args)
     if args.add_feature:
         sge_add_feature(args)
-    elif args.add_minmax:
+    if args.add_minmax:
         sge_add_minmax(args)
 
 
