@@ -17,6 +17,7 @@ histology_suffixes=[".tif", ".tiff", ".png"]
 histology_suffixes.extend([suffix.upper() for suffix in histology_suffixes])
 
 aux_env_args = {
+        "sge_stitch": ["spatula"],
         "sge_convert": ["spatula", "gzip", "parquet_tools"],
         "run_ficture": ['spatula', 'bgzip', "tabix", "gzip", "sort", "sort_mem"],
         "run_cartload_join": ['magick', 'pmtiles', 'gdal_translate', 'gdaladdo', 'tippecanoe', 'spatula'],
@@ -236,6 +237,9 @@ def cmd_sge_stitch(sgeinfo, args, env):
         f"--n-jobs {args.n_jobs}" if args.n_jobs else "",
         f"--restart" if args.restart else ""
     ])
+    # add aux env
+    stitch_aug = add_param_to_cmd(stitch_aug, env, aux_env_args["sge_stitch"])
+
     # add aux parameters
     stitch_aug = merge_config(sgeinfo, args, aux_params_args["sge_stitch"], prefix=None)
     stitch_cmd = add_param_to_cmd(stitch_cmd, stitch_aug, aux_params_args["sge_stitch"])

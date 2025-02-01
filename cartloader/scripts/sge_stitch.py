@@ -28,6 +28,12 @@ def sge_stitch(_args):
     inout_params.add_argument('--units-per-um', type=float, default=1.0, help='Units per um in the input transcript tsv files (default: 1.0)')
     inout_params.add_argument('--minmax-in-um', action='store_true', help='Input minmax is in um while input transcript is based on unit.')
     inout_params.add_argument('--convert-to-um', action='store_true', help='Convert output to um.')
+
+    # env params
+    env_params = parser.add_argument_group("ENV Parameters", "Environment parameters for the tools")
+    env_params.add_argument('--gzip', type=str, default="gzip", help='Path to gzip binary. For faster processing, use "pigz -p 4".')
+    env_params.add_argument('--spatula', type=str, default=None, help='Path to spatula binary. When not provided, it will use the spatula from the submodules.')
+
     args = parser.parse_args(_args)
 
     mm = minimake()
@@ -101,6 +107,13 @@ def sge_stitch(_args):
     cmds.append(f'[ -f {os.path.join(args.out_dir, "transcripts.unsorted.tsv.gz")} ] && [ -f {os.path.join(args.out_dir, "feature.clean.tsv.gz")} ] && [ -f {os.path.join(args.out_dir, "coordinate_minmax.tsv")} ] && touch {sge_stitch_flag}')
     mm.add_target(sge_stitch_flag, prerequisities, cmds)
 
+    # draw xy plot for visualization
+    cmds = cmd_separator([], f"Drawing XY plot")
+    out_transcript=os.path.join(args.out_dir, "transcripts.unsorted.tsv.gz")
+    out_xypng=os.path.join(args.out_dir, "xyplot.png")
+    draw_cmd=f"{args.gzip} -dc {out_transcript} | tail -n +2 | cut -f 1,2 | {args.spatula} draw-xy --tsv /dev/stdin --out {out_xypng}"
+    cmds.append(draw_cmd)
+    mm.add_target(out_xypng, [sge_stitch_flag], cmds)
 
     # write makefile
     if len(mm.targets) == 0:
