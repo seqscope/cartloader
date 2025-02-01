@@ -34,9 +34,9 @@ def parse_arguments(_args):
     inout_params.add_argument('--rotate-clockwise', action='store_true', default=False)
     inout_params.add_argument('--rotate-counter', action='store_true', default=False)
 
-    memory_params = parser.add_argument_group("Memory Management")
-    memory_params.add_argument('--max-memory-gb', type=float, default=4.0,
-                             help='Maximum memory usage in gigabytes')
+    # memory_params = parser.add_argument_group("Memory Management")
+    # memory_params.add_argument('--max-memory-gb', type=float, default=4.0,
+    #                          help='Maximum memory usage in gigabytes')
 
     aux_params = parser.add_argument_group("Auxiliary Parameters")    
     aux_params.add_argument('--skip-pmtiles', action='store_true', default=False)
@@ -104,16 +104,96 @@ def run_hist2pmtiles(_args):
     args = parse_arguments(_args)
     logger = create_custom_logger(__name__, args.out_prefix + args.log_suffix if args.log else None)
     logger.info("Analysis Started")
+    
+    is_ome = True
+    px_per_um_x = None
+    px_per_um_y = None
+    offset_px_x = None
+    offset_px_y = None
+    if args.csv is not None:
+        is_ome = False
+        logger.info(f"Reading the CSV file {args.csv}")
+        with open(args.csv, 'r') as f:
+            lines = f.readlines()
+            tok0s = lines[0].strip().replace(',', ' ').split(' ')
+            tok1s = lines[1].strip().replace(',', ' ').split(' ')
+            px_per_um_x = float(tok0s[0])
+            px_per_um_y = float(tok1s[1])
+            offset_px_x = float(tok0s[2])
+            offset_px_y = float(tok1s[2])
+            if float(tok0s[1]) != 0.0 or float(tok1s[0]) != 0.0:
+                raise ValueError(f"The CSV file {args.csv} contains non-zero values at off-diagonal elements")
 
     # [CSV processing and metadata extraction remain the same]
     with tifffile.TiffFile(args.tif, _multifile=False) as tif:
         logger.info(f"Loaded OME-TIFF file {args.tif}")
         
+        n_pages = len(tif.pages)
+        n_series = len(tif.series)
+        n_levels = len(tif.series[0].levels)
+        
+        if n_pages > 1 and args.page is None:
+            logger.error("Multiple pages detected. Please specify the page number to extract the image from")
+            sys.exit(1)
+
         # Get page and validate
         args.page = 0 if args.page is None else args.page
         page = tif.series[args.series].levels[args.level].pages[args.page]
         
         assert page.is_tiled, "Only tiled TIFF files are supported"
+        
+        if len(page.shape) == 3:
+            if page.shape[2] != 3:
+                logger.error("The colored image is not in RGB format")
+                sys.exit(1)
+            is_mono = False
+            if args.colorize:
+                logger.error("Cannot colorize already RGB-colored image")
+                sys.exit(1)
+        elif args.colorize is not None:
+            is_mono = False
+        else:
+            is_mono = True
+            
+
+        if is_ome:
+            meta = tifffile.xml2dict(tif.ome_metadata) ## extract metadata
+            meta = meta['OME']['Image']['Pixels']
+            logger.info("Metadata: \n" + json.dumps(meta, indent=2))            
+            px_size_x = meta['PhysicalSizeX']
+            px_size_y = meta['PhysicalSizeY']
+            px_size_unit = meta.get('PhysicalSizeXUnit', 'um')
+            if px_size_unit != 'um' and px_size_unit != 'µm':
+                raise ValueError(f"Physical size unit is not in um: {px_size_unit}")
+            offset_um_x = meta.get('OffsetX', 0)
+            offset_um_y = meta.get('OffsetY', 0)
+
+            level_0_shape = tif.series[0].levels[0].pages[args.page].shape
+            current_page_shape = page.shape
+            if level_0_shape != current_page_shape:
+                scale_factor_x = level_0_shape[1] / current_page_shape[1]
+                scale_factor_y = level_0_shape[0] / current_page_shape[0]
+                px_size_x = px_size_x * scale_factor_x
+                px_size_y = px_size_y * scale_factor_y
+                logger.info(f"Rescaling the pixel size level {args.level} by ({scale_factor_x},{scale_factor_y})...")
+        else:
+            px_size_x = 1/px_per_um_x
+            px_size_y = 1/px_per_um_y
+            offset_um_x = 0 - offset_px_x / px_per_um_x
+            offset_um_y = 0 - offset_px_y / px_per_um_y
+            
+        ul = [offset_um_x, offset_um_y]
+        lr = [offset_um_x + px_size_x * page.shape[1], offset_um_y + px_size_y * page.shape[0]]
+
+        logger.info(f"OME-TIFF mode: {is_ome}")        
+        logger.info(f"Number of pages: {n_pages}")
+        logger.info(f"Number of series: {n_series}")
+        logger.info(f"Number of levels: {n_levels}")
+        logger.info(f"Pixel size in um: ({px_size_x},{px_size_y})")
+        logger.info(f"Offset in um: ({offset_um_x},{offset_um_y})")
+        for i in range(n_levels):
+            logger.info(f"Level {i} Dimension: {tif.series[0].levels[i].shape}")
+            #logger.info(type(tif.series[0].levels[i]))
         
         ## iterate over the segment and extract the image by tile
         (chunk_height, chunk_width) = page.chunks
@@ -201,6 +281,7 @@ def run_hist2pmtiles(_args):
             #output.flush()            
                 
         # Save final image
+        output.flush()
         logger.info("Saving final image...")
         Image.fromarray(output).save(f"{args.out_prefix}.png")
         
