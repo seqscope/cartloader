@@ -28,11 +28,12 @@ def parse_arguments(_args):
 def sge_add_feature(args):
     """Generate a summarized feature file."""
 
-    # Determine the output file path if not provided
-    if args.out_feature is None:
-        in_dir = os.path.dirname(args.in_transcript)
-        in_id = os.path.basename(args.in_transcript).replace('.tsv.gz', '').replace(".transcripts", "").replace(".transcript", "")
-        args.out_feature = os.path.join(in_dir, f"{in_id}.feature.tsv.gz")
+    assert args.out_feature is not None, "When --add-feature, --out-feature must be provided."
+    # # Determine the output file path if not provided
+    # if args.out_feature is None:
+    #     in_dir = os.path.dirname(args.in_transcript)
+    #     in_id = os.path.basename(args.in_transcript).replace('.tsv.gz', '').replace(".transcripts", "").replace(".transcript", "")
+    #     args.out_feature = os.path.join(in_dir, f"{in_id}.feature.tsv.gz")
 
     # Read the input transcript file
     with gzip.open(args.in_transcript, 'rt') as f:
@@ -55,11 +56,12 @@ def sge_add_feature(args):
 def sge_add_minmax(args):
     """Extract, scale, and compute min/max for X and Y coordinates."""
     # Determine the output file path if not provided
-    if args.out_minmax is None:
-        #raise ValueError("Output file for minmax must be provided.")
-        in_dir = os.path.dirname(args.in_transcript)
-        in_id = os.path.basename(args.in_transcript).replace('.tsv.gz', '').replace(".transcripts", "").replace(".transcript", "")
-        args.out_minmax = os.path.join(in_dir, f"{in_id}.minmax.tsv")
+    assert args.out_minmax is not None, "When --add-minmax, --out-minmax must be provided."
+    # if args.out_minmax is None:
+    #     #raise ValueError("Output file for minmax must be provided.")
+    #     in_dir = os.path.dirname(args.in_transcript)
+    #     in_id = os.path.basename(args.in_transcript).replace('.tsv.gz', '').replace(".transcripts", "").replace(".transcript", "")
+    #     args.out_minmax = os.path.join(in_dir, f"{in_id}.minmax.tsv")
 
     with gzip.open(args.in_transcript, 'rt') as f:
         transcripts = pd.read_csv(f, sep="\t")

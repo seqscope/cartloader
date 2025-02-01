@@ -109,8 +109,8 @@ def combine_sges_by_layout(_args):
         prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}",
         description="Combine SGE data by layout"
     )
-    parser.add_argument("--input", type=str, nargs='*', default=[], help="List of input information in a specific format.")
-    parser.add_argument("--outdir", type=str, help="Output directory.")
+    parser.add_argument("--in-tiles", type=str, nargs='*', default=[], help="List of input information in a specific format.")
+    parser.add_argument("--out-dir", type=str, help="Output directory.")
     parser.add_argument("--outid", type=str, default=None, help="Output ID.")
     parser.add_argument("--colnames-count", type=str, nargs='*', help="Columns to sum (default: count).", default=['count'])
     parser.add_argument('--colname-feature-name', type=str, default='gene', help='Feature name column (default: gene)')
@@ -125,37 +125,36 @@ def combine_sges_by_layout(_args):
     # parser.add_argument("--analy-dir", type=str, help="(For test) Analysis directory.")
     args = parser.parse_args(_args)
 
-    os.makedirs(args.outdir, exist_ok=True) 
+    os.makedirs(args.out_dir, exist_ok=True) 
     logging.basicConfig(
         level=logging.INFO,
         format='%(asctime)s - %(levelname)s - %(message)s',
-        filename=os.path.join(args.outdir, f"{args.outid}.log" if args.outid else "sge_combine.log"),
+        filename=os.path.join(args.out_dir, f"{args.outid}.log" if args.outid else "sge_combine.log"),
         filemode='w'
     )
 
-    input_list = args.input
+    input_list = args.in_tiles
 
     # log
-    logging.info("="*30)
-    logging.info(f"Commands:")
+    # logging.info("="*30)
+    # logging.info(f"Commands:")
+    # cmd=" ".join([f"cartloader combine_sges_by_layout",
+    #     f"--input {' '.join(input_list)} ",
+    #     f"--out-dir {args.out_dir}",
+    #     f"--outid {args.outid} " if args.outid else "",
+    #     f"--colnames-count {' '.join(args.colnames_count)} ",
+    #     f"--colname-feature-name {args.colname_feature_name} ",
+    #     f"--colname-feature-id {args.colname_feature_id} " if args.colname_feature_id else "",
+    #     f"--colname-x {args.colname_x} ",
+    #     f"--colname-y {args.colname_y} ",
+    #     f"--units-per-um {args.units_per_um} ",
+    #     '--minmax-in-um' if args.minmax_in_um else '',
+    #     '--convert-to-um' if args.convert_to_um else '',
+    #     f'--test-mode' if args.test_mode else ''])
+    # logging.info(cmd)
+    # logging.info("="*30)
 
-    cmd=" ".join([f"cartloader combine_sges_by_layout",
-        f"--input {' '.join(input_list)} ",
-        f"--outdir {args.outdir}",
-        f"--outid {args.outid} " if args.outid else "",
-        f"--colnames-count {' '.join(args.colnames_count)} ",
-        f"--colname-feature-name {args.colname_feature_name} ",
-        f"--colname-feature-id {args.colname_feature_id} " if args.colname_feature_id else "",
-        f"--colname-x {args.colname_x} ",
-        f"--colname-y {args.colname_y} ",
-        f"--units-per-um {args.units_per_um} ",
-        '--minmax-in-um' if args.minmax_in_um else '',
-        '--convert-to-um' if args.convert_to_um else '',
-        f'--test-mode' if args.test_mode else ''])
-    
-    logging.info(cmd)
-    logging.info("="*30)
-    logging.info(f"  - Output directory: {args.outdir}")
+    logging.info(f"  - Output directory: {args.out_dir}")
 
     outcols=[args.colname_x, args.colname_y]
     outcols.extend([args.colname_feature_name]) if args.colname_feature_id is None else outcols.extend([args.colname_feature_name, args.colname_feature_id])
@@ -215,19 +214,19 @@ def combine_sges_by_layout(_args):
     
     df_minmax_combined = {k: round(v, 2) for k, v in df_minmax_combined.items()}
 
-    out_minmax = os.path.join(args.outdir, f"{args.outid}.coordinate_minmax.tsv" if args.outid else "coordinate_minmax.tsv")
+    out_minmax = os.path.join(args.out_dir, f"{args.outid}.coordinate_minmax.tsv" if args.outid else "coordinate_minmax.tsv")
     with open(out_minmax, "w") as f:
         f.writelines([f"{key}\t{value}\n" for key, value in df_minmax_combined.items()])
     logging.info(f"Minmax file written to {out_minmax}")
 
     # feature
-    out_ftr = os.path.join(args.outdir, f"{args.outid}.feature.tsv.gz" if args.outid else "feature.clean.tsv.gz")
+    out_ftr = os.path.join(args.out_dir, f"{args.outid}.feature.tsv.gz" if args.outid else "feature.clean.tsv.gz")
     in_ftrs = df["feature_path"].tolist()
     df_ftr_combined = combine_ftr_across_sge(in_ftrs, args.colnames_count, args.colname_feature_name, args.colname_feature_id, test_mode=args.test_mode)
     df_ftr_combined.to_csv(out_ftr, sep="\t", index=False, compression="gzip")
     logging.info(f"Feature file written to {out_ftr}")
 
-    out_transcript = os.path.join(args.outdir, f"{args.outid}.transcripts.unsorted.tsv.gz" if args.outid else "transcripts.unsorted.tsv.gz")
+    out_transcript = os.path.join(args.out_dir, f"{args.outid}.transcripts.unsorted.tsv.gz" if args.outid else "transcripts.unsorted.tsv.gz")
     combine_transcript_across_sge(df, out_transcript, args.colname_x, args.colname_y, args.colnames_count, outcols=outcols, units_per_um=args.units_per_um, out_in_um=args.convert_to_um, test_mode=args.test_mode)
     logging.info(f"Transcript file written to {out_transcript}")
     

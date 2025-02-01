@@ -25,8 +25,9 @@ aux_env_args = {
 }
 
 aux_params_args = {
-    "sge_convert": [item for sublist in aux_sge_args.values() for item in sublist] + ["mu_scale", "radius", "quartil", "hex_n_move", "polygon_min_size"],
-    "run_ficture": ['anchor_res', 'radius_buffer', 
+    "sge_stitch": ["colname_feature_name", "colname_feature_id", "colname_x", "colname_y"],
+    "sge_convert": [item for sublist in aux_sge_args.values() for item in sublist] + ["radius", "quartil", "hex_n_move", "polygon_min_size"] + ["precision_um", "units_per_um"],
+    "run_ficture": [ 'anchor_res', 'radius_buffer', 
                      'hexagon_n_move', 'hexagon_precision', 'min_ct_per_unit_hexagon',
                      'minibatch_size', 'minibatch_buffer',
                      'train_epoch', 'train_epoch_id_len', 'lda_rand_init', 'lda_plot_um_per_pixel',
@@ -88,6 +89,7 @@ def define_sge(filter_by_density, filtered_prefix, run_dir, sge_dir, create_soft
     #     print(f"Input file not found: {tsv} or {cstsv}")
     #     sys.exit(1)
     sge_arg=f"--in-cstranscript {cstsv} --in-transcript {tsv} --in-feature {ftr} --in-minmax {minmax}"
+
     # link files 
     if create_softlink:
         # check if the files exist
@@ -219,6 +221,25 @@ def submit_job(jobname, jobpref, cmds, slurm, args):
         except subprocess.CalledProcessError as e:
             print("Error submitting job:\n", e.stderr)
 
+def cmd_sge_stitch(sgeinfo, args, env):
+    mkbn = "sge_stitch"
+    # collect tiles 
+
+    stitch_cmd = " ".join([
+        "cartloader", "sge_stitch",
+        f"--makefn {mkbn}.mk",
+        f"--in-tiles {' '.join(sgeinfo['in_tiles_str'])}",
+        f"--out-dir {sgeinfo['sge_dir']}",
+        f"--units-per-um {sgeinfo.get('units_per_um', None)}" if sgeinfo.get("units_per_um", None) else "",
+        f"--colnames-count {sgeinfo.get('colname_count', None)}" if sgeinfo.get('colname_count', None) else "",
+        f"--convert-to-um",
+        f"--n-jobs {args.n_jobs}" if args.n_jobs else "",
+        f"--restart" if args.restart else ""
+    ])
+    # add aux parameters
+    stitch_aug = merge_config(sgeinfo, args, aux_params_args["sge_stitch"], prefix=None)
+    stitch_cmd = add_param_to_cmd(stitch_cmd, stitch_aug, aux_params_args["sge_stitch"])
+    return stitch_cmd
 
 def cmd_sge_convert(sgeinfo, args, env):
     mkbn = "sge_convert"
@@ -241,26 +262,26 @@ def cmd_sge_convert(sgeinfo, args, env):
         assert sgeinfo.get("in_csv", None) is not None, f"Please provide --in-csv for {platform}"
         in_arg= f"--in-csv {sgeinfo['in_csv']}"
 
-    sge_cmd = " ".join([
+    format_cmd = " ".join([
         "cartloader", "sge_convert",
         f"--makefn {mkbn}.mk",
         f"--platform {sgeinfo['platform']}",
         in_arg,
         f"--out-dir {sgeinfo['sge_dir']}",
-        f"--precision-um {args.precision_um}" if args.precision_um else "",
-        f"--units-per-um {args.units_per_um}" if args.units_per_um else "",
-        f"--filter-by-density" if args.filter_by_density else "",
-        f"--out-filtered-prefix {args.filtered_prefix}" if args.filter_by_density and args.filtered_prefix else "",
-        f"--colnames-count {args.colname_count}" if args.colname_count else "",
+        f"--precision-um {sgeinfo.get('precision_um', None)}" if sgeinfo.get("", None) else "",
+        f"--units-per-um {sgeinfo.get('units_per_um', None)}" if sgeinfo.get("units_per_um", None) else "",
+        f"--colnames-count {sgeinfo.get('colname_count', None)}" if sgeinfo.get('colname_count', None) else "",
+        f"--filter-by-density" if sgeinfo.get('filter_by_density', False) else "",
+        f"--out-filtered-prefix {sgeinfo.get('filtered_prefix', None)}" if sgeinfo.get('filter_by_density', False) and sgeinfo.get('filtered_prefix', None) else "",
         f"--n-jobs {args.n_jobs}" if args.n_jobs else "",
         f"--restart" if args.restart else ""
     ])
     # add aux tools
-    sge_cmd = add_param_to_cmd(sge_cmd, env, aux_env_args["sge_convert"])
+    format_cmd = add_param_to_cmd(format_cmd, env, aux_env_args["sge_convert"])
     # add aux parameters
-    sge_aug = merge_config(sgeinfo, args, aux_params_args["sge_convert"], prefix=None)
-    sge_cmd = add_param_to_cmd(sge_cmd, sge_aug, aux_params_args["sge_convert"])
-    return sge_cmd
+    format_aug = merge_config(sgeinfo, args, aux_params_args["sge_convert"], prefix=None)
+    format_cmd = add_param_to_cmd(format_cmd, format_aug, aux_params_args["sge_convert"])
+    return format_cmd
 
 def cmd_run_ficture(run_i, args, env):
     
@@ -424,7 +445,7 @@ def cmd_run_fig2pmtiles(run_i, args, env):
             "--georeference" if histology.get("georeference", False) else "",
             "--geotif2mbtiles", 
             "--mbtiles2pmtiles", 
-            f"--update-catalog --basemap-key {histology["hist_id"]}" if os.path.exists(catalog_yaml) else "",
+            f"--update-catalog --basemap-key {histology['hist_id']}" if os.path.exists(catalog_yaml) else "",
             f"--in-fig {hist_path}",
             f"--out-prefix {hist_prefix}",
             "--flip-vertical" if histology["flip"] in ["vertical", "both"] else "",
@@ -482,7 +503,7 @@ def stepinator(_args):
 
     # * commands
     cmd_params = parser.add_argument_group("Commands", "Commands to be performed")
-    cmd_params.add_argument("--all", action="store_true", help="Run sge-convert, run_ficture, run_cartload_join, run_fig2pmtiles, and upload_aws in sequence")
+    cmd_params.add_argument("--sge-stitch", action="store_true", help="Run sge-stitch in cartloader")
     cmd_params.add_argument("--sge-convert", action="store_true", help="Run sge-convert in cartloader")
     cmd_params.add_argument("--run-ficture", action="store_true", help="Run run-ficture in cartloader. Only the main function is executed.")
     cmd_params.add_argument("--run-cartload-join", action="store_true", help="Run run-cartload-join in cartloader")
@@ -509,12 +530,14 @@ def stepinator(_args):
     key_params.add_argument('--in-parquet', type=str, default=None, help='Required if --sge-convert on 10x_visium_hd datasets. Path to the input raw parquet file for spatial coordinates (default: None, typical naming convention: tissue_positions.parquet)')
     # - input for 10x_xenium, bgi_stereoseq, cosmx_smi, vizgen_merscope, pixel_seq, and nova_st
     key_params.add_argument('--in-csv', type=str, default=None, help='(10x_xenium, bgi_stereoseq, cosmx_smi, vizgen_merscope, pixel_seq, and nova_st only) Path to the input raw CSV/TSV file (default: None).')
-    key_params.add_argument('--units-per-um', type=float, default=None, help='Applicable if --sge-convert. Coordinate unit per um (conversion factor) (default: 1.00)') 
+    key_params.add_argument('--units-per-um', type=float, default=None, help='Applicable if --sge-convert or --sge-stitch. Coordinate unit per um (conversion factor) (default: 1.00)') 
     key_params.add_argument('--scale-json', type=str, default=None, help="Applicable if --sge-convert on 10x_visium_hd datasets. Coordinate unit per um using the scale json file (default: None, typical naming convention: scalefactors_json.json)")
     key_params.add_argument('--precision-um', type=int, default=None, help='Required if --sge-convert. Number of digits of transcript coordinates (default: 2)')
     key_params.add_argument('--filter-by-density', action='store_true', default=False, help='Required if --sge-convert or --run-ficture. If --sge-convert, it enables density-filtering. If --run-ficture, it defines the density-filtered SGE as input (default: False)')
     key_params.add_argument('--filtered-prefix', type=str, default=None, help='Required if --filtered-by-density. The prefix for density-filtered SGE (default: filtered)')
-    key_params.add_argument("--colname-count", type=str, default="count", help="Required if --sge-convert, --run-ficture or --run-cartload-join. Column name for count (default: count)")
+    key_params.add_argument("--colname-count", type=str, default="count", help="Required if --sge-convert, --sge-stitch, --run-ficture, or --run-cartload-join. Column name that showing the expression count of the genomic feature of interest. (default: gene)")
+    # for sge_stitch 
+    key_params.add_argument("--in-tiles", nargs="*", default=[], help="Required if --sge-stitch. List of input tiles of each in the format of <transcript_path>,<feature_path>,<minmax_path>,<row>,<col> (default: [])")
     # for run_ficture
     key_params.add_argument("--major-axis", type=str, default="X", help="Major axis")
     key_params.add_argument("--ext-path", type=str, default=None, help="Required when --run-ficture with an external model. The path for the external model.")
@@ -559,46 +582,55 @@ def stepinator(_args):
     env_params.add_argument('--gdaladdo', type=str, default=None, help='Path to gdaladdo binary')
     env_params.add_argument('--aws', type=str, default=None, help='Path to aws binary')
     
-    sge_aux_params = parser.add_argument_group(
+    format_aux_parameter = parser.add_argument_group(
         "Auxiliary Parameters for sge_convert", 
         "Parameters for sge_convert. Required if --sge-convert is used with non-default values."
     )
     # IN-MEX
-    sge_aux_params.add_argument('--icols-mtx', type=str, default=None, help='Input column indices (comma-separated 1-based) in the input matrix file (default: 1,2,3,4,5)')
-    sge_aux_params.add_argument('--icol-bcd-barcode', type=int, default=None, help='(seqscope only) 1-based column index of barcode in the input barcode file (default: 1)')
-    sge_aux_params.add_argument('--icol-bcd-x', type=int, default=None, help='(seqscope only) 1-based column index of x coordinate in the input barcode file (default: 6)')
-    sge_aux_params.add_argument('--icol-bcd-y', type=int, default=None, help='(seqscope only) 1-based column index of y coordinate in the input barcode file (default: 7)')
-    sge_aux_params.add_argument('--icol-ftr-id', type=int, default=None, help='1-based column index of feature ID in the input feature file (default: 1)')
-    sge_aux_params.add_argument('--icol-ftr-name', type=int, default=None, help='1-based column index of feature name in the input feature file (default: 2)')
-    sge_aux_params.add_argument('--pos-colname-barcode', type=str, default=None, help='(10x_visium_hd only) Column name for barcode in the input parquet file (default: barcode)')
-    sge_aux_params.add_argument('--pos-colname-x', type=str, default=None, help='(10x_visium_hd only) Column name for X-axis in the input parquet file (default: pxl_row_in_fullres)')
-    sge_aux_params.add_argument('--pos-colname-y', type=str, default=None, help='(10x_visium_hd only) Column name for Y-axis in the input parquet file (default: pxl_col_in_fullres)')
-    sge_aux_params.add_argument('--pos-delim', type=str, default=None, help='(10x_visium_hd only) Delimiter for the input parquet file (default: ",")')
+    format_aux_parameter.add_argument('--icols-mtx', type=str, default=None, help='Input column indices (comma-separated 1-based) in the input matrix file (default: 1,2,3,4,5)')
+    format_aux_parameter.add_argument('--icol-bcd-barcode', type=int, default=None, help='(seqscope only) 1-based column index of barcode in the input barcode file (default: 1)')
+    format_aux_parameter.add_argument('--icol-bcd-x', type=int, default=None, help='(seqscope only) 1-based column index of x coordinate in the input barcode file (default: 6)')
+    format_aux_parameter.add_argument('--icol-bcd-y', type=int, default=None, help='(seqscope only) 1-based column index of y coordinate in the input barcode file (default: 7)')
+    format_aux_parameter.add_argument('--icol-ftr-id', type=int, default=None, help='1-based column index of feature ID in the input feature file (default: 1)')
+    format_aux_parameter.add_argument('--icol-ftr-name', type=int, default=None, help='1-based column index of feature name in the input feature file (default: 2)')
+    format_aux_parameter.add_argument('--pos-colname-barcode', type=str, default=None, help='(10x_visium_hd only) Column name for barcode in the input parquet file (default: barcode)')
+    format_aux_parameter.add_argument('--pos-colname-x', type=str, default=None, help='(10x_visium_hd only) Column name for X-axis in the input parquet file (default: pxl_row_in_fullres)')
+    format_aux_parameter.add_argument('--pos-colname-y', type=str, default=None, help='(10x_visium_hd only) Column name for Y-axis in the input parquet file (default: pxl_col_in_fullres)')
+    format_aux_parameter.add_argument('--pos-delim', type=str, default=None, help='(10x_visium_hd only) Delimiter for the input parquet file (default: ",")')
     # IN-CSV
-    sge_aux_params.add_argument('--csv-delim', type=str, default=None, help='Delimiter for the additional input tsv/csv file (default: "," for 10x_xenium, cosmx_smi, and vizgen_merscope; "\\t" for bgi_stereoseq, pixel_seq, and nova_st) ')
-    sge_aux_params.add_argument('--csv-colname-x',  type=str, default=None, help='Column name for X-axis (default: x_location for 10x_xenium; x for bgi_stereoseq; x_local_px for cosmx_smi; global_x for vizgen_merscope; xcoord for pixel_seq; x for nova_st)')
-    sge_aux_params.add_argument('--csv-colname-y',  type=str, default=None, help='Column name for Y-axis (default: y_location for 10x_xenium; y for bgi_stereoseq; y_local_px for cosmx_smi; global_y for vizgen_merscope; ycoord for pixel_seq; y for nova_st)')
-    sge_aux_params.add_argument('--csv-colname-feature-name', type=str, default=None, help='Column name for gene name (default: feature_name for 10x_xenium; geneID for bgi_stereoseq; target for cosmx_smi; gene for vizgen_merscope; geneName for pixel_seq; geneID for nova_st)')
-    sge_aux_params.add_argument('--csv-colnames-count', type=str, default=None, help='Column name for expression count. If not provided, a count of 1 will be added for a feature in a pixel (default: MIDCounts for bgi_stereoseq; MIDCount for nova_st; None for the rest platforms).')
-    sge_aux_params.add_argument('--csv-colname-feature-id', type=str, default=None, help='Column name for gene id (default: None)')
-    sge_aux_params.add_argument('--csv-colnames-others', nargs='+', default=[], help='Columns names to keep (e.g., cell_id, overlaps_nucleus) (default: None)')
-    sge_aux_params.add_argument('--csv-colname-phredscore', type=str, default=None, help='Column name for Phred-scaled quality value (Q-Score) estimating the probability of incorrect call (default: qv for 10x_xenium and None for the rest platforms).') # qv
-    sge_aux_params.add_argument('--min-phred-score', type=float, default=None, help='Specify the Phred-scaled quality score cutoff (default: 20 for 10x_xenium and None for the rest platforms).')
+    format_aux_parameter.add_argument('--csv-delim', type=str, default=None, help='Delimiter for the additional input tsv/csv file (default: "," for 10x_xenium, cosmx_smi, and vizgen_merscope; "\\t" for bgi_stereoseq, pixel_seq, and nova_st) ')
+    format_aux_parameter.add_argument('--csv-colname-x',  type=str, default=None, help='Column name for X-axis (default: x_location for 10x_xenium; x for bgi_stereoseq; x_local_px for cosmx_smi; global_x for vizgen_merscope; xcoord for pixel_seq; x for nova_st)')
+    format_aux_parameter.add_argument('--csv-colname-y',  type=str, default=None, help='Column name for Y-axis (default: y_location for 10x_xenium; y for bgi_stereoseq; y_local_px for cosmx_smi; global_y for vizgen_merscope; ycoord for pixel_seq; y for nova_st)')
+    format_aux_parameter.add_argument('--csv-colname-feature-name', type=str, default=None, help='Column name for gene name (default: feature_name for 10x_xenium; geneID for bgi_stereoseq; target for cosmx_smi; gene for vizgen_merscope; geneName for pixel_seq; geneID for nova_st)')
+    format_aux_parameter.add_argument('--csv-colnames-count', type=str, default=None, help='Column name for expression count. If not provided, a count of 1 will be added for a feature in a pixel (default: MIDCounts for bgi_stereoseq; MIDCount for nova_st; None for the rest platforms).')
+    format_aux_parameter.add_argument('--csv-colname-feature-id', type=str, default=None, help='Column name for gene id (default: None)')
+    format_aux_parameter.add_argument('--csv-colnames-others', nargs='+', default=[], help='Columns names to keep (e.g., cell_id, overlaps_nucleus) (default: None)')
+    format_aux_parameter.add_argument('--csv-colname-phredscore', type=str, default=None, help='Column name for Phred-scaled quality value (Q-Score) estimating the probability of incorrect call (default: qv for 10x_xenium and None for the rest platforms).') # qv
+    format_aux_parameter.add_argument('--min-phred-score', type=float, default=None, help='Specify the Phred-scaled quality score cutoff (default: 20 for 10x_xenium and None for the rest platforms).')
     # feature-filtering
-    sge_aux_params.add_argument('--include-feature-list', type=str, default=None, help='A file provides a list of gene names to include (default: None)')
-    sge_aux_params.add_argument('--exclude-feature-list', type=str, default=None, help='A file provides a list of gene names to exclude (default: None)')
-    sge_aux_params.add_argument('--include-feature-regex', type=str, default=None, help='Regex pattern for gene names to include (default: None)')
-    sge_aux_params.add_argument('--exclude-feature-regex', type=str, default=None, help='Regex pattern for gene names to exclude (default: "^(BLANK|Blank-|NegCon|NegPrb)"). To skip this, use --exclude-feature-regex "".')
-    sge_aux_params.add_argument('--include-feature-type-regex', type=str, default=None, help='Regex pattern for gene type to include (default: None). Requires --csv-colname-feature-type or --feature-type-ref for gene type info') # (e.g. protein_coding|lncRNA)
-    sge_aux_params.add_argument('--csv-colname-feature-type', type=str, default=None, help='If --include-feature-type-regex is used and the input file has gene type, define the column name for gene type info (default: None)')
-    sge_aux_params.add_argument('--feature-type-ref', type=str, default=None, help='Path to a tab-separated gene reference file containing gene type information. The format should be: chrom, start position, end position, gene id, gene name, gene type (default: None)')
+    format_aux_parameter.add_argument('--include-feature-list', type=str, default=None, help='A file provides a list of gene names to include (default: None)')
+    format_aux_parameter.add_argument('--exclude-feature-list', type=str, default=None, help='A file provides a list of gene names to exclude (default: None)')
+    format_aux_parameter.add_argument('--include-feature-regex', type=str, default=None, help='Regex pattern for gene names to include (default: None)')
+    format_aux_parameter.add_argument('--exclude-feature-regex', type=str, default=None, help='Regex pattern for gene names to exclude (default: "^(BLANK|Blank-|NegCon|NegPrb)"). To skip this, use --exclude-feature-regex "".')
+    format_aux_parameter.add_argument('--include-feature-type-regex', type=str, default=None, help='Regex pattern for gene type to include (default: None). Requires --csv-colname-feature-type or --feature-type-ref for gene type info') # (e.g. protein_coding|lncRNA)
+    format_aux_parameter.add_argument('--csv-colname-feature-type', type=str, default=None, help='If --include-feature-type-regex is used and the input file has gene type, define the column name for gene type info (default: None)')
+    format_aux_parameter.add_argument('--feature-type-ref', type=str, default=None, help='Path to a tab-separated gene reference file containing gene type information. The format should be: chrom, start position, end position, gene id, gene name, gene type (default: None)')
     # Polygon-filtering
-    sge_aux_params.add_argument('--mu-scale', type=int, default=None, help='Scale factor for the polygon area calculation (default: 1.0)')
-    sge_aux_params.add_argument('--radius', type=int, default=None, help='Radius for the polygon area calculation (default: 15)')
-    sge_aux_params.add_argument('--quartile', type=int, default=None, help='Quartile for the polygon area calculation (default: 2)')
-    sge_aux_params.add_argument('--hex-n-move', type=int, default=None, help='Sliding step (default: 1)')
-    sge_aux_params.add_argument('--polygon-min-size', type=int, default=None, help='The minimum polygon size (default: 500)')
-    
+    #format_aux_parameter.add_argument('--mu-scale', type=int, default=None, help='Scale factor for the polygon area calculation (default: 1.0)')   # Always use --mu-scale 1, since this will be performed after sge conversion, which will apply --units-per-um to generate the output SGE in um
+    format_aux_parameter.add_argument('--radius', type=int, default=None, help='Radius for the polygon area calculation (default: 15)')
+    format_aux_parameter.add_argument('--quartile', type=int, default=None, help='Quartile for the polygon area calculation (default: 2)')
+    format_aux_parameter.add_argument('--hex-n-move', type=int, default=None, help='Sliding step (default: 1)')
+    format_aux_parameter.add_argument('--polygon-min-size', type=int, default=None, help='The minimum polygon size (default: 500)')
+
+    stitch_aux_parameter = parser.add_argument_group(
+        "Auxiliary Parameters for sge_stitch", 
+        "Parameters for sge_stitch. Required if --sge-stitch is used with non-default values."
+    )
+    stitch_aux_parameter.add_argument('--colname-feature-name', type=str, default=None, help='Feature name column (default: gene)')
+    stitch_aux_parameter.add_argument('--colname-feature-id', type=str, default=None, help='Feature ID column (default: None)')
+    stitch_aux_parameter.add_argument('--colname-x', type=str, default=None, help='X column name (default: X)')
+    stitch_aux_parameter.add_argument('--colname-y', type=str, default=None, help='Y column name (default: Y)')
+
     ficture_aux_params = parser.add_argument_group(
         "Auxiliary Parameters for FICTURE", 
         "Parameters for run_ficture. Required if --run-ficture is used with non-default values. Default values are recommended."
@@ -645,19 +677,11 @@ def stepinator(_args):
     # =========
     #  actions
     # =========
-    if args.all:
-        args.sge_convert=True
-        args.run_ficture=True
-        args.run_cartload_join=True
-        args.run_fig2pmtiles=True
-        args.upload_aws=True
-        
-    assert args.sge_convert or args.run_ficture or args.run_cartload_join or args.run_fig2pmtiles or args.upload_aws , "Error: at least one command is d!"
+    assert args.sge_stitch or args.sge_convert or args.run_ficture or args.run_cartload_join or args.run_fig2pmtiles or args.upload_aws, "Error: At least one action is required"
 
     # =========
     #  Read YAML/args
     # =========
-
     if args.in_yaml is not None:
         with open(args.in_yaml, "r") as f:
              #yml.update(yaml.safe_load(f))
@@ -665,6 +689,7 @@ def stepinator(_args):
 
     # output dir
     out_dir = args.out_dir if args.out_dir else yml.get("out_dir", None)
+    assert out_dir is not None, "Error: --out-dir is required"
     out_dir = os.path.abspath(out_dir)
     os.makedirs(out_dir, exist_ok=True)
 
@@ -740,10 +765,27 @@ def stepinator(_args):
     cmds = []
 
     # =========
-    #  SGE Convert
+    #  SGE Convert / Stitch
     # =========
     if args.sge_convert:
         cmds.append(cmd_sge_convert(sgeinfo, args, env))
+
+    if args.sge_stitch:
+        # comma-based input per tile
+        if args.in_yaml:
+            in_tiles=sgeinfo.get("in_tiles", [])
+            assert len(in_tiles) > 0, 'When --sge-stitch is enabled, provide tile information in the "tiles" field in the SGE field in the input YAML file.'
+            assert len(in_tiles) > 1, 'When --sge-stitch is enabled, at least two tiles are required.'
+            sgeinfo["in_tiles_str"] = [
+                ",".join(str(intile.get(key, "")) for key in ["in_csv", "in_feature", "in_minmax", "row", "col"])
+                for intile in in_tiles
+            ]
+        else:
+            assert len(args.in_tiles) > 0, "When --sge-stitch is enabled, --in-tiles is required"
+            assert len(args.in_tiles) > 1, "When --sge-stitch is enabled, at least two tiles are required"
+            sgeinfo["in_tiles_str"]=args.in_tiles
+        # sge-stitch
+        cmds.append(cmd_sge_stitch(sgeinfo, args, env))
 
     # =========
     #  Downstream

@@ -22,7 +22,6 @@ def parse_arguments(_args):
     run_params.add_argument('--restart', action='store_true', default=False, help='Ignore all intermediate files and start from the beginning (default: False)')
     run_params.add_argument('--n-jobs', '-j', type=int, default=1, help='Number of jobs (processes) to run in parallel (default: 1)')
     run_params.add_argument('--makefn', type=str, default="sge_convert.mk", help='Makefile name (default: sge_convert.mk)')
-    run_params.add_argument('--append-makefile', type=str, default=None, help='For stepinator only. Specifies an existing Makefile to append new targets. Do not use.')
     run_params.add_argument('--threads', type=int, default=1, help='Maximum number of threads to use in each process (default: 1)')
     
     # Input/output/key params
