@@ -32,6 +32,7 @@ def parse_arguments(_args):
     key_params = parser.add_argument_group("Key parameters")
     key_params.add_argument('--srs', type=str, default='EPSG:3857', help='For the georeference and geo2tiff steps, define the spatial reference system (default: EPSG:3857)')
     key_params.add_argument('--mono', action='store_true', default=False, help='Black-and-white, single-banded image (default: False)')
+    key_params.add_argument('--rgba', action='store_true', default=False, help='RGBA, 4-banded image (default: False)')
     key_params.add_argument('--resample', type=str, default='cubic', help='For the geo2tiff step, define the resampling method (default: cubic). Options: near, bilinear, cubic, etc.')
     key_params.add_argument('--blocksize', type=int, default='512', help='For the geo2tiff step, define the blocksize (default: 512)')
     key_params.add_argument('--aws-bucket', type=str, default=None, help='For the update-aws step, define the path to the AWS S3 bucket')
@@ -136,9 +137,7 @@ def run_fig2pmtiles(_args):
                 "gdalwarp",
                 f'"{geotif_f}"',  # Add quotes around file names to handle spaces
                 f'"{vflip_f}"',
-                "-b", "1",
-                "-b", "2",
-                "-b", "3",
+                "-b 1" if args.mono else "-b 1 -b 2 -b 3 -b 4" if args.rgba else "-b 1 -b 2 -b 3",
                 "-ct", "\"+proj=pipeline +step +proj=axisswap +order=1,-2\"",
                 "-overwrite",
                 "-ts", "$WIDTH", "$HEIGHT"  # Use the WIDTH and HEIGHT from the previous command
@@ -155,7 +154,7 @@ def run_fig2pmtiles(_args):
         cmds = cmd_separator([], f"Converting from geotif to mbtiles: {geotif_f}")
         cmd = " ".join([
             args.gdal_translate, 
-            "-b 1 -b 2 -b 3" if not args.mono else "-b 1",
+            "-b 1" if args.mono else "-b 1 -b 2 -b 3 -b 4" if args.rgba else "-b 1 -b 2 -b 3",
             "-strict",
             "-co", "\"ZOOM_LEVEL_STRATEGY=UPPER\"",
             "-co", f"\"RESAMPLING={args.resample}\"",

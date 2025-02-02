@@ -28,11 +28,13 @@ def parse_arguments(_args):
     inout_params.add_argument("--upper-thres-intensity", type=float, default=255, help='Intensity-based capped value')
     inout_params.add_argument("--lower-thres-quantile", type=float, help='Quantile-based floored value')
     inout_params.add_argument("--lower-thres-intensity", type=float, default=0, help='Intensity-based floored value')
+    inout_params.add_argument("--transparent-below", type=int, default=0, help='Set pixels below this value to transparent (0-255)')
     inout_params.add_argument("--colorize", type=str, help='Colorize using RGB code as max value')
     inout_params.add_argument('--flip-horizontal', action='store_true', default=False)
     inout_params.add_argument('--flip-vertical', action='store_true', default=False)
     inout_params.add_argument('--rotate-clockwise', action='store_true', default=False)
     inout_params.add_argument('--rotate-counter', action='store_true', default=False)
+    inout_params.add_argument('--high-memory', action='store_true', default=False)
 
     # memory_params = parser.add_argument_group("Memory Management")
     # memory_params.add_argument('--max-memory-gb', type=float, default=4.0,
@@ -61,10 +63,20 @@ def process_image_chunk(chunk: np.ndarray, args, r=None, g=None, b=None) -> np.n
              - args.lower_thres_intensity) / (args.upper_thres_intensity - args.lower_thres_intensity))
     
     # Colorize if needed
+    if args.transparent_below > 0:
+        mask = (chunk < args.transparent_below/255)
     if args.colorize is not None:
-        chunk = np.stack([chunk * r, chunk * g, chunk * b], axis=-1)
+        if args.transparent_below > 0:
+            chunk = np.stack([chunk * r, chunk * g, chunk * b, chunk * 255], axis=-1)
+            chunk[mask, 3] = 0 ## make it transparent
+        else:
+            chunk = np.stack([chunk * r, chunk * g, chunk * b], axis=-1)
     else:
-        chunk = chunk * 255.0
+        if args.transparent_below > 0:
+            chunk = np.stack([chunk * 255, chunk * 255, chunk * 255, chunk * 255], axis=-1)
+            chunk[mask, 3] = 0 ## make it transparent
+        else:
+            chunk = chunk * 255.0
     
     return chunk.astype(np.uint8)
 
@@ -140,7 +152,10 @@ def run_hist2pmtiles(_args):
         args.page = 0 if args.page is None else args.page
         page = tif.series[args.series].levels[args.level].pages[args.page]
         
-        assert page.is_tiled, "Only tiled TIFF files are supported"
+        #assert page.is_tiled, "Only tiled TIFF files are supported"
+        if not args.high_memory and not page.is_tiled:
+            logger.error("When the TIFF file is not tiled, please use the --high-memory flag")
+            sys.exit(1)
         
         if len(page.shape) == 3:
             if page.shape[2] != 3:
@@ -196,25 +211,33 @@ def run_hist2pmtiles(_args):
             #logger.info(type(tif.series[0].levels[i]))
         
         ## iterate over the segment and extract the image by tile
-        (chunk_height, chunk_width) = page.chunks
-        n_chunks = ((page.imagelength + chunk_height - 1) // chunk_height) * ((page.imagewidth + chunk_width - 1) // chunk_width)
+        if args.high_memory:
+            (chunk_height, chunk_width) = page.shape[:2]
+            n_chunks = 1
+        else:
+            (chunk_height, chunk_width) = page.chunks
+            n_chunks = ((page.imagelength + chunk_height - 1) // chunk_height) * ((page.imagewidth + chunk_width - 1) // chunk_width)
         logger.info(f"Processing in chunks of {chunk_height}x{chunk_width} pixels")
 
-        pixel_bytes = 4 if args.colorize else 1  # Account for RGB vs grayscale
-        
-        # Create chunked reader
-        #reader = ChunkedTiffReader(page)
-    
+        #pixel_bytes = 4 if args.colorize else 1  # Account for RGB vs grayscale
+            
         # Prepare output file
-        output_shape = (*page.shape[:2], 3) if args.colorize else page.shape[:2]
+        output_shape = (*page.shape[:2], 4) if args.transparent_below > 0 else ((*page.shape[:2], 3) if args.colorize else page.shape[:2])
         output_dtype = np.uint8
+        
+        if args.high_memory:
+            image_array_highmem = page.asarray()
         
         ## if needed, get the overall distribution of pixel values for quantile-based thresholding
         if args.upper_thres_quantile is not None or args.lower_thres_quantile is not None:
             logger.info("Calculating pixel value distribution...")
             histogram = Counter()
             total_count = 0
-            segments = page.segments()
+            if args.high_memory:
+                segments = [image_array_highmem]
+            else:
+                segments = page.segments()
+
             for i, segment in enumerate(segments):
                 if i % 100 == 0:
                     logger.info(f"Processing segment {i+1}/{n_chunks}...")
@@ -236,15 +259,19 @@ def run_hist2pmtiles(_args):
             gc.collect()
     
         # Create memory-mapped output file
-        output = np.memmap(f"{args.out_prefix}_output.npy", dtype=output_dtype,
-                        mode='w+', shape=output_shape)
+        output = np.memmap(f"{args.out_prefix}_output.npy", dtype=output_dtype, mode='w+', shape=output_shape)
     
         # Process color information
         r, g, b = None, None, None
         if args.colorize:
             r, g, b = hex_to_rgb(args.colorize)
 
-        segments = page.segments()
+
+        if args.high_memory:
+            segments = [image_array_highmem]
+        else:
+            segments = page.segments()
+            
         for i, segment in enumerate(segments):
             if i % 100 == 0:
                 current_memory = get_memory_usage()
@@ -271,7 +298,7 @@ def run_hist2pmtiles(_args):
             #print(f"Chunk {i}: shape: {data.shape}, {processed.shape}, {offset_x}, {offset_y}, {width}, {height}, {page.imagewidth}, {page.imagelength}")
                 
             # Write to output
-            if args.colorize:
+            if len(output_shape) > 2:
                 output[offset_y:(offset_y+height), offset_x:(offset_x+width), :] = processed[0:height, 0:width, :]
             else:
                 output[offset_y:(offset_y+height), offset_x:(offset_x+width)] = processed[0:height, 0:width]
@@ -293,16 +320,14 @@ def run_hist2pmtiles(_args):
         # Handle PMTiles conversion
         if not args.skip_pmtiles:
             logger.info(f"Creating PMTiles with run_fig2pmtiles...")
-            # if args.flip_horizontal:
-            #     (ul[0], lr[0]) = (lr[0], ul[0])
-            # if args.flip_vertical:
-            #     (ul[1], lr[1]) = (lr[1], ul[1])
             if ul[0] < 0:
                 ul0 = f"\\{ul[0]}"
             else:
                 ul0 = f"{ul[0]}"
             cmd = f"cartloader run_fig2pmtiles --in-bounds '{ul0},{ul[1]},{lr[0]},{lr[1]}' --in-fig {args.out_prefix}.png --out-prefix {args.out_prefix} --geotif2mbtiles --mbtiles2pmtiles --georeference"
-            if is_mono:
+            if args.transparent_below > 0:
+                cmd += " --rgba"
+            elif is_mono:
                 cmd += " --mono"
             print(cmd)
             result = subprocess.run(cmd, shell=True)
