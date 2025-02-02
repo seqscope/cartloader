@@ -228,7 +228,7 @@ def run_fig2pmtiles(_args):
         if args.flip_horizontal:
             ort_suffix.append("hflip")
 
-        ort_f = f"{args.out_prefix}-{"-".join(ort_suffix)}.tif"
+        ort_f = f"{args.out_prefix}-{'-'.join(ort_suffix)}.tif"
 
         # 3) Axis order for gdalwrap and Output dimensions
         axis_order = orient2axisorder.get(
