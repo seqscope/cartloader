@@ -13,6 +13,8 @@ from cartloader.utils.utils import add_param_to_cmd
 from cartloader.utils.image_helper import update_orient
 from cartloader.utils.sge_helper import aux_sge_args
 
+timestamp = datetime.datetime.now().strftime("%y%m%d")
+
 histology_suffixes=[".tif", ".tiff", ".png"]
 histology_suffixes.extend([suffix.upper() for suffix in histology_suffixes])
 
@@ -20,7 +22,7 @@ aux_env_args = {
         "sge_stitch": ["spatula"],
         "sge_convert": ["spatula", "gzip", "parquet_tools"],
         "run_ficture": ['spatula', 'bgzip', "tabix", "gzip", "sort", "sort_mem"],
-        "run_cartload_join": ['magick', 'pmtiles', 'gdal_translate', 'gdaladdo', 'tippecanoe', 'spatula'],
+        "run_cartload_join": ['pmtiles', 'gdal_translate', 'gdaladdo', 'tippecanoe', 'spatula'],
         "run_fig2pmtiles": ['pmtiles', 'gdal_translate', 'gdaladdo'],
         "upload_aws": ['aws']
 }
@@ -211,6 +213,12 @@ def submit_job(jobname, jobpref, cmds, slurm, args):
             if args.submit_mode == "local":
                 result = subprocess.run(f"bash {job_file}", shell=True, check=True, capture_output=True, text=True)
                 print("Job executed successfully:\n", result.stdout)
+                # store the stderr and stdout
+                with open(f"{jobpref}_{timestamp}.out", "w") as f:
+                    f.write(result.stdout)
+                with open(f"{jobpref}_{timestamp}.err", "w") as f:
+                    f.write(result.stderr)
+                
             elif args.submit_mode == "slurm":
                 # ?? The minimum required SLURM parameters
                 missing_params = [k for k in [ "cpus_per_task", "mem"] if not getattr(slurm, k, None)]
@@ -238,7 +246,7 @@ def cmd_sge_stitch(sgeinfo, args, env):
         f"--restart" if args.restart else ""
     ])
     # add aux env
-    stitch_aug = add_param_to_cmd(stitch_aug, env, aux_env_args["sge_stitch"])
+    stitch_cmd = add_param_to_cmd(stitch_cmd, env, aux_env_args["sge_stitch"])
 
     # add aux parameters
     stitch_aug = merge_config(sgeinfo, args, aux_params_args["sge_stitch"], prefix=None)
@@ -289,9 +297,9 @@ def cmd_sge_convert(sgeinfo, args, env):
 
 def cmd_run_ficture(run_i, args, env):
     
-    ext_path = run_i.get("ext_path", None)
-    ext_id   = run_i.get("ext_id", None)
-
+    ext_path = run_i["ext_path"]
+    ext_id   = run_i["ext_id"]
+    
     # makefile 
     mkbn = "run_ficture" if ext_path is None else f"run_ficture_{ext_id}"
 
@@ -299,17 +307,20 @@ def cmd_run_ficture(run_i, args, env):
     fic_dir=os.path.join(run_i["run_dir"], "ficture")
 
     create_softlink = False if args.sge_convert else True
-    sge_arg = define_sge(run_i.get("filter_by_density", False), run_i.get("filtered_prefix", None), run_i["run_dir"], run_i.get("sge_dir", None), create_softlink)
+    sge_arg = define_sge(run_i["filter_by_density"],
+                         run_i["filtered_prefix"],
+                         run_i["run_dir"], 
+                         run_i["sge_dir"], create_softlink)
 
-    cmap_arg = define_args_rgb(run_i.get("cmap", None))
+    cmap_arg = define_args_rgb(run_i["cmap"])
     
     # model & parameters
-    assert run_i.get("train_width", None) is not None, "Error: --train-width is d"
+    assert run_i["train_width"] is not None, "Error: --train-width is d"
     if ext_path:
-        assert ext_id is not None, "Error: --ext-id is Required when running ficture with an external model"
+        assert ext_id is not None, "Error: --ext-id is required when running ficture with an external model"
         assert os.path.exists(ext_path), f"Error: --ext-path is defined with a missing file: {ext_path}"
     else:
-        assert run_i.get("n_factor", None) is not None, "Error: --n-factor is Required when running standard ficture"
+        assert run_i["n_factor"] is not None, "Error: --n-factor is required when running standard ficture"
     
     # cmd
     ficture_cmd = " ".join([
@@ -317,15 +328,16 @@ def cmd_run_ficture(run_i, args, env):
         f"--makefn {mkbn}.mk",
         f"--out-dir {fic_dir}",
         sge_arg,
-        f"--major-axis {run_i.get('major_axis', 'X')}",
+        f"--major-axis {run_i['major_axis']}",
         f"--colname-count {run_i['colname_count']}" if run_i['colname_count'] else "",
         f"{'--init-ext' if ext_path and args.init_ext else '--main-ext' if ext_path else '--main'}",
         f"--ext-path {ext_path}" if ext_path else "",
         f"--ext-id {ext_id}" if ext_path else "",
-        "--copy-ext-model" if ext_path and run_i.get("copy_ext_model", False) else "",
+        "--copy-ext-model" if ext_path and run_i["copy_ext_model"] else "",
         f"--n-factor {run_i['n_factor']}" if ext_path is None else "",
         f"--train-width {run_i['train_width']}",
         "--skip-coarse-report" if args.skip_coarse_report else "",
+        "--segment-10x" if args.segment_10x else "",
         cmap_arg,
         f"--n-jobs {args.n_jobs}" if args.n_jobs else "",
         f"--restart" if args.restart else "",
@@ -349,7 +361,7 @@ def cmd_run_cartload_join(run_i, args, env):
         f"--fic-dir {fic_dir}", 
         f"--out-dir {cartload_dir}",
         f"--id {run_i['run_id']}",
-        f"--major-axis {run_i.get('major_axis', 'X')}",
+        f"--major-axis {run_i['major_axis']}",
         f"--colname-count {run_i['colname_count']}" if run_i['colname_count'] else "",
         f"--n-jobs {args.n_jobs}" if args.n_jobs else "",
         f"--restart" if args.restart else "",
@@ -516,6 +528,7 @@ def stepinator(_args):
     cmd_params.add_argument("--copy-ext-model", action="store_true", help="Auxiliary action parameters for run-ficture. Copy external model when running FICTURE with an external model")
     cmd_params.add_argument("--init-ext", action="store_true", help="Auxiliary action parameters for run-ficture. Only Initialize external model without run main-ext")
     cmd_params.add_argument("--skip-coarse-report", action="store_true", help="Auxiliary action parameters for run-ficture. Skip coarse report")
+    cmd_params.add_argument('--segment-10x', action='store_true', default=False, help='(Additional function) Perform hexagon segmentation into 10x Genomics format')
 
     # * Key
     key_params = parser.add_argument_group(
@@ -581,7 +594,7 @@ def stepinator(_args):
     env_params.add_argument('--tabix', type=str, default=None, help='Path to tabix binary')
     env_params.add_argument('--pmtiles', type=str,  default=None,  help='Path to pmtiles binary. When not provided, it will use the pmtiles from the submodules.')
     env_params.add_argument('--tippecanoe', type=str,  default=None,  help='Path to tippecanoe binary. When not provided, it will use the tippecanoe from the submodules.')
-    env_params.add_argument('--magick', type=str, default=None, help='Path to magick binary')
+    env_params.add_argument('--imagemagick', type=str, default=None, help='Path to the imagemagick binary directory')
     env_params.add_argument('--gdal_translate', type=str, default=None, help='Path to gdal_translate binary')
     env_params.add_argument('--gdaladdo', type=str, default=None, help='Path to gdaladdo binary')
     env_params.add_argument('--aws', type=str, default=None, help='Path to aws binary')
@@ -644,38 +657,42 @@ def stepinator(_args):
     # ficture_aux_params.add_argument('--csv-colidx-x',  type=int, default=1, help='Column index for X-axis in the --in-transcript (default: 1)')
     # ficture_aux_params.add_argument('--csv-colidx-y',  type=int, default=2, help='Column index for Y-axis in the --in-transcript (default: 2)')
     # segmentation - ficture
-    ficture_aux_params.add_argument('--hexagon-n-move', type=int, default=None, help='Level of hexagonal sliding when creating hexagon-indexed SGE in FICTURE compatible format')
-    ficture_aux_params.add_argument('--hexagon-precision', type=float, default=None, help='Output precision of hexagon coordinates for FICTURE compatible format')
-    ficture_aux_params.add_argument('--min-ct-per-unit-hexagon', type=int, default=None, help='Minimum count per hexagon in hexagon segmentation in FICTURE compatible format')
+    ficture_aux_params.add_argument('--hexagon-n-move', type=int, default=None, help='Level of hexagonal sliding when creating hexagon-indexed SGE in FICTURE compatible format (default: 1)')
+    ficture_aux_params.add_argument('--hexagon-precision', type=float, default=None, help='Output precision of hexagon coordinates for FICTURE compatible format (default: 2)')
+    ficture_aux_params.add_argument('--min-ct-per-unit-hexagon', type=int, default=None, help='Minimum count per hexagon in hexagon segmentation in FICTURE compatible format (default: 50)')
+    # segmentation - 10x
+    ficture_aux_params.add_argument('--hexagon-n-move-10x', type=int, default=None, help='Level of hexagonal sliding when creating hexagon-indexed SGE in 10x Genomics format (default: 1)')
+    ficture_aux_params.add_argument('--hexagon-precision-10x', type=float, default=None, help='Output precision of hexagon coordinates for 10x Genomics format (default: 2)')
+    ficture_aux_params.add_argument('--min-ct-per-unit-hexagon-10x', type=int, default=None, help='Minimum count per hexagon in hexagon segmentation in 10x Genomics format (default: 1)')
     # minibatch
-    ficture_aux_params.add_argument('--minibatch-size', type=int, default=None, help='Batch size used in minibatch processing')
-    ficture_aux_params.add_argument('--minibatch-buffer', type=int, default=None, help='Batch buffer used in minibatch processing')
+    ficture_aux_params.add_argument('--minibatch-size', type=int, default=None, help='Batch size used in minibatch processing (default: 500)')
+    ficture_aux_params.add_argument('--minibatch-buffer', type=int, default=None, help='Batch buffer used in minibatch processing (default: 30)')
     # train 
-    ficture_aux_params.add_argument('--train-epoch', type=int, default=None, help='Training epoch for LDA model')
-    ficture_aux_params.add_argument('--train-epoch-id-len', type=int, default=None, help='Training epoch ID length')
-    ficture_aux_params.add_argument('--lda-rand-init', type=int, default=None, help='Number of random initialization during model training')
-    ficture_aux_params.add_argument('--lda-plot-um-per-pixel', type=float, default=None, help='Image resolution for LDA plot')
+    ficture_aux_params.add_argument('--train-epoch', type=int, default=None, help='Training epoch for LDA model (default: 3)')
+    ficture_aux_params.add_argument('--train-epoch-id-len', type=int, default=None, help='Training epoch ID length (default: 2)')
+    ficture_aux_params.add_argument('--lda-rand-init', type=int, default=None, help='Number of random initialization during model training (default: 10)')
+    ficture_aux_params.add_argument('--lda-plot-um-per-pixel', type=float, default=None, help='Image resolution for LDA plot (default: 1)')
     # fit 
     ficture_aux_params.add_argument('--fit-width',  type=str, default=None, help='Hexagon flat-to-flat width (in um) during model fitting (default: same to train-width)')
-    ficture_aux_params.add_argument('--fit-precision', type=float, default=None, help='Output precision of model fitting')
-    ficture_aux_params.add_argument('--min-ct-per-unit-fit', type=int, default=None, help='Minimum count per hexagon unit during model fitting')
-    ficture_aux_params.add_argument('--fit-plot-um-per-pixel', type=float, default=None, help='Image resolution for fit coarse plot')   # in Scopeflow, this is set to 2
+    ficture_aux_params.add_argument('--fit-precision', type=float, default=None, help='Output precision of model fitting (default: 2)')
+    ficture_aux_params.add_argument('--min-ct-per-unit-fit', type=int, default=None, help='Minimum count per hexagon unit during model fitting (default: 20)')
+    ficture_aux_params.add_argument('--fit-plot-um-per-pixel', type=float, default=None, help='Image resolution for fit coarse plot (default: 1)')   # in Scopeflow, this is set to 2
     # decode
-    ficture_aux_params.add_argument('--anchor-res', type=int, default=None, help='Anchor resolution for decoding. If absent, run_ficture will use the default value: 4.')
-    ficture_aux_params.add_argument('--radius-buffer', type=int, default=None, help='Buffer to radius(=anchor_res + radius_buffer) for pixel-level decoding. If absent, run_ficture will use the default value: 1.')
-    ficture_aux_params.add_argument('--decode-top-k', type=int, default=None, help='Top K columns to output in pixel-level decoding results')
-    ficture_aux_params.add_argument('--decode-block-size', type=int, default=None, help='Block size for pixel decoding output')
-    ficture_aux_params.add_argument('--decode-scale', type=int, default=None, help='Scale parameters for pixel decoding output')
-    ficture_aux_params.add_argument('--decode-precision', type=float, default=None, help='Precision of pixel level decoding')
-    ficture_aux_params.add_argument('--decode-plot-um-per-pixel', type=float, default=None, help='Image resolution for pixel decoding plot')
+    ficture_aux_params.add_argument('--anchor-res', type=int, default=None, help='Anchor resolution for decoding (default: 4)')
+    ficture_aux_params.add_argument('--radius-buffer', type=int, default=None, help='Buffer to radius(=anchor_res + radius_buffer) for pixel-level decoding (default: 1)')
+    ficture_aux_params.add_argument('--decode-top-k', type=int, default=None, help='Top K columns to output in pixel-level decoding results (default: 3)')
+    ficture_aux_params.add_argument('--decode-block-size', type=int, default=None, help='Block size for pixel decoding output (default: 100)')
+    ficture_aux_params.add_argument('--decode-scale', type=int, default=None, help='Scale parameters for pixel decoding output (default: 100)')
+    ficture_aux_params.add_argument('--decode-precision', type=float, default=None, help='Precision of pixel level decoding (default: 0.01)')
+    ficture_aux_params.add_argument('--decode-plot-um-per-pixel', type=float, default=None, help='Image resolution for pixel decoding plot (default: 0.5)')
     # merge_by_pixel
-    ficture_aux_params.add_argument('--merge-max-dist-um', type=float, default=None, help='Maximum distance in um for merging pixel-level decoding results') 
-    ficture_aux_params.add_argument('--merge-max-k', type=int, default=None, help='Maximum number of K columns to output in merged pixel-level decoding results')
-    ficture_aux_params.add_argument('--merge-max-p', type=int, default=None, help='Maximum number of P columns to output in merged pixel-level decoding results')
+    ficture_aux_params.add_argument('--merge-max-dist-um', type=float, default=None, help='Maximum distance in um for merging pixel-level decoding results (default: 0.1)') 
+    ficture_aux_params.add_argument('--merge-max-k', type=int, default=None, help='Maximum number of K columns to output in merged pixel-level decoding results (default: 1)')
+    ficture_aux_params.add_argument('--merge-max-p', type=int, default=None, help='Maximum number of P columns to output in merged pixel-level decoding results (default: 1)')
     # others parameters shared across steps
-    ficture_aux_params.add_argument('--min-ct-per-feature', type=int, default=None, help='Minimum count per feature during LDA training, transform and decoding')
-    ficture_aux_params.add_argument('--de-max-pval', type=float, default=None, help='p-value cutoff for differential expression')
-    ficture_aux_params.add_argument('--de-min-fold', type=float, default=None, help='Fold-change cutoff for differential expression')
+    ficture_aux_params.add_argument('--min-ct-per-feature', type=int, default=None, help='Minimum count per feature during LDA training, transform and decoding (default: 20)')
+    ficture_aux_params.add_argument('--de-max-pval', type=float, default=None, help='p-value cutoff for differential expression (default: 1e-3)')
+    ficture_aux_params.add_argument('--de-min-fold', type=float, default=None, help='Fold-change cutoff for differential expression (default: 1.5)')
     args = parser.parse_args(_args)
 
     # =========
@@ -723,12 +740,10 @@ def stepinator(_args):
     # =========
     #  env
     # =========
-    timestamp = datetime.datetime.now().strftime("%y%m%d_%H%M")
-    # * tools (collect from yaml and args)
-    aux_env_args = []
-    for action, aux_env_args_i in aux_env_args:
-        aux_env_args.extend(aux_env_args_i)
-    env = merge_config(yml, args, aux_env_args,  prefix="env")  
+    # * tools (collect from yaml and args)    
+    env = merge_config(yml, args, 
+                       [item for sublist in aux_env_args.values() for item in sublist] + ["imagemagick"],
+                        prefix="env")  
 
     if env.spatula is None:
         env.spatula  = os.path.join(cartloader_repo, "submodules", "spatula", "bin", "spatula")
@@ -766,6 +781,11 @@ def stepinator(_args):
     #  init 
     # =========
     env_cmds=[module_load_cmds] + conda_cmd
+    # export path for imagemagick
+    if args.sge_stitch or args.run_cartload_join:
+        if getattr(env, "imagemagick", None) is not None:
+            env_cmds.append("export PATH=$PATH:"+":".join([env.imagemagick]))
+    env_cmds.append("\n")
     cmds = []
 
     # =========
@@ -805,12 +825,22 @@ def stepinator(_args):
 
             for run_i in yml.get("RUNS", []):
                 if run_i.get("run_id") in args.run_ids:
-                    # update the shared parameters from SGE field
+                    # in/out directory
                     run_i["sge_dir"]=sgeinfo["sge_dir"]
+                    run_i["run_dir"]=os.path.join(out_dir, run_i["run_id"])
+                    # sge info
                     run_i["filter_by_density"]=sgeinfo.get("filter_by_density", False)
                     run_i["filtered_prefix"]=sgeinfo.get("filtered_prefix", "filtered")
+                    run_i["major_axis"]=run_i.get("major_axis", "X")
                     run_i["colname_count"]=sgeinfo.get("colname_count", "count")
-                    run_i["run_dir"]=os.path.join(out_dir, run_i["run_id"])
+                    # external model when applied
+                    run_i["ext_path"]=run_i.get("ext_path", None)
+                    run_i["ext_id"]=run_i.get("ext_id", None)
+                    run_i["copy_ext_model"]=run_i.get("copy_ext_model", False)
+                    run_i["cmap"]=run_i.get("cmap", None)
+                    # analysis parameters
+                    run_i["train_width"]=run_i.get("train_width", None)     
+                    run_i["n_factor"]=run_i.get("n_factor", None)           # will fill in the default value in lda
                     runinfo.append(run_i)
         else:
             assert len(args.run_ids) == 1, "When --in-yaml is not provided, only one run ID is allowed"            

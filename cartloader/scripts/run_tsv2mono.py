@@ -34,7 +34,7 @@ def parse_arguments(_args):
     aux_params.add_argument('--pmtiles', type=str, default=f"pmtiles", help='Path to pmtiles binary from go-pmtiles')
     aux_params.add_argument('--gdal_translate', type=str, default=f"gdal_translate", help='Path to gdal_translate binary')
     aux_params.add_argument('--gdaladdo', type=str, default=f"gdaladdo", help='Path to gdaladdo binary')
-    aux_params.add_argument('--magick', type=str, default=f"magick", help='Path to ImageMagick binary')
+    # aux_params.add_argument('--magick', type=str, default=f"magick", help='Path to ImageMagick binary') # Disable this function. The user need to add the path to the ImageMagick binary directory to the PATH environment variable
     aux_params.add_argument('--keep-intermediate-files', action='store_true', default=False, help='Keep intermediate output files')
     
     run_params = parser.add_argument_group("Run Options", "Run options for FICTURE commands")
@@ -69,7 +69,7 @@ def run_tsv2mono(_args):
     scheck_app(args.pmtiles)
     scheck_app(args.gdal_translate)
     scheck_app(args.gdaladdo)
-    scheck_app(args.magick)
+    # scheck_app(args.magick)
 
     ## check input tsv file header and get the column indices
     icol_x, icol_y, icol_cnt = None, None, None

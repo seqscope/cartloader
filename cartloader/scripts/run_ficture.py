@@ -40,26 +40,26 @@ def parse_arguments(_args):
 
     inout_params = parser.add_argument_group("Input/Output Parameters", "Input and output parameters for FICTURE")
     inout_params.add_argument('--out-dir', required= True, type=str, help='Output directory')
-    inout_params.add_argument('--out-json', type=str, default=None, help="Output JSON file for summarizing the ficture parameters. Default: <out-dir>/ficture.params.json ")
-    inout_params.add_argument('--in-transcript', type=str, default=None, help='Input unsorted transcript-indexed SGE file in TSV format. Default to transcripts.unsorted.tsv.gz in the output directory')
-    inout_params.add_argument('--in-minmax', type=str, default=None, help='Input coordinate minmax TSV file. Default to coordinate_minmax.tsv in the output directory')
-    inout_params.add_argument('--in-feature', type=str, default=None,  help='(Optional) Input TSV file that specify which genes to use as input, e.g., feature.clean.tsv.gz. If absent, all genes will be used')
-    inout_params.add_argument('--in-cstranscript', type=str, default=None, help='(Optional) If a coordinate-sorted transcript-indexed SGE file (sorted by x and y coordinates) exists, specify it by --in-cstranscript to skip the sorting step. Or use this to define the name of the sorted file. Default to transcripts.sorted.tsv.gz in the output directory')
+    inout_params.add_argument('--out-json', type=str, default=None, help="Output JSON file for summarizing the ficture parameters (default: <out-dir>/ficture.params.json)")
+    inout_params.add_argument('--in-transcript', type=str, default=None, help='Input unsorted transcript-indexed SGE file in TSV format (default: <out-dir>/transcripts.unsorted.tsv.gz)')
+    inout_params.add_argument('--in-minmax', type=str, default=None, help='Input coordinate minmax TSV file. (default: <out-dir>/coordinate_minmax.tsv)')  
+    inout_params.add_argument('--in-feature', type=str, default=None,  help='(Optional) Input TSV file that specify which input genes, e.g., feature.clean.tsv.gz. If absent, all genes will be used')
+    inout_params.add_argument('--in-cstranscript', type=str, default=None, help='(Optional) Use --in-cstranscript if a coordinate-sorted transcript-indexed SGE file already exists to skip sorting, or to define a custom sorted file name (default: <out-dir>/transcripts.sorted.tsv.gz)')
 
     external_params = parser.add_argument_group("External Model Parameters", """When using --init-ext, provide the pre-trained model, its type, and ID by --ext-path, --ext-type and --ext-id. """)
     external_params.add_argument('--ext-path', type=str, default=None, help='Path to the external model file')
-    external_params.add_argument('--ext-type', type=str, default="pseudobulk", help='The type of external model. Options: "pseudobulk", "cluster"')
+    external_params.add_argument('--ext-type', type=str, default="pseudobulk", help='The type of external model (options: "pseudobulk", "cluster")')
     external_params.add_argument('--ext-id', type=str, default=None, help='ID of the external model') 
     
     key_params = parser.add_argument_group("Key Parameters", "Key parameters that requires user's attention")
-    key_params.add_argument('--major-axis', type=str, default="X", choices=['X', 'Y', 'auto'], help='Axis where transcripts.tsv.gz are sorted. Options: X, Y, auto. If "auto", it will be automatically defined by the longer axis. Default: X')
-    key_params.add_argument('--mu-scale', type=float, default=1.0, help='Scale factor for mu (pixels per um)')
-    key_params.add_argument('--hexagon-width', type=str, default=None, help='Hexagon flat-to-flat width (in µm) used for creating hexagon-indexed SGE. Separate multiple values with commas. If absent, it will use the train-width for segmentation')
-    key_params.add_argument('--hexagon-width-10x', type=str, default="12", help='Hexagon flat-to-flat width (in µm) used for creating hexagon-indexed SGE in 10x Genomics format. Separate multiple values with commas.')
-    key_params.add_argument('--train-width', type=str, default=None, help='Hexagon flat-to-flat width (in um) during training. This width will be used to create hexagon-indexed SGE in FICTURE compatible format for LDA training. Use comma to specify multiple values.')
-    key_params.add_argument('--n-factor', type=str, default=None, help='Number of factors to train. Use comma to specify multiple values (cannot be used with --init-ext)')
-    key_params.add_argument('--anchor-res', type=int, default=4, help='Anchor resolution for decoding')
-    key_params.add_argument('--radius-buffer', type=int, default=1, help='Buffer to radius(=anchor_res + radius_buffer) for pixel-level decoding')
+    key_params.add_argument('--major-axis', type=str, default="X", choices=['X', 'Y', 'auto'], help='Axis where --in-transcript is sorted. Options: X, Y, auto. If "auto", use the longer axis (default: X)')
+    key_params.add_argument('--mu-scale', type=float, default=1.0, help='Scale factor for mu, i.e., pixels per um (default: 1.0)')
+    key_params.add_argument('--hexagon-width', type=str, default=None, help='Comma-separated hexagon flat-to-flat widths (in µm) used for creating hexagon-indexed SGE (default: same to train-width)')
+    key_params.add_argument('--hexagon-width-10x', type=str, default=None, help='Comma-separated hexagon flat-to-flat widths (in µm) used for creating hexagon-indexed SGE in 10x Genomics format (default: same to train-width)')
+    key_params.add_argument('--train-width', type=str, default=None, help='Comma-separated hexagon flat-to-flat widths (in um) for LDA training (default: None)')
+    key_params.add_argument('--n-factor', type=str, default=None, help='Comma-separated list of factor counts for LDA training. Incompatible with --init-ext. Defaults to 12,24 for --init-lda.')
+    key_params.add_argument('--anchor-res', type=int, default=4, help='Anchor resolution for decoding (default: 4)')
+    key_params.add_argument('--radius-buffer', type=int, default=1, help='Buffer to radius(=anchor_res + radius_buffer) for pixel-level decoding (default: 1)')
 
     # env params
     env_params = parser.add_argument_group("ENV Parameters", "Environment parameters, e.g., tools.")
@@ -78,44 +78,44 @@ def parse_arguments(_args):
     aux_params.add_argument('--csv-colidx-y',  type=int, default=2, help='Column index for Y-axis in the --in-transcript (default: 2)')
     aux_params.add_argument('--colname-count', type=str, default="count", help='Columns from the input file to be used as key')
     # segmentation - ficture
-    aux_params.add_argument('--hexagon-n-move', type=int, default=1, help='Level of hexagonal sliding when creating hexagon-indexed SGE in FICTURE compatible format')
-    aux_params.add_argument('--hexagon-precision', type=float, default=2, help='Output precision of hexagon coordinates for FICTURE compatible format')
-    aux_params.add_argument('--min-ct-per-unit-hexagon', type=int, default=50, help='Minimum count per hexagon in hexagon segmentation in FICTURE compatible format')
+    aux_params.add_argument('--hexagon-n-move', type=int, default=1, help='Level of hexagonal sliding when creating hexagon-indexed SGE in FICTURE compatible format (default: 1)')
+    aux_params.add_argument('--hexagon-precision', type=float, default=2, help='Output precision of hexagon coordinates for FICTURE compatible format (default: 2)')
+    aux_params.add_argument('--min-ct-per-unit-hexagon', type=int, default=50, help='Minimum count per hexagon in hexagon segmentation in FICTURE compatible format (default: 50)')
     # segmentation - 10x
-    aux_params.add_argument('--hexagon-n-move-10x', type=int, default=1, help='Level of hexagonal sliding when creating hexagon-indexed SGE in 10x Genomics format')
-    aux_params.add_argument('--hexagon-precision-10x', type=float, default=2, help='Output precision of hexagon coordinates for 10x Genomics format')
-    aux_params.add_argument('--min-ct-per-unit-hexagon-10x', type=int, default=1, help='Minimum count per hexagon in hexagon segmentation in 10x Genomics format')
+    aux_params.add_argument('--hexagon-n-move-10x', type=int, default=1, help='Level of hexagonal sliding when creating hexagon-indexed SGE in 10x Genomics format (default: 1)')
+    aux_params.add_argument('--hexagon-precision-10x', type=float, default=2, help='Output precision of hexagon coordinates for 10x Genomics format (default: 2)')
+    aux_params.add_argument('--min-ct-per-unit-hexagon-10x', type=int, default=1, help='Minimum count per hexagon in hexagon segmentation in 10x Genomics format (default: 1)')
     # minibatch
-    aux_params.add_argument('--minibatch-size', type=int, default=500, help='Batch size used in minibatch processing')
-    aux_params.add_argument('--minibatch-buffer', type=int, default=30, help='Batch buffer used in minibatch processing')
+    aux_params.add_argument('--minibatch-size', type=int, default=500, help='Batch size used in minibatch processing (default: 500)')
+    aux_params.add_argument('--minibatch-buffer', type=int, default=30, help='Batch buffer used in minibatch processing (default: 30)')
     # train 
-    aux_params.add_argument('--train-epoch', type=int, default=3, help='Training epoch for LDA model')
-    aux_params.add_argument('--train-epoch-id-len', type=int, default=2, help='Training epoch ID length')
-    aux_params.add_argument('--lda-rand-init', type=int, default=10, help='Number of random initialization during model training')
-    aux_params.add_argument('--lda-plot-um-per-pixel', type=float, default=1, help='Image resolution for LDA plot')
+    aux_params.add_argument('--train-epoch', type=int, default=3, help='Training epoch for LDA model (default: 3)')
+    aux_params.add_argument('--train-epoch-id-len', type=int, default=2, help='Training epoch ID length (default: 2)')
+    aux_params.add_argument('--lda-rand-init', type=int, default=10, help='Number of random initialization during model training (default: 10)')
+    aux_params.add_argument('--lda-plot-um-per-pixel', type=float, default=1, help='Image resolution for LDA plot (default: 1)')
     # fit 
     aux_params.add_argument('--fit-width',  type=str, default=None, help='Hexagon flat-to-flat width (in um) during model fitting (default: same to train-width)')
-    aux_params.add_argument('--fit-precision', type=float, default=2, help='Output precision of model fitting')
-    aux_params.add_argument('--min-ct-per-unit-fit', type=int, default=20, help='Minimum count per hexagon unit during model fitting')
-    aux_params.add_argument('--fit-plot-um-per-pixel', type=float, default=1, help='Image resolution for fit coarse plot')   # in Scopeflow, this is set to 2
+    aux_params.add_argument('--fit-precision', type=float, default=2, help='Output precision of model fitting (default: 2)')
+    aux_params.add_argument('--min-ct-per-unit-fit', type=int, default=20, help='Minimum count per hexagon unit during model fitting (default: 20)')
+    aux_params.add_argument('--fit-plot-um-per-pixel', type=float, default=1, help='Image resolution for fit coarse plot (default: 1)')   # in Scopeflow, this is set to 2
     # decode
-    aux_params.add_argument('--decode-top-k', type=int, default=3, help='Top K columns to output in pixel-level decoding results')
-    aux_params.add_argument('--decode-block-size', type=int, default=100, help='Block size for pixel decoding output')
-    aux_params.add_argument('--decode-scale', type=int, default=100, help='Scale parameters for pixel decoding output')
-    aux_params.add_argument('--decode-precision', type=float, default=0.01, help='Precision of pixel level decoding')
-    aux_params.add_argument('--decode-plot-um-per-pixel', type=float, default=0.5, help='Image resolution for pixel decoding plot')
+    aux_params.add_argument('--decode-top-k', type=int, default=3, help='Top K columns to output in pixel-level decoding results (default: 3)')
+    aux_params.add_argument('--decode-block-size', type=int, default=100, help='Block size for pixel decoding output (default: 100)')
+    aux_params.add_argument('--decode-scale', type=int, default=100, help='Scale parameters for pixel decoding output (default: 100)')
+    aux_params.add_argument('--decode-precision', type=float, default=0.01, help='Precision of pixel level decoding (default: 0.01)')
+    aux_params.add_argument('--decode-plot-um-per-pixel', type=float, default=0.5, help='Image resolution for pixel decoding plot (default: 0.5)')
     # merge_by_pixel
-    aux_params.add_argument('--merge-max-dist-um', type=float, default=0.1, help='Maximum distance in um for merging pixel-level decoding results') 
-    aux_params.add_argument('--merge-max-k', type=int, default=1, help='Maximum number of K columns to output in merged pixel-level decoding results')
-    aux_params.add_argument('--merge-max-p', type=int, default=1, help='Maximum number of P columns to output in merged pixel-level decoding results')
+    aux_params.add_argument('--merge-max-dist-um', type=float, default=0.1, help='Maximum distance in um for merging pixel-level decoding results (default: 0.1)') 
+    aux_params.add_argument('--merge-max-k', type=int, default=1, help='Maximum number of K columns to output in merged pixel-level decoding results (default: 1)')
+    aux_params.add_argument('--merge-max-p', type=int, default=1, help='Maximum number of P columns to output in merged pixel-level decoding results (default: 1)')
     # color map
-    aux_params.add_argument('--cmap-name', type=str, default="turbo", help='Name of color map')
-    aux_params.add_argument('--static-cmap-file', type=str, help='Default file for fixed color map [assets/fixed_color_map_52.tsv]')
+    aux_params.add_argument('--cmap-name', type=str, default="turbo", help='Name of color map to generate a color map (default: turbo)')
     aux_params.add_argument('--cmap-static', action='store_true', default=False, help='Use a fixed color map for factor visualization')
+    aux_params.add_argument('--static-cmap-file', type=str, help='If --cmap-static, define the path to the fixed color map (default: <cartloader_dir>/assets/fixed_color_map_60.tsv)')
     # others parameters shared across steps
-    aux_params.add_argument('--min-ct-per-feature', type=int, default=20, help='Minimum count per feature during LDA training, transform and decoding')
-    aux_params.add_argument('--de-max-pval', type=float, default=1e-3, help='p-value cutoff for differential expression')
-    aux_params.add_argument('--de-min-fold', type=float, default=1.5, help='Fold-change cutoff for differential expression')
+    aux_params.add_argument('--min-ct-per-feature', type=int, default=20, help='Minimum count per feature during LDA training, transform and decoding (default: 20)')
+    aux_params.add_argument('--de-max-pval', type=float, default=1e-3, help='p-value cutoff for differential expression (default: 1e-3)')
+    aux_params.add_argument('--de-min-fold', type=float, default=1.5, help='Fold-change cutoff for differential expression (default: 1.5)')
 
     if len(_args) == 0:
         parser.print_help()
@@ -154,7 +154,11 @@ def define_cmap(args, model_id):
 def define_lda_runs(args):
     assert args.init_lda, "--init-lda must be ON when running define_lda_runs()"
     assert args.train_width is not None, "When --init-lda is ON, provide at least one train width for LDA training using --train-width"
-    assert args.n_factor is not None, "When --init-lda is ON, provide at least one n.factor for LDA training using --n-factor"
+
+    if args.n_factor is None:
+        print("Warning: --n-factor is not provided for LDA. Using default values: 12,24")
+        args.n_factor = "12,24"
+    #assert args.n_factor is not None, "When --init-lda is ON, provide at least one n.factor for LDA training using --n-factor"
 
     train_widths = [int(x) for x in args.train_width.split(",")] if args.train_width else [] #and not (args.use_external_model and args.external_model_type == "custom") else []
     n_factors = [int(x) for x in args.n_factor.split(",")] if args.n_factor else []  #and not (args.use_external_model and args.external_model_type == "custom") else []
@@ -300,7 +304,7 @@ def run_ficture(_args):
         if args.static_cmap_file is None:
             scriptdir = os.path.dirname(os.path.realpath(__file__))
             progdir = os.path.dirname(os.path.dirname(scriptdir))
-            args.static_cmap_file = os.path.join(progdir, "assets", "fixed_color_map_52.tsv")
+            args.static_cmap_file = os.path.join(progdir, "assets", "fixed_color_map_60.tsv")
         assert os.path.exists(args.static_cmap_file), f"Static color map file {args.static_cmap_file} does not exist"
     
     # start mm
@@ -370,7 +374,9 @@ def run_ficture(_args):
             mm.add_target(f"{hexagon}", [args.in_cstranscript], cmds)
     
     # segmentation - 10x
-    if args.segment_10x:        
+    if args.segment_10x:       
+        if args.hexagon_width_10x is None:
+            args.hexagon_width_10x = args.train_width 
         assert args.hexagon_width_10x is not None, "When --segment-10x, Provide at least one hexagon width for segmentation in 10x Genomics format using --hexagon-width-10x"
         hexagon_widths_10x = [int(x) for x in args.hexagon_width_10x.split(",")]
         
@@ -383,8 +389,8 @@ def run_ficture(_args):
                 f"--input {args.in_cstranscript} {feature_arg}",
                 f"--major_axis {major_axis}",
                 f"--key {args.colname_count}",
-                f"--output_path", hexagon_dir,
-                f"--hex_width", hexagon_width,
+                f"--output_path {hexagon_dir}",
+                f"--hex_width {hexagon_width}",
                 f"--n_move {args.hexagon_n_move_10x}",
                 f"--mu_scale {args.mu_scale}",
                 f"--precision {args.hexagon_precision_10x}",

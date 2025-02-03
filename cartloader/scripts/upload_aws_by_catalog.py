@@ -146,7 +146,7 @@ def upload_aws_by_catalog(_args):
 
     ## write makefile
     if args.append_makefile is None:
-        make_f = os.path.join(args.out_dir, args.makefn)
+        make_f = os.path.join(args.in_dir, args.makefn)
         mm.write_makefile(make_f)
     else:
         mm.append_to_makefile(args.append_makefile)

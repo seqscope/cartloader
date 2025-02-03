@@ -36,7 +36,7 @@ def parse_arguments(_args):
     key_params.add_argument('--log-suffix', type=str, default=".log", help='The suffix for the log file (appended to the output directory). Default: .log')
 
     env_params = parser.add_argument_group("Env Parameters", "Environment parameters, e.g., tools.")
-    env_params.add_argument('--magick', type=str, default=f"magick", help='Path to ImageMagick binary from go-pmtiles')
+    # aux_params.add_argument('--magick', type=str, default=f"magick", help='Path to ImageMagick binary') # Disable this function. The user need to add the path to the ImageMagick binary directory to the PATH environment variable
     env_params.add_argument('--pmtiles', type=str, default=f"pmtiles", help='Path to pmtiles binary from go-pmtiles')
     env_params.add_argument('--gdal_translate', type=str, default=f"gdal_translate", help='Path to gdal_translate binary')
     env_params.add_argument('--gdaladdo', type=str, default=f"gdaladdo", help='Path to gdaladdo binary')
@@ -59,7 +59,7 @@ def parse_arguments(_args):
     aux_params.add_argument('--max-feature-counts', type=int, default=500000, help='Max feature limits per tile in PMTiles')
     aux_params.add_argument('--preserve-point-density-thres', type=int, default=1024, help='Threshold for preserving point density in PMTiles')
     aux_params.add_argument('--keep-intermediate-files', action='store_true', default=False, help='Keep intermediate output files')
-    aux_params.add_argument('--skip-raster', action='store_true', default=False, help='Skip processing raster files, removing dependency to magick, gdal, go-pmtiles')
+    aux_params.add_argument('--skip-raster', action='store_true', default=False, help='Skip processing raster files, removing dependency to gdal, go-pmtiles')
     if len(_args) == 0:
         parser.print_help()
         sys.exit(1)
@@ -85,7 +85,7 @@ def run_cartload_join(_args):
         scheck_app(args.pmtiles)
         scheck_app(args.gdal_translate)
         scheck_app(args.gdaladdo)
-        scheck_app(args.magick)
+        #scheck_app(args.magick)
 
     # create output directory if needed
     if not os.path.exists(args.out_dir):
@@ -127,7 +127,7 @@ def run_cartload_join(_args):
             "--out-prefix", f"{args.out_dir}/sge-mono",
             "--colname-count", args.colname_count,
             "--main",
-            f"--magick '{args.magick}'",
+            #f"--magick '{args.magick}'",
             f"--pmtiles '{args.pmtiles}'",
             f"--gdal_translate '{args.gdal_translate}'",
             f"--gdaladdo '{args.gdaladdo}'",
