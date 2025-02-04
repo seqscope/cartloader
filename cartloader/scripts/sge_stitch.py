@@ -20,7 +20,7 @@ def sge_stitch(_args):
     inout_params = parser.add_argument_group("Input/Output Parameters", "Input/Output Parameters")
     inout_params.add_argument("--in-tiles", type=str, nargs='*', default=[], help="List of the input tiles in a specific format.")
     inout_params.add_argument("--out-dir", type=str, help="Output directory.")
-    inout_params.add_argument("--colnames-count", type=str, default="count", help="Comma-separate column names for count (default: count)")
+    inout_params.add_argument("--colnames-count", type=str, default="count", help="Comma-separated column names for count (default: count)")
     inout_params.add_argument('--colname-feature-name', type=str, default='gene', help='Feature name column (default: gene)')
     inout_params.add_argument('--colname-feature-id', type=str, default=None, help='Feature ID column (default: None)')
     inout_params.add_argument('--colname-x', type=str, default="X", help='X column name (default: X)')

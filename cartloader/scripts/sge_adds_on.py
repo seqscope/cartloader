@@ -14,7 +14,7 @@ def parse_arguments(_args):
     parser.add_argument("--out-feature", type=str, help="Output file for feature.", default=None)
     parser.add_argument('--colname-feature-name', type=str, default='gene', help='Feature name column (default: gene)')
     parser.add_argument('--colname-feature-id', type=str, default=None, help='Feature ID column (default: None)')
-    parser.add_argument("--colnames-count", type=str, default="gn,gt,spl,unspl,ambig", help="Comma-separate column names for count (default: gn,gt,spl,unspl,ambig)")
+    parser.add_argument("--colnames-count", type=str, default="gn,gt,spl,unspl,ambig", help="Comma-separated column names for count (default: gn,gt,spl,unspl,ambig)")
 
     # minmax args
     parser.add_argument("--out-minmax", type=str, help="Output file for minmax.", default=None)

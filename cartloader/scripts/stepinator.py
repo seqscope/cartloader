@@ -632,7 +632,7 @@ def stepinator(_args):
     format_aux_parameter.add_argument('--csv-colname-feature-id', type=str, default=None, help='Column name for gene id (default: None)')
     format_aux_parameter.add_argument('--csv-colnames-others', nargs='+', default=[], help='Columns names to keep (e.g., cell_id, overlaps_nucleus) (default: None)')
     format_aux_parameter.add_argument('--csv-colname-phredscore', type=str, default=None, help='Column name for Phred-scaled quality value (Q-Score) estimating the probability of incorrect call (default: qv for 10x_xenium and None for the rest platforms).') # qv
-    format_aux_parameter.add_argument('--min-phred-score', type=float, default=None, help='Specify the Phred-scaled quality score cutoff (default: 20 for 10x_xenium and None for the rest platforms).')
+    format_aux_parameter.add_argument('--min-phred-score', type=float, default=None, help='Phred-scaled quality score cutoff (default: 20 for 10x_xenium and None for the rest platforms).')
     # feature-filtering
     format_aux_parameter.add_argument('--include-feature-list', type=str, default=None, help='A file provides a list of gene names to include (default: None)')
     format_aux_parameter.add_argument('--exclude-feature-list', type=str, default=None, help='A file provides a list of gene names to exclude (default: None)')
@@ -708,6 +708,7 @@ def stepinator(_args):
     #  actions
     # =========
     assert args.sge_stitch or args.sge_convert or args.run_ficture or args.run_cartload_join or args.run_fig2pmtiles or args.upload_aws, "Error: At least one action is required"
+    assert not (args.sge_convert and args.sge_stitch), "Error: --sge-convert and --sge-stitch cannot be applied together"
 
     # =========
     #  Read YAML/args
@@ -906,7 +907,7 @@ def stepinator(_args):
 
     # TODO: Find a better way to automatically generate the job ID
     if args.job_id is None:
-        action_str = "_".join(filter(None, ["sge" if args.sge_convert else "", "ficture" if args.run_ficture else "", "cartload" if args.run_cartload_join else "", "fig2pmtiles" if args.run_fig2pmtiles else "", "aws" if args.upload_aws else ""]))
+        action_str = "_".join(filter(None, ["SGE-convert" if args.sge_convert else "", "SGE-stitch" if args.sge_stitch else "", "ficture" if args.run_ficture else "", "cartload" if args.run_cartload_join else "", "fig2pmtiles" if args.run_fig2pmtiles else "", "aws" if args.upload_aws else ""]))
         if not args.run_ficture and not args.run_cartload_join and not args.run_fig2pmtiles and not args.upload_aws:
             args.job_id = f"{action_str}_{timestamp}"
         elif len(args.run_ids) == 1:

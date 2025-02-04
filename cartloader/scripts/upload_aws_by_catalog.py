@@ -28,12 +28,11 @@ def traverse_dict(d, parent_key=''):
 
 def upload_aws_by_catalog(_args):
     parser = argparse.ArgumentParser(description="Upload files to S3 as specified in catalog.yaml. All files must be in the input directory.")
-    run_params = parser.add_argument_group("Run Options", "Run options for FICTURE commands")
+    run_params = parser.add_argument_group("Run Options", "")
     run_params.add_argument('--dry-run', action='store_true', default=False, help='Dry run. Generate only the Makefile without running it')
     run_params.add_argument('--restart', action='store_true', default=False, help='Restart the run. Ignore all intermediate files and start from the beginning')
     run_params.add_argument('--n-jobs', type=int, default=1, help='Number of jobs (processes) to run in parallel')
-    run_params.add_argument('--makefn', type=str, default="run_ficture.mk", help='The name of the Makefile to generate (default: run_ficture.mk)')
-    run_params.add_argument('--append-makefile', type=str, default=None, help='For stepinator only. Specifies an existing Makefile to append new targets. Do not use.')
+    run_params.add_argument('--makefn', type=str, default="upload_aws.mk", help='The name of the Makefile to generate (default: upload_aws.mk)')
 
     key_params = parser.add_argument_group("Key Parameters", "Key parameters that requires user's attention")
     key_params.add_argument("--in-dir", help="Path to the input directory (e.g., /<main_dir>/cartload/).")
@@ -145,11 +144,8 @@ def upload_aws_by_catalog(_args):
     # #         mm.add_target(hist_flag, [hist_copy], cmds)
 
     ## write makefile
-    if args.append_makefile is None:
-        make_f = os.path.join(args.in_dir, args.makefn)
-        mm.write_makefile(make_f)
-    else:
-        mm.append_to_makefile(args.append_makefile)
+    make_f = os.path.join(args.in_dir, args.makefn)
+    mm.write_makefile(make_f)
 
     if args.dry_run:
         dry_cmd=f"make -f {make_f} -n {'-B' if args.restart else ''} "
