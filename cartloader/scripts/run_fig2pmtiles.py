@@ -65,7 +65,6 @@ def parse_arguments(_args):
     run_params.add_argument('--restart', action='store_true', default=False, help='Restart the run. Ignore all intermediate files and start from the beginning')
     run_params.add_argument('--n-jobs', type=int, default=1, help='Number of jobs (processes) to run in parallel')
     run_params.add_argument('--makefn', type=str, default=None, help='The file name of the Makefile to generate (default: {out-prefix}.mk)')
-    run_params.add_argument('--append-makefile', type=str, default=None, help='For stepinator only. Specifies an existing Makefile to append new targets. Do not use.')
 
     cmd_params = parser.add_argument_group("Commands", "Commands to run. If all functions were enabled, the steps will be executed in this order: transform, georeference, rotate, flip-vertical/horizontal, geotif2mbtiles, mbtiles2pmtiles, update-catalog")
     cmd_params.add_argument('--main', action='store_true', default=False, help='Run main commands (geotif2mbtiles, mbtiles2pmtiles, upload-aws, update-yaml)')
@@ -313,11 +312,8 @@ def run_fig2pmtiles(_args):
     #     mm.add_target(f"{pmtiles_f}.aws.done", [pmtiles_f], cmds)
 
     ## write makefile
-    if args.append_makefile is None:
-        make_f=os.path.join(out_dir, args.makefn) if args.makefn is not None else f"{args.out_prefix}.mk"
-        mm.write_makefile(make_f)
-    else:
-        mm.append_to_makefile(args.append_makefile)
+    make_f=os.path.join(out_dir, args.makefn) if args.makefn is not None else f"{args.out_prefix}.mk"
+    mm.write_makefile(make_f)
 
     if args.dry_run:
         dry_cmd=f"make -f {make_f} -n {'-B' if args.restart else ''} "

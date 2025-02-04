@@ -5,15 +5,17 @@ import pandas as pd
 def parse_arguments(_args):
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", 
-                                    description=""" Generate a feature file for the SGE. """)
+                                    description=""" Generate a feature or a minmax file for the SGE in FICTURE-compatible format. """)
     parser.add_argument("--in-transcript", type=str, help="Input file.", required=True)
     parser.add_argument("--add-feature", action='store_true', help="Add feature to the input file.")
     parser.add_argument("--add-minmax", action='store_true', help="Add minmax to the input file.")
 
     # feature args
     parser.add_argument("--out-feature", type=str, help="Output file for feature.", default=None)
-    parser.add_argument("--index-col", type=str, nargs='*', help="Column names to be used as index.", default=['gene_id', 'gene'])
-    parser.add_argument("--count-col", type=str, nargs='*', help="Column names to be used as count.", default=['gn', 'gt', 'spl', 'unspl', 'ambig'])
+    parser.add_argument('--colname-feature-name', type=str, default='gene', help='Feature name column (default: gene)')
+    parser.add_argument('--colname-feature-id', type=str, default=None, help='Feature ID column (default: None)')
+    parser.add_argument("--colnames-count", type=str, default="gn,gt,spl,unspl,ambig", help="Comma-separate column names for count (default: gn,gt,spl,unspl,ambig)")
+
     # minmax args
     parser.add_argument("--out-minmax", type=str, help="Output file for minmax.", default=None)
     parser.add_argument("--mu-scale", type=float, help="Scale factor for X and Y coordinates.", default=1)
@@ -27,25 +29,20 @@ def parse_arguments(_args):
 
 def sge_add_feature(args):
     """Generate a summarized feature file."""
-
     assert args.out_feature is not None, "When --add-feature, --out-feature must be provided."
-    # # Determine the output file path if not provided
-    # if args.out_feature is None:
-    #     in_dir = os.path.dirname(args.in_transcript)
-    #     in_id = os.path.basename(args.in_transcript).replace('.tsv.gz', '').replace(".transcripts", "").replace(".transcript", "")
-    #     args.out_feature = os.path.join(in_dir, f"{in_id}.feature.tsv.gz")
 
-    # Read the input transcript file
     with gzip.open(args.in_transcript, 'rt') as f:
         transcripts = pd.read_csv(f, sep='\t')
 
-    # Ensure required columns are in the input
-    missing_cols = set(args.index_col + args.count_col) - set(transcripts.columns)
+    ftr_cols=[args.colname_feature_name, args.colname_feature_id] if args.colname_feature_id else [args.colname_feature_name]
+    count_cols = args.colnames_count.split(",")
+
+    missing_cols = set(ftr_cols + count_cols) - set(transcripts.columns)
     if missing_cols:
         raise ValueError(f"The following required columns are missing in the input: {', '.join(missing_cols)}")
 
     # Aggregate all feature columns in a single groupby operation
-    feature_summary = transcripts.groupby(args.index_col, as_index=False)[args.count_col].sum()
+    feature_summary = transcripts.groupby(ftr_cols, as_index=False)[count_cols].sum()
 
     # Save the summarized DataFrame to a compressed TSV file
     with gzip.open(args.out_feature, 'wt') as f:
@@ -55,13 +52,7 @@ def sge_add_feature(args):
 
 def sge_add_minmax(args):
     """Extract, scale, and compute min/max for X and Y coordinates."""
-    # Determine the output file path if not provided
     assert args.out_minmax is not None, "When --add-minmax, --out-minmax must be provided."
-    # if args.out_minmax is None:
-    #     #raise ValueError("Output file for minmax must be provided.")
-    #     in_dir = os.path.dirname(args.in_transcript)
-    #     in_id = os.path.basename(args.in_transcript).replace('.tsv.gz', '').replace(".transcripts", "").replace(".transcript", "")
-    #     args.out_minmax = os.path.join(in_dir, f"{in_id}.minmax.tsv")
 
     with gzip.open(args.in_transcript, 'rt') as f:
         transcripts = pd.read_csv(f, sep="\t")

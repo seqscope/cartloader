@@ -20,7 +20,7 @@ def sge_stitch(_args):
     inout_params = parser.add_argument_group("Input/Output Parameters", "Input/Output Parameters")
     inout_params.add_argument("--in-tiles", type=str, nargs='*', default=[], help="List of the input tiles in a specific format.")
     inout_params.add_argument("--out-dir", type=str, help="Output directory.")
-    inout_params.add_argument("--colnames-count", type=str, nargs='*', help="Columns to sum (default: count).", default=['count'])
+    inout_params.add_argument("--colnames-count", type=str, default="count", help="Comma-separate column names for count (default: count)")
     inout_params.add_argument('--colname-feature-name', type=str, default='gene', help='Feature name column (default: gene)')
     inout_params.add_argument('--colname-feature-id', type=str, default=None, help='Feature ID column (default: None)')
     inout_params.add_argument('--colname-x', type=str, default="X", help='X column name (default: X)')
@@ -32,18 +32,14 @@ def sge_stitch(_args):
     # env params
     env_params = parser.add_argument_group("ENV Parameters", "Environment parameters for the tools")
     env_params.add_argument('--gzip', type=str, default="gzip", help='Path to gzip binary. For faster processing, use "pigz -p 4".')
-    env_params.add_argument('--spatula', type=str, default=None, help='Path to spatula binary. When not provided, it will use the spatula from the submodules.')
+    env_params.add_argument('--spatula', type=str, default="spatula", help='Path to spatula binary.')
     args = parser.parse_args(_args)
 
     mm = minimake()
 
     updated_tiles = []
     prerequisities = []
-    colnames_ftr=[
-        args.colname_feature_name,
-        args.colname_feature_id if args.colname_feature_id else "",
-    ]
-    
+
     # sge adds on
     for in_tile in args.in_tiles:
         transcript, feature, minmax, row, col = in_tile.split(",")
@@ -61,10 +57,10 @@ def sge_stitch(_args):
             add_ftr_cmd =" ".join([f"cartloader", "sge_adds_on",
                                     f"--in-transcript {transcript}",
                                     "--add-feature",
-                                    f"--index-col {' '.join(colnames_ftr)}",
-                                    f"--count-col {' '.join(args.colnames_count)}",
-                                    f"--out-feature {out_ftr}",
-                                    f"--mu-scale {args.units_per_um}" if args.minmax_in_um else "",
+                                    f"--colname-feature-name {args.colname_feature_name}",
+                                    f"--colname-feature-id {args.colname_feature_id}" if args.colname_feature_id else "",
+                                    f"--colnames-count {args.colnames_count}",
+                                    f"--out-feature {out_ftr}"
                                 ])
             cmds.append(add_ftr_cmd)
             mm.add_target(out_ftr, [transcript], cmds)
@@ -75,8 +71,6 @@ def sge_stitch(_args):
             add_minmax_cmd =" ".join([f"cartloader", "sge_adds_on",
                                     f"--in-transcript {transcript}",
                                     "--add-minmax",
-                                    f"--index-col {' '.join(colnames_ftr)}",
-                                    f"--count-col {' '.join(args.colnames_count)}",
                                     f"--out-minmax {out_minmax}",
                                     f"--mu-scale {args.units_per_um}" if args.minmax_in_um else "",
                                 ])

@@ -21,7 +21,7 @@ histology_suffixes.extend([suffix.upper() for suffix in histology_suffixes])
 aux_env_args = {
         "sge_stitch": ["spatula"],
         "sge_convert": ["spatula", "gzip", "parquet_tools"],
-        "run_ficture": ['spatula', 'bgzip', "tabix", "gzip", "sort", "sort_mem"],
+        "run_ficture": ['bgzip', "tabix", "gzip", "sort", "sort_mem"],
         "run_cartload_join": ['pmtiles', 'gdal_translate', 'gdaladdo', 'tippecanoe', 'spatula'],
         "run_fig2pmtiles": ['pmtiles', 'gdal_translate', 'gdaladdo'],
         "upload_aws": ['aws']
@@ -231,7 +231,7 @@ def submit_job(jobname, jobpref, cmds, slurm, args):
             print("Error submitting job:\n", e.stderr)
 
 def cmd_sge_stitch(sgeinfo, args, env):
-    mkbn = "sge_stitch"
+    mkbn = "sge_stitch" if args.identifier is None else f"sge_stitch_{args.identifier}"
     # collect tiles 
 
     stitch_cmd = " ".join([
@@ -240,7 +240,7 @@ def cmd_sge_stitch(sgeinfo, args, env):
         f"--in-tiles {' '.join(sgeinfo['in_tiles_str'])}",
         f"--out-dir {sgeinfo['sge_dir']}",
         f"--units-per-um {sgeinfo.get('units_per_um', None)}" if sgeinfo.get("units_per_um", None) else "",
-        f"--colnames-count {sgeinfo.get('colname_count', None)}" if sgeinfo.get('colname_count', None) else "",
+        f"--colnames-count {sgeinfo.get('colnames_all_count', None)}" if sgeinfo.get('colnames_all_count', None) else "",
         f"--convert-to-um",
         f"--n-jobs {args.n_jobs}" if args.n_jobs else "",
         f"--restart" if args.restart else ""
@@ -254,7 +254,7 @@ def cmd_sge_stitch(sgeinfo, args, env):
     return stitch_cmd
 
 def cmd_sge_convert(sgeinfo, args, env):
-    mkbn = "sge_convert"
+    mkbn = "sge_convert" if args.identifier is None else f"sge_convert_{args.identifier}"
 
     platform= sgeinfo.get("platform", None)
     assert platform is not None, "Please provide a platform for sge_convert"
@@ -282,9 +282,10 @@ def cmd_sge_convert(sgeinfo, args, env):
         f"--out-dir {sgeinfo['sge_dir']}",
         f"--precision-um {sgeinfo.get('precision_um', None)}" if sgeinfo.get("", None) else "",
         f"--units-per-um {sgeinfo.get('units_per_um', None)}" if sgeinfo.get("units_per_um", None) else "",
-        f"--colnames-count {sgeinfo.get('colname_count', None)}" if sgeinfo.get('colname_count', None) else "",
+        f"--colnames-count {sgeinfo['colnames_all_count']}",
         f"--filter-by-density" if sgeinfo.get('filter_by_density', False) else "",
         f"--out-filtered-prefix {sgeinfo.get('filtered_prefix', None)}" if sgeinfo.get('filter_by_density', False) and sgeinfo.get('filtered_prefix', None) else "",
+        f"--genomic-feature {sgeinfo['colname_count']}" if sgeinfo.get('filter_by_density', False) else "",
         f"--n-jobs {args.n_jobs}" if args.n_jobs else "",
         f"--restart" if args.restart else ""
     ])
@@ -302,6 +303,7 @@ def cmd_run_ficture(run_i, args, env):
     
     # makefile 
     mkbn = "run_ficture" if ext_path is None else f"run_ficture_{ext_id}"
+    mkbn = f"{mkbn}_{args.identifier}" if args.identifier is not None else mkbn
 
     # sge and rgb
     fic_dir=os.path.join(run_i["run_dir"], "ficture")
@@ -315,12 +317,12 @@ def cmd_run_ficture(run_i, args, env):
     cmap_arg = define_args_rgb(run_i["cmap"])
     
     # model & parameters
-    assert run_i["train_width"] is not None, "Error: --train-width is d"
+    assert run_i["train_width"] is not None, "Error: When --run-ficture, --train-width is required"
     if ext_path:
         assert ext_id is not None, "Error: --ext-id is required when running ficture with an external model"
         assert os.path.exists(ext_path), f"Error: --ext-path is defined with a missing file: {ext_path}"
     else:
-        assert run_i["n_factor"] is not None, "Error: --n-factor is required when running standard ficture"
+        assert run_i["n_factor"] is not None, "Error: --n-factor is required when running --run-ficture with LDA"
     
     # cmd
     ficture_cmd = " ".join([
@@ -352,12 +354,14 @@ def cmd_run_ficture(run_i, args, env):
     return ficture_cmd
 
 def cmd_run_cartload_join(run_i, args, env):
+    mkbn="run_cartload_join" if args.identifier is None else f"run_cartload_join_{args.identifier}"
+
     fic_dir = os.path.join(run_i["run_dir"], "ficture")
     cartload_dir = os.path.join(run_i["run_dir"], "cartload")
     os.makedirs(cartload_dir, exist_ok=True)
     cartload_cmd=" ".join([
         "cartloader", "run_cartload_join", 
-        "--makefn run_cartload_join.mk",
+        f"--makefn {mkbn}",
         f"--fic-dir {fic_dir}", 
         f"--out-dir {cartload_dir}",
         f"--id {run_i['run_id']}",
@@ -435,7 +439,7 @@ def update_orient_in_histology(histology):
 #         ])
 #     return hist_cmd
 
-def cmd_run_fig2pmtiles(run_i, args, env):
+def cmd_run_fig2pmtiles(run_i, args, env):    
     assert len(run_i.get("histology", [])) > 0, "Error: --histology is Required when running fig2pmtiles"
     hist_cmds=[]
 
@@ -451,12 +455,15 @@ def cmd_run_fig2pmtiles(run_i, args, env):
                 hist_inname = hist_inname[:-len(suffix)]
                 break
         hist_prefix = os.path.join(cartload_dir, hist_inname)
-        # basemap key
         # update the orientation
         histology = update_orient_in_histology(histology)
+        # mkbn
+        mkbn = f"run_fig2pmtiles_{hist_inname}"
+        mkbn = mkbn if args.identifier is None else f"{mkbn}_{args.identifier}"
         # cmds
         hist_cmd= " ".join([
             "cartloader", "run_fig2pmtiles", 
+            '--makefn', f"{mkbn}.mk",
             "--transform" if histology.get("transform", False) else "",
             "--georeference" if histology.get("georeference", False) else "",
             "--geotif2mbtiles", 
@@ -513,9 +520,10 @@ def stepinator(_args):
     run_params.add_argument('--restart', action='store_true', default=False, help='Restart the run. Ignore all intermediate files and start from the beginning')
     run_params.add_argument('--n-jobs', '-j', type=int, default=None, help='Number of jobs (processes) to run in parallel (default: 1)')
     run_params.add_argument('--threads', type=int, default=10, help='Maximum number of threads per job (for tippecanoe)')
-    run_params.add_argument("--submit", action="store_true",  help="Submit the job")
-    run_params.add_argument('--submit-mode', type=str,  default="local", choices=["slurm", "local"], help='Specify how the job should be executed. Choose "slurm" for SLURM, "local" for local execution')
+    run_params.add_argument("--submit", action="store_true", help="Submit the job")
+    run_params.add_argument('--submit-mode', type=str, default="local", choices=["slurm", "local"], help='Specify how the job should be executed. Choose "slurm" for SLURM, "local" for local execution')
     run_params.add_argument('--job-id', type=str, default=None, help='Filename for the job script. It not provided, it will use the commands as the job name')
+    run_params.add_argument('--identifier', type=str, default=None, help='Makefile identifier. This helps when multiple sets of parameters will be applied to one function, such as --run_ficture.')
 
     # * commands
     cmd_params = parser.add_argument_group("Commands", "Commands to be performed")
@@ -538,8 +546,8 @@ def stepinator(_args):
     "2. Use individual command-line arguments to specify input files and settings, allowing processing of a single run at a time."
     )
     key_params.add_argument("--in-yaml", '-i', type=str, default=None, help="Input yaml file")
-    key_params.add_argument("--run-ids",  nargs="*", default=[], help="Run IDs. Required if --run-ficture, --run-cartload-join, --run-fig2pmtiles, or --upload-aws is applied")
-    key_params.add_argument("--out-dir",  type=str, default=None, help="Output directory. It will have 3 subdirectories: sge (output from --sge-convert), ficture (output from --run-ficture), and cartload (output from --run-cartload-join and --run-fig2pmtiles)")
+    key_params.add_argument("--run-ids", nargs="*", default=[], help="Run IDs. Required if --run-ficture, --run-cartload-join, --run-fig2pmtiles, or --upload-aws is applied")
+    key_params.add_argument("--out-dir", type=str, default=None, help="Output directory. It will have 3 subdirectories: sge (output from --sge-convert), ficture (output from --run-ficture), and cartload (output from --run-cartload-join and --run-fig2pmtiles)")
     # for sge_convert
     key_params.add_argument('--platform', type=str, choices=["10x_visium_hd", "seqscope", "10x_xenium", "bgi_stereoseq", "cosmx_smi", "vizgen_merscope", "pixel_seq", "nova_st"], help='Required if --sge-convert. Platform of the raw input file to infer the format of the input file. ')
     # - input for 10x_visium_hd, seqscope 
@@ -553,6 +561,7 @@ def stepinator(_args):
     key_params.add_argument('--filter-by-density', action='store_true', default=False, help='Required if --sge-convert or --run-ficture. If --sge-convert, it enables density-filtering. If --run-ficture, it defines the density-filtered SGE as input (default: False)')
     key_params.add_argument('--filtered-prefix', type=str, default=None, help='Required if --filtered-by-density. The prefix for density-filtered SGE (default: filtered)')
     key_params.add_argument("--colname-count", type=str, default="count", help="Required if --sge-convert, --sge-stitch, --run-ficture, or --run-cartload-join. Column name that showing the expression count of the genomic feature of interest. (default: gene)")
+    key_params.add_argument("--colnames-other-count", nargs="*", default=[], help="Optional if --sge-convert, --sge-stitch is enabled. It allows to keep other genomic features in the formatted SGE besides the genomic feature of interest. (default: [])")
     # for sge_stitch 
     key_params.add_argument("--in-tiles", nargs="*", default=[], help="Required if --sge-stitch. List of input tiles of each in the format of <transcript_path>,<feature_path>,<minmax_path>,<row>,<col> (default: [])")
     # for run_ficture
@@ -586,14 +595,14 @@ def stepinator(_args):
     env_params.add_argument('--conda-env', type=str, default=None, help='Conda environment to activate. If it is installed in the default location, i.e., within the base path, provide the environment name. Otherwise, provide the full path to the environment.')
     # app
     env_params.add_argument('--gzip', type=str, default=None, help='Path to gzip binary. For faster processing, use "pigz -p 4"')
-    env_params.add_argument('--spatula', type=str,  default=None,  help='Path to spatula binary. When not provided, it will use the spatula from the submodules.')    
-    env_params.add_argument('--parquet-tools', type=str, default="parquet-tools", help='Path to parquet-tools binary')
+    env_params.add_argument('--spatula', type=str, default=None, help='Path to spatula binary.')    
+    env_params.add_argument('--parquet-tools', type=str, default=None, help='Path to parquet-tools binary')
     env_params.add_argument('--sort', type=str, default=None, help='Path to sort binary. For faster processing, you may add arguments like "sort -T /path/to/new/tmpdir --parallel=20 -S 10G"')
     env_params.add_argument('--sort-mem', type=str, default=None, help='Memory size for each process')
     env_params.add_argument('--bgzip', type=str, default=None, help='Path to bgzip binary. For faster processing, use "bgzip -@ 4')
     env_params.add_argument('--tabix', type=str, default=None, help='Path to tabix binary')
-    env_params.add_argument('--pmtiles', type=str,  default=None,  help='Path to pmtiles binary. When not provided, it will use the pmtiles from the submodules.')
-    env_params.add_argument('--tippecanoe', type=str,  default=None,  help='Path to tippecanoe binary. When not provided, it will use the tippecanoe from the submodules.')
+    env_params.add_argument('--pmtiles', type=str, default=None, help='Path to pmtiles binary.')
+    env_params.add_argument('--tippecanoe', type=str, default=None, help='Path to tippecanoe binary. ')
     env_params.add_argument('--imagemagick', type=str, default=None, help='Path to the imagemagick binary directory')
     env_params.add_argument('--gdal_translate', type=str, default=None, help='Path to gdal_translate binary')
     env_params.add_argument('--gdaladdo', type=str, default=None, help='Path to gdaladdo binary')
@@ -616,8 +625,8 @@ def stepinator(_args):
     format_aux_parameter.add_argument('--pos-delim', type=str, default=None, help='(10x_visium_hd only) Delimiter for the input parquet file (default: ",")')
     # IN-CSV
     format_aux_parameter.add_argument('--csv-delim', type=str, default=None, help='Delimiter for the additional input tsv/csv file (default: "," for 10x_xenium, cosmx_smi, and vizgen_merscope; "\\t" for bgi_stereoseq, pixel_seq, and nova_st) ')
-    format_aux_parameter.add_argument('--csv-colname-x',  type=str, default=None, help='Column name for X-axis (default: x_location for 10x_xenium; x for bgi_stereoseq; x_local_px for cosmx_smi; global_x for vizgen_merscope; xcoord for pixel_seq; x for nova_st)')
-    format_aux_parameter.add_argument('--csv-colname-y',  type=str, default=None, help='Column name for Y-axis (default: y_location for 10x_xenium; y for bgi_stereoseq; y_local_px for cosmx_smi; global_y for vizgen_merscope; ycoord for pixel_seq; y for nova_st)')
+    format_aux_parameter.add_argument('--csv-colname-x', type=str, default=None, help='Column name for X-axis (default: x_location for 10x_xenium; x for bgi_stereoseq; x_local_px for cosmx_smi; global_x for vizgen_merscope; xcoord for pixel_seq; x for nova_st)')
+    format_aux_parameter.add_argument('--csv-colname-y', type=str, default=None, help='Column name for Y-axis (default: y_location for 10x_xenium; y for bgi_stereoseq; y_local_px for cosmx_smi; global_y for vizgen_merscope; ycoord for pixel_seq; y for nova_st)')
     format_aux_parameter.add_argument('--csv-colname-feature-name', type=str, default=None, help='Column name for gene name (default: feature_name for 10x_xenium; geneID for bgi_stereoseq; target for cosmx_smi; gene for vizgen_merscope; geneName for pixel_seq; geneID for nova_st)')
     format_aux_parameter.add_argument('--csv-colnames-count', type=str, default=None, help='Column name for expression count. If not provided, a count of 1 will be added for a feature in a pixel (default: MIDCounts for bgi_stereoseq; MIDCount for nova_st; None for the rest platforms).')
     format_aux_parameter.add_argument('--csv-colname-feature-id', type=str, default=None, help='Column name for gene id (default: None)')
@@ -654,8 +663,8 @@ def stepinator(_args):
     )
     ficture_aux_params.add_argument("--cmap", '-c', type=str, default=None, help="Required if the user prefers to use a pre-built color map (Default: None)")
     # input column indexes
-    # ficture_aux_params.add_argument('--csv-colidx-x',  type=int, default=1, help='Column index for X-axis in the --in-transcript (default: 1)')
-    # ficture_aux_params.add_argument('--csv-colidx-y',  type=int, default=2, help='Column index for Y-axis in the --in-transcript (default: 2)')
+    # ficture_aux_params.add_argument('--csv-colidx-x', type=int, default=1, help='Column index for X-axis in the --in-transcript (default: 1)')
+    # ficture_aux_params.add_argument('--csv-colidx-y', type=int, default=2, help='Column index for Y-axis in the --in-transcript (default: 2)')
     # segmentation - ficture
     ficture_aux_params.add_argument('--hexagon-n-move', type=int, default=None, help='Level of hexagonal sliding when creating hexagon-indexed SGE in FICTURE compatible format (default: 1)')
     ficture_aux_params.add_argument('--hexagon-precision', type=float, default=None, help='Output precision of hexagon coordinates for FICTURE compatible format (default: 2)')
@@ -673,7 +682,7 @@ def stepinator(_args):
     ficture_aux_params.add_argument('--lda-rand-init', type=int, default=None, help='Number of random initialization during model training (default: 10)')
     ficture_aux_params.add_argument('--lda-plot-um-per-pixel', type=float, default=None, help='Image resolution for LDA plot (default: 1)')
     # fit 
-    ficture_aux_params.add_argument('--fit-width',  type=str, default=None, help='Hexagon flat-to-flat width (in um) during model fitting (default: same to train-width)')
+    ficture_aux_params.add_argument('--fit-width', type=str, default=None, help='Hexagon flat-to-flat width (in um) during model fitting (default: same to train-width)')
     ficture_aux_params.add_argument('--fit-precision', type=float, default=None, help='Output precision of model fitting (default: 2)')
     ficture_aux_params.add_argument('--min-ct-per-unit-fit', type=int, default=None, help='Minimum count per hexagon unit during model fitting (default: 20)')
     ficture_aux_params.add_argument('--fit-plot-um-per-pixel', type=float, default=None, help='Image resolution for fit coarse plot (default: 1)')   # in Scopeflow, this is set to 2
@@ -716,7 +725,7 @@ def stepinator(_args):
 
     # sge infomation - shared across actions
     if args.in_yaml:
-        sgeinfo=yml.get("SGE", {})
+        sgeinfo = yml.get("SGE", {})
     else:
         sgeinfo={
             "platform": args.platform,
@@ -730,7 +739,10 @@ def stepinator(_args):
             "filtered_prefix": args.filtered_prefix,
             "colname_count": args.colname_count,
         }
-    sgeinfo["sge_dir"]=os.path.join(out_dir, "sge")
+    sgeinfo["sge_dir"] = os.path.join(out_dir, "sge")
+
+    sgeinfo["colnames_all_count"] = ",".join([sgeinfo["colname_count"]] + sgeinfo["colnames_other_count"].split(",") if sgeinfo.get("colnames_other_count", None) is not None else [sgeinfo["colname_count"]])
+    
     os.makedirs(sgeinfo['sge_dir'], exist_ok=True)
 
     # worklog dir
@@ -745,10 +757,10 @@ def stepinator(_args):
                        [item for sublist in aux_env_args.values() for item in sublist] + ["imagemagick"],
                         prefix="env")  
 
-    if env.spatula is None:
-        env.spatula  = os.path.join(cartloader_repo, "submodules", "spatula", "bin", "spatula")
-    if env.tippecanoe is None:
-        env.tippecanoe = os.path.join(cartloader_repo, "submodules", "tippecanoe", "bin", "tippecanoe")
+    # if env.spatula is None:
+    #     env.spatula  = os.path.join(cartloader_repo, "submodules", "spatula", "bin", "spatula")
+    # if env.tippecanoe is None:
+    #     env.tippecanoe = os.path.join(cartloader_repo, "submodules", "tippecanoe", "bin", "tippecanoe")
 
     # * slurm (collect from yaml and args)
     slurm = merge_config(yml, args, ["account", "partition", "mail_user", "cpus_per_task", "mem", "hours"], prefix="slurm")
@@ -895,7 +907,9 @@ def stepinator(_args):
     # TODO: Find a better way to automatically generate the job ID
     if args.job_id is None:
         action_str = "_".join(filter(None, ["sge" if args.sge_convert else "", "ficture" if args.run_ficture else "", "cartload" if args.run_cartload_join else "", "fig2pmtiles" if args.run_fig2pmtiles else "", "aws" if args.upload_aws else ""]))
-        if len(args.run_ids) == 1:
+        if not args.run_ficture and not args.run_cartload_join and not args.run_fig2pmtiles and not args.upload_aws:
+            args.job_id = f"{action_str}_{timestamp}"
+        elif len(args.run_ids) == 1:
             args.job_id = f"{runinfo[0]['run_id']}_{action_str}_{timestamp}"
         else:
             shared_text = os.path.commonprefix(args.run_ids)

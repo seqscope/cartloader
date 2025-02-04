@@ -14,7 +14,6 @@ def parse_arguments(_args):
     run_params.add_argument('--threads', type=int, default=1, help='Maximum number of threads to use in each process')
     run_params.add_argument('--n-jobs', type=int, default=1, help='Number of jobs (processes) to run in parallel')
     run_params.add_argument('--makefn', type=str, default="run_ficture.mk", help='The name of the Makefile to generate (default: run_ficture.mk)')
-    run_params.add_argument('--mm-action', type=str, default="write", choices=["write", "return"], help='For stepinator use. Do not use.')
 
     cmd_params = parser.add_argument_group("Commands", "FICTURE commands to run together")
     cmd_params.add_argument('--main', action='store_true', default=False, help='Run the main functions (sorttsv, minibatch, segment, lda, decode, summary)')
@@ -63,7 +62,7 @@ def parse_arguments(_args):
 
     # env params
     env_params = parser.add_argument_group("ENV Parameters", "Environment parameters, e.g., tools.")
-    env_params.add_argument('--spatula', type=str, help='Path to spatula binary. When not provided, it will use the spatula from the submodules.')    
+    #env_params.add_argument('--spatula', type=str, default="spatula", help='Path to spatula binary.')    
     env_params.add_argument('--bgzip', type=str, default="bgzip", help='Path to bgzip binary. For faster processing, use "bgzip -@ 4')
     env_params.add_argument('--tabix', type=str, default="tabix", help='Path to tabix binary')
     env_params.add_argument('--gzip', type=str, default="gzip", help='Path to gzip binary. For faster processing, use "pigz -p 4"')
@@ -901,9 +900,10 @@ ${tabix} -f -s1 -b"${sortidx}" -e"${sortidx}" ${output}
     if len(mm.targets) == 0:
             logging.error("There is no target to run. Please make sure that ast least one run option was turned on")
             sys.exit(1)
-    make_f = os.path.join(args.out_dir, args.makefn)
     
+    make_f = os.path.join(args.out_dir, args.makefn)
     mm.write_makefile(make_f)
+
     if args.dry_run:
         dry_cmd=f"make -f {make_f} -n {'-B' if args.restart else ''} "
         os.system(dry_cmd)
