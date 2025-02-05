@@ -57,7 +57,7 @@ def parse_arguments(_args):
     key_params.add_argument('--hexagon-width-10x', type=str, default=None, help='Comma-separated hexagon flat-to-flat widths (in µm) used for creating hexagon-indexed SGE in 10x Genomics format (default: same to train-width)')
     key_params.add_argument('--train-width', type=str, default=None, help='Comma-separated hexagon flat-to-flat widths (in um) for LDA training (default: None)')
     key_params.add_argument('--n-factor', type=str, default=None, help='Comma-separated list of factor counts for LDA training. Incompatible with --init-ext. Defaults to 12,24 for --init-lda.')
-    key_params.add_argument('--anchor-res', type=int, default=4, help='Anchor resolution for decoding (default: 4)')
+    key_params.add_argument('--anchor-res', type=int, default=6, help='Anchor resolution for decoding (default: 6)')
     key_params.add_argument('--radius-buffer', type=int, default=1, help='Buffer to radius(=anchor_res + radius_buffer) for pixel-level decoding (default: 1)')
 
     # env params
