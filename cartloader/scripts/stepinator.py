@@ -282,7 +282,7 @@ def cmd_sge_convert(sgeinfo, args, env):
         f"--out-dir {sgeinfo['sge_dir']}",
         f"--precision-um {sgeinfo.get('precision_um', None)}" if sgeinfo.get("", None) else "",
         f"--units-per-um {sgeinfo.get('units_per_um', None)}" if sgeinfo.get("units_per_um", None) else "",
-        f"--colnames-count {sgeinfo['colnames_all_count']}",
+        f"--colnames-count {sgeinfo.get('colnames_all_count', None)}" if sgeinfo.get('colnames_all_count', None) else "",
         f"--filter-by-density" if sgeinfo.get('filter_by_density', False) else "",
         f"--out-filtered-prefix {sgeinfo.get('filtered_prefix', None)}" if sgeinfo.get('filter_by_density', False) and sgeinfo.get('filtered_prefix', None) else "",
         f"--genomic-feature {sgeinfo['colname_count']}" if sgeinfo.get('filter_by_density', False) else "",
@@ -361,7 +361,7 @@ def cmd_run_cartload_join(run_i, args, env):
     os.makedirs(cartload_dir, exist_ok=True)
     cartload_cmd=" ".join([
         "cartloader", "run_cartload_join", 
-        f"--makefn {mkbn}",
+        f"--makefn {mkbn}.mk",
         f"--fic-dir {fic_dir}", 
         f"--out-dir {cartload_dir}",
         f"--id {run_i['run_id']}",
@@ -546,7 +546,8 @@ def stepinator(_args):
     "2. Use individual command-line arguments to specify input files and settings, allowing processing of a single run at a time."
     )
     key_params.add_argument("--in-yaml", '-i', type=str, default=None, help="Input yaml file")
-    key_params.add_argument("--run-ids", nargs="*", default=[], help="Run IDs. Required if --run-ficture, --run-cartload-join, --run-fig2pmtiles, or --upload-aws is applied")
+    key_params.add_argument("--run-ids", nargs="*", default=[], help="Run IDs. Required if --run-ficture, --run-cartload-join, --run-fig2pmtiles, or --upload-aws is applied. ")
+    key_params.add_argument("--hist-ids", nargs="*", default=[], help="Histology IDs. Specifies the histology IDs in the --in-yaml for the --run-fig2pmtiles command. If omitted, all histologies in the input YAML are processed.")
     key_params.add_argument("--out-dir", type=str, default=None, help="Output directory. It will have 3 subdirectories: sge (output from --sge-convert), ficture (output from --run-ficture), and cartload (output from --run-cartload-join and --run-fig2pmtiles)")
     # for sge_convert
     key_params.add_argument('--platform', type=str, choices=["10x_visium_hd", "seqscope", "10x_xenium", "bgi_stereoseq", "cosmx_smi", "vizgen_merscope", "pixel_seq", "nova_st"], help='Required if --sge-convert. Platform of the raw input file to infer the format of the input file. ')
@@ -738,13 +739,12 @@ def stepinator(_args):
             "precision_um": args.precision_um,
             "filter_by_density": args.filter_by_density,
             "filtered_prefix": args.filtered_prefix,
-            "colname_count": args.colname_count,
+            "colname_count": args.colname_count
         }
     sgeinfo["sge_dir"] = os.path.join(out_dir, "sge")
-
-    sgeinfo["colnames_all_count"] = ",".join([sgeinfo["colname_count"]] + sgeinfo["colnames_other_count"].split(",") if sgeinfo.get("colnames_other_count", None) is not None else [sgeinfo["colname_count"]])
-    
     os.makedirs(sgeinfo['sge_dir'], exist_ok=True)
+
+    sgeinfo["colnames_all_count"] = ",".join([sgeinfo.get("colname_count",None)] + sgeinfo["colnames_other_count"].split(",")) if sgeinfo.get("colnames_other_count", None) is not None else sgeinfo.get("colname_count",None)    
 
     # worklog dir
     log_dir = os.path.join(out_dir, "worklog")
@@ -828,6 +828,14 @@ def stepinator(_args):
     #  Downstream
     # =========
     
+    if args.run_fig2pmtiles:
+        if args.in_yaml:
+            histinfo = yml.get("HISTOLOGY", [])
+            if len(args.hist_ids) > 0:
+                histinfo = [hist_i for hist_i in histinfo if hist_i.get("hist_id") in args.hist_ids]
+        else:
+            histinfo = parse_histology_args(args.histology) if len(args.histology) > 0 else []
+
     if args.run_ficture or args.run_cartload_join or args.run_fig2pmtiles or args.upload_aws:
         runinfo=[]
         if args.in_yaml:
@@ -881,10 +889,7 @@ def stepinator(_args):
                     "histology":[],
                 }
             ] 
-            # histology
-            if len(args.histology) > 0:
-                runinfo[0]["histology"].extend(parse_histology_args(args.histology))
-
+            
         for run_i in runinfo:
             os.makedirs(run_i["run_dir"], exist_ok=True)
             if args.run_ficture:
@@ -894,6 +899,7 @@ def stepinator(_args):
                 os.makedirs(os.path.join(run_i["run_dir"], "cartload"), exist_ok=True)
                 cmds.append(cmd_run_cartload_join(run_i, args, env))
             if args.run_fig2pmtiles:
+                run_i["histology"] = histinfo
                 cmds.extend(cmd_run_fig2pmtiles(run_i, args, env))
             if args.upload_aws:
                 cmds.append(cmd_upload_aws(run_i, args, env))
@@ -911,7 +917,7 @@ def stepinator(_args):
         if not args.run_ficture and not args.run_cartload_join and not args.run_fig2pmtiles and not args.upload_aws:
             args.job_id = f"{action_str}_{timestamp}"
         elif len(args.run_ids) == 1:
-            args.job_id = f"{runinfo[0]['run_id']}_{action_str}_{timestamp}"
+            args.job_id = f"{args.run_ids[0]}_{action_str}_{timestamp}"
         else:
             shared_text = os.path.commonprefix(args.run_ids)
             indiv_text = [run_id.replace(shared_text, "") for run_id in args.run_ids]
