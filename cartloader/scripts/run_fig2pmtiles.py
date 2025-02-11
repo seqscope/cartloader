@@ -100,10 +100,10 @@ def parse_arguments(_args):
     aux_params.add_argument("--page", type=int, help='For --transform, for 3D (X/Y/Z) OME file, specify the z-value to extract the image from')
     aux_params.add_argument("--level", type=int, default=0, help='For --transform, specify the level to extract from the OME-TIFF file')
     aux_params.add_argument("--series", type=int, default=0, help='For --transform, specify the index of series to extract from the OME-TIFF file')
-    aux_params.add_argument("--upper-thres-quantile", type=float, help='For --transform, quantile-based capped value for rescaling the image. Cannot be used with --upper-thres-intensity')
-    aux_params.add_argument("--upper-thres-intensity", type=float, help='For --transform, intensity-based capped value for rescaling the image. Cannot be used with --upper-thres-quantile')
-    aux_params.add_argument("--lower-thres-quantile", type=float, help='For --transform, quantile-based floored value for rescaling the image. Cannot be used with --lower-thres-intensity')
-    aux_params.add_argument("--lower-thres-intensity", type=float, help='For --transform, intensity-based floored value for rescaling the image. Cannot be used with --lower-thres-quantile')
+    aux_params.add_argument("--upper-thres-quantile", type=float, default=None, help='For --transform, quantile-based capped value for rescaling the image. Cannot be used with --upper-thres-intensity')
+    aux_params.add_argument("--upper-thres-intensity", type=float, default=None, help='For --transform, intensity-based capped value for rescaling the image. Cannot be used with --upper-thres-quantile')
+    aux_params.add_argument("--lower-thres-quantile", type=float, default=None, help='For --transform, quantile-based floored value for rescaling the image. Cannot be used with --lower-thres-intensity')
+    aux_params.add_argument("--lower-thres-intensity", type=float, default=None, help='For --transform, intensity-based floored value for rescaling the image. Cannot be used with --lower-thres-quantile')
     aux_params.add_argument("--colorize", type=str, help='For --transform, colorize the black-and-white image using a specific RGB code as a max value (does not work with RGB images)')
 
     if len(_args) == 0:
@@ -205,7 +205,34 @@ def run_fig2pmtiles(_args):
                 lry = float(ann2val["SIZE_Y"])+1+uly # Lower Right Y-coordinate 
             else:
                 raise ValueError("Please provide either --in-bounds or --in-tsv to georeference the figure")
-            
+
+            # if args.flip_vertical or args.flip_horizontal or args.rotate is not None:
+            #     axis_order = orient2axisorder.get(
+            #         (args.rotate, args.flip_vertical, args.flip_horizontal)
+            #     )
+                
+            #     axis_order_1, axis_order_2 = axis_order.split(",")
+            #     #print(f"axis_order: {axis_order}, axis_order_1: {axis_order_1}, axis_order_2: {axis_order_2}")
+            #     if axis_order_1 == "1":
+            #         ulx_new, lrx_new = ulx, lrx
+            #     elif axis_order_1 == "-1":
+            #         ulx_new, lrx_new = f"-{lrx}", f"-{ulx}"
+            #     elif axis_order_1 == "2":
+            #         ulx_new, lrx_new = uly, lry
+            #     elif axis_order_1 == "-2":
+            #         ulx_new, lrx_new = f"-{lry}", f"-{uly}"
+                
+            #     if axis_order_2 == "2":
+            #         uly_new, lry_new = uly, lry
+            #     elif axis_order_2 == "-2":
+            #         uly_new, lry_new = f"-{lry}", f"-{uly}"
+            #     elif axis_order_2 == "1":
+            #         uly_new, lry_new = ulx, lrx
+            #     elif axis_order_2 == "-1":
+            #         uly_new, lry_new = f"-{lrx}", f"-{ulx}"
+                
+            #     ulx, uly, lrx, lry = ulx_new, uly_new, lrx_new, lry_new
+                
             cmds.append(f"{args.gdal_translate} -of GTiff -a_srs {args.srs} -a_ullr {ulx} {uly} {lrx} {lry} {transform_f} {georef_f}")
             mm.add_target(georef_f, [transform_f], cmds)
     else:

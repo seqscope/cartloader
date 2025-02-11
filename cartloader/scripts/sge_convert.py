@@ -27,23 +27,22 @@ def parse_arguments(_args):
     # Input/output/key params
     inout_params = parser.add_argument_group("Input/Output Parameters", "Parameters to specify platform, input, output, and units per um, precision, and density-filtering for output.")
     inout_params.add_argument('--platform', type=str, choices=["10x_visium_hd", "seqscope", "10x_xenium", "bgi_stereoseq", "cosmx_smi", "vizgen_merscope", "pixel_seq", "nova_st"], required=True, help='Platform of the raw input file to infer the format of the input file')
-    # - input for 10x_visium_hd, seqscope 
-    inout_params.add_argument('--in-mex', type=str, default=os.getcwd(), help='(10x_visium_hd and seqscope only) Directory path to input files in Market Exchange (MEX) format. Defaults to the current working directory.')
-    inout_params.add_argument('--in-parquet', type=str, default="tissue_positions.parquet", help='(10x_visium_hd only) Path to the input parquet file for spatial coordinates (default: tissue_positions.parquet)')
-    # - input for 10x_xenium, bgi_stereoseq, cosmx_smi, vizgen_merscope, pixel_seq, and nova_st
-    inout_params.add_argument('--in-csv', type=str, default=None, help='(10x_xenium, bgi_stereoseq, cosmx_smi, vizgen_merscope, pixel_seq, and nova_st only) Path to the input raw CSV/TSV file (default: None).')
+    # - input
+    inout_params.add_argument('--in-mex', type=str, default=os.getcwd(), help='(10x_visium_hd and seqscope only) Directory path to input files in Market Exchange (MEX) format. Defaults to the current working directory.') # 10x_visium_hd, seqscope 
+    inout_params.add_argument('--in-parquet', type=str, default="tissue_positions.parquet", help='(10x_visium_hd only) Path to the input parquet file for spatial coordinates (default: tissue_positions.parquet)') # 10x_visium_hd
+    inout_params.add_argument('--in-csv', type=str, default=None, help='(10x_xenium, bgi_stereoseq, cosmx_smi, vizgen_merscope, pixel_seq, and nova_st only) Path to the input raw CSV/TSV file (default: None).') # 10x_xenium, bgi_stereoseq, cosmx_smi, vizgen_merscope, pixel_seq, and nova_st
+    inout_params.add_argument('--units-per-um', type=float, default=1.00, help='Coordinate unit per um in the input files (default: 1.00). Alternatively, for 10x Visium HD, skip --units-per-um and use --scale-json to auto-compute.')  
+    inout_params.add_argument('--scale-json', type=str, default=None, help="(10x_visium_hd only) Path to a scale json file for calculating --units-per-um (default: None; Typical naming convention: scalefactors_json.json)") # 10x_visium_hd
     # - output
     inout_params.add_argument('--out-dir', type=str, required=True, help='The output directory to host files from SGE format conversion, files from density-filtering, and the make file.')
     inout_params.add_argument('--out-transcript', type=str, default="transcripts.unsorted.tsv.gz", help='Output for SGE format conversion. The compressed transcript-indexed SGE file in TSV format (default: transcripts.unsorted.tsv.gz).')
     inout_params.add_argument('--out-minmax', type=str, default="coordinate_minmax.tsv", help='Output for SGE format conversion. The coordinate minmax TSV file (default: coordinate_minmax.tsv).')
     inout_params.add_argument('--out-feature', type=str, default="feature.clean.tsv.gz", help='Output for SGE format conversion. The compressed UMI count per gene TSV file (default: feature.clean.tsv.gz).')
-    # - unit conversion and precision
-    inout_params.add_argument('--units-per-um', type=float, default=1.00, help='Coordinate unit per um (conversion factor, default: 1.00). Alternatively, for 10x Visium HD, use --scale-json to auto-compute.') 
-    inout_params.add_argument('--scale-json', type=str, default=None, help="(10x_visium_hd only) Path to a scale json file for calculating --units-per-um (default: None; Typical naming convention: scalefactors_json.json)")
-    inout_params.add_argument('--precision-um', type=int, default=2, help='Precision for transcript coordinates. Set it to 0 to round to integer (default: 2)')
     # - density filtering
-    inout_params.add_argument('--filter-by-density', action='store_true', default=False, help='Filter the output SGE by density (default: False). If enabled, check the density-filtering auxiliary parameters.')
+    inout_params.add_argument('--filter-by-density', action='store_true', default=False, help='Filter SGE from format conversion by density (default: False). If enabled, check the density-filtering auxiliary parameters.')
     inout_params.add_argument('--out-filtered-prefix', type=str, default="filtered", help='Output for density-filtering. If --filter-by-density, define the prefix for filtered SGE (default: filtered)')
+    # - sge visualization
+    inout_params.add_argument('--sge-visual', action='store_true', default=False, help='Visualize the output SGE. If --filter-by-density, both unfiltered and filtered SGE will be visualized (default: False)')
 
     # AUX input MEX params
     aux_in_mex_params = parser.add_argument_group( "IN-MEX Auxiliary Parameters", "(10x_visium_hd and seqscope only) Auxiliary parameters for input MEX and parquet files. Required if --in-mex is used." )
@@ -79,6 +78,7 @@ def parse_arguments(_args):
     
     # AUX output params
     aux_out_params = parser.add_argument_group("Output Auxiliary Parameters", "Auxiliary parameters for the output files (Recommand to use the default values)")
+    aux_out_params.add_argument('--precision-um', type=int, default=2, help='Precision for transcript coordinates. Set it to 0 to round to integer (default: 2)')
     aux_out_params.add_argument('--colname-x', type=str, default='X', help='Column name for X (default: X)')
     aux_out_params.add_argument('--colname-y', type=str, default='Y', help='Column name for Y (default: Y)')
     aux_out_params.add_argument('--colnames-count', type=str, default='count', help='Comma-separated column names for count (default: count)')
@@ -152,7 +152,7 @@ def write_ftrlist_from_ftrtype(args):
 
 def extract_unit2px_from_json(scale_json):
     # purpose: Extract the microns per pixel value from the scale json file and calculate the units per um.
-    print(f"As --units-per-um-from-json is enabled, calculating units per um based on the microns per pixel value...")
+    print(f"As --scale-json is provided, calculating units per um based on the microns per pixel value from {scale_json}")
     assert os.path.exists(scale_json), f"The scale json file ({scale_json}) does not exist. Please provide the correct path using --scale-json."
     with open(scale_json, 'r') as file:
         scale_data = json.load(file)
@@ -282,13 +282,13 @@ def sge_density_filtering(mm, args):
         args.genomic_feature = args.colnames_count
         
     sge_convert_flag = os.path.join(args.out_dir, "sge_convert.done")
-    out_filtered_transcript=os.path.join(args.out_dir, f"{args.out_filtered_prefix}.transcripts.unsorted.tsv.gz")
+    filtered_transcript_f = os.path.join(args.out_dir, f"{args.out_filtered_prefix}.transcripts.unsorted.tsv.gz")
     cmds=cmd_separator([], "Filtering the converted data by density...")
     cmd = " ".join([
             "ficture", "filter_by_density",
             f"--input {args.out_dir}/{args.out_transcript}",
             f"--feature {args.out_dir}/{args.out_feature}",
-            f"--output {out_filtered_transcript}",
+            f"--output {filtered_transcript_f}",
             f"--output_boundary {args.out_dir}/{args.out_filtered_prefix}",
             f"--filter_based_on {args.genomic_feature}",
             f"--mu_scale {args.mu_scale}",
@@ -300,7 +300,21 @@ def sge_density_filtering(mm, args):
             f"--count_header {' '.join(count_header)}",
         ])
     cmds.append(cmd)
-    mm.add_target(f"{out_filtered_transcript}", [sge_convert_flag], cmds)
+    mm.add_target(f"{filtered_transcript_f}", [sge_convert_flag], cmds)
+    return mm
+
+#================================================================================================
+#
+# main functions
+#
+#================================================================================================
+def sge_visual(mm, args, transcript_f, xy_f, prereq):
+    scheck_app(args.spatula)
+    # draw xy plot for visualization
+    cmds = cmd_separator([], f"Drawing XY plot for SGE: {transcript_f}")
+    draw_cmd=f"{args.gzip} -dc {transcript_f} | tail -n +2 | cut -f 1,2 | {args.spatula} draw-xy --tsv /dev/stdin --out {xy_f}"
+    cmds.append(draw_cmd)
+    mm.add_target(xy_f, prereq, cmds)
     return mm
 
 #================================================================================================
@@ -318,13 +332,20 @@ def sge_convert(_args):
 
     # input
     in_raw_filelist=input_by_platform(args)
+
     # output
     os.makedirs(args.out_dir, exist_ok=True)
+    out_transcript_f = os.path.join(args.out_dir, args.out_transcript)
+    filtered_transcript_f = os.path.join(args.out_dir, f"{args.out_filtered_prefix}.transcripts.unsorted.tsv.gz")
+    out_xy_f = os.path.join(args.out_dir, "xy.png")
+    filtered_xy_f = os.path.join(args.out_dir, f"{args.out_filtered_prefix}.xy.png")
 
     # mm
     mm = minimake()
 
     # sge_convert
+    sge_convert_flag = os.path.join(args.out_dir, "sge_convert.done")
+
     cmds = cmd_separator([], f"Converting input for raw data from: {args.platform}...")
     if args.platform == "10x_visium_hd":
         cmds = convert_visiumhd(cmds, args)
@@ -332,13 +353,23 @@ def sge_convert(_args):
         cmds = convert_seqscope(cmds, args)
     elif args.platform in ["10x_xenium", "cosmx_smi", "bgi_stereoseq", "vizgen_merscope", "pixel_seq", "nova_st"]:
         cmds = convert_tsv(cmds, args)
-
-    sge_convert_flag = os.path.join(args.out_dir, "sge_convert.done")
-    cmds.append(f"[ -f {os.path.join(args.out_dir, args.out_transcript)} ] && [ -f {os.path.join(args.out_dir, args.out_feature)} ] && [ -f {os.path.join(args.out_dir, args.out_minmax)} ] && touch {sge_convert_flag}")
+    cmds.append(f"[ -f {out_transcript_f} ] && [ -f {os.path.join(args.out_dir, args.out_feature)} ] && [ -f {os.path.join(args.out_dir, args.out_minmax)} ] && touch {sge_convert_flag}")
     mm.add_target(sge_convert_flag, in_raw_filelist, cmds) 
 
+    if args.sge_visual:
+        mm = sge_visual(mm, args, 
+                        out_transcript_f,
+                        out_xy_f,
+                        [sge_convert_flag])        
+            
+   
     if args.filter_by_density:
         mm = sge_density_filtering(mm, args)
+    if args.filter_by_density and args.sge_visual:
+        mm = sge_visual(mm, args, 
+                        filtered_transcript_f,
+                        filtered_xy_f,
+                        [filtered_transcript_f])
 
     # write makefile
     if len(mm.targets) == 0:

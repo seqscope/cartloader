@@ -20,6 +20,9 @@ def sge_stitch(_args):
     inout_params = parser.add_argument_group("Input/Output Parameters", "Input/Output Parameters")
     inout_params.add_argument("--in-tiles", type=str, nargs='*', default=[], help="List of the input tiles in a specific format.")
     inout_params.add_argument("--out-dir", type=str, help="Output directory.")
+    inout_params.add_argument('--out-transcript', type=str, default="transcripts.unsorted.tsv.gz", help='Output for SGE stitch. The compressed transcript-indexed SGE file in TSV format (default: transcripts.unsorted.tsv.gz).')
+    inout_params.add_argument('--out-minmax', type=str, default="coordinate_minmax.tsv", help='Output for SGE stitch. The coordinate minmax TSV file (default: coordinate_minmax.tsv).')
+    inout_params.add_argument('--out-feature', type=str, default="feature.clean.tsv.gz", help='Output for SGE stitch. The compressed UMI count per gene TSV file (default: feature.clean.tsv.gz).')
     inout_params.add_argument("--colnames-count", type=str, default="count", help="Comma-separated column names for count (default: count)")
     inout_params.add_argument('--colname-feature-name', type=str, default='gene', help='Feature name column (default: gene)')
     inout_params.add_argument('--colname-feature-id', type=str, default=None, help='Feature ID column (default: None)')
@@ -28,6 +31,8 @@ def sge_stitch(_args):
     inout_params.add_argument('--units-per-um', type=float, default=1.0, help='Units per um in the input transcript tsv files (default: 1.0)')
     inout_params.add_argument('--minmax-in-um', action='store_true', help='Input minmax is in um while input transcript is based on unit.')
     inout_params.add_argument('--convert-to-um', action='store_true', help='Convert output to um.')
+    inout_params.add_argument('--sge-visual', action='store_true', default=False, help='Plot the SGE in a PNG file. (default: False)')
+    # inout_params.add_argument('--out-visual', type=str, default="xy.png", help='Output filename visualization for SGE  (default: xy.png).')
 
     # env params
     env_params = parser.add_argument_group("ENV Parameters", "Environment parameters for the tools")
@@ -86,6 +91,9 @@ def sge_stitch(_args):
     combine_cmd=" ".join([f"cartloader", "combine_sges_by_layout",
                             f"--in-tiles {' '.join(updated_tiles)}",
                             f"--out-dir {args.out_dir}",
+                            f"--out-transcript {args.out_transcript}",
+                            f"--out-minmax {args.out_minmax}",
+                            f"--out-feature {args.out_feature}",
                             f"--colnames-count {' '.join(args.colnames_count)}",
                             f"--colname-feature-name {args.colname_feature_name}",
                             f"--colname-feature-id {args.colname_feature_id}" if args.colname_feature_id else "",
@@ -101,12 +109,13 @@ def sge_stitch(_args):
     mm.add_target(sge_stitch_flag, prerequisities, cmds)
 
     # draw xy plot for visualization
-    cmds = cmd_separator([], f"Drawing XY plot")
-    out_transcript=os.path.join(args.out_dir, "transcripts.unsorted.tsv.gz")
-    out_xypng=os.path.join(args.out_dir, "xyplot.png")
-    draw_cmd=f"{args.gzip} -dc {out_transcript} | tail -n +2 | cut -f 1,2 | {args.spatula} draw-xy --tsv /dev/stdin --out {out_xypng}"
-    cmds.append(draw_cmd)
-    mm.add_target(out_xypng, [sge_stitch_flag], cmds)
+    if args.sge_visual:
+        cmds = cmd_separator([], f"Drawing XY plot")
+        out_transcript=os.path.join(args.out_dir, args.out_transcript)
+        out_xypng=os.path.join(args.out_dir, "xy.png")
+        draw_cmd=f"{args.gzip} -dc {out_transcript} | tail -n +2 | cut -f 1,2 | {args.spatula} draw-xy --tsv /dev/stdin --out {out_xypng}"
+        cmds.append(draw_cmd)
+        mm.add_target(out_xypng, [sge_stitch_flag], cmds)
 
     # write makefile
     if len(mm.targets) == 0:

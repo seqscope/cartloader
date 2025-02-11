@@ -71,7 +71,7 @@ def define_sge(filter_by_density, filtered_prefix, run_dir, sge_dir, create_soft
     if filter_by_density:
         assert filtered_prefix is not None, "Error: --filtered-prefix is Required when --filter-by-density is applied"
     tsvfn    = "transcripts.unsorted.tsv.gz" if not filter_by_density else f"{filtered_prefix}.transcripts.unsorted.tsv.gz"
-    cstsvfn  = "transcripts.sorted.tsv.gz" if not filter_by_density else f"{filtered_prefix}.transcripts.sorted.tsv.gz"
+    #cstsvfn  = "transcripts.sorted.tsv.gz" if not filter_by_density else f"{filtered_prefix}.transcripts.sorted.tsv.gz"
     ftrfn    = "feature.clean.tsv.gz" if not filter_by_density else f"{filtered_prefix}.feature.lenient.tsv.gz"
     minmaxfn = "coordinate_minmax.tsv" if not filter_by_density else f"{filtered_prefix}.coordinate_minmax.tsv"
 
@@ -79,7 +79,7 @@ def define_sge(filter_by_density, filtered_prefix, run_dir, sge_dir, create_soft
         sge_dir = run_dir
 
     tsv = os.path.join(sge_dir, tsvfn)
-    cstsv = os.path.join(sge_dir, cstsvfn)
+    #cstsv = os.path.join(sge_dir, cstsvfn)
     ftr = os.path.join(sge_dir, ftrfn)
     minmax = os.path.join(sge_dir, minmaxfn)
 
@@ -91,26 +91,27 @@ def define_sge(filter_by_density, filtered_prefix, run_dir, sge_dir, create_soft
     # else:
     #     print(f"Input file not found: {tsv} or {cstsv}")
     #     sys.exit(1)
-    sge_arg=f"--in-cstranscript {cstsv} --in-transcript {tsv} --in-feature {ftr} --in-minmax {minmax}"
+    sge_arg=f"--in-transcript {tsv} --in-feature {ftr} --in-minmax {minmax}"
 
     # link files 
     if create_softlink:
         # check if the files exist
-        for infile in [ftr, minmax]:
+        for infile in [ftr, minmax, tsv]:
             check_file(infile)
-        # tsv or cstsv
-        if os.path.isfile(cstsv) or os.path.islink(cstsv):
-            check_file(cstsv)
-        elif os.path.isfile(tsv) or os.path.islink(tsv):
-                check_file(tsv)
+
+        # # tsv or cstsv
+        # if os.path.isfile(cstsv) or os.path.islink(cstsv):
+        #     check_file(cstsv)
+        # elif os.path.isfile(tsv) or os.path.islink(tsv):
+        #         check_file(tsv)
         # create softlink
         fic_dir=os.path.join(run_dir, "ficture")
         if sge_dir != fic_dir:
-            for infn in [cstsvfn, tsvfn, ftrfn, minmaxfn]:
+            for infn in [tsvfn, ftrfn, minmaxfn]:
                 src = os.path.join(sge_dir, infn) # source
                 dst = os.path.join(fic_dir, infn) # destination
-                if infn == cstsvfn and not os.path.exists(os.path.abspath(src)):
-                    continue
+                # if infn == cstsvfn and not os.path.exists(os.path.abspath(src)):
+                #     continue
                 if not os.path.isfile(dst) and not os.path.exists(dst):
                     os.symlink(src, dst)
                     print(f"Creating symlink for {infn}")
@@ -242,6 +243,7 @@ def cmd_sge_stitch(sgeinfo, args, env):
         f"--units-per-um {sgeinfo.get('units_per_um', None)}" if sgeinfo.get("units_per_um", None) else "",
         f"--colnames-count {sgeinfo.get('colnames_all_count', None)}" if sgeinfo.get('colnames_all_count', None) else "",
         f"--convert-to-um",
+        f"--sge-visual" if args.sge_visual else "",
         f"--n-jobs {args.n_jobs}" if args.n_jobs else "",
         f"--restart" if args.restart else ""
     ])
@@ -285,7 +287,8 @@ def cmd_sge_convert(sgeinfo, args, env):
         f"--colnames-count {sgeinfo.get('colnames_all_count', None)}" if sgeinfo.get('colnames_all_count', None) else "",
         f"--filter-by-density" if sgeinfo.get('filter_by_density', False) else "",
         f"--out-filtered-prefix {sgeinfo.get('filtered_prefix', None)}" if sgeinfo.get('filter_by_density', False) and sgeinfo.get('filtered_prefix', None) else "",
-        f"--genomic-feature {sgeinfo['colname_count']}" if sgeinfo.get('filter_by_density', False) else "",
+        f"--sge-visual" if args.sge_visual else "",
+        f"--genomic-feature {sgeinfo['colname_count']}" if sgeinfo.get('filter_by_density', False) and sgeinfo.get('colname_count', None) else "",
         f"--n-jobs {args.n_jobs}" if args.n_jobs else "",
         f"--restart" if args.restart else ""
     ])
@@ -465,6 +468,11 @@ def cmd_run_fig2pmtiles(run_i, args, env):
             "cartloader", "run_fig2pmtiles", 
             '--makefn', f"{mkbn}.mk",
             "--transform" if histology.get("transform", False) else "",
+            f"--upper-thres-quantile {histology.get('upper_thres_quantile', None)}" if histology.get("transform", False) and histology.get("upper_thres_quantile", None) is not None else "",
+            f"--lower-thres-quantile {histology.get('lower_thres_quantile', None)}" if histology.get("transform", False) and histology.get("lower_thres_quantile", None) is not None else "",
+            f"--upper-thres-intensity {histology.get('upper_thres_intensity', None)}" if histology.get("transform", False) and histology.get("upper_thres_intensity", None) is not None else "",
+            f"--lower-thres-intensity {histology.get('lower_thres_intensity', None)}" if histology.get("transform", False) and histology.get("lower_thres_intensity", None) is not None else "",
+            f"--colorize {histology.get('colorize', None)}" if histology.get("transform", False) and histology.get("colorize", None) is not None else "",
             "--georeference" if histology.get("georeference", False) else "",
             "--geotif2mbtiles", 
             "--mbtiles2pmtiles", 
@@ -529,6 +537,7 @@ def stepinator(_args):
     cmd_params = parser.add_argument_group("Commands", "Commands to be performed")
     cmd_params.add_argument("--sge-stitch", action="store_true", help="Run sge-stitch in cartloader")
     cmd_params.add_argument("--sge-convert", action="store_true", help="Run sge-convert in cartloader")
+    cmd_params.add_argument('--sge-visual', action='store_true', help='Plot the SGE from sge-convert or sge-stitch in a PNG file')
     cmd_params.add_argument("--run-ficture", action="store_true", help="Run run-ficture in cartloader. Only the main function is executed.")
     cmd_params.add_argument("--run-cartload-join", action="store_true", help="Run run-cartload-join in cartloader")
     cmd_params.add_argument("--run-fig2pmtiles", action="store_true", help="Run run-fig2pmtiles in cartloader. This s provide histology using --in-yaml or --histology.")
@@ -536,7 +545,7 @@ def stepinator(_args):
     cmd_params.add_argument("--copy-ext-model", action="store_true", help="Auxiliary action parameters for run-ficture. Copy external model when running FICTURE with an external model")
     cmd_params.add_argument("--init-ext", action="store_true", help="Auxiliary action parameters for run-ficture. Only Initialize external model without run main-ext")
     cmd_params.add_argument("--skip-coarse-report", action="store_true", help="Auxiliary action parameters for run-ficture. Skip coarse report")
-    cmd_params.add_argument('--segment-10x', action='store_true', default=False, help='(Additional function) Perform hexagon segmentation into 10x Genomics format')
+    cmd_params.add_argument('--segment-10x', action='store_true', help='(Additional function) Perform hexagon segmentation into 10x Genomics format')
 
     # * Key
     key_params = parser.add_argument_group(
@@ -710,7 +719,9 @@ def stepinator(_args):
     # =========
     assert args.sge_stitch or args.sge_convert or args.run_ficture or args.run_cartload_join or args.run_fig2pmtiles or args.upload_aws, "Error: At least one action is required"
     assert not (args.sge_convert and args.sge_stitch), "Error: --sge-convert and --sge-stitch cannot be applied together"
-
+    # sge_visual only works with sge_convert or sge_stitch
+    if args.sge_visual:
+        assert args.sge_convert or args.sge_stitch, "Error: --sge-visual can only be applied with --sge-convert or --sge-stitch"
     # =========
     #  Read YAML/args
     # =========

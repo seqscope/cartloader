@@ -111,7 +111,10 @@ def combine_sges_by_layout(_args):
     )
     parser.add_argument("--in-tiles", type=str, nargs='*', default=[], help="List of input information in a specific format.")
     parser.add_argument("--out-dir", type=str, help="Output directory.")
-    parser.add_argument("--outid", type=str, default=None, help="Output ID.")
+    #parser.add_argument("--outid", type=str, default=None, help="Output ID.")
+    parser.add_argument('--out-transcript', type=str, default="transcripts.unsorted.tsv.gz", help='Output for SGE combination. The compressed transcript-indexed SGE file in TSV format (default: transcripts.unsorted.tsv.gz).')
+    parser.add_argument('--out-minmax', type=str, default="coordinate_minmax.tsv", help='Output for SGE combination. The coordinate minmax TSV file (default: coordinate_minmax.tsv).')
+    parser.add_argument('--out-feature', type=str, default="feature.clean.tsv.gz", help='Output for SGE combination. The compressed UMI count per gene TSV file (default: feature.clean.tsv.gz).')
     parser.add_argument("--colnames-count", type=str, nargs='*', help="Columns to sum (default: count).", default=['count'])
     parser.add_argument('--colname-feature-name', type=str, default='gene', help='Feature name column (default: gene)')
     parser.add_argument('--colname-feature-id', type=str, default=None, help='Feature ID column (default: None)')
@@ -129,7 +132,8 @@ def combine_sges_by_layout(_args):
     logging.basicConfig(
         level=logging.INFO,
         format='%(asctime)s - %(levelname)s - %(message)s',
-        filename=os.path.join(args.out_dir, f"{args.outid}.log" if args.outid else "sge_combine.log"),
+        #filename=os.path.join(args.out_dir, f"{args.outid}.log" if args.outid else "sge_combine.log"),
+        filename=os.path.join(args.out_dir, "sge_stitch.log"),
         filemode='w'
     )
 
@@ -214,19 +218,22 @@ def combine_sges_by_layout(_args):
     
     df_minmax_combined = {k: round(v, 2) for k, v in df_minmax_combined.items()}
 
-    out_minmax = os.path.join(args.out_dir, f"{args.outid}.coordinate_minmax.tsv" if args.outid else "coordinate_minmax.tsv")
+    #out_minmax = os.path.join(args.out_dir, f"{args.outid}.coordinate_minmax.tsv" if args.outid else "coordinate_minmax.tsv")
+    out_minmax = os.path.join(args.out_dir, args.out_minmax)
     with open(out_minmax, "w") as f:
         f.writelines([f"{key}\t{value}\n" for key, value in df_minmax_combined.items()])
     logging.info(f"Minmax file written to {out_minmax}")
 
     # feature
-    out_ftr = os.path.join(args.out_dir, f"{args.outid}.feature.tsv.gz" if args.outid else "feature.clean.tsv.gz")
+    #out_ftr = os.path.join(args.out_dir, f"{args.outid}.feature.tsv.gz" if args.outid else "feature.clean.tsv.gz")
+    out_ftr = os.path.join(args.out_dir, args.out_feature)
     in_ftrs = df["feature_path"].tolist()
     df_ftr_combined = combine_ftr_across_sge(in_ftrs, args.colnames_count, args.colname_feature_name, args.colname_feature_id, test_mode=args.test_mode)
     df_ftr_combined.to_csv(out_ftr, sep="\t", index=False, compression="gzip")
     logging.info(f"Feature file written to {out_ftr}")
 
-    out_transcript = os.path.join(args.out_dir, f"{args.outid}.transcripts.unsorted.tsv.gz" if args.outid else "transcripts.unsorted.tsv.gz")
+    #out_transcript = os.path.join(args.out_dir, f"{args.outid}.transcripts.unsorted.tsv.gz" if args.outid else "transcripts.unsorted.tsv.gz")
+    out_transcript = os.path.join(args.out_dir, args.out_transcript)
     combine_transcript_across_sge(df, out_transcript, args.colname_x, args.colname_y, args.colnames_count, outcols=outcols, units_per_um=args.units_per_um, out_in_um=args.convert_to_um, test_mode=args.test_mode)
     logging.info(f"Transcript file written to {out_transcript}")
     
