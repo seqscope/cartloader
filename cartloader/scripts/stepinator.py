@@ -29,7 +29,7 @@ aux_env_args = {
 
 aux_params_args = {
     "sge_stitch": ["colname_feature_name", "colname_feature_id", "colname_x", "colname_y"],
-    "sge_convert": [item for sublist in aux_sge_args.values() for item in sublist] + ["radius", "quartil", "hex_n_move", "polygon_min_size"] + ["precision_um", "units_per_um"],
+    "sge_convert": [item for sublist in aux_sge_args.values() for item in sublist] + ["radius", "quartil", "hex_n_move", "polygon_min_size"],
     "run_ficture": [ 'anchor_res', 'radius_buffer', 
                      'hexagon_n_move', 'hexagon_precision', 'min_ct_per_unit_hexagon',
                      'minibatch_size', 'minibatch_buffer',
@@ -71,7 +71,7 @@ def define_sge(filter_by_density, filtered_prefix, run_dir, sge_dir, create_soft
     if filter_by_density:
         assert filtered_prefix is not None, "Error: --filtered-prefix is Required when --filter-by-density is applied"
     tsvfn    = "transcripts.unsorted.tsv.gz" if not filter_by_density else f"{filtered_prefix}.transcripts.unsorted.tsv.gz"
-    #cstsvfn  = "transcripts.sorted.tsv.gz" if not filter_by_density else f"{filtered_prefix}.transcripts.sorted.tsv.gz"
+    cstsvfn  = "transcripts.sorted.tsv.gz" if not filter_by_density else f"{filtered_prefix}.transcripts.sorted.tsv.gz"
     ftrfn    = "feature.clean.tsv.gz" if not filter_by_density else f"{filtered_prefix}.feature.lenient.tsv.gz"
     minmaxfn = "coordinate_minmax.tsv" if not filter_by_density else f"{filtered_prefix}.coordinate_minmax.tsv"
 
@@ -79,9 +79,11 @@ def define_sge(filter_by_density, filtered_prefix, run_dir, sge_dir, create_soft
         sge_dir = run_dir
 
     tsv = os.path.join(sge_dir, tsvfn)
-    #cstsv = os.path.join(sge_dir, cstsvfn)
     ftr = os.path.join(sge_dir, ftrfn)
     minmax = os.path.join(sge_dir, minmaxfn)
+
+    fic_dir=os.path.join(run_dir, "ficture")
+    cstsv = os.path.join(fic_dir, cstsvfn)
 
     # # tsv or cstsv
     # if os.path.isfile(cstsv) or os.path.islink(cstsv):
@@ -91,7 +93,7 @@ def define_sge(filter_by_density, filtered_prefix, run_dir, sge_dir, create_soft
     # else:
     #     print(f"Input file not found: {tsv} or {cstsv}")
     #     sys.exit(1)
-    sge_arg=f"--in-transcript {tsv} --in-feature {ftr} --in-minmax {minmax}"
+    sge_arg=f"--in-transcript {tsv} --in-feature {ftr} --in-minmax {minmax} --in-cstranscript {cstsv}"
 
     # link files 
     if create_softlink:
@@ -105,7 +107,6 @@ def define_sge(filter_by_density, filtered_prefix, run_dir, sge_dir, create_soft
         # elif os.path.isfile(tsv) or os.path.islink(tsv):
         #         check_file(tsv)
         # create softlink
-        fic_dir=os.path.join(run_dir, "ficture")
         if sge_dir != fic_dir:
             for infn in [tsvfn, ftrfn, minmaxfn]:
                 src = os.path.join(sge_dir, infn) # source
@@ -282,8 +283,8 @@ def cmd_sge_convert(sgeinfo, args, env):
         f"--platform {sgeinfo['platform']}",
         in_arg,
         f"--out-dir {sgeinfo['sge_dir']}",
-        f"--precision-um {sgeinfo.get('precision_um', None)}" if sgeinfo.get("", None) else "",
-        f"--units-per-um {sgeinfo.get('units_per_um', None)}" if sgeinfo.get("units_per_um", None) else "",
+        # f"--precision-um {sgeinfo.get('precision_um', None)}" if sgeinfo.get("", None) else "",                   # will be added in the aux_params_args["sge_convert"]
+        # f"--units-per-um {sgeinfo.get('units_per_um', None)}" if sgeinfo.get("units_per_um", None) else "",       # will be added in the aux_params_args["sge_convert"]
         f"--colnames-count {sgeinfo.get('colnames_all_count', None)}" if sgeinfo.get('colnames_all_count', None) else "",
         f"--filter-by-density" if sgeinfo.get('filter_by_density', False) else "",
         f"--out-filtered-prefix {sgeinfo.get('filtered_prefix', None)}" if sgeinfo.get('filter_by_density', False) and sgeinfo.get('filtered_prefix', None) else "",
@@ -295,6 +296,7 @@ def cmd_sge_convert(sgeinfo, args, env):
     # add aux tools
     format_cmd = add_param_to_cmd(format_cmd, env, aux_env_args["sge_convert"])
     # add aux parameters
+    # remove the "units_per_um" in the aux_params_args["sge_convert"] 
     format_aug = merge_config(sgeinfo, args, aux_params_args["sge_convert"], prefix=None)
     format_cmd = add_param_to_cmd(format_cmd, format_aug, aux_params_args["sge_convert"])
     return format_cmd
@@ -861,7 +863,8 @@ def stepinator(_args):
                     run_i["sge_dir"]=sgeinfo["sge_dir"]
                     run_i["run_dir"]=os.path.join(out_dir, run_i["run_id"])
                     # sge info
-                    run_i["filter_by_density"]=sgeinfo.get("filter_by_density", False)
+                    if run_i.get("filter_by_density") is None:
+                        run_i["filter_by_density"]=sgeinfo.get("filter_by_density", False)
                     run_i["filtered_prefix"]=sgeinfo.get("filtered_prefix", "filtered")
                     run_i["major_axis"]=run_i.get("major_axis", "X")
                     run_i["colname_count"]=sgeinfo.get("colname_count", "count")
@@ -871,8 +874,8 @@ def stepinator(_args):
                     run_i["copy_ext_model"]=run_i.get("copy_ext_model", False)
                     run_i["cmap"]=run_i.get("cmap", None)
                     # analysis parameters
-                    run_i["train_width"]=run_i.get("train_width", None)     
-                    run_i["n_factor"]=run_i.get("n_factor", None)           # will fill in the default value in lda
+                    run_i["train_width"] = run_i.get("train_width", None)     
+                    run_i["n_factor"] = run_i.get("n_factor", None)           # will fill in the default value in lda
                     runinfo.append(run_i)
         else:
             assert len(args.run_ids) == 1, "When --in-yaml is not provided, only one run ID is allowed"            

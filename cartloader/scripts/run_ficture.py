@@ -40,9 +40,9 @@ def parse_arguments(_args):
     inout_params = parser.add_argument_group("Input/Output Parameters", "Input and output parameters for FICTURE")
     inout_params.add_argument('--out-dir', required= True, type=str, help='Output directory')
     inout_params.add_argument('--out-json', type=str, default=None, help="Output JSON file for summarizing the ficture parameters (default: <out-dir>/ficture.params.json)")
-    inout_params.add_argument('--in-transcript', type=str, default=None, help='Input unsorted transcript-indexed SGE file in TSV format (default: <out-dir>/transcripts.unsorted.tsv.gz)')
-    inout_params.add_argument('--in-minmax', type=str, default=None, help='Input coordinate minmax TSV file. (default: <out-dir>/coordinate_minmax.tsv)')  
-    inout_params.add_argument('--in-feature', type=str, default=None,  help='(Optional) Input TSV file that specify which input genes, e.g., feature.clean.tsv.gz. If absent, all genes will be used')
+    inout_params.add_argument('--in-transcript', type=str, default=None, help='Path to the input unsorted transcript-indexed SGE file in TSV format (default: <out-dir>/transcripts.unsorted.tsv.gz)')
+    inout_params.add_argument('--in-minmax', type=str, default=None, help='Path to the input coordinate minmax TSV file. (default: <out-dir>/coordinate_minmax.tsv)')  
+    inout_params.add_argument('--in-feature', type=str, default=None,  help='(Optional) Path to the input TSV file that specify which input genes, e.g., feature.clean.tsv.gz. If absent, all genes will be used')
     inout_params.add_argument('--in-cstranscript', type=str, default=None, help='(Optional) Use --in-cstranscript if a coordinate-sorted transcript-indexed SGE file already exists to skip sorting, or to define a custom sorted file name (default: <out-dir>/transcripts.sorted.tsv.gz)')
 
     external_params = parser.add_argument_group("External Model Parameters", """When using --init-ext, provide the pre-trained model, its type, and ID by --ext-path, --ext-type and --ext-id. """)

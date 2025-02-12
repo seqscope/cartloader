@@ -249,9 +249,9 @@ def convert_tsv(cmds, args):
             args.csv_colname_phredscore = "qv"
         if args.min_phred_score is None:
             args.min_phred_score = 20
-    # * check --csv-colnames-count has the same number as --colnames-count
-    if len(args.csv_colnames_count.split(",")) != len(args.colnames_count.split(",")):
-        raise ValueError(f"The number of columns in --csv-colnames-count ({args.csv_colnames_count}) should be the same as the number of columns in --colnames-count ({args.colnames_count}).")
+    # * no need to check --csv-colnames-count has the same number as --colnames-count (for spme platform, no need to provide --csv-colnames-count)
+    # if len(args.csv_colnames_count.split(",")) != len(args.colnames_count.split(",")):
+    #     raise ValueError(f"The number of columns in --csv-colnames-count ({args.csv_colnames_count}) should be the same as the number of columns in --colnames-count ({args.colnames_count}).")
     # main commands
     transcript_tsv = args.out_transcript.replace(".gz", "")
     format_cmd=f"cartloader format_generic --input {args.in_csv} --out-dir {args.out_dir} --out-transcript {transcript_tsv} --out-feature {args.out_feature} --out-minmax {args.out_minmax}"
