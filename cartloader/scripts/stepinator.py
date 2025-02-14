@@ -260,7 +260,7 @@ def cmd_sge_convert(sgeinfo, args, env):
     mkbn = "sge_convert" if args.identifier is None else f"sge_convert_{args.identifier}"
 
     platform= sgeinfo.get("platform", None)
-    assert platform is not None, "Please provide a platform for sge_convert"
+    assert platform is not None, "Please provide platform information for sge_convert"
 
     if platform == "10x_visium_hd":
         assert sgeinfo.get("in_mex", None) is not None, "Please provide --in-mex for 10x_visium_hd"
@@ -285,11 +285,9 @@ def cmd_sge_convert(sgeinfo, args, env):
         f"--out-dir {sgeinfo['sge_dir']}",
         # f"--precision-um {sgeinfo.get('precision_um', None)}" if sgeinfo.get("", None) else "",                   # will be added in the aux_params_args["sge_convert"]
         # f"--units-per-um {sgeinfo.get('units_per_um', None)}" if sgeinfo.get("units_per_um", None) else "",       # will be added in the aux_params_args["sge_convert"]
-        f"--colnames-count {sgeinfo.get('colnames_all_count', None)}" if sgeinfo.get('colnames_all_count', None) else "",
-        f"--filter-by-density" if sgeinfo.get('filter_by_density', False) else "",
-        f"--out-filtered-prefix {sgeinfo.get('filtered_prefix', None)}" if sgeinfo.get('filter_by_density', False) and sgeinfo.get('filtered_prefix', None) else "",
+        f"--colnames-count {sgeinfo['colnames_all_count']}",
+        f"--filter-by-density --out-filtered-prefix {sgeinfo['filtered_prefix']} --genomic-feature {sgeinfo['colname_count']}" if sgeinfo['filter_by_density'] else "",
         f"--sge-visual" if args.sge_visual else "",
-        f"--genomic-feature {sgeinfo['colname_count']}" if sgeinfo.get('filter_by_density', False) and sgeinfo.get('colname_count', None) else "",
         f"--n-jobs {args.n_jobs}" if args.n_jobs else "",
         f"--restart" if args.restart else ""
     ])
@@ -421,28 +419,7 @@ def update_orient_in_histology(histology):
         histology["flip"] = "horizontal"
     else:
         histology["flip"] = None
-
     return histology
-
-# def fig2pmtiles_transform(histology, hist_prefix):
-#     # inpath
-#     hist_path = histology["path"]
-#     # rotation
-#     if histology.get("rotate", None) is not None:
-#         if histology.get("rotate") == "90" or histology.get("rotate") == 90:
-#             rot_args =" --rotate-clockwise"
-#         elif histology.get("rotate") == "270" or histology.get("rotate") == 270:
-#             rot_args =" --rotate-counter"        
-#     else:
-#         rot_args=""
-#     # cmd
-#     hist_cmd= " ".join([
-#             "cartloader", "transform_aligned_histology", 
-#             f"--tif {hist_path}",
-#             f"--out-prefix {hist_prefix}",
-#             rot_args
-#         ])
-#     return hist_cmd
 
 def cmd_run_fig2pmtiles(run_i, args, env):    
     assert len(run_i.get("histology", [])) > 0, "Error: --histology is Required when running fig2pmtiles"
@@ -741,6 +718,7 @@ def stepinator(_args):
     # sge infomation - shared across actions
     if args.in_yaml:
         sgeinfo = yml.get("SGE", {})
+        # check if any run requires filter_by_density
     else:
         sgeinfo={
             "platform": args.platform,
@@ -752,13 +730,18 @@ def stepinator(_args):
             "precision_um": args.precision_um,
             "filter_by_density": args.filter_by_density,
             "filtered_prefix": args.filtered_prefix,
-            "colname_count": args.colname_count
+            "colname_count": args.colname_count             # output column name for count
         }
+    # add default values for some parameters
+    # filter_by_density
+    sgeinfo["filter_by_density"] = sgeinfo.get("filter_by_density", False)
+    sgeinfo["filtered_prefix"] = sgeinfo.get("filtered_prefix", "filtered")
+    # colnames for output
+    sgeinfo["colname_count"] = sgeinfo.get("colname_count", "count")
+    sgeinfo["colnames_all_count"] = ",".join([sgeinfo["colname_count"]] + sgeinfo["colnames_other_count"].split(",")) if sgeinfo.get("colnames_other_count", None) is not None else sgeinfo["colname_count"]
+    # sge_dir    
     sgeinfo["sge_dir"] = os.path.join(out_dir, "sge")
     os.makedirs(sgeinfo['sge_dir'], exist_ok=True)
-
-    sgeinfo["colnames_all_count"] = ",".join([sgeinfo.get("colname_count",None)] + sgeinfo["colnames_other_count"].split(",")) if sgeinfo.get("colnames_other_count", None) is not None else sgeinfo.get("colname_count",None)    
-
     # worklog dir
     log_dir = os.path.join(out_dir, "worklog")
     os.makedirs(log_dir, exist_ok=True)
@@ -771,6 +754,7 @@ def stepinator(_args):
                        [item for sublist in aux_env_args.values() for item in sublist] + ["imagemagick"],
                         prefix="env")  
 
+    # * Disable the use of submodule binaries, making them default to the binaries available in the system PATH.
     # if env.spatula is None:
     #     env.spatula  = os.path.join(cartloader_repo, "submodules", "spatula", "bin", "spatula")
     # if env.tippecanoe is None:
@@ -863,11 +847,10 @@ def stepinator(_args):
                     run_i["sge_dir"]=sgeinfo["sge_dir"]
                     run_i["run_dir"]=os.path.join(out_dir, run_i["run_id"])
                     # sge info
-                    if run_i.get("filter_by_density") is None:
-                        run_i["filter_by_density"]=sgeinfo.get("filter_by_density", False)
-                    run_i["filtered_prefix"]=sgeinfo.get("filtered_prefix", "filtered")
-                    run_i["major_axis"]=run_i.get("major_axis", "X")
-                    run_i["colname_count"]=sgeinfo.get("colname_count", "count")
+                    run_i["filter_by_density"] = run_i.get("filter_by_density", False) # If filter_by_density is required for a run, the user should define it in the run section
+                    run_i["filtered_prefix"] = sgeinfo["filtered_prefix"]
+                    run_i["major_axis"] = run_i.get("major_axis", "X")
+                    run_i["colname_count"] = sgeinfo["colname_count"]
                     # external model when applied
                     run_i["ext_path"]=run_i.get("ext_path", None)
                     run_i["ext_id"]=run_i.get("ext_id", None)
