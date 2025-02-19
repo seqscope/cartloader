@@ -193,7 +193,7 @@ def submit_job(jobname, jobpref, cmds, slurm, args):
             "nodes": "#SBATCH --nodes=1",
             "ntasks": "#SBATCH --ntasks=1",
             "cpus_per_task": f"#SBATCH --cpus-per-task={getattr(slurm, 'cpus_per_task', 1)}",
-            "mem": f"#SBATCH --mem={getattr(slurm, 'mem', '6500mb')}"
+            "mem_per_cpu": f"#SBATCH --mem-per-cpu={getattr(slurm, 'mem_per_cpu', '6500mb')}"
         }
 
         slurm_header = ["#!/bin/bash"] + [value for value in slurm_options.values() if value]  # Filter out empty entries and construct the header
@@ -223,7 +223,7 @@ def submit_job(jobname, jobpref, cmds, slurm, args):
                 
             elif args.submit_mode == "slurm":
                 # ?? The minimum required SLURM parameters
-                missing_params = [k for k in [ "cpus_per_task", "mem"] if not getattr(slurm, k, None)]
+                missing_params = [k for k in [ "cpus_per_task", "mem_per_cpu"] if not getattr(slurm, k, None)]
                 if missing_params:
                     print(f"Error: Missing required SLURM parameters: {', '.join(missing_params)}")
                     return
@@ -577,9 +577,9 @@ def stepinator(_args):
     env_params.add_argument('--slurm-partition', type=str, default=None, help='If "--submit-mode slurm", provide a SLURM partition')
     env_params.add_argument('--slurm-mail-user', type=str, default=None, help='If "--submit-mode slurm", provide a SLURM mail user')
     env_params.add_argument('--slurm-cpus-per-task', type=int, default=10, help='If "--submit-mode slurm", provide a SLURM cpus per task')
-    env_params.add_argument('--slurm-mem', type=str, default="65000mb", help='If "--submit-mode slurm", provide a SLURM memory')
+    env_params.add_argument('--slurm-mem-per-cpu', type=str, default="6500mb", help='If "--submit-mode slurm", provide a SLURM memory per cpu')
     # modules & env
-    env_params.add_argument('--hpc-modules', type=str, default=None, help='Comma-separated HPC modules to load. When a version is required, use the format: <module>/<version>')
+    env_params.add_argument('--hpc-modules', type=str, nargs="*", default=[], help='Comma-separated HPC modules to load. When a version is required, use the format: <module>/<version>')
     env_params.add_argument('--conda-base', type=str, default=None, help='Conda base path')
     env_params.add_argument('--conda-env', type=str, default=None, help='Conda environment to activate. If it is installed in the default location, i.e., within the base path, provide the environment name. Otherwise, provide the full path to the environment.')
     # app
@@ -761,7 +761,7 @@ def stepinator(_args):
     #     env.tippecanoe = os.path.join(cartloader_repo, "submodules", "tippecanoe", "bin", "tippecanoe")
 
     # * slurm (collect from yaml and args)
-    slurm = merge_config(yml, args, ["account", "partition", "mail_user", "cpus_per_task", "mem", "hours"], prefix="slurm")
+    slurm = merge_config(yml, args, ["account", "partition", "mail_user", "cpus_per_task", "mem_per_cpu", "hours"], prefix="slurm")
     
     # * hpc modules
     hpc_modules =  yml.get("env", {}).get("hpc_modules", [])

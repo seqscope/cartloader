@@ -77,14 +77,14 @@ def format_generic(_args):
     feature=pd.DataFrame()
 
     # 2) minmax
-    # xmin = np.inf
-    # ymin = np.inf
-    # xmax = -np.inf
-    # ymax = -np.inf
-    xmin=sys.maxsize
-    xmax=0
-    ymin=sys.maxsize
-    ymax=0
+    xmin = np.inf
+    ymin = np.inf
+    xmax = -np.inf
+    ymax = -np.inf
+    # xmin=sys.maxsize
+    # xmax=0
+    # ymin=sys.maxsize
+    # ymax=0
 
     # 3) transcript (header)
     feature_cols=[args.colname_feature_name] if args.csv_colname_feature_id is None else [args.colname_feature_name, args.colname_feature_id]
