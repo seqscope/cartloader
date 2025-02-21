@@ -109,7 +109,7 @@ def upload_aws_by_catalog(_args):
         s3_file_path = os.path.join(args.s3_dir, filename) 
         cmds.append(f"{args.aws} s3 cp {file_path} {s3_file_path}")
          # upload catalog.yaml to AWS
-        cmds.append(f"{args.aws} s3 cp  {catalog_f} {s3_catalog_f}")
+        cmds.append(f"{args.aws} s3 cp {catalog_f} {s3_catalog_f}")
         cmds.append(f"touch {file_path}.aws.done")
         mm.add_target(f"{file_path}.aws.done", [file_path], cmds)
 

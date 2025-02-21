@@ -455,7 +455,7 @@ def cmd_run_fig2pmtiles(run_i, args, env):
             "--georeference" if histology.get("georeference", False) else "",
             "--geotif2mbtiles", 
             "--mbtiles2pmtiles", 
-            f"--update-catalog --basemap-key {histology['hist_id']}" if os.path.exists(catalog_yaml) else "",
+            f"--update-catalog --basemap-key {histology['hist_id']}" if os.path.exists(catalog_yaml) or args.run_cartload_join else "",
             f"--in-fig {hist_path}",
             f"--out-prefix {hist_prefix}",
             "--flip-vertical" if histology["flip"] in ["vertical", "both"] else "",
