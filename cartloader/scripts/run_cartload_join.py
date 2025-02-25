@@ -59,6 +59,7 @@ def parse_arguments(_args):
     aux_params.add_argument('--preserve-point-density-thres', type=int, default=1024, help='Threshold for preserving point density in PMTiles')
     aux_params.add_argument('--keep-intermediate-files', action='store_true', default=False, help='Keep intermediate output files')
     aux_params.add_argument('--skip-raster', action='store_true', default=False, help='Skip processing raster files, removing dependency to magick, gdal, go-pmtiles')
+    aux_params.add_argument('--tmp-dir', type=str, help='Temporary directory to be used (default: {out-dir}/tmp')
     if len(_args) == 0:
         parser.print_help()
         sys.exit(1)
@@ -89,6 +90,11 @@ def run_cartload_join(_args):
     # create output directory if needed
     if not os.path.exists(args.out_dir):
         os.makedirs(args.out_dir, exist_ok=True)
+
+    if args.tmp_dir is None:
+        args.tmp_dir = os.path.join(args.out_dir, "tmp")
+        if not os.path.exists(args.tmp_dir):
+            os.makedirs(args.tmp_dir, exist_ok=True)
     
     # output files/prefix
     make_f = os.path.join(args.out_dir, args.makefn)
@@ -220,6 +226,7 @@ def run_cartload_join(_args):
                 "--preserve-point-density-thres", str(args.preserve_point_density_thres),
                 f"--log --log-suffix '{args.log_suffix}'" if args.log else "",
                 f"--tippecanoe '{args.tippecanoe}'",
+                f"--tmp-dir '{args.tmp_dir}'",
                 "--keep-intermediate-files" if args.keep_intermediate_files else ""
             ])
             cmds.append(cmd)
@@ -328,7 +335,7 @@ def run_cartload_join(_args):
         out_pixel_tsvf = f"{out_pixel_tsvprefix}.tsv.gz"
         sort_cols = "2,2g" if major_axis == "X" else "3,3g"
         # for sort commands, use a done file as target -- in case more than one job is running
-        cmd = f"(gzip -cd {in_pixel_tsvf} | head | grep ^#; gzip -cd {in_pixel_tsvf} | grep -v ^# | sort -k{sort_cols} -S 1G;) | gzip -c > {out_pixel_tsvf} && touch {out_pixel_tsvprefix}.done"
+        cmd = f"(gzip -cd {in_pixel_tsvf} | head | grep ^#; gzip -cd {in_pixel_tsvf} | grep -v ^# | sort -T {args.tmp_dir} -k{sort_cols} -S 1G;) | gzip -c > {out_pixel_tsvf} && touch {out_pixel_tsvprefix}.done"
         cmds.append(cmd)
         mm.add_target(f"{out_pixel_tsvprefix}.done", [in_pixel_tsvf], cmds)
         pixel_tsvs_to_be_joined.append(out_pixel_tsvf)
@@ -369,6 +376,7 @@ def run_cartload_join(_args):
         "--n-jobs", str(args.n_jobs),
         f"--log --log-suffix '{args.log_suffix}'" if args.log else "",
         f"--tippecanoe '{args.tippecanoe}'",
+        f"--tmp-dir '{args.tmp_dir}'",
         "--keep-intermediate-files" if args.keep_intermediate_files else ""
     ])
     cmds.append(cmd)
