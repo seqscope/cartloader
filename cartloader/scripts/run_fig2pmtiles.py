@@ -13,9 +13,8 @@ cartloader_dir=os.path.dirname(os.path.dirname(os.path.dirname(current_path)))
 gdal_get_size_script = os.path.join(cartloader_dir, 'cartloader', "utils", "gdal_get_size.sh")
 
 aux_image_arg={
-    "transform": ["transform_csv", "page", "level", "series", "upper_thres_quantile", "upper_thres_intensity", "lower_thres_quantile", "lower_thres_intensity", "colorize"]
+    "transform": ["page", "level", "series", "upper_thres_quantile", "upper_thres_intensity", "lower_thres_quantile", "lower_thres_intensity", "colorize"]
     }
-
 
 def cmds_for_dimensions(geotif_f, dim_f):
     cmds = cmd_separator([], f"Extract dimensions from: {geotif_f}")
@@ -83,17 +82,21 @@ def parse_arguments(_args):
     inout_params.add_argument('--out-prefix', required=True, type=str, help='The output prefix. A new directory will be created if needed')
     inout_params.add_argument('--in-tsv', type=str, default=None, help='If --georeference is required without --transform, use the *.pixel.sorted.tsv.gz from run_ficture to provide georeferenced bounds.')
     inout_params.add_argument('--in-bounds', type=str, default=None, help='If --georeference is required without --transform, provide the bounds in the format of "<ulx>,<uly>,<lrx>,<lry>", which represents upper-left X, upper-left Y, lower-right X, lower-right Y.')
-    
+
+    key_params = parser.add_argument_group("Key parameters")
+    key_params.add_argument('--srs', type=str, default='EPSG:3857', help='For --georeference and --geotif2mbtiles, define the spatial reference system (default: EPSG:3857)')
+    key_params.add_argument('--mono', action='store_true', default=False, help='For --rotate, --flip-vertical/horizontal, and --geotif2mbtiles without --transform, define if the input image is black-and-white and single-banded. (default: False)')
+    key_params.add_argument('--rgba', action='store_true', default=False, help='RGBA, 4-banded image (default: False)')
+    key_params.add_argument('--resample', type=str, default='cubic', help='For --geotif2mbtiles and --mbtiles2pmtiles, define the resampling method (default: cubic). Options: near, bilinear, cubic, etc.')
+    key_params.add_argument('--blocksize', type=int, default='512', help='For --geotif2mbtiles and --mbtiles2pmtiles, define the blocksize (default: 512)')
+
     env_params = parser.add_argument_group("Env Parameters", "Environment parameters, e.g., tools.")
     env_params.add_argument('--pmtiles', type=str, default=f"pmtiles", help='Path to pmtiles binary from go-pmtiles')
     env_params.add_argument('--gdal_translate', type=str, default=f"gdal_translate", help='Path to gdal_translate binary')
     env_params.add_argument('--gdaladdo', type=str, default=f"gdaladdo", help='Path to gdaladdo binary')
+    env_params.add_argument('--keep-intermediate-files', action='store_true', default=False, help='Keep intermediate files')
 
     aux_params = parser.add_argument_group("Auxiliary Parameters", "Auxiliary parameters for steps, and tools")
-    aux_params.add_argument('--srs', type=str, default='EPSG:3857', help='For --georeference and --geotif2mbtiles, define the spatial reference system (default: EPSG:3857)')
-    aux_params.add_argument('--mono', action='store_true', default=False, help='For --rotate, --flip-vertical/horizontal, and --geotif2mbtiles without --transform, define if the input image is black-and-white and single-banded. (default: False)')
-    aux_params.add_argument('--resample', type=str, default='cubic', help='For --geotif2mbtiles and --mbtiles2pmtiles, define the resampling method (default: cubic). Options: near, bilinear, cubic, etc.')
-    aux_params.add_argument('--blocksize', type=int, default='512', help='For --geotif2mbtiles and --mbtiles2pmtiles, define the blocksize (default: 512)')
     aux_params.add_argument('--catalog-yaml', type=str, default=None, help='For --update-catalog, define the catalog yaml file to update (default: catalog.yaml in the output directory specified by --out-prefix)')
     aux_params.add_argument('--basemap-key', type=str, default=None, help='For --update-catalog, The information to use for updating the basemap in the catalog.yaml file. An example for a histology file: <type>:<hist_id>.')
     aux_params.add_argument('--transform-csv', type=str, help='For --transform, (Vizgen only) CSV file containing conversion parameters (typically micron_to_mosaic_pixel_transform.csv)')
@@ -153,7 +156,7 @@ def run_fig2pmtiles(_args):
     if args.transform:
         # update the mono information from transform
         args.mono = get_mono(args)
-        assert check_ome_tiff(args.in_fig), "When --transform is enabled, the input figure must be an OME-TIFF file"
+        #assert check_ome_tiff(args.in_fig), "When --transform is enabled, the input figure must be an OME-TIFF file"
         transform_prefix=f"{args.out_prefix}.transform"
         transform_f=f"{transform_prefix}.png"
         cmds = cmd_separator([], f"Transforming {args.in_fig} to {transform_f}")
@@ -281,7 +284,7 @@ def run_fig2pmtiles(_args):
                 "gdalwarp",
                 f'"{georef_f}"',  # Add quotes around file names to handle spaces
                 f'"{ort_f}"',
-                "-b 1 -b 2 -b 3" if not args.mono else "-b 1",
+                "-b 1" if args.mono else "-b 1 -b 2 -b 3 -b 4" if args.rgba else "-b 1 -b 2 -b 3",
                 "-ct", f"\"+proj=pipeline +step +proj=axisswap +order={axis_order}\"",
                 "-overwrite",
                 "-ts", f"{out_dim}"
@@ -295,8 +298,8 @@ def run_fig2pmtiles(_args):
     if args.geotif2mbtiles:
         cmds = cmd_separator([], f"Converting from geotif to mbtiles: {ort_f}")
         cmd = " ".join([
-            "gdal_translate", 
-            "-b 1 -b 2 -b 3" if not args.mono else "-b 1",
+            args.gdal_translate, 
+            "-b 1" if args.mono else "-b 1 -b 2 -b 3 -b 4" if args.rgba else "-b 1 -b 2 -b 3",
             "-strict",
             "-co", "\"ZOOM_LEVEL_STRATEGY=UPPER\"",
             "-co", f"\"RESAMPLING={args.resample}\"",

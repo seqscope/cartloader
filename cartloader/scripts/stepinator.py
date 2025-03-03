@@ -447,6 +447,7 @@ def cmd_run_fig2pmtiles(run_i, args, env):
             "cartloader", "run_fig2pmtiles", 
             '--makefn', f"{mkbn}.mk",
             "--transform" if histology.get("transform", False) else "",
+            f"--transform-csv {histology.get('transform_csv', None)}" if histology.get("transform", False) and histology.get("transform_csv", None) is not None else "",
             f"--upper-thres-quantile {histology.get('upper_thres_quantile', None)}" if histology.get("transform", False) and histology.get("upper_thres_quantile", None) is not None else "",
             f"--lower-thres-quantile {histology.get('lower_thres_quantile', None)}" if histology.get("transform", False) and histology.get("lower_thres_quantile", None) is not None else "",
             f"--upper-thres-intensity {histology.get('upper_thres_intensity', None)}" if histology.get("transform", False) and histology.get("upper_thres_intensity", None) is not None else "",
