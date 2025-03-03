@@ -85,16 +85,20 @@ def sge_stitch(_args):
         updated_tiles.append(",".join([transcript, feature, minmax, row, col]))
         prerequisities.extend([transcript, feature, minmax])
 
-
+    
     # combine sge
     cmds = cmd_separator([], f"Combining SGEs")
+    if "," in args.colnames_count:
+        colnames_count = args.colnames_count.split(",")
+    else:
+        colnames_count = [args.colnames_count]
     combine_cmd=" ".join([f"cartloader", "combine_sges_by_layout",
                             f"--in-tiles {' '.join(updated_tiles)}",
                             f"--out-dir {args.out_dir}",
                             f"--out-transcript {args.out_transcript}",
                             f"--out-minmax {args.out_minmax}",
                             f"--out-feature {args.out_feature}",
-                            f"--colnames-count {' '.join(args.colnames_count)}",
+                            f"--colnames-count {' '.join(colnames_count)}",
                             f"--colname-feature-name {args.colname_feature_name}",
                             f"--colname-feature-id {args.colname_feature_id}" if args.colname_feature_id else "",
                             f"--colname-x {args.colname_x}",
