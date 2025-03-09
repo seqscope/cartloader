@@ -196,6 +196,7 @@ def convert_visiumhd(cmds, args):
     if args.include_feature_type_regex is not None:
         args.include_feature_list = write_ftrlist_from_ftrtype(args)
     # * check --icols-mtx has the same number as --colnames-count
+    args.icols_mtx=str(args.icols_mtx)
     if len(args.icols_mtx.split(",")) != len(args.colnames_count.split(",")):
         raise ValueError(f"The number of columns in --icols-mtx ({args.icols_mtx}) should be the same as the number of columns in --colnames-count ({args.colnames_count}).")
     # * convert sge to tsv (output: out_transcript, out_minmax, out_feature, (optional) out_sge)
@@ -219,6 +220,7 @@ def convert_seqscope(cmds, args):
     if args.include_feature_type_regex is not None:
         args.include_feature_list = write_ftrlist_from_ftrtype(args)
     # * check --icols-mtx has the same number as --colnames-count
+    args.icols_mtx=str(args.icols_mtx)
     if len(args.icols_mtx.split(",")) != len(args.colnames_count.split(",")):
         raise ValueError(f"The number of columns in --icols-mtx ({args.icols_mtx}) should be the same as the number of columns in --colnames-count ({args.colnames_count}).")
     # * convert sge to tsv (output: out_transcript, out_minmax, out_feature
