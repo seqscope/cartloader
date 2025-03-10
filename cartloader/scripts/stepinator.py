@@ -208,6 +208,9 @@ def submit_job(jobname, jobpref, cmds, slurm, args):
     except Exception as e:
         print(f"Error writing a job file: {e}")
         return
+    
+    # run chmod 755 on the job file to make it executable
+    os.chmod(job_file, 0o755) # 0o755
 
     # Submit job if requested
     if args.submit:
