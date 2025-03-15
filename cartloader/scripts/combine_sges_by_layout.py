@@ -66,44 +66,6 @@ def combine_transcript_across_sge(df, out_transcript, colx, coly, colnames_count
                 logging.error(f"Error processing {row['transcript_path']}: {e}")
                 raise
 
-# def combine_transcript_across_sge(df, out_transcript, colx, coly, outcols, units_per_um, out_in_um, chunksize=100000, test_mode=False):
-#     logging.info("Merging transcripts...")
-#     with gzip.open(out_transcript, "wt") as out_file:
-#         for idx, row in df.iterrows():
-#             try:
-#                 x_offset = row["x_offset"]
-#                 y_offset = row["y_offset"]
-#                 logging.info(f" - File: {row['transcript_path']}")
-#                 logging.info(f"   row,col: {row['row']},{row['col']}") 
-#                 if out_in_um:
-#                     logging.info(f"   x y offsets (in um): {round(x_offset/units_per_um, 2)},{round(y_offset/units_per_um,2)}")
-#                     logging.info(f"   subset minmax(xmin,xmax,ymin,ymax) (in um): {round(row['xmin']/units_per_um, 2)},{round(row['xmax']/units_per_um,2)},{round(row['ymin']/units_per_um,2)},{round(row['ymax']/units_per_um,2)}")
-#                 else:
-#                     logging.info(f"   x y offsets (in unit): {x_offset},{y_offset}")
-#                     logging.info(f"   subset minmax(xmin,xmax,ymin,ymax) (in unit): {row['xmin']},{row['xmax']},{row['ymin']},{row['ymax']}")
-#                 with gzip.open(row["transcript_path"], "rt") as f:
-#                     for chunk in pd.read_csv(f, sep="\t", chunksize=chunksize):
-#                         chunk[colx] += x_offset
-#                         chunk[coly] += y_offset
-#                         chunk["index"] = idx
-#                         # convert into um with two decimal points if needed
-#                         if out_in_um:
-#                             chunk[colx] = chunk[colx] / units_per_um
-#                             chunk[coly] = chunk[coly] / units_per_um
-#                             chunk[colx] = chunk[colx].round(2)
-#                             chunk[coly] = chunk[coly].round(2)
-#                         header = idx == 0 and chunk.index[0] == 0
-#                         chunk = chunk[outcols]
-#                         chunk.to_csv(out_file, sep="\t", index=False, header=header)                        
-#                         # If test mode is enabled, process only the first chunk
-#                         if test_mode:
-#                             logging.info("Test mode is True. Exiting after processing the first chunk.")
-#                             break
-#             except Exception as e:
-#                 logging.error(f"Error processing {row['transcript_path']}: {e}")
-#                 raise
-
-
 def combine_sges_by_layout(_args):
     parser = argparse.ArgumentParser(
         prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}",
@@ -124,8 +86,6 @@ def combine_sges_by_layout(_args):
     parser.add_argument('--minmax-in-um', action='store_true', help='Input minmax is in um while input transcript is based on unit.')
     parser.add_argument('--convert-to-um', action='store_true', help='Convert output to um.')
     parser.add_argument('--test-mode', action='store_true', help='Test mode.')
-    # parser.add_argument("--unit-ids", type=str, nargs='*', default=[], help="(For test) List of input unit ids.")
-    # parser.add_argument("--analy-dir", type=str, help="(For test) Analysis directory.")
     args = parser.parse_args(_args)
 
     os.makedirs(args.out_dir, exist_ok=True) 
@@ -138,26 +98,7 @@ def combine_sges_by_layout(_args):
     )
 
     input_list = args.in_tiles
-
-    # log
-    # logging.info("="*30)
-    # logging.info(f"Commands:")
-    # cmd=" ".join([f"cartloader combine_sges_by_layout",
-    #     f"--input {' '.join(input_list)} ",
-    #     f"--out-dir {args.out_dir}",
-    #     f"--outid {args.outid} " if args.outid else "",
-    #     f"--colnames-count {' '.join(args.colnames_count)} ",
-    #     f"--colname-feature-name {args.colname_feature_name} ",
-    #     f"--colname-feature-id {args.colname_feature_id} " if args.colname_feature_id else "",
-    #     f"--colname-x {args.colname_x} ",
-    #     f"--colname-y {args.colname_y} ",
-    #     f"--units-per-um {args.units_per_um} ",
-    #     '--minmax-in-um' if args.minmax_in_um else '',
-    #     '--convert-to-um' if args.convert_to_um else '',
-    #     f'--test-mode' if args.test_mode else ''])
-    # logging.info(cmd)
-    # logging.info("="*30)
-
+    
     logging.info(f"  - Output directory: {args.out_dir}")
 
     outcols=[args.colname_x, args.colname_y]

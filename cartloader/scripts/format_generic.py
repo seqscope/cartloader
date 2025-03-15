@@ -46,8 +46,8 @@ def format_generic(_args):
                                            4) Use --*-feature-list or --*-feature-substr or --*-feature-regex to filter out features by feature name.
                                            5) Use --include-feature-type-regex with --csv-colname-feature-type or --feature-type-ref to filter out features by gene type.
                                            """)
-    aux_params.add_argument('--csv-colname-feature-id', type=str, default=None, help='Specify the input column name for gene ID if available')
-    aux_params.add_argument('--colname-feature-id', type=str, default='gene_id', help='Specify the output column name for gene ID if needed')
+    aux_params.add_argument('--csv-colname-feature-id', type=str, default=None, help='Specify the input column name for gene ID if available (default: None)')
+    aux_params.add_argument('--colname-feature-id', type=str, default='gene_id', help='Specify the output column name for gene ID when --csv-colname-feature-id is enabled (default: gene_id)')
     aux_params.add_argument('--add-molecule-id', action='store_true', default=False, help='If needed, use --add-molecule-id to generate a column of "molecule_id" in the output file to track the index of the original input. If the input file already has a column of molecule ID, use --csv-colnames-others instead of --add-molecule-id. (default: False)')
     aux_params.add_argument('--csv-colname-phredscore', type=str, default=None, help='Specify the input column name for Phred-scaled quality score (Q-Score) estimating the probability of incorrect call. If provided,  (platform: 10x_xenium; default: None)')
     aux_params.add_argument('--min-phred-score', type=float, default=None, help='Specify the Phred-scaled quality score cutoff') 
@@ -140,7 +140,7 @@ def format_generic(_args):
     if args.csv_colname_phredscore is not None and args.min_phred_score is None:
         print(f"Warning: While the --csv-colname-phredscore is enabled, the --min-phred-score is not provided. carloader will SKIP filtering SGE by phred score.")
 
-    # 5) for test
+    # 5) feature filtering (logging info here. action in the loop)
     if args.exclude_feature_regex is not None:
         print(f"Check: the --exclude-feature-regex is enabled. It will exclude features that match the regex pattern: {args.exclude_feature_regex}")
     

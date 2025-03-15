@@ -9,9 +9,10 @@ import yaml
 import datetime
 from types import SimpleNamespace
 
-from cartloader.utils.utils import add_param_to_cmd
-from cartloader.utils.image_helper import update_orient
+from cartloader.utils.utils import add_param_to_cmd, scheck_file
+from cartloader.utils.image_helper import update_orient_in_histology
 from cartloader.utils.sge_helper import aux_sge_args
+from cartloader.utils.execution import write_jobfile, submit_job
 
 timestamp = datetime.datetime.now().strftime("%y%m%d")
 
@@ -60,183 +61,8 @@ def merge_config(base_config, args, keys, prefix=None):
             config[key] = val
     return SimpleNamespace(**config)
 
-def check_file(file_path):
-    if not (os.path.isfile(file_path) or os.path.islink(file_path)):
-        print(f"Input file not found: {file_path}")
-        sys.exit(1)
-    else:
-        print(f"Checked: {file_path}")
-
-def define_sge(filter_by_density, filtered_prefix, run_dir, sge_dir, create_softlink=False):
-    if filter_by_density:
-        assert filtered_prefix is not None, "Error: --filtered-prefix is Required when --filter-by-density is applied"
-    tsvfn    = "transcripts.unsorted.tsv.gz" if not filter_by_density else f"{filtered_prefix}.transcripts.unsorted.tsv.gz"
-    cstsvfn  = "transcripts.sorted.tsv.gz" if not filter_by_density else f"{filtered_prefix}.transcripts.sorted.tsv.gz"
-    ftrfn    = "feature.clean.tsv.gz" if not filter_by_density else f"{filtered_prefix}.feature.lenient.tsv.gz"
-    minmaxfn = "coordinate_minmax.tsv" if not filter_by_density else f"{filtered_prefix}.coordinate_minmax.tsv"
-
-    if sge_dir is None:
-        sge_dir = run_dir
-
-    tsv = os.path.join(sge_dir, tsvfn)
-    ftr = os.path.join(sge_dir, ftrfn)
-    minmax = os.path.join(sge_dir, minmaxfn)
-
-    fic_dir=os.path.join(run_dir, "ficture")
-    cstsv = os.path.join(fic_dir, cstsvfn)
-
-    # # tsv or cstsv
-    # if os.path.isfile(cstsv) or os.path.islink(cstsv):
-    #     sge_arg=f"--in-cstranscript {cstsv} --in-feature {ftr} --in-minmax {minmax}"
-    # elif os.path.isfile(tsv) or os.path.islink(tsv):
-    #     sge_arg=f"--in-transcript {tsv} --in-feature {ftr} --in-minmax {minmax}" 
-    # else:
-    #     print(f"Input file not found: {tsv} or {cstsv}")
-    #     sys.exit(1)
-    sge_arg=f"--in-transcript {tsv} --in-feature {ftr} --in-minmax {minmax} --in-cstranscript {cstsv}"
-
-    # link files 
-    if create_softlink:
-        # check if the files exist
-        for infile in [ftr, minmax, tsv]:
-            check_file(infile)
-
-        # # tsv or cstsv
-        # if os.path.isfile(cstsv) or os.path.islink(cstsv):
-        #     check_file(cstsv)
-        # elif os.path.isfile(tsv) or os.path.islink(tsv):
-        #         check_file(tsv)
-        # create softlink
-        if sge_dir != fic_dir:
-            for infn in [tsvfn, ftrfn, minmaxfn]:
-                src = os.path.join(sge_dir, infn) # source
-                dst = os.path.join(fic_dir, infn) # destination
-                # if infn == cstsvfn and not os.path.exists(os.path.abspath(src)):
-                #     continue
-                if not os.path.isfile(dst) and not os.path.exists(dst):
-                    os.symlink(src, dst)
-                    print(f"Creating symlink for {infn}")
-
-    return sge_arg
-
-def define_args_rgb(rgbpath):
-    if rgbpath is None:
-        rgb_arg = ""
-    else:
-        check_file(rgbpath)
-        rgb_arg = f"--cmap-static --static-cmap-file {rgbpath}"
-    return rgb_arg
-
-# def submit_cmd(mkpref, jobname, slurm, submit):
-#     slurm_account=slurm.get("account", None)
-#     slurm_partition=slurm.get("partition", None)
-#     slurm_mail_user=slurm.get("mail_user", None)
-#     slurm_cpus_per_task=slurm.get("cpus_per_task", None)
-#     slurm_mem=slurm.get("mem", None)
-#     slurm_hours=slurm.get("hours", None)
-#     if submit:
-#         submit_cmd = " ".join([
-#             "sbatch",
-#             f"--account={slurm_account}",
-#             f"--partition={slurm_partition}",
-#             f"--mail-user={slurm_mail_user}",
-#             "--mail-type=END,FAIL,REQUEUE",
-#             f"--job-name={jobname}",
-#             f"--output={mkpref}_%j.out",
-#             f"--error={mkpref}_%j.err",
-#             f"--time={slurm_hours}:00:00",
-#             "--nodes=1",
-#             "--ntasks=1",
-#             f"--cpus-per-task={slurm_cpus_per_task}",
-#             f"--mem={slurm_mem}",
-#             f"--wrap=\"make -f {mkpref}.mk -j 10\""
-#         ])
-#         print("Submitting job with command:", submit_cmd)
-#         subprocess.run(submit_cmd, shell=True)
-#     # else:
-#     #     print("debug:", submit_cmd)
-
-def submit_job(jobname, jobpref, cmds, slurm, args):
-    """
-    Create and optionally submit a SLURM job.
-    """
-    # Generate SLURM script content
-    if args.submit_mode == "local":
-        job_content = """#!/bin/bash\n""" + "\n".join(cmds)
-    else:
-        # slurm_options = {
-        #     "account": f"#SBATCH --account={slurm.get('account')}" if slurm.get("account") else "",
-        #     "partition": f"#SBATCH --partition={slurm.get('partition')}" if slurm.get("partition") else "",
-        #     "mail_user": f"#SBATCH --mail-user={slurm.get('mail_user')}" if slurm.get("mail_user") else "",
-        #     "mail_type": "#SBATCH --mail-type=END,FAIL,REQUEUE" if slurm.get("mail_user") else "",
-        #     "job_name": f"#SBATCH --job-name={jobname}",
-        #     "output": f"#SBATCH --output={jobpref}_%j.out",
-        #     "error": f"#SBATCH --error={jobpref}_%j.err",
-        #     "time": f"#SBATCH --time={slurm.get('hours', "5")}:00:00",
-        #     "nodes": "#SBATCH --nodes=1",
-        #     "ntasks": "#SBATCH --ntasks=1",
-        #     "cpus_per_task": f"#SBATCH --cpus-per-task={slurm.get('cpus_per_task', 1)}",
-        #     "mem": f"#SBATCH --mem={slurm.get('mem', '6500mb')}"
-        # }
-        # slurm_header = ["#!/bin/bash"] + [value for value in slurm_options.values() if value] # Filter out empty entries and construct the header
-        # job_content = "\n".join(slurm_header + cmds)
-        # Generate SLURM options
-        slurm_options = {
-            "account": f"#SBATCH --account={slurm.account}" if getattr(slurm, "account", None) else "",
-            "partition": f"#SBATCH --partition={slurm.partition}" if getattr(slurm, "partition", None) else "",
-            "mail_user": f"#SBATCH --mail-user={slurm.mail_user}" if getattr(slurm, "mail_user", None) else "",
-            "mail_type": "#SBATCH --mail-type=END,FAIL,REQUEUE" if getattr(slurm, "mail_user", None) else "",
-            "job_name": f"#SBATCH --job-name={jobname}",
-            "output": f"#SBATCH --output={jobpref}_%j.out",
-            "error": f"#SBATCH --error={jobpref}_%j.err",
-            "time": f"#SBATCH --time={getattr(slurm, 'hours', '5')}:00:00",
-            "nodes": "#SBATCH --nodes=1",
-            "ntasks": "#SBATCH --ntasks=1",
-            "cpus_per_task": f"#SBATCH --cpus-per-task={getattr(slurm, 'cpus_per_task', 1)}",
-            "mem_per_cpu": f"#SBATCH --mem-per-cpu={getattr(slurm, 'mem_per_cpu', '6500mb')}"
-        }
-
-        slurm_header = ["#!/bin/bash"] + [value for value in slurm_options.values() if value]  # Filter out empty entries and construct the header
-        job_content = "\n".join(slurm_header + cmds)
-
-    # Write SLURM script
-    job_file = f"{jobpref}.job"
-    try:
-        with open(job_file, "w") as f:
-            f.write(job_content)
-        print(f"A job file created: {job_file}")
-    except Exception as e:
-        print(f"Error writing a job file: {e}")
-        return
-    
-    # run chmod 755 on the job file to make it executable
-    os.chmod(job_file, 0o755) # 0o755
-
-    # Submit job if requested
-    if args.submit:
-        try:
-            if args.submit_mode == "local":
-                result = subprocess.run(f"bash {job_file}", shell=True, check=True, capture_output=True, text=True)
-                print("Job executed successfully:\n", result.stdout)
-                # store the stderr and stdout
-                with open(f"{jobpref}_{timestamp}.out", "w") as f:
-                    f.write(result.stdout)
-                with open(f"{jobpref}_{timestamp}.err", "w") as f:
-                    f.write(result.stderr)
-                
-            elif args.submit_mode == "slurm":
-                # ?? The minimum required SLURM parameters
-                missing_params = [k for k in [ "cpus_per_task", "mem_per_cpu"] if not getattr(slurm, k, None)]
-                if missing_params:
-                    print(f"Error: Missing required SLURM parameters: {', '.join(missing_params)}")
-                    return
-                result = subprocess.run(f"sbatch {job_file}", shell=True, check=True, capture_output=True, text=True)
-                print("Job submitted successfully:\n", result.stdout)
-        except subprocess.CalledProcessError as e:
-            print("Error submitting job:\n", e.stderr)
-
 def cmd_sge_stitch(sgeinfo, args, env):
-    mkbn = "sge_stitch" if args.identifier is None else f"sge_stitch_{args.identifier}"
+    mkbn = "sge_stitch" if args.mk_id is None else f"sge_stitch_{args.mk_id}"
     # collect tiles 
 
     stitch_cmd = " ".join([
@@ -260,7 +86,7 @@ def cmd_sge_stitch(sgeinfo, args, env):
     return stitch_cmd
 
 def cmd_sge_convert(sgeinfo, args, env):
-    mkbn = "sge_convert" if args.identifier is None else f"sge_convert_{args.identifier}"
+    mkbn = "sge_convert" if args.mk_id is None else f"sge_convert_{args.mk_id}"
 
     platform= sgeinfo.get("platform", None)
     assert platform is not None, "Please provide platform information for sge_convert"
@@ -286,8 +112,6 @@ def cmd_sge_convert(sgeinfo, args, env):
         f"--platform {sgeinfo['platform']}",
         in_arg,
         f"--out-dir {sgeinfo['sge_dir']}",
-        # f"--precision-um {sgeinfo.get('precision_um', None)}" if sgeinfo.get("", None) else "",                   # will be added in the aux_params_args["sge_convert"]
-        # f"--units-per-um {sgeinfo.get('units_per_um', None)}" if sgeinfo.get("units_per_um", None) else "",       # will be added in the aux_params_args["sge_convert"]
         f"--colnames-count {sgeinfo['colnames_all_count']}",
         f"--filter-by-density --out-filtered-prefix {sgeinfo['filtered_prefix']} --genomic-feature {sgeinfo['colname_count']}" if sgeinfo['filter_by_density'] else "",
         f"--sge-visual" if args.sge_visual else "",
@@ -302,25 +126,72 @@ def cmd_sge_convert(sgeinfo, args, env):
     format_cmd = add_param_to_cmd(format_cmd, format_aug, aux_params_args["sge_convert"])
     return format_cmd
 
-def cmd_run_ficture(run_i, args, env):
+def define_sge2fn(filter_by_density, filtered_prefix):
+    if filter_by_density:
+        assert filtered_prefix is not None, "Error: --filtered-prefix is Required when --filter-by-density is applied"
+    tsvfn    = "transcripts.unsorted.tsv.gz" if not filter_by_density else f"{filtered_prefix}.transcripts.unsorted.tsv.gz"
+    cstsvfn  = "transcripts.sorted.tsv.gz" if not filter_by_density else f"{filtered_prefix}.transcripts.sorted.tsv.gz"
+    ftrfn    = "feature.clean.tsv.gz" if not filter_by_density else f"{filtered_prefix}.feature.lenient.tsv.gz"
+    minmaxfn = "coordinate_minmax.tsv" if not filter_by_density else f"{filtered_prefix}.coordinate_minmax.tsv"
+    sge2fn={
+        "tsv": tsvfn,
+        "ftr": ftrfn,
+        "minmax": minmaxfn,
+        "cstsv": cstsvfn
+    }
+    return sge2fn
+
+def define_sge_arg(sgefn, sge_dir, fic_dir):
+    # if sge_dir is None:
+    #     sge_dir = run_dir
+    tsv = os.path.join(sge_dir, sgefn["tsv"])
+    ftr = os.path.join(sge_dir, sgefn["ftr"])
+    minmax = os.path.join(sge_dir, sgefn["minmax"])
     
+    cstsv = os.path.join(fic_dir, sgefn["cstsv"])
+
+    sge_arg=f"--in-transcript {tsv} --in-feature {ftr} --in-minmax {minmax} --in-cstranscript {cstsv}"
+    return sge_arg
+
+def link_sge_to_fict(sge_fn, sge_dir, fic_dir):
+    # create softlink
+    for infn in [sge_fn["tsv"], sge_fn["ftr"], sge_fn["minmax"]]:
+        src = os.path.join(sge_dir, infn) # source
+        dst = os.path.join(fic_dir, infn) # destination
+        # if infn == cstsvfn and not os.path.exists(os.path.abspath(src)):
+        #     continue
+        if not os.path.isfile(dst) and not os.path.exists(dst):
+            os.symlink(src, dst)
+            print(f"Creating symlink for {infn}")
+
+def cmd_run_ficture(run_i, args, env):
     ext_path = run_i["ext_path"]
     ext_id   = run_i["ext_id"]
     
     # makefile 
     mkbn = "run_ficture" if ext_path is None else f"run_ficture_{ext_id}"
-    mkbn = f"{mkbn}_{args.identifier}" if args.identifier is not None else mkbn
+    mkbn = f"{mkbn}_{args.mk_id}" if args.mk_id is not None else mkbn
 
-    # sge and rgb
+    # sge
+    sge2fn = define_sge2fn(run_i["filter_by_density"], run_i["filtered_prefix"])
+    sge_arg = define_sge_arg(sge2fn, run_i["sge_dir"], run_i["run_dir"])
+    # * check files
+    if not args.sge_convert and not args.sge_stitch:
+        if not args.lenient:
+            for file in [sge2fn["tsv"], sge2fn["ftr"], sge2fn["minmax"]]:
+                scheck_file(os.path.join(run_i["sge_dir"], file))
+    # * link files from sge to ficture
     fic_dir=os.path.join(run_i["run_dir"], "ficture")
-
-    create_softlink = False if args.sge_convert else True
-    sge_arg = define_sge(run_i["filter_by_density"],
-                         run_i["filtered_prefix"],
-                         run_i["run_dir"], 
-                         run_i["sge_dir"], create_softlink)
-
-    cmap_arg = define_args_rgb(run_i["cmap"])
+    if run_i["sge_dir"] is not None and run_i["sge_dir"] != fic_dir:
+        link_sge_to_fict(sge2fn, run_i["sge_dir"], fic_dir)
+    
+    # cmap
+    if run_i["cmap"] is None:
+        cmap_arg = ""
+    else:
+        if not args.lenient:
+            scheck_file(run_i["cmap"])
+        cmap_arg = f"--cmap-static --static-cmap-file {run_i['cmap']}"
     
     # model & parameters
     assert run_i["train_width"] is not None, "Error: When --run-ficture, --train-width is required"
@@ -360,7 +231,7 @@ def cmd_run_ficture(run_i, args, env):
     return ficture_cmd
 
 def cmd_run_cartload_join(run_i, args, env):
-    mkbn="run_cartload_join" if args.identifier is None else f"run_cartload_join_{args.identifier}"
+    mkbn="run_cartload_join" if args.mk_id is None else f"run_cartload_join_{args.mk_id}"
 
     fic_dir = os.path.join(run_i["run_dir"], "ficture")
     cartload_dir = os.path.join(run_i["run_dir"], "cartload")
@@ -401,29 +272,6 @@ def parse_histology_args(histology_args):
 
     return hist_input
 
-def update_orient_in_histology(histology):
-    hist_path = histology["path"]
-
-    rotation = histology.get("rotate", None)
-    
-    flip = histology.get("flip", None)
-    flip_vertical = flip in [ "vertical", "both"]
-    flip_horizontal = flip in ["horizontal", "both"]
-
-    new_rot, new_vflip, new_hflip = update_orient(rotation, flip_vertical, flip_horizontal, hist_path)
-
-    # Update the histology dictionary with the best solution
-    histology["rotate"] = new_rot
-    if new_vflip and new_hflip:
-        histology["flip"] = "both"
-    elif new_vflip:
-        histology["flip"] = "vertical"
-    elif new_hflip:
-        histology["flip"] = "horizontal"
-    else:
-        histology["flip"] = None
-    return histology
-
 def cmd_run_fig2pmtiles(run_i, args, env):    
     assert len(run_i.get("histology", [])) > 0, "Error: --histology is Required when running fig2pmtiles"
     hist_cmds=[]
@@ -444,7 +292,7 @@ def cmd_run_fig2pmtiles(run_i, args, env):
         histology = update_orient_in_histology(histology)
         # mkbn
         mkbn = f"run_fig2pmtiles_{hist_inname}"
-        mkbn = mkbn if args.identifier is None else f"{mkbn}_{args.identifier}"
+        mkbn = mkbn if args.mk_id is None else f"{mkbn}_{args.mk_id}"
         # cmds
         hist_cmd= " ".join([
             "cartloader", "run_fig2pmtiles", 
@@ -509,14 +357,15 @@ def stepinator(_args):
     run_params = parser.add_argument_group("Run", "Run mode")
     run_params.add_argument("--dry-run", action="store_true", help="Perform a dry run")
     run_params.add_argument('--restart', action='store_true', default=False, help='Restart the run. Ignore all intermediate files and start from the beginning')
-    run_params.add_argument('--n-jobs', '-j', type=int, default=None, help='Number of jobs (processes) to run in parallel (default: 1)')
+    run_params.add_argument('--n-jobs', '-j', type=int, default=None, help='Number of processes to run in parallel (default: 1)')
     run_params.add_argument('--threads', type=int, default=10, help='Maximum number of threads per job (for tippecanoe)')
     run_params.add_argument("--submit", action="store_true", help="Submit the job")
     run_params.add_argument('--submit-mode', type=str, default="local", choices=["slurm", "local"], help='Specify how the job should be executed. Choose "slurm" for SLURM, "local" for local execution')
-    run_params.add_argument('--job-id', type=str, default=None, help='Filename for the job script. It not provided, it will use the commands as the job name')
-    run_params.add_argument('--identifier', type=str, default=None, help='Makefile identifier. This helps when multiple sets of parameters will be applied to one function, such as --run_ficture.')
+    run_params.add_argument('--job-id', type=str, default=None, help='Job ID, which will be used as the base name for the job file if --job-file is not provided and the job name for SLURM if --submit-mode is slurm' )
+    run_params.add_argument('--mk-id', type=str, default=None, help='Makefile identifier. This helps when multiple sets of parameters will be applied to one function, such as --run_ficture.')
+    # run_params.add_argument('--debug', action='store_true', help='For the debug mode')
 
-    # * commands
+    # * commands 
     cmd_params = parser.add_argument_group("Commands", "Commands to be performed")
     cmd_params.add_argument("--sge-stitch", action="store_true", help="Run sge-stitch in cartloader")
     cmd_params.add_argument("--sge-convert", action="store_true", help="Run sge-convert in cartloader")
@@ -551,7 +400,7 @@ def stepinator(_args):
     key_params.add_argument('--units-per-um', type=float, default=None, help='Applicable if --sge-convert or --sge-stitch. Coordinate unit per um (conversion factor) (default: 1.00)') 
     key_params.add_argument('--scale-json', type=str, default=None, help="Applicable if --sge-convert on 10x_visium_hd datasets. Coordinate unit per um using the scale json file (default: None, typical naming convention: scalefactors_json.json)")
     key_params.add_argument('--precision-um', type=int, default=None, help='Required if --sge-convert. Number of digits of transcript coordinates (default: 2)')
-    key_params.add_argument('--filter-by-density', action='store_true', default=False, help='Required if --sge-convert or --run-ficture. If --sge-convert, it enables density-filtering. If --run-ficture, it defines the density-filtered SGE as input (default: False)')
+    key_params.add_argument('--filter-by-density', action='store_true', default=False, help='Required if --sge-convert or --run-ficture. If --sge-convert, it enables density-filtering. If --run-ficture, it defines the density-filtered SGE as input. (default: False)')
     key_params.add_argument('--filtered-prefix', type=str, default=None, help='Required if --filtered-by-density. The prefix for density-filtered SGE (default: filtered)')
     key_params.add_argument("--colname-count", type=str, default="count", help="Required if --sge-convert, --sge-stitch, --run-ficture, or --run-cartload-join. Column name that showing the expression count of the genomic feature of interest. (default: gene)")
     key_params.add_argument("--colnames-other-count", nargs="*", default=[], help="Optional if --sge-convert, --sge-stitch is enabled. It allows to keep other genomic features in the formatted SGE besides the genomic feature of interest. (default: [])")
@@ -695,6 +544,10 @@ def stepinator(_args):
     ficture_aux_params.add_argument('--min-ct-per-feature', type=int, default=None, help='Minimum count per feature during LDA training, transform and decoding (default: 20)')
     ficture_aux_params.add_argument('--de-max-pval', type=float, default=None, help='p-value cutoff for differential expression (default: 1e-3)')
     ficture_aux_params.add_argument('--de-min-fold', type=float, default=None, help='Fold-change cutoff for differential expression (default: 1.5)')
+
+    dev_params = parser.add_argument_group("Developer", "Developer options")
+    dev_params.add_argument('--lenient', action='store_true', help='(Only for development usage) Lenient mode. Skip the required file/app existence check')
+
     args = parser.parse_args(_args)
 
     # =========
@@ -722,7 +575,7 @@ def stepinator(_args):
     # sge infomation - shared across actions
     if args.in_yaml:
         sgeinfo = yml.get("SGE", {})
-        # check if any run requires filter_by_density
+        # do density-filtering by default to offer the raw and filtered SGE & xy.png for users to decide.
     else:
         sgeinfo={
             "platform": args.platform,
@@ -913,20 +766,35 @@ def stepinator(_args):
             os.system(f"{cmd} --dry-run")
 
     # TODO: Find a better way to automatically generate the job ID
-    if args.job_id is None:
-        action_str = "_".join(filter(None, ["SGE-convert" if args.sge_convert else "", "SGE-stitch" if args.sge_stitch else "", "ficture" if args.run_ficture else "", "cartload" if args.run_cartload_join else "", "fig2pmtiles" if args.run_fig2pmtiles else "", "aws" if args.upload_aws else ""]))
-        if not args.run_ficture and not args.run_cartload_join and not args.run_fig2pmtiles and not args.upload_aws:
-            args.job_id = f"{action_str}_{timestamp}"
+    def generate_job_id(args, timestamp):
+        # Define shorthand encoding
+        action_code = "".join([
+            "A" if args.sge_convert else "a" if args.sge_stitch else "",
+            "B" if args.run_ficture else "",
+            "C" if args.run_cartload_join else "",
+            "D" if args.run_fig2pmtiles else "",
+            "E" if args.upload_aws else ""
+        ])
+        # Construct job_id based on run_ids
+        if not any([args.run_ficture, args.run_cartload_join, args.run_fig2pmtiles, args.upload_aws]):
+            args.job_id = f"{action_code}_{timestamp}"
         elif len(args.run_ids) == 1:
-            args.job_id = f"{args.run_ids[0]}_{action_str}_{timestamp}"
+            args.job_id = f"{args.run_ids[0]}_{action_code}_{timestamp}"
         else:
             shared_text = os.path.commonprefix(args.run_ids)
             indiv_text = [run_id.replace(shared_text, "") for run_id in args.run_ids]
-            args.job_id = f"{shared_text}-{'.'.join(indiv_text)}_{action_str}_{timestamp}"
+            args.job_id = f"{shared_text}-{'.'.join(indiv_text)}_{action_code}_{timestamp}"
+        return args.job_id
 
-    jobpref=os.path.join(log_dir, args.job_id) 
+    if args.job_id is None:
+        args.job_id = generate_job_id(args, timestamp)
 
-    submit_job(args.job_id, jobpref, env_cmds+cmds, slurm, args)
+    job_f = write_jobfile(args.job_id, log_dir, env_cmds+cmds, slurm, args.submit_mode)
+
+    if args.submit:
+        submit_job(job_f, args.submit_mode)
+
+
 
 if __name__ == "__main__":
     # Get the path to the cartloader repository

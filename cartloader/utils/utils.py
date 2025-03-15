@@ -1,5 +1,9 @@
 import logging, os, shutil, sys, importlib, csv, shlex, subprocess, json, yaml, re
 
+# ====
+# cmd
+# ====
+
 def cmd_separator(cmds, info):
     """
     Append messages separating between commands
@@ -9,6 +13,9 @@ def cmd_separator(cmds, info):
     cmds.append(rf"$(info --------------------------------------------------------------)")
     return cmds
 
+# ====
+# sanity check
+# ====
 def scheck_app(app_cmd):
     """
     Check if the specified application is available
@@ -17,6 +24,18 @@ def scheck_app(app_cmd):
     if not shutil.which(app_cmd):
         logging.error(f"Cannot find {app_cmd}. Please make sure that the path to specify {app_cmd} is correct")
         sys.exit(1)
+
+def scheck_file(file_path):
+    if not (os.path.isfile(file_path) or os.path.islink(file_path)):
+        print(f"Input file not found: {file_path}")
+        sys.exit(1)
+    else:
+        print(f"Checked: {file_path}")
+
+# ====
+# scheck
+# ====
+
 
 def get_func(name):
     """
@@ -157,21 +176,6 @@ def read_minmax(filename, format):
         "ymax": ymax
     }
     
-# def add_param_to_cmd(cmd, args, aux_argset):
-#     aux_args = {k: v for k, v in vars(args).items() if k in aux_argset}
-#     for arg, value in aux_args.items():
-#         if value or isinstance(value, bool):
-#             arg_name = arg.replace('_', '-')
-#             if isinstance(value, bool) and value:
-#                 cmd += f" --{arg_name}"
-#             elif isinstance(value, list):
-#                 cmd += f" --{arg_name} {' '.join(value)}"
-#             elif not isinstance(value, bool):
-#                 if "regex" in arg_name:
-#                     cmd += f" --{arg_name} '{value}'"
-#                 else:
-#                     cmd += f" --{arg_name} {value}"
-#     return cmd
 
 def add_param_to_cmd(cmd, args, aux_argset, underscore2dash=True):
     aux_args = {k: v for k, v in vars(args).items() if k in aux_argset}

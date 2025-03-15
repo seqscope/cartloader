@@ -72,3 +72,27 @@ def update_orient(rotation, flip_vertical, flip_horizontal, image_f):
     )
 
     return new_rot, new_vflip, new_hflip
+
+# Update the orientation of a histology image
+def update_orient_in_histology(histology):
+    hist_path = histology["path"]
+
+    rotation = histology.get("rotate", None)
+    
+    flip = histology.get("flip", None)
+    flip_vertical = flip in [ "vertical", "both"]
+    flip_horizontal = flip in ["horizontal", "both"]
+
+    new_rot, new_vflip, new_hflip = update_orient(rotation, flip_vertical, flip_horizontal, hist_path)
+
+    # Update the histology dictionary with the best solution
+    histology["rotate"] = new_rot
+    if new_vflip and new_hflip:
+        histology["flip"] = "both"
+    elif new_vflip:
+        histology["flip"] = "vertical"
+    elif new_hflip:
+        histology["flip"] = "horizontal"
+    else:
+        histology["flip"] = None
+    return histology
