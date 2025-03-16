@@ -155,7 +155,7 @@ def define_sge_arg(sgefn, sge_dir, fic_dir):
 
 def link_sge_to_fict(sge_fn, sge_dir, fic_dir):
     # create softlink
-    for infn in [sge_fn["tsv"], sge_fn["ftr"], sge_fn["minmax"]]:
+    for infn in [sge_fn["tspv"], sge_fn["ftr"], sge_fn["minmax"]]:
         src = os.path.join(sge_dir, infn) # source
         dst = os.path.join(fic_dir, infn) # destination
         # if infn == cstsvfn and not os.path.exists(os.path.abspath(src)):
@@ -172,16 +172,17 @@ def cmd_run_ficture(run_i, args, env):
     mkbn = "run_ficture" if ext_path is None else f"run_ficture_{ext_id}"
     mkbn = f"{mkbn}_{args.mk_id}" if args.mk_id is not None else mkbn
 
+    fic_dir=os.path.join(run_i["run_dir"], "ficture")
+
     # sge
     sge2fn = define_sge2fn(run_i["filter_by_density"], run_i["filtered_prefix"])
-    sge_arg = define_sge_arg(sge2fn, run_i["sge_dir"], run_i["run_dir"])
+    sge_arg = define_sge_arg(sge2fn, run_i["sge_dir"], fic_dir)
     # * check files
     if not args.sge_convert and not args.sge_stitch:
         if not args.lenient:
             for file in [sge2fn["tsv"], sge2fn["ftr"], sge2fn["minmax"]]:
                 scheck_file(os.path.join(run_i["sge_dir"], file))
     # * link files from sge to ficture
-    fic_dir=os.path.join(run_i["run_dir"], "ficture")
     if run_i["sge_dir"] is not None and run_i["sge_dir"] != fic_dir:
         link_sge_to_fict(sge2fn, run_i["sge_dir"], fic_dir)
     

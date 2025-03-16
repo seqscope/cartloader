@@ -437,20 +437,25 @@ def run_ficture(_args):
             cmds.append(cmd)
             cmds.append(f"[ -f {lda_fit_tsv} ] && [ -f {lda_model_matrix} ] && [ -f {lda_postcount_tsv} ] && touch {model_prefix}.done" )
             mm.add_target(f"{model_prefix}.done", [args.in_cstranscript, hexagon], cmds)
-            # 2) choose color 
-            if not args.skip_coarse_report:
-                cmap = args.static_cmap_file if args.cmap_static else f"{model_prefix}.rgb.tsv"
-                cmds = run_choose_color(args, lda_fit_tsv, n_factor, model_prefix)
-                if len(cmds) > 0:
-                    mm.add_target(cmap, [f"{model_prefix}.done"], cmds)
+
+            # 2) choose color (generate a color map no matter skip coarse plot or not, given this color map may be needed for the projection or decode visual)
+            cmap = args.static_cmap_file if args.cmap_static else f"{model_prefix}.rgb.tsv"
+            cmds = run_choose_color(args, lda_fit_tsv, n_factor, model_prefix)
+            if len(cmds) > 0:
+                mm.add_target(cmap, [f"{model_prefix}.done"], cmds)
+
             # 3) coarse plot/DE/report
             if not args.skip_coarse_report:
-                cmds = cmd_separator([], f" LDA visualization and report for {train_width}um and {n_factor} factors...")
+                cmds = cmd_separator([], f" LDA visualization for {train_width}um and {n_factor} factors...")
                 cmds.append(f"ficture plot_base --input {lda_fit_tsv} --output {model_prefix}.coarse --fill_range {lda_fillr} --color_table {cmap} --plot_um_per_pixel {args.lda_plot_um_per_pixel} --plot_discretized")
-                cmds.append(f"ficture de_bulk --input {lda_postcount_tsv} --output {lda_de} --min_ct_per_feature {args.min_ct_per_feature} --max_pval_output {args.de_max_pval} --min_fold_output {args.de_min_fold}")
-                cmds.append(f"ficture factor_report --path {args.out_dir} --pref {model_id} --color_table {cmap}")
-                cmds.append(f"[ -f {model_prefix}.coarse.png ] && [ -f {lda_de} ] && [ -f {model_prefix}.factor.info.html ] && touch {model_prefix}_summary.done")
-                mm.add_target(f"{model_prefix}_summary.done", [f"{model_prefix}.done"], cmds)
+                mm.add_target(f"{model_prefix}.coarse.png", [f"{model_prefix}.done"], cmds)
+            
+            # 4) DE
+            cmds = cmd_separator([], f" LDA DE/report for {train_width}um and {n_factor} factors...")
+            cmds.append(f"ficture de_bulk --input {lda_postcount_tsv} --output {lda_de} --min_ct_per_feature {args.min_ct_per_feature} --max_pval_output {args.de_max_pval} --min_fold_output {args.de_min_fold}")
+            cmds.append(f"ficture factor_report --path {args.out_dir} --pref {model_id} --color_table {cmap}")
+            cmds.append(f"[ -f {lda_de} ] && [ -f {model_prefix}.factor.info.html ] && touch {model_prefix}_summary.done")
+            mm.add_target(f"{model_prefix}_summary.done", [f"{model_prefix}.done"], cmds)
 
     # 5. init_ext
     if args.init_ext:
@@ -489,7 +494,7 @@ def run_ficture(_args):
             ext_factormap_tsv = f"{model_prefix}.factormap.tsv"
 
             # 1) fit model
-            cmds = cmd_separator([], f"Projecting {model_id} for {train_width}um...")
+            cmds = cmd_separator([], f"init_pseudo: Projecting {model_id} for {train_width}um...")
             if ( args.copy_ext_model ):
                 #cmd = f"cp -f {model_path} {model_prefix}.model_matrix.tsv.gz"
                 cmd = " ".join([
@@ -548,20 +553,28 @@ def run_ficture(_args):
             mm.add_target(f"{model_prefix}.done", [args.in_cstranscript, hexagon], cmds)
 
             # 2) choose color 
+            # if not args.skip_coarse_report:
+            #     cmap = args.static_cmap_file if args.cmap_static else f"{model_prefix}.rgb.tsv"
+            #     cmds = run_choose_color(args, ext_fit_tsv, n_factor, model_prefix)
+            #     if len(cmds) > 0:
+            #         mm.add_target(cmap, [f"{model_prefix}.done"], cmds)
+            cmap = args.static_cmap_file if args.cmap_static else f"{model_prefix}.rgb.tsv"
+            cmds = run_choose_color(args, ext_fit_tsv, n_factor, model_prefix)
+            if len(cmds) > 0:
+                mm.add_target(cmap, [f"{model_prefix}.done"], cmds)
+            
+            # 3) coarse plot
             if not args.skip_coarse_report:
-                cmap = args.static_cmap_file if args.cmap_static else f"{model_prefix}.rgb.tsv"
-                cmds = run_choose_color(args, ext_fit_tsv, n_factor, model_prefix)
-                if len(cmds) > 0:
-                    mm.add_target(cmap, [f"{model_prefix}.done"], cmds)
-
-            # 3) coarse plot/DE/report
-            if not args.skip_coarse_report:
-                cmds = cmd_separator([], f"LDA visualization and report for {train_width}um and {n_factor} factors...")
+                cmds = cmd_separator([], f"init_pseudo visualization and report for {train_width}um and {n_factor} factors...")
                 cmds.append(f"ficture plot_base --input {ext_fit_tsv} --output {model_prefix}.coarse --fill_range {ext_fillr} --color_table {cmap} --plot_um_per_pixel {args.lda_plot_um_per_pixel} --plot_discretized")
-                cmds.append(f"ficture de_bulk --input {ext_postcount_tsv} --output {ext_de} --min_ct_per_feature {args.min_ct_per_feature} --max_pval_output {args.de_max_pval} --min_fold_output {args.de_min_fold}")
-                cmds.append(f"ficture factor_report --path {args.out_dir} --pref {model_id} --color_table {cmap}")
-                cmds.append(f"[ -f {model_prefix}.coarse.png ] && [ -f {ext_de} ] && [ -f {model_prefix}.factor.info.html ] && touch {model_prefix}_summary.done")
-                mm.add_target(f"{model_prefix}_summary.done", [f"{model_prefix}.done"], cmds)
+                mm.add_target(f"{model_prefix}.coarse.png", [f"{model_prefix}.done", cmap], cmds)
+
+            # 4) DE/report
+            cmds = cmd_separator([], f"init_pseudo DE/report for {train_width}um and {n_factor} factors...")
+            cmds.append(f"ficture de_bulk --input {ext_postcount_tsv} --output {ext_de} --min_ct_per_feature {args.min_ct_per_feature} --max_pval_output {args.de_max_pval} --min_fold_output {args.de_min_fold}")
+            cmds.append(f"ficture factor_report --path {args.out_dir} --pref {model_id} --color_table {cmap}")
+            cmds.append(f"[ -f {ext_de} ] && [ -f {model_prefix}.factor.info.html ] && touch {model_prefix}_summary.done")
+            mm.add_target(f"{model_prefix}_summary.done", [f"{model_prefix}.done", cmap], cmds)
 
     if args.projection:
         scheck_app(args.bgzip)
@@ -610,20 +623,8 @@ def run_ficture(_args):
             cmds.append(cmd)
             cmds.append(f"[ -f {proj_fit_tsv} ] && [ -f {proj_postcount} ] && touch {proj_prefix}.done" )
             mm.add_target(f"{proj_prefix}.done", [fit_prereq], cmds)
-            cmds=cmd_separator([], f"Projection visualization and report, ID: {proj_id}")
-            # 2) choose color 
-            # if the cmap_path is the one generated from lda
-            lda_cmap = os.path.join(args.out_dir, f"{proj_params['model_id']}.rgb.tsv")
-            if not os.path.exists(cmap_path):
-                if args.init_lda and cmap_path == lda_cmap:
-                    print(f"Using the color map from the LDA model: {cmap_path}")
-                elif args.init_ext and cmap_path == lda_cmap:
-                    print(f"Using the color map from the external model: {cmap_path}")
-                else:
-                    cmds = run_choose_color(args, proj_fit_tsv, proj_params["n_factor"], proj_prefix)
-                    if len(cmds) > 0:
-                        mm.add_target(cmap_path, [f"{proj_prefix}.done"], cmds)
-            # 3) visualization/DE/report
+            # 3) visualization
+            cmds=cmd_separator([], f"Projection visualization, ID: {proj_id}")
             if not args.skip_coarse_report:
                 cmd = " ".join([
                     "ficture", "plot_base",
@@ -635,21 +636,24 @@ def run_ficture(_args):
                     f"--plot_discretized"
                     ])
                 cmds.append(cmd)
-                # - transform-DE
-                cmd = " ".join([
-                    "ficture", "de_bulk",
-                    f"--input {proj_postcount}",
-                    f"--output {proj_de}",
-                    f"--min_ct_per_feature {args.min_ct_per_feature}",
-                    f"--max_pval_output {args.de_max_pval}",
-                    f"--min_fold_output {args.de_min_fold}"
-                    ])
-                cmds.append(cmd)
-                # - transform-report
-                cmds.append(f"ficture factor_report --path {args.out_dir} --pref {proj_id} --color_table {cmap_path}")
-                # - done & target
-                cmds.append(f"[ -f {proj_de} ] && [ -f {proj_prefix}.factor.info.html ] && [ -f {proj_prefix}.coarse.png ] && [ -f {proj_prefix}.coarse.top.png ] && touch {proj_prefix}_summary.done")
-                mm.add_target(f"{proj_prefix}_summary.done", [f"{proj_prefix}.done"], cmds)  
+                mm.add_target(f"{proj_prefix}.coarse.png", [f"{proj_prefix}.done", cmap_path], cmds)
+            # 4) DE/report
+            cmds=cmd_separator([], f"Projection DE and report, ID: {proj_id}")
+            # - transform-DE
+            cmd = " ".join([
+                "ficture", "de_bulk",
+                f"--input {proj_postcount}",
+                f"--output {proj_de}",
+                f"--min_ct_per_feature {args.min_ct_per_feature}",
+                f"--max_pval_output {args.de_max_pval}",
+                f"--min_fold_output {args.de_min_fold}"
+                ])
+            cmds.append(cmd)
+            # - transform-report
+            cmds.append(f"ficture factor_report --path {args.out_dir} --pref {proj_id} --color_table {cmap_path}")
+            # - done & target
+            cmds.append(f"[ -f {proj_de} ] && [ -f {proj_prefix}.factor.info.html ] && touch {proj_prefix}_summary.done")
+            mm.add_target(f"{proj_prefix}_summary.done", [f"{proj_prefix}.done", cmap_path], cmds)  
 
     if args.decode:
         scheck_app(args.bgzip)
@@ -757,7 +761,7 @@ ${tabix} -f -s1 -b"${sortidx}" -e"${sortidx}" ${output}
             cmds.append(f"[ -f {decode_spixel} ] && [ -f {decode_postcount} ] && [ -f {decode_anchor} ] && touch {decode_prefix}.done")
             #cmds.append(f"rm {decode_prefix}.pixel.tsv.gz")
             mm.add_target(f"{decode_prefix}.done", [batch_mat, f"{proj_prefix}.done"], cmds)
-            # 2) decode-visualization and report
+            # 2) decode-visualization
             cmds = cmd_separator([], f"Pixel-level decoding visualization and report, ID: {decode_id}")
             # - decode-pixel 
             cmd = " ".join([
@@ -769,6 +773,9 @@ ${tabix} -f -s1 -b"${sortidx}" -e"${sortidx}" ${output}
                 f"--full"
                 ])
             cmds.append(cmd)
+            mm.add_target(f"{decode_prefix}.pixel.png", [f"{decode_prefix}.done", cmap_path], cmds)
+            # 3) decode-DE/report
+            cmds = cmd_separator([], f"Pixel-level decoding DE and report, ID: {decode_id}")
             # - decode-DE
             cmd = " ".join([
                 "ficture", "de_bulk",
@@ -781,8 +788,8 @@ ${tabix} -f -s1 -b"${sortidx}" -e"${sortidx}" ${output}
             cmds.append(cmd)
             cmds.append(f"ficture factor_report --path {args.out_dir} --pref {decode_id} --color_table {cmap_path}")
             # done & target
-            cmds.append(f"[ -f {decode_prefix}.bulk_chisq.tsv ] && [ -f {decode_prefix}.factor.info.html ] && [ -f {decode_prefix}.pixel.png ] && touch {decode_prefix}_summary.done")
-            mm.add_target(f"{decode_prefix}_summary.done", [batch_mat, f"{decode_prefix}.done"], cmds)
+            cmds.append(f"[ -f {decode_prefix}.bulk_chisq.tsv ] && [ -f {decode_prefix}.factor.info.html ] && touch {decode_prefix}_summary.done")
+            mm.add_target(f"{decode_prefix}_summary.done", [batch_mat, f"{decode_prefix}.done", cmap_path], cmds)
 
     if args.summary:
         prerequisities=[]
@@ -877,7 +884,7 @@ ${tabix} -f -s1 -b"${sortidx}" -e"${sortidx}" ${output}
                 model_prefix = os.path.join(args.out_dir, train_param["model_id"])
                 cmds = cmd_separator([], f" Dotplot visualization and report for LDA, ID: {model_id}.")
                 cmds.append(f"factor_viz dotplot --post_count_file {model_prefix}.posterior.count.tsv.gz --meta_data_file {model_prefix}.factor.info.tsv --output {model_prefix}.dotplot.pdf")
-                mm.add_target(f"{model_prefix}_summary.done", [f"{model_prefix}.dotplot.pdf"], cmds)
+                mm.add_target(f"{model_prefix}.dotplot.pdf", [f"{model_prefix}.done", f"{model_prefix}_summary.done"], cmds)
         if args.projection or args.decode:
             proj_runs = define_proj_runs(args)
             for proj_params in proj_runs:
@@ -889,12 +896,12 @@ ${tabix} -f -s1 -b"${sortidx}" -e"${sortidx}" ${output}
                 # proj
                 cmds = cmd_separator([], f" Dotplot visualization and report for projection, ID: {proj_id}")
                 cmds.append(f"factor_viz dotplot --post_count_file {proj_prefix}.posterior.count.tsv.gz --meta_data_file {proj_prefix}.factor.info.tsv --output {proj_prefix}.dotplot.pdf")
-                mm.add_target(f"{proj_prefix}_summary.done", [f"{proj_prefix}.dotplot.pdf"], cmds)
+                mm.add_target(f"{proj_prefix}.dotplot.pdf", [f"{proj_prefix}.done", f"{proj_prefix}_summary.done"], cmds)
                 # decode
                 if args.decode:
                     cmds = cmd_separator([], f" Dotplot visualization and report for decoding, ID: {decode_id}")
                     cmds.append(f"factor_viz dotplot --post_count_file {decode_prefix}.posterior.count.tsv.gz --meta_data_file {decode_prefix}.factor.info.tsv --output {decode_prefix}.dotplot.pdf")
-                    mm.add_target(f"{decode_prefix}_summary.done", [f"{decode_prefix}.dotplot.pdf"], cmds)
+                    mm.add_target(f"{decode_prefix}.dotplot.pdf", [f"{decode_prefix}.done", f"{decode_prefix}_summary.done"], cmds)
 
     ## write makefile
     if len(mm.targets) == 0:
