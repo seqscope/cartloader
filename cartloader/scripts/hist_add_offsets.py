@@ -5,14 +5,10 @@ import subprocess
 from cartloader.utils.utils import cmd_separator, scheck_app, add_param_to_cmd, log_dataframe
 from cartloader.utils.minimake import minimake
 
-def sge_stitch(_args):
+def hist_add_offsets(_args):
     parser = argparse.ArgumentParser(
         prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}",
-        description=""""
-        Stitching multiple tile SGEs into one SGE.
-        Outputs: A transcript-indexed SGE file, a coordinate minmax TSV file, and a feature file counting UMIs per gene. All output are in micro-meter precision.
-
-        """
+        description="..."
     )
     run_params = parser.add_argument_group("Run Options", "Run options")
     run_params.add_argument('--dry-run', action='store_true', default=False, help='Simulate the process without executing commands (default: False)')
@@ -22,26 +18,35 @@ def sge_stitch(_args):
     run_params.add_argument('--threads', type=int, default=1, help='Maximum number of threads to use in each process (default: 1)')
     
     inout_params = parser.add_argument_group("Input/Output Parameters", "Input/Output Parameters")
-    inout_params.add_argument("--in-tiles", type=str, nargs='*', default=[], help="List of the input tiles in a specific format.")
-    inout_params.add_argument("--out-dir", type=str, help="Output directory.")
-    inout_params.add_argument('--out-transcript', type=str, default="transcripts.unsorted.tsv.gz", help='Output for SGE stitch. The compressed transcript-indexed SGE file in TSV format (default: transcripts.unsorted.tsv.gz).')
-    inout_params.add_argument('--out-minmax', type=str, default="coordinate_minmax.tsv", help='Output for SGE stitch. The coordinate minmax TSV file (default: coordinate_minmax.tsv).')
-    inout_params.add_argument('--out-feature', type=str, default="feature.clean.tsv.gz", help='Output for SGE stitch. The compressed UMI count per gene TSV file (default: feature.clean.tsv.gz).')
-    inout_params.add_argument("--colnames-count", type=str, default="count", help="Comma-separated column names for count (default: count)")
-    inout_params.add_argument('--colname-feature-name', type=str, default='gene', help='Feature name column (default: gene)')
-    inout_params.add_argument('--colname-feature-id', type=str, default=None, help='Feature ID column (default: None)')
-    inout_params.add_argument('--colname-x', type=str, default="X", help='X column name (default: X)')
-    inout_params.add_argument('--colname-y', type=str, default="Y", help='Y column name (default: Y)')
+    inout_params.add_argument("--in-tiles", type=str, nargs='*', default=[], help="List of the input tiles in a specific format: <path>,<row>,<col>.")
+    inout_params.add_argument("--output", type=str, help="Output path to store the merged file.")
+    inout_params.add_argument("--in-offsets", type=str, help="Path to the input offsets file.")
+    inout_params.add_argument("--colname-x-offset", type=str, default="x_offset", help="Column name for x offset in the input offsets file.")
+    inout_params.add_argument("--colname-y-offset", type=str, default="y_offset", help="Column name for y offset in the input offsets file.")
     inout_params.add_argument('--units-per-um', type=float, default=1.0, help='Units per um in the input transcript tsv files (default: 1.0)')
-    # parser.add_argument('--minmax-in-um', action='store_true', help='Input minmax is in um while input transcript is based on unit.') # This was originally designed for the minmax in SeqScope v2 SGEs. Now we only take the transcripts and generate minmax from the sge-adds-on. So, disabling this.
     inout_params.add_argument('--convert-to-um', action='store_true', help='Convert output to um.')
-    inout_params.add_argument('--sge-visual', action='store_true', default=False, help='Plot the SGE in a PNG file. (default: False)')
-    # inout_params.add_argument('--out-visual', type=str, default="xy.png", help='Output filename visualization for SGE  (default: xy.png).')
+
+    parser.add_argument("--in-hist", type=str, help="Input file.", required=True)
+    parser.add_argument("--x-offset", action='store_true', help="Add feature to the input file.")
+    parser.add_argument("--y-offset", action='store_true', help="Add minmax to the input file.")
+    # feature args
+    parser.add_argument("--out-feature", type=str, help="Output file for feature.", default=None)
+    parser.add_argument('--colname-feature-name', type=str, default='gene', help='Feature name column (default: gene)')
+    parser.add_argument('--colname-feature-id', type=str, default=None, help='Feature ID column (default: None)')
+    parser.add_argument("--colnames-count", type=str, default="gn,gt,spl,unspl,ambig", help="Comma-separated column names for count (default: gn,gt,spl,unspl,ambig)")
+    # minmax args
+    parser.add_argument("--out-minmax", type=str, help="Output file for minmax.", default=None)
+    parser.add_argument("--mu-scale", type=float, help="Scale factor for X and Y coordinates.", default=1)
+    parser.add_argument("--minmax-format", type=str, help="Type of minmax to compute.", default="col")
+    if len(_args) == 0:
+        parser.print_help()
+        sys.exit(1)
+    return parser.parse_args(_args)
 
     # env params
-    env_params = parser.add_argument_group("ENV Parameters", "Environment parameters for the tools")
-    env_params.add_argument('--gzip', type=str, default="gzip", help='Path to gzip binary. For faster processing, use "pigz -p 4".')
-    env_params.add_argument('--spatula', type=str, default="spatula", help='Path to spatula binary.')
+    # env_params = parser.add_argument_group("ENV Parameters", "Environment parameters for the tools")
+    # env_params.add_argument('--gzip', type=str, default="gzip", help='Path to gzip binary. For faster processing, use "pigz -p 4".')
+    # env_params.add_argument('--spatula', type=str, default="spatula", help='Path to spatula binary.')
     args = parser.parse_args(_args)
 
     mm = minimake()
@@ -49,13 +54,24 @@ def sge_stitch(_args):
     updated_tiles = []
     prerequisities = []
 
-    os.makedirs(args.out_dir, exist_ok=True)
+    out_dir=os.path.dirname(args.output)
+    os.makedirs(out_dir, exist_ok=True)
 
-    # sge adds on
+    # read in_offsets
+    offsets = pd.read_csv(args.in_offsets, sep="\t")
+    offsets["row"] = offsets["row"].astype(int)
+    offsets["col"] = offsets["col"].astype(int)
+    # create dict between (row, col) to x_offset, y_offset
+    idx2offsets = {}
+    for i, row in offsets.iterrows():
+        idx2offsets[(row['row'], row['col'])] = (row[args.colname_x_offset], row[args.colname_y_offset])
+
+    # hist add offsets
     for in_tile in args.in_tiles:
-        transcript, feature, minmax, row, col = in_tile.split(",")
-        if not os.path.exists(transcript):
-            raise FileNotFoundError(f"Transcript file {transcript} does not exist.")
+        path, row, col = in_tile.split(",")
+        x_offset, y_offset = idx2offsets[(int(row), int(col))]
+        if not os.path.exists(path):
+            raise FileNotFoundError(f"Transcript file {path} does not exist.")
         # missing feature or minmax
         missing_ftr = feature is None or feature == "None"
         missing_minmax = minmax is None or minmax == "None"
@@ -82,7 +98,8 @@ def sge_stitch(_args):
             add_minmax_cmd =" ".join([f"cartloader", "sge_adds_on",
                                     f"--in-transcript {transcript}",
                                     "--add-minmax",
-                                    f"--out-minmax {out_minmax}"
+                                    f"--out-minmax {out_minmax}",
+                                    f"--mu-scale {args.units_per_um}" if args.minmax_in_um else "",
                                 ])
             cmds.append(add_minmax_cmd)
             mm.add_target(out_minmax, [transcript], cmds)
@@ -109,6 +126,7 @@ def sge_stitch(_args):
                             f"--colname-x {args.colname_x}",
                             f"--colname-y {args.colname_y}",
                             f"--units-per-um {args.units_per_um}",
+                            '--minmax-in-um' if args.minmax_in_um else '',
                             '--convert-to-um' if args.convert_to_um else '',
                         ])
     cmds.append(combine_cmd)

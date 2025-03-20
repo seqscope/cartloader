@@ -42,8 +42,9 @@ def parse_arguments(_args):
     inout_params.add_argument('--out-json', type=str, default=None, help="Output JSON file for summarizing the ficture parameters (default: <out-dir>/ficture.params.json)")
     inout_params.add_argument('--in-transcript', type=str, default=None, help='Path to the input unsorted transcript-indexed SGE file in TSV format (default: <out-dir>/transcripts.unsorted.tsv.gz)')
     inout_params.add_argument('--in-minmax', type=str, default=None, help='Path to the input coordinate minmax TSV file. (default: <out-dir>/coordinate_minmax.tsv)')  
-    inout_params.add_argument('--in-feature', type=str, default=None,  help='(Optional) Path to the input TSV file that specify which input genes, e.g., feature.clean.tsv.gz. If absent, all genes will be used')
+    inout_params.add_argument('--in-feature', type=str, default=None,  help='Path to the input UMI count per gene TSV file.(default: feature.clean.tsv.gz).')
     inout_params.add_argument('--in-cstranscript', type=str, default=None, help='(Optional) Use --in-cstranscript if a coordinate-sorted transcript-indexed SGE file already exists to skip sorting, or to define a custom sorted file name (default: <out-dir>/transcripts.sorted.tsv.gz)')
+    inout_params.add_argument('--in-feature-ficture', type=str, default=None, help='(Optional) Use --in-feature-ficture if a feature file for FICTURE analysis (default: <out-dir>/features.ficture.tsv.gz)')
 
     external_params = parser.add_argument_group("External Model Parameters", """When using --init-ext, provide the pre-trained model, its type, and ID by --ext-path, --ext-type and --ext-id. """)
     external_params.add_argument('--ext-path', type=str, default=None, help='Path to the external model file')
@@ -62,20 +63,36 @@ def parse_arguments(_args):
 
     # env params
     env_params = parser.add_argument_group("ENV Parameters", "Environment parameters, e.g., tools.")
-    #env_params.add_argument('--spatula', type=str, default="spatula", help='Path to spatula binary.')    
     env_params.add_argument('--bgzip', type=str, default="bgzip", help='Path to bgzip binary. For faster processing, use "bgzip -@ 4')
     env_params.add_argument('--tabix', type=str, default="tabix", help='Path to tabix binary')
     env_params.add_argument('--gzip', type=str, default="gzip", help='Path to gzip binary. For faster processing, use "pigz -p 4"')
     env_params.add_argument('--sort', type=str, default="sort", help='Path to sort binary. For faster processing, you may add arguments like "sort -T /path/to/new/tmpdir --parallel=20 -S 10G"')
     env_params.add_argument('--sort-mem', type=str, default="5G", help='Memory size for each process')
-    #env_params.add_argument('--ficture', type=str, default="ficture", help='Path to ficture repository')
+
+    # AUX gene-filtering params
+    aux_ftrfilter_params = parser.add_argument_group( "Feature Customizing Auxiliary Parameters", 
+                                                    "Auxiliary parameters for customizing features in FICTURE analysis without modifying the original input feature TSV file. This ensures the original feature TSV file is retained in the output JSON file for downstream processing .")
+    # given the input sge should be standardized, the csv-delim, csv-colname-feature-name, ftr-delim, ftr-colname-feature-name are not necessary
+    aux_ftrfilter_params.add_argument('--out-ficture-feature', type=str, default="features.ficture.tsv.gz", help='File name for the output TSV file of feature used in FICTURE analysis (default: None)')
+    aux_ftrfilter_params.add_argument('--include-feature-list', type=str, default=None, help='A file containing a list of input genes to be included (feature name of IDs) (default: None)')
+    aux_ftrfilter_params.add_argument('--exclude-feature-list', type=str, default=None, help='A file containing a list of input genes to be excluded (feature name of IDs) (default: None)')
+    aux_ftrfilter_params.add_argument('--include-feature-substr', type=str, default=None, help='A substring of feature/gene names to be included (default: None)')
+    aux_ftrfilter_params.add_argument('--exclude-feature-substr', type=str, default=None, help='A substring of feature/gene names to be excluded (default: None)')
+    aux_ftrfilter_params.add_argument('--include-feature-regex', type=str, default=None, help='A regex pattern of feature/gene names to be included (default: None)')
+    aux_ftrfilter_params.add_argument('--exclude-feature-regex', type=str, default=None, help='A regex pattern of feature/gene names to be excluded (default: None)')
+    # type regex
+    aux_ftrfilter_params.add_argument('--include-feature-type-regex', type=str, default=None, help='A regex pattern of feature/gene type to be included (default: None). When --include-feature-type-regex, use --colname-feature-type or --feature-type-ref to provide gene type information.') # (e.g. protein_coding|lncRNA)
+    aux_ftrfilter_params.add_argument('--colname-feature-type', type=str, default=None, help='Column name in the --in-transcript that has gene type information (default: None). ')
+    aux_ftrfilter_params.add_argument('--feature-type-ref', type=str, default=None, help='Specify the path to a tab-separated reference file to provide gene type information for each each per row (default: None)')
+    aux_ftrfilter_params.add_argument('--feature-type-ref-colidx-name', type=str, default=None, help='Column index for gene name in the reference file (default: None).')
+    aux_ftrfilter_params.add_argument('--feature-type-ref-colidx-type', type=str, default=None, help='Column index for gene type in the reference file (default: None).')
 
     # aux params
     aux_params = parser.add_argument_group("Auxiliary Parameters", "Auxiliary parameters (using default is recommended)")
     # input column indexes
-    aux_params.add_argument('--csv-colidx-x',  type=int, default=1, help='Column index for X-axis in the --in-transcript (default: 1)')
-    aux_params.add_argument('--csv-colidx-y',  type=int, default=2, help='Column index for Y-axis in the --in-transcript (default: 2)')
-    aux_params.add_argument('--colname-count', type=str, default="count", help='Columns from the input file to be used as key')
+    aux_params.add_argument('--colidx-x',  type=int, default=1, help='Column index for X-axis in the --in-transcript (default: 1)')
+    aux_params.add_argument('--colidx-y',  type=int, default=2, help='Column index for Y-axis in the --in-transcript (default: 2)')
+    aux_params.add_argument('--colname-count', type=str, default="count", help='Columns from the input transcript file to be used as key')
     # segmentation - ficture
     aux_params.add_argument('--hexagon-n-move', type=int, default=1, help='Level of hexagonal sliding when creating hexagon-indexed SGE in FICTURE compatible format (default: 1)')
     aux_params.add_argument('--hexagon-precision', type=float, default=2, help='Output precision of hexagon coordinates for FICTURE compatible format (default: 2)')
@@ -142,13 +159,6 @@ def define_cmap(args, model_id):
     else:
         cmap_path = model_cmap
     return cmap_path
-
-# def generate_cmap_from_static(out_cmap, static_cmap_file, n_factor):
-#     # purpose: generate a cmap from a static file
-#     print(f"Generate cmap from a static file: {out_cmap} from {static_cmap_file}")
-#     df_cmap=pd.read_csv(static_cmap_file, sep="\t", header=0)
-#     assert df_cmap.shape[0] >= n_factor, f"Colors in {static_cmap_file} is less than n_factor ({n_factor})"
-#     df_cmap.iloc[:n_factor].to_csv(out_cmap, sep="\t", index=False)
 
 def define_lda_runs(args):
     assert args.init_lda, "--init-lda must be ON when running define_lda_runs()"
@@ -282,16 +292,50 @@ def run_ficture(_args):
     # dirs
     os.makedirs(args.out_dir, exist_ok=True)
 
+    # start mm
+    mm = minimake()
+
     # in files
     if args.in_transcript is None:
         args.in_transcript = os.path.join(args.out_dir, "transcripts.unsorted.tsv.gz")
+    
     if args.in_cstranscript is None:
         args.in_cstranscript = os.path.join(args.out_dir, "transcripts.sorted.tsv.gz")
+    
     if args.in_minmax is None:
         args.in_minmax = os.path.join(args.out_dir, "coordinate_minmax.tsv")
-    feature_arg = f"--feature {args.in_feature}" if args.in_feature is not None else ""
+    
+    if args.in_feature is None:
+        args.in_feature = os.path.join(args.out_dir, "feature.clean.tsv.gz")
+    
     assert os.path.exists(args.in_transcript) or os.path.exists(args.in_cstranscript), "Provide at least one valid input transcript-indexed SGE file by --in-transcript or --in-cstranscript"
     assert os.path.exists(args.in_minmax), "Provide a valid input coordinate minmax file by --in-minmax"
+    assert os.path.exists(args.in_feature), "Provide a valid input feature file by --in-feature"
+
+    # feature customize when enabled 
+    if any([args.include_feature_list, args.exclude_feature_list, args.include_feature_substr, args.exclude_feature_substr, args.include_feature_regex, args.exclude_feature_regex, args.include_feature_type_regex]):
+        in_feature_ficture = os.path.join(args.out_dir, args.out_ficture_feature)
+        in_feature_ficture_record = os.path.join(args.out_dir, args.out_ficture_feature.replace(".tsv.gz", ".record.tsv"))
+        cmds = cmd_separator([], f"Customizing features for FICTURE analysis...")
+        cmd = " ".join(["cartloader feature_filtering ",
+                                    f"--in-csv {args.in_feature}", 
+                                    f"--out-csv {in_feature_ficture}", 
+                                    f"--out-record  {in_feature_ficture_record}",
+                                    f"--include-feature-list {args.include_feature_list}" if args.include_feature_list is not None else "",
+                                    f"--exclude-feature-list {args.exclude_feature_list}" if args.exclude_feature_list is not None else "",
+                                    f"--include-feature-substr '{args.include_feature_substr}'" if args.include_feature_substr is not None else "",
+                                    f"--exclude-feature-substr '{args.exclude_feature_substr}'" if args.exclude_feature_substr is not None else "",
+                                    f"--include-feature-regex '{args.include_feature_regex}'" if args.include_feature_regex is not None else "",
+                                    f"--exclude-feature-regex '{args.exclude_feature_regex}'" if args.exclude_feature_regex is not None else "",
+                                    f"--include-feature-type-regex {args.include_feature_type_regex} --feature-type-ref {args.in_transcript} --feature-type-ref-colname-name gene --feature-type-ref-colname-type {args.colname_feature_type}" if args.include_feature_type_regex is not None and args.colname_feature_type is not None else "",
+                                    f"--include-feature-type-regex {args.include_feature_type_regex} --feature-type-ref {args.feature_type_ref} --feature-type-ref-colidx-name {args.feature_type_ref_colidx_name}  --feature-type-ref-colidx-type {args.feature_type_ref_colidx_type}" if args.include_feature_type_regex is not None and args.feature_type_ref is not None else "",
+                                    f"--log"
+                                    ]) 
+        cmds.append(cmd)
+        mm.add_target(in_feature_ficture, [args.in_cstranscript, args.in_feature], cmds)
+    else:
+        in_feature_ficture = args.in_feature
+
 
     # out files
     if args.out_json is None:
@@ -305,17 +349,14 @@ def run_ficture(_args):
             progdir = os.path.dirname(os.path.dirname(scriptdir))
             args.static_cmap_file = os.path.join(progdir, "assets", "fixed_color_map_60.tsv")
         assert os.path.exists(args.static_cmap_file), f"Static color map file {args.static_cmap_file} does not exist"
-    
-    # start mm
-    mm = minimake()
 
     # 1. sort 
     if args.sorttsv:
         scheck_app(args.gzip)
         scheck_app(args.sort)
         major_axis = define_major_axis(args)
-        major_axis_1stcol = args.csv_colidx_x if major_axis == 'X' else args.csv_colidx_y
-        major_axis_2ndcol = args.csv_colidx_y if major_axis == 'X' else args.csv_colidx_x
+        major_axis_1stcol = args.colidx_x if major_axis == 'X' else args.colidx_y
+        major_axis_2ndcol = args.colidx_y if major_axis == 'X' else args.colidx_x
         sort_keys=f'-k{major_axis_1stcol},{major_axis_1stcol}g  -k{major_axis_2ndcol},{major_axis_2ndcol}g'
 
         cmds = cmd_separator([], f"Sorting the input transcript-indexed SGE file in tgz: {os.path.basename(args.in_transcript)}")
@@ -331,7 +372,7 @@ def run_ficture(_args):
         batch_mat_tsv = f"{args.out_dir}/batched.matrix.tsv"
 
         major_axis = define_major_axis(args)
-        major_axis_col = args.csv_colidx_x if major_axis == 'X' else args.csv_colidx_y
+        major_axis_col = args.colidx_x if major_axis == 'X' else args.colidx_y
         major_axis_col += 1 if major_axis_col != 1 else 0     # make_spatial_minibatch will insert a column on the 2nd position for a random_index.
         sort_keys= f"-k2,2n -k{major_axis_col},{major_axis_col}g"
         
@@ -385,7 +426,8 @@ def run_ficture(_args):
             cmds.append(f"mkdir -p {hexagon_dir}")
             cmd = " ".join([
                 "ficture", "make_sge_by_hexagon",
-                f"--input {args.in_cstranscript} {feature_arg}",
+                f"--input {args.in_cstranscript}",
+                f"--feature {in_feature_ficture}",
                 f"--major_axis {major_axis}",
                 f"--key {args.colname_count}",
                 f"--output_path {hexagon_dir}",
@@ -398,7 +440,7 @@ def run_ficture(_args):
                 ])
             cmds.append(cmd)
             cmds.append(f"[ -f {hexagon_dir}/barcodes.tsv.gz ] && [ -f {hexagon_dir}/features.tsv.gz ] && [ -f {hexagon_dir}/matrix.mtx.gz ] && touch {args.out_dir}/hexagon.d_{hexagon_width}.10x.done")
-            mm.add_target(f"{args.out_dir}/hexagon.d_{hexagon_width}.10x.done", [args.in_cstranscript], cmds)
+            mm.add_target(f"{args.out_dir}/hexagon.d_{hexagon_width}.10x.done", [args.in_cstranscript, in_feature_ficture], cmds)
 
     # 4. lda
     if args.init_lda:
@@ -422,7 +464,8 @@ def run_ficture(_args):
             cmds = cmd_separator([], f"LDA training for {train_width}um and {n_factor} factors...")
             cmd = " ".join([
                 "ficture", "fit_model",
-                f"--input {hexagon} {feature_arg}",
+                f"--input {hexagon}",
+                f"--feature {in_feature_ficture}",
                 f"--output {model_prefix}",
                 f"--nFactor {n_factor}",
                 f"--epoch {args.train_epoch}",
@@ -436,7 +479,7 @@ def run_ficture(_args):
                 ])
             cmds.append(cmd)
             cmds.append(f"[ -f {lda_fit_tsv} ] && [ -f {lda_model_matrix} ] && [ -f {lda_postcount_tsv} ] && touch {model_prefix}.done" )
-            mm.add_target(f"{model_prefix}.done", [args.in_cstranscript, hexagon], cmds)
+            mm.add_target(f"{model_prefix}.done", [args.in_cstranscript, hexagon, in_feature_ficture], cmds)
 
             # 2) choose color (generate a color map no matter skip coarse plot or not, given this color map may be needed for the projection or decode visual)
             cmap = args.static_cmap_file if args.cmap_static else f"{model_prefix}.rgb.tsv"
@@ -508,7 +551,7 @@ def run_ficture(_args):
                 cmd = " ".join([
                     "ficture", "transform",
                     f"--input {args.in_cstranscript}",
-                    f"--feature {args.in_feature}" if args.in_feature is not None else "",
+                    f"--feature {in_feature_ficture}",
                     f"--output_pref {model_prefix}",
                     f"--model {model_prefix}.model_matrix.tsv.gz",
                     f"--key {args.colname_count}",
@@ -522,11 +565,11 @@ def run_ficture(_args):
                     ])
                 cmds.append(cmd)
                 cmds.append(f"[ -f {ext_fit_tsv} ] && [ -f {ext_model_matrix} ] && [ -f {ext_postcount_tsv} ] && touch {model_prefix}.done" )
-
             else:
                 cmd = " ".join([
                     "ficture", "init_model_from_pseudobulk",
-                    f"--input {hexagon} {feature_arg}",
+                    f"--input {hexagon}",
+                    f"--feature {in_feature_ficture}",
                     f"--output {model_prefix}_ref",
                     f"--model {model_path}",
                     f"--epoch 0",
@@ -550,7 +593,7 @@ def run_ficture(_args):
                 cmds.append(f"rm -f {init_fit_tsv} {init_postcount_tsv}")
                 cmds.append(f"[ -f {ext_fit_tsv} ] && [ -f {ext_factormap_tsv} ] && [ -f {ext_model_matrix} ] && [ -f {ext_postcount_tsv} ] && touch {model_prefix}.done" )
 
-            mm.add_target(f"{model_prefix}.done", [args.in_cstranscript, hexagon], cmds)
+            mm.add_target(f"{model_prefix}.done", [args.in_cstranscript, hexagon, in_feature_ficture], cmds)
 
             # 2) choose color 
             # if not args.skip_coarse_report:
@@ -608,7 +651,7 @@ def run_ficture(_args):
             cmd = " ".join([
                 "ficture", "transform",
                 f"--input {args.in_cstranscript}",
-                f"--feature {args.in_feature}" if args.in_feature is not None else "",
+                f"--feature {in_feature_ficture}",
                 f"--output_pref {proj_prefix}",
                 f"--model {model_path}",
                 f"--key {args.colname_count}",
@@ -622,7 +665,7 @@ def run_ficture(_args):
                 ])
             cmds.append(cmd)
             cmds.append(f"[ -f {proj_fit_tsv} ] && [ -f {proj_postcount} ] && touch {proj_prefix}.done" )
-            mm.add_target(f"{proj_prefix}.done", [fit_prereq], cmds)
+            mm.add_target(f"{proj_prefix}.done", [fit_prereq, in_feature_ficture], cmds)
             # 3) visualization
             cmds=cmd_separator([], f"Projection visualization, ID: {proj_id}")
             if not args.skip_coarse_report:
@@ -742,7 +785,7 @@ ${tabix} -f -s1 -b"${sortidx}" -e"${sortidx}" ${output}
             cmd = " ".join([
                 "ficture", "slda_decode",
                 f"--input {batch_mat}",
-                f"--feature {args.in_feature}" if args.in_feature is not None else "",
+                f"--feature {in_feature_ficture}",
                 f"--output {decode_prefix}",
                 f"--model {model_path}",
                 f"--anchor {proj_fit_tsv}",
@@ -760,7 +803,7 @@ ${tabix} -f -s1 -b"${sortidx}" -e"${sortidx}" ${output}
             cmds.append(f"bash {script_path} {decode_prefix}.pixel.tsv.gz {decode_spixel} {args.in_minmax} {proj_params['n_factor']} {args.decode_block_size} {args.decode_scale} {args.decode_top_k} {major_axis} {args.bgzip} {args.tabix} {args.sort} {args.sort_mem}")
             cmds.append(f"[ -f {decode_spixel} ] && [ -f {decode_postcount} ] && [ -f {decode_anchor} ] && touch {decode_prefix}.done")
             #cmds.append(f"rm {decode_prefix}.pixel.tsv.gz")
-            mm.add_target(f"{decode_prefix}.done", [batch_mat, f"{proj_prefix}.done"], cmds)
+            mm.add_target(f"{decode_prefix}.done", [batch_mat, in_feature_ficture, f"{proj_prefix}.done"], cmds)
             # 2) decode-visualization
             cmds = cmd_separator([], f"Pixel-level decoding visualization and report, ID: {decode_id}")
             # - decode-pixel 
@@ -849,8 +892,20 @@ ${tabix} -f -s1 -b"${sortidx}" -e"${sortidx}" ${output}
                 summary_aux_args.append(" ".join(summary_aux_args_projection))
             if args.decode and len(summary_aux_args_decode) > 1:
                 summary_aux_args.append(" ".join(summary_aux_args_decode))
+        # summary
         cmds = cmd_separator([], f"Summarizing output into to the <out_json> files...")
-        cmds.append(f"cartloader write_json_for_ficture --merge --in-cstranscript {args.in_cstranscript} --in-feature {args.in_feature} --in-minmax {args.in_minmax} --out-dir {args.out_dir} --out-json {args.out_json} {' '.join(summary_aux_args)}")
+        cmd = " ".join([
+            "cartloader", "write_json_for_ficture",
+                "--merge",
+                f"--in-cstranscript {args.in_cstranscript}",
+                f"--in-feature {args.in_feature}", # use the original feature file for SGE
+                f"--in-feature-ficture {in_feature_ficture}" if in_feature_ficture != args.in_feature else "",
+                f"--in-minmax {args.in_minmax}",
+                f"--out-dir {args.out_dir}",
+                f"--out-json {args.out_json}",
+                " ".join(summary_aux_args)
+            ])
+        cmds.append(cmd)
         mm.add_target(args.out_json, prerequisities, cmds)
 
     if args.viz_per_factor:

@@ -1,4 +1,7 @@
 import os
+import pandas as pd
+import re
+import numpy as np
 
 aux_sge_args = {
     "out": [
@@ -31,7 +34,7 @@ aux_sge_args = {
         'exclude_feature_substr', 'include_feature_regex', 'exclude_feature_regex'
     ],
     "ftrtype": [
-        'include_feature_type_regex', 'csv_colname_feature_type', 'feature_type_ref'
+        'include_feature_type_regex', 'csv_colname_feature_type', 'feature_type_ref', "feature_type_ref_colidx_name","feature_type_ref_colidx_type"
     ]
 }
 

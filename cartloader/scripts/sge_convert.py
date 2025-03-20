@@ -12,7 +12,7 @@ def parse_arguments(_args):
                                     description="""
                                      Standardize Spatial Transcriptomics (ST) datasets into a transcript-indexed SGE in TSV format.  
                                      Platform Supports: 10X Visium HD, SeqScope, 10X Xenium, BGI Stereoseq, Cosmx SMI, Vizgen Merscope, Pixel-Seq, and Nova-ST.
-                                     Outputs: A transcript-indexed SGE file, a coordinate minmax TSV file, and a feature file counting UMIs per gene.
+                                     Outputs: A transcript-indexed SGE file, a coordinate minmax TSV file, and a feature file counting UMIs per gene. All output are in micro-meter precision.
                                      Options: filtering SGE by quality, gene, or density; coordinate conversion.
                                      """)
     #parser = argparse.ArgumentParser()
@@ -87,16 +87,16 @@ def parse_arguments(_args):
 
     # AUX gene-filtering params
     aux_ftrfilter_params = parser.add_argument_group( "Feature Filtering Auxiliary Parameters", "Auxiliary parameters for filtering features by their name or type using an additional file, substring, or regex pattern")
-    aux_ftrfilter_params.add_argument('--include-feature-list', type=str, default=None, help='A file provides a list of gene names to include (default: None)')
-    aux_ftrfilter_params.add_argument('--exclude-feature-list', type=str, default=None, help='A file provides a list of gene names to exclude (default: None)')
-    aux_ftrfilter_params.add_argument('--include-feature-substr', type=str, default=None, help='A substring of gene names to include (default: None)')
-    aux_ftrfilter_params.add_argument('--exclude-feature-substr', type=str, default=None, help='A substring of gene names to exclude (default: None)')
-    aux_ftrfilter_params.add_argument('--include-feature-regex', type=str, default=None, help='Regex pattern for gene names to include (default: None)')
-    aux_ftrfilter_params.add_argument('--exclude-feature-regex', type=str, default="^(BLANK|Blank-|NegCon|NegPrb)", help='Regex pattern for gene names to exclude (default: "^(BLANK|Blank-|NegCon|NegPrb)"). To skip this, use --exclude-feature-regex "".')
-    aux_ftrfilter_params.add_argument('--include-feature-type-regex', type=str, default=None, help='Regex pattern for gene type to include (default: None). Requires --csv-colname-feature-type or --feature-type-ref for gene type info') # (e.g. protein_coding|lncRNA)
-    aux_ftrfilter_params.add_argument('--csv-colname-feature-type', type=str, default=None, help='If --include-feature-type-regex is used and the input file has gene type, define the column name for gene type info (default: None)')
-    aux_ftrfilter_params.add_argument('--feature-type-ref', type=str, default=None, help='Path to a tab-separated gene reference file containing gene type information. The format should be: chrom, start position, end position, gene id, gene name, gene type (default: None)')
-    aux_ftrfilter_params.add_argument('--print-removed-transcripts', action='store_true', default=False, help='(10x_xenium, bgi_stereoseq, cosmx_smi, vizgen_merscope or pixel_seq only) For debugging purposes (default: False)')
+    aux_ftrfilter_params.add_argument('--include-feature-list', type=str, default=None, help='A file containing a list of input genes to be included (feature name of IDs) (default: None)')
+    aux_ftrfilter_params.add_argument('--exclude-feature-list', type=str, default=None, help='A file containing a list of input genes to be excluded (feature name of IDs) (default: None)')
+    aux_ftrfilter_params.add_argument('--include-feature-substr', type=str, default=None, help='A substring of feature/gene names to be included (default: None)')
+    aux_ftrfilter_params.add_argument('--exclude-feature-substr', type=str, default=None, help='A substring of feature/gene names to be excluded (default: None)')
+    aux_ftrfilter_params.add_argument('--include-feature-regex', type=str, default=None, help='A regex pattern of feature/gene names to be included (default: None)')
+    aux_ftrfilter_params.add_argument('--exclude-feature-regex', type=str, default=None, help='A regex pattern of feature/gene names to be excluded (default: None)')
+    aux_ftrfilter_params.add_argument('--include-feature-type-regex', type=str, default=None, help='A regex pattern of feature/gene type to be included (default: None).') # (e.g. protein_coding|lncRNA)
+    aux_ftrfilter_params.add_argument('--csv-colname-feature-type', type=str, default=None, help='The input column name in the input that corresponding to the gene type information, if your input file has gene type information(default: None)')
+    aux_ftrfilter_params.add_argument('--feature-type-ref', type=str, default=None, help='Specify <ref_path>:<colidx_gene_name>:<colidx_gene_type>, where <ref_path> is the path to a tab-separated reference file to provide gene type information for each each per row; <colidx_gene_name> and <colidx_gene_type> are the column indices for gene name and gene type, respectively. (default: None)')
+    aux_ftrfilter_params.add_argument('--print-removed-transcripts', action='store_true', default=False, help='Print the list of removed transcript with corresponding filtering criteria (default: False)')
 
     # AUX polygon-filtering params
     aux_polyfilter_params = parser.add_argument_group('Density/Polygon Filtering Auxiliary Parameters','Auxiliary parameters for filtering polygons based on the number of vertices. Required when --filter-by-density is enabled.')
@@ -319,12 +319,6 @@ def sge_visual(mm, args, transcript_f, xy_f, prereq):
     mm.add_target(xy_f, prereq, cmds)
     return mm
 
-#================================================================================================
-#
-# main functions
-#
-#================================================================================================
-
 def sge_convert(_args):
     # args
     args=parse_arguments(_args)
@@ -337,9 +331,11 @@ def sge_convert(_args):
 
     # output
     os.makedirs(args.out_dir, exist_ok=True)
+
     out_transcript_f = os.path.join(args.out_dir, args.out_transcript)
-    filtered_transcript_f = os.path.join(args.out_dir, f"{args.out_filtered_prefix}.transcripts.unsorted.tsv.gz")
     out_xy_f = os.path.join(args.out_dir, "xy.png")
+
+    filtered_transcript_f = os.path.join(args.out_dir, f"{args.out_filtered_prefix}.transcripts.unsorted.tsv.gz")
     filtered_xy_f = os.path.join(args.out_dir, f"{args.out_filtered_prefix}.xy.png")
 
     # mm
@@ -367,6 +363,7 @@ def sge_convert(_args):
    
     if args.filter_by_density:
         mm = sge_density_filtering(mm, args)
+    
     if args.filter_by_density and args.sge_visual:
         mm = sge_visual(mm, args, 
                         filtered_transcript_f,

@@ -38,7 +38,8 @@ aux_params_args = {
                      'fit_width', 'fit_precision', 'min_ct_per_unit_fit', 'fit_plot_um_per_pixel',
                      'decode_top_k', 'decode_block_size', 'decode_scale', 'decode_precision', 'decode_plot_um_per_pixel',
                      'merge_max_dist_um', 'merge_max_k', 'merge_max_p',
-                     'min_ct_per_feature', 'de_max_pval', 'de_min_fold']
+                     'min_ct_per_feature', 'de_max_pval', 'de_min_fold',
+                     "include_feature_list", "exclude_feature_list", "include_feature_substr", "exclude_feature_substr", "include_feature_regex", "exclude_feature_regex", "include_feature_type_regex", "feature_type_ref", "feature_type_ref_colidx_name", "feature_type_ref_colidx_type"]
     }
 
 def merge_config(base_config, args, keys, prefix=None):
@@ -155,7 +156,7 @@ def define_sge_arg(sgefn, sge_dir, fic_dir):
 
 def link_sge_to_fict(sge_fn, sge_dir, fic_dir):
     # create softlink
-    for infn in [sge_fn["tspv"], sge_fn["ftr"], sge_fn["minmax"]]:
+    for infn in [sge_fn["tsv"], sge_fn["ftr"], sge_fn["minmax"]]:
         src = os.path.join(sge_dir, infn) # source
         dst = os.path.join(fic_dir, infn) # destination
         # if infn == cstsvfn and not os.path.exists(os.path.abspath(src)):
@@ -193,7 +194,7 @@ def cmd_run_ficture(run_i, args, env):
         if not args.lenient:
             scheck_file(run_i["cmap"])
         cmap_arg = f"--cmap-static --static-cmap-file {run_i['cmap']}"
-    
+
     # model & parameters
     assert run_i["train_width"] is not None, "Error: When --run-ficture, --train-width is required"
     if ext_path:
@@ -504,10 +505,19 @@ def stepinator(_args):
         "Auxiliary Parameters for FICTURE", 
         "Parameters for run_ficture. Required if --run-ficture is used with non-default values. Default values are recommended."
     )
+    # use fic
     ficture_aux_params.add_argument("--cmap", '-c', type=str, default=None, help="Required if the user prefers to use a pre-built color map (Default: None)")
+    ficture_aux_params.add_argument('--out-ficture-feature', type=str, default="features.ficture.tsv.gz", help='File name for the output TSV file of feature used in FICTURE analysis (default: None)')
+    ficture_aux_params.add_argument('--fic-include-feature-list', type=str, default=None, help='A file containing a list of input genes to be included (feature name of IDs) (default: None)')
+    ficture_aux_params.add_argument('--fic-exclude-feature-list', type=str, default=None, help='A file containing a list of input genes to be excluded (feature name of IDs) (default: None)')
+    ficture_aux_params.add_argument('--fic-include-feature-substr', type=str, default=None, help='A substring of feature/gene names to be included (default: None)')
+    ficture_aux_params.add_argument('--fic-exclude-feature-substr', type=str, default=None, help='A substring of feature/gene names to be excluded (default: None)')
+    ficture_aux_params.add_argument('--fic-include-feature-regex', type=str, default=None, help='A regex pattern of feature/gene names to be included (default: None)')
+    ficture_aux_params.add_argument('--fic-exclude-feature-regex', type=str, default=None, help='A regex pattern of feature/gene names to be excluded (default: None)')
+    ficture_aux_params.add_argument('--fic-include-feature-type-regex', type=str, default=None, help='A regex pattern of feature/gene type to be included (default: None). Requires --csv-colname-feature-type or --feature-type-ref for gene type info') # (e.g. protein_coding|lncRNA)
     # input column indexes
-    # ficture_aux_params.add_argument('--csv-colidx-x', type=int, default=1, help='Column index for X-axis in the --in-transcript (default: 1)')
-    # ficture_aux_params.add_argument('--csv-colidx-y', type=int, default=2, help='Column index for Y-axis in the --in-transcript (default: 2)')
+    # ficture_aux_params.add_argument('--colidx-x', type=int, default=1, help='Column index for X-axis in the --in-transcript (default: 1)')
+    # ficture_aux_params.add_argument('--colidx-y', type=int, default=2, help='Column index for Y-axis in the --in-transcript (default: 2)')
     # segmentation - ficture
     ficture_aux_params.add_argument('--hexagon-n-move', type=int, default=None, help='Level of hexagonal sliding when creating hexagon-indexed SGE in FICTURE compatible format (default: 1)')
     ficture_aux_params.add_argument('--hexagon-precision', type=float, default=None, help='Output precision of hexagon coordinates for FICTURE compatible format (default: 2)')
@@ -717,6 +727,12 @@ def stepinator(_args):
                     # analysis parameters
                     run_i["train_width"] = run_i.get("train_width", None)     
                     run_i["n_factor"] = run_i.get("n_factor", None)           # will fill in the default value in lda
+                    # customizing feature filtering 
+                    if run_i.get("include_feature_type_regex", None) and run_i.get("feature_type_ref", None) is None:
+                        if sgeinfo.get("csv_colname_feature_type", None) is None:
+                            raise ValueError("Error: --csv-colname-feature-type is required when --include-feature-type-regex is used.")
+                        else:
+                            run_i["feature_type_ref"] = sgeinfo["csv_colname_feature_type"]
                     runinfo.append(run_i)
         else:
             assert len(args.run_ids) == 1, "When --in-yaml is not provided, only one run ID is allowed"            

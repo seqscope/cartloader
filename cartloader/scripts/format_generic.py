@@ -1,6 +1,8 @@
 import argparse, os, re, sys, logging, gzip, inspect
 import pandas as pd
 import numpy as np
+import subprocess
+import hashlib
 
 
 from cartloader.utils.utils import cmd_separator, scheck_app, create_custom_logger
@@ -9,7 +11,7 @@ def format_generic(_args):
     parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", 
                                      description="""
                                      Standardize Spatial Transcriptomics (ST) datasets from various platforms, including 10X Xenium, BGI Stereoseq, Cosmx SMI, Vizgen Merscope, Pixel-Seq. 
-                                     It will generate a transcript-indexed SGE file in TSV format, a feature file couning UMIs per gene, and a minmax file for X Y coordinates.
+                                     It will generate output in micrometer precision, including a transcript-indexed SGE file in TSV format, a feature file couning UMIs per gene, and a minmax file for X Y coordinates.
                                      """)
     inout_params = parser.add_argument_group("Input/Output Parameters", "Input/output directory/files.")
     inout_params.add_argument('--input', type=str, help='Specify the input transcript-indexed SGE file in TSV or CSV format')
@@ -19,7 +21,6 @@ def format_generic(_args):
     inout_params.add_argument('--out-feature', type=str, default="features.clean.tsv.gz", help='The output file collects UMI counts on a per-gene basis. Default: features.clean.tsv.gz')
     
     key_params = parser.add_argument_group("Key Parameters", "Key parameters, such as filtering cutoff.")
-    # key_params.add_argument('--dummy-genes', type=str, default='', help='A single name or a regex describing the names of negative control probes')
     key_params.add_argument('--precision-um', type=int, default=2, help='Number of digits to store the transcript coordinates in micrometer')
     key_params.add_argument('--units-per-um', type=float, default=1, help='Units per micrometer (default: 1)')
 
@@ -59,12 +60,12 @@ def format_generic(_args):
     aux_params.add_argument('--exclude-feature-regex', type=str, default=None, help='A regex pattern of feature/gene names to be excluded (default: None)')
     aux_params.add_argument('--include-feature-type-regex', type=str, default=None, help='A regex pattern of feature/gene type to be included (default: None).') # (e.g. protein_coding|lncRNA)
     aux_params.add_argument('--csv-colname-feature-type', type=str, default=None, help='The input column name in the input that corresponding to the gene type information, if your input file has gene type information(default: None)')
-    aux_params.add_argument('--feature-type-ref', type=str, default=None, help='Specify the path to a tab-separated gene information reference file to provide gene type information. The format should be: chrom, start position, end position, gene id, gene name, gene type (default: None)')
-    aux_params.add_argument('--print-removed-transcripts', action='store_true', default=False, help='Print the list of removed features based on the filtering criteria (default: False)')
+    aux_params.add_argument('--feature-type-ref', type=str, default=None, help='Specify the path to a tab-separated reference file to provide gene type information for each each per row (default: None)')
+    aux_params.add_argument('--feature-type-ref-colidx-name', type=str, default=None, help='Column index for gene name in the reference file (default: None).')
+    aux_params.add_argument('--feature-type-ref-colidx-type', type=str, default=None, help='Column index for gene type in the reference file (default: None).')
+    aux_params.add_argument('--print-removed-transcripts', action='store_true', default=False, help='Print the list of removed transcript with corresponding filtering criteria (default: False)')
     args = parser.parse_args(_args)
 
-    # logger = create_custom_logger(__name__, args.out_prefix + "_tsv2pmtiles" + args.log_suffix if args.log else None)
-    # logger.info("Analysis Started")
 
     # output
     os.makedirs(args.out_dir, exist_ok=True)
@@ -107,7 +108,6 @@ def format_generic(_args):
     with open(out_transcript_path, 'w') as wf:
         _ = wf.write('\t'.join(oheader)+'\n')
     
-    
     # params
     # 1) float_format
     float_format="%.2f"
@@ -122,19 +122,36 @@ def format_generic(_args):
     if args.csv_colname_feature_id is not None:
         col_dict[args.csv_colname_feature_id] = args.colname_feature_id
 
-    # 3) gene type filtering ref if provided
-    if args.include_feature_type_regex is not None:
-        assert args.feature_type_ref is not None or args.csv_colname_feature_type is not None, "Please provide the gene type reference file or the column name for gene type."
-        if args.feature_type_ref is not None:
-            df_ftrtype = pd.read_csv(args.feature_type_ref, sep='\t', header=None, names=["chrom", "posstart", "posend", "gene_id", "gene_name", "gene_type"])
-            df_ftrtype = df_ftrtype[~df_ftrtype["gene_type"].str.contains(args.include_feature_type_regex, flags=re.IGNORECASE, regex=True)]
-            ftrs_keep_type=df_ftrtype["gene_id"].tolist()
-    
-    if args.include_feature_list is not None:
-        ftrs_keep_name = pd.read_csv(args.include_feature_list, header=None, names=["feature"])["feature"].tolist()
-    
-    if args.exclude_feature_list is not None:
-        ftrs_exclude_name = pd.read_csv(args.exclude_feature_list, header=None, names=["feature"])["feature"].tolist()
+    # 3) feature preprocessing, read all features from the input and apply all ftr-related filters. 
+    #   This returns a dict with {feature name}:{removal reasons joint by ;}. 
+    #   For a keep feature, the value is an empty string.
+    #   generate a 10 digits md5 with combination of [args.include_feature_list, args.exclude_feature_list, args.include_feature_substr, args.exclude_feature_substr, args.include_feature_regex, args.exclude_feature_regex, args.include_feature_type_regex, args.csv_colname_feature_type, args.feature_type_ref]
+    if any([args.include_feature_list, args.exclude_feature_list, args.include_feature_substr, args.exclude_feature_substr, args.include_feature_regex, args.exclude_feature_regex, args.include_feature_type_regex]):
+        ftrinfo_id = hashlib.md5(";".join([
+            str(i) if i is not None else ""  
+            for i in [args.include_feature_list, args.exclude_feature_list, args.include_feature_substr, args.exclude_feature_substr, args.include_feature_regex, args.exclude_feature_regex, args.include_feature_type_regex, args.csv_colname_feature_type, args.feature_type_ref]]).encode()).hexdigest()[:10]
+        ftrfilter_f = os.path.join(args.out_dir, f"features.filtering.record.{ftrinfo_id}.tsv")
+        cmd = " ".join(["cartloader feature_filtering ",
+                                    f"--in-csv {args.input}", 
+                                    f"--out-record {ftrfilter_f}", 
+                                    f"--include-feature-list {args.include_feature_list}" if args.include_feature_list is not None else "",
+                                    f"--exclude-feature-list {args.exclude_feature_list}" if args.exclude_feature_list is not None else "",
+                                    f"--include-feature-substr {args.include_feature_substr}" if args.include_feature_substr is not None else "",
+                                    f"--exclude-feature-substr {args.exclude_feature_substr}" if args.exclude_feature_substr is not None else "",
+                                    f"--include-feature-regex {args.include_feature_regex}" if args.include_feature_regex is not None else "",
+                                    f"--exclude-feature-regex {args.exclude_feature_regex}" if args.exclude_feature_regex is not None else "",
+                                    f"--include-feature-type-regex {args.include_feature_type_regex} --feature-type-ref {args.input} --feature-type-ref-colname-name {args.csv_colname_feature_name} --feature-type-ref-colname-type {args.csv_colname_feature_type}" if args.include_feature_type_regex is not None and args.csv_colname_feature_type is not None else "",
+                                    f"--include-feature-type-regex {args.include_feature_type_regex} --feature-type-ref {args.feature_type_ref} --feature-type-ref-colidx-name {args.feature_type_ref_colidx_name}  --feature-type-ref-colidx-type {args.feature_type_ref_colidx_type}" if args.include_feature_type_regex is not None and args.feature_type_ref is not None else "",
+                                    f"--log"
+                                    ])
+        
+        subprocess.run(cmd, shell=True, check=True)
+        assert os.path.exists(ftrfilter_f), f"Failed to create the feature info file ({ftrfilter_f}) using commands: {cmd}"
+        df_ftrfilter = pd.read_csv(ftrfilter_f, sep='\t', header=0, index_col=None)
+        df_ftrfilter.columns = ["feature", "filtering"]
+        ftr2filter = df_ftrfilter.set_index("feature")["filtering"].to_dict()
+    else:
+        ftr2filter = {}
 
     # 4) phred score filtering
     if args.csv_colname_phredscore is not None and args.min_phred_score is None:
@@ -161,50 +178,15 @@ def format_generic(_args):
         else:
             Craw=Rraw
         
-        # filtering:
-        # filter by gene type
-        if args.include_feature_type_regex is not None:
-            if args.csv_colname_feature_type is not None:
-                removed = chunk[~chunk[args.csv_colname_feature_name].str.contains(args.include_feature_type_regex, flags=re.IGNORECASE, regex=True)].copy()
-                chunk = chunk[chunk[args.csv_colname_feature_name].str.contains(args.include_feature_type_regex, flags=re.IGNORECASE, regex=True)]
-            else:
-                removed = chunk[~chunk[args.csv_colname_feature_id].isin(ftrs_keep_type)].copy()
-                chunk = chunk[chunk[args.csv_colname_feature_id].isin(ftrs_keep_type)]
-            removed['reason'] = 'include_feature_type_regex'
+        # filter by feature 
+        # if ftr2filter is not empty
+        if ftr2filter:
+            removed = chunk[chunk[args.csv_colname_feature_name].map(ftr2filter) != ""].copy()
+            removed['reason'] = removed[args.csv_colname_feature_name].map(ftr2filter)
             filtered_out_rows.append(removed)
-        
-        # filter by feature name
-        if args.include_feature_list is not None:
-            removed = chunk[~chunk[args.csv_colname_feature_name].isin(ftrs_keep_name)].copy()
-            removed['reason'] = 'include_feature_list'
-            filtered_out_rows.append(removed)
-            chunk = chunk[chunk[args.csv_colname_feature_name].isin(ftrs_keep_name)]
-        if args.exclude_feature_list is not None:
-            removed = chunk[chunk[args.csv_colname_feature_name].isin(ftrs_exclude_name)].copy()
-            removed['reason'] = 'exclude_feature_list'
-            filtered_out_rows.append(removed)
-            chunk = chunk[~chunk[args.csv_colname_feature_name].isin(ftrs_exclude_name)]
-        if args.include_feature_substr is not None:
-            removed = chunk[~chunk[args.csv_colname_feature_name].str.contains(args.include_feature_substr, regex=False)].copy() # should be case-sensitive, removed `flags=re.IGNORECASE`
-            removed['reason'] = 'include_feature_substr'
-            filtered_out_rows.append(removed)
-            chunk = chunk[chunk[args.csv_colname_feature_name].str.contains(args.include_feature_substr, regex=False)]           # should be case-sensitive, removed `flags=re.IGNORECASE`
-        if args.exclude_feature_substr is not None:
-            removed = chunk[chunk[args.csv_colname_feature_name].str.contains(args.exclude_feature_substr, regex=False)].copy()  # should be case-sensitive, removed `flags=re.IGNORECASE`
-            removed['reason'] = 'exclude_feature_substr'
-            filtered_out_rows.append(removed)
-            chunk = chunk[~chunk[args.csv_colname_feature_name].str.contains(args.exclude_feature_substr, regex=False)]          # should be case-sensitive, removed `flags=re.IGNORECASE`
-        if args.include_feature_regex is not None:
-            removed = chunk[~chunk[args.csv_colname_feature_name].str.contains(args.include_feature_regex, regex=True)].copy()   # should be case-sensitive, removed `flags=re.IGNORECASE`
-            removed['reason'] = 'include_feature_regex'
-            filtered_out_rows.append(removed)
-            chunk = chunk[chunk[args.csv_colname_feature_name].str.contains(args.include_feature_regex, regex=True)]             # should be case-sensitive, removed `flags=re.IGNORECASE`
-        if args.exclude_feature_regex is not None:
-            removed = chunk[chunk[args.csv_colname_feature_name].str.contains(args.exclude_feature_regex, regex=True)].copy()    # should be case-sensitive, removed `flags=re.IGNORECASE`
-            removed['reason'] = 'exclude_feature_regex'
-            filtered_out_rows.append(removed)
-            chunk = chunk[~chunk[args.csv_colname_feature_name].str.contains(args.exclude_feature_regex, regex=True)]            # should be case-sensitive, removed `flags=re.IGNORECASE`
-        
+            chunk = chunk[chunk[args.csv_colname_feature_name].map(ftr2filter) == ""]
+
+
         # filter by phred scores (low-quality reads)
         if args.csv_colname_phredscore is not None and args.min_phred_score is not None:
             removed = chunk[chunk[args.csv_colname_phredscore] < args.min_phred_score].copy()
@@ -271,7 +253,7 @@ def format_generic(_args):
     # print out the removed features
     filtered_out_df = pd.concat(filtered_out_rows, ignore_index=True)
     if args.print_removed_transcripts:
-        filtered_out_df.to_csv(os.path.join(args.out_dir, "filtered_out_transcripts.tsv"), sep='\t', index=False)
+        filtered_out_df.to_csv(os.path.join(args.out_dir, "transcripts.removed.tsv"), sep='\t', index=False)
 
     # feature
     feature = feature.groupby(by=feature_cols).agg({args.colnames_count:"sum"}).reset_index()
@@ -284,7 +266,7 @@ def format_generic(_args):
         wf.write(f"ymin\t{ymin:.2f}\n")
         wf.write(f"ymax\t{ymax:.2f}\n")
 
-if __name__ == "__main__":
+if __name__ == "__main__":#
     # Get the base file name without extension
     script_name = os.path.splitext(os.path.basename(__file__))[0]
 
