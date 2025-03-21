@@ -3,6 +3,8 @@ import pandas as pd
 from cartloader.utils.minimake import minimake
 from cartloader.utils.utils import cmd_separator, scheck_app, add_param_to_cmd
 from cartloader.utils.sge_helper import aux_sge_args, input_by_platform, update_csvformat_by_platform
+from cartloader.scripts.feature_filtering import filter_feature_by_type
+
 
 # get the path of the cu
 
@@ -95,7 +97,10 @@ def parse_arguments(_args):
     aux_ftrfilter_params.add_argument('--exclude-feature-regex', type=str, default=None, help='A regex pattern of feature/gene names to be excluded (default: None)')
     aux_ftrfilter_params.add_argument('--include-feature-type-regex', type=str, default=None, help='A regex pattern of feature/gene type to be included (default: None).') # (e.g. protein_coding|lncRNA)
     aux_ftrfilter_params.add_argument('--csv-colname-feature-type', type=str, default=None, help='The input column name in the input that corresponding to the gene type information, if your input file has gene type information(default: None)')
-    aux_ftrfilter_params.add_argument('--feature-type-ref', type=str, default=None, help='Specify <ref_path>:<colidx_gene_name>:<colidx_gene_type>, where <ref_path> is the path to a tab-separated reference file to provide gene type information for each each per row; <colidx_gene_name> and <colidx_gene_type> are the column indices for gene name and gene type, respectively. (default: None)')
+    aux_ftrfilter_params.add_argument('--feature-type-ref', type=str, default=None, help='Specify the path to a tab-separated reference file to provide gene type information for each each per row (default: None)')
+    aux_ftrfilter_params.add_argument('--feature-type-ref-delim', type=str, default='\t', help='Delimiter used in the reference file (default: tab).')
+    aux_ftrfilter_params.add_argument('--feature-type-ref-colidx-name', type=str, default=None, help='Column index for gene name in the reference file (default: None).')
+    aux_ftrfilter_params.add_argument('--feature-type-ref-colidx-type', type=str, default=None, help='Column index for gene type in the reference file (default: None).')
     aux_ftrfilter_params.add_argument('--print-removed-transcripts', action='store_true', default=False, help='Print the list of removed transcript with corresponding filtering criteria (default: False)')
 
     # AUX polygon-filtering params
@@ -128,27 +133,6 @@ def parse_arguments(_args):
 # in-mex general functions
 #
 #================================================================================================
-def write_ftrlist_from_ftrtype(args):
-    # purpose: Given the spatula doesn't support filtering based on gene type, this function prepares a feature list based on the gene type reference file.
-    #           Note, when the --include-feature-type-regex is enabled, the --include-feature-list argument will be updated with the path to the prepared feature list.
-    # Validate arguments
-    assert args.feature_type_ref is not None, "The argument --include-feature-type-regex is enabled. Please provide the gene type reference file by --feature-type-ref."
-    assert args.csv_colname_feature_type is None, "The argument --include-feature-type-regex is enabled. For 10x_visium_hd datasets, please use --feature-type-ref instead of --csv-colname-feature-type."
-    # Read the gene type reference file
-    df_ftrtype = pd.read_csv(args.feature_type_ref, sep="\t", header=None, names=["chrom", "start", "end", "gene_id", "gene_name", "gene_type"])
-    df_ftrtype = df_ftrtype[df_ftrtype["gene_type"].str.contains(args.include_feature_type_regex)]
-    # If the include_feature_list argument is provided, merge the gene names from the feature list and the gene type reference file
-    if args.include_feature_list is not None:
-        df_ftrlist_raw = pd.read_csv(args.include_feature_list, header=None, names=["gene_name"])
-        df_ftrlist     = pd.concat([df_ftrlist_raw, df_ftrtype["gene_name"]], ignore_index=True)
-        df_ftrlist     = df_ftrlist.drop_duplicates()
-    else:
-        df_ftrlist     = df_ftrtype["gene_name"].drop_duplicates()
-    # Save the feature list to a TSV file
-    ftrlist_tsv = f"{args.out_dir}/include_feature_list.tsv"
-    df_ftrlist.to_csv(ftrlist_tsv, sep="\t", header=False, index=False)
-    # Update the include_feature_list argument with the path to the prepared feature list
-    return ftrlist_tsv
 
 def extract_unit2px_from_json(scale_json):
     # purpose: Extract the microns per pixel value from the scale json file and calculate the units per um.
@@ -194,7 +178,23 @@ def convert_visiumhd(cmds, args):
         args.units_per_um = extract_unit2px_from_json(args.scale_json)
     # * --included_feature_type_regex
     if args.include_feature_type_regex is not None:
-        args.include_feature_list = write_ftrlist_from_ftrtype(args)
+        # purpose: Given the spatula doesn't support filtering based on gene type, this function prepares a feature list based on the gene type reference file.
+        #           Note, when the --include-feature-type-regex is enabled, the --include-feature-list argument will be updated with the path to the prepared feature list.
+        # since MEX will not be able to provide ftr type column.
+        ftrlist_tsv = f"{args.out_dir}/feature_list.tsv"
+        cmd = " ".join(["cartloader", "feature_filtering_by_type",
+                        "--include-feature-type-regex", args.include_feature_type_regex,
+                        "--feature-type-ref", args.feature_type_ref,
+                        "--feature-type-ref-delim", args.feature_type_ref_delim,
+                        "--feature-type-ref-colidx-name", args.feature_type_ref_colidx_name,
+                        "--feature-type-ref-colidx-type", args.feature_type_ref_colidx_type,
+                        "--include-feature-list", args.include_feature_list,
+                        "--exclude-feature-list", args.exclude_feature_list,
+                        "--out-feature", ftrlist_tsv,
+                        "--log"])
+        args.include_feature_list = ftrlist_tsv
+        args.exclude_feature_list = None
+        cmds.append(cmd)
     # * check --icols-mtx has the same number as --colnames-count
     args.icols_mtx=str(args.icols_mtx)
     if len(args.icols_mtx.split(",")) != len(args.colnames_count.split(",")):
@@ -218,7 +218,23 @@ def convert_seqscope(cmds, args):
     # output: out_transcript, out_minmax, out_feature
     # * --included_feature_type_regex
     if args.include_feature_type_regex is not None:
-        args.include_feature_list = write_ftrlist_from_ftrtype(args)
+        # purpose: Given the spatula doesn't support filtering based on gene type, this function prepares a feature list based on the gene type reference file.
+        #           Note, when the --include-feature-type-regex is enabled, the --include-feature-list argument will be updated with the path to the prepared feature list.
+        # since MEX will not be able to provide ftr type column.
+        ftrlist_tsv = f"{args.out_dir}/feature_list.tsv"
+        cmd = " ".join(["cartloader", "feature_filtering_by_type",
+                        "--include-feature-type-regex", args.include_feature_type_regex,
+                        "--feature-type-ref", args.feature_type_ref,
+                        "--feature-type-ref-delim", args.feature_type_ref_delim,
+                        "--feature-type-ref-colidx-name", args.feature_type_ref_colidx_name,
+                        "--feature-type-ref-colidx-type", args.feature_type_ref_colidx_type,
+                        "--include-feature-list", args.include_feature_list,
+                        "--exclude-feature-list", args.exclude_feature_list,
+                        "--out-feature", ftrlist_tsv,
+                        "--log"])
+        args.include_feature_list = ftrlist_tsv
+        args.exclude_feature_list = None
+        cmds.append(cmd)
     # * check --icols-mtx has the same number as --colnames-count
     args.icols_mtx=str(args.icols_mtx)
     if len(args.icols_mtx.split(",")) != len(args.colnames_count.split(",")):

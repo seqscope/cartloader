@@ -105,7 +105,7 @@ def cmd_sge_convert(sgeinfo, args, env):
         in_arg= f"--in-mex {sgeinfo['in_mex']}"
     elif platform in ["10x_xenium", "bgi_stereoseq", "cosmx_smi", "vizgen_merscope", "pixel_seq", "nova_st"]:
         assert sgeinfo.get("in_csv", None) is not None, f"Please provide --in-csv for {platform}"
-        in_arg= f"--in-csv {sgeinfo['in_csv']}"
+        in_arg= f"--in-csv {sgeinfo['in_csv']} --print-removed-transcripts"
 
     format_cmd = " ".join([
         "cartloader", "sge_convert",
@@ -116,8 +116,8 @@ def cmd_sge_convert(sgeinfo, args, env):
         f"--colnames-count {sgeinfo['colnames_all_count']}",
         f"--filter-by-density --out-filtered-prefix {sgeinfo['filtered_prefix']} --genomic-feature {sgeinfo['colname_count']}" if sgeinfo['filter_by_density'] else "",
         f"--sge-visual" if args.sge_visual else "",
-        f"--n-jobs {args.n_jobs}" if args.n_jobs else "",
-        f"--restart" if args.restart else ""
+        f"--n-jobs {args.n_jobs}" if args.n_jobs else ""
+        "" 
     ])
     # add aux tools
     format_cmd = add_param_to_cmd(format_cmd, env, aux_env_args["sge_convert"])
@@ -156,16 +156,22 @@ def define_sge_arg(sgefn, sge_dir, fic_dir):
 
 def link_sge_to_fict(sge_fn, sge_dir, fic_dir):
     # create softlink
+    dst2src={}
     for infn in [sge_fn["tsv"], sge_fn["ftr"], sge_fn["minmax"]]:
         src = os.path.join(sge_dir, infn) # source
         dst = os.path.join(fic_dir, infn) # destination
         # if infn == cstsvfn and not os.path.exists(os.path.abspath(src)):
         #     continue
         if not os.path.isfile(dst) and not os.path.exists(dst):
-            os.symlink(src, dst)
-            print(f"Creating symlink for {infn}")
+            if os.path.exists(src):
+                os.symlink(src, dst)
+                print(f"Creating symlink for {infn}")
+            else:
+                dst2src[dst]=src
+    return dst2src
 
 def cmd_run_ficture(run_i, args, env):
+    ficture_cmds = []
     ext_path = run_i["ext_path"]
     ext_id   = run_i["ext_id"]
     
@@ -185,7 +191,12 @@ def cmd_run_ficture(run_i, args, env):
                 scheck_file(os.path.join(run_i["sge_dir"], file))
     # * link files from sge to ficture
     if run_i["sge_dir"] is not None and run_i["sge_dir"] != fic_dir:
-        link_sge_to_fict(sge2fn, run_i["sge_dir"], fic_dir)
+        sge_dst2src = link_sge_to_fict(sge2fn, run_i["sge_dir"], fic_dir)
+    
+    # if sge_dst2src is not an empty dict, add the files to the command
+    if sge_dst2src:
+        for dst, src in sge_dst2src.items():
+            ficture_cmds.append(f"ln -s {src} {dst}")
     
     # cmap
     if run_i["cmap"] is None:
@@ -230,7 +241,8 @@ def cmd_run_ficture(run_i, args, env):
     ficture_aug = merge_config(run_i, args, aux_params_args["run_ficture"], prefix=None)  # merge auxiliary parameters
     ficture_cmd = add_param_to_cmd(ficture_cmd, ficture_aug, aux_params_args["run_ficture"])
 
-    return ficture_cmd
+    ficture_cmds.append(ficture_cmd)
+    return ficture_cmds
 
 def cmd_run_cartload_join(run_i, args, env):
     mkbn="run_cartload_join" if args.mk_id is None else f"run_cartload_join_{args.mk_id}"
@@ -765,7 +777,7 @@ def stepinator(_args):
             os.makedirs(run_i["run_dir"], exist_ok=True)
             if args.run_ficture:
                 os.makedirs(os.path.join(run_i["run_dir"], "ficture"), exist_ok=True)
-                cmds.append(cmd_run_ficture(run_i, args, env))
+                cmds.extend(cmd_run_ficture(run_i, args, env))
             if args.run_cartload_join:
                 os.makedirs(os.path.join(run_i["run_dir"], "cartload"), exist_ok=True)
                 cmds.append(cmd_run_cartload_join(run_i, args, env))
@@ -774,6 +786,8 @@ def stepinator(_args):
                 cmds.extend(cmd_run_fig2pmtiles(run_i, args, env))
             if args.upload_aws:
                 cmds.append(cmd_upload_aws(run_i, args, env))
+
+    #print(cmds)
 
     if args.dry_run:
         for cmd in cmds:

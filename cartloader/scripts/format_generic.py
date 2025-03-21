@@ -4,8 +4,8 @@ import numpy as np
 import subprocess
 import hashlib
 
-
-from cartloader.utils.utils import cmd_separator, scheck_app, create_custom_logger
+from cartloader.utils.utils import cmd_separator, scheck_app, create_custom_logger, log_info
+from cartloader.scripts.feature_filtering import map_filter_per_feature
 
 def format_generic(_args):
     parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", 
@@ -23,6 +23,7 @@ def format_generic(_args):
     key_params = parser.add_argument_group("Key Parameters", "Key parameters, such as filtering cutoff.")
     key_params.add_argument('--precision-um', type=int, default=2, help='Number of digits to store the transcript coordinates in micrometer')
     key_params.add_argument('--units-per-um', type=float, default=1, help='Units per micrometer (default: 1)')
+    key_params.add_argument('--log', type=str, default=None, help='Specify the log file path (default: None)')
 
     incol_params = parser.add_argument_group("Input Columns Parameters", "Input column parameters.")
     incol_params.add_argument('--csv-delim', type=str, default='\t', help='Delimiter for the additional barcode position file (default: \\t).')
@@ -58,20 +59,20 @@ def format_generic(_args):
     aux_params.add_argument('--exclude-feature-substr', type=str, default=None, help='A substring of feature/gene names to be excluded (default: None)')
     aux_params.add_argument('--include-feature-regex', type=str, default=None, help='A regex pattern of feature/gene names to be included (default: None)')
     aux_params.add_argument('--exclude-feature-regex', type=str, default=None, help='A regex pattern of feature/gene names to be excluded (default: None)')
-    aux_params.add_argument('--include-feature-type-regex', type=str, default=None, help='A regex pattern of feature/gene type to be included (default: None).') # (e.g. protein_coding|lncRNA)
-    aux_params.add_argument('--csv-colname-feature-type', type=str, default=None, help='The input column name in the input that corresponding to the gene type information, if your input file has gene type information(default: None)')
+    aux_params.add_argument('--include-feature-type-regex', type=str, default=None, help='A regex pattern of feature/gene type to be included (default: None). It must be used with --csv-colname-feature-type or --feature-type-ref') # (e.g. protein_coding|lncRNA)
+    aux_params.add_argument('--csv-colname-feature-type', type=str, default=None, help='If your input file has a column of gene type information, specify the column name (default: None)')
     aux_params.add_argument('--feature-type-ref', type=str, default=None, help='Specify the path to a tab-separated reference file to provide gene type information for each each per row (default: None)')
-    aux_params.add_argument('--feature-type-ref-colidx-name', type=str, default=None, help='Column index for gene name in the reference file (default: None).')
-    aux_params.add_argument('--feature-type-ref-colidx-type', type=str, default=None, help='Column index for gene type in the reference file (default: None).')
+    aux_params.add_argument('--feature-type-ref-delim', type=str, default='\t', help='If --feature-type-ref, define delimiter used in the reference file (default: tab).')
+    aux_params.add_argument('--feature-type-ref-colidx-name', type=str, default=None, help='If --feature-type-ref, define the column index for gene name in the reference file (default: None).')
+    aux_params.add_argument('--feature-type-ref-colidx-type', type=str, default=None, help='If --feature-type-ref, define the column index for gene type in the reference file (default: None).')
     aux_params.add_argument('--print-removed-transcripts', action='store_true', default=False, help='Print the list of removed transcript with corresponding filtering criteria (default: False)')
     args = parser.parse_args(_args)
-
 
     # output
     os.makedirs(args.out_dir, exist_ok=True)
     out_transcript_path=os.path.join(args.out_dir, args.out_transcript)
     out_feature_path=os.path.join(args.out_dir, args.out_feature)
-    out_minmax_path=os.path.join(args.out_dir, args.out_minmax)
+    out_minmax_path=os.path.join(args.out_dir, args.out_minmax)    
 
     # initial output
     # 1) feature
@@ -123,33 +124,40 @@ def format_generic(_args):
         col_dict[args.csv_colname_feature_id] = args.colname_feature_id
 
     # 3) feature preprocessing, read all features from the input and apply all ftr-related filters. 
-    #   This returns a dict with {feature name}:{removal reasons joint by ;}. 
-    #   For a keep feature, the value is an empty string.
-    #   generate a 10 digits md5 with combination of [args.include_feature_list, args.exclude_feature_list, args.include_feature_substr, args.exclude_feature_substr, args.include_feature_regex, args.exclude_feature_regex, args.include_feature_type_regex, args.csv_colname_feature_type, args.feature_type_ref]
+    #   This returns a df with columns [feature, filtering]
+    #   For a keep feature, the filtering column is na
     if any([args.include_feature_list, args.exclude_feature_list, args.include_feature_substr, args.exclude_feature_substr, args.include_feature_regex, args.exclude_feature_regex, args.include_feature_type_regex]):
-        ftrinfo_id = hashlib.md5(";".join([
-            str(i) if i is not None else ""  
-            for i in [args.include_feature_list, args.exclude_feature_list, args.include_feature_substr, args.exclude_feature_substr, args.include_feature_regex, args.exclude_feature_regex, args.include_feature_type_regex, args.csv_colname_feature_type, args.feature_type_ref]]).encode()).hexdigest()[:10]
-        ftrfilter_f = os.path.join(args.out_dir, f"features.filtering.record.{ftrinfo_id}.tsv")
-        cmd = " ".join(["cartloader feature_filtering ",
-                                    f"--in-csv {args.input}", 
-                                    f"--out-record {ftrfilter_f}", 
-                                    f"--include-feature-list {args.include_feature_list}" if args.include_feature_list is not None else "",
-                                    f"--exclude-feature-list {args.exclude_feature_list}" if args.exclude_feature_list is not None else "",
-                                    f"--include-feature-substr {args.include_feature_substr}" if args.include_feature_substr is not None else "",
-                                    f"--exclude-feature-substr {args.exclude_feature_substr}" if args.exclude_feature_substr is not None else "",
-                                    f"--include-feature-regex {args.include_feature_regex}" if args.include_feature_regex is not None else "",
-                                    f"--exclude-feature-regex {args.exclude_feature_regex}" if args.exclude_feature_regex is not None else "",
-                                    f"--include-feature-type-regex {args.include_feature_type_regex} --feature-type-ref {args.input} --feature-type-ref-colname-name {args.csv_colname_feature_name} --feature-type-ref-colname-type {args.csv_colname_feature_type}" if args.include_feature_type_regex is not None and args.csv_colname_feature_type is not None else "",
-                                    f"--include-feature-type-regex {args.include_feature_type_regex} --feature-type-ref {args.feature_type_ref} --feature-type-ref-colidx-name {args.feature_type_ref_colidx_name}  --feature-type-ref-colidx-type {args.feature_type_ref_colidx_type}" if args.include_feature_type_regex is not None and args.feature_type_ref is not None else "",
-                                    f"--log"
-                                    ])
-        
-        subprocess.run(cmd, shell=True, check=True)
-        assert os.path.exists(ftrfilter_f), f"Failed to create the feature info file ({ftrfilter_f}) using commands: {cmd}"
-        df_ftrfilter = pd.read_csv(ftrfilter_f, sep='\t', header=0, index_col=None)
-        df_ftrfilter.columns = ["feature", "filtering"]
-        ftr2filter = df_ftrfilter.set_index("feature")["filtering"].to_dict()
+        # ftrinfo_id = hashlib.md5(";".join([
+        #     str(i) if i is not None else ""  
+        #     for i in [args.include_feature_list, args.exclude_feature_list, args.include_feature_substr, args.exclude_feature_substr, args.include_feature_regex, args.exclude_feature_regex, args.include_feature_type_regex, args.csv_colname_feature_type, args.feature_type_ref]]).encode()).hexdigest()[:10]
+        df_ftrinfo = pd.read_csv(args.input, usecols=[args.csv_colname_feature_name], sep=args.csv_delim, index_col=None, header=0, comment="#")
+        feature_filter_args = {
+            "include_feature_list": args.include_feature_list,
+            "exclude_feature_list": args.exclude_feature_list,
+            "include_feature_substr": args.include_feature_substr,
+            "exclude_feature_substr": args.exclude_feature_substr,
+            "include_feature_regex": args.include_feature_regex,
+            "exclude_feature_regex": args.exclude_feature_regex,
+            "include_feature_type_regex": args.include_feature_type_regex,
+            "logger": None,
+        }
+        if args.include_feature_type_regex is not None:
+            if args.csv_colname_feature_type is not None:
+                feature_filter_args.update({
+                    "feature_type_ref": args.input,
+                    "feature_type_ref_delim": args.csv_delim,
+                    "feature_type_ref_colname_name": args.csv_colname_feature_name,
+                    "feature_type_ref_colname_type": args.csv_colname_feature_type,
+                })
+            elif args.feature_type_ref is not None:
+                feature_filter_args.update({
+                    "feature_type_ref": args.feature_type_ref,
+                    "feature_type_ref_delim": args.feature_type_ref_delim,
+                    "feature_type_ref_colidx_name": args.feature_type_ref_colidx_name,
+                    "feature_type_ref_colidx_type": args.feature_type_ref_colidx_type,
+                })
+        df_ftrinfo = map_filter_per_feature(df_ftrinfo, **feature_filter_args)
+        ftr2filter = df_ftrinfo.set_index("feature")["filtering"].to_dict()
     else:
         ftr2filter = {}
 
@@ -157,16 +165,9 @@ def format_generic(_args):
     if args.csv_colname_phredscore is not None and args.min_phred_score is None:
         print(f"Warning: While the --csv-colname-phredscore is enabled, the --min-phred-score is not provided. carloader will SKIP filtering SGE by phred score.")
 
-    # 5) feature filtering (logging info here. action in the loop)
-    if args.exclude_feature_regex is not None:
-        print(f"Check: the --exclude-feature-regex is enabled. It will exclude features that match the regex pattern: {args.exclude_feature_regex}")
-    
-    if args.include_feature_regex is not None:
-        print(f"Check: the --include-feature-regex is enabled. It will include features that match the regex pattern: {args.include_feature_regex}")
-
-    # 6) ini a list for collecting rm rows
+    # 5) ini a list for collecting rm rows
     filtered_out_rows = []
-    
+
     # processing
     for chunk in pd.read_csv(args.input, header=0, chunksize=500000, index_col=None, sep=args.csv_delim, comment='#'):
         # drop the lines starts with '#' (novast start with '#')
@@ -181,11 +182,13 @@ def format_generic(_args):
         # filter by feature 
         # if ftr2filter is not empty
         if ftr2filter:
-            removed = chunk[chunk[args.csv_colname_feature_name].map(ftr2filter) != ""].copy()
-            removed['reason'] = removed[args.csv_colname_feature_name].map(ftr2filter)
+            # add ftr2filter value to removed by key == csv_colname_feature_name
+            removed = chunk.copy()
+            removed["reason"] = removed[args.csv_colname_feature_name].map(ftr2filter)
+            # drop the rows that the reason is na
+            removed = removed[removed["reason"].notna()]
             filtered_out_rows.append(removed)
-            chunk = chunk[chunk[args.csv_colname_feature_name].map(ftr2filter) == ""]
-
+            chunk = chunk[chunk[args.csv_colname_feature_name].map(ftr2filter).isna()]
 
         # filter by phred scores (low-quality reads)
         if args.csv_colname_phredscore is not None and args.min_phred_score is not None:

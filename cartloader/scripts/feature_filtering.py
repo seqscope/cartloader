@@ -2,17 +2,84 @@ import argparse, os, re, sys, logging, gzip, inspect
 import pandas as pd
 import numpy as np
 
-from cartloader.utils.utils import create_custom_logger
+from cartloader.utils.utils import create_custom_logger, log_info
+from cartloader.scripts.feature_filtering_by_type import filter_feature_by_type
 
-"""
-Test code:
-cartloader feature_filtering \
-    --in-csv /nfs/turbo/umms-leeju/nova/v3/seqscope-mouse-muscle-n18b345-mask-20250311/sge/feature.clean.tsv.gz \
-    --out-record /nfs/turbo/umms-leeju/nova/v3/seqscope-mouse-muscle-n18b345-mask-20250311/seqscope-mouse-muscle-n18b345-mask-20250311-v2/ficture/features.ficture.filtering.tsv \
-    --out-csv /nfs/turbo/umms-leeju/nova/v3/seqscope-mouse-muscle-n18b345-mask-20250311/seqscope-mouse-muscle-n18b345-mask-20250311-v2/ficture/features.ficture.tsv.gz  \
-    --exclude-feature-regex "^(mt-|Gm\d+$)"  \
-    --log
-"""
+def map_filter_per_feature(df_ftrinfo, 
+                           include_feature_list=None, exclude_feature_list=None, 
+                           include_feature_substr=None, exclude_feature_substr=None, 
+                           include_feature_regex=None, exclude_feature_regex=None,
+                           include_feature_type_regex=None, feature_type_ref=None, feature_type_ref_delim='\t', feature_type_ref_colname_name=None, feature_type_ref_colname_type=None, feature_type_ref_colidx_name=None, feature_type_ref_colidx_type=None,
+                           logger=None):
+    """
+    df_ftrinfo: pd.DataFrame with a column named "feature" containing feature names.
+    """
+    df_ftrinfo.drop_duplicates(inplace=True)
+    n_raw_ftr = df_ftrinfo.shape[0]
+    df_ftrinfo.columns = ["feature"]
+
+    # ====
+    # 1. Examining each feature for filtering criteria
+    # ====
+
+    # Filtering based on provided lists
+    log_info(" Examining each feature for filtering criteria", logger) 
+    if include_feature_list is not None:
+        log_info(f"  - include_feature_list: {include_feature_list}", logger)
+        ftr_keep_list = pd.read_csv(include_feature_list, header=None, names=["feature"])['feature'].tolist()
+        df_ftrinfo["rm_by_include_feature_list"] = df_ftrinfo["feature"].apply(lambda x: "include_feature_list" if x not in ftr_keep_list else np.nan)
+
+    if exclude_feature_list is not None:
+        log_info(f"  - exclude_feature_list: {exclude_feature_list}", logger)
+        ftr_exclude_list = pd.read_csv(exclude_feature_list, header=None, names=["feature"])['feature'].tolist()
+        df_ftrinfo["rm_by_exclude_feature_list"] = df_ftrinfo["feature"].apply(lambda x: "exclude_feature_list" if x in ftr_exclude_list else np.nan)
+        
+    # Filtering based on substrings and regex patterns
+    filters = {
+            "include_feature_substr": (include_feature_substr, True, False),
+            "exclude_feature_substr": (exclude_feature_substr, False, False),
+            "include_feature_regex": (include_feature_regex, True, True),
+            "exclude_feature_regex": (exclude_feature_regex, False, True),
+        }
+
+    for filter_name, (filter_value, include, is_regex) in filters.items():
+            if filter_value:  # Skip if no filtering value is provided
+                log_info(f"  - Applying {filter_name}: {filter_value}", logger)
+                # Ensure regex pattern does not introduce capture groups
+                pattern = filter_value if is_regex else re.escape(filter_value)
+                # Create a boolean mask based on the filtering condition
+                mask = df_ftrinfo["feature"].str.contains(pattern, regex=is_regex, na=False) ^ include
+                # Assign filtering reason where the condition is met
+                df_ftrinfo.loc[mask, f"rm_by_{filter_name}"] = filter_name
+
+    # Feature type filtering
+    if include_feature_type_regex is not None:
+        ftrlist_keep_type= filter_feature_by_type(include_feature_type_regex, feature_type_ref, feature_type_ref_delim=feature_type_ref_delim, 
+                                                  feature_type_ref_colname_name=feature_type_ref_colname_name, feature_type_ref_colname_type=feature_type_ref_colname_type, 
+                                                  feature_type_ref_colidx_name=feature_type_ref_colidx_name, feature_type_ref_colidx_type=feature_type_ref_colidx_type, 
+                                                  logger=logger)
+        df_ftrinfo["rm_by_include_feature_type"] = df_ftrinfo["feature"].apply(lambda x: "include_feature_type_regex" if x not in ftrlist_keep_type else np.nan)
+
+    # ====
+    # 2. Summarize the filtering criteria & N removal genes
+    # ====
+    log_info(" Summarizing filtering per gene ...", logger)
+    log_info(f"  - N raw features: {n_raw_ftr}", logger)
+    comment_cols = [x for x in df_ftrinfo.columns if x.startswith("rm_by_")]
+    for cmtcol in comment_cols:
+        rm_ftr_reason = cmtcol.replace("rm_by_", "Number of genes will be removed by --").replace("_", "-")
+        df_ftrinfo[cmtcol] = df_ftrinfo[cmtcol].replace("nan", np.nan)
+        df_ftrinfo[cmtcol] = df_ftrinfo[cmtcol].replace({pd.NA: np.nan}).dropna()
+        rm_ftr_count = df_ftrinfo[cmtcol].dropna().shape[0]
+        log_info(f"  - {rm_ftr_reason}: {rm_ftr_count}", logger)
+
+    # df_ftrinfo 
+    df_ftrinfo["filtering"] = df_ftrinfo[comment_cols].apply(lambda x: ";".join(x.dropna()) if len(x.dropna()) > 1 else x.dropna().values[0] if len(x.dropna()) == 1 else None, axis=1)
+    df_ftrinfo = df_ftrinfo[["feature", "filtering"]]
+    
+    log_info(f'  - N keep features: {df_ftrinfo[df_ftrinfo["filtering"].isna()].shape[0]}', logger)
+    return df_ftrinfo
+
 
 def feature_filtering(_args):
     parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", 
@@ -44,7 +111,6 @@ def feature_filtering(_args):
     ftr_params.add_argument('--feature-type-ref-colidx-name', type=str, default=None, help='Column index for gene name in the reference file (default: None).')
     ftr_params.add_argument('--feature-type-ref-colidx-type', type=str, default=None, help='Column index for gene type in the reference file (default: None).')
 
-
     args = parser.parse_args(_args)
 
     # sanity check 
@@ -69,74 +135,15 @@ def feature_filtering(_args):
     # ===============================
 
     # Read all input feature names
-    logger.info(" 0. Reading input --in-csv: "+args.in_csv)
+    logger.info(" Reading input --in-csv: "+args.in_csv)
     df_ftrinfo = pd.read_csv(args.in_csv, usecols=[args.csv_colname_feature_name], sep=args.csv_delim, header=0, comment="#")
-    df_ftrinfo.rename(columns={args.csv_colname_feature_name: "feature"}, inplace=True)
-    df_ftrinfo.drop_duplicates(inplace=True)
-    n_raw_ftr = df_ftrinfo.shape[0]
-
-    # Filtering based on provided lists
-    logger.info(" 1. Examining each feature for filtering criteria")
-    if args.include_feature_list is not None:
-        logger.info(f"  - include_feature_list: {args.include_feature_list}")
-        ftr_keep_list = pd.read_csv(args.include_feature_list, header=None, names=["feature"])['feature'].tolist()
-        df_ftrinfo["rm_by_include_feature_list"] = df_ftrinfo["feature"].apply(lambda x: "include_feature_list" if x not in ftr_keep_list else np.nan)
-
-    if args.exclude_feature_list is not None:
-        logger.info(f"  - exclude_feature_list: {args.exclude_feature_list}")
-        ftr_exclude_list = pd.read_csv(args.exclude_feature_list, header=None, names=["feature"])['feature'].tolist()
-        df_ftrinfo["rm_by_exclude_feature_list"] = df_ftrinfo["feature"].apply(lambda x: "exclude_feature_list" if x in ftr_exclude_list else np.nan)
-        
-    # Filtering based on substrings and regex patterns
-    filters = {
-            "include_feature_substr": (args.include_feature_substr, True, False),
-            "exclude_feature_substr": (args.exclude_feature_substr, False, False),
-            "include_feature_regex": (args.include_feature_regex, True, True),
-            "exclude_feature_regex": (args.exclude_feature_regex, False, True),
-        }
-
-    for filter_name, (filter_value, include, is_regex) in filters.items():
-        if filter_value is not None:  # Skip if no filtering value is provided
-            logger.info(f"  - {filter_name}: {filter_value}")
-            df_ftrinfo[f"rm_by_{filter_name}"] = np.where(
-                # Apply str.contains() to check for substring or regex match & Uses ^ exclude (XOR) to invert results for exclude_* filters.
-                df_ftrinfo["feature"].str.contains(filter_value, regex=is_regex, na=False) ^ include,  
-                filter_name,  
-                np.nan        
-            )
-        
-    # Feature type filtering
-    if args.include_feature_type_regex is not None:
-        assert args.feature_type_ref is not None, "Provide --feature-type-ref when --include-feature-type-regex is enabled."
-        assert (args.feature_type_ref_colidx_name is not None and args.feature_type_ref_colidx_type is not None) or (args.feature_type_ref_colname_name is not None and args.feature_type_ref_colname_type is not None), "Provide either --feature-type-ref-colidx-name and --feature-type-ref-colidx-type or --feature-type-ref-colname-name and --feature-type-ref-colname-type"
-        ftrlist_keep_type = []
-        logger.info(f"  - include_feature_type_regex: {args.include_feature_type_regex} using --feature-type-ref {args.feature_type_ref} with colidx_name: {args.feature_type_ref_colidx_name} and colidx_type: {args.feature_type_ref_colidx_type}")
-        for chunk in pd.read_csv(args.feature_type_ref, chunksize=50000, index_col=None, sep=args.feature_type_ref_delim, comment="#"):
-            if args.feature_type_ref_colname_name is not None and args.feature_type_ref_colname_type is not None:
-                chunk = chunk[[args.feature_type_ref_colname_name, args.feature_type_ref_colname_type]]
-            elif args.feature_type_ref_colidx_name is not None and args.feature_type_ref_colidx_type is not None:
-                chunk = chunk.iloc[:, [args.feature_type_ref_colidx_name, args.feature_type_ref_colidx_type]]
-            chunk.columns = ["ftr", "ftr_type"]
-            ftrlist_keep_type.extend(chunk[~chunk["ftr_type"].str.contains(args.include_feature_type_regex, regex=True)]["ftr"].tolist())
-        ftrlist_keep_type = list(set(ftrlist_keep_type)) 
-        df_ftrinfo["rm_by_include_feature_type"] = df_ftrinfo["feature"].apply(lambda x: "include_feature_type_regex" if x not in ftrlist_keep_type else np.nan)
-
-    # Summarize the filtering criteria & N removal genes
-    logger.info(" 2. Summarizing filtering per gene ...")
-    logger.info(f"  - N raw features: {n_raw_ftr}")
-    comment_cols = [x for x in df_ftrinfo.columns if x.startswith("rm_by_")]
-    for cmtcol in comment_cols:
-        rm_ftr_reason = cmtcol.replace("rm_by_", "Number of genes will be removed by --").replace("_", "-")
-        df_ftrinfo[cmtcol] = df_ftrinfo[cmtcol].replace("nan", np.nan)
-        df_ftrinfo[cmtcol] = df_ftrinfo[cmtcol].replace({pd.NA: np.nan}).dropna()
-        rm_ftr_count = df_ftrinfo[cmtcol].dropna().shape[0]
-        logger.info(f"  - {rm_ftr_reason}: {rm_ftr_count}") 
-
-    # df_ftrinfo 
-    df_ftrinfo["filtering"] = df_ftrinfo[comment_cols].apply(lambda x: ";".join(x.dropna()) if len(x.dropna()) > 1 else x.dropna().values[0] if len(x.dropna()) == 1 else None, axis=1)
-    df_ftrinfo = df_ftrinfo[["feature", "filtering"]]
-    
-    logger.info(f'  - N keep features: {df_ftrinfo[df_ftrinfo["filtering"].isna()].shape[0]}')
+    df_ftrinfo = map_filter_per_feature(df_ftrinfo,
+                                        include_feature_list=args.include_feature_list, exclude_feature_list=args.exclude_feature_list,
+                                        include_feature_substr=args.include_feature_substr, exclude_feature_substr=args.exclude_feature_substr,
+                                        include_feature_regex=args.include_feature_regex, exclude_feature_regex=args.exclude_feature_regex,
+                                        include_feature_type_regex=args.include_feature_type_regex, feature_type_ref=args.feature_type_ref, feature_type_ref_delim=args.feature_type_ref_delim, 
+                                        feature_type_ref_colname_name=args.feature_type_ref_colname_name, feature_type_ref_colname_type=args.feature_type_ref_colname_type, feature_type_ref_colidx_name=args.feature_type_ref_colidx_name, feature_type_ref_colidx_type=args.feature_type_ref_colidx_type,
+                                        logger=logger)
 
     # Save the filtered features
     if args.out_record is not None:
@@ -148,7 +155,7 @@ def feature_filtering(_args):
     # ===============================
     if args.out_csv is not None:
         # read-in
-        logger.info(" 4. Applying filtering...")
+        logger.info(" Applying filtering...")
         df_ftrinfo = df_ftrinfo[df_ftrinfo["filtering"].isna()]
         n_raw_csv = 0
         n_filtered_csv = 0

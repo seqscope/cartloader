@@ -336,7 +336,6 @@ def run_ficture(_args):
     else:
         in_feature_ficture = args.in_feature
 
-
     # out files
     if args.out_json is None:
         args.out_json = os.path.join(args.out_dir, f"ficture.params.json") 
