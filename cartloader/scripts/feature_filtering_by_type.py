@@ -12,23 +12,32 @@ def filter_feature_by_type(include_feature_type_regex, feature_type_ref, feature
     assert (feature_type_ref_colidx_name is not None and feature_type_ref_colidx_type is not None) or (feature_type_ref_colname_name is not None and feature_type_ref_colname_type is not None), "Provide either --feature-type-ref-colidx-name and --feature-type-ref-colidx-type or --feature-type-ref-colname-name and --feature-type-ref-colname-type"
     
     ftrlist_keep_type = []
+    n_ftr = 0
+    # log
     log_info(f"  - include_feature_type_regex: {include_feature_type_regex} using --feature-type-ref {feature_type_ref} ", logger)
+    if feature_type_ref_colname_name is not None and feature_type_ref_colname_type is not None:
+        log_info(f"  - --feature-type-ref-colname-name: {feature_type_ref_colname_name} and --feature-type-ref-colname-type: {feature_type_ref_colname_type}", logger)
+    elif feature_type_ref_colidx_name is not None and feature_type_ref_colidx_type is not None:
+        log_info(f"  - --feature-type-ref-colidx-name: {feature_type_ref_colidx_name} and --feature-type-ref-colidx-type: {feature_type_ref_colidx_type}", logger)
+    # processing
     for chunk in pd.read_csv(feature_type_ref, chunksize=50000, index_col=None, sep=feature_type_ref_delim, comment="#"):
         if feature_type_ref_colname_name is not None and feature_type_ref_colname_type is not None:
-            log_info(f"  - --feature-type-ref-colname-name: {feature_type_ref_colname_name} and --feature-type-ref-colname-type: {feature_type_ref_colname_type}", logger)
             chunk = chunk[[feature_type_ref_colname_name, feature_type_ref_colname_type]]
         elif feature_type_ref_colidx_name is not None and feature_type_ref_colidx_type is not None:
-            log_info(f"  - --feature-type-ref-colidx-name: {feature_type_ref_colidx_name} and --feature-type-ref-colidx-type: {feature_type_ref_colidx_type}", logger)
             chunk = chunk.iloc[:, [feature_type_ref_colidx_name, feature_type_ref_colidx_type]]
         chunk.columns = ["ftr", "ftr_type"]
-        ftrlist_keep_type.extend(chunk[~chunk["ftr_type"].str.contains(include_feature_type_regex, regex=True)]["ftr"].tolist())
+        n_ftr += chunk.shape[0]
+        ftrlist_keep_type.extend(chunk[chunk["ftr_type"].str.contains(include_feature_type_regex, regex=True)]["ftr"].tolist())
     ftrlist_keep_type = list(set(ftrlist_keep_type)) 
+    log_info(f"  - N genes in the reference file: {n_ftr}", logger)
+    log_info(f"  - N genes with the specified feature type: {len(ftrlist_keep_type)}", logger)
     return ftrlist_keep_type
 
 def feature_filtering_by_type(_args):
     parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", 
-                                        description="""
-                                    
+                                        description="""Filter features by gene type using a reference file.
+                                        The reference file should contain gene name and gene type information.
+                                        This 
                                         """)
     ftr_params = parser.add_argument_group("Feature Filtering Parameters", "Filtering criteria for features.")
     ftr_params.add_argument('--include-feature-type-regex', type=str, default=None, help='A regex pattern of feature/gene type to be included (default: None). When --include-feature-type-regex, provide --feature-type-ref with either colidx or colname for name and type') # (e.g. protein_coding|lncRNA) # (e.g. protein_coding|lncRNA)
@@ -36,29 +45,27 @@ def feature_filtering_by_type(_args):
     ftr_params.add_argument('--feature-type-ref-delim', type=str, default='\t', help='Delimiter used in the reference file (default: tab).')
     ftr_params.add_argument('--feature-type-ref-colname-name', type=str, default=None, help='Column name for gene name in the reference file (default: None).')
     ftr_params.add_argument('--feature-type-ref-colname-type', type=str, default=None, help='Column name for gene type in the reference file (default: None).')
-    ftr_params.add_argument('--feature-type-ref-colidx-name', type=str, default=None, help='Column index for gene name in the reference file (default: None).')
-    ftr_params.add_argument('--feature-type-ref-colidx-type', type=str, default=None, help='Column index for gene type in the reference file (default: None).')
+    ftr_params.add_argument('--feature-type-ref-colidx-name', type=int, default=None, help='Column index for gene name in the reference file (default: None).')
+    ftr_params.add_argument('--feature-type-ref-colidx-type', type=int, default=None, help='Column index for gene type in the reference file (default: None).')
     ftr_params.add_argument('--include-feature-list', type=str, default=None, help='A file containing a list of input genes to be included (feature name of IDs) (default: None)')
     ftr_params.add_argument('--exclude-feature-list', type=str, default=None, help='A file containing a list of input genes to be excluded (feature name of IDs) (default: None)')
     ftr_params.add_argument('--out-feature', type=str, default=None, help='Output file path to save the filtered features (default: None)')
     ftr_params.add_argument('--log', action='store_true', default=False, help='Enable logging.')
     args = parser.parse_args(_args)
 
-    out_dir=os.path.dirname(args.out_feature) if args.out_feature is not None else os.getcwd()
-    if not os.path.exists(out_dir):
-        os.makedirs(out_dir)
+    assert args.out_feature is not None, "Provide --out-feature to save the filtered feature list."
+    out_dir=os.path.dirname(args.out_feature)
+    os.makedirs(out_dir, exist_ok=True)
     
-    logger = create_custom_logger(__name__, os.path.join(out_dir,__name__+".log") if args.log else None)
+    logger = create_custom_logger(__name__, os.path.join(out_dir, args.out_feature + ".log") if args.log else None)
 
     # log the sys.argv
     log_info(f"Running: {' '.join(sys.argv)}", logger)
-
     ftrlist_keep_type= filter_feature_by_type(args.include_feature_type_regex, 
                                               feature_type_ref = args.feature_type_ref, feature_type_ref_delim=args.feature_type_ref_delim, 
                                               feature_type_ref_colidx_name=args.feature_type_ref_colidx_name, feature_type_ref_colidx_type=args.feature_type_ref_colidx_type, 
                                               feature_type_ref_colname_name=args.feature_type_ref_colname_name, feature_type_ref_colname_type=args.feature_type_ref_colname_type,
                                               logger=logger)
-    log_info(f"  - N genes after applying --include-feature-type-regex : {len(ftrlist_keep_type)}", logger)
     
     # if --include-feature-list is provided, merge the gene list with the gene type list
     if args.include_feature_list is not None:
@@ -74,11 +81,10 @@ def feature_filtering_by_type(_args):
         ftrlist_keep_type = list(set(ftrlist_keep_type) - set(ftrlist_exclude))
         log_info(f"  - N genes after applying --exclude-feature-list : {len(ftrlist_keep_type)}", logger)
     
-    if args.out_feature is not None:
-        # convert a pd.dataframe to a file
-        df_ftr = pd.DataFrame(ftrlist_keep_type, columns=["gene_name"])
-        df_ftr.to_csv(args.out_feature, index=False, header=False, sep="\t")
-        log_info(f"  - Saved the filtered feature list to {args.out_feature}", logger)
+    # convert a pd.dataframe to a file
+    df_ftr = pd.DataFrame(ftrlist_keep_type, columns=["gene_name"])
+    df_ftr.to_csv(args.out_feature, index=False, header=False, sep="\t")
+    log_info(f"  - Saved the filtered feature list to {args.out_feature}", logger)
     
 if __name__ == "__main__":#
     # Get the base file name without extension

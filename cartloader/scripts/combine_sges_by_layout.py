@@ -44,8 +44,7 @@ def combine_sges_by_layout(_args):
     os.makedirs(args.out_dir, exist_ok=True) 
 
     # log
-    log_f = os.path.join(args.out_dir, f"sge_stitch.log")
-    logger = create_custom_logger(__name__, log_f)
+    logger = create_custom_logger(__name__, os.path.join(args.out_dir, f"{args.out_transcript}.log"))
     logger.info(f"Command: {' '.join(sys.argv)}")
     logger.info(f"  - Output directory: {args.out_dir}")
 

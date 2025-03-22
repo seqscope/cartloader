@@ -98,7 +98,7 @@ def parse_arguments(_args):
     aux_ftrfilter_params.add_argument('--include-feature-type-regex', type=str, default=None, help='A regex pattern of feature/gene type to be included (default: None).') # (e.g. protein_coding|lncRNA)
     aux_ftrfilter_params.add_argument('--csv-colname-feature-type', type=str, default=None, help='The input column name in the input that corresponding to the gene type information, if your input file has gene type information(default: None)')
     aux_ftrfilter_params.add_argument('--feature-type-ref', type=str, default=None, help='Specify the path to a tab-separated reference file to provide gene type information for each each per row (default: None)')
-    aux_ftrfilter_params.add_argument('--feature-type-ref-delim', type=str, default='\t', help='Delimiter used in the reference file (default: tab).')
+    aux_ftrfilter_params.add_argument('--feature-type-ref-delim', type=str, default=None, help='Delimiter used in the reference file (default: tab).')
     aux_ftrfilter_params.add_argument('--feature-type-ref-colidx-name', type=str, default=None, help='Column index for gene name in the reference file (default: None).')
     aux_ftrfilter_params.add_argument('--feature-type-ref-colidx-type', type=str, default=None, help='Column index for gene type in the reference file (default: None).')
     aux_ftrfilter_params.add_argument('--print-removed-transcripts', action='store_true', default=False, help='Print the list of removed transcript with corresponding filtering criteria (default: False)')
@@ -183,14 +183,14 @@ def convert_visiumhd(cmds, args):
         # since MEX will not be able to provide ftr type column.
         ftrlist_tsv = f"{args.out_dir}/feature_list.tsv"
         cmd = " ".join(["cartloader", "feature_filtering_by_type",
-                        "--include-feature-type-regex", args.include_feature_type_regex,
-                        "--feature-type-ref", args.feature_type_ref,
-                        "--feature-type-ref-delim", args.feature_type_ref_delim,
-                        "--feature-type-ref-colidx-name", args.feature_type_ref_colidx_name,
-                        "--feature-type-ref-colidx-type", args.feature_type_ref_colidx_type,
-                        "--include-feature-list", args.include_feature_list,
-                        "--exclude-feature-list", args.exclude_feature_list,
-                        "--out-feature", ftrlist_tsv,
+                        f"--include-feature-type-regex {args.include_feature_type_regex}", 
+                        f"--feature-type-ref {args.feature_type_ref}",
+                        f"--feature-type-ref-colidx-name {args.feature_type_ref_colidx_name}",
+                        f"--feature-type-ref-colidx-type {args.feature_type_ref_colidx_type}",
+                        f"--feature-type-ref-delim {args.feature_type_ref_delim}" if args.feature_type_ref_delim is not None else "",
+                        f"--include-feature-list {args.include_feature_list}"  if args.include_feature_list is not None else "",
+                        f"--exclude-feature-list {args.exclude_feature_list}"  if args.include_feature_list is not None else "",
+                        f"--out-feature {ftrlist_tsv}",
                         "--log"])
         args.include_feature_list = ftrlist_tsv
         args.exclude_feature_list = None
@@ -223,14 +223,14 @@ def convert_seqscope(cmds, args):
         # since MEX will not be able to provide ftr type column.
         ftrlist_tsv = f"{args.out_dir}/feature_list.tsv"
         cmd = " ".join(["cartloader", "feature_filtering_by_type",
-                        "--include-feature-type-regex", args.include_feature_type_regex,
-                        "--feature-type-ref", args.feature_type_ref,
-                        "--feature-type-ref-delim", args.feature_type_ref_delim,
-                        "--feature-type-ref-colidx-name", args.feature_type_ref_colidx_name,
-                        "--feature-type-ref-colidx-type", args.feature_type_ref_colidx_type,
-                        "--include-feature-list", args.include_feature_list,
-                        "--exclude-feature-list", args.exclude_feature_list,
-                        "--out-feature", ftrlist_tsv,
+                        f"--include-feature-type-regex {args.include_feature_type_regex}", 
+                        f"--feature-type-ref {args.feature_type_ref}",
+                        f"--feature-type-ref-colidx-name {args.feature_type_ref_colidx_name}",
+                        f"--feature-type-ref-colidx-type {args.feature_type_ref_colidx_type}",
+                        f"--feature-type-ref-delim {args.feature_type_ref_delim}" if args.feature_type_ref_delim is not None else "",
+                        f"--include-feature-list {args.include_feature_list}"  if args.include_feature_list is not None else "",
+                        f"--exclude-feature-list {args.exclude_feature_list}"  if args.include_feature_list is not None else "",
+                        f"--out-feature {ftrlist_tsv}",
                         "--log"])
         args.include_feature_list = ftrlist_tsv
         args.exclude_feature_list = None

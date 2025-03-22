@@ -33,10 +33,8 @@ def sge_stitch(_args):
     inout_params.add_argument('--colname-x', type=str, default="X", help='X column name (default: X)')
     inout_params.add_argument('--colname-y', type=str, default="Y", help='Y column name (default: Y)')
     inout_params.add_argument('--units-per-um', type=float, default=1.0, help='Units per um in the input transcript tsv files (default: 1.0)')
-    # parser.add_argument('--minmax-in-um', action='store_true', help='Input minmax is in um while input transcript is based on unit.') # This was originally designed for the minmax in SeqScope v2 SGEs. Now we only take the transcripts and generate minmax from the sge-adds-on. So, disabling this.
     inout_params.add_argument('--convert-to-um', action='store_true', help='Convert output to um.')
     inout_params.add_argument('--sge-visual', action='store_true', default=False, help='Plot the SGE in a PNG file. (default: False)')
-    # inout_params.add_argument('--out-visual', type=str, default="xy.png", help='Output filename visualization for SGE  (default: xy.png).')
 
     # env params
     env_params = parser.add_argument_group("ENV Parameters", "Environment parameters for the tools")
