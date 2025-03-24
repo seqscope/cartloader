@@ -30,14 +30,14 @@ def format_generic(_args):
     incol_params.add_argument('--csv-colname-x',  type=str, default=None, required=True, help='Specify the input column name for X-axis')
     incol_params.add_argument('--csv-colname-y',  type=str, default=None, required=True, help='Specify the input column name for Y-axis')
     incol_params.add_argument('--csv-colname-feature-name', type=str, default=None, required=True, help='Specify the input column name for gene name')
-    incol_params.add_argument('--csv-colnames-count', type=str, default=None, help='Specify column name(s) for UMI count. If not provided, a count of 1 will be added for a feature in a pixel')
+    incol_params.add_argument('--csv-colnames-count', type=str, default=None, help='Specify column name(s) for UMI count. For multiple columns, separate names with commas. If not provided, each feature will be assigned a default count of 1 per pixel.')
     incol_params.add_argument('--csv-colnames-others', nargs='+', default=[], help='Specify the input column names to keep (e.g. cell_id, overlaps_nucleus). Please note this will affect how the count is aggregated (default: [])')
 
     outcol_params = parser.add_argument_group("Output Columns Parameters", "Output column parameters .")
     outcol_params.add_argument('--colname-x', type=str, default='X', help='Specify the output column name for X (default: X)')
     outcol_params.add_argument('--colname-y', type=str, default='Y', help='Specify the output column name for Y (default: Y)')
     outcol_params.add_argument('--colname-feature-name', type=str, default='gene', help='Specify the output column name for feature(gene) name')
-    outcol_params.add_argument('--colnames-count', type=str, default='gn', help='Specify the output column names for UMI count. (default: gn)')
+    outcol_params.add_argument('--colnames-count', type=str, default='count', help='Output column name(s) for UMI count. If multiple input columns are specified in `--csv-colnames-count`, provide corresponding output column names (default: count).')
 
     aux_params = parser.add_argument_group("Auxiliary Parameters", 
                                            """
@@ -92,20 +92,29 @@ def format_generic(_args):
     feature_cols=[args.colname_feature_name] if args.csv_colname_feature_id is None else [args.colname_feature_name, args.colname_feature_id]
     other_cols = args.csv_colnames_others + ["molecule_id"] if args.add_molecule_id else args.csv_colnames_others 
     
-    iheader = pd.read_csv(args.input, nrows=1, sep=args.csv_delim, comment="#").columns.tolist()
+    iheader = pd.read_csv(args.input, nrows=1, sep=args.csv_delim).columns.tolist()
     icols = [args.csv_colname_x, args.csv_colname_y, args.csv_colname_feature_name] + args.csv_colnames_others
     for j in [args.csv_colname_feature_id, args.csv_colname_feature_type, args.csv_colname_phredscore]:
         if j is not None:
             icols.append(j)
     
+    countcols_out= args.colnames_count.split(",")
     if args.csv_colnames_count is not None:
-        icols += args.csv_colnames_count.split(",")
-    
+        countcols_in = args.csv_colnames_count.split(",")
+        icols += countcols_in
+
+        # check if the number of input and output column names for UMI count are the same
+        assert len(countcols_in) == len(countcols_out), "The number of input and output column names for UMI count must be the same."
+        countcols_in2out={countcols_in[i]:countcols_out[i] for i in range(len(countcols_in))}
+    else:
+        countcols_in = []
+        countcols_in2out = {}
+
     for icol in icols:
         assert icol in iheader, f"Column {icol} is not found in the input file."
     
     unit_info = [args.colname_x, args.colname_y] + feature_cols + other_cols
-    oheader = unit_info + [args.colnames_count]
+    oheader = unit_info + countcols_out
     with open(out_transcript_path, 'w') as wf:
         _ = wf.write('\t'.join(oheader)+'\n')
     
@@ -130,7 +139,7 @@ def format_generic(_args):
         # ftrinfo_id = hashlib.md5(";".join([
         #     str(i) if i is not None else ""  
         #     for i in [args.include_feature_list, args.exclude_feature_list, args.include_feature_substr, args.exclude_feature_substr, args.include_feature_regex, args.exclude_feature_regex, args.include_feature_type_regex, args.csv_colname_feature_type, args.feature_type_ref]]).encode()).hexdigest()[:10]
-        df_ftrinfo = pd.read_csv(args.input, usecols=[args.csv_colname_feature_name], sep=args.csv_delim, index_col=None, header=0, comment="#")
+        df_ftrinfo = pd.read_csv(args.input, usecols=[args.csv_colname_feature_name], sep=args.csv_delim, index_col=None, header=0)
         feature_filter_args = {
             "include_feature_list": args.include_feature_list,
             "exclude_feature_list": args.exclude_feature_list,
@@ -169,13 +178,13 @@ def format_generic(_args):
     filtered_out_rows = []
 
     # processing
-    for chunk in pd.read_csv(args.input, header=0, chunksize=500000, index_col=None, sep=args.csv_delim, comment='#'):
+    for chunk in pd.read_csv(args.input, header=0, chunksize=500000, index_col=None, sep=args.csv_delim):
         # drop the lines starts with '#' (novast start with '#')
         #chunk = chunk[~chunk[args.csv_colname_x].str.startswith('#')]
 
         Rraw=chunk.shape[0]
-        if args.csv_colnames_count is not None:
-            Craw=chunk[args.csv_colnames_count].sum()
+        if len(countcols_in) > 0:
+            Craw="s;".join([col+":"+str(chunk[col].sum()) for col in countcols_in])
         else:
             Craw=Rraw
         
@@ -215,18 +224,22 @@ def format_generic(_args):
         # * Applying args.csv_colnames_others may introduce NaN, and NaN in any column in unit_info may reduce the number of groups.
         #   So, replace NaN with a placeholder before grouping to ensure they are not causing issues in the grouping process.
         # 1) add a count column
-        if args.csv_colnames_count is not None:
-            chunk.rename(columns = {args.csv_colnames_count:args.colnames_count}, inplace=True)
+        if len(countcols_in) > 0:
+            for k,v in countcols_in2out.items():
+                chunk.rename(columns = {k:v}, inplace=True)
         else:
             chunk[args.colnames_count] = 1
         # 2) drop unnecessary columns
-        chunk=chunk[unit_info+[args.colnames_count]]
+        chunk=chunk[unit_info + countcols_out]
         # 3) replace NaN with a placeholder
         for col in chunk.columns:
             #chunk[col].fillna('NA', inplace=True) # avoiding chained assignments due to FutureWarning
             chunk[col] = chunk[col].fillna('NA')
-        # 4) group by
-        chunk = chunk.groupby(by = unit_info).agg({args.colnames_count:'sum'}).reset_index()
+        # 4) group by unit_info and aggregate each count
+        # for all cols in countcols_out, aggregate the count
+        # chunk = chunk.groupby(by = unit_info).agg({args.colnames_count:'sum'}).reset_index()
+        chunk = chunk.groupby(by=unit_info).agg({col: 'sum' for col in countcols_out}).reset_index()
+
         # 5) replace back
         for col in chunk.columns:
             #chunk[col].replace('NA', np.nan, inplace=True) # avoiding chained assignments due to FutureWarning
@@ -237,11 +250,14 @@ def format_generic(_args):
         
         # log
         Rqc=chunk.shape[0]
-        Cqc=chunk[args.colnames_count].sum()
+        #Cqc=chunk[args.colnames_count].sum()
+        Cqc = " ;".join([col+":"+str(chunk[col].sum()) for col in countcols_out])
+
         print(f"processing: 1) rows {Rraw} -> {Rqc}\t2) counts {Craw} -> {Cqc}")
         
         # feature
-        feature = pd.concat([feature, chunk.groupby(by=feature_cols).agg({args.colnames_count:"sum"}).reset_index()])
+        #feature = pd.concat([feature, chunk.groupby(by=feature_cols).agg({args.colnames_count:"sum"}).reset_index()])
+        feature = pd.concat([feature, chunk.groupby(by=feature_cols).agg({col: 'sum' for col in countcols_out}).reset_index()])
         
         # minmax chunk
         x0 = chunk[args.colname_x].min()
@@ -254,12 +270,19 @@ def format_generic(_args):
         ymax = max(ymax, y1)
 
     # print out the removed features
-    filtered_out_df = pd.concat(filtered_out_rows, ignore_index=True)
+
     if args.print_removed_transcripts:
-        filtered_out_df.to_csv(os.path.join(args.out_dir, "transcripts.removed.tsv"), sep='\t', index=False)
+        if len(filtered_out_rows) > 0:
+            filtered_out_df = pd.concat(filtered_out_rows, ignore_index=True)
+            filtered_out_df.to_csv(os.path.join(args.out_dir, "transcripts.removed.tsv"), sep='\t', index=False)
+        else:
+            # touch an empty file
+            with open(os.path.join(args.out_dir, "transcripts.removed.tsv"), 'w') as wf:
+                pass
 
     # feature
-    feature = feature.groupby(by=feature_cols).agg({args.colnames_count:"sum"}).reset_index()
+    #feature = feature.groupby(by=feature_cols).agg({args.colnames_count:"sum"}).reset_index()
+    feature = feature.groupby(by=feature_cols).agg({col: 'sum' for col in countcols_out}).reset_index()
     feature.to_csv(out_feature_path, sep='\t',index=False)
 
     # minmax

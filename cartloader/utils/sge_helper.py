@@ -52,7 +52,7 @@ def input_by_platform(args):
             "mex_ftr": os.path.join(args.in_mex, args.mex_ftr),
             "mex_mtx": os.path.join(args.in_mex, args.mex_mtx),
         }
-    elif args.platform in ["10x_xenium", "cosmx_smi", "bgi_stereoseq", "vizgen_merscope", "pixel_seq", "nova_st"]:
+    elif args.platform in ["10x_xenium", "cosmx_smi", "bgi_stereoseq", "vizgen_merscope", "pixel_seq", "nova_st", "generic"]:
         in_dict={
             "in_csv": args.in_csv
         }
@@ -117,6 +117,13 @@ def update_csvformat_by_platform(args):
             "count": "MIDCount",
             "delim": None
         },
+        "generic": {
+            "x": "X",
+            "y": "Y",
+            "feature_name": "gene",
+            "count": "count",
+            "delim": None # none for using default tab
+        }
     }
     # Update arguments based on platform
     platform_settings = platform_mappings[args.platform]

@@ -106,6 +106,9 @@ def cmd_sge_convert(sgeinfo, args, env):
     elif platform in ["10x_xenium", "bgi_stereoseq", "cosmx_smi", "vizgen_merscope", "pixel_seq", "nova_st"]:
         assert sgeinfo.get("in_csv", None) is not None, f"Please provide --in-csv for {platform}"
         in_arg= f"--in-csv {sgeinfo['in_csv']} --print-removed-transcripts"
+    elif platform in ["generic"]:
+        assert sgeinfo.get("in_csv", None) is not None, f"Please provide --in-csv for {platform}"
+        in_arg= f"--in-csv {sgeinfo['in_csv']} --print-removed-transcripts"
 
     format_cmd = " ".join([
         "cartloader", "sge_convert",
