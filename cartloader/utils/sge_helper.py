@@ -81,7 +81,7 @@ def update_csvformat_by_platform(args):
             "feature_name": "feature_name",
             "count": None,
             "delim": ",",
-            "comment": None
+            "comment": False
         },
         "bgi_stereoseq": {
             "x": "x",
@@ -89,7 +89,7 @@ def update_csvformat_by_platform(args):
             "feature_name": "geneID",
             "count": "MIDCounts",
             "delim": None,
-            "comment": None
+            "comment": False
         },
         "cosmx_smi": {
             "x": "x_global_px",
@@ -97,7 +97,7 @@ def update_csvformat_by_platform(args):
             "feature_name": "target",
             "count": None,
             "delim": ",",
-            "comment": None
+            "comment": False
         },
         "vizgen_merscope": {
             "x": "global_x",
@@ -105,7 +105,7 @@ def update_csvformat_by_platform(args):
             "feature_name": "gene",
             "count": None,
             "delim": ",",
-            "comment": None
+            "comment": False
         },
         "pixel_seq": {
             "x": "xcoord",
@@ -113,7 +113,7 @@ def update_csvformat_by_platform(args):
             "feature_name": "geneName",
             "count": None,
             "delim": None,
-            "comment": None
+            "comment": False
         },
         "nova_st": {
             "x": "x",
@@ -121,7 +121,7 @@ def update_csvformat_by_platform(args):
             "feature_name": "geneID",
             "count": "MIDCount",
             "delim": None,
-            "comment": "#"
+            "comment": True
         },
         "generic": {
             "x": "X",
@@ -129,7 +129,7 @@ def update_csvformat_by_platform(args):
             "feature_name": "gene",
             "count": "count",
             "delim": None, # none for using default tab
-            "comment": None
+            "comment": False
         }
     }
     # Update arguments based on platform
@@ -144,7 +144,7 @@ def update_csvformat_by_platform(args):
         args.csv_colnames_count = platform_settings["count"]
     if args.csv_delim is None:
         args.csv_delim = platform_settings["delim"]
-    if args.csv_comment is None:
+    if args.csv_comment is False:
         args.csv_comment = platform_settings["comment"]
     return args
 

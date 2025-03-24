@@ -26,7 +26,7 @@ def format_generic(_args):
     key_params.add_argument('--log', type=str, default=None, help='Specify the log file path (default: None)')
 
     incol_params = parser.add_argument_group("Input Columns Parameters", "Input column parameters.")
-    incol_params.add_argument('--csv-comment', type=str, default=None, help='Comment character for the input file (default: None).')
+    incol_params.add_argument('--csv-comment',  action='store_true', default=False, help='Lines starts with # is comment lines in the input file (default: False).')
     incol_params.add_argument('--csv-delim', type=str, default='\t', help='Delimiter for the additional barcode position file (default: \\t).')
     incol_params.add_argument('--csv-colname-x',  type=str, default=None, required=True, help='Specify the input column name for X-axis')
     incol_params.add_argument('--csv-colname-y',  type=str, default=None, required=True, help='Specify the input column name for Y-axis')
@@ -90,10 +90,13 @@ def format_generic(_args):
     # ymax=0
 
     # 3) transcript (header)
+    csv_comment="#" if args.csv_comment else None
+    print(f"csv_comment: {csv_comment}")
+    
     feature_cols=[args.colname_feature_name] if args.csv_colname_feature_id is None else [args.colname_feature_name, args.colname_feature_id]
     other_cols = args.csv_colnames_others + ["molecule_id"] if args.add_molecule_id else args.csv_colnames_others 
     
-    iheader = pd.read_csv(args.input, nrows=1, sep=args.csv_delim, comment=args.csv_comment).columns.tolist()
+    iheader = pd.read_csv(args.input, nrows=1, sep=args.csv_delim, comment=csv_comment).columns.tolist()
     icols = [args.csv_colname_x, args.csv_colname_y, args.csv_colname_feature_name] + args.csv_colnames_others
     for j in [args.csv_colname_feature_id, args.csv_colname_feature_type, args.csv_colname_phredscore]:
         if j is not None:
@@ -140,7 +143,7 @@ def format_generic(_args):
         # ftrinfo_id = hashlib.md5(";".join([
         #     str(i) if i is not None else ""  
         #     for i in [args.include_feature_list, args.exclude_feature_list, args.include_feature_substr, args.exclude_feature_substr, args.include_feature_regex, args.exclude_feature_regex, args.include_feature_type_regex, args.csv_colname_feature_type, args.feature_type_ref]]).encode()).hexdigest()[:10]
-        df_ftrinfo = pd.read_csv(args.input, usecols=[args.csv_colname_feature_name], sep=args.csv_delim, index_col=None, header=0, comment=args.csv_comment)
+        df_ftrinfo = pd.read_csv(args.input, usecols=[args.csv_colname_feature_name], sep=args.csv_delim, index_col=None, header=0, comment=csv_comment)
         feature_filter_args = {
             "include_feature_list": args.include_feature_list,
             "exclude_feature_list": args.exclude_feature_list,
@@ -179,7 +182,7 @@ def format_generic(_args):
     filtered_out_rows = []
 
     # processing
-    for chunk in pd.read_csv(args.input, header=0, chunksize=500000, index_col=None, sep=args.csv_delim, comment=args.csv_comment):
+    for chunk in pd.read_csv(args.input, header=0, chunksize=500000, index_col=None, sep=args.csv_delim, comment=csv_comment):
         # drop the lines starts with '#' (novast start with '#')
         #chunk = chunk[~chunk[args.csv_colname_x].str.startswith('#')]
 
