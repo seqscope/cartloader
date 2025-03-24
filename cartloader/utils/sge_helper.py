@@ -22,7 +22,7 @@ aux_sge_args = {
         'pos_colname_barcode', 'pos_colname_x', 'pos_colname_y', 'pos_delim'
     ],
     "incsv": [
-        'csv_delim', 'csv_colname_x', 'csv_colname_y', 'csv_colname_feature_name',
+        'csv_comment', 'csv_delim', 'csv_colname_x', 'csv_colname_y', 'csv_colname_feature_name',
         'csv_colnames_count', 'csv_colname_feature_id', 'csv_colnames_others',
         'csv_colname_phredscore', 'min_phred_score', 'add_molecule_id'
     ],
@@ -80,49 +80,56 @@ def update_csvformat_by_platform(args):
             "y": "y_location",
             "feature_name": "feature_name",
             "count": None,
-            "delim": ","
+            "delim": ",",
+            "comment": None
         },
         "bgi_stereoseq": {
             "x": "x",
             "y": "y",
             "feature_name": "geneID",
             "count": "MIDCounts",
-            "delim": None
+            "delim": None,
+            "comment": None
         },
         "cosmx_smi": {
             "x": "x_global_px",
             "y": "y_global_px",
             "feature_name": "target",
             "count": None,
-            "delim": ","
+            "delim": ",",
+            "comment": None
         },
         "vizgen_merscope": {
             "x": "global_x",
             "y": "global_y",
             "feature_name": "gene",
             "count": None,
-            "delim": ","
+            "delim": ",",
+            "comment": None
         },
         "pixel_seq": {
             "x": "xcoord",
             "y": "ycoord",
             "feature_name": "geneName",
             "count": None,
-            "delim": None
+            "delim": None,
+            "comment": None
         },
         "nova_st": {
             "x": "x",
             "y": "y",
             "feature_name": "geneID",
             "count": "MIDCount",
-            "delim": None
+            "delim": None,
+            "comment": "#"
         },
         "generic": {
             "x": "X",
             "y": "Y",
             "feature_name": "gene",
             "count": "count",
-            "delim": None # none for using default tab
+            "delim": None, # none for using default tab
+            "comment": None
         }
     }
     # Update arguments based on platform
@@ -137,5 +144,7 @@ def update_csvformat_by_platform(args):
         args.csv_colnames_count = platform_settings["count"]
     if args.csv_delim is None:
         args.csv_delim = platform_settings["delim"]
+    if args.csv_comment is None:
+        args.csv_comment = platform_settings["comment"]
     return args
 

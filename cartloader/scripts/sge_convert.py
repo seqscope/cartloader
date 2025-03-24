@@ -67,6 +67,7 @@ def parse_arguments(_args):
 
     # AUX input csv params
     aux_in_csv_params = parser.add_argument_group( "IN-CSV Auxiliary Parameters", "(10x_xenium, bgi_stereoseq, cosmx_smi, vizgen_merscope, pixel_seq, and nova_st only) Auxiliary parameters for input TSV/CSV files")
+    aux_in_csv_params.add_argument('--csv-comment', type=str, default=None, help="If comment in included in the csv file, specify the comment character (default: None for 10x_xenium, bgi_stereoseq, cosmx_smi, vizgen_merscope, and pixel_seq; # for nova_st)")
     aux_in_csv_params.add_argument('--csv-delim', type=str, default=None, help='Delimiter for the additional input tsv/csv file (default: "," for 10x_xenium, cosmx_smi, and vizgen_merscope; "\\t" for bgi_stereoseq, pixel_seq, and nova_st) ')
     aux_in_csv_params.add_argument('--csv-colname-x',  type=str, default=None, help='Column name for X-axis (default: x_location for 10x_xenium; x for bgi_stereoseq; x_local_px for cosmx_smi; global_x for vizgen_merscope; xcoord for pixel_seq; x for nova_st)')
     aux_in_csv_params.add_argument('--csv-colname-y',  type=str, default=None, help='Column name for Y-axis (default: y_location for 10x_xenium; y for bgi_stereoseq; y_local_px for cosmx_smi; global_y for vizgen_merscope; ycoord for pixel_seq; y for nova_st)')
