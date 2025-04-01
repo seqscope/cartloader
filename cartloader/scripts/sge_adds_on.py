@@ -1,62 +1,60 @@
 import sys, os, gzip, argparse, logging, warnings, shutil, re, copy, time, pickle, inspect, warnings, json, yaml
 import pandas as pd
+"""
+cartloader sge_adds_on \
+    --in-transcript /nfs/turbo/umms-leeju/nova/v2/analysis/n14-hm2tk-t07a-mouse-1bbd0/n14-hm2tk-t07a-mouse-1bbd0-mask-a3207/preprocess/n14-hm2tk-t07a-mouse-1bbd0-mask-a3207.transcripts.tsv.gz \
+    --out-feature /nfs/turbo/umms-leeju/nova/v2/analysis/n14-hm2tk-t07a-mouse-1bbd0/n14-hm2tk-t07a-mouse-1bbd0-mask-a3207/preprocess/n14-hm2tk-t07a-mouse-1bbd0-mask-a3207.feature.tsv.gz \
+    --colname-feature-id gene_id --add-feature
 
+"""
 
 def parse_arguments(_args):
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", 
-                                    description=""" Generate a feature file for the SGE. """)
+                                    description=""" Generate a feature or a minmax file for the SGE in FICTURE-compatible format. """)
     parser.add_argument("--in-transcript", type=str, help="Input file.", required=True)
     parser.add_argument("--add-feature", action='store_true', help="Add feature to the input file.")
     parser.add_argument("--add-minmax", action='store_true', help="Add minmax to the input file.")
-
     # feature args
-    parser.add_argument("--out-feature", type=str, help="Input file.", default=None)
-    parser.add_argument("--index-col", type=str, nargs='*', help="Column names to be used as index.", default=['gene_id', 'gene'])
-    parser.add_argument("--count-col", type=str, nargs='*', help="Column names to be used as count.", default=['gn', 'gt', 'spl', 'unspl', 'ambig'])
+    parser.add_argument("--out-feature", type=str, help="Output file for feature.", default=None)
+    parser.add_argument('--colname-feature-name', type=str, default='gene', help='Feature name column (default: gene)')
+    parser.add_argument('--colname-feature-id', type=str, default=None, help='Feature ID column (default: None)')
+    parser.add_argument("--colnames-count", type=str, default="gn,gt,spl,unspl,ambig", help="Comma-separated column names for count (default: gn,gt,spl,unspl,ambig)")
     # minmax args
     parser.add_argument("--out-minmax", type=str, help="Output file for minmax.", default=None)
     parser.add_argument("--mu-scale", type=float, help="Scale factor for X and Y coordinates.", default=1)
     parser.add_argument("--minmax-format", type=str, help="Type of minmax to compute.", default="col")
-
     if len(_args) == 0:
         parser.print_help()
         sys.exit(1)
-
     return parser.parse_args(_args)
 
 def sge_add_feature(args):
     """Generate a summarized feature file."""
+    assert args.out_feature is not None, "When --add-feature, --out-feature must be provided."
 
-    # Determine the output file path if not provided
-    if args.out_feature is None:
-        in_dir = os.path.dirname(args.in_transcript)
-        in_id = os.path.basename(args.in_transcript).split('.')[0]
-        args.out_feature = os.path.join(in_dir, f"{in_id}.feature.tsv.gz")
-
-    # Read the input transcript file
     with gzip.open(args.in_transcript, 'rt') as f:
         transcripts = pd.read_csv(f, sep='\t')
 
-    # Ensure required columns are in the input
-    missing_cols = set(args.index_col + args.count_col) - set(transcripts.columns)
+    ftr_cols=[args.colname_feature_name, args.colname_feature_id] if args.colname_feature_id else [args.colname_feature_name]
+    count_cols = args.colnames_count.split(",")
+
+    missing_cols = set(ftr_cols + count_cols) - set(transcripts.columns)
     if missing_cols:
         raise ValueError(f"The following required columns are missing in the input: {', '.join(missing_cols)}")
 
     # Aggregate all feature columns in a single groupby operation
-    feature_summary = transcripts.groupby(args.index_col, as_index=False)[args.count_col].sum()
+    feature_summary = transcripts.groupby(ftr_cols, as_index=False)[count_cols].sum()
 
     # Save the summarized DataFrame to a compressed TSV file
     with gzip.open(args.out_feature, 'wt') as f:
         feature_summary.to_csv(f, sep='\t', index=False)
 
-    print(f"Feature summary saved to {args.out_feature}")
+    print(f"Feature saved to {args.out_feature}")
 
 def sge_add_minmax(args):
     """Extract, scale, and compute min/max for X and Y coordinates."""
-    # Determine the output file path if not provided
-    if args.out_minmax is None:
-        raise ValueError("Output file for minmax must be provided.")
+    assert args.out_minmax is not None, "When --add-minmax, --out-minmax must be provided."
 
     with gzip.open(args.in_transcript, 'rt') as f:
         transcripts = pd.read_csv(f, sep="\t")
@@ -82,13 +80,14 @@ def sge_add_minmax(args):
         with open(args.out_minmax, "w") as f:
             for key, value in minmax_dict.items():
                 f.write(f"{key}\t{value}\n")
+    print(f"Minmax saved to {args.out_minmax}")
 
 def sge_adds_on(_args):
     """Generate a feature file for the SGE."""
     args = parse_arguments(_args)
     if args.add_feature:
         sge_add_feature(args)
-    elif args.add_minmax:
+    if args.add_minmax:
         sge_add_minmax(args)
 
 

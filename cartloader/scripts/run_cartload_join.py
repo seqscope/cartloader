@@ -1,4 +1,4 @@
-import sys, os, gzip, argparse, logging, warnings, shutil, subprocess, ast, json
+import sys, os, argparse, logging, subprocess
 import pandas as pd
 
 from cartloader.utils.minimake import minimake
@@ -16,6 +16,13 @@ def parse_arguments(_args):
 
     parser = argparse.ArgumentParser(prog=f"cartloader run_cartload_join", description="Build resources for CartoScope, joining the pixel-level results from FICTURE")
 
+    run_params = parser.add_argument_group("Run Options", "Run options for FICTURE commands")
+    run_params.add_argument('--dry-run', action='store_true', default=False, help='Dry run. Generate only the Makefile without running it')
+    run_params.add_argument('--restart', action='store_true', default=False, help='Restart the run. Ignore all intermediate files and start from the beginning')
+    run_params.add_argument('--n-jobs', type=int, default=1, help='Number of jobs (processes) to run in parallel')
+    run_params.add_argument('--makefn', type=str, default="run_cartload_join.mk", help='The name of the Makefile to generate')
+    run_params.add_argument('--threads', type=int, default=4, help='Maximum number of threads per job (for tippecanoe)')
+
     inout_params = parser.add_argument_group("Input/Output Parameters", "Input/output directory/files.")
     inout_params.add_argument('--fic-dir', type=str, required=True, help='Input directory containing FICTURE output')
     inout_params.add_argument('--out-dir', type=str, required=True, help='Output directory')
@@ -27,20 +34,13 @@ def parse_arguments(_args):
     key_params.add_argument('--log', action='store_true', default=False, help='Write log to file')
     key_params.add_argument('--log-suffix', type=str, default=".log", help='The suffix for the log file (appended to the output directory). Default: .log')
 
-    run_params = parser.add_argument_group("Run Options", "Run options for FICTURE commands")
-    run_params.add_argument('--dry-run', action='store_true', default=False, help='Dry run. Generate only the Makefile without running it')
-    run_params.add_argument('--restart', action='store_true', default=False, help='Restart the run. Ignore all intermediate files and start from the beginning')
-    run_params.add_argument('--n-jobs', type=int, default=1, help='Number of jobs (processes) to run in parallel')
-    run_params.add_argument('--threads', type=int, default=4, help='Maximum number of threads per job (for tippecanoe)')
-    run_params.add_argument('--makefn', type=str, default="run_cartload_join.mk", help='The name of the Makefile to generate')
-
-    mod_params = parser.add_argument_group("Submodule Parameters", "Submodule parameters (using default is recommended)")
-    mod_params.add_argument('--magick', type=str, default=f"magick", help='Path to ImageMagick binary from go-pmtiles')
-    mod_params.add_argument('--pmtiles', type=str, default=f"pmtiles", help='Path to pmtiles binary from go-pmtiles')
-    mod_params.add_argument('--gdal_translate', type=str, default=f"gdal_translate", help='Path to gdal_translate binary')
-    mod_params.add_argument('--gdaladdo', type=str, default=f"gdaladdo", help='Path to gdaladdo binary')
-    mod_params.add_argument('--tippecanoe', type=str, default=f"{repo_dir}/submodules/tippecanoe/tippecanoe", help='Path to tippecanoe binary')
-    mod_params.add_argument('--spatula', type=str, default=f"{repo_dir}/submodules/spatula/bin/spatula", help='Path to spatula binary')
+    env_params = parser.add_argument_group("Env Parameters", "Environment parameters, e.g., tools.")
+    # aux_params.add_argument('--magick', type=str, default=f"magick", help='Path to ImageMagick binary') # Disable this function. The user need to add the path to the ImageMagick binary directory to the PATH environment variable
+    env_params.add_argument('--pmtiles', type=str, default=f"pmtiles", help='Path to pmtiles binary from go-pmtiles')
+    env_params.add_argument('--gdal_translate', type=str, default=f"gdal_translate", help='Path to gdal_translate binary')
+    env_params.add_argument('--gdaladdo', type=str, default=f"gdaladdo", help='Path to gdaladdo binary')
+    env_params.add_argument('--tippecanoe', type=str, default=f"tippecanoe", help='Path to tippecanoe binary') # default=f"{repo_dir}/submodules/tippecanoe/tippecanoe", 
+    env_params.add_argument('--spatula', type=str, default=f"spatula",  help='Path to spatula binary') # default=f"{repo_dir}/submodules/spatula/bin/spatula",
 
     aux_params = parser.add_argument_group("Auxiliary Parameters", "Auxiliary parameters (using default is recommended)")
     aux_params.add_argument('--in-fic-params', type=str, default="ficture.params.json", help='The YAML/JSON file containing both the SGE files and FICTURE parameters')
@@ -51,14 +51,14 @@ def parse_arguments(_args):
     aux_params.add_argument('--rename-x', type=str, default='X:lon', help='tippecanoe parameters to rename X axis')  
     aux_params.add_argument('--rename-y', type=str, default='Y:lat', help='tippecanoe parameters to rename Y axis')  
     aux_params.add_argument('--colname-feature', type=str, default='gene', help='Input/output Column name for gene name (default: gene)')
-    aux_params.add_argument('--colname-count', type=str, default='gn', help='Column name for feature counts')
+    aux_params.add_argument('--colname-count', type=str, default='count', help='Column name for feature counts')
     aux_params.add_argument('--out-molecules-id', type=str, default='genes', help='Prefix of output molecules PMTiles files. No directory path should be included')
     aux_params.add_argument('--max-join-dist-um', type=float, default=0.1, help='Maximum distance allowed to join molecules and pixel in micrometers')
     aux_params.add_argument('--max-tile-bytes', type=int, default=5000000, help='Maximum bytes for each tile in PMTiles')
     aux_params.add_argument('--max-feature-counts', type=int, default=500000, help='Max feature limits per tile in PMTiles')
     aux_params.add_argument('--preserve-point-density-thres', type=int, default=1024, help='Threshold for preserving point density in PMTiles')
     aux_params.add_argument('--keep-intermediate-files', action='store_true', default=False, help='Keep intermediate output files')
-    aux_params.add_argument('--skip-raster', action='store_true', default=False, help='Skip processing raster files, removing dependency to magick, gdal, go-pmtiles')
+    aux_params.add_argument('--skip-raster', action='store_true', default=False, help='Skip processing raster files, removing dependency to gdal, go-pmtiles')
     aux_params.add_argument('--tmp-dir', type=str, help='Temporary directory to be used (default: {out-dir}/tmp')
     if len(_args) == 0:
         parser.print_help()
@@ -85,7 +85,7 @@ def run_cartload_join(_args):
         scheck_app(args.pmtiles)
         scheck_app(args.gdal_translate)
         scheck_app(args.gdaladdo)
-        scheck_app(args.magick)
+        #scheck_app(args.magick)
 
     # create output directory if needed
     if not os.path.exists(args.out_dir):
@@ -97,7 +97,6 @@ def run_cartload_join(_args):
             os.makedirs(args.tmp_dir, exist_ok=True)
     
     # output files/prefix
-    make_f = os.path.join(args.out_dir, args.makefn)
     out_assets_f = os.path.join(args.out_dir, args.out_fic_assets)
     out_catalog_f = os.path.join(args.out_dir,args.out_catalog)
     out_molecules_prefix=os.path.join(args.out_dir,args.out_molecules_id)
@@ -133,7 +132,7 @@ def run_cartload_join(_args):
             "--out-prefix", f"{args.out_dir}/sge-mono",
             "--colname-count", args.colname_count,
             "--main",
-            f"--magick '{args.magick}'",
+            #f"--magick '{args.magick}'",
             f"--pmtiles '{args.pmtiles}'",
             f"--gdal_translate '{args.gdal_translate}'",
             f"--gdaladdo '{args.gdaladdo}'",
@@ -213,6 +212,7 @@ def run_cartload_join(_args):
         #}
 
         # fit_results
+        #print(f"--tippecanoe '{args.tippecanoe}'")
         in_fit_tsvf = f"{in_prefix}.fit_result.tsv.gz"
         if os.path.exists(in_fit_tsvf):
             cmd = " ".join([
@@ -224,8 +224,8 @@ def run_cartload_join(_args):
                 "--max-tile-bytes", str(args.max_tile_bytes),
                 "--max-feature-counts", str(args.max_feature_counts),
                 "--preserve-point-density-thres", str(args.preserve_point_density_thres),
-                f"--log --log-suffix '{args.log_suffix}'" if args.log else "",
                 f"--tippecanoe '{args.tippecanoe}'",
+                f"--log --log-suffix '{args.log_suffix}'" if args.log else "",
                 f"--tmp-dir '{args.tmp_dir}'",
                 "--keep-intermediate-files" if args.keep_intermediate_files else ""
             ])
@@ -267,6 +267,7 @@ def run_cartload_join(_args):
                 "--max-tile-bytes", str(args.max_tile_bytes),
                 "--max-feature-counts", str(args.max_feature_counts),
                 "--preserve-point-density-thres", str(args.preserve_point_density_thres),
+                f"--tippecanoe '{args.tippecanoe}'",
                 f"--log --log-suffix '{args.log_suffix}'" if args.log else "",
             ])
             cmds.append(cmd)
@@ -393,7 +394,7 @@ def run_cartload_join(_args):
     # 3. Create a yaml for all output assets
     cmds = cmd_separator([], f"Writing a YAML file for all output assets")
     cmd = " ".join([
-        "cartloader", "write_yaml_for_assets",
+        "cartloader", "write_catalog_for_assets",
         "--sge-index", f"{out_molecules_prefix}_pmtiles_index.tsv", 
         "--sge-counts", f"{out_molecules_prefix}_bin_counts.json", 
         "--fic-assets", out_assets_f,
@@ -423,17 +424,28 @@ def run_cartload_join(_args):
         sys.exit(1)
 
     ## write makefile
+    make_f = os.path.join(args.out_dir, args.makefn)
     mm.write_makefile(make_f)
 
     ## run makefile
+    # if args.dry_run:
+    #     ## run makefile
+    #     os.system(f"make -f {make_f} -n")
+    #     print(f"To execute the pipeline, run the following command:\nmake -f {make_f} -j {args.n_jobs}")
+    # else:
+    #     exit_code = os.system(f"make -f {make_f} -j {args.n_jobs}")
+    #     if exit_code != 0:
+    #         logging.error(f"Error in running make -f {make_f} -j {args.n_jobs}")
+    #         sys.exit(1)
+
     if args.dry_run:
-        ## run makefile
         os.system(f"make -f {make_f} -n")
         print(f"To execute the pipeline, run the following command:\nmake -f {make_f} -j {args.n_jobs}")
     else:
-        exit_code = os.system(f"make -f {make_f} -j {args.n_jobs}")
-        if exit_code != 0:
-            logging.error(f"Error in running make -f {make_f} -j {args.n_jobs}")
+        exe_cmd=f"make -f {make_f} -j {args.n_jobs} {'-B' if args.restart else ''}"
+        result = subprocess.run(exe_cmd, shell=True)
+        if result.returncode != 0:
+            print(f"Error in executing: {exe_cmd}")
             sys.exit(1)
 
     logger.info("Analysis Finished")

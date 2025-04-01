@@ -12,6 +12,7 @@ def parse_arguments(_args):
     parser.add_argument('--in-cstranscript', type=str, default=None, help='Path to the transcript file.')
     parser.add_argument('--in-feature', type=str, default=None, help='Path to the feature file.')
     parser.add_argument('--in-minmax', type=str, default=None, help='Path to the minmax file.')
+    parser.add_argument('--in-feature-ficture', type=str, default=None, help='(Optional) If FICTURE used a different feature file than the in-feature file, specify the path to the feature file used for FICTURE analysis.')
     parser.add_argument('--lda-model', nargs='*', type=str, default=None, help='LDA Model information: <model_type>,<model_path>,<model_id>,<train_width>,<n_factor>,<cmap>')
     parser.add_argument('--ext-model', nargs='*', type=str, default=None, help='External Model information: <model_type>,<model_path>,<model_id>,<train_width>,<factor_map>,<cmap>')
     parser.add_argument('--projection', nargs='*', type=str, default=None, help='Projection information: <model_type>,<model_id>,<projection_id>,<fit_width>,<anchor_res>')
@@ -145,11 +146,17 @@ def write_json_for_ficture(_args):
                         proj["decode_params"].append(decode_entry)
 
     # Construct final JSON data
-    json_data = {
-        "in_sge": sge_data,
-        "train_params": train_params
-    }
-
+    if args.in_feature_ficture is not None:
+        json_data = {
+            "in_sge": sge_data,
+            "train_params": train_params
+        }
+    else:
+        json_data = {
+            "in_sge": sge_data,
+            "in_feature_ficture": args.in_feature_ficture,
+            "train_params": train_params
+        }
     if os.path.exists(args.out_json):
         if args.overwrite:
             print(f'Overwriting the existing JSON file: {args.out_json}')

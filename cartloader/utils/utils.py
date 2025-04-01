@@ -1,4 +1,18 @@
 import logging, os, shutil, sys, importlib, csv, shlex, subprocess, json, yaml, re
+import os
+
+
+def get_func(name):
+    """
+    Get the function object among the runnable scripts based on the script name
+    """
+    #print(f"get_func({name}) was called")
+    module = importlib.import_module(f"cartloader.scripts.{name}")
+    return getattr(module,name)
+
+# ====
+# cmd
+# ====
 
 def cmd_separator(cmds, info):
     """
@@ -9,6 +23,60 @@ def cmd_separator(cmds, info):
     cmds.append(rf"$(info --------------------------------------------------------------)")
     return cmds
 
+def add_param_to_cmd(cmd, args, aux_argset, underscore2dash=True):
+    aux_args = {k: v for k, v in vars(args).items() if k in aux_argset}
+    for arg, value in aux_args.items():
+        if value or isinstance(value, bool):
+            if underscore2dash:
+                arg_name = arg.replace('_', '-')
+            else:
+                arg_name = arg
+            if isinstance(value, bool) and value:
+                cmd += f" --{arg_name}"
+            elif isinstance(value, list) and len(value) > 0:
+                cmd += f" --{arg_name} {' '.join(map(str, value))}"
+            elif not isinstance(value, bool):
+                # Ensure regex patterns are properly quoted
+                if "regex" in arg_name:
+                    quoted_value = shlex.quote(str(value))
+                    cmd += f" --{arg_name} {quoted_value}"
+                else:
+                    cmd += f" --{arg_name} {value}"
+    return cmd
+
+# def run_bash_command(command):
+#     try:
+#         result = subprocess.run(command, 
+#                   shell=True, 
+#                   stdout=subprocess.PIPE, 
+#                   stderr=subprocess.PIPE, 
+#                   text=True, 
+#                   check=True)
+#         return result.stdout
+#     except subprocess.CalledProcessError as e:
+#         print(f"Command failed with error:\n\t{command}\n\t{e.stderr}\n")
+#         raise
+
+def run_command(command, use_bash=False):
+    executable_shell = "/bin/bash" if use_bash else "/bin/sh"
+    try:
+        result = subprocess.run(
+            command, 
+            shell=True, 
+            executable=executable_shell,  # Choose the shell based on the use_bash flag
+            stdout=subprocess.PIPE, 
+            stderr=subprocess.PIPE, 
+            text=True, 
+            check=True
+        )
+        return result.stdout
+    except subprocess.CalledProcessError as e:
+        print(f"Command failed with error:\n{e.stderr}")
+        raise
+
+# ====
+# sanity check
+# ====
 def scheck_app(app_cmd):
     """
     Check if the specified application is available
@@ -18,13 +86,16 @@ def scheck_app(app_cmd):
         logging.error(f"Cannot find {app_cmd}. Please make sure that the path to specify {app_cmd} is correct")
         sys.exit(1)
 
-def get_func(name):
-    """
-    Get the function object among the runnable scripts based on the script name
-    """
-    #print(f"get_func({name}) was called")
-    module = importlib.import_module(f"cartloader.scripts.{name}")
-    return getattr(module,name)
+def scheck_file(file_path):
+    if not (os.path.isfile(file_path) or os.path.islink(file_path)):
+        print(f"Input file not found: {file_path}")
+        sys.exit(1)
+    else:
+        print(f"Checked: {file_path}")
+
+# ====
+# logging
+# ====
 
 def create_custom_logger(name, logfile=None, level=logging.INFO):
     """
@@ -56,6 +127,43 @@ def create_custom_logger(name, logfile=None, level=logging.INFO):
         logger.addHandler(log_file_handler)
     
     return logger
+
+
+def log_info(msg, logger=None):
+    """
+    Logs a message if a logger is provided; otherwise, prints it.
+    """
+    if logger:
+        if logger == "logging":
+            logging.info(msg)
+        else:
+            logger.info(msg)
+    else:
+        print(msg)
+
+
+def log_dataframe(df, msg="DataFrame Info:", logger=None, indentation=""): 
+    ## purpose:format the log messages so that each column value occupies a fixed width
+
+    # Calculate column widths
+    col_widths = {col: max(df[col].astype(str).apply(len).max(), len(col)) for col in df.columns}
+
+    # Prepare the header string with column names aligned
+    header = ' | '.join([col.ljust(col_widths[col]) for col in df.columns])
+
+    # Log the header
+    log_info(f"{msg}")
+    log_info(indentation+header)
+    log_info(indentation+"-" * len(header))  # Divider line
+    
+    # Iterate over DataFrame rows and log each, maintaining alignment
+    for _, row in df.iterrows():
+        row_str = ' | '.join([str(row[col]).ljust(col_widths[col]) for col in df.columns])
+        log_info(indentation+row_str)
+        
+# ======
+# SGE
+# ======
 
 # copied from NovaScope
 def find_major_axis(filename, format):
@@ -96,7 +204,7 @@ def find_major_axis(filename, format):
         return "X"
     else:
         return "Y"
-    
+
 def read_minmax(filename, format):
     # purpose: find the longer axis of the image
     # (1) detect from the "{uid}.coordinate_minmax.tsv"  
@@ -136,39 +244,10 @@ def read_minmax(filename, format):
         "ymax": ymax
     }
     
-# def add_param_to_cmd(cmd, args, aux_argset):
-#     aux_args = {k: v for k, v in vars(args).items() if k in aux_argset}
-#     for arg, value in aux_args.items():
-#         if value or isinstance(value, bool):
-#             arg_name = arg.replace('_', '-')
-#             if isinstance(value, bool) and value:
-#                 cmd += f" --{arg_name}"
-#             elif isinstance(value, list):
-#                 cmd += f" --{arg_name} {' '.join(value)}"
-#             elif not isinstance(value, bool):
-#                 if "regex" in arg_name:
-#                     cmd += f" --{arg_name} '{value}'"
-#                 else:
-#                     cmd += f" --{arg_name} {value}"
-#     return cmd
 
-def add_param_to_cmd(cmd, args, aux_argset):
-    aux_args = {k: v for k, v in vars(args).items() if k in aux_argset}
-    for arg, value in aux_args.items():
-        if value or isinstance(value, bool):
-            arg_name = arg.replace('_', '-')
-            if isinstance(value, bool) and value:
-                cmd += f" --{arg_name}"
-            elif isinstance(value, list):
-                cmd += f" --{arg_name} {' '.join(map(str, value))}"
-            elif not isinstance(value, bool):
-                # Ensure regex patterns are properly quoted
-                if "regex" in arg_name:
-                    quoted_value = shlex.quote(str(value))
-                    cmd += f" --{arg_name} {quoted_value}"
-                else:
-                    cmd += f" --{arg_name} {value}"
-    return cmd
+#======
+# file - dict
+#======
 
 ## code suggested by ChatGPT
 def load_file_to_dict(file_path, file_type=None):
@@ -197,7 +276,34 @@ def load_file_to_dict(file_path, file_type=None):
             return yaml.safe_load(file)
     else:
         raise ValueError("Unsupported file type. Please provide 'json' or 'yaml'/'yml' as file_type.")
-    
+
+## code suggested by ChatGPT
+def write_dict_to_file(data, file_path, file_type=None):
+    """
+    Write a dictionary to a JSON or YAML file.
+
+    Parameters:
+    data (dict): The dictionary to write to the file.
+    file_path (str): Path to the output file.
+    file_type (str, optional): The type of the file ('json' or 'yaml'). If None, the type is inferred from the file extension.
+
+    Raises:
+    ValueError: If the file type is unsupported.
+    """
+    if file_type is None:
+        _, file_extension = os.path.splitext(file_path)
+        file_type = file_extension.lower()[1:]  # Strip the dot and use the extension
+
+    if file_type == 'json':
+        with open(file_path, 'w') as file:
+            json.dump(data, file, indent=4)
+    elif file_type in ['yaml', 'yml']:
+        with open(file_path, 'w') as file:
+            yaml.safe_dump(data, file, default_flow_style=False)
+    else:
+        raise ValueError("Unsupported file type. Please provide 'json' or 'yaml'/'yml' as file_type.")
+
+
 def factor_id_to_name(factor_id):
     pattern = re.compile(r"(?:(t\d+)-)?(?:(f\d+)-)?(?:(p\d+)-)?(?:(a\d+)-)?(?:(r\d+))?")
     match = pattern.match(factor_id)
@@ -404,63 +510,9 @@ def ficture_params_to_factor_assets(params, skip_raster=False):
                         out_assets.append(out_asset)
     return out_assets
 
-## code suggested by ChatGPT
-def write_dict_to_file(data, file_path, file_type=None):
-    """
-    Write a dictionary to a JSON or YAML file.
 
-    Parameters:
-    data (dict): The dictionary to write to the file.
-    file_path (str): Path to the output file.
-    file_type (str, optional): The type of the file ('json' or 'yaml'). If None, the type is inferred from the file extension.
 
-    Raises:
-    ValueError: If the file type is unsupported.
-    """
-    if file_type is None:
-        _, file_extension = os.path.splitext(file_path)
-        file_type = file_extension.lower()[1:]  # Strip the dot and use the extension
 
-    if file_type == 'json':
-        with open(file_path, 'w') as file:
-            json.dump(data, file, indent=4)
-    elif file_type in ['yaml', 'yml']:
-        with open(file_path, 'w') as file:
-            yaml.safe_dump(data, file, default_flow_style=False)
-    else:
-        raise ValueError("Unsupported file type. Please provide 'json' or 'yaml'/'yml' as file_type.")
-
-# def run_bash_command(command):
-#     try:
-#         result = subprocess.run(command, 
-#                   shell=True, 
-#                   stdout=subprocess.PIPE, 
-#                   stderr=subprocess.PIPE, 
-#                   text=True, 
-#                   check=True)
-#         return result.stdout
-#     except subprocess.CalledProcessError as e:
-#         print(f"Command failed with error:\n\t{command}\n\t{e.stderr}\n")
-#         raise
-
-def run_command(command, use_bash=False):
-    executable_shell = "/bin/bash" if use_bash else "/bin/sh"
-    try:
-        result = subprocess.run(
-            command, 
-            shell=True, 
-            executable=executable_shell,  # Choose the shell based on the use_bash flag
-            stdout=subprocess.PIPE, 
-            stderr=subprocess.PIPE, 
-            text=True, 
-            check=True
-        )
-        return result.stdout
-    except subprocess.CalledProcessError as e:
-        print(f"Command failed with error:\n{e.stderr}")
-        raise
-
-import os
 
 def create_symlink(A, B):
     # Purpose: Create a soft link from A to B
