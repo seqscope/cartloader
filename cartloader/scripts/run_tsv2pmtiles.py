@@ -56,6 +56,7 @@ def parse_arguments(_args):
     aux_params.add_argument('--out-features-suffix', type=str, default="features.tsv.gz", help='The output file to store feature count matrix. Each file name will be [out-prefix].split.[bin_id].[out-features-suffix]. Default: features.tsv.gz')
     aux_params.add_argument('--tippecanoe', type=str, default=f"{repo_dir}/submodules/tippecanoe/tippecanoe", help='Path to tippecanoe binary')
     aux_params.add_argument('--keep-intermediate-files', action='store_true', default=False, help='Keep intermediate output files')
+    aux_params.add_argument('--tmp-dir', type=str, help='Temporary directory to be used (default: out-dir/tmp; specify /tmp if needed)')
 
     if len(_args) == 0:
         parser.print_help()
@@ -93,6 +94,11 @@ def run_tsv2pmtiles(_args):
     out_base = os.path.basename(args.out_prefix)
     if not os.path.exists(out_dir):
         os.makedirs(out_dir, exist_ok=True)
+
+    if args.tmp_dir is None:
+        args.tmp_dir = os.path.join(out_dir, "tmp")
+        if not os.path.exists(args.tmp_dir):
+            os.makedirs(args.tmp_dir, exist_ok=True)
     
     # 1. Perform split without running makefile
     if args.split:
@@ -139,7 +145,7 @@ def run_tsv2pmtiles(_args):
             else:
                 pmtiles_path = args.out_prefix + "_bin" + bin_id + ".pmtiles"
             cmds = cmd_separator([], f"Converting bin {bin_id} to pmtiles")
-            cmds.append(f"TIPPECANOE_MAX_THREADS={args.threads} '{args.tippecanoe}' -o {pmtiles_path} -Z {args.min_zoom} -z {args.max_zoom} --force -s EPSG:3857 -M {args.max_tile_bytes} -O {args.max_feature_counts} --drop-densest-as-needed --extend-zooms-if-still-dropping '--preserve-point-density-threshold={args.preserve_point_density_thres}' --no-duplication --no-clipping --buffer 0 {csv_path}")
+            cmds.append(f"TIPPECANOE_MAX_THREADS={args.threads} '{args.tippecanoe}' -t {args.tmp_dir} -o {pmtiles_path} -Z {args.min_zoom} -z {args.max_zoom} --force -s EPSG:3857 -M {args.max_tile_bytes} -O {args.max_feature_counts} --drop-densest-as-needed --extend-zooms-if-still-dropping '--preserve-point-density-threshold={args.preserve_point_density_thres}' --no-duplication --no-clipping --buffer 0 {csv_path}")
             mm.add_target(pmtiles_path, [csv_path], cmds)
 
         if len(mm.targets) == 0:

@@ -46,9 +46,7 @@ def parse_arguments(_args):
 def transform_aligned_histology(_args):
     args=parse_arguments(_args)
         
-    ## /Users/hmkang/data/ficture/xenium/ffpe_human_breast_cancer_rep1/out/outs/morphology.ome.tif
-    ## /Users/hmkang/data/ficture/xenium/human_lung_cancer_out/morphology.ome.tif
-    ## /Users/hmkang/data/ficture/xenium/human_lung_preview_out/morphology.ome.tif
+    ## ~/data/ficture/xenium/ffpe_human_breast_cancer_rep1/out/outs/morphology.ome.tif
 
     logger = create_custom_logger(__name__, args.out_prefix + args.log_suffix if args.log else None)
     logger.info("Analysis Started")
@@ -73,7 +71,7 @@ def transform_aligned_histology(_args):
                 raise ValueError(f"The CSV file {args.csv} contains non-zero values at off-diagonal elements")
             
     ## output basic information, such as number of pages
-    with tifffile.TiffFile(args.tif) as tif:
+    with tifffile.TiffFile(args.tif, _multifile=False) as tif:
         logger.info(f"Successfully loaded the OME-TIFF file {args.tif}")
         n_pages = len(tif.pages)
         n_series = len(tif.series)
@@ -85,6 +83,38 @@ def transform_aligned_histology(_args):
 
         args.page = 0
         page = tif.series[args.series].levels[args.level].pages[args.page]
+
+## This is a test code for handle the tiled TIFF      
+        if page.is_tiled:            
+            print(f"This is a tiled TIFF with chunk size {page.chunks}")
+            print(f"chunks = {page.chunks}")
+            print(f"tilelength = {page.tilelength}")
+            print(f"tilewidth = {page.tilewidth}")
+            print(f"tiledepth = {page.tiledepth}")
+            print(f"samplesperpixel = {page.samplesperpixel}")
+            print(f"imagewidth = {page.imagewidth}")
+            print(f"imagelength = {page.imagelength}")
+            print(f"imagedepth = {page.imagedepth}")
+            print(f"rowsperstrip = {page.rowsperstrip}")
+            print(f"sampleformat = {page.sampleformat}")
+            print(f"compression = {page.compression}")
+            print(f"photometric = {page.photometric}")
+            segments = page.segments()
+            for i, segment in enumerate(segments):
+                (data, offset, bytecount) = segment
+                print(f"{i}, {data.shape}, {offset}, {bytecount}, {np.squeeze(data).shape}")
+                if i > 10:
+                    break
+        else:
+            # It's not tiled, so check how many strips there are
+            n_strips = len(page.strip_offsets) if page.strip_offsets is not None else 0
+            if n_strips > 1:
+                print(f"This is a striped TIFF with {n_strips} strips.")
+            else:
+                print("This is a single-strip (scanline-based) TIFF.")
+        
+        sys.exit(1)
+            
         if len(page.shape) == 3:
             if page.shape[2] != 3:
                 logger.error("The colored image is not in RGB format")
