@@ -327,7 +327,13 @@ def run_fig2pmtiles(_args):
         cmds = cmd_separator([], f"Updating yaml for pmtiles: {pmtiles_f}")
         pmtiles_name=os.path.basename(pmtiles_f)
         pmtiles_dir=os.path.dirname(pmtiles_f)
-        cmds.append(f"cartloader update_catalog_for_basemap --in-yaml {catalog_f} --basemap {args.basemap_key}:{pmtiles_name} --basemap-dir {pmtiles_dir} --overwrite")
+        cmd= " ".join([
+            "cartloader write_catalog_for_assets",
+            f"--out-catalog {catalog_f}",
+            f"--basemap {args.basemap_key}:{pmtiles_name}",
+            f"--basemap-dir {pmtiles_dir}"
+        ])
+        #cmds.append(f"cartloader update_catalog_for_basemap --in-yaml {catalog_f} --basemap {args.basemap_key}:{pmtiles_name} --basemap-dir {pmtiles_dir} --overwrite")
         cmds.append(f"touch {pmtiles_f}.yaml.done")
         mm.add_target(f"{pmtiles_f}.yaml.done", [pmtiles_f, catalog_f], cmds)
 

@@ -1,3 +1,7 @@
+# UPDATED: 2025-04-03
+# USE write_catalog_for_assets instead.
+
+
 import sys, os, gzip, argparse, logging, warnings, shutil, subprocess, ast, json, yaml
 import pandas as pd
 
@@ -43,21 +47,12 @@ def update_catalog_for_basemap(_args):
         toks = basemap.split(":")
         if len(toks) == 2:
             (basemap_type, basemap_fn) = toks
-            if ( basemap_type in basemap_dict ):
-                if not args.overwrite:
-                    print(f"Skipping {basemap_type} as it already exists in the catalog as: {basemap_type}:{basemap_dict[basemap_type]}")
-                    continue
             basemap_dict[basemap_type] = basemap_fn
         elif ( len(toks) == 3 ):
             (basemap_id1, basemap_id2, basemap_fn) = toks
             if ( basemap_id1 not in basemap_dict ):
                 basemap_dict[basemap_id1] = {}
                 basemap_dict[basemap_id1]["default"] = basemap_id2
-            if ( basemap_id2 in basemap_dict[basemap_id1] ):
-                #raise ValueError (f"Duplicate basemap id {basemap_id1}:{basemap_id2}")
-                if not args.overwrite:
-                    print(f"Skipping {basemap_id1}:{basemap_id2} as it already exists in the catalog")
-                    continue
             basemap_dict[basemap_id1][basemap_id2] = basemap_fn
         else:
             raise ValueError(f"Invalid basemap format {basemap}")
