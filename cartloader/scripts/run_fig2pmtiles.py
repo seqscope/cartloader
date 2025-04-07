@@ -333,6 +333,7 @@ def run_fig2pmtiles(_args):
             f"--basemap {args.basemap_key}:{pmtiles_name}",
             f"--basemap-dir {pmtiles_dir}"
         ])
+        cmds.append(cmd)
         #cmds.append(f"cartloader update_catalog_for_basemap --in-yaml {catalog_f} --basemap {args.basemap_key}:{pmtiles_name} --basemap-dir {pmtiles_dir} --overwrite")
         cmds.append(f"touch {pmtiles_f}.yaml.done")
         mm.add_target(f"{pmtiles_f}.yaml.done", [pmtiles_f, catalog_f], cmds)
