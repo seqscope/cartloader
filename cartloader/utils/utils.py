@@ -1,4 +1,4 @@
-import logging, os, shutil, sys, importlib, csv, shlex, subprocess, json, yaml, re
+import logging, os, shutil, sys, importlib, csv, shlex, subprocess, json, yaml, re, gzip
 import os
 
 
@@ -545,3 +545,36 @@ def create_symlink(A, B):
     # Step 3: Create the soft link
     os.symlink(A, B)
     print(f"Soft link created from {A} to {B}.")
+
+# flexopen - open either plan or gzip file
+def flexopen(filename, mode='rt'):
+    if filename.endswith('.gz'):
+        return gzip.open(filename, mode, encoding='utf-8' if 't' in mode else None)
+    else:
+        return open(filename, mode, encoding='utf-8' if 't' in mode else None)
+
+# unquote a string
+def unquote_str(s):
+    if len(s) >= 2 and s[0] == s[-1] and s[0] in ("'", '"'):
+        return s[1:-1]
+    return s
+
+# smart sorting - sort as integers only if all are integers
+def smartsort(strings):
+    # Convert to list if it's a set
+    strings = list(strings)
+
+    # Check if all elements are integers
+    all_integers = all(s.lstrip('-').isdigit() for s in strings)
+
+    if all_integers:
+        # Sort numerically
+        sorted_strings = sorted(strings, key=lambda x: int(x))
+    else:
+        # Sort lexicographically
+        sorted_strings = sorted(strings)
+
+    # Create the mapping from string to its order
+    order_mapping = {s: idx for idx, s in enumerate(sorted_strings)}
+
+    return sorted_strings, order_mapping
