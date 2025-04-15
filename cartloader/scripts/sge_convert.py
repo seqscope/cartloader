@@ -1,7 +1,7 @@
 import sys, os, argparse, logging,  inspect, json, subprocess
 import pandas as pd
 from cartloader.utils.minimake import minimake
-from cartloader.utils.utils import cmd_separator, scheck_app, add_param_to_cmd
+from cartloader.utils.utils import cmd_separator, scheck_app, add_param_to_cmd, read_minmax
 from cartloader.utils.sge_helper import aux_sge_args, input_by_platform, update_csvformat_by_platform
 from cartloader.scripts.feature_filtering import filter_feature_by_type
 
@@ -328,11 +328,23 @@ def sge_density_filtering(mm, args):
 # main functions
 #
 #================================================================================================
-def sge_visual(mm, args, transcript_f, xy_f, prereq):
+def sge_visual(mm, args, transcript_f, minmax_f, xy_f, prereq):
     scheck_app(args.spatula)
     # draw xy plot for visualization
     cmds = cmd_separator([], f"Drawing XY plot for SGE: {transcript_f}")
-    draw_cmd=f"{args.gzip} -dc {transcript_f} | tail -n +2 | cut -f 1,2 | {args.spatula} draw-xy --tsv /dev/stdin --out {xy_f}"
+    #draw_cmd=f"{args.gzip} -dc {transcript_f} | tail -n +2 | cut -f 1,2 | {args.spatula} draw-xy --tsv /dev/stdin --out {xy_f}"
+    minmax = read_minmax(minmax_f, "row")
+    draw_cmd = " ".join([
+        f"'{args.spatula}'",
+        "draw-xy",
+        "--tsv", transcript_f,
+        "--icol-x 0", # str(icol_x),
+        "--icol-y 1", # str(icol_y),
+        "--icol-cnt -1", # str(icol_cnt) if icol_cnt is not None else "-1",
+        "--ullr", f"{minmax['xmin']},{minmax['ymin']},{minmax['xmax']},{minmax['ymax']}",
+        "--auto-adjust",
+        "--skip-lines", "1",
+    ])
     cmds.append(draw_cmd)
     mm.add_target(xy_f, prereq, cmds)
     return mm
@@ -351,9 +363,11 @@ def sge_convert(_args):
     os.makedirs(args.out_dir, exist_ok=True)
 
     out_transcript_f = os.path.join(args.out_dir, args.out_transcript)
+    out_minmax_f = os.path.join(args.out_dir, args.out_minmax)
     out_xy_f = os.path.join(args.out_dir, "xy.png")
 
     filtered_transcript_f = os.path.join(args.out_dir, f"{args.out_filtered_prefix}.transcripts.unsorted.tsv.gz")
+    filtered_minmax_f = os.path.join(args.out_dir, f"{args.out_filtered_prefix}.coordinate_minmax.tsv")
     filtered_xy_f = os.path.join(args.out_dir, f"{args.out_filtered_prefix}.xy.png")
 
     # mm
@@ -375,6 +389,7 @@ def sge_convert(_args):
     if args.sge_visual:
         mm = sge_visual(mm, args, 
                         out_transcript_f,
+                        out_minmax_f,
                         out_xy_f,
                         [sge_convert_flag])        
             
@@ -385,6 +400,7 @@ def sge_convert(_args):
     if args.filter_by_density and args.sge_visual:
         mm = sge_visual(mm, args, 
                         filtered_transcript_f,
+                        filtered_minmax_f,
                         filtered_xy_f,
                         [filtered_transcript_f])
 

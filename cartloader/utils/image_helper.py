@@ -1,3 +1,14 @@
+import rasterio
+
+def scheck_georeference(tif_path):
+    """
+    Check if a TIFF file is georeferenced (i.e., a GeoTIFF).
+    """
+    with rasterio.open(tif_path) as src:
+        has_transform = src.transform != rasterio.Affine.identity()
+        has_crs = src.crs is not None
+        return has_transform and has_crs
+    
 
 orient2axisorder = {
     # rotate, flip_vertical, flip_horizontal: order_arg
@@ -28,6 +39,7 @@ orient2axisorder = {
 
 # Simplified map of equivalent transformations
 def update_orient(rotation, flip_vertical, flip_horizontal, image_f):
+    rotation = str(rotation) if rotation is not None else None
     orient_map = {
         # No transformation
         (None, False, False): (None, False, False),
@@ -64,8 +76,8 @@ def update_orient(rotation, flip_vertical, flip_horizontal, image_f):
     if rotation is not None:
         if isinstance(rotation, int):
             rotation = str(rotation)
-        if rotation not in ["90", "180", "270"]:
-            raise ValueError(f"Error: Invalid rotate value ({rotation}) for {image_f}. Rotation must be None, 90, 180, or 270.")
+            if rotation not in ["90", "180", "270"]:
+                raise ValueError(f"Error: Invalid rotate value ({rotation}) for {image_f}. Rotation must be None, 90, 180, or 270.")
 
     new_rot, new_vflip, new_hflip = orient_map.get(
         (rotation, flip_vertical, flip_horizontal)

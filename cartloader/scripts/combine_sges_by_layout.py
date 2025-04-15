@@ -72,7 +72,7 @@ def combine_sges_by_layout(_args):
 
     # * concat
     df = pd.concat([df, minmax_df], axis=1)
-    log_dataframe(df, log_message="  - Input SGEs:", indentation="  ")
+    log_dataframe(df, msg="  - Input SGEs:")
 
     # 3. Calculate subset (offset and minmax for each tile)
     logger.info(f"  "+"-"*20)
@@ -101,21 +101,16 @@ def combine_sges_by_layout(_args):
     df["y_offset"] = df["row"].map(row2y_offsets) - (df["ymin"] + df["ymax"]) / 2
 
     df_subset = df[["row", "col", "xmin", "xmax", "ymin", "ymax", "x_offset", "y_offset"]].copy()
-    df_subset["x_offset_in_um"] = df_subset["x_offset"] / args.units_per_um if args.convert_to_um else np.nan
-    df_subset["y_offset_in_um"] = df_subset["y_offset"] / args.units_per_um if args.convert_to_um else np.nan
 
-    df_subset["new_xmin"] = df_subset["xmin"] + df_subset["x_offset"]
-    df_subset["new_xmax"] = df_subset["xmax"] + df_subset["x_offset"]
-    df_subset["new_ymin"] = df_subset["ymin"] + df_subset["y_offset"]
-    df_subset["new_ymax"] = df_subset["ymax"] + df_subset["y_offset"]
+    df_subset["units_per_um"]= args.units_per_um
 
-    # * Convert to um (to allow offset_in_um in out_offsets file)
-    df_subset["new_xmin_in_um"] = df_subset["new_xmin"] / args.units_per_um if args.convert_to_um else np.nan
-    df_subset["new_xmax_in_um"] = df_subset["new_xmax"] / args.units_per_um if args.convert_to_um else np.nan
-    df_subset["new_ymin_in_um"] = df_subset["new_ymin"] / args.units_per_um if args.convert_to_um else np.nan
-    df_subset["new_ymax_in_um"] = df_subset["new_ymax"] / args.units_per_um if args.convert_to_um else np.nan
+    # use a scaled version (only for record)
+    df_subset["new_xmin_scaled"] = (df_subset["xmin"] + df_subset["x_offset"])/ args.units_per_um
+    df_subset["new_xmax_scaled"] = (df_subset["xmax"] + df_subset["x_offset"])/ args.units_per_um
+    df_subset["new_ymin_scaled"] = (df_subset["ymin"] + df_subset["y_offset"])/ args.units_per_um
+    df_subset["new_ymax_scaled"] = (df_subset["ymax"] + df_subset["y_offset"])/ args.units_per_um
 
-    log_dataframe(df_subset,  log_message="  - Offsets and new minmax per tile:", indentation="  ")
+    log_dataframe(df_subset,  msg="  - Offsets and new minmax per tile:", indentation="  ")
 
     # * save subset offsets & minmax
     out_subset = os.path.join(args.out_dir, args.out_subset)
@@ -134,16 +129,15 @@ def combine_sges_by_layout(_args):
         "ymax": row2y.sum()
     }
     df_minmax_combined = {k: round(v, args.precision) for k, v in df_minmax_combined.items()} 
-    logger.info(f"  - Minmax for the combined SGEs (in unit): {df_minmax_combined}")
+    logger.info(f"  - Minmax for the combined SGEs (in the input coordinate unit): {df_minmax_combined}")
 
     # * in um
-    if args.convert_to_um:
-        df_minmax_combined["xmin"] = df_minmax_combined["xmin"] / args.units_per_um
-        df_minmax_combined["xmax"] = df_minmax_combined["xmax"] / args.units_per_um
-        df_minmax_combined["ymin"] = df_minmax_combined["ymin"] / args.units_per_um
-        df_minmax_combined["ymax"] = df_minmax_combined["ymax"] / args.units_per_um
-        df_minmax_combined = {k: round(v, args.precision) for k, v in df_minmax_combined.items()} 
-        logger.info(f"  - Minmax for the combined SGEs (in um): {df_minmax_combined}")
+    df_minmax_combined["xmin"] = df_minmax_combined["xmin"] / args.units_per_um
+    df_minmax_combined["xmax"] = df_minmax_combined["xmax"] / args.units_per_um
+    df_minmax_combined["ymin"] = df_minmax_combined["ymin"] / args.units_per_um
+    df_minmax_combined["ymax"] = df_minmax_combined["ymax"] / args.units_per_um
+    df_minmax_combined = {k: round(v, args.precision) for k, v in df_minmax_combined.items()} 
+    logger.info(f"  - Minmax for the combined SGEs (scaled): {df_minmax_combined}")
 
     # * Write minmax for combined SGE
     out_minmax = os.path.join(args.out_dir, args.out_minmax)
@@ -212,7 +206,7 @@ def combine_sges_by_layout(_args):
     logger.info(f"Transcript file written to {out_transcript}")
 
     if args.debug:
-        log_dataframe(df, log_message="Details:", indentation="  ")
+        log_dataframe(df, msg="Details:", indentation="  ")
 
 
 if __name__ == "__main__":

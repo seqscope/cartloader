@@ -1,137 +1,169 @@
 import sys, os, gzip, argparse, logging, warnings, shutil, re, copy, time, pickle, inspect, warnings, json, yaml
 import pandas as pd
 import subprocess
+import rasterio # for extracting bounds
 
-from cartloader.utils.utils import cmd_separator, scheck_app, add_param_to_cmd, log_dataframe
+from cartloader.utils.utils import cmd_separator
 from cartloader.utils.minimake import minimake
+from cartloader.utils.image_helper import update_orient
+
+from cartloader.scripts.run_fig2pmtiles import get_orientation_suffix, cmds_for_dimensions, cmds_for_orientation
+
+# get the current path
+current_path = os.path.realpath(__file__)
+cartloader_dir=os.path.dirname(os.path.dirname(os.path.dirname(current_path)))
+gdal_get_size_script = os.path.join(cartloader_dir, 'cartloader', "utils", "gdal_get_size.sh")
 
 def hist_stitch(_args):
     parser = argparse.ArgumentParser(
         prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}",
-        description="Stitching tiles into one tif."
+        description="""
+        Stitching multiple tif tiles into one tif. 
+        If georeferencing is required, there are two options: 1) set georef=True with ullr in local (per-tile) coordinates and provide --in-offsets; 2) set georef=True with ullr in global coordinates and set --in-offsets=None.
+        If the tiles are already georeferenced with local coordinates, use --in-offsets to adjust positions.
+        If the tiles are already georeferenced with global coordinates, set georef=False and --in-offsets=None.
+        """
     )
     run_params = parser.add_argument_group("Run Options", "Run options")
     run_params.add_argument('--dry-run', action='store_true', default=False, help='Simulate the process without executing commands (default: False)')
     run_params.add_argument('--restart', action='store_true', default=False, help='Ignore all intermediate files and start from the beginning (default: False)')
     run_params.add_argument('--n-jobs', '-j', type=int, default=1, help='Number of jobs (processes) to run in parallel (default: 1)')
-    run_params.add_argument('--makefn', type=str, default="sge_stitch.mk", help='Makefile name (default: sge_stitch.mk)')
+    run_params.add_argument('--makefn', type=str, default=None, help='Makefile name. By default, it will be named as hist_stitch_<filename>.mk based on the output file name.')
     run_params.add_argument('--threads', type=int, default=1, help='Maximum number of threads to use in each process (default: 1)')
     
     inout_params = parser.add_argument_group("Input/Output Parameters", "Input/Output Parameters")
-    inout_params.add_argument("--in-tiles", type=str, nargs='*', default=[], help="List of the input tiles in a specific format: <path>,<row>,<col>.")
-    inout_params.add_argument("--output", type=str, help="Output path to store the merged file.")
-    inout_params.add_argument("--in-offsets", type=str, help="Path to the input offsets file.")
-    inout_params.add_argument("--colname-x-offset", type=str, default="x_offset", help="Column name for x offset in the input offsets file.")
-    inout_params.add_argument("--colname-y-offset", type=str, default="y_offset", help="Column name for y offset in the input offsets file.")
-    inout_params.add_argument('--units-per-um', type=float, default=1.0, help='Units per um in the input transcript tsv files (default: 1.0)')
-    inout_params.add_argument('--convert-to-um', action='store_true', help='Convert output to um.')
-
-    # env params
-    # env_params = parser.add_argument_group("ENV Parameters", "Environment parameters for the tools")
-    # env_params.add_argument('--gzip', type=str, default="gzip", help='Path to gzip binary. For faster processing, use "pigz -p 4".')
-    # env_params.add_argument('--spatula', type=str, default="spatula", help='Path to spatula binary.')
+    inout_params.add_argument("--in-tiles", type=str, nargs='*', default=[], help="List of input tiles in the format: <path>,<row>,<col>,<georef>,<bounds>,<rotate>,<vertical_flip>,<horizontal_flip>. "
+                                                                                "<georef> is a boolean indicating if georeferencing is needed. "
+                                                                                "<bounds> is '<ulx>,<uly>,<lrx>,<lry>' if georeferencing is required. "
+                                                                                "<rotate> is one of 0, 90, 180, 270. <vertical_flip> and <horizontal_flip> are booleans indicating if the image should be flipped vertically or horizontally.")
+    inout_params.add_argument("--output", type=str, help="Output path for the stitched tif file.")
+    inout_params.add_argument("--in-offsets", type=str, default=None, help="Path to the input offsets file, in which the following columns are required: row, col, x_offset, y_offset, units_per_um")
+    
+    env_params = parser.add_argument_group("Env Parameters", "Environment parameters, e.g., tools.")
+    env_params.add_argument('--gdal_translate', type=str, default=f"gdal_translate", help='Path to gdal_translate binary')
+    env_params.add_argument('--gdalbuildvrt', type=str, default=f"gdalbuildvrt", help='Path to gdalbuildvrt binary')
+    env_params.add_argument('--srs', type=str, default='EPSG:3857', help='Spatial reference system (default: EPSG:0)')
     args = parser.parse_args(_args)
 
     mm = minimake()
 
-    updated_tiles = []
-    prerequisities = []
-
-    out_dir=os.path.dirname(args.output)
+    out_dir = os.path.dirname(args.output)
     os.makedirs(out_dir, exist_ok=True)
 
+    out_bn = os.path.basename(args.output).replace(".tif", "")
+    if args.makefn is None:
+        args.makefn = f"hist_stitch_{out_bn}.mk"
+
     # read in_offsets
-    offsets = pd.read_csv(args.in_offsets, sep="\t")
-    offsets["row"] = offsets["row"].astype(int)
-    offsets["col"] = offsets["col"].astype(int)
-    # create dict between (row, col) to x_offset, y_offset
     idx2offsets = {}
-    for i, row in offsets.iterrows():
-        idx2offsets[(row['row'], row['col'])] = (row[args.colname_x_offset], row[args.colname_y_offset])
+    if args.in_offsets is not None:
+        offsets = pd.read_csv(args.in_offsets, sep="\t")
 
-    # hist add offsets
+        # assure the type
+        offsets["row"] = offsets["row"].astype(int).astype(str)
+        offsets["col"] = offsets["col"].astype(int).astype(str)
+        offsets["x_offset"] = offsets["x_offset"].astype(float)
+        offsets["y_offset"] = offsets["y_offset"].astype(float)
+        offsets["units_per_um"] = offsets["units_per_um"].astype(float)
+
+        # assuming the coordinates in hist in um
+        offsets["x_offset_um"] = offsets["x_offset"] / offsets["units_per_um"]
+        offsets["y_offset_um"] = offsets["y_offset"] / offsets["units_per_um"]
+   
+        # create dict between (row, col) to x_offset, y_offset
+        idx2offsets = {
+            (row["row"], row["col"]): (row["x_offset_um"], row["y_offset_um"])
+            for _, row in offsets.iterrows()
+        }
+
+    tiles = []
     for in_tile in args.in_tiles:
-        path, row, col = in_tile.split(",")
-        x_offset, y_offset = idx2offsets[(int(row), int(col))]
-        if not os.path.exists(path):
-            raise FileNotFoundError(f"Transcript file {path} does not exist.")
-        # missing feature or minmax
-        missing_ftr = feature is None or feature == "None"
-        missing_minmax = minmax is None or minmax == "None"
-        if missing_ftr or missing_minmax:
-            in_dir = os.path.dirname(transcript)
-            in_id = os.path.basename(transcript).replace('.tsv.gz', '').replace(".transcripts", "").replace(".transcript", "")
-        if missing_ftr:
-            cmds = cmd_separator([], f"Creating missing feature file for {transcript}")
-            out_ftr = os.path.join(in_dir, f"{in_id}.feature.tsv.gz")
-            add_ftr_cmd =" ".join([f"cartloader", "sge_adds_on",
-                                    f"--in-transcript {transcript}",
-                                    "--add-feature",
-                                    f"--colname-feature-name {args.colname_feature_name}",
-                                    f"--colname-feature-id {args.colname_feature_id}" if args.colname_feature_id else "",
-                                    f"--colnames-count {args.colnames_count}",
-                                    f"--out-feature {out_ftr}"
-                                ])
-            cmds.append(add_ftr_cmd)
-            mm.add_target(out_ftr, [transcript], cmds)
-            feature = out_ftr
-        if missing_minmax:
-            cmds = cmd_separator([], f"Creating missing minmax file for {transcript}")
-            out_minmax = os.path.join(in_dir, f"{in_id}.minmax.tsv")
-            add_minmax_cmd =" ".join([f"cartloader", "sge_adds_on",
-                                    f"--in-transcript {transcript}",
-                                    "--add-minmax",
-                                    f"--out-minmax {out_minmax}",
-                                    f"--mu-scale {args.units_per_um}" if args.minmax_in_um else "",
-                                ])
-            cmds.append(add_minmax_cmd)
-            mm.add_target(out_minmax, [transcript], cmds)
-            minmax = out_minmax
-        updated_tiles.append(",".join([transcript, feature, minmax, row, col]))
-        prerequisities.extend([transcript, feature, minmax])
+        # input params
+        tif, row, col, georef, georef_bound, rotate, vflip, hflip = in_tile.split(",")
 
-    
-    # combine sge
-    cmds = cmd_separator([], f"Combining SGEs")
-    if "," in args.colnames_count:
-        colnames_count = args.colnames_count.split(",")
-    else:
-        colnames_count = [args.colnames_count]
-    combine_cmd=" ".join([f"cartloader", "combine_sges_by_layout",
-                            f"--in-tiles {' '.join(updated_tiles)}",
-                            f"--out-dir {args.out_dir}",
-                            f"--out-transcript {args.out_transcript}",
-                            f"--out-minmax {args.out_minmax}",
-                            f"--out-feature {args.out_feature}",
-                            f"--colnames-count {' '.join(colnames_count)}",
-                            f"--colname-feature-name {args.colname_feature_name}",
-                            f"--colname-feature-id {args.colname_feature_id}" if args.colname_feature_id else "",
-                            f"--colname-x {args.colname_x}",
-                            f"--colname-y {args.colname_y}",
-                            f"--units-per-um {args.units_per_um}",
-                            '--minmax-in-um' if args.minmax_in_um else '',
-                            '--convert-to-um' if args.convert_to_um else '',
-                        ])
-    cmds.append(combine_cmd)
-    sge_stitch_flag = os.path.join(args.out_dir, "sge_stitch.done")
-    cmds.append(f'[ -f {os.path.join(args.out_dir, "transcripts.unsorted.tsv.gz")} ] && [ -f {os.path.join(args.out_dir, "feature.clean.tsv.gz")} ] && [ -f {os.path.join(args.out_dir, "coordinate_minmax.tsv")} ] && touch {sge_stitch_flag}')
-    mm.add_target(sge_stitch_flag, prerequisities, cmds)
+        assert os.path.exists(tif), f"Input histology file {tif} (index: {row}, {col}) does not exist."
+        row, col = str(int(row)), str(int(col))
+        georef = str(georef).lower() == "true"
+        georef_bound = georef_bound if georef_bound else None
+        rotate = str(rotate) if rotate else None
+        vflip = str(vflip).lower() == "true"
+        hflip = str(hflip).lower() == "true"
+        
+        # tile_prefix for orientation
+        tile_prefix = os.path.join(out_dir, os.path.basename(tif).replace(".tif", ""))
 
-    # draw xy plot for visualization
-    if args.sge_visual:
-        cmds = cmd_separator([], f"Drawing XY plot")
-        out_transcript=os.path.join(args.out_dir, args.out_transcript)
-        out_xypng=os.path.join(args.out_dir, "xy.png")
-        draw_cmd=f"{args.gzip} -dc {out_transcript} | tail -n +2 | cut -f 1,2 | {args.spatula} draw-xy --tsv /dev/stdin --out {out_xypng}"
-        cmds.append(draw_cmd)
-        mm.add_target(out_xypng, [sge_stitch_flag], cmds)
+        # Update to global coordinates
+        # 1) georef 
+        x_offset, y_offset = idx2offsets.get((row, col), (0, 0))
+        
+        # - tif without coordinates with/wo offsets (update to global coordinates)
+        if georef: 
+            assert georef_bound is not None, "Georeferencing requires bounds. Format: <ulx>,<uly>,<lrx>,<lry>"
+            ulx, uly, lrx, lry = map(float, georef_bound.split(","))
+            ulx = ulx + x_offset 
+            uly = uly + y_offset
+            lrx = lrx + x_offset
+            lry = lry + y_offset
+            ullr = f"{ulx} {uly} {lrx} {lry}"
+        # - tif with local coordinates (add offsets to update to global coordinates)
+        elif x_offset != 0 or y_offset != 0:
+            # extract bounds from the tif and add offsets from gdalinfo
+            with rasterio.open(tif) as src:
+                bounds = src.bounds             # returns: BoundingBox(left=min_x, bottom=min_y, right=max_x, top=max_y)
+            ulx = bounds.left + x_offset
+            uly = bounds.top + y_offset
+            lrx = bounds.right + x_offset
+            lry = bounds.bottom + y_offset
+            ullr = f"{ulx} {uly} {lrx} {lry}"
+        # - tif with global coordinates (no offsets)
+        else:
+            ullr = None
 
+        if ullr is not None:
+            cmds = cmd_separator([], f"Tile (row {row}, col {col}): Georeferencing with ullr ({ullr}). Input params: georef={georef}, bounds={georef_bound}, offsets=({x_offset}, {y_offset})")
+            georef_f=f"{tile_prefix}.georef.tif"
+            cmds.append(f"{args.gdal_translate} -of GTiff -a_srs {args.srs} -a_ullr {ullr} {tif} {georef_f}")
+            mm.add_target(georef_f, [tif], cmds)
+        else:
+            georef_f = tif
+        
+        # 2) rotate
+        if rotate is not None or vflip or hflip:
+            rotate, vflip, hflip = update_orient(rotate, vflip, hflip, tif)
+            # Generate Dimension file to provide height and width
+            dim_f = georef_f.replace(".tif", "") + ".dim.tsv"
+            cmds = cmds_for_dimensions(georef_f, dim_f)
+            mm.add_target(dim_f, [georef_f], cmds)
+            # Generate the orientated file
+            ort_suffix = get_orientation_suffix(rotate, vflip, hflip)
+            ort_f = f"{tile_prefix}.{ort_suffix}.tif"
+            cmds = cmds_for_orientation( georef_f, dim_f, ort_f, rotate, vflip, hflip)
+            mm.add_target(ort_f, [georef_f, dim_f], cmds) 
+        else:
+            ort_f = georef_f
+
+        tiles.append(ort_f)
+
+    # 3) stitch
+    # gdalbuildvrt + gdal_translate
+    cmds= cmd_separator([], f"Stitching the input into {args.output}")
+    out_vrt = args.output.replace(".tif", ".vrt")
+    cmd = " ".join([args.gdalbuildvrt, out_vrt] + tiles)
+    cmds.append(cmd)
+    cmd = " ".join([
+        args.gdal_translate,
+        "-of GTiff",
+        out_vrt,
+        args.output])
+    cmds.append(cmd)
+    mm.add_target(args.output, tiles, cmds)
+            
     # write makefile
     if len(mm.targets) == 0:
         logging.error("There is no target to run. Please make sure that at least one run option was turned on")
         sys.exit(1)
     
-    make_f = os.path.join(args.out_dir, args.makefn)
+    make_f = os.path.join(out_dir, args.makefn)
     mm.write_makefile(make_f)
     if args.dry_run:
         dry_cmd=f"make -f {make_f} -n {'-B' if args.restart else ''} "
