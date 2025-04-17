@@ -82,67 +82,78 @@ def hist_stitch(_args):
         tif, row, col, georef, georef_bound, rotate, vflip, hflip = in_tile.split(",")
 
         assert os.path.exists(tif), f"Input histology file {tif} (index: {row}, {col}) does not exist."
+        tile_prefix = os.path.join(out_dir, os.path.basename(tif).replace(".tif", "")) # tile_prefix for intermediate files
+
         row, col = str(int(row)), str(int(col))
+
+        # actions
+        # - georef
         georef = str(georef).lower() == "true"
         georef_bound = georef_bound if georef_bound else None
+        # - orient
         rotate = str(rotate) if rotate else None
         vflip = str(vflip).lower() == "true"
         hflip = str(hflip).lower() == "true"
-        
-        # tile_prefix for orientation
-        tile_prefix = os.path.join(out_dir, os.path.basename(tif).replace(".tif", ""))
-
-        # Update to global coordinates
-        # 1) georef 
+        rotate, vflip, hflip = update_orient(rotate, vflip, hflip, tif)
+        orient= True if rotate is not None or vflip or hflip else False
+        # - add offsets
         x_offset, y_offset = idx2offsets.get((row, col), (0, 0))
+        add_offsets = True if x_offset != 0 or y_offset != 0 else False
+
+        current_f = tif
         
-        # - tif without coordinates with/wo offsets (update to global coordinates)
+        # 1) georef (tif without coordinates)
         if georef: 
             assert georef_bound is not None, "Georeferencing requires bounds. Format: <ulx>,<uly>,<lrx>,<lry>"
             ulx, uly, lrx, lry = map(float, georef_bound.split(","))
-            ulx = ulx + x_offset 
-            uly = uly + y_offset
-            lrx = lrx + x_offset
-            lry = lry + y_offset
-            ullr = f"{ulx} {uly} {lrx} {lry}"
-        # - tif with local coordinates (add offsets to update to global coordinates)
-        elif x_offset != 0 or y_offset != 0:
-            # extract bounds from the tif and add offsets from gdalinfo
-            with rasterio.open(tif) as src:
+            ullr=f"{ulx} {uly} {lrx} {lry}"
+            cmds = cmd_separator([], f"Tile (row {row}, col {col}): Georeferencing with ullr ({ullr}). Input params: georef={georef}, bounds={georef_bound}, offsets=({x_offset}, {y_offset})")
+            georef_f=f"{tile_prefix}.georef.tif"
+            cmds.append(f"{args.gdal_translate} -of GTiff -a_srs {args.srs} -a_ullr {ullr} {tif} {georef_f}")
+            mm.add_target(georef_f, [tif], cmds)
+            current_f = georef_f
+        else:
+            # extract the ullr from the tif (for the add_offsets step)
+            with rasterio.open(current_f) as src:
+                bounds = src.bounds             # returns: BoundingBox(left=min_x, bottom=min_y, right=max_x, top=max_y)
+            ulx = bounds.left
+            uly = bounds.top
+            lrx = bounds.right
+            lry = bounds.bottom
+            ullr=f"{ulx} {uly} {lrx} {lry}"
+
+        # 2) rotate
+        if orient:
+            # Generate Dimension file to provide height and width
+            dim_f = current_f.replace(".tif", "") + ".dim.tsv"
+            cmds = cmds_for_dimensions(current_f, dim_f)
+            mm.add_target(dim_f, [current_f], cmds)
+            # Generate the orientated file
+            ort_suffix = get_orientation_suffix(rotate, vflip, hflip)
+            ort_f = f"{tile_prefix}.{ort_suffix}.tif"
+            cmds = cmds_for_orientation( current_f, dim_f, ort_f, rotate, vflip, hflip)
+            mm.add_target(ort_f, [current_f, dim_f], cmds) 
+            current_f = ort_f
+            # update the ullr
+            
+
+        # 3) add offsets
+        if add_offsets:
+            # extract local bounds from the ort_f
+            with rasterio.open(current_f) as src:
                 bounds = src.bounds             # returns: BoundingBox(left=min_x, bottom=min_y, right=max_x, top=max_y)
             ulx = bounds.left + x_offset
             uly = bounds.top + y_offset
             lrx = bounds.right + x_offset
             lry = bounds.bottom + y_offset
-            ullr = f"{ulx} {uly} {lrx} {lry}"
-        # - tif with global coordinates (no offsets)
-        else:
-            ullr = None
-
-        if ullr is not None:
-            cmds = cmd_separator([], f"Tile (row {row}, col {col}): Georeferencing with ullr ({ullr}). Input params: georef={georef}, bounds={georef_bound}, offsets=({x_offset}, {y_offset})")
-            georef_f=f"{tile_prefix}.georef.tif"
-            cmds.append(f"{args.gdal_translate} -of GTiff -a_srs {args.srs} -a_ullr {ullr} {tif} {georef_f}")
-            mm.add_target(georef_f, [tif], cmds)
-        else:
-            georef_f = tif
+            
+            cmds = cmd_separator([], f"Tile (row {row}, col {col}): Adding offsets to be ullr ({ulx} {uly} {lrx} {lry}). Input params: georef={georef}, bounds={georef_bound}, offsets=({x_offset}, {y_offset})")
+            gcoord_f=f"{tile_prefix}.globalcoord.tif"
+            cmds.append(f"{args.gdal_translate} -of GTiff -a_srs {args.srs} -a_ullr {ulx} {uly} {lrx} {lry} {current_f} {gcoord_f}")
+            mm.add_target(gcoord_f, [current_f], cmds)
+            current_f = gcoord_f
         
-        # 2) rotate
-        if rotate is not None or vflip or hflip:
-            rotate, vflip, hflip = update_orient(rotate, vflip, hflip, tif)
-            # Generate Dimension file to provide height and width
-            dim_f = georef_f.replace(".tif", "") + ".dim.tsv"
-            cmds = cmds_for_dimensions(georef_f, dim_f)
-            mm.add_target(dim_f, [georef_f], cmds)
-            # Generate the orientated file
-            ort_suffix = get_orientation_suffix(rotate, vflip, hflip)
-            ort_f = f"{tile_prefix}.{ort_suffix}.tif"
-            cmds = cmds_for_orientation( georef_f, dim_f, ort_f, rotate, vflip, hflip)
-            mm.add_target(ort_f, [georef_f, dim_f], cmds) 
-        else:
-            ort_f = georef_f
-
-        tiles.append(ort_f)
+        tiles.append(current_f)
 
     # 3) stitch
     # gdalbuildvrt + gdal_translate

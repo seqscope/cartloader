@@ -393,7 +393,6 @@ def sge_convert(_args):
                         out_xy_f,
                         [sge_convert_flag])        
             
-   
     if args.filter_by_density:
         mm = sge_density_filtering(mm, args)
     

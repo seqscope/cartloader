@@ -73,7 +73,6 @@ def cmd_sge_stitch(sgeinfo, args, env):
         f"--out-dir {sgeinfo['sge_dir']}",
         f"--units-per-um {sgeinfo.get('units_per_um', None)}" if sgeinfo.get("units_per_um", None) else "",
         f"--colnames-count {sgeinfo.get('colnames_all_count', None)}" if sgeinfo.get('colnames_all_count', None) else "",
-        f"--convert-to-um",
         f"--sge-visual" if args.sge_visual else "",
         f"--n-jobs {args.n_jobs}" if args.n_jobs else "",
         f"--restart" if args.restart else ""

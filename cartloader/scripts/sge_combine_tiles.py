@@ -5,21 +5,13 @@ import numpy as np
 
 from cartloader.utils.utils import log_dataframe, create_custom_logger
 
-global script_name
-script_name = os.path.splitext(os.path.basename(__file__))[0]
-
-def parse_minmax(file_path):
-    if not os.path.exists(file_path):
-        raise FileNotFoundError(f"Minmax file not found: {file_path}")
-    with open(file_path, "r") as f:
-        return {k: float(v) for k, v in (line.strip().split("\t") for line in f)}
-
-def combine_sges_by_layout(_args):
+def sge_combine_tiles(_args):
     parser = argparse.ArgumentParser(
         prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}",
         description="Combine SGE data by layout. Note the transcript/feature/minmax files should be in the same resolution.",
     )
     parser.add_argument("--in-tiles", type=str, nargs='*', default=[], help="List of input information in a specific format: <transcript_path>,<feature_path>,<minmax_path>,<row>,<col>.")
+    parser.add_argument('--in-tile-minmax', type=str, default=None, help="Path to the input offsets file, in which the following columns are required: row, col, x_offset_unit, y_offset_unit, global_xmin_um, global_xmax_um, global_ymin_um, global_ymax_um")
     parser.add_argument("--out-dir", type=str, help="Output directory.")
     parser.add_argument('--out-transcript', type=str, default="transcripts.unsorted.tsv.gz", help='Output file name for the compressed transcript-indexed SGE file in TSV format (default: transcripts.unsorted.tsv.gz).')
     parser.add_argument('--out-minmax', type=str, default="coordinate_minmax.tsv", help='Output minmax file name for the coordinate minmax TSV file (default: coordinate_minmax.tsv).')
@@ -30,11 +22,11 @@ def combine_sges_by_layout(_args):
     parser.add_argument('--colname-feature-id', type=str, default=None, help='Feature ID column (default: None)')
     parser.add_argument('--colname-x', type=str, default="X", help='X column name (default: X)')
     parser.add_argument('--colname-y', type=str, default="Y", help='Y column name (default: Y)')
-    parser.add_argument("--convert-to-um", action="store_true", help="Convert output coordinates to micrometers(default: False)")
-    parser.add_argument("--units-per-um", type=float, default=1.0, help="If --convert-to-um, define the scaling factor for unit conversion from coordinate to um(default: 1.0)")
-    # parser.add_argument('--minmax-in-um', action='store_true', help='Input minmax is in um while input transcript is based on unit.') # This was originally designed for the minmax in SeqScope v2 SGEs. Now we only take the transcripts and generate minmax from the sge-adds-on. So, disabling this.
+    parser.add_argument("--units-per-um", type=float, default=1.0, help="Define the scaling factor for unit conversion from coordinate to um (default: 1.0)")
     parser.add_argument("--precision", type=int, default=2, help="Precision for the output minmax and transcript files (default: 2)")
     parser.add_argument('--debug', action='store_true', help='Test mode.')
+    parser.add_argument('--log', action='store_true', default=False, help='Write log to file')
+
     args = parser.parse_args(_args)
 
     # outdir
@@ -44,7 +36,7 @@ def combine_sges_by_layout(_args):
     os.makedirs(args.out_dir, exist_ok=True) 
 
     # log
-    logger = create_custom_logger(__name__, os.path.join(args.out_dir, f"{args.out_transcript}.log"))
+    logger = create_custom_logger(__name__, os.path.join(args.out_dir, f"{args.out_transcript}.log") if args.log else None)
     logger.info(f"Command: {' '.join(sys.argv)}")
     logger.info(f"  - Output directory: {args.out_dir}")
 
@@ -59,94 +51,48 @@ def combine_sges_by_layout(_args):
     assert len(args.in_tiles) > 0, "No input tiles provided."
     assert all(len(in_tile.split(",")) == 5 for in_tile in args.in_tiles), "Each input tile should have 5 elements: <transcript_path>,<feature_path>,<minmax_path>,<row>,<col>."
 
+    # read in df
     df = pd.DataFrame(args.in_tiles, columns=["input"])
     df = df["input"].str.split(",", expand=True)
     df.columns = ["transcript_path", "feature_path", "minmax_path", "row", "col"]
     df["row"] = df["row"].astype(int)
     df["col"] = df["col"].astype(int)
-
-    # * input min max 
-    minmax_data = df["minmax_path"].apply(parse_minmax)
-    minmax_df = pd.DataFrame(minmax_data.tolist())
-    assert {"xmin", "xmax", "ymin", "ymax"}.issubset(minmax_df.columns), "Missing required minmax columns: xmin, xmax, ymin, ymax in the minmax file."
-
-    # * concat
-    df = pd.concat([df, minmax_df], axis=1)
     log_dataframe(df, msg="  - Input SGEs:")
+    df["layout_idx"] = df.apply(lambda x: f"{int(x['row'])},{int(x['col'])}", axis=1)
 
-    # 3. Calculate subset (offset and minmax for each tile)
-    logger.info(f"  "+"-"*20)
-    logger.info(f"  - Calculating offsets and new minmax for each tile ...")
-    # (1) The tile should be put at the center of the fixed space.
+    # read in_offsets
+    logger.info(f"  - Reading in offsets...")
+    df_tile_coords = pd.read_csv(args.in_tile_minmax, sep="\t", header=0)
+    assert df.shape[0] == df_tile_coords.shape[0], f"Found mismatch number of tiles between --in-tiles ({df.shape[0]}) and --in-tile-minmax ({df_tile_coords.shape[0]})."
+    df_tile_coords["layout_idx"] = df_tile_coords.apply(lambda x: f"{int(x['row'])},{int(x['col'])}", axis=1)
 
-    # * All x and y across rows and cols (in unit)
-    df["tile_x"] = df["xmax"] - df["xmin"]  # tile width (x)
-    df["tile_y"] = df["ymax"] - df["ymin"]  # tile height (y)
+    # update df: input with offsets
+    df=df.merge(df_tile_coords[["layout_idx", "x_offset_unit", "y_offset_unit"]], on="layout_idx", how="left")
+    
+    # 3. Minmax for the combined SGEs
+    logger.info(f"  - Get minmax for the combined SGEs ...")
+    # make sure the row and col are 
+    global_xmin_um = df_tile_coords["global_xmin_um"].min()
+    global_xmax_um = df_tile_coords["global_xmax_um"].max()
+    global_ymin_um = df_tile_coords["global_ymin_um"].min()
+    global_ymax_um = df_tile_coords["global_ymax_um"].max()
 
-    # * Fixed tile size (using the largest x and y) per row and per col (in unit)
-    row2y = df.groupby("row")["tile_y"].max() 
-    col2x = df.groupby("col")["tile_x"].max()
-    logger.info(f"      * Fixed height per row (in coordinate unit): {row2y.to_dict()}")
-    logger.info(f"      * Fixed width per col (in coordinate unit): {col2x.to_dict()}")
-
-    # * Offset for each col and per row (in unit)
-    row2y_offsets = row2y.cumsum() - row2y / 2
-    col2x_offsets = col2x.cumsum() - col2x / 2
-
-    # * drop the tile x and y
-    df.drop(["tile_x", "tile_y"], axis=1, inplace=True)
-
-    # * Offset for each tile (in unit)
-    df["x_offset"] = df["col"].map(col2x_offsets) - (df["xmin"] + df["xmax"]) / 2
-    df["y_offset"] = df["row"].map(row2y_offsets) - (df["ymin"] + df["ymax"]) / 2
-
-    df_subset = df[["row", "col", "xmin", "xmax", "ymin", "ymax", "x_offset", "y_offset"]].copy()
-
-    df_subset["units_per_um"]= args.units_per_um
-
-    # use a scaled version (only for record)
-    df_subset["new_xmin_scaled"] = (df_subset["xmin"] + df_subset["x_offset"])/ args.units_per_um
-    df_subset["new_xmax_scaled"] = (df_subset["xmax"] + df_subset["x_offset"])/ args.units_per_um
-    df_subset["new_ymin_scaled"] = (df_subset["ymin"] + df_subset["y_offset"])/ args.units_per_um
-    df_subset["new_ymax_scaled"] = (df_subset["ymax"] + df_subset["y_offset"])/ args.units_per_um
-
-    log_dataframe(df_subset,  msg="  - Offsets and new minmax per tile:", indentation="  ")
-
-    # * save subset offsets & minmax
-    out_subset = os.path.join(args.out_dir, args.out_subset)
-    df_subset.to_csv(out_subset, sep="\t", index=False)
-    logger.info(f"  - Offsets and new minmax per tile written to {out_subset}")
-
-    # 4. Minmax for the combined SGEs
-    logger.info(f"  "+"-"*20)
-    logger.info(f"  - Calculating minmax for the combined SGEs...")
-
-    # * in unit
     df_minmax_combined = {
-        "xmin": 0,
-        "xmax": col2x.sum(), 
-        "ymin": 0,
-        "ymax": row2y.sum()
+        "xmin": global_xmin_um,
+        "xmax": global_xmax_um,
+        "ymin": global_ymin_um,
+        "ymax": global_ymax_um
     }
     df_minmax_combined = {k: round(v, args.precision) for k, v in df_minmax_combined.items()} 
-    logger.info(f"  - Minmax for the combined SGEs (in the input coordinate unit): {df_minmax_combined}")
+    logger.info(f"  - Minmax for the combined SGEs (in um): {df_minmax_combined}")
 
-    # * in um
-    df_minmax_combined["xmin"] = df_minmax_combined["xmin"] / args.units_per_um
-    df_minmax_combined["xmax"] = df_minmax_combined["xmax"] / args.units_per_um
-    df_minmax_combined["ymin"] = df_minmax_combined["ymin"] / args.units_per_um
-    df_minmax_combined["ymax"] = df_minmax_combined["ymax"] / args.units_per_um
-    df_minmax_combined = {k: round(v, args.precision) for k, v in df_minmax_combined.items()} 
-    logger.info(f"  - Minmax for the combined SGEs (scaled): {df_minmax_combined}")
-
-    # * Write minmax for combined SGE
     out_minmax = os.path.join(args.out_dir, args.out_minmax)
     with open(out_minmax, "w") as f:
         f.writelines([f"{key}\t{value}\n" for key, value in df_minmax_combined.items()])
     
     logger.info(f"  - Minmax file written to {out_minmax}")
 
-    # 5. feature
+    # 4. feature
     logger.info(f"  "+"-"*20)
     logger.info(f"  - Combining feature counts...")
 
@@ -167,31 +113,33 @@ def combine_sges_by_layout(_args):
     df_ftr_combined.to_csv(out_ftr, sep="\t", index=False, compression="gzip")
     logger.info(f"  - Feature file written to {out_ftr}")
 
-    # 6. transcript
+    # 5. transcript
     logger.info(f"  "+"-"*20)
     logger.info(f"  - Combining transcripts...")
+    logger.info(f"  - Units per um: {args.units_per_um}")
+    logger.info(f"  - Precision: {args.precision}")
 
-    def combine_transcript_across_sge(df, output_file, col_x, col_y, count_cols, out_cols, units_per_um, convert_to_um, precision, chunk_size=100000, debug=False):
+    def combine_transcript_across_sge(df, output_file, col_x, col_y, count_cols, out_cols, units_per_um, precision, chunk_size=100000, debug=False):
         """Combines transcript data across multiple input files."""
+        if os.path.exists(output_file):
+            logger.info(f"  - Output file already exists, removing: {output_file}")
+            os.remove(output_file)
         with gzip.open(output_file, "wt") as out_file:
+            chunk_gidx = 0 # global chunk index for handling the header
             for idx, row in df.iterrows():
                 try:
-                    x_offset, y_offset = row["x_offset"], row["y_offset"]
+                    x_offset, y_offset = row["x_offset_unit"], row["y_offset_unit"]
                     transcript_path = row["transcript_path"]
-
-                    logger.info(f" - Processing: {transcript_path} (Row: {row['row']}, Col: {row['col']})")
-                    with gzip.open(transcript_path, "rt") as f:
-                        for chunk in pd.read_csv(f, sep="\t", chunksize=chunk_size):
-                            chunk[col_x] += x_offset
-                            chunk[col_y] += y_offset
-                
-                            if convert_to_um:
-                                chunk[[col_x, col_y]] = (chunk[[col_x, col_y]] / units_per_um).round(precision)
-                            
-                            chunk["index"] = idx
+                    logger.info(f"  - Processing: {transcript_path} (Row: {row['row']}, Col: {row['col']}): x_offset={x_offset}, y_offset={y_offset}")
+                    with gzip.open(transcript_path, "rt") as in_f:
+                        for chunk in pd.read_csv(in_f, sep="\t", chunksize=chunk_size):
+                            chunk[col_x] += float(x_offset)
+                            chunk[col_y] += float(y_offset)
+                            chunk[[col_x, col_y]] = (chunk[[col_x, col_y]] / units_per_um).round(precision)
                             chunk = chunk[chunk[count_cols].sum(axis=1) > 0]  # Drop zero-count rows
                             assert all(col in chunk.columns for col in out_cols), f"Output columns not found in the chunk(cols: {chunk.columns}) "
-                            chunk[out_cols].to_csv(out_file, sep="\t", index=False, header=(idx == 0))
+                            chunk[out_cols].to_csv(out_file, sep="\t", index=False, header=(chunk_gidx == 0))
+                            chunk_gidx += 1
                     if debug:
                         logger.info("Test mode enabled, stopping after first chunk.")
                         return
@@ -201,7 +149,7 @@ def combine_sges_by_layout(_args):
     out_transcript = os.path.join(args.out_dir, args.out_transcript)
     combine_transcript_across_sge(df, out_transcript, 
                                 args.colname_x, args.colname_y, args.colnames_count, out_cols=out_cols, 
-                                units_per_um=args.units_per_um, convert_to_um=args.convert_to_um, precision=args.precision,
+                                units_per_um=args.units_per_um,  precision=args.precision,
                                 debug=args.debug)
     logger.info(f"Transcript file written to {out_transcript}")
 

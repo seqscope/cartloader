@@ -27,13 +27,14 @@ def sge_stitch(_args):
     inout_params.add_argument('--out-transcript', type=str, default="transcripts.unsorted.tsv.gz", help='Output for SGE stitch. The compressed transcript-indexed SGE file in TSV format (default: transcripts.unsorted.tsv.gz).')
     inout_params.add_argument('--out-minmax', type=str, default="coordinate_minmax.tsv", help='Output for SGE stitch. The coordinate minmax TSV file (default: coordinate_minmax.tsv).')
     inout_params.add_argument('--out-feature', type=str, default="feature.clean.tsv.gz", help='Output for SGE stitch. The compressed UMI count per gene TSV file (default: feature.clean.tsv.gz).')
+    inout_params.add_argument('--out-tile-minmax', type=str, default="coordinate_minmax_per_tile.tsv", help='Output for SGE stitch. The coordinate minmax per tile TSV file (default: coordinate_minmax_per_tile.tsv).')
     inout_params.add_argument("--colnames-count", type=str, default="count", help="Comma-separated column names for count (default: count)")
     inout_params.add_argument('--colname-feature-name', type=str, default='gene', help='Feature name column (default: gene)')
     inout_params.add_argument('--colname-feature-id', type=str, default=None, help='Feature ID column (default: None)')
     inout_params.add_argument('--colname-x', type=str, default="X", help='X column name (default: X)')
     inout_params.add_argument('--colname-y', type=str, default="Y", help='Y column name (default: Y)')
     inout_params.add_argument('--units-per-um', type=float, default=1.0, help='Units per um in the input transcript tsv files (default: 1.0)')
-    inout_params.add_argument('--convert-to-um', action='store_true', help='Convert output to um.')
+    inout_params.add_argument("--precision", type=int, default=2, help="Precision for the output minmax and transcript files (default: 2)")
     inout_params.add_argument('--sge-visual', action='store_true', default=False, help='Plot the SGE in a PNG file. (default: False)')
 
     # env params
@@ -50,10 +51,19 @@ def sge_stitch(_args):
     os.makedirs(args.out_dir, exist_ok=True)
 
     # sge adds on
+    layout_indices=[]
     for in_tile in args.in_tiles:
         transcript, feature, minmax, row, col = in_tile.split(",")
+        
+        layout_idx=f"{row},{col}"
+        if layout_idx not in layout_indices:
+            layout_indices.append(layout_idx)
+        else:
+            raise ValueError(f"Found duplicate layout index (row {row}, col {col}).")
+        
         if not os.path.exists(transcript):
             raise FileNotFoundError(f"Transcript file {transcript} does not exist.")
+        
         # missing feature or minmax
         missing_ftr = feature is None or feature == "None"
         missing_minmax = minmax is None or minmax == "None"
@@ -88,6 +98,16 @@ def sge_stitch(_args):
         updated_tiles.append(",".join([transcript, feature, minmax, row, col]))
         prerequisities.extend([transcript, feature, minmax])
 
+    # coordinate transform from local to global and from unit to um 
+    tile_minmax = os.path.join(args.out_dir, args.out_tile_minmax)
+    cmds = cmd_separator([], f"Transforming local coordinates to global coordinates, and converting to um")
+    transform_coord_cmd=" ".join([f"cartloader", "sge_tile_coord_transform",
+                            f"--in-tiles {' '.join(updated_tiles)}",
+                            f"--output {tile_minmax}",
+                            f"--units-per-um {args.units_per_um}",
+                        ])
+    cmds.append(transform_coord_cmd)
+    mm.add_target(tile_minmax, prerequisities, cmds)
     
     # combine sge
     cmds = cmd_separator([], f"Combining SGEs")
@@ -95,8 +115,9 @@ def sge_stitch(_args):
         colnames_count = args.colnames_count.split(",")
     else:
         colnames_count = [args.colnames_count]
-    combine_cmd=" ".join([f"cartloader", "combine_sges_by_layout",
+    combine_cmd=" ".join([f"cartloader", "sge_combine_tiles",
                             f"--in-tiles {' '.join(updated_tiles)}",
+                            f"--in-tile-minmax {tile_minmax}",
                             f"--out-dir {args.out_dir}",
                             f"--out-transcript {args.out_transcript}",
                             f"--out-minmax {args.out_minmax}",
@@ -107,12 +128,12 @@ def sge_stitch(_args):
                             f"--colname-x {args.colname_x}",
                             f"--colname-y {args.colname_y}",
                             f"--units-per-um {args.units_per_um}",
-                            '--convert-to-um' if args.convert_to_um else '',
+                            f"--precision {args.precision}"
                         ])
     cmds.append(combine_cmd)
     sge_stitch_flag = os.path.join(args.out_dir, "sge_stitch.done")
     cmds.append(f'[ -f {os.path.join(args.out_dir, "transcripts.unsorted.tsv.gz")} ] && [ -f {os.path.join(args.out_dir, "feature.clean.tsv.gz")} ] && [ -f {os.path.join(args.out_dir, "coordinate_minmax.tsv")} ] && touch {sge_stitch_flag}')
-    mm.add_target(sge_stitch_flag, prerequisities, cmds)
+    mm.add_target(sge_stitch_flag, prerequisities+[tile_minmax], cmds)
 
     # draw xy plot for visualization
     if args.sge_visual:
