@@ -13,6 +13,7 @@ def scheck_georeference(tif_path):
 orient2axisorder = {
     # rotate, flip_vertical, flip_horizontal: order_arg
     # no rotation,
+    (None, False, False): "1,2",     # No rotation
     (None, False, True): "-1,2",     # Flip X-axis
     (None, True, False): "1,-2",     # Flip Y-axis
     (None, True, True): "-1,-2",     # Flip both axes

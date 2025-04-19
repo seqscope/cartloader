@@ -333,15 +333,19 @@ def sge_visual(mm, args, transcript_f, minmax_f, xy_f, prereq):
     # draw xy plot for visualization
     cmds = cmd_separator([], f"Drawing XY plot for SGE: {transcript_f}")
     #draw_cmd=f"{args.gzip} -dc {transcript_f} | tail -n +2 | cut -f 1,2 | {args.spatula} draw-xy --tsv /dev/stdin --out {xy_f}"
-    minmax = read_minmax(minmax_f, "row")
+    cmds.append(f"XMIN=$(awk '/xmin/' {minmax_f}|cut -f 2) && \\")
+    cmds.append(f"XMAX=$(awk '/xmax/' {minmax_f}|cut -f 2) && \\")
+    cmds.append(f"YMIN=$(awk '/ymin/' {minmax_f}|cut -f 2) && \\")
+    cmds.append(f"YMAX=$(awk '/ymax/' {minmax_f}|cut -f 2) && \\")
     draw_cmd = " ".join([
         f"'{args.spatula}'",
         "draw-xy",
         "--tsv", transcript_f,
+        "--out", xy_f,
         "--icol-x 0", # str(icol_x),
         "--icol-y 1", # str(icol_y),
         "--icol-cnt -1", # str(icol_cnt) if icol_cnt is not None else "-1",
-        "--ullr", f"{minmax['xmin']},{minmax['ymin']},{minmax['xmax']},{minmax['ymax']}",
+        "--ullr", "$XMIN,$YMIN,$XMAX,$YMAX",
         "--auto-adjust",
         "--skip-lines", "1",
     ])

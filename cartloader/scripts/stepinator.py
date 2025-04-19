@@ -22,6 +22,7 @@ histology_suffixes.extend([suffix.upper() for suffix in histology_suffixes])
 aux_env_args = {
         "sge_stitch": ["spatula"],
         "sge_convert": ["spatula", "gzip", "parquet_tools"],
+        "hist_stitch": ["gdal_translate", "gdalbuildvrt"],
         "run_ficture": ['bgzip', "tabix", "gzip", "sort", "sort_mem"],
         "run_cartload_join": ['pmtiles', 'gdal_translate', 'gdaladdo', 'tippecanoe', 'spatula'],
         "run_fig2pmtiles": ['pmtiles', 'gdal_translate', 'gdaladdo'],
@@ -41,6 +42,14 @@ aux_params_args = {
                      'min_ct_per_feature', 'de_max_pval', 'de_min_fold',
                      "include_feature_list", "exclude_feature_list", "include_feature_substr", "exclude_feature_substr", "include_feature_regex", "exclude_feature_regex", "include_feature_type_regex", "feature_type_ref", "feature_type_ref_colidx_name", "feature_type_ref_colidx_type"]
     }
+
+
+hist_keys = [ "path",
+            "transform", "lower_thres_quantile", "upper_thres_quantile", "level", "colorize",
+            "georeference", "georef_tsv", "georef_bounds", 
+            "rotate", "flip"
+    ]
+hist_keys_tiles = [x for x in hist_keys if x not in ["transform", "lower_thres_quantile", "upper_thres_quantile", "level", "colorize"]]
 
 def merge_config(base_config, args, keys, prefix=None):
     """
@@ -62,10 +71,9 @@ def merge_config(base_config, args, keys, prefix=None):
             config[key] = val
     return SimpleNamespace(**config)
 
-def cmd_sge_stitch(sgeinfo, args, env):
+def cmd_sge_stitch(sgeinfo, args, env, generate_tile_minmax_only=False):
     mkbn = "sge_stitch" if args.mk_id is None else f"sge_stitch_{args.mk_id}"
     # collect tiles 
-
     stitch_cmd = " ".join([
         "cartloader", "sge_stitch",
         f"--makefn {mkbn}.mk",
@@ -75,7 +83,8 @@ def cmd_sge_stitch(sgeinfo, args, env):
         f"--colnames-count {sgeinfo.get('colnames_all_count', None)}" if sgeinfo.get('colnames_all_count', None) else "",
         f"--sge-visual" if args.sge_visual else "",
         f"--n-jobs {args.n_jobs}" if args.n_jobs else "",
-        f"--restart" if args.restart else ""
+        f"--restart" if args.restart else "",
+        "--generate-tile-minmax-only" if generate_tile_minmax_only else "",
     ])
     # add aux env
     stitch_cmd = add_param_to_cmd(stitch_cmd, env, aux_env_args["sge_stitch"])
@@ -269,29 +278,88 @@ def cmd_run_cartload_join(run_i, args, env):
 
     return cartload_cmd
 
-def parse_histology_args(histology_args):
+# hist_keys and hist_keys_tiles are global variables
+def parse_histology_args(histology_args, by_tiles=False):
+    # <hist_id>;<path>;<transform>;....;<georeference>;<georef_tsv>;<georef_bounds>;<rotate_degree>;<flip_direction>
+    # <hist_id>;<tile_info1>;<tile_info2>... where each tile_info is <row>,<col>,<path>,<georeference>,<georef_tsv>,<georef_bounds>,<rotate_degree>,<flip_direction>. 
     hist_input = []
     for histology in histology_args:
-        hist_info = histology.split(";")
-        if len(hist_info) < 2:
-            raise ValueError("Error: --histology should at least have <histology_type> and <histology_path>.")
-        
-        keys = [
-            "hist_id", "path",
-            "transform", 
-            "georeference", "georef_tsv", "georef_bounds", 
-            "rotate", "flip"
-        ]
-        
-        hist_dict = {key: hist_info[i] if i < len(hist_info) else None for i, key in enumerate(keys)}
+        hist_info = histology.strip().split(";")
+        assert len(hist_info) >= 2, ("Error: --histology should at least have <hist_id> and <histology_path>." if not by_tiles else "Error: --histology-tiles should have <hist_id>, and at least one <tile_info>")
+        hist_dict = {"hist_id": hist_info[0]}
+        if not by_tiles:
+            values = hist_info[1:]
+            for i, key in enumerate(hist_keys):
+                val = values[i] if i < len(values) else None
+                if val in ["", "null", "Null"]:
+                    val = None
+                hist_dict[key] = val          
+        else:
+            hist_dict["in_tiles"] = []
+            for tile in hist_info[1:]:
+                tile_fields = tile.strip().split(",")
+                assert len(tile_fields) >= 3, "Error: each <tile_info> must have at least <row>,<col>,<path>"
+                tile_dict = {
+                    "row": tile_fields[0],
+                    "col": tile_fields[1]
+                }
+                tile_values = tile_fields[2:]
+                for i, key in enumerate(hist_keys_tiles):
+                    val = tile_values[i] if i < len(tile_values) else None
+                    if val in ["", "null", "Null"]:
+                        val = None
+                    tile_dict[key] = val
+                hist_dict["in_tiles"].append(tile_dict)
         hist_input.append(hist_dict)
-
     return hist_input
 
+def generate_in_tiles_str(histology_dict, hist_keys_tiles):
+    tile_args = []
+    for tile in histology_dict.get("in_tiles", []):
+        row = tile.get("row")
+        col = tile.get("col")
+        values =[str(row), str(col)]
+        for key in hist_keys_tiles:
+            val = tile.get(key, "")
+            #print(key+":"+str(val))
+            if val in [None, "null", "Null"]:
+                val = ""
+            if key == "flip":
+                vertical = "True" if str(val).lower() == "vertical" else "False"
+                horizontal = "True" if str(val).lower() == "horizontal" else "False"
+                values.append(vertical)
+                values.append(horizontal)
+            else:
+                values.append(str(val))
+        tile_args.append(",".join(values))
+    in_tiles_str = " ".join(tile_args)
+    return in_tiles_str
+
+def cmd_hist_stitch(histinfo_by_tiles, args, env):
+    hist_stitch_cmds = []        
+    for histinfo_i in histinfo_by_tiles:
+        hist_id= histinfo_i["hist_id"]
+        mkbn = f"hist_stitch_{hist_id}" if args.mk_id is None else f"hist_stitch_{hist_id}_{args.mk_id}"
+        in_tiles_str = generate_in_tiles_str(histinfo_i, hist_keys_tiles)
+        hist_stitch_cmd=" ".join([
+                "cartloader", "hist_stitch",
+                f"--output {histinfo_i['path']}", 
+                f"--makefn {mkbn}.mk",
+                f"--in-offsets {histinfo_i['in_offsets']}",
+                f"--in-tiles {in_tiles_str}",
+                f"--crop-tile-by-minmax",
+                f"--in-minmax {histinfo_i['in_offsets']}",
+                f"--restart" if args.restart else "",
+                f"--n-jobs {args.n_jobs}" if args.n_jobs else "",
+        ])
+        # add aux tools
+        hist_stitch_cmd = add_param_to_cmd(hist_stitch_cmd, env, aux_env_args["hist_stitch"], underscore2dash=False)
+        hist_stitch_cmds.append(hist_stitch_cmd)
+    return hist_stitch_cmds
+  
 def cmd_run_fig2pmtiles(run_i, args, env):    
     assert len(run_i.get("histology", [])) > 0, "Error: --histology is Required when running fig2pmtiles"
     hist_cmds=[]
-
     cartload_dir=os.path.join(run_i["run_dir"], "cartload")
     catalog_yaml=os.path.join(cartload_dir, "catalog.yaml")
     for histology in run_i.get("histology", []):
@@ -388,6 +456,7 @@ def stepinator(_args):
     cmd_params.add_argument('--sge-visual', action='store_true', help='Plot the SGE from sge-convert or sge-stitch in a PNG file')
     cmd_params.add_argument("--run-ficture", action="store_true", help="Run run-ficture in cartloader. Only the main function is executed.")
     cmd_params.add_argument("--run-cartload-join", action="store_true", help="Run run-cartload-join in cartloader")
+    cmd_params.add_argument("--hist-stitch", action="store_true", help="Run histology stitch in cartloader. This is for stitching histology images.")
     cmd_params.add_argument("--run-fig2pmtiles", action="store_true", help="Run run-fig2pmtiles in cartloader. This s provide histology using --in-yaml or --histology.")
     cmd_params.add_argument("--upload-aws", action="store_true", help="Upload files to AWS S3 bucket. This s provide AWS bucket name using --in-yaml or --aws-bucket.")
     cmd_params.add_argument("--copy-ext-model", action="store_true", help="Auxiliary action parameters for run-ficture. Copy external model when running FICTURE with an external model")
@@ -412,7 +481,8 @@ def stepinator(_args):
     key_params.add_argument('--in-mex', type=str, default=None, help='Required if --sge-convert on 10x_visium_hd and seqscope datasets. Directory path to input files in Market Exchange (MEX) format.')
     key_params.add_argument('--in-parquet', type=str, default=None, help='Required if --sge-convert on 10x_visium_hd datasets. Path to the input raw parquet file for spatial coordinates (default: None, typical naming convention: tissue_positions.parquet)')
     # - input for 10x_xenium, bgi_stereoseq, cosmx_smi, vizgen_merscope, pixel_seq, and nova_st
-    key_params.add_argument('--in-csv', type=str, default=None, help='(10x_xenium, bgi_stereoseq, cosmx_smi, vizgen_merscope, pixel_seq, and nova_st only) Path to the input raw CSV/TSV file (default: None).')
+    key_params.add_argument('--in-csv', type=str, default=None, help='Required if --sge-convert for 10x_xenium, bgi_stereoseq, cosmx_smi, vizgen_merscope, pixel_seq, and nova_st. Path to the input raw CSV/TSV file (default: None).')
+    key_params.add_argument("--in-tiles", nargs="*", default=[], help="Required if --sge-stitch. List of input tiles of each in the format of <transcript_path>,<feature_path>,<minmax_path>,<row>,<col>. If feature or minmax is missing, specify its path as null (default: [])")
     key_params.add_argument('--units-per-um', type=float, default=None, help='Applicable if --sge-convert or --sge-stitch. Coordinate unit per um (conversion factor) (default: 1.00)') 
     key_params.add_argument('--scale-json', type=str, default=None, help="Applicable if --sge-convert on 10x_visium_hd datasets. Coordinate unit per um using the scale json file (default: None, typical naming convention: scalefactors_json.json)")
     key_params.add_argument('--precision-um', type=int, default=None, help='Required if --sge-convert. Number of digits of transcript coordinates (default: 2)')
@@ -420,20 +490,26 @@ def stepinator(_args):
     key_params.add_argument('--filtered-prefix', type=str, default=None, help='Required if --filtered-by-density. The prefix for density-filtered SGE (default: filtered)')
     key_params.add_argument("--colname-count", type=str, default="count", help="Required if --sge-convert, --sge-stitch, --run-ficture, or --run-cartload-join. Column name that showing the expression count of the genomic feature of interest. (default: gene)")
     key_params.add_argument("--colnames-other-count", nargs="*", default=[], help="Optional if --sge-convert, --sge-stitch is enabled. It allows to keep other genomic features in the formatted SGE besides the genomic feature of interest. (default: [])")
-    # for sge_stitch 
-    key_params.add_argument("--in-tiles", nargs="*", default=[], help="Required if --sge-stitch. List of input tiles of each in the format of <transcript_path>,<feature_path>,<minmax_path>,<row>,<col> (default: [])")
     # for run_ficture
-    key_params.add_argument("--major-axis", type=str, default="X", help="Major axis")
+    key_params.add_argument("--major-axis", type=str, default="X", choices=["X","Y"], help="Major axis (default: X)")
     key_params.add_argument("--ext-path", type=str, default=None, help="Required when --run-ficture with an external model. The path for the external model.")
     key_params.add_argument("--ext-id", type=str, default=None, help="Required when --run-ficture  with an external model. The ID for the external model.")
     key_params.add_argument("--train-width", '-w', type=str, default=None, help="Required if --run-ficture. Train width.")
     key_params.add_argument("--n-factor", '-n', type=str, default=None, help="Required if --run-ficture with LDA. Number of factors. ")
     key_params.add_argument("--histology", type=str, nargs="?", default=[], help="""
-                              (Optional) Provide histology info as <hist_id>;<path>;<transform>;<georeference>;<georef_tsv>;<georef_bounds>;<rotate_degree>;<flip_direction>. 
+                              (Optional) Provide histology info as <hist_id>;<path>;<transform>;<lower_thres_quantile>;<upper_thres_quantile>;<level>;<colorize>;<georeference>;<georef_tsv>;<georef_bounds>;<rotate_degree>;<flip_direction>. 
                               Only <hist_id> and <path> are required. Supports multiple files; use <hist_id> to distinguish them. (Default: [])
                               Define <transform> and <georeference> by True or False. If georeference=True, specify <georef_tsv> or <georef_bounds>. 
                               Orientation allows rotation (90, 180, 270) and flipping (vertical, horizontal, both). 
                             """)
+    key_params.add_argument("--histology-tiles", type=str, default=[], nargs="*", help="""
+                            (Optional) Provide the histology tiles infor for histology stitch. The format should be <hist_id>;<tile_info1>;<tile_info2>... where each tile_info is <row>,<col>,<path>,<georeference>,<georef_tsv>,<georef_bounds>,<rotate_degree>,<flip_direction>.
+                            Note use ";" to separate the hist_id and tile_info, and use "," to separate the information in the tile_info. Currently, our histology stitch doesn't support transform tiles given it's not finalized 
+                            """) # <transform>,<lower_thres_quantile>,<upper_thres_quantile>,<level>,<colorize>,
+    # key_params.add_argument("--minmax-tiles", type=str, default=None, help="""
+    #                         (Optional) Provide an existing minmax tsv file for each tile with columns of "row","col","x_offset_unit","y_offset_unit","units_per_um","global_xmin_um","global_xmax_um","global_ymin_um","global_ymax_um".
+    #                         This file usually comes from the output of sge_stitch. 
+    #                         """)
     key_params.add_argument('--aws-bucket', type=str, default=None, help='Required if --upload-aws. AWS bucket name')
 
     # * tools
@@ -700,29 +776,60 @@ def stepinator(_args):
             assert len(args.in_tiles) > 0, "When --sge-stitch is enabled, --in-tiles is required"
             assert len(args.in_tiles) > 1, "When --sge-stitch is enabled, at least two tiles are required"
             sgeinfo["in_tiles_str"]=args.in_tiles
-        # sge-stitch
         cmds.append(cmd_sge_stitch(sgeinfo, args, env))
 
     # =========
-    #  Downstream
+    #  HIST Stitch
     # =========
-    
-    if args.run_fig2pmtiles:
+    # the stitched histology tif should be shared across run_id in the sge
+    if args.run_fig2pmtiles or args.hist_stitch:
         if args.in_yaml:
             histinfo = yml.get("HISTOLOGY", [])
             if len(args.hist_ids) > 0:
                 histinfo = [hist_i for hist_i in histinfo if hist_i.get("hist_id") in args.hist_ids]
         else:
-            histinfo = parse_histology_args(args.histology) if len(args.histology) > 0 else []
+            histinfo_by_tif = parse_histology_args(args.histology) if len(args.histology) > 0 else []
+            histinfo_by_tiles = parse_histology_args(args.histology_tiles, by_tiles=True) if len(args.histology_tiles) > 0 else []
+            histinfo = histinfo_by_tif + histinfo_by_tiles
+        # sanity check: no duplicate hist_id in histinfo
+        hist_ids = [hist_i.get("hist_id") for hist_i in histinfo]
+        assert len(hist_ids) == len(set(hist_ids)), "Error: Duplicate histology IDs found in the input YAML file or command line arguments. Please ensure that each histology ID is unique."
 
+    # histology stitch
+    if args.hist_stitch:
+        # hist_dir to host the output tif from histology stitch
+        hist_dir = os.path.join(out_dir, "hist")
+        os.makedirs(hist_dir, exist_ok=True)
+        # add a cmd to make sure tile_offsets file exists - it was not generated for the early jobs
+        tile_offsets_f = os.path.join(sgeinfo["sge_dir"], "coordinate_minmax_per_tile.tsv")
+        if not os.path.exists(tile_offsets_f) and not args.sge_stitch:
+            cmd.append(cmd_sge_stitch(sgeinfo, args, env, generate_tile_minmax_only=True))
+        # extract the histology info for histology stitch, and add the path
+        histinfo_by_tiles = []
+        for hist_i in histinfo:
+            if len(hist_i.get("in_tiles", [])) > 0:     # use in_tiles to distinguish the single-tif and tile-tifs
+                hist_i["path"] = os.path.join(hist_dir, hist_i["hist_id"]+".tif") 
+                hist_i["in_offsets"] = tile_offsets_f
+                histinfo_by_tiles.append(hist_i)
+        assert len(histinfo_by_tiles) > 0, "Error: --hist_stitch is enabled, but no histology tile information is provided. Please provide the histology tile information in the input YAML file or using the --histology-tiles argument."
+        cmds.extend(cmd_hist_stitch(histinfo_by_tiles, args, env))
+
+    # =========
+    #  Downstream
+    # =========
     if args.run_ficture or args.run_cartload_join or args.run_fig2pmtiles or args.upload_aws:
+        # print("run_ids", args.run_ids)
+        # print("run_ficture", args.run_ficture)
+        # print("run_cartload_join", args.run_cartload_join)
+        # print("run_fig2pmtiles", args.run_fig2pmtiles)
+        # print("upload_aws", args.upload_aws)
         runinfo=[]
         if args.in_yaml:
             avail_runs=[run_i.get("run_id") for run_i in yml.get("RUNS", [])]
             if len(args.run_ids) == 0 and len(avail_runs) == 1:
                 args.run_ids = avail_runs
             assert len(args.run_ids) > 0, "When --run-ficture, --run-cartload-join, --run-fig2pmtiles, or --upload-aws is enabled, --run-ids is required"
-
+            
             for run_i in yml.get("RUNS", []):
                 if run_i.get("run_id") in args.run_ids:
                     # in/out directory
@@ -774,7 +881,7 @@ def stepinator(_args):
                     "histology":[],
                 }
             ] 
-            
+        #print(runinfo) 
         for run_i in runinfo:
             os.makedirs(run_i["run_dir"], exist_ok=True)
             if args.run_ficture:
@@ -785,6 +892,7 @@ def stepinator(_args):
                 cmds.append(cmd_run_cartload_join(run_i, args, env))
             if args.run_fig2pmtiles:
                 run_i["histology"] = histinfo
+                #print(histinfo)
                 cmds.extend(cmd_run_fig2pmtiles(run_i, args, env))
             if args.upload_aws:
                 cmds.append(cmd_upload_aws(run_i, args, env))
@@ -810,7 +918,7 @@ def stepinator(_args):
         ])
         # Construct job_id based on run_ids
         if not any([args.run_ficture, args.run_cartload_join, args.run_fig2pmtiles, args.upload_aws]):
-            args.job_id = f"{action_code}_{timestamp}"
+            args.job_id = f"sge_convert_{timestamp}" if args.sge_convert else f"sge_stitch_{timestamp}"
         elif len(args.run_ids) == 1:
             args.job_id = f"{args.run_ids[0]}_{action_code}_{timestamp}"
         else:
