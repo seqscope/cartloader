@@ -22,6 +22,7 @@ def sge_combine_tiles(_args):
     parser.add_argument('--colname-feature-id', type=str, default=None, help='Feature ID column (default: None)')
     parser.add_argument('--colname-x', type=str, default="X", help='X column name (default: X)')
     parser.add_argument('--colname-y', type=str, default="Y", help='Y column name (default: Y)')
+    parser.add_argument('--colnames-others', nargs='*', default=[], help='Columns names to keep (e.g., cell_id, overlaps_nucleus) (default: None)')
     parser.add_argument("--units-per-um", type=float, default=1.0, help="Define the scaling factor for unit conversion from coordinate to um (default: 1.0)")
     parser.add_argument("--precision", type=int, default=2, help="Precision for the output minmax and transcript files (default: 2)")
     parser.add_argument('--debug', action='store_true', help='Test mode.')
@@ -44,6 +45,7 @@ def sge_combine_tiles(_args):
     out_cols=[args.colname_x, args.colname_y]
     out_cols.extend([args.colname_feature_name]) if args.colname_feature_id is None else out_cols.extend([args.colname_feature_name, args.colname_feature_id])
     out_cols.extend(args.colnames_count)
+    out_cols.extend(args.colnames_others)
     logger.info(f"  - Output columns: {out_cols}")
 
     # 2. input

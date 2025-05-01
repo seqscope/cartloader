@@ -109,3 +109,12 @@ def update_orient_in_histology(histology):
     else:
         histology["flip"] = None
     return histology
+
+# return the number of bands in a raster image
+def get_band_count(input_path, max_bands=4):
+    """Return the number of bands in a raster image."""
+    with rasterio.open(input_path) as src:
+        Nbands= src.count
+    if Nbands > max_bands:
+        raise ValueError(f"Error: {input_path} has {Nbands} bands, which is more than the defined maximum of {max_bands}.")
+    return Nbands

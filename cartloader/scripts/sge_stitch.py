@@ -33,6 +33,7 @@ def sge_stitch(_args):
     inout_params.add_argument('--colname-feature-id', type=str, default=None, help='Feature ID column (default: None)')
     inout_params.add_argument('--colname-x', type=str, default="X", help='X column name (default: X)')
     inout_params.add_argument('--colname-y', type=str, default="Y", help='Y column name (default: Y)')
+    inout_params.add_argument('--colnames-others', nargs='*', default=[], help='Columns names to keep (e.g., cell_id, overlaps_nucleus) (default: None)')
     inout_params.add_argument('--units-per-um', type=float, default=1.0, help='Units per um in the input transcript tsv files (default: 1.0)')
     inout_params.add_argument("--precision", type=int, default=2, help="Precision for the output minmax and transcript files (default: 2)")
     inout_params.add_argument('--sge-visual', action='store_true', default=False, help='Plot the SGE in a PNG file. (default: False)')
@@ -131,7 +132,8 @@ def sge_stitch(_args):
                                 f"--colname-x {args.colname_x}",
                                 f"--colname-y {args.colname_y}",
                                 f"--units-per-um {args.units_per_um}",
-                                f"--precision {args.precision}"
+                                f"--precision {args.precision}",
+                                f"--colnames-others {' '.join(args.colnames_others)}"
                             ])
         cmds.append(combine_cmd)
         sge_stitch_flag = os.path.join(args.out_dir, "sge_stitch.done")

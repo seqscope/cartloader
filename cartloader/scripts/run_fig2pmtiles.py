@@ -297,7 +297,7 @@ def run_fig2pmtiles(_args):
             "-co", "\"ZOOM_LEVEL_STRATEGY=UPPER\"",         # Use higher zoom levels to preserve detail
             "-co", f"\"RESAMPLING={args.resample}\"",       # Use cubic interpolation when scaling tiles
             "-co", f"\"BLOCKSIZE={args.blocksize}\"",       # Use 512x512 pixel tile blocks (standard for MBTiles)
-            "-ot", "Byte",                                  # Convert pixel values to 8-bit integers (0â€“255)
+            "-ot", "Byte",                                  # Convert pixel values to 8-bit integers (0-255)
             "-scale",                                       # Automatically scale pixel values to 0-255
             "-of", "mbtiles",
             "-a_srs", args.srs,                             # default to EPSG:3857. Assign the target projection: Web Mercator (used by web maps)
@@ -311,7 +311,7 @@ def run_fig2pmtiles(_args):
     if args.mbtiles2pmtiles:
         cmds = cmd_separator([], f"Resampling mbtiles and converting to pmtiles: {mbtile_f}")
         cmds.append(f"cp {mbtile_f} {mbtile_f_ann}")
-        cmds.append(f"'{args.gdaladdo}' {mbtile_f_ann} -r {args.resample} 2 4 8 16 32 64 128 256")
+        cmds.append(f"'{args.gdaladdo}' {mbtile_f_ann} -r {args.resample} 2 4 8 16 32 64 128 256") # Build internal overviews. 
         cmds.append(f"'{args.pmtiles}' convert --force {mbtile_f_ann} {pmtiles_f}")
         mm.add_target(pmtiles_f, [mbtile_f], cmds)
 
