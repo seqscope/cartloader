@@ -291,45 +291,75 @@ def convert_tsv(cmds, args):
 #
 #================================================================================================
 
-def sge_density_filtering(mm, args):
-    gene_header=[args.colname_feature_name] if args.colname_feature_id is None else [args.colname_feature_name, args.colname_feature_id]
-    count_header=args.colnames_count.split(",")
+# def sge_density_filtering(mm, args):
+#     gene_header=[args.colname_feature_name] if args.colname_feature_id is None else [args.colname_feature_name, args.colname_feature_id]
+#     count_header=args.colnames_count.split(",")
 
-    if args.genomic_feature is None:
-        if len(args.colnames_count.split(",")) > 1:
+#     if args.genomic_feature is None:
+#         if len(args.colnames_count.split(",")) > 1:
+#             logging.error("Missing --genomic-feature. Cannot use --colnames-count with multiple columns as --genomic-feature. Please provide one column name for density-filtering.")
+#             sys.exit(1)
+#         args.genomic_feature = args.colnames_count
+        
+#     sge_convert_flag = os.path.join(args.out_dir, "sge_convert.done")
+#     out_transcript_f = os.path.join(args.out_dir, args.out_transcript)
+#     out_feature_f = os.path.join(args.out_dir, args.out_feature)
+#     filtered_transcript_f = os.path.join(args.out_dir, f"{args.out_filtered_prefix}.transcripts.unsorted.tsv.gz")
+#     cmds=cmd_separator([], "Filtering the converted data by density...")
+#     cmd = " ".join([
+#             "ficture", "filter_by_density",
+#             f"--input {out_transcript_f}",
+#             f"--feature {out_feature_f}",
+#             f"--output {filtered_transcript_f}",
+#             f"--output_boundary {args.out_dir}/{args.out_filtered_prefix}",
+#             f"--filter_based_on {args.genomic_feature}",
+#             f"--mu_scale {args.mu_scale}",
+#             f"--radius {args.radius}",
+#             f"--quartile {args.quartile}",
+#             f"--hex_n_move {args.hex_n_move}",
+#             f"--remove_small_polygons {args.polygon_min_size}",
+#             f"--gene_header {' '.join(gene_header)}",
+#             f"--count_header {' '.join(count_header)}",
+#         ])
+#     cmds.append(cmd)
+#     mm.add_target(f"{filtered_transcript_f}", [sge_convert_flag], cmds)
+#     return mm
+
+def sge_density_filtering(mm, sge_filtering_dict):
+    genomic_feature=sge_filtering_dict["genomic_feature"]
+    count_header=sge_filtering_dict["count_header"]
+    if genomic_feature is None:
+        if len(count_header) > 1:
             logging.error("Missing --genomic-feature. Cannot use --colnames-count with multiple columns as --genomic-feature. Please provide one column name for density-filtering.")
             sys.exit(1)
-        args.genomic_feature = args.colnames_count
-        
-    sge_convert_flag = os.path.join(args.out_dir, "sge_convert.done")
-    filtered_transcript_f = os.path.join(args.out_dir, f"{args.out_filtered_prefix}.transcripts.unsorted.tsv.gz")
+        genomic_feature = count_header[0]
     cmds=cmd_separator([], "Filtering the converted data by density...")
     cmd = " ".join([
             "ficture", "filter_by_density",
-            f"--input {args.out_dir}/{args.out_transcript}",
-            f"--feature {args.out_dir}/{args.out_feature}",
-            f"--output {filtered_transcript_f}",
-            f"--output_boundary {args.out_dir}/{args.out_filtered_prefix}",
-            f"--filter_based_on {args.genomic_feature}",
-            f"--mu_scale {args.mu_scale}",
-            f"--radius {args.radius}",
-            f"--quartile {args.quartile}",
-            f"--hex_n_move {args.hex_n_move}",
-            f"--remove_small_polygons {args.polygon_min_size}",
-            f"--gene_header {' '.join(gene_header)}",
+            f"--input {sge_filtering_dict['raw_transcript']}",
+            f"--feature {sge_filtering_dict['raw_feature']}",
+            f"--output", sge_filtering_dict["filtered_transcript"],
+            f"--output_boundary  {sge_filtering_dict['filtered_prefix']}",
+            f"--filter_based_on {genomic_feature}", 
+            f"--mu_scale {sge_filtering_dict['mu_scale']}",
+            f"--radius {sge_filtering_dict['radius']}", 
+            f"--quartile {sge_filtering_dict['quartile']}",
+            f"--hex_n_move {sge_filtering_dict['hex_n_move']}",
+            f"--remove_small_polygons {sge_filtering_dict['polygon_min_size']}",
+            f"--gene_header {' '.join(sge_filtering_dict['gene_header'])}",
             f"--count_header {' '.join(count_header)}",
         ])
     cmds.append(cmd)
-    mm.add_target(f"{filtered_transcript_f}", [sge_convert_flag], cmds)
+    cmds.append(f"[ -f {sge_filtering_dict['filtered_transcript']} ] && [ -f {sge_filtering_dict['filtered_minmax']} ] && [ -f {sge_filtering_dict['filtered_feature']} ] && touch {sge_filtering_dict['flag']}")
+    mm.add_target(sge_filtering_dict['flag'], sge_filtering_dict["prereq"], cmds)
     return mm
-
 #================================================================================================
 #
 # main functions
 #
 #================================================================================================
-def sge_visual(mm, args, transcript_f, minmax_f, xy_f, prereq):
-    scheck_app(args.spatula)
+def sge_visual(mm, transcript_f, minmax_f, xy_f, prereq, spatula):
+    scheck_app(spatula)
     # draw xy plot for visualization
     cmds = cmd_separator([], f"Drawing XY plot for SGE: {transcript_f}")
     #draw_cmd=f"{args.gzip} -dc {transcript_f} | tail -n +2 | cut -f 1,2 | {args.spatula} draw-xy --tsv /dev/stdin --out {xy_f}"
@@ -338,7 +368,7 @@ def sge_visual(mm, args, transcript_f, minmax_f, xy_f, prereq):
     cmds.append(f"YMIN=$(awk '/ymin/' {minmax_f}|cut -f 2) && \\")
     cmds.append(f"YMAX=$(awk '/ymax/' {minmax_f}|cut -f 2) && \\")
     draw_cmd = " ".join([
-        f"'{args.spatula}'",
+        f"'{spatula}'",
         "draw-xy",
         "--tsv", transcript_f,
         "--out", xy_f,
@@ -368,9 +398,11 @@ def sge_convert(_args):
 
     out_transcript_f = os.path.join(args.out_dir, args.out_transcript)
     out_minmax_f = os.path.join(args.out_dir, args.out_minmax)
+    out_feature_f = os.path.join(args.out_dir, args.out_feature)
     out_xy_f = os.path.join(args.out_dir, "xy.png")
 
     filtered_transcript_f = os.path.join(args.out_dir, f"{args.out_filtered_prefix}.transcripts.unsorted.tsv.gz")
+    filtered_feature_f = os.path.join(args.out_dir, f"{args.out_filtered_prefix}.feature.clean.tsv.gz")
     filtered_minmax_f = os.path.join(args.out_dir, f"{args.out_filtered_prefix}.coordinate_minmax.tsv")
     filtered_xy_f = os.path.join(args.out_dir, f"{args.out_filtered_prefix}.xy.png")
 
@@ -387,25 +419,47 @@ def sge_convert(_args):
         cmds = convert_seqscope(cmds, args)
     elif args.platform in ["10x_xenium", "cosmx_smi", "bgi_stereoseq", "vizgen_merscope", "pixel_seq", "nova_st", "generic"]:
         cmds = convert_tsv(cmds, args)
-    cmds.append(f"[ -f {out_transcript_f} ] && [ -f {os.path.join(args.out_dir, args.out_feature)} ] && [ -f {os.path.join(args.out_dir, args.out_minmax)} ] && touch {sge_convert_flag}")
+    cmds.append(f"[ -f {out_transcript_f} ] && [ -f {out_feature_f} ] && [ -f {out_minmax_f} ] && touch {sge_convert_flag}")
     mm.add_target(sge_convert_flag, in_raw_filelist, cmds) 
 
     if args.sge_visual:
-        mm = sge_visual(mm, args, 
+        mm = sge_visual(mm, 
                         out_transcript_f,
                         out_minmax_f,
                         out_xy_f,
-                        [sge_convert_flag])        
+                        [sge_convert_flag],
+                        args.spatula)        
             
     if args.filter_by_density:
-        mm = sge_density_filtering(mm, args)
+        sge_filtered_flag = os.path.join(args.out_dir, "sge_density_filtering.done")
+        sge_filtering_dict={
+            "raw_transcript": out_transcript_f,
+            "raw_feature": out_feature_f,
+            "prereq": [sge_convert_flag],
+            "filtered_transcript": filtered_transcript_f,
+            "filtered_minmax": filtered_minmax_f,
+            "filtered_feature": filtered_feature_f,
+            "filtered_xy": filtered_xy_f,
+            "filtered_prefix": os.path.join(args.out_dir, args.out_filtered_prefix),
+            "flag": sge_filtered_flag,
+            "gene_header": [args.colname_feature_name] if args.colname_feature_id is None else [args.colname_feature_name, args.colname_feature_id], # list
+            "count_header": args.colnames_count.split(","), #list
+            "genomic_feature": args.genomic_feature,
+            "mu_scale": args.mu_scale,
+            "radius": args.radius,
+            "quartile": args.quartile,
+            "hex_n_move": args.hex_n_move,
+            "polygon_min_size": args.polygon_min_size,
+        }
+        mm = sge_density_filtering(mm, sge_filtering_dict)
     
     if args.filter_by_density and args.sge_visual:
-        mm = sge_visual(mm, args, 
+        mm = sge_visual(mm, 
                         filtered_transcript_f,
                         filtered_minmax_f,
                         filtered_xy_f,
-                        [filtered_transcript_f])
+                        [sge_filtered_flag],
+                        args.spatula)
 
     # write makefile
     if len(mm.targets) == 0:

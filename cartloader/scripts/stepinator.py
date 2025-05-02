@@ -30,8 +30,8 @@ aux_env_args = {
 }
 
 aux_params_args = {
-    "sge_stitch": ["colname_feature_name", "colname_feature_id", "colname_x", "colname_y"],
-    "sge_convert": [item for sublist in aux_sge_args.values() for item in sublist] + ["radius", "quartil", "hex_n_move", "polygon_min_size"],
+    "sge_stitch": ["colname_feature_name", "colname_feature_id", "colname_x", "colname_y"] + ["radius", "quartile", "hex_n_move", "polygon_min_size"],
+    "sge_convert": [item for sublist in aux_sge_args.values() for item in sublist] + ["radius", "quartile", "hex_n_move", "polygon_min_size"],
     "run_ficture": [ 'anchor_res', 'radius_buffer', 
                      'hexagon_n_move', 'hexagon_precision', 'min_ct_per_unit_hexagon',
                      'minibatch_size', 'minibatch_buffer',
@@ -85,6 +85,7 @@ def cmd_sge_stitch(sgeinfo, args, env, generate_tile_minmax_only=False):
         f"--n-jobs {args.n_jobs}" if args.n_jobs else "",
         f"--restart" if args.restart else "",
         "--generate-tile-minmax-only" if generate_tile_minmax_only else "",
+        f"--filter-by-density --out-filtered-prefix {sgeinfo['filtered_prefix']} --genomic-feature {sgeinfo['colname_count']}" if sgeinfo['filter_by_density'] else "",
     ])
     # add aux env
     stitch_cmd = add_param_to_cmd(stitch_cmd, env, aux_env_args["sge_stitch"])
