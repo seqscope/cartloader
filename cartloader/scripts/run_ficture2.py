@@ -86,7 +86,7 @@ def parse_arguments(_args):
     # fit 
     aux_params.add_argument('--fit-width',  type=str, default=None, help='Hexagon flat-to-flat width (in um) during model fitting (default: same to train-width)')
     aux_params.add_argument('--fit-precision', type=float, default=2, help='Output precision of model fitting (default: 2)')
-    aux_params.add_argument('--min-ct-per-unit-fit', type=int, default=20, help='Minimum count per hexagon unit during model fitting (default: 20)')
+    aux_params.add_argument('--min-ct-per-unit-fit', type=int, default=50, help='Minimum count per hexagon unit during model fitting (default: 20)')
     aux_params.add_argument('--fit-plot-um-per-pixel', type=float, default=1, help='Image resolution for fit coarse plot (default: 1)')   # in Scopeflow, this is set to 2
     # decode
     aux_params.add_argument('--decode-top-k', type=int, default=3, help='Top K columns to output in pixel-level decoding results (default: 3)')
@@ -252,8 +252,8 @@ def run_ficture2(_args):
             tsv_plain = f"{args.in_transcript}"
 
         feature_plain = f"{args.out_dir}/feature.tsv"
-        with flexopen(in_feature_ficture, "r") as f:
-            with open(feature_plain, "w") as wf:
+        with flexopen(in_feature_ficture, "rt") as f:
+            with open(feature_plain, "wt") as wf:
                 wf.write(f.readline())
                 for line in f:
                     toks = line.strip().split("\t")
