@@ -1,7 +1,7 @@
 import sys, os, gzip, argparse, logging, shutil, subprocess
 import pandas as pd
 from cartloader.utils.minimake import minimake
-from cartloader.utils.utils import cmd_separator, scheck_app, add_param_to_cmd, read_minmax
+from cartloader.utils.utils import cmd_separator, scheck_app, add_param_to_cmd, read_minmax, flexopen
 
 def parse_arguments(_args):
     """Parse command-line arguments."""
@@ -251,12 +251,16 @@ def run_ficture2(_args):
         else:
             tsv_plain = f"{args.in_transcript}"
 
-        if in_feature_ficture.endswith(".gz"):
-            feature_plain = f"{args.out_dir}/feature.tsv"
-            cmds.append(f"{args.gzip} -dc {args.in_feature} > {feature_plain}")
-        else:
-            feature_plain = f"{in_feature_ficture}"
-        
+        feature_plain = f"{args.out_dir}/feature.tsv"
+        with flexopen(args.in_feature_ficture, "r") as f:
+            with flexopen(feature_plain, "w") as wf:
+                wf.write(f.readline())
+                for line in f:
+                    toks = line.strip().split("\t")
+                    count = int(toks[-1])
+                    if count >= args.min_ct_per_feature:
+                        wf.write(line)
+                            
         cmd = " ".join([
             ficture2bin, "pts2tiles",
             f"--in-tsv {tsv_plain}",
@@ -510,7 +514,7 @@ def run_ficture2(_args):
                 "--merge",
                 f"--in-transcript {args.in_transcript}",
                 f"--in-feature {args.in_feature}", # use the original feature file for SGE
-                f"--in-feature-ficture {in_feature_ficture}" if in_feature_ficture != args.in_feature else "",
+                f"--in-feature-ficture {feature_plain}",
                 f"--in-minmax {args.in_minmax}",
                 f"--out-dir {args.out_dir}",
                 f"--out-json {args.out_json}",

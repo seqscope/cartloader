@@ -2,7 +2,7 @@ import sys, os, argparse, logging, subprocess
 import pandas as pd
 
 from cartloader.utils.minimake import minimake
-from cartloader.utils.utils import cmd_separator, scheck_app, create_custom_logger, load_file_to_dict, write_dict_to_file, find_major_axis, ficture2_params_to_factor_assets, read_minmax
+from cartloader.utils.utils import cmd_separator, scheck_app, create_custom_logger, load_file_to_dict, write_dict_to_file, ficture2_params_to_factor_assets, read_minmax, flexopen
 
 def parse_arguments(_args):
     """
