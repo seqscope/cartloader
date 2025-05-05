@@ -252,8 +252,8 @@ def run_ficture2(_args):
             tsv_plain = f"{args.in_transcript}"
 
         feature_plain = f"{args.out_dir}/feature.tsv"
-        with flexopen(args.in_feature_ficture, "r") as f:
-            with flexopen(feature_plain, "w") as wf:
+        with flexopen(in_feature_ficture, "r") as f:
+            with open(feature_plain, "w") as wf:
                 wf.write(f.readline())
                 for line in f:
                     toks = line.strip().split("\t")
