@@ -240,8 +240,6 @@ def run_ficture2(_args):
     if args.out_json is None:
         args.out_json = os.path.join(args.out_dir, f"ficture.params.json") 
 
-    # check static cmap file
-
     # 1. tiling :
     if args.tile:
         scheck_app(args.gzip)
@@ -252,6 +250,12 @@ def run_ficture2(_args):
             cmds.append(f"{args.gzip} -dc {args.in_transcript} > {tsv_plain}")
         else:
             tsv_plain = f"{args.in_transcript}"
+
+        if in_feature_ficture.endswith(".gz"):
+            feature_plain = f"{args.out_dir}/feature.tsv"
+            cmds.append(f"{args.gzip} -dc {args.in_feature} > {feature_plain}")
+        else:
+            feature_plain = f"{in_feature_ficture}"
         
         cmd = " ".join([
             ficture2bin, "pts2tiles",
@@ -284,7 +288,7 @@ def run_ficture2(_args):
                 ficture2bin, "tiles2hex",
                 f"--in-tsv {args.out_dir}/transcripts.tiled.tsv",
                 f"--in-index {args.out_dir}/transcripts.tiled.index",  
-                f"--feature-dict {in_feature_ficture}",
+                f"--feature-dict {feature_plain}",
                 f"--icol-x {args.colidx_x-1}",
                 f"--icol-y {args.colidx_y-1}",
                 f"--icol-feature 2",
