@@ -510,9 +510,93 @@ def ficture_params_to_factor_assets(params, skip_raster=False):
                         out_assets.append(out_asset)
     return out_assets
 
+## transform FICTURE parameters to FACTOR assets (new standard)
+def ficture2_params_to_factor_assets(params, skip_raster=False):
+    ## model_id
+    ## proj_params -> proj_id
+    ## proj_params -> decode_params -> decode_id
+    suffix_factormap = "-factor-map.tsv"
+    suffix_de = "-bulk-de.tsv"
+    suffix_info = "-info.tsv"
+    suffix_model = "-model.tsv"
+    suffix_post = "-pseudobulk.tsv"
+    suffix_rgb = "-rgb.tsv"
+    suffix_hex_coarse = ".pmtiles"
+    suffix_raster = "-pixel-raster.pmtiles"
 
+    out_assets = []
+    for param in params: ## train_params is a list of dictionaries
+        if not "model_id" in param:
+            raise ValueError(f"model_id is missing from FICTURE parameters")
+        model_id = param["model_id"].replace("_", "-")
 
+        len_decode_params = len(param["decode_params"])
 
+        if len_decode_params == 0: ## train_param only
+            out_asset = {
+                "id": model_id,
+                "name": factor_id_to_name(model_id),
+                "model_id": model_id,
+                "de": model_id + suffix_de,
+                "info": model_id + suffix_info,
+                "model": model_id + suffix_model,
+                "rgb": model_id + suffix_rgb,
+                "pmtiles": {
+                    "hex_coarse": model_id + suffix_hex_coarse
+                }
+            }
+            if "factor_map" in param:
+                out_asset["factor_map"] = model_id + suffix_factormap
+            out_assets.append(out_asset)
+        elif len_decode_params == 1:
+            decode_param = param["decode_params"][0]
+            if not "decode_id" in decode_param:
+                raise ValueError(f"decode_id is missing from FICTURE parameter for {model_id}")
+            decode_id = decode_param["decode_id"].replace("_", "-")
+
+            out_asset = {
+                "id": model_id,
+                "name": factor_id_to_name(model_id),
+                "model_id": model_id,
+                "decode_id": decode_id,
+                "de": model_id + suffix_de,
+                "info": model_id + suffix_info,
+                "model": model_id + suffix_model,
+                "post": decode_id + suffix_post,
+                "rgb": model_id + suffix_rgb,
+                "pmtiles": {
+                    "hex_coarse": model_id + suffix_hex_coarse,
+                    **({"raster": decode_id + suffix_raster} if not skip_raster else {})
+                }
+            }
+            if "factor_map" in param:
+                out_asset["factor_map"] = model_id + suffix_factormap
+            out_assets.append(out_asset)
+        else: ## multiple decode_params
+            for decode_param in param["decode_params"]:
+                if not "decode_id" in decode_param:
+                    raise ValueError(f"decode_id is missing from FICTURE parameter for {model_id}")
+                decode_id = decode_param["decode_id"].replace("_", "-")
+
+                out_asset = {
+                    "id": model_id,
+                    "name": factor_id_to_name(model_id),
+                    "model_id": model_id,
+                    "decode_id": decode_id,
+                    "de": model_id + suffix_de,
+                    "info": model_id + suffix_info,
+                    "model": model_id + suffix_model,
+                    "post": decode_id + suffix_post,
+                    "rgb": model_id + suffix_rgb,
+                    "pmtiles": {
+                        "hex_coarse": model_id + suffix_hex_coarse,
+                        **({"raster": decode_id + suffix_raster} if not skip_raster else {})
+                    }
+                }
+                if "factor_map" in param:
+                    out_asset["factor_map"] = model_id + suffix_factormap
+                out_assets.append(out_asset)
+    return out_assets
 
 def create_symlink(A, B):
     # Purpose: Create a soft link from A to B
