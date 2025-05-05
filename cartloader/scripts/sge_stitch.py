@@ -136,7 +136,7 @@ def sge_stitch(_args):
 
         filtered_transcript_f = os.path.join(args.out_dir, f"{args.out_filtered_prefix}.transcripts.unsorted.tsv.gz")
         filtered_minmax_f = os.path.join(args.out_dir, f"{args.out_filtered_prefix}.coordinate_minmax.tsv")
-        filtered_feature_f = os.path.join(args.out_dir, f"{args.out_filtered_prefix}.feature.clean.tsv.gz")
+        filtered_feature_f = os.path.join(args.out_dir, f"{args.out_filtered_prefix}.feature.lenient.tsv.gz")
         filtered_xy_f = os.path.join(args.out_dir, f"{args.out_filtered_prefix}.xy.png")
         
          # combine sges
