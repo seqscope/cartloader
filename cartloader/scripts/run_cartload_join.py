@@ -370,6 +370,7 @@ def run_cartload_join(_args):
         "--threads", str(args.threads),
         "--colname-feature", args.colname_feature,
         "--colname-count", args.colname_count,
+        "--col-rename", "X:lon", "Y:lat",
         "--max-tile-bytes", str(args.max_tile_bytes),
         "--max-feature-counts", str(args.max_feature_counts),
         "--preserve-point-density-thres", str(args.preserve_point_density_thres),

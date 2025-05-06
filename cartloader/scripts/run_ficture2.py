@@ -72,7 +72,7 @@ def parse_arguments(_args):
     aux_params.add_argument('--colname-count', type=str, default="count", help='Columns from the input transcript file to be used as key')
     aux_params.add_argument('--tile-size', type=int, default=500, help='Tile size for tiling (default: 500)')
     aux_params.add_argument('--tile-buffer', type=int, default=1000, help='Tile buffer for tiling (default: 1000)')
-    aux_params.add_argument('--seed', type=int, default=0, help='Random seed for random number generation (default: 0)')
+    aux_params.add_argument('--seed', type=int, default=1, help='Random seed for random number generation (default: 0)')
     # segmentation - ficture
     aux_params.add_argument('--min-ct-per-unit-hexagon', type=int, default=50, help='Minimum count per hexagon in hexagon segmentation in FICTURE compatible format (default: 50)')
     # minibatch

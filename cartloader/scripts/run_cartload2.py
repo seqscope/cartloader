@@ -326,7 +326,7 @@ def run_cartload2(_args):
         "--in-features", in_features,
         "--out-prefix", f"{out_molecules_prefix}",
         "--threads", str(args.threads),
-        "--col-rename", args.rename_x, args.rename_y, "feature:gene", "ct:count",
+        "--col-rename", args.rename_x, args.rename_y, f"feature:{args.colname_feature}", f"ct:{args.colname_count}",
         "--colname-feature", args.colname_feature,
         "--colname-count", args.colname_count,
         "--max-tile-bytes", str(args.max_tile_bytes),
