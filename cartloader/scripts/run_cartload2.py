@@ -282,7 +282,7 @@ def run_cartload2(_args):
                     "cartloader", "run_fig2pmtiles",
                     "--georeference", "--geotif2mbtiles", "--mbtiles2pmtiles",
                     "--in-fig", in_pixel_png,
-                    f"--in-bounds {xmin},{ymin},{xmax},{ymax}",
+                    f"--in-bounds '{xmin},{ymin},{xmax},{ymax}'",
                     "--out-prefix", f"{out_prefix}-pixel-raster",
                     f"--pmtiles '{args.pmtiles}'",
                     f"--gdal_translate '{args.gdal_translate}'",
