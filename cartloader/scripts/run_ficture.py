@@ -490,14 +490,14 @@ def run_ficture(_args):
             if not args.skip_coarse_report:
                 cmds = cmd_separator([], f" LDA visualization for {train_width}um and {n_factor} factors...")
                 cmds.append(f"ficture plot_base --input {lda_fit_tsv} --output {model_prefix}.coarse --fill_range {lda_fillr} --color_table {cmap} --plot_um_per_pixel {args.lda_plot_um_per_pixel} --plot_discretized")
-                mm.add_target(f"{model_prefix}.coarse.png", [f"{model_prefix}.done"], cmds)
+                mm.add_target(f"{model_prefix}.coarse.png", [f"{model_prefix}.done", cmap], cmds)
             
             # 4) DE
             cmds = cmd_separator([], f" LDA DE/report for {train_width}um and {n_factor} factors...")
             cmds.append(f"ficture de_bulk --input {lda_postcount_tsv} --output {lda_de} --min_ct_per_feature {args.min_ct_per_feature} --max_pval_output {args.de_max_pval} --min_fold_output {args.de_min_fold}")
             cmds.append(f"ficture factor_report --path {args.out_dir} --pref {model_id} --color_table {cmap}")
             cmds.append(f"[ -f {lda_de} ] && [ -f {model_prefix}.factor.info.html ] && touch {model_prefix}_summary.done")
-            mm.add_target(f"{model_prefix}_summary.done", [f"{model_prefix}.done"], cmds)
+            mm.add_target(f"{model_prefix}_summary.done", [f"{model_prefix}.done", cmap], cmds)
 
     # 5. init_ext
     if args.init_ext:
