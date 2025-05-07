@@ -5,46 +5,11 @@ from collections import Counter
 
 from cartloader.utils.utils import create_custom_logger
 
-# # Function to get log2 bins from the first file
-# def get_equal_bins(n_bins, in_features, out_prefix, out_features_suffix, delim, colname_feature, colname_count, skip_original):
-#     ## read the feature data frame
-#     df = pd.read_csv(in_features, sep=delim)
-
-#     ## sort by smallest to largest
-#     df = df.sort_values(by=colname_count).reset_index(drop=True)
-
-#     # Calculate the cumulative sum of 'count'
-#     df['cumulative_sum'] = df[colname_count].cumsum()
-
-#     # Define the total sum and target sum for each bin
-#     total_sum = df[colname_count].sum()
-#     target_sum = total_sum / n_bins
-
-#     # Create the bin edges, but exclude the last edge to ensure n_bins bins
-#     bin_edges = np.linspace(0, total_sum, n_bins + 1)[1:]  # Skip the first edge
-
-#     # Assign each cumulative sum to a bin
-#     df['bin'] = (np.digitize(df['cumulative_sum'], bin_edges, right=True) + 1).astype(int)
-
-#     equal_bins = df.set_index(colname_feature)['bin'].to_dict()
-
-#     df = df.drop(columns=['cumulative_sum'])
-
-#     if not skip_original:
-#         df.to_csv(f"{out_prefix}_all_{out_features_suffix}", sep='\t', index=False, na_rep='NA')
-#     df.to_json(f"{out_prefix}_bin_counts.json", orient='records')
-
-#     for equal_bin, group in df.groupby('bin'):
-#         output_file = f"{out_prefix}_bin{equal_bin}_{out_features_suffix}"
-#         group.drop('bin', axis=1).to_csv(output_file, sep='\t', index=False, na_rep='NA')
-    
-#     return equal_bins
-
 # Function to get equal bins from the first file
 def get_equal_bins(n_bins, in_features, out_prefix, out_features_suffix, delim, colname_feature, colname_count, skip_original):
     ## read the feature data frame
     df = pd.read_csv(in_features, sep=delim)
-    
+
     ## sort by smallest to largest
     df = df.sort_values(by=colname_count, ascending=False).reset_index(drop=True)
 
@@ -108,12 +73,14 @@ def get_log2_bins(multiplier, in_features, out_prefix, out_features_suffix, deli
 # Function to process chunks of the second file
 def process_chunk(chunk, bins, colname_feature, out_prefix, out_tsv_suffix, out_tsv_delim, rename_dict):
     bin2nmols = {}
+    chunk.rename(columns=rename_dict, inplace=True)
     for bin_id, group in chunk.groupby(chunk[colname_feature].map(bins)):
         bin2nmols[bin_id] = group.shape[0]
         # bin_id may be 1.0, 2.0, etc. Convert to int and then to str
         output_file = f"{out_prefix}_bin{str(int(bin_id))}_{out_tsv_suffix}"
         mode = 'a' if os.path.exists(output_file) else 'w'
-        group.rename(columns=rename_dict).to_csv(output_file, sep=out_tsv_delim, index=False, mode=mode, header=(mode == 'w'), na_rep='NA')
+        #group.rename(columns=rename_dict).to_csv(output_file, sep=out_tsv_delim, index=False, mode=mode, header=(mode == 'w'), na_rep='NA')
+        group.to_csv(output_file, sep=out_tsv_delim, index=False, mode=mode, header=(mode == 'w'), na_rep='NA')
     return bin2nmols
 
 def split_molecule_counts(_args):

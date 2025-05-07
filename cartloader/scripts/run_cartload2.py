@@ -2,7 +2,7 @@ import sys, os, argparse, logging, subprocess
 import pandas as pd
 
 from cartloader.utils.minimake import minimake
-from cartloader.utils.utils import cmd_separator, scheck_app, create_custom_logger, load_file_to_dict, write_dict_to_file, find_major_axis, ficture_params_to_factor_assets
+from cartloader.utils.utils import cmd_separator, scheck_app, create_custom_logger, load_file_to_dict, write_dict_to_file, ficture2_params_to_factor_assets, read_minmax, flexopen
 
 def parse_arguments(_args):
     """
@@ -14,13 +14,13 @@ def parse_arguments(_args):
     """
     repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 
-    parser = argparse.ArgumentParser(prog=f"cartloader run_cartload_join", description="Build resources for CartoScope, joining the pixel-level results from FICTURE")
+    parser = argparse.ArgumentParser(prog=f"cartloader run_cartload2", description="Build resources for CartoScope, joining the pixel-level results from FICTURE")
 
     run_params = parser.add_argument_group("Run Options", "Run options for FICTURE commands")
     run_params.add_argument('--dry-run', action='store_true', default=False, help='Dry run. Generate only the Makefile without running it')
     run_params.add_argument('--restart', action='store_true', default=False, help='Restart the run. Ignore all intermediate files and start from the beginning')
     run_params.add_argument('--n-jobs', type=int, default=1, help='Number of jobs (processes) to run in parallel')
-    run_params.add_argument('--makefn', type=str, default="run_cartload_join.mk", help='The name of the Makefile to generate')
+    run_params.add_argument('--makefn', type=str, default="run_cartload2.mk", help='The name of the Makefile to generate')
     run_params.add_argument('--threads', type=int, default=4, help='Maximum number of threads per job (for tippecanoe)')
 
     inout_params = parser.add_argument_group("Input/Output Parameters", "Input/output directory/files.")
@@ -47,9 +47,8 @@ def parse_arguments(_args):
     aux_params.add_argument('--out-fic-assets', type=str, default="ficture_assets.json", help='The YAML/JSON file containing FICTURE output assets')
     aux_params.add_argument('--out-catalog', type=str, default="catalog.yaml", help='The YAML file containing the output catalog')
     aux_params.add_argument('--background-assets', type=str, nargs="+", help='The JSON/YAML file containing background assets in the form of [id:file] or [id1:id2:file]')
-    aux_params.add_argument('--major-axis', type=str, default="X", choices=['X', 'Y', 'auto'], help='Axis where transcripts.tsv.gz are sorted. Options: X, Y, auto. If "auto", it will be automatically defined by the longer axis. Default: X')
-    aux_params.add_argument('--rename-x', type=str, default='X:lon', help='tippecanoe parameters to rename X axis')  
-    aux_params.add_argument('--rename-y', type=str, default='Y:lat', help='tippecanoe parameters to rename Y axis')  
+    aux_params.add_argument('--rename-x', type=str, default='x:lon', help='tippecanoe parameters to rename X axis')  
+    aux_params.add_argument('--rename-y', type=str, default='y:lat', help='tippecanoe parameters to rename Y axis')  
     aux_params.add_argument('--colname-feature', type=str, default='gene', help='Input/output Column name for gene name (default: gene)')
     aux_params.add_argument('--colname-count', type=str, default='count', help='Column name for feature counts')
     aux_params.add_argument('--out-molecules-id', type=str, default='genes', help='Prefix of output molecules PMTiles files. No directory path should be included')
@@ -66,7 +65,23 @@ def parse_arguments(_args):
 
     return parser.parse_args(_args)
 
-def run_cartload_join(_args):
+def copy_rgb_tsv(in_rgb, out_rgb):
+    with open(in_rgb, 'r') as f:
+        hdrs = f.readline().rstrip().split("\t")
+        col2idx = {hdr: i for i, hdr in enumerate(hdrs)}
+        with open(out_rgb, 'w') as outf:
+            outf.write("\t".join(["Name", "Color_index", "R", "G", "B"]) + "\n")
+            for line in f:
+                toks = line.rstrip().split("\t")
+                if len(toks) != len(hdrs):
+                    raise ValueError(f"Input RGB file {in_rgb} has inconsistent number of columns")
+                rgb_r = int(toks[col2idx["R"]])/255
+                rgb_g = int(toks[col2idx["G"]])/255
+                rgb_b = int(toks[col2idx["B"]])/255
+                name = toks[col2idx["Name"]]
+                outf.write(f"{name}\t{name}\t{rgb_r:.5f}\t{rgb_g:.5f}\t{rgb_b:5f}\n")
+
+def run_cartload2(_args):
     """
     Build resources for CartoScope
     """
@@ -109,19 +124,13 @@ def run_cartload_join(_args):
 
     ## sge 
     in_sge = in_data.get("in_sge", {})
-    in_molecules = in_sge.get("in_cstranscript", None)
+    in_molecules = in_sge.get("in_transcript", None)
     assert in_molecules is not None and os.path.exists(in_molecules), "Provide a valid input molecules file in the json file"
     in_features = in_sge.get("in_feature", None)
     assert in_features is not None and os.path.exists(in_features), "Provide a valid input features file in the json file"
     in_minmax = in_sge.get("in_minmax", None)
     assert in_minmax is not None and os.path.exists(in_minmax), "Provide a valid input minmax file in the json file"
     
-    ## identify the major axis of the data
-    if args.major_axis == "auto":
-        major_axis = find_major_axis(in_minmax, "row")
-    else:
-        major_axis = args.major_axis
-
     if not args.skip_raster:
         ## create raster mono pmtiles for SGE
         cmds = cmd_separator([], f"Converting SGE counts into PMTiles")
@@ -132,7 +141,6 @@ def run_cartload_join(_args):
             "--out-prefix", f"{args.out_dir}/sge-mono",
             "--colname-count", args.colname_count,
             "--main",
-            #f"--magick '{args.magick}'",
             f"--pmtiles '{args.pmtiles}'",
             f"--gdal_translate '{args.gdal_translate}'",
             f"--gdaladdo '{args.gdaladdo}'",
@@ -149,18 +157,21 @@ def run_cartload_join(_args):
         logging.error(f"The parameters are empty after loading {args.fic_dir}/{args.in_fic_params}")
 
     # create the output assets json
-    out_fic_assets = ficture_params_to_factor_assets(in_fic_params, args.skip_raster)
+    out_fic_assets = ficture2_params_to_factor_assets(in_fic_params, args.skip_raster)
 
     train_targets = []
 
     join_pixel_tsvs = []
     join_pixel_ids = []
 
+    minmax = read_minmax(in_minmax, "row")
+    xmin = minmax["xmin"]
+    xmax = minmax["xmax"]
+    ymin = minmax["ymin"]
+    ymax = minmax["ymax"]
+
     for train_param in in_fic_params:
-        # train_width = train_param["train_width"]
-        # n_factor = train_param["n_factor"]
         model_id = train_param["model_id"]
-        #model_path = train_param["model_path"]
         factormap_path = train_param.get("factor_map", None)
         model_rgb = train_param["cmap"]
 
@@ -174,8 +185,8 @@ def run_cartload_join(_args):
         train_inout ={
             "model":{
                 "required": True,
-                "in":  f"{in_prefix}.model_matrix.tsv.gz",
-                "out": f"{out_prefix}-model-matrix.tsv.gz"
+                "in":  f"{in_prefix}.model.tsv",
+                "out": f"{out_prefix}-model.tsv"
             },
             "rgb":{
                 "required": True,
@@ -187,11 +198,6 @@ def run_cartload_join(_args):
                 "in":  f"{in_prefix}.bulk_chisq.tsv",
                 "out": f"{out_prefix}-bulk-de.tsv"
             },
-            "post":{
-                "required": False,
-                "in":  f"{in_prefix}.posterior.count.tsv.gz",
-                "out": f"{out_prefix}-posterior-counts.tsv.gz"
-            }, 
             "info":{
                 "required": False,
                 "in":  f"{in_prefix}.factor.info.tsv",
@@ -207,19 +213,24 @@ def run_cartload_join(_args):
 
         prerequisites = []
         cmds = cmd_separator([], f"Converting LDA-trained factors {model_id} into PMTiles and copying relevant files..")
-        #out_train_avails = {
-        #    "prefix": out_id,
-        #}
 
         # fit_results
         #print(f"--tippecanoe '{args.tippecanoe}'")
-        in_fit_tsvf = f"{in_prefix}.fit_result.tsv.gz"
+        in_fit_tsvf = f"{in_prefix}.results.tsv.gz"
+        out_fit_tsvf = f"{out_prefix}.results.tsv.gz"
         if os.path.exists(in_fit_tsvf):
             cmd = " ".join([
+                args.spatula, "append-topk-tsv",
+                "--in-tsv", in_fit_tsvf,
+                "--out-tsv", out_fit_tsvf,
+                "--icol-beg", "2"
+            ])
+            cmds.append(cmd)
+            cmd = " ".join([
                 "cartloader", "convert_generic_tsv_to_pmtiles",
-                "--in-tsv", in_fit_tsvf, 
+                "--in-tsv", out_fit_tsvf, 
                 "--out-prefix", out_prefix,
-                "--rename-column", "x:lon", "y:lat",
+                "--rename-column", args.rename_x, args.rename_y,
                 "--threads", str(args.threads),
                 "--max-tile-bytes", str(args.max_tile_bytes),
                 "--max-feature-counts", str(args.max_feature_counts),
@@ -230,93 +241,62 @@ def run_cartload_join(_args):
                 "--keep-intermediate-files" if args.keep_intermediate_files else ""
             ])
             cmds.append(cmd)
+            cmds.append(f"rm -f {out_fit_tsvf}")
             prerequisites.append(in_fit_tsvf)
 
         # mode/rgb/de/posterior/info
         for key, val in train_inout.items():
             if val["required"] or os.path.exists(val["in"]):
                 prerequisites.append(val["in"])
-                cmds.append(f"cp {val['in']} {val['out']}")
+                if key == "rgb":
+                    copy_rgb_tsv(val["in"], val["out"])
+                else:
+                    cmds.append(f"cp {val['in']} {val['out']}")
         
         cmds.append(f"touch {out_prefix}.done")
         mm.add_target(f"{out_prefix}.done", prerequisites, cmds)
 
         ## add to the output asset json
-        out_proj_assets = []
+        out_decode_assets = []
 
         sources = [f"{out_prefix}.done"]
 
-        for proj_param in train_param["proj_params"]:
-            in_id = proj_param["proj_id"]
+        for decode_param in train_param["decode_params"]:
+            in_id = decode_param["decode_id"]
             in_prefix = f"{args.fic_dir}/{in_id}"
-            in_fit_tsvf = f"{in_prefix}.fit_result.tsv.gz"
+            in_pixel_tsvf = f"{in_prefix}.tsv.gz"
+            in_pixel_png = f"{in_prefix}.png"
             in_de_tsvf  = f"{in_prefix}.bulk_chisq.tsv"
-            in_post_tsvf = f"{in_prefix}.posterior.count.tsv.gz"
+            in_post_tsvf = f"{in_prefix}.pseudobulk.tsv"
             in_info_tsvf = f"{in_prefix}.factor.info.tsv"
 
             out_id = in_id.replace("_", "-")
             out_prefix = os.path.join(args.out_dir, out_id)
 
-            cmds = cmd_separator([], f"Converting projected factors {in_id} into PMTiles and copying relevant files..")
-            cmd = " ".join([
-                "cartloader", "convert_generic_tsv_to_pmtiles",
-                "--in-tsv", in_fit_tsvf, 
-                "--out-prefix", f"{out_prefix}",
-                "--rename-column", "x:lon", "y:lat",
-                "--threads", str(args.threads),
-                "--max-tile-bytes", str(args.max_tile_bytes),
-                "--max-feature-counts", str(args.max_feature_counts),
-                "--preserve-point-density-thres", str(args.preserve_point_density_thres),
-                f"--tippecanoe '{args.tippecanoe}'",
-                f"--log --log-suffix '{args.log_suffix}'" if args.log else "",
-            ])
-            cmds.append(cmd)
+            join_pixel_tsvs.append(in_pixel_tsvf)
+            join_pixel_ids.append(out_id)
+
+            cmds = cmd_separator([], f"Converting decoded factors {in_id} into PMTiles and copying relevant files..")
+            if not args.skip_raster:
+                cmd = " ".join([
+                    "cartloader", "run_fig2pmtiles",
+                    "--georeference", "--geotif2mbtiles", "--mbtiles2pmtiles",
+                    "--in-fig", in_pixel_png,
+                    f"--in-bounds={xmin},{ymin},{xmax},{ymax}",
+                    "--out-prefix", f"{out_prefix}-pixel-raster",
+                    f"--pmtiles '{args.pmtiles}'",
+                    f"--gdal_translate '{args.gdal_translate}'",
+                    f"--gdaladdo '{args.gdaladdo}'",
+                    "--keep-intermediate-files" if args.keep_intermediate_files else ""
+                ])
+                cmds.append(cmd)
+
             cmds.append(f"cp {in_de_tsvf} {out_prefix}-bulk-de.tsv")
-            cmds.append(f"cp {in_post_tsvf} {out_prefix}-posterior-counts.tsv.gz")
+            cmds.append(f"cp {in_post_tsvf} {out_prefix}-pseudobulk.tsv")
             cmds.append(f"cp {in_info_tsvf} {out_prefix}-info.tsv")
             cmds.append(f"touch {out_prefix}.done")
-            mm.add_target(f"{out_prefix}.done", [in_fit_tsvf, in_de_tsvf, in_post_tsvf, model_rgb, in_info_tsvf], cmds)
+            mm.add_target(f"{out_prefix}.done", [in_pixel_tsvf, in_pixel_png, in_de_tsvf, in_post_tsvf, model_rgb, in_info_tsvf], cmds)
             sources.append(f"{out_prefix}.done")
-
-            for decode_param in proj_param["decode_params"]:
-                in_id = decode_param["decode_id"]
-                assert in_id is not None, "Provide a valid decode_id in the json file"
-                in_prefix = f"{args.fic_dir}/{in_id}"
-                in_pixel_tsvf = f"{in_prefix}.pixel.sorted.tsv.gz"
-                in_pixel_png = f"{in_prefix}.pixel.png"
-                in_de_tsvf = f"{in_prefix}.bulk_chisq.tsv"
-                in_post_tsvf = f"{in_prefix}.posterior.count.tsv.gz"
-                in_info_tsvf = f"{in_prefix}.factor.info.tsv"
-                
-                out_id = in_id.replace("_", "-")
-                out_prefix = os.path.join(args.out_dir, out_id)
-
-                cmds = cmd_separator([], f"Converting pixel-level factors {in_prefix} into PMTiles and copying relevant files..")
-                cmds.append(f"cp {in_de_tsvf} {out_prefix}-bulk-de.tsv")
-                cmds.append(f"cp {in_post_tsvf} {out_prefix}-posterior-counts.tsv.gz")
-                cmds.append(f"cp {in_info_tsvf} {out_prefix}-info.tsv")
-                cmds.append(f"touch {out_prefix}.done")
-                mm.add_target(f"{out_prefix}.done", [in_fit_tsvf, in_de_tsvf, in_post_tsvf, model_rgb, in_info_tsvf], cmds)
-                sources.append(f"{out_prefix}.done")
-                join_pixel_tsvs.append(in_pixel_tsvf)
-                join_pixel_ids.append(out_id)
-
-                if not args.skip_raster:
-                    cmds = cmd_separator([], f"Creating raster pixel-level factor {in_prefix} into PMTiles...")
-                    cmd = " ".join([
-                        "cartloader", "run_fig2pmtiles",
-                        "--georeference", "--geotif2mbtiles", "--mbtiles2pmtiles",
-                        "--in-fig", in_pixel_png,
-                        "--in-tsv", in_pixel_tsvf,
-                        "--out-prefix", f"{out_prefix}-pixel-raster",
-                        f"--pmtiles '{args.pmtiles}'",
-                        f"--gdal_translate '{args.gdal_translate}'",
-                        f"--gdaladdo '{args.gdaladdo}'",
-                        "--keep-intermediate-files" if args.keep_intermediate_files else ""
-                    ])
-                    cmds.append(cmd)
-                    cmds.append(f"touch {out_prefix}-pixel-raster.done")
-                    mm.add_target(f"{out_prefix}-pixel-raster.done", [in_pixel_png, in_pixel_tsvf], cmds)
 
         cmds = cmd_separator([], f"Finishing up for train parameters {out_train_id}")
         cmds.append(f"touch {out_train_prefix}.alldone")
@@ -324,41 +304,19 @@ def run_cartload_join(_args):
         train_targets.append(f"{out_train_prefix}.alldone")
 
     ## Join pixel-level TSVs
-    ## sort the pixel-level TSVs
-    pixel_tsvs_to_be_joined = []
-    pixel_tsvs_to_be_joined_flags=[]
-    in_pixel_ids_to_be_joined = []
-    for i in range(len(join_pixel_tsvs)):
-        cmds = cmd_separator([], f"Sorting pixel-level TSV {join_pixel_tsvs[i]}")
-        in_pixel_tsvf = join_pixel_tsvs[i]
-        in_pixel_id = join_pixel_ids[i]
-        out_pixel_tsvprefix = os.path.join(args.out_dir, f"{in_pixel_id}.major_sorted")
-        out_pixel_tsvf = f"{out_pixel_tsvprefix}.tsv.gz"
-        sort_cols = "2,2g" if major_axis == "X" else "3,3g"
-        # for sort commands, use a done file as target -- in case more than one job is running
-        cmd = f"(gzip -cd {in_pixel_tsvf} | head | grep ^#; gzip -cd {in_pixel_tsvf} | grep -v ^# | sort -T {args.tmp_dir} -k{sort_cols} -S 1G;) | gzip -c > {out_pixel_tsvf} && touch {out_pixel_tsvprefix}.done"
-        cmds.append(cmd)
-        mm.add_target(f"{out_pixel_tsvprefix}.done", [in_pixel_tsvf], cmds)
-        pixel_tsvs_to_be_joined.append(out_pixel_tsvf)
-        in_pixel_ids_to_be_joined.append(in_pixel_id)
-        pixel_tsvs_to_be_joined_flags.append(f"{out_pixel_tsvprefix}.done")
-
-    ## create a joined pixel-level TSV
-    if ( len(pixel_tsvs_to_be_joined) > 0 ):
-        cmds = cmd_separator([], f"Joining pixel-level TSVs")
-        out_join_pixel_prefix = f"{args.out_dir}/transcripts_pixel_joined.sorted"
+    if ( len(join_pixel_tsvs) > 0 ):
+        cmds = cmd_separator([], f"Pasting pixel-level TSVs")
+        out_join_pixel_prefix = f"{args.out_dir}/transcripts_pixel_joined"
         cmd = " ".join([
-            f"'{args.spatula}'", "join-pixel-tsv",
-            "--mol-tsv", in_molecules,
-            "--out-prefix", out_join_pixel_prefix, 
-            "--max-dist-um", str(args.max_join_dist_um),
-            "--sort-axis", major_axis ] + 
-            [ f"--pix-prefix-tsv {in_pixel_ids_to_be_joined[i]}_,{pixel_tsvs_to_be_joined[i]}" for i in range(len(pixel_tsvs_to_be_joined)) ]
+                f"'{args.spatula}'", "paste-pixel-tsv",
+                f"--out-tsv {out_join_pixel_prefix}.tsv.gz",
+                f"--colname-x", args.rename_x.split(":")[0],
+                f"--colname-y", args.rename_y.split(":")[0]
+            ]
+            + [ f"--pix-prefix-tsv {join_pixel_ids[i]}_,{join_pixel_tsvs[i]}" for i in range(len(join_pixel_tsvs)) ]
         )
         cmds.append(cmd)
-        mm.add_target(f"{out_join_pixel_prefix}.tsv.gz", pixel_tsvs_to_be_joined_flags + [in_molecules], cmds)
-    else:
-        out_join_pixel_prefix = in_molecules.replace(".tsv.gz","") ## no joining needed
+        mm.add_target(f"{out_join_pixel_prefix}.tsv.gz", [in_molecules], cmds)
 
     ## run tsv2pmtiles for the convert the joined pixel-level TSV to PMTiles
     cmds = cmd_separator([], f"Converting the joined pixel-level TSV to PMTiles")
@@ -368,9 +326,9 @@ def run_cartload_join(_args):
         "--in-features", in_features,
         "--out-prefix", f"{out_molecules_prefix}",
         "--threads", str(args.threads),
+        "--col-rename", args.rename_x, args.rename_y, f"feature:{args.colname_feature}", f"ct:{args.colname_count}",
         "--colname-feature", args.colname_feature,
         "--colname-count", args.colname_count,
-        "--col-rename", "X:lon", "Y:lat",
         "--max-tile-bytes", str(args.max_tile_bytes),
         "--max-feature-counts", str(args.max_feature_counts),
         "--preserve-point-density-thres", str(args.preserve_point_density_thres),
@@ -427,17 +385,6 @@ def run_cartload_join(_args):
     ## write makefile
     make_f = os.path.join(args.out_dir, args.makefn)
     mm.write_makefile(make_f)
-
-    ## run makefile
-    # if args.dry_run:
-    #     ## run makefile
-    #     os.system(f"make -f {make_f} -n")
-    #     print(f"To execute the pipeline, run the following command:\nmake -f {make_f} -j {args.n_jobs}")
-    # else:
-    #     exit_code = os.system(f"make -f {make_f} -j {args.n_jobs}")
-    #     if exit_code != 0:
-    #         logging.error(f"Error in running make -f {make_f} -j {args.n_jobs}")
-    #         sys.exit(1)
 
     if args.dry_run:
         os.system(f"make -f {make_f} -n")

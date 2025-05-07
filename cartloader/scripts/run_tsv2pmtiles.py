@@ -83,8 +83,8 @@ def run_tsv2pmtiles(_args):
     ## rename X/Y to lon/lat for tippecanoe compatibility
     if args.col_rename is None:
         args.col_rename = []
-    args.col_rename.append("X:lon")
-    args.col_rename.append("Y:lat")
+        args.col_rename.append("X:lon")
+        args.col_rename.append("Y:lat")
 
     # start mm
     mm = minimake()

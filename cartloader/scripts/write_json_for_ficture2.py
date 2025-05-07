@@ -9,14 +9,12 @@ def parse_arguments(_args):
                                      description="Write a JSON file to summarize the parameters.")
     parser.add_argument('--out-dir', required=True, type=str, help='Output directory')
     parser.add_argument('--out-json', type=str, default=None, help='Path to the output JSON file. Default: <out-dir>/ficture.params.json')
-    parser.add_argument('--in-cstranscript', type=str, default=None, help='Path to the transcript file.')
+    parser.add_argument('--in-transcript', type=str, default=None, help='Path to the transcript file.')
     parser.add_argument('--in-feature', type=str, default=None, help='Path to the feature file.')
     parser.add_argument('--in-minmax', type=str, default=None, help='Path to the minmax file.')
     parser.add_argument('--in-feature-ficture', type=str, default=None, help='(Optional) If FICTURE used a different feature file than the in-feature file, specify the path to the feature file used for FICTURE analysis.')
     parser.add_argument('--lda-model', nargs='*', type=str, default=None, help='LDA Model information: <model_type>,<model_path>,<model_id>,<train_width>,<n_factor>,<cmap>')
-    parser.add_argument('--ext-model', nargs='*', type=str, default=None, help='External Model information: <model_type>,<model_path>,<model_id>,<train_width>,<factor_map>,<cmap>')
-    parser.add_argument('--projection', nargs='*', type=str, default=None, help='Projection information: <model_type>,<model_id>,<projection_id>,<fit_width>,<anchor_res>')
-    parser.add_argument('--decode', nargs='*', type=str, default=None, help='Decode information: <model_type>,<model_id>,<projection_id>,<decode_id>,<radius>')
+    parser.add_argument('--decode', nargs='*', type=str, default=None, help='Projection information: <model_type>,<model_id>,<projection_id>,<fit_width>,<anchor_res>')
     parser.add_argument('--merge', action='store_true', default=False, help='Merge with to the existing JSON file.')
     parser.add_argument('--overwrite', action='store_true', default=False, help='Overwrite the existing JSON file.')
 
@@ -71,7 +69,7 @@ def merge_params(params1, params2, keynames, nodenames):
             out_params.append(params2[idx2])
     return out_params
 
-def write_json_for_ficture(_args):
+def write_json_for_ficture2(_args):
     args = parse_arguments(_args)
     if args.overwrite and args.merge:
         raise ValueError("Cannot use both --overwrite and --merge options.")
@@ -80,7 +78,7 @@ def write_json_for_ficture(_args):
     
     # Input SGE data
     sge_data={
-        "in_cstranscript": args.in_cstranscript,
+        "in_transcript": args.in_transcript,
         "in_feature": args.in_feature,
         "in_minmax": args.in_minmax
     }
@@ -98,53 +96,23 @@ def write_json_for_ficture(_args):
                 "train_width": int(train_width),
                 "n_factor": int(n_factor),
                 "cmap": cmap,
-                "proj_params": []
-            }
-            model_dict[(model_type, model_id)] = model_entry
-            train_params.append(model_entry)
-
-    if args.ext_model is not None:
-        for model in args.ext_model:
-            model_type, model_path, model_id, train_width, factor_map, cmap = model.split(',')
-            model_entry = {
-                "model_type": model_type,
-                "model_id": model_id,
-                "model_path": model_path,
-                "train_width": int(train_width),
-                **({"factor_map": factor_map} if factor_map != "None" else {}),
-                "cmap": cmap,
-                "proj_params": []
-            }
-            model_dict[(model_type, model_id)] = model_entry
-            train_params.append(model_entry)
-
-    # Process projection data
-    if args.projection is not None:
-        for proj in args.projection:
-            model_type, model_id, projection_id, fit_width, anchor_res = proj.split(',')
-            projection_entry = {
-                "proj_id": projection_id,
-                "fit_width": int(fit_width),
-                "anchor_res": int(anchor_res),
                 "decode_params": []
             }
-            if (model_type, model_id) in model_dict:
-                model_dict[(model_type, model_id)]["proj_params"].append(projection_entry)
-    
+            model_dict[(model_type, model_id)] = model_entry
+            train_params.append(model_entry)
+
     # Process decode data
     if args.decode is not None:
         for dec in args.decode:
-            model_type, model_id, projection_id, decode_id, radius = dec.split(',')
+            model_type, model_id, decode_id, fit_width, anchor_res = dec.split(',')
             decode_entry = {
                 "decode_id": decode_id,
-                "radius": int(radius)
+                "fit_width": int(fit_width),
+                "anchor_res": int(anchor_res),
             }
-            # Find the right model and projection to add decode parameters
             if (model_type, model_id) in model_dict:
-                for proj in model_dict[(model_type, model_id)]["proj_params"]:
-                    if proj["proj_id"] == projection_id:
-                        proj["decode_params"].append(decode_entry)
-
+                model_dict[(model_type, model_id)]["decode_params"].append(decode_entry)
+    
     # Construct final JSON data
     if args.in_feature_ficture is None:
         json_data = {
@@ -172,7 +140,7 @@ def write_json_for_ficture(_args):
             if existing_data["in_sge"] != sge_data:
                 raise ValueError("The 'in_sge' data in the existing JSON file is different from the new data. NOT compartible and --merge option failed")
             ## Merge the existing data with the new data
-            json_data["train_params"] = merge_params(existing_data["train_params"], json_data["train_params"], ["model_id", "proj_id", "decode_id"], ["proj_params", "decode_params", ""])
+            json_data["train_params"] = merge_params(existing_data["train_params"], json_data["train_params"], ["model_id", "decode_id"], ["decode_params", ""])
         else:
             raise FileExistsError(f"Output JSON file already exists: {args.out_json}. Please use --overwrite to overwrite the file, and --merge to merge with existing JSON file")
 
