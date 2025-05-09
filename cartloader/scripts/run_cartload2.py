@@ -217,18 +217,19 @@ def run_cartload2(_args):
         # fit_results
         #print(f"--tippecanoe '{args.tippecanoe}'")
         in_fit_tsvf = f"{in_prefix}.results.tsv.gz"
-        out_fit_tsvf = f"{out_prefix}.results.tsv.gz"
+        #out_fit_tsvf = f"{out_prefix}.results.tsv.gz"
         if os.path.exists(in_fit_tsvf):
-            cmd = " ".join([
-                args.spatula, "append-topk-tsv",
-                "--in-tsv", in_fit_tsvf,
-                "--out-tsv", out_fit_tsvf,
-                "--icol-beg", "2"
-            ])
-            cmds.append(cmd)
+            # cmd = " ".join([
+            #     args.spatula, "append-topk-tsv",
+            #     "--in-tsv", in_fit_tsvf,
+            #     "--out-tsv", out_fit_tsvf,
+            #     "--icol-beg", "2"
+            # ])
+            # cmds.append(cmd)
             cmd = " ".join([
                 "cartloader", "convert_generic_tsv_to_pmtiles",
-                "--in-tsv", out_fit_tsvf, 
+                #"--in-tsv", out_fit_tsvf, 
+                "--in-tsv", in_fit_tsvf,
                 "--out-prefix", out_prefix,
                 "--rename-column", args.rename_x, args.rename_y,
                 "--threads", str(args.threads),
@@ -241,7 +242,7 @@ def run_cartload2(_args):
                 "--keep-intermediate-files" if args.keep_intermediate_files else ""
             ])
             cmds.append(cmd)
-            cmds.append(f"rm -f {out_fit_tsvf}")
+            #cmds.append(f"rm -f {out_fit_tsvf}")
             prerequisites.append(in_fit_tsvf)
 
         # mode/rgb/de/posterior/info
