@@ -190,7 +190,8 @@ def run_ficture2(_args):
     # input/output/other files
     # dirs
     os.makedirs(args.out_dir, exist_ok=True)
-
+    #os.makedirs(os.path.join(args.out_dir, "tmp"), exist_ok=True)
+    
     # start mm
     mm = minimake()
 
@@ -254,15 +255,18 @@ def run_ficture2(_args):
             tsv_plain = f"{args.in_transcript}"
 
         feature_plain = f"{args.out_dir}/feature.tsv"
+        feature_nohdr = f"{args.out_dir}/feature.nohdr.tsv"
         with flexopen(in_feature_ficture, "rt") as f:
             with open(feature_plain, "wt") as wf:
-                wf.write(f.readline())
-                for line in f:
-                    toks = line.strip().split("\t")
-                    count = int(toks[-1])
-                    if count >= args.min_ct_per_feature:
-                        wf.write(line)
-
+                with open(feature_nohdr, "wt") as wf2:
+                    wf.write(f.readline())
+                    for line in f:
+                        toks = line.strip().split("\t")
+                        count = int(toks[-1])
+                        if count >= args.min_ct_per_feature:
+                            wf.write(line)
+                            wf2.write(line)
+                            
         cmd = " ".join([
             ficture2bin, "pts2tiles",
             f"--in-tsv {tsv_plain}",
@@ -293,8 +297,8 @@ def run_ficture2(_args):
             cmd = " ".join([
                 ficture2bin, "tiles2hex",
                 f"--in-tsv {args.out_dir}/transcripts.tiled.tsv",
-                f"--in-index {args.out_dir}/transcripts.tiled.index",
-                f"--feature-dict {feature_plain}",
+                f"--in-index {args.out_dir}/transcripts.tiled.index",  
+                f"--feature-dict {feature_nohdr}",
                 f"--icol-x {args.colidx_x-1}",
                 f"--icol-y {args.colidx_y-1}",
                 f"--icol-feature 2",
@@ -336,7 +340,7 @@ def run_ficture2(_args):
                 ficture2bin, "lda4hex",
                 f"--in-data {hexagon}",
                 f"--in-meta {meta}",
-                f"--out-prefix {model_prefix}",
+                f"--out-prefix {model_prefix}.unsorted",
                 f"--n-topics {n_factor}",
                 f"--transform",
                 f"--min-count-train {args.min_count_train}",
@@ -346,11 +350,22 @@ def run_ficture2(_args):
                 f"--threads {args.threads}",
                 ])
             cmds.append(cmd)
-            ## compress the LDA output
             cmd = " ".join([
-                args.gzip, "-f", lda_fit_tsv
+                args.spatula, "append-topk-tsv",
+                f"--in-model {model_prefix}.unsorted.model.tsv",
+                f"--out-model {model_prefix}.model.tsv",
+                f"--reorder",
+                f"--in-tsv {model_prefix}.unsorted.results.tsv",
+                f"--out-tsv {model_prefix}.results.tsv.gz",
+                f"--offset-tsv 2",
+                f"--offset-model 1"
             ])
+            ## compress the LDA output
+            # cmd = " ".join([
+            #     args.gzip, "-f", lda_fit_tsv
+            # ])
             cmds.append(cmd)
+            cmds.append(f"rm -f {model_prefix}.unsorted.model.tsv {model_prefix}.unsorted.results.tsv")
             cmds.append(f"[ -f {lda_fit_tsv}.gz ] && [ -f {lda_model_matrix} ] && touch {model_prefix}.done" )
             mm.add_target(f"{model_prefix}.done", [f"{args.out_dir}/transcripts.tiled.done", f"{args.out_dir}/hexagon.d_{train_width}.done"], cmds)
 
@@ -383,6 +398,7 @@ def run_ficture2(_args):
         decode_runs = define_decode_runs(args)
         for decode_params in decode_runs:
             # input
+            model_prefix = os.path.join(args.out_dir, decode_params["model_id"])
             model_path = decode_params["model_path"]
             cmap_path = decode_params["cmap_path"]
             # prerequisities

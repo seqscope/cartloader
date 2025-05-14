@@ -36,6 +36,7 @@ def parse_arguments(_args):
 
     env_params = parser.add_argument_group("Env Parameters", "Environment parameters, e.g., tools.")
     # aux_params.add_argument('--magick', type=str, default=f"magick", help='Path to ImageMagick binary') # Disable this function. The user need to add the path to the ImageMagick binary directory to the PATH environment variable
+    env_params.add_argument('--gzip', type=str, default="gzip", help='Path to gzip binary. For faster processing, use "pigz -p4"')
     env_params.add_argument('--pmtiles', type=str, default=f"pmtiles", help='Path to pmtiles binary from go-pmtiles')
     env_params.add_argument('--gdal_translate', type=str, default=f"gdal_translate", help='Path to gdal_translate binary')
     env_params.add_argument('--gdaladdo', type=str, default=f"gdaladdo", help='Path to gdaladdo binary')
@@ -53,6 +54,7 @@ def parse_arguments(_args):
     aux_params.add_argument('--colname-count', type=str, default='count', help='Column name for feature counts')
     aux_params.add_argument('--out-molecules-id', type=str, default='genes', help='Prefix of output molecules PMTiles files. No directory path should be included')
     aux_params.add_argument('--max-join-dist-um', type=float, default=0.1, help='Maximum distance allowed to join molecules and pixel in micrometers')
+    aux_params.add_argument('--join-tile-size', type=float, default=500, help='Tile size for joining molecules and pixel in micrometers')
     aux_params.add_argument('--max-tile-bytes', type=int, default=5000000, help='Maximum bytes for each tile in PMTiles')
     aux_params.add_argument('--max-feature-counts', type=int, default=500000, help='Max feature limits per tile in PMTiles')
     aux_params.add_argument('--preserve-point-density-thres', type=int, default=1024, help='Threshold for preserving point density in PMTiles')
@@ -217,18 +219,19 @@ def run_cartload2(_args):
         # fit_results
         #print(f"--tippecanoe '{args.tippecanoe}'")
         in_fit_tsvf = f"{in_prefix}.results.tsv.gz"
-        out_fit_tsvf = f"{out_prefix}.results.tsv.gz"
+        #out_fit_tsvf = f"{out_prefix}.results.tsv.gz"
         if os.path.exists(in_fit_tsvf):
-            cmd = " ".join([
-                args.spatula, "append-topk-tsv",
-                "--in-tsv", in_fit_tsvf,
-                "--out-tsv", out_fit_tsvf,
-                "--icol-beg", "2"
-            ])
-            cmds.append(cmd)
+            # cmd = " ".join([
+            #     args.spatula, "append-topk-tsv",
+            #     "--in-tsv", in_fit_tsvf,
+            #     "--out-tsv", out_fit_tsvf,
+            #     "--icol-beg", "2"
+            # ])
+            # cmds.append(cmd)
             cmd = " ".join([
                 "cartloader", "convert_generic_tsv_to_pmtiles",
-                "--in-tsv", out_fit_tsvf, 
+                #"--in-tsv", out_fit_tsvf, 
+                "--in-tsv", in_fit_tsvf,
                 "--out-prefix", out_prefix,
                 "--rename-column", args.rename_x, args.rename_y,
                 "--threads", str(args.threads),
@@ -241,7 +244,7 @@ def run_cartload2(_args):
                 "--keep-intermediate-files" if args.keep_intermediate_files else ""
             ])
             cmds.append(cmd)
-            cmds.append(f"rm -f {out_fit_tsvf}")
+            #cmds.append(f"rm -f {out_fit_tsvf}")
             prerequisites.append(in_fit_tsvf)
 
         # mode/rgb/de/posterior/info
@@ -307,15 +310,26 @@ def run_cartload2(_args):
     if ( len(join_pixel_tsvs) > 0 ):
         cmds = cmd_separator([], f"Pasting pixel-level TSVs")
         out_join_pixel_prefix = f"{args.out_dir}/transcripts_pixel_joined"
+        # cmd = " ".join([
+        #         f"'{args.spatula}'", "paste-pixel-tsv",
+        #         f"--out-tsv {out_join_pixel_prefix}.tsv.gz",
+        #         f"--colname-x", args.rename_x.split(":")[0],
+        #         f"--colname-y", args.rename_y.split(":")[0]
+        #     ]
+        #     + [ f"--pix-prefix-tsv {join_pixel_ids[i]}_,{join_pixel_tsvs[i]}" for i in range(len(join_pixel_tsvs)) ]
+        # )
         cmd = " ".join([
-                f"'{args.spatula}'", "paste-pixel-tsv",
-                f"--out-tsv {out_join_pixel_prefix}.tsv.gz",
-                f"--colname-x", args.rename_x.split(":")[0],
-                f"--colname-y", args.rename_y.split(":")[0]
+                f"'{args.spatula}'", "join-pixel-decode",
+                f"--out-prefix {out_join_pixel_prefix}",
+                f"--mol-tsv {in_molecules}",
+                f"--threads {args.threads}",
+                f"--max-dist {args.max_join_dist_um}",
+                f"--tile-size {args.join_tile_size}"
             ]
-            + [ f"--pix-prefix-tsv {join_pixel_ids[i]}_,{join_pixel_tsvs[i]}" for i in range(len(join_pixel_tsvs)) ]
+             + [ f"--decode-prefix-tsv {join_pixel_ids[i]}_,{join_pixel_tsvs[i]}" for i in range(len(join_pixel_tsvs)) ]
         )
         cmds.append(cmd)
+        cmds.append(f"{args.gzip} -f {out_join_pixel_prefix}.tsv")
         mm.add_target(f"{out_join_pixel_prefix}.tsv.gz", [in_molecules], cmds)
 
     ## run tsv2pmtiles for the convert the joined pixel-level TSV to PMTiles
