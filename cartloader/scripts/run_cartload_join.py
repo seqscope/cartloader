@@ -137,7 +137,8 @@ def run_cartload_join(_args):
             f"--gdal_translate '{args.gdal_translate}'",
             f"--gdaladdo '{args.gdaladdo}'",
             f"--spatula '{args.spatula}'",
-            "--keep-intermediate-files" if args.keep_intermediate_files else ""
+            "--keep-intermediate-files" if args.keep_intermediate_files else "",
+            "--restart" if args.restart else "",
         ])
         cmds.append(cmd)
         mm.add_target(f"{args.out_dir}/sge-mono-dark.pmtiles.done", [in_molecules, in_minmax], cmds)
@@ -312,7 +313,8 @@ def run_cartload_join(_args):
                         f"--pmtiles '{args.pmtiles}'",
                         f"--gdal_translate '{args.gdal_translate}'",
                         f"--gdaladdo '{args.gdaladdo}'",
-                        "--keep-intermediate-files" if args.keep_intermediate_files else ""
+                        "--keep-intermediate-files" if args.keep_intermediate_files else "",
+                        "--restart" if args.restart else "",
                     ])
                     cmds.append(cmd)
                     cmds.append(f"touch {out_prefix}-pixel-raster.done")
@@ -379,7 +381,8 @@ def run_cartload_join(_args):
         f"--log --log-suffix '{args.log_suffix}'" if args.log else "",
         f"--tippecanoe '{args.tippecanoe}'",
         f"--tmp-dir '{args.tmp_dir}'",
-        "--keep-intermediate-files" if args.keep_intermediate_files else ""
+        "--keep-intermediate-files" if args.keep_intermediate_files else "",
+        "--restart" if args.restart else "",
     ])
     cmds.append(cmd)
     mm.add_target(f"{out_molecules_prefix}_pmtiles_index.tsv", [f"{out_join_pixel_prefix}.tsv.gz"], cmds)
@@ -440,7 +443,7 @@ def run_cartload_join(_args):
     #         sys.exit(1)
 
     if args.dry_run:
-        os.system(f"make -f {make_f} -n")
+        os.system(f"make -f {make_f} -n {'-B' if args.restart else ''} ")
         print(f"To execute the pipeline, run the following command:\nmake -f {make_f} -j {args.n_jobs}")
     else:
         exe_cmd=f"make -f {make_f} -j {args.n_jobs} {'-B' if args.restart else ''}"

@@ -27,10 +27,10 @@ def parse_arguments(_args):
     inout_params.add_argument('--out-dir', required= True, type=str, help='Output directory')
     inout_params.add_argument('--out-json', type=str, default=None, help="Output JSON file for summarizing the ficture parameters (default: <out-dir>/ficture.params.json)")
     inout_params.add_argument('--in-transcript', type=str, default=None, help='Path to the input unsorted transcript-indexed SGE file in TSV format (default: <out-dir>/transcripts.unsorted.tsv.gz)')
-    inout_params.add_argument('--in-minmax', type=str, default=None, help='Path to the input coordinate minmax TSV file. (default: <out-dir>/coordinate_minmax.tsv)')  
+    inout_params.add_argument('--in-minmax', type=str, default=None, help='Path to the input coordinate minmax TSV file. (default: <out-dir>/coordinate_minmax.tsv)')
     inout_params.add_argument('--in-feature', type=str, default=None,  help='Path to the input UMI count per gene TSV file.(default: feature.clean.tsv.gz).')
-    inout_params.add_argument('--in-feature-ficture', type=str, default=None, help='(Optional) Use --in-feature-ficture if a feature file for FICTURE analysis (default: <out-dir>/features.ficture.tsv.gz)')
-    
+    inout_params.add_argument('--in-feature-ficture', type=str, default=None, help='(Optional) Use --in-feature-ficture to provide a feature file for FICTURE analysis if such feature file exists. Alternatively, see "Feature Customizing Auxiliary Parameters" to customize the features in FICTURE analysis.')
+
     key_params = parser.add_argument_group("Key Parameters", "Key parameters that requires user's attention")
     key_params.add_argument('--width', type=str, default=None, help='Comma-separated hexagon flat-to-flat widths (in um) for LDA training (default: None)')
     key_params.add_argument('--n-factor', type=str, default=None, help='Comma-separated list of factor counts for LDA training.')
@@ -43,11 +43,11 @@ def parse_arguments(_args):
     env_params.add_argument('--sort', type=str, default="sort", help='Path to sort binary. For faster processing, you may add arguments like "sort -T /path/to/new/tmpdir --parallel=20 -S 10G"')
     env_params.add_argument('--sort-mem', type=str, default="1G", help='Memory size for each process')
     env_params.add_argument('--spatula', type=str, default=f"spatula",  help='Path to spatula binary') # default=f"{repo_dir}/submodules/spatula/bin/spatula",
-    env_params.add_argument('--ficture2', type=str, required=True,  help='Path to punkst(ficture2) repository') 
+    env_params.add_argument('--ficture2', type=str, required=True,  help='Path to punkst(ficture2) repository')
     env_params.add_argument('--python', type=str, default="python3",  help='Python3 binary')
 
     # AUX gene-filtering params
-    aux_ftrfilter_params = parser.add_argument_group( "Feature Customizing Auxiliary Parameters", 
+    aux_ftrfilter_params = parser.add_argument_group( "Feature Customizing Auxiliary Parameters",
                                                     "Auxiliary parameters for customizing features in FICTURE analysis without modifying the original input feature TSV file. This ensures the original feature TSV file is retained in the output JSON file for downstream processing .")
     # given the input sge should be standardized, the csv-delim, csv-colname-feature-name, ftr-delim, ftr-colname-feature-name are not necessary
     aux_ftrfilter_params.add_argument('--out-ficture-feature', type=str, default="features.ficture.tsv.gz", help='File name for the output TSV file of feature used in FICTURE analysis (default: None)')
@@ -78,12 +78,12 @@ def parse_arguments(_args):
     # minibatch
     aux_params.add_argument('--minibatch-size', type=int, default=500, help='Batch size used in minibatch processing (default: 500)')
     aux_params.add_argument('--minibatch-buffer', type=int, default=30, help='Batch buffer used in minibatch processing (default: 30)')
-    # train 
+    # train
     aux_params.add_argument('--train-epoch', type=int, default=2, help='Training epoch for LDA model (default: 2)')
     aux_params.add_argument('--train-epoch-id-len', type=int, default=2, help='Training epoch ID length (default: 2)')
     aux_params.add_argument('--lda-rand-init', type=int, default=10, help='Number of random initialization during model training (default: 10)')
     aux_params.add_argument('--lda-plot-um-per-pixel', type=float, default=1, help='Image resolution for LDA plot (default: 1)')
-    # fit 
+    # fit
     aux_params.add_argument('--fit-width',  type=str, default=None, help='Hexagon flat-to-flat width (in um) during model fitting (default: same to train-width)')
     aux_params.add_argument('--fit-precision', type=float, default=2, help='Output precision of model fitting (default: 2)')
     aux_params.add_argument('--min-ct-per-unit-fit', type=int, default=50, help='Minimum count per hexagon unit during model fitting (default: 20)')
@@ -95,7 +95,7 @@ def parse_arguments(_args):
     aux_params.add_argument('--decode-precision', type=float, default=0.01, help='Precision of pixel level decoding (default: 0.01)')
     aux_params.add_argument('--decode-plot-um-per-pixel', type=float, default=0.5, help='Image resolution for pixel decoding plot (default: 0.5)')
     # merge_by_pixel
-    aux_params.add_argument('--merge-max-dist-um', type=float, default=0.1, help='Maximum distance in um for merging pixel-level decoding results (default: 0.1)') 
+    aux_params.add_argument('--merge-max-dist-um', type=float, default=0.1, help='Maximum distance in um for merging pixel-level decoding results (default: 0.1)')
     aux_params.add_argument('--merge-max-k', type=int, default=1, help='Maximum number of K columns to output in merged pixel-level decoding results (default: 1)')
     aux_params.add_argument('--merge-max-p', type=int, default=1, help='Maximum number of P columns to output in merged pixel-level decoding results (default: 1)')
     # color map
@@ -127,7 +127,7 @@ def define_lda_runs(args):
     train_params= [
         {
          "model_type": "lda",
-         "train_width": train_width, 
+         "train_width": train_width,
          "n_factor": n_factor,
          "model_id":f"t{train_width}_f{n_factor}",
         }
@@ -197,13 +197,13 @@ def run_ficture2(_args):
     # in files
     if args.in_transcript is None:
         args.in_transcript = os.path.join(args.out_dir, "transcripts.unsorted.tsv.gz")
-        
+
     if args.in_minmax is None:
         args.in_minmax = os.path.join(args.out_dir, "coordinate_minmax.tsv")
-    
+
     if args.in_feature is None:
         args.in_feature = os.path.join(args.out_dir, "feature.clean.tsv.gz")
-    
+
     assert os.path.exists(args.in_transcript), "Provide at least one valid input transcript-indexed SGE file by --in-transcript or --in-cstranscript"
     assert os.path.exists(args.in_minmax), "Provide a valid input coordinate minmax file by --in-minmax"
     assert os.path.exists(args.in_feature), "Provide a valid input feature file by --in-feature"
@@ -212,14 +212,16 @@ def run_ficture2(_args):
     ficture2de = args.python + " " + os.path.join(args.ficture2, "ext/py/de_bulk.py")
     ficture2report = args.python + " " + os.path.join(args.ficture2, "ext/py/factor_report.py")
 
-    # feature customize when enabled 
-    if any([args.include_feature_list, args.exclude_feature_list, args.include_feature_substr, args.exclude_feature_substr, args.include_feature_regex, args.exclude_feature_regex, args.include_feature_type_regex]):
-        in_feature_ficture = os.path.join(args.out_dir, args.out_ficture_feature)
-        in_feature_ficture_record = os.path.join(args.out_dir, args.out_ficture_feature.replace(".tsv.gz", ".record.tsv"))
+    # feature customize when enabled: 1) the --in-feature-ficture is provided; 2) feature filtering conditions are provided.
+    if args.in_feature_ficture is not None:
+        in_feature_ficture = args.in_feature_ficture
+    elif any([args.include_feature_list, args.exclude_feature_list, args.include_feature_substr, args.exclude_feature_substr, args.include_feature_regex, args.exclude_feature_regex, args.include_feature_type_regex]):
+        in_feature_ficture = os.path.join(args.out_dir, args.out_feature_ficture)
+        in_feature_ficture_record = os.path.join(args.out_dir, args.out_feature_ficture.replace(".tsv.gz", ".record.tsv"))
         cmds = cmd_separator([], f"Customizing features for FICTURE analysis...")
         cmd = " ".join(["cartloader feature_filtering ",
-                                    f"--in-csv {args.in_feature}", 
-                                    f"--out-csv {in_feature_ficture}", 
+                                    f"--in-csv {args.in_feature}",
+                                    f"--out-csv {in_feature_ficture}",
                                     f"--out-record  {in_feature_ficture_record}",
                                     f"--include-feature-list {args.include_feature_list}" if args.include_feature_list is not None else "",
                                     f"--exclude-feature-list {args.exclude_feature_list}" if args.exclude_feature_list is not None else "",
@@ -230,15 +232,15 @@ def run_ficture2(_args):
                                     f"--include-feature-type-regex {args.include_feature_type_regex} --feature-type-ref {args.in_transcript} --feature-type-ref-colname-name gene --feature-type-ref-colname-type {args.colname_feature_type}" if args.include_feature_type_regex is not None and args.colname_feature_type is not None else "",
                                     f"--include-feature-type-regex {args.include_feature_type_regex} --feature-type-ref {args.feature_type_ref} --feature-type-ref-colidx-name {args.feature_type_ref_colidx_name}  --feature-type-ref-colidx-type {args.feature_type_ref_colidx_type}" if args.include_feature_type_regex is not None and args.feature_type_ref is not None else "",
                                     f"--log"
-                                    ]) 
+                                    ])
         cmds.append(cmd)
-        mm.add_target(in_feature_ficture, [args.in_transcript, args.in_feature], cmds)
+        mm.add_target(in_feature_ficture, [args.in_cstranscript, args.in_feature], cmds)
     else:
         in_feature_ficture = args.in_feature
 
     # out files
     if args.out_json is None:
-        args.out_json = os.path.join(args.out_dir, f"ficture.params.json") 
+        args.out_json = os.path.join(args.out_dir, f"ficture.params.json")
 
     # 1. tiling :
     if args.tile:
@@ -260,7 +262,7 @@ def run_ficture2(_args):
                     count = int(toks[-1])
                     if count >= args.min_ct_per_feature:
                         wf.write(line)
-                            
+
         cmd = " ".join([
             ficture2bin, "pts2tiles",
             f"--in-tsv {tsv_plain}",
@@ -291,7 +293,7 @@ def run_ficture2(_args):
             cmd = " ".join([
                 ficture2bin, "tiles2hex",
                 f"--in-tsv {args.out_dir}/transcripts.tiled.tsv",
-                f"--in-index {args.out_dir}/transcripts.tiled.index",  
+                f"--in-index {args.out_dir}/transcripts.tiled.index",
                 f"--feature-dict {feature_plain}",
                 f"--icol-x {args.colidx_x-1}",
                 f"--icol-y {args.colidx_y-1}",
@@ -303,12 +305,12 @@ def run_ficture2(_args):
                 f"--hex-grid-dist {hexagon_width}",
                 f"--min-count {args.min_ct_per_unit_hexagon}"
                 ])
-            cmds.append(cmd)                
+            cmds.append(cmd)
             cmds.append(f"{args.sort} -S {args.sort_mem} -k 1,1n {hexagon_prefix}.tsv > {hexagon_prefix}.randomized.tsv")
             cmds.append(f"rm -f {hexagon_prefix}.tsv")
             cmds.append(f"[ -f {hexagon_prefix}.randomized.tsv ] && [ -f {hexagon_prefix}.json ] && touch {hexagon_prefix}.done" )
             mm.add_target(f"{hexagon_prefix}.done", [f"{args.out_dir}/transcripts.tiled.done"], cmds)
-    
+
     # 3. lda
     if args.init_lda:
         lda_runs = define_lda_runs(args)
@@ -389,7 +391,7 @@ def run_ficture2(_args):
             fit_width = decode_params["fit_width"]
             decode_id = decode_params["decode_id"]
             decode_prefix = os.path.join(args.out_dir, decode_id)
-            
+
             fit_n_move = int(fit_width / args.anchor_res)
             decode_postcount = f"{decode_prefix}.pseudobulk.tsv"
             decode_fit_tsv = f"{decode_prefix}.tsv"
@@ -471,7 +473,7 @@ def run_ficture2(_args):
             cmds.append(cmd)
             # - done & target
             cmds.append(f"[ -f {decode_de} ] && [ -f {decode_prefix}.factor.info.html ] && [ -f {decode_fit_tsv}.gz ] && touch {decode_prefix}_summary.done")
-            mm.add_target(f"{decode_prefix}_summary.done", [f"{decode_prefix}.done", cmap_path], cmds)  
+            mm.add_target(f"{decode_prefix}_summary.done", [f"{decode_prefix}.done", cmap_path], cmds)
 
     if args.summary:
         prerequisities=[]
@@ -496,7 +498,7 @@ def run_ficture2(_args):
             decode_runs = define_decode_runs(args)
             for decode_params in decode_runs:
                 model_type = decode_params["model_type"]
-                model_id = decode_params["model_id"]                
+                model_id = decode_params["model_id"]
                 fit_width = decode_params["fit_width"]
                 decode_id = decode_params["decode_id"]
                 # prerequisities
@@ -527,7 +529,7 @@ def run_ficture2(_args):
     if len(mm.targets) == 0:
             logging.error("There is no target to run. Please make sure that ast least one run option was turned on")
             sys.exit(1)
-    
+
     make_f = os.path.join(args.out_dir, args.makefn)
     mm.write_makefile(make_f)
 

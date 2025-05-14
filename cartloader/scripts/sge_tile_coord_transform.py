@@ -17,7 +17,7 @@ def sge_tile_coord_transform(_args):
         prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}",
         description="Calculate the offsets and global minmax for each tile SGE"    
     )
-    parser.add_argument("--in-tiles", type=str, nargs='*', default=[], help="List of input information in a specific format: <transcript_path>,<feature_path>,<minmax_path>,<row>,<col>.")
+    parser.add_argument("--in-tiles", type=str, nargs='*', default=[], help="List of input information in a specific format: <minmax_path>,<row>,<col>.")
     parser.add_argument('--output', type=str, help='Output subset file name for the coordinate minmax and offset TSV file .') #"coordinate_minmax_per_tile.tsv"
     parser.add_argument("--units-per-um", type=float, default=1.0, help="If --convert-to-um, define the scaling factor for unit conversion from coordinate to um(default: 1.0)")
     parser.add_argument('--log', action='store_true', default=False, help='Write log to file')
@@ -34,11 +34,11 @@ def sge_tile_coord_transform(_args):
     # 2. input
     # * input paths
     assert len(args.in_tiles) > 0, "No input tiles provided."
-    assert all(len(in_tile.split(",")) == 5 for in_tile in args.in_tiles), "Each input tile should have 5 elements: <transcript_path>,<feature_path>,<minmax_path>,<row>,<col>."
+    assert all(len(in_tile.split(",")) == 3 for in_tile in args.in_tiles), "Each input tile should have 3 elements: <minmax_path>,<row>,<col>."
 
     df = pd.DataFrame(args.in_tiles, columns=["input"])
     df = df["input"].str.split(",", expand=True)
-    df.columns = ["transcript_path", "feature_path", "minmax_path", "row", "col"]
+    df.columns = ["minmax_path", "row", "col"]
     df["row"] = df["row"].astype(int)
     df["col"] = df["col"].astype(int)
 

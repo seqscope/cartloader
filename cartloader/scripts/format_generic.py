@@ -115,7 +115,7 @@ def format_generic(_args):
         countcols_in2out = {}
 
     for icol in icols:
-        assert icol in iheader, f"Column {icol} is not found in the input file."
+        assert icol in iheader, f"Column {icol} is not found in the input file{iheader}."
     
     unit_info = [args.colname_x, args.colname_y] + feature_cols + other_cols
     oheader = unit_info + countcols_out

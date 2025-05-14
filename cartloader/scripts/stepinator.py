@@ -85,6 +85,7 @@ def cmd_sge_stitch(sgeinfo, args, env, generate_tile_minmax_only=False):
         f"--n-jobs {args.n_jobs}" if args.n_jobs else "",
         f"--restart" if args.restart else "",
         "--generate-tile-minmax-only" if generate_tile_minmax_only else "",
+        "--list-overlapping-genes",
         f"--filter-by-density --out-filtered-prefix {sgeinfo['filtered_prefix']} --genomic-feature {sgeinfo['colname_count']}" if sgeinfo['filter_by_density'] else "",
     ])
     # add aux env
@@ -118,6 +119,8 @@ def cmd_sge_convert(sgeinfo, args, env):
     elif platform in ["generic"]:
         assert sgeinfo.get("in_csv", None) is not None, f"Please provide --in-csv for {platform}"
         in_arg= f"--in-csv {sgeinfo['in_csv']} --print-removed-transcripts"
+
+    sgeinfo["csv_colnames_others"]= sgeinfo["csv_colnames_others"].split(",") if sgeinfo.get("csv_colnames_others", None) is not None else []
 
     format_cmd = " ".join([
         "cartloader", "sge_convert",

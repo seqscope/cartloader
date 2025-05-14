@@ -155,7 +155,7 @@ def run_tsv2mono(_args):
     else:
         result = subprocess.run(f"make -f {make_f} -j {args.n_jobs} {'-B' if args.restart else ''}", shell=True)
         if result.returncode != 0:
-            print(f"Error in converting the figure ({args.in_fig}) to pmtiles ({pmtiles_f})")
+            print(f"Error in tsv2mono pipeline. Please check the log files.")
             sys.exit(1)
 
 if __name__ == "__main__":
