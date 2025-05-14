@@ -190,7 +190,8 @@ def run_ficture2(_args):
     # input/output/other files
     # dirs
     os.makedirs(args.out_dir, exist_ok=True)
-
+    #os.makedirs(os.path.join(args.out_dir, "tmp"), exist_ok=True)
+    
     # start mm
     mm = minimake()
 
@@ -395,6 +396,7 @@ def run_ficture2(_args):
         decode_runs = define_decode_runs(args)
         for decode_params in decode_runs:
             # input
+            model_prefix = os.path.join(args.out_dir, decode_params["model_id"])
             model_path = decode_params["model_path"]
             cmap_path = decode_params["cmap_path"]
             # prerequisities
