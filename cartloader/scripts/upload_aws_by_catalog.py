@@ -13,6 +13,7 @@ def run_command(command, dry_run):
         print("Dry-run command:", " ".join(command))
     else:
         subprocess.run(command, check=True)
+
 def traverse_dict(d, parent_key=''):
     pairs = []
     for key, value in d.items():
