@@ -474,18 +474,17 @@ def run_ficture2(_args):
             # ymin = minmax["ymin"]
             # ymax = minmax["ymax"]
             cmds=cmd_separator([], f"Decode visualization, ID: {decode_id}")
-            if not args.skip_coarse_report:
-                cmd = " ".join([
-                    ficture2bin, "draw-pixel-factors",
-                    f"--in-tsv {decode_fit_tsv}",
-                    f"--header-json {decode_prefix}.json",
-                    f"--in-color {cmap_path}",
-                    f"--out {decode_prefix}.png",
-                    f"--scale 1",
-                    f"--range {args.in_minmax}"
-                    ])
-                cmds.append(cmd)
-                mm.add_target(f"{decode_prefix}.png", [f"{decode_prefix}.done", cmap_path], cmds)
+            cmd = " ".join([
+                ficture2bin, "draw-pixel-factors",
+                f"--in-tsv {decode_fit_tsv}",
+                f"--header-json {decode_prefix}.json",
+                f"--in-color {cmap_path}",
+                f"--out {decode_prefix}.png",
+                f"--scale 1",
+                f"--range {args.in_minmax}"
+                ])
+            cmds.append(cmd)
+            mm.add_target(f"{decode_prefix}.png", [f"{decode_prefix}.done", cmap_path], cmds)
 
             # 4) DE/report
             cmds=cmd_separator([], f"Decode DE and report, ID: {decode_id}")
@@ -517,7 +516,7 @@ def run_ficture2(_args):
             cmds.append(cmd)
             # - done & target
             cmds.append(f"[ -f {decode_de} ] && [ -f {decode_prefix}.factor.info.html ] && [ -f {decode_fit_tsv}.gz ] && touch {decode_prefix}_summary.done")
-            mm.add_target(f"{decode_prefix}_summary.done", [f"{decode_prefix}.done", cmap_path], cmds)  
+            mm.add_target(f"{decode_prefix}_summary.done", [f"{decode_prefix}.done", f"{decode_prefix}.png", cmap_path], cmds)  
 
     if args.summary:
         prerequisities=[]
