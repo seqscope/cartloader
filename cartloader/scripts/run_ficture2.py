@@ -50,26 +50,27 @@ def parse_arguments(_args):
     aux_ftrfilter_params = parser.add_argument_group( "Feature Customizing Auxiliary Parameters", 
                                                     "Auxiliary parameters for customizing features in FICTURE analysis without modifying the original input feature TSV file. This ensures the original feature TSV file is retained in the output JSON file for downstream processing .")
     # given the input sge should be standardized, the csv-delim, csv-colname-feature-name, ftr-delim, ftr-colname-feature-name are not necessary
-    aux_ftrfilter_params.add_argument('--out-ficture-feature', type=str, default="features.ficture.tsv.gz", help='File name for the output TSV file of feature used in FICTURE analysis (default: None)')
-    aux_ftrfilter_params.add_argument('--include-feature-list', type=str, default=None, help='A file containing a list of input genes to be included (feature name of IDs) (default: None)')
-    aux_ftrfilter_params.add_argument('--exclude-feature-list', type=str, default=None, help='A file containing a list of input genes to be excluded (feature name of IDs) (default: None)')
-    aux_ftrfilter_params.add_argument('--include-feature-substr', type=str, default=None, help='A substring of feature/gene names to be included (default: None)')
-    aux_ftrfilter_params.add_argument('--exclude-feature-substr', type=str, default=None, help='A substring of feature/gene names to be excluded (default: None)')
+    # aux_ftrfilter_params.add_argument('--out-ficture-feature', type=str, default="features.ficture.tsv.gz", help='File name for the output TSV file of feature used in FICTURE analysis (default: None)')
+    # aux_ftrfilter_params.add_argument('--include-feature-list', type=str, default=None, help='A file containing a list of input genes to be included (feature name of IDs) (default: None)')
+    # aux_ftrfilter_params.add_argument('--exclude-feature-list', type=str, default=None, help='A file containing a list of input genes to be excluded (feature name of IDs) (default: None)')
+    # aux_ftrfilter_params.add_argument('--include-feature-substr', type=str, default=None, help='A substring of feature/gene names to be included (default: None)')
+    # aux_ftrfilter_params.add_argument('--exclude-feature-substr', type=str, default=None, help='A substring of feature/gene names to be excluded (default: None)')
     aux_ftrfilter_params.add_argument('--include-feature-regex', type=str, default=None, help='A regex pattern of feature/gene names to be included (default: None)')
     aux_ftrfilter_params.add_argument('--exclude-feature-regex', type=str, default=None, help='A regex pattern of feature/gene names to be excluded (default: None)')
     # type regex
-    aux_ftrfilter_params.add_argument('--include-feature-type-regex', type=str, default=None, help='A regex pattern of feature/gene type to be included (default: None). When --include-feature-type-regex, use --colname-feature-type or --feature-type-ref to provide gene type information.') # (e.g. protein_coding|lncRNA)
-    aux_ftrfilter_params.add_argument('--colname-feature-type', type=str, default=None, help='Column name in the --in-transcript that has gene type information (default: None). ')
-    aux_ftrfilter_params.add_argument('--feature-type-ref', type=str, default=None, help='Specify the path to a tab-separated reference file to provide gene type information for each each per row (default: None)')
-    aux_ftrfilter_params.add_argument('--feature-type-ref-colidx-name', type=str, default=None, help='Column index for gene name in the reference file (default: None).')
-    aux_ftrfilter_params.add_argument('--feature-type-ref-colidx-type', type=str, default=None, help='Column index for gene type in the reference file (default: None).')
+    # aux_ftrfilter_params.add_argument('--include-feature-type-regex', type=str, default=None, help='A regex pattern of feature/gene type to be included (default: None). When --include-feature-type-regex, use --colname-feature-type or --feature-type-ref to provide gene type information.') # (e.g. protein_coding|lncRNA)
+    # aux_ftrfilter_params.add_argument('--colname-feature-type', type=str, default=None, help='Column name in the --in-transcript that has gene type information (default: None). ')
+    # aux_ftrfilter_params.add_argument('--feature-type-ref', type=str, default=None, help='Specify the path to a tab-separated reference file to provide gene type information for each each per row (default: None)')
+    # aux_ftrfilter_params.add_argument('--feature-type-ref-colidx-name', type=str, default=None, help='Column index for gene name in the reference file (default: None).')
+    # aux_ftrfilter_params.add_argument('--feature-type-ref-colidx-type', type=str, default=None, help='Column index for gene type in the reference file (default: None).')
 
     # aux params
     aux_params = parser.add_argument_group("Auxiliary Parameters", "Auxiliary parameters (using default is recommended)")
     # input column indexes
     aux_params.add_argument('--colidx-x',  type=int, default=1, help='Column index for X-axis in the --in-transcript (default: 1)')
     aux_params.add_argument('--colidx-y',  type=int, default=2, help='Column index for Y-axis in the --in-transcript (default: 2)')
-    aux_params.add_argument('--colname-count', type=str, default="count", help='Columns from the input transcript file to be used as key')
+    aux_params.add_argument('--colname-count', type=str, default="count", help='Columns from the input transcript file to be used as key for count')
+    aux_params.add_argument('--colname-feature', type=str, default="gene", help='Columns from the input transcript file to be used as key for feature name')
     aux_params.add_argument('--tile-size', type=int, default=500, help='Tile size for tiling (default: 500)')
     aux_params.add_argument('--tile-buffer', type=int, default=1000, help='Tile buffer for tiling (default: 1000)')
     aux_params.add_argument('--seed', type=int, default=1, help='Random seed for random number generation (default: 0)')
@@ -198,44 +199,57 @@ def run_ficture2(_args):
     # in files
     if args.in_transcript is None:
         args.in_transcript = os.path.join(args.out_dir, "transcripts.unsorted.tsv.gz")
-        
-    if args.in_minmax is None:
-        args.in_minmax = os.path.join(args.out_dir, "coordinate_minmax.tsv")
+
+    # do not require to have the feature and minmax files        
+    # if args.in_minmax is None:
+    #     args.in_minmax = os.path.join(args.out_dir, "coordinate_minmax.tsv")
     
-    if args.in_feature is None:
-        args.in_feature = os.path.join(args.out_dir, "feature.clean.tsv.gz")
+    # if args.in_feature is None:
+    #     args.in_feature = os.path.join(args.out_dir, "feature.clean.tsv.gz")
     
     assert os.path.exists(args.in_transcript), "Provide at least one valid input transcript-indexed SGE file by --in-transcript or --in-cstranscript"
-    assert os.path.exists(args.in_minmax), "Provide a valid input coordinate minmax file by --in-minmax"
-    assert os.path.exists(args.in_feature), "Provide a valid input feature file by --in-feature"
+    if args.in_minmax is not None:
+        assert os.path.exists(args.in_minmax), "Provide a valid input coordinate minmax file by --in-minmax, or skip specifying it"
+    if args.in_feature is not None:
+        assert os.path.exists(args.in_feature), "Provide a valid input feature file by --in-feature, or skip specifying it"
 
     ficture2bin = os.path.join(args.ficture2, "bin/punkst")
     ficture2de = args.python + " " + os.path.join(args.ficture2, "ext/py/de_bulk.py")
     ficture2report = args.python + " " + os.path.join(args.ficture2, "ext/py/factor_report.py")
 
     # feature customize when enabled 
-    if any([args.include_feature_list, args.exclude_feature_list, args.include_feature_substr, args.exclude_feature_substr, args.include_feature_regex, args.exclude_feature_regex, args.include_feature_type_regex]):
-        in_feature_ficture = os.path.join(args.out_dir, args.out_ficture_feature)
-        in_feature_ficture_record = os.path.join(args.out_dir, args.out_ficture_feature.replace(".tsv.gz", ".record.tsv"))
-        cmds = cmd_separator([], f"Customizing features for FICTURE analysis...")
-        cmd = " ".join(["cartloader feature_filtering ",
-                                    f"--in-csv {args.in_feature}", 
-                                    f"--out-csv {in_feature_ficture}", 
-                                    f"--out-record  {in_feature_ficture_record}",
-                                    f"--include-feature-list {args.include_feature_list}" if args.include_feature_list is not None else "",
-                                    f"--exclude-feature-list {args.exclude_feature_list}" if args.exclude_feature_list is not None else "",
-                                    f"--include-feature-substr '{args.include_feature_substr}'" if args.include_feature_substr is not None else "",
-                                    f"--exclude-feature-substr '{args.exclude_feature_substr}'" if args.exclude_feature_substr is not None else "",
-                                    f"--include-feature-regex '{args.include_feature_regex}'" if args.include_feature_regex is not None else "",
-                                    f"--exclude-feature-regex '{args.exclude_feature_regex}'" if args.exclude_feature_regex is not None else "",
-                                    f"--include-feature-type-regex {args.include_feature_type_regex} --feature-type-ref {args.in_transcript} --feature-type-ref-colname-name gene --feature-type-ref-colname-type {args.colname_feature_type}" if args.include_feature_type_regex is not None and args.colname_feature_type is not None else "",
-                                    f"--include-feature-type-regex {args.include_feature_type_regex} --feature-type-ref {args.feature_type_ref} --feature-type-ref-colidx-name {args.feature_type_ref_colidx_name}  --feature-type-ref-colidx-type {args.feature_type_ref_colidx_type}" if args.include_feature_type_regex is not None and args.feature_type_ref is not None else "",
-                                    f"--log"
-                                    ]) 
-        cmds.append(cmd)
-        mm.add_target(in_feature_ficture, [args.in_transcript, args.in_feature], cmds)
-    else:
-        in_feature_ficture = args.in_feature
+    # if any([args.include_feature_list, args.exclude_feature_list, args.include_feature_substr, args.exclude_feature_substr, args.include_feature_regex, args.exclude_feature_regex, args.include_feature_type_regex]):
+    #     if args.in_feature is None:
+    #         raise ValueError("When customizing features, provide a valid input feature file by --in-feature")
+    #     in_feature_ficture = os.path.join(args.out_dir, args.out_ficture_feature)
+    #     in_feature_ficture_record = os.path.join(args.out_dir, args.out_ficture_feature.replace(".tsv.gz", ".record.tsv"))
+    #     cmds = cmd_separator([], f"Customizing features for FICTURE analysis...")
+    #     cmd = " ".join(["cartloader feature_filtering ",
+    #                                 f"--in-csv {args.in_feature}", 
+    #                                 f"--out-csv {in_feature_ficture}", 
+    #                                 f"--out-record  {in_feature_ficture_record}",
+    #                                 f"--include-feature-list {args.include_feature_list}" if args.include_feature_list is not None else "",
+    #                                 f"--exclude-feature-list {args.exclude_feature_list}" if args.exclude_feature_list is not None else "",
+    #                                 f"--include-feature-substr '{args.include_feature_substr}'" if args.include_feature_substr is not None else "",
+    #                                 f"--exclude-feature-substr '{args.exclude_feature_substr}'" if args.exclude_feature_substr is not None else "",
+    #                                 f"--include-feature-regex '{args.include_feature_regex}'" if args.include_feature_regex is not None else "",
+    #                                 f"--exclude-feature-regex '{args.exclude_feature_regex}'" if args.exclude_feature_regex is not None else "",
+    #                                 f"--include-feature-type-regex {args.include_feature_type_regex} --feature-type-ref {args.in_transcript} --feature-type-ref-colname-name gene --feature-type-ref-colname-type {args.colname_feature_type}" if args.include_feature_type_regex is not None and args.colname_feature_type is not None else "",
+    #                                 f"--include-feature-type-regex {args.include_feature_type_regex} --feature-type-ref {args.feature_type_ref} --feature-type-ref-colidx-name {args.feature_type_ref_colidx_name}  --feature-type-ref-colidx-type {args.feature_type_ref_colidx_type}" if args.include_feature_type_regex is not None and args.feature_type_ref is not None else "",
+    #                                 f"--log"
+    #                                 ]) 
+    #     cmds.append(cmd)
+    #     mm.add_target(in_feature_ficture, [args.in_transcript], cmds)
+    # else:
+    #     in_feature_ficture = args.in_feature
+    
+    in_feature_ficture = args.in_feature
+    if args.include_feature_regex is None:
+        args.include_feature_regex = ".*"
+    if args.exclude_feature_regex is None:
+        args.exclude_feature_regex = "___NONE___"
+
+    
 
     # out files
     if args.out_json is None:
@@ -251,19 +265,6 @@ def run_ficture2(_args):
             cmds.append(f"{args.gzip} -dc {args.in_transcript} > {tsv_plain}")
         else:
             tsv_plain = f"{args.in_transcript}"
-
-        feature_plain = f"{args.out_dir}/feature.tsv"
-        feature_nohdr = f"{args.out_dir}/feature.nohdr.tsv"
-        with flexopen(in_feature_ficture, "rt") as f:
-            with open(feature_plain, "wt") as wf:
-                with open(feature_nohdr, "wt") as wf2:
-                    wf.write(f.readline())
-                    for line in f:
-                        toks = line.strip().split("\t")
-                        count = int(toks[-1])
-                        if count >= args.min_ct_per_feature:
-                            wf.write(line)
-                            wf2.write(line)
                             
         cmd = " ".join([
             ficture2bin, "pts2tiles",
@@ -271,6 +272,8 @@ def run_ficture2(_args):
             f"--out-prefix {args.out_dir}/transcripts.tiled",
             f"--icol-x {args.colidx_x-1}",
             f"--icol-y {args.colidx_y-1}",
+            f"--icol-feature 2",
+            f"--icol-int 3",
             f"--skip 1",
             f"--temp-dir {args.out_dir}/tmp",
             f"--tile-size {args.tile_size}",
@@ -278,8 +281,36 @@ def run_ficture2(_args):
             f"--threads {args.threads}"
         ])
         cmds.append(cmd)
+
         if args.in_transcript.endswith(".gz"):
             cmds.append(f"rm -f {tsv_plain}")
+
+        ## write the feature file as needed
+        if in_feature_ficture is not None:
+            feature_plain = f"{args.out_dir}/features.hdr.tsv"
+            feature_nohdr = f"{args.out_dir}/features.tsv"
+            with flexopen(in_feature_ficture, "rt") as f:
+                with open(feature_plain, "wt") as wf:
+                    with open(feature_nohdr, "wt") as wf2:
+                        wf.write(f.readline())
+                        for line in f:
+                            toks = line.strip().split("\t")
+                            count = int(toks[-1])
+                            if count >= args.min_ct_per_feature:
+                                wf.write(line)
+                                wf2.write(line)
+        else: ## if feature file is not provided, create one from the input transcript file
+            feature_plain = f"{args.out_dir}/features.hdr.tsv"
+            feature_nohdr = f"{args.out_dir}/features.tsv"
+            in_feature = feature_plain
+            in_feature_ficture = feature_plain
+            args.in_feature = feature_plain
+            cmds.append(f"(echo {args.colname_feature} {args.colname_count} | tr ' ' '\\t'; cat {feature_nohdr};) > {feature_plain}")
+
+        if args.in_minmax is None: ## specify minmax file if not provided
+            args.in_minmax = os.path.join(args.out_dir, "coord_range.tsv")
+        
+
         cmds.append(f"[ -f {args.out_dir}/transcripts.tiled.tsv ] && [ -f {args.out_dir}/transcripts.tiled.index ] && touch {args.out_dir}/transcripts.tiled.done" )
         mm.add_target(f"{args.out_dir}/transcripts.tiled.done", [args.in_transcript], cmds)
 
@@ -342,28 +373,30 @@ def run_ficture2(_args):
                 f"--n-topics {n_factor}",
                 f"--transform",
                 f"--min-count-train {args.min_count_train}",
+                f"--min-count-per-feature {args.min_ct_per_feature}",
+                f"--features {feature_nohdr}",
+                f"--include-feature-regex '{args.include_feature_regex}'",
+                f"--exclude-feature-regex '{args.exclude_feature_regex}'",
                 f"--minibatch-size {args.minibatch_size}",
                 f"--seed {args.seed}",
                 f"--n-epochs {args.train_epoch}",
                 f"--threads {args.threads}",
                 ])
             cmds.append(cmd)
+            cmd = f"cut -f 2- {model_prefix}.unsorted.results.tsv > {model_prefix}.unsorted.results.nohex.tsv"
+            cmds.append(cmd)
             cmd = " ".join([
                 args.spatula, "append-topk-tsv",
                 f"--in-model {model_prefix}.unsorted.model.tsv",
                 f"--out-model {model_prefix}.model.tsv",
                 f"--reorder",
-                f"--in-tsv {model_prefix}.unsorted.results.tsv",
+                f"--in-tsv {model_prefix}.unsorted.results.nohex.tsv",
                 f"--out-tsv {model_prefix}.results.tsv.gz",
                 f"--offset-tsv 2",
                 f"--offset-model 1"
             ])
-            ## compress the LDA output
-            # cmd = " ".join([
-            #     args.gzip, "-f", lda_fit_tsv
-            # ])
             cmds.append(cmd)
-            cmds.append(f"rm -f {model_prefix}.unsorted.model.tsv {model_prefix}.unsorted.results.tsv")
+            cmds.append(f"rm -f {model_prefix}.unsorted.model.tsv {model_prefix}.unsorted.results.tsv {model_prefix}.unsorted.results.nohex.tsv")
             cmds.append(f"[ -f {lda_fit_tsv}.gz ] && [ -f {lda_model_matrix} ] && touch {model_prefix}.done" )
             mm.add_target(f"{model_prefix}.done", [f"{args.out_dir}/transcripts.tiled.done", f"{args.out_dir}/hexagon.d_{train_width}.done"], cmds)
 
@@ -432,14 +465,14 @@ def run_ficture2(_args):
                 ])
             cmds.append(cmd)
             cmds.append(f"[ -f {decode_fit_tsv} ] && [ -f {decode_postcount} ] && touch {decode_prefix}.done" )
-            mm.add_target(f"{decode_prefix}.done", [in_feature_ficture, f"{args.out_dir}/transcripts.tiled.done", f"{model_prefix}.done"], cmds)
+            mm.add_target(f"{decode_prefix}.done", [f"{args.out_dir}/transcripts.tiled.done", f"{model_prefix}.done"], cmds)
 
             # 3) visualization
-            minmax = read_minmax(args.in_minmax, "row")
-            xmin = minmax["xmin"]
-            xmax = minmax["xmax"]
-            ymin = minmax["ymin"]
-            ymax = minmax["ymax"]
+            # minmax = read_minmax(args.in_minmax, "row")
+            # xmin = minmax["xmin"]
+            # xmax = minmax["xmax"]
+            # ymin = minmax["ymin"]
+            # ymax = minmax["ymax"]
             cmds=cmd_separator([], f"Decode visualization, ID: {decode_id}")
             if not args.skip_coarse_report:
                 cmd = " ".join([
@@ -449,10 +482,7 @@ def run_ficture2(_args):
                     f"--in-color {cmap_path}",
                     f"--out {decode_prefix}.png",
                     f"--scale 1",
-                    f"--xmin {xmin}",
-                    f"--xmax {xmax}",
-                    f"--ymin {ymin}",
-                    f"--ymax {ymax}"
+                    f"--range {args.in_minmax}"
                     ])
                 cmds.append(cmd)
                 mm.add_target(f"{decode_prefix}.png", [f"{decode_prefix}.done", cmap_path], cmds)
@@ -541,8 +571,8 @@ def run_ficture2(_args):
 
     ## write makefile
     if len(mm.targets) == 0:
-            logging.error("There is no target to run. Please make sure that ast least one run option was turned on")
-            sys.exit(1)
+        logging.error("There is no target to run. Please make sure that ast least one run option was turned on")
+        sys.exit(1)
     
     make_f = os.path.join(args.out_dir, args.makefn)
     mm.write_makefile(make_f)
