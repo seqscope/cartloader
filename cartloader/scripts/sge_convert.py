@@ -5,7 +5,6 @@ from cartloader.utils.utils import cmd_separator, scheck_app, add_param_to_cmd, 
 from cartloader.utils.sge_helper import aux_sge_args, input_by_platform, update_csvformat_by_platform
 from cartloader.scripts.feature_filtering import filter_feature_by_type
 
-
 # get the path of the cu
 
 def parse_arguments(_args):
@@ -42,9 +41,10 @@ def parse_arguments(_args):
     inout_params.add_argument('--out-feature', type=str, default="feature.clean.tsv.gz", help='Output for SGE format conversion. The compressed UMI count per gene TSV file (default: feature.clean.tsv.gz).')
     # - density filtering
     inout_params.add_argument('--filter-by-density', action='store_true', default=False, help='Filter SGE from format conversion by density (default: False). If enabled, check the density-filtering auxiliary parameters.')
-    inout_params.add_argument('--out-filtered-prefix', type=str, default="filtered", help='Output for density-filtering. If --filter-by-density, define the prefix for filtered SGE (default: filtered)')
+    inout_params.add_argument('--out-filtered-prefix', type=str, default="filtered", help='Output for density-filtering. If --filter-by-density, define the prefix for filtered SGE and its visualization (default: filtered)')
     # - sge visualization
     inout_params.add_argument('--sge-visual', action='store_true', default=False, help='Visualize the output SGE. If --filter-by-density, both unfiltered and filtered SGE will be visualized (default: False)')
+    inout_params.add_argument('--out-xy', type=str, default="xy.png", help='Output for SGE visualization image (default: xy.png)')
 
     # AUX input MEX params
     aux_in_mex_params = parser.add_argument_group( "IN-MEX Auxiliary Parameters", "(10x_visium_hd and seqscope only) Auxiliary parameters for input MEX and parquet files. Required if --in-mex is used." )
@@ -114,12 +114,21 @@ def parse_arguments(_args):
     aux_polyfilter_params.add_argument('--polygon-min-size', type=int, default=500, help='The minimum polygon size (default: 500)')
     # gene_header and count_header will be automatically based on the --colname-feature-name, --colname-feature-id and --colnames-count
 
+    # AUX visualization params
+    aux_visual_params = parser.add_argument_group("North-up Auxiliary Parameters", "Auxiliary parameters for visualizing the output SGE in a north-up orientation. It is optional if --sge-visual is enabled.")
+    aux_visual_params.add_argument('--north-up', action='store_true', default=False, help='If enabled, the sge will be visualized in a tif image north-up (default: False).')
+    aux_visual_params.add_argument('--out-northup-tif', type=str, default="xy_northup.tif", help='Output for SGE visualization. The prefix for the output north-up image (default: north_up.tif)')
+    aux_visual_params.add_argument('--srs', type=str, default='EPSG:3857', help='If --north-up, define the spatial reference system (default: EPSG:3857)')
+    aux_visual_params.add_argument('--resample', type=str, default='cubic', help='Define the resampling method (default: cubic). Options: near, bilinear, cubic, etc.')
+
     # env params
     env_params = parser.add_argument_group("ENV Parameters", "Environment parameters for the tools")
     env_params.add_argument('--gzip', type=str, default="gzip", help='Path to gzip binary. For faster processing, use "pigz -p 4".')
-    env_params.add_argument('--spatula', type=str, default="spatula", help='Path to spatula binary. ')
-    env_params.add_argument('--parquet-tools', type=str, default="parquet-tools", help='Path to parquet-tools binary')
-    
+    env_params.add_argument('--spatula', type=str, default="spatula", help='Path to spatula binary.')
+    env_params.add_argument('--parquet-tools', type=str, default="parquet-tools", help='If --in-parquet is enabled, path to parquet-tools binary')
+    env_params.add_argument('--gdal_translate', type=str, default=f"gdal_translate", help='If --sge-visual with --north-up, provide path to gdal_translate binary')
+    env_params.add_argument('--gdalwarp', type=str, default=f"gdalwarp", help='If --sge-visual with --north-up, provide path to gdalwarp binary')
+
     # not in use 
     #aux_ftrfilter_params.add_argument('--unique', action='store_true', default=False, help='Merge pixels with (almost?) identical coordinates. Applies to cosmx_smi only.')
  
@@ -353,11 +362,13 @@ def sge_density_filtering(mm, sge_filtering_dict):
     cmds.append(f"[ -f {sge_filtering_dict['filtered_transcript']} ] && [ -f {sge_filtering_dict['filtered_minmax']} ] && [ -f {sge_filtering_dict['filtered_feature']} ] && touch {sge_filtering_dict['flag']}")
     mm.add_target(sge_filtering_dict['flag'], sge_filtering_dict["prereq"], cmds)
     return mm
+
 #================================================================================================
 #
-# main functions
+# visual functions
 #
 #================================================================================================
+
 def sge_visual(mm, transcript_f, minmax_f, xy_f, prereq, spatula):
     scheck_app(spatula)
     # draw xy plot for visualization
@@ -383,6 +394,20 @@ def sge_visual(mm, transcript_f, minmax_f, xy_f, prereq, spatula):
     mm.add_target(xy_f, prereq, cmds)
     return mm
 
+def sge_visual_northup(mm, xy_f, xy_northup_f, minmax_f, prereq, srs="EPSG:3857", resample="cubic", gdalwarp="gdalwarp", gdal_translate="gdal_translate"):
+    cmds = cmd_separator([], f"Create a north-up tif image for SGE: {xy_f}")
+    temp_tif= xy_northup_f+".temp.tif"
+    cmd = f"cartloader image_north_up --in-png {xy_f} --in-tif {temp_tif} --out-tif {xy_northup_f} --minmax {minmax_f} --srs {srs} --resample {resample} --gdalwarp {gdalwarp} --gdal_translate {gdal_translate}"
+    cmds.append(cmd)
+    cmds.append(f"rm {temp_tif}")
+    mm.add_target(xy_northup_f, [xy_f]+prereq, cmds)
+    return mm
+#================================================================================================
+#
+# main functions
+#
+#================================================================================================
+
 def sge_convert(_args):
     # args
     args=parse_arguments(_args)
@@ -399,12 +424,12 @@ def sge_convert(_args):
     out_transcript_f = os.path.join(args.out_dir, args.out_transcript)
     out_minmax_f = os.path.join(args.out_dir, args.out_minmax)
     out_feature_f = os.path.join(args.out_dir, args.out_feature)
-    out_xy_f = os.path.join(args.out_dir, "xy.png")
+    out_xy_f = os.path.join(args.out_dir, args.out_xy)
 
     filtered_transcript_f = os.path.join(args.out_dir, f"{args.out_filtered_prefix}.transcripts.unsorted.tsv.gz")
     filtered_feature_f = os.path.join(args.out_dir, f"{args.out_filtered_prefix}.feature.lenient.tsv.gz")
     filtered_minmax_f = os.path.join(args.out_dir, f"{args.out_filtered_prefix}.coordinate_minmax.tsv")
-    filtered_xy_f = os.path.join(args.out_dir, f"{args.out_filtered_prefix}.xy.png")
+    filtered_xy_f = os.path.join(args.out_dir, f"{args.out_filtered_prefix}.{args.out_xy}")
 
     # mm
     mm = minimake()
@@ -427,9 +452,14 @@ def sge_convert(_args):
                         out_transcript_f,
                         out_minmax_f,
                         out_xy_f,
-                        [sge_convert_flag],
-                        args.spatula)        
-            
+                        [sge_convert_flag], 
+                        args.spatula)
+        if args.north_up:
+            out_xyn_f= os.path.join(args.out_dir, args.out_northup_tif)
+            mm = sge_visual_northup(mm, out_xy_f, out_xyn_f, out_minmax_f, [sge_convert_flag],
+                                  srs=args.srs, resample=args.resample, gdalwarp=args.gdalwarp, gdal_translate=args.gdal_translate)
+    
+    # filtering
     if args.filter_by_density:
         sge_filtered_flag = os.path.join(args.out_dir, "sge_density_filtering.done")
         sge_filtering_dict={
@@ -453,13 +483,17 @@ def sge_convert(_args):
         }
         mm = sge_density_filtering(mm, sge_filtering_dict)
     
-    if args.filter_by_density and args.sge_visual:
-        mm = sge_visual(mm, 
-                        filtered_transcript_f,
-                        filtered_minmax_f,
-                        filtered_xy_f,
-                        [sge_filtered_flag],
-                        args.spatula)
+        if args.sge_visual:
+            mm = sge_visual(mm, 
+                            filtered_transcript_f,
+                            filtered_minmax_f,
+                            filtered_xy_f,
+                            [sge_filtered_flag],
+                            args.spatula)
+            if args.north_up:
+                filtered_xyn_f= os.path.join(args.out_dir, f"{args.out_filtered_prefix}.{args.out_northup_tif}")
+                mm = sge_visual_northup(mm, filtered_xy_f, filtered_xyn_f, filtered_minmax_f, [sge_filtered_flag],
+                                        srs=args.srs, resample=args.resample, gdalwarp=args.gdalwarp, gdal_translate=args.gdal_translate)
 
     # write makefile
     if len(mm.targets) == 0:

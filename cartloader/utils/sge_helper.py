@@ -148,3 +148,10 @@ def update_csvformat_by_platform(args):
         args.csv_comment = platform_settings["comment"]
     return args
 
+# def read_minmax(minmax_f):
+#     minmax = {}
+#     with open(minmax_f, "r") as f:
+#         for line in f:
+#             key, value = line.strip().split("\t")
+#             minmax[key] = float(value)
+#     return minmax

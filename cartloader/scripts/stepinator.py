@@ -22,6 +22,7 @@ histology_suffixes.extend([suffix.upper() for suffix in histology_suffixes])
 aux_env_args = {
         "sge_stitch": ["spatula"],
         "sge_convert": ["spatula", "gzip", "parquet_tools"],
+        "north_up": ["gdal_translate", "gdalwarp"],
         "hist_stitch": ["gdal_translate", "gdalbuildvrt"],
         "run_ficture": ['bgzip', "tabix", "gzip", "sort", "sort_mem"],
         "run_cartload_join": ['pmtiles', 'gdal_translate', 'gdaladdo', 'tippecanoe', 'spatula'],
@@ -32,6 +33,7 @@ aux_env_args = {
 aux_params_args = {
     "sge_stitch": ["colname_feature_name", "colname_feature_id", "colname_x", "colname_y"] + ["radius", "quartile", "hex_n_move", "polygon_min_size"],
     "sge_convert": [item for sublist in aux_sge_args.values() for item in sublist] + ["radius", "quartile", "hex_n_move", "polygon_min_size"],
+    "north_up": ["srs", "resample"],
     "run_ficture": [ 'anchor_res', 'radius_buffer', 
                      'hexagon_n_move', 'hexagon_precision', 'min_ct_per_unit_hexagon',
                      'minibatch_size', 'minibatch_buffer',
@@ -49,7 +51,8 @@ hist_keys = [ "path",
             "georeference", "georef_tsv", "georef_bounds", 
             "rotate", "flip"
     ]
-hist_keys_tiles = [x for x in hist_keys if x not in ["transform", "lower_thres_quantile", "upper_thres_quantile", "level", "colorize"]]
+hist_keys_tiles =  ["row", "col"] + [x for x in hist_keys if x not in ["transform", "lower_thres_quantile", "upper_thres_quantile", "level", "colorize"]]
+
 
 def merge_config(base_config, args, keys, prefix=None):
     """
@@ -77,7 +80,7 @@ def cmd_sge_stitch(sgeinfo, args, env, generate_tile_minmax_only=False):
     stitch_cmd = " ".join([
         "cartloader", "sge_stitch",
         f"--makefn {mkbn}.mk",
-        f"--in-tiles {' '.join(sgeinfo['in_tiles_str'])}",
+        f"--in-tiles {sgeinfo['in_tiles_str']}",
         f"--out-dir {sgeinfo['sge_dir']}",
         f"--units-per-um {sgeinfo.get('units_per_um', None)}" if sgeinfo.get("units_per_um", None) else "",
         f"--colnames-count {sgeinfo.get('colnames_all_count', None)}" if sgeinfo.get('colnames_all_count', None) else "",
@@ -87,13 +90,21 @@ def cmd_sge_stitch(sgeinfo, args, env, generate_tile_minmax_only=False):
         "--generate-tile-minmax-only" if generate_tile_minmax_only else "",
         "--list-overlapping-genes",
         f"--filter-by-density --out-filtered-prefix {sgeinfo['filtered_prefix']} --genomic-feature {sgeinfo['colname_count']}" if sgeinfo['filter_by_density'] else "",
+        f"--north-up --out-northup-tif {sgeinfo['xy_ntif']}" if args.north_up else "",
     ])
-    # add aux env
-    stitch_cmd = add_param_to_cmd(stitch_cmd, env, aux_env_args["sge_stitch"])
 
-    # add aux parameters
+    # add aux stitch parameters
     stitch_aug = merge_config(sgeinfo, args, aux_params_args["sge_stitch"], prefix=None)
     stitch_cmd = add_param_to_cmd(stitch_cmd, stitch_aug, aux_params_args["sge_stitch"])
+
+    # add aux north-up parameters
+    if args.north_up:
+        northup_aug = merge_config(sgeinfo, args, aux_params_args["north_up"], prefix=None)
+        stitch_cmd = add_param_to_cmd(stitch_cmd, northup_aug, aux_params_args["north_up"])
+    
+    # add aux env
+    stitch_cmd = add_param_to_cmd(stitch_cmd, env, aux_env_args["sge_stitch"]+aux_env_args["north_up"]) if args.north_up else add_param_to_cmd(stitch_cmd, env, aux_env_args["sge_stitch"])
+    # add aux env
     return stitch_cmd
 
 def cmd_sge_convert(sgeinfo, args, env):
@@ -132,14 +143,21 @@ def cmd_sge_convert(sgeinfo, args, env):
         f"--filter-by-density --out-filtered-prefix {sgeinfo['filtered_prefix']} --genomic-feature {sgeinfo['colname_count']}" if sgeinfo['filter_by_density'] else "",
         f"--sge-visual" if args.sge_visual else "",
         f"--n-jobs {args.n_jobs}" if args.n_jobs else ""
-        "" 
+        f"--north-up --out-northup-tif {sgeinfo['xy_ntif']}" if args.north_up else "",
     ])
-    # add aux tools
-    format_cmd = add_param_to_cmd(format_cmd, env, aux_env_args["sge_convert"])
     # add aux parameters
     # remove the "units_per_um" in the aux_params_args["sge_convert"] 
     format_aug = merge_config(sgeinfo, args, aux_params_args["sge_convert"], prefix=None)
     format_cmd = add_param_to_cmd(format_cmd, format_aug, aux_params_args["sge_convert"])
+
+    # add aux north-up parameters
+    if args.north_up:
+        northup_aug = merge_config(sgeinfo, args, aux_params_args["north_up"], prefix=None)
+        format_cmd = add_param_to_cmd(format_cmd, northup_aug, aux_params_args["north_up"])
+
+    # add aux tools
+    format_cmd = add_param_to_cmd(format_cmd, env, aux_env_args["sge_convert"]++aux_env_args["north_up"]) if args.north_up else add_param_to_cmd(format_cmd, env, aux_env_args["sge_convert"])
+
     return format_cmd
 
 def define_sge2fn(filter_by_density, filtered_prefix):
@@ -149,11 +167,12 @@ def define_sge2fn(filter_by_density, filtered_prefix):
     cstsvfn  = "transcripts.sorted.tsv.gz" if not filter_by_density else f"{filtered_prefix}.transcripts.sorted.tsv.gz"
     ftrfn    = "feature.clean.tsv.gz" if not filter_by_density else f"{filtered_prefix}.feature.lenient.tsv.gz"
     minmaxfn = "coordinate_minmax.tsv" if not filter_by_density else f"{filtered_prefix}.coordinate_minmax.tsv"
+
     sge2fn={
         "tsv": tsvfn,
         "ftr": ftrfn,
         "minmax": minmaxfn,
-        "cstsv": cstsvfn
+        "cstsv": cstsvfn,
     }
     return sge2fn
 
@@ -317,26 +336,36 @@ def parse_histology_args(histology_args, by_tiles=False):
         hist_input.append(hist_dict)
     return hist_input
 
-def generate_in_tiles_str(histology_dict, hist_keys_tiles):
+def update_flip_to_vhflip(val):
+    vertical = "True" if str(val).lower() == "vertical" else "False"
+    horizontal = "True" if str(val).lower() == "horizontal" else "False"
+    return vertical, horizontal
+
+def generate_in_tiles_str(in_tiles, param_keys):
+    assert len(in_tiles) > 0, "Error: --in-tiles should have at least one tile"
     tile_args = []
-    for tile in histology_dict.get("in_tiles", []):
-        row = tile.get("row")
-        col = tile.get("col")
-        values =[str(row), str(col)]
-        for key in hist_keys_tiles:
+    for tile in in_tiles:
+        # row = tile.get("row")
+        # col = tile.get("col")
+        # values =[str(row), str(col)]
+        values = []
+        for key in param_keys:
             val = tile.get(key, "")
             #print(key+":"+str(val))
             if val in [None, "null", "Null"]:
                 val = ""
             if key == "flip":
-                vertical = "True" if str(val).lower() == "vertical" else "False"
-                horizontal = "True" if str(val).lower() == "horizontal" else "False"
+                vertical, horizontal = update_flip_to_vhflip(val)
                 values.append(vertical)
                 values.append(horizontal)
+            elif key == "row" or key == "col":
+                values.append(str(val))
             else:
                 values.append(str(val))
         tile_args.append(",".join(values))
+        #print(tile_args)
     in_tiles_str = " ".join(tile_args)
+    #print(in_tiles_str)
     return in_tiles_str
 
 def cmd_hist_stitch(histinfo_by_tiles, args, env):
@@ -344,7 +373,7 @@ def cmd_hist_stitch(histinfo_by_tiles, args, env):
     for histinfo_i in histinfo_by_tiles:
         hist_id= histinfo_i["hist_id"]
         mkbn = f"hist_stitch_{hist_id}" if args.mk_id is None else f"hist_stitch_{hist_id}_{args.mk_id}"
-        in_tiles_str = generate_in_tiles_str(histinfo_i, hist_keys_tiles)
+        in_tiles_str = generate_in_tiles_str(histinfo_i.get("in_tiles",[]), hist_keys_tiles)
         hist_stitch_cmd=" ".join([
                 "cartloader", "hist_stitch",
                 f"--output {histinfo_i['path']}", 
@@ -439,7 +468,7 @@ def stepinator(_args):
     Stepinator: A tool to run steps in cartloader to do SGE format conversion (--sge-convert) or downstream process (--run-ficture, --run-cartload-join, --run-fig2pmtiles, --upload-aws) in cartloader.
     The input, actions, parameters, and tools can be provided in two ways: 1) using a YAML file or 2) using individual command-line arguments in IN/OUT Configuration, Environment Configuration, and Auxiliary Parameters for FICTURE.
     It also allows the job execution in two modes: local and slurm.
-                                     """)
+    """)
 
     # * mode
     run_params = parser.add_argument_group("Run", "Run mode")
@@ -458,6 +487,7 @@ def stepinator(_args):
     cmd_params.add_argument("--sge-stitch", action="store_true", help="Run sge-stitch in cartloader")
     cmd_params.add_argument("--sge-convert", action="store_true", help="Run sge-convert in cartloader")
     cmd_params.add_argument('--sge-visual', action='store_true', help='Plot the SGE from sge-convert or sge-stitch in a PNG file')
+    cmd_params.add_argument("--north-up", action="store_true", help="Set the north direction to up in the SGE visual")
     cmd_params.add_argument("--run-ficture", action="store_true", help="Run run-ficture in cartloader. Only the main function is executed.")
     cmd_params.add_argument("--run-cartload-join", action="store_true", help="Run run-cartload-join in cartloader")
     cmd_params.add_argument("--hist-stitch", action="store_true", help="Run histology stitch in cartloader. This is for stitching histology images.")
@@ -486,7 +516,7 @@ def stepinator(_args):
     key_params.add_argument('--in-parquet', type=str, default=None, help='Required if --sge-convert on 10x_visium_hd datasets. Path to the input raw parquet file for spatial coordinates (default: None, typical naming convention: tissue_positions.parquet)')
     # - input for 10x_xenium, bgi_stereoseq, cosmx_smi, vizgen_merscope, pixel_seq, and nova_st
     key_params.add_argument('--in-csv', type=str, default=None, help='Required if --sge-convert for 10x_xenium, bgi_stereoseq, cosmx_smi, vizgen_merscope, pixel_seq, and nova_st. Path to the input raw CSV/TSV file (default: None).')
-    key_params.add_argument("--in-tiles", nargs="*", default=[], help="Required if --sge-stitch. List of input tiles of each in the format of <transcript_path>,<feature_path>,<minmax_path>,<row>,<col>. If feature or minmax is missing, specify its path as null (default: [])")
+    key_params.add_argument("--in-tiles", nargs="*", default=[], help="Required if --sge-stitch. List of input tiles of each in the format of <transcript_path>,<feature_path>,<minmax_path>,<row>,<col>,<rotate>,<flip>. If feature or minmax is missing, specify its path as null (default: [])")
     key_params.add_argument('--units-per-um', type=float, default=None, help='Applicable if --sge-convert or --sge-stitch. Coordinate unit per um (conversion factor) (default: 1.00)') 
     key_params.add_argument('--scale-json', type=str, default=None, help="Applicable if --sge-convert on 10x_visium_hd datasets. Coordinate unit per um using the scale json file (default: None, typical naming convention: scalefactors_json.json)")
     key_params.add_argument('--precision-um', type=int, default=None, help='Required if --sge-convert. Number of digits of transcript coordinates (default: 2)')
@@ -650,6 +680,10 @@ def stepinator(_args):
     ficture_aux_params.add_argument('--de-max-pval', type=float, default=None, help='p-value cutoff for differential expression (default: 1e-3)')
     ficture_aux_params.add_argument('--de-min-fold', type=float, default=None, help='Fold-change cutoff for differential expression (default: 1.5)')
 
+    gis_aux_params = parser.add_argument_group("Auxiliary Parameters for images", "Parameters for images")
+    key_params.add_argument('--srs', type=str, default='EPSG:3857', help=' define the spatial reference system (default: EPSG:3857)')
+    key_params.add_argument('--resample', type=str, default='cubic', help='define the resampling method (default: cubic). Options: near, bilinear, cubic, etc.')
+
     dev_params = parser.add_argument_group("Developer", "Developer options")
     dev_params.add_argument('--lenient', action='store_true', help='(Only for development usage) Lenient mode. Skip the required file/app existence check')
 
@@ -704,6 +738,8 @@ def stepinator(_args):
     # sge_dir    
     sgeinfo["sge_dir"] = os.path.join(out_dir, "sge")
     os.makedirs(sgeinfo['sge_dir'], exist_ok=True)
+    sgeinfo["xy_png"] = "xy.png"
+    sgeinfo["xy_ntif"] = "xy_northup.tif"
     # worklog dir
     log_dir = os.path.join(out_dir, "worklog")
     os.makedirs(log_dir, exist_ok=True)
@@ -770,16 +806,27 @@ def stepinator(_args):
         # comma-based input per tile
         if args.in_yaml:
             in_tiles=sgeinfo.get("in_tiles", [])
-            assert len(in_tiles) > 0, 'When --sge-stitch is enabled, provide tile information in the "tiles" field in the SGE field in the input YAML file.'
             assert len(in_tiles) > 1, 'When --sge-stitch is enabled, at least two tiles are required.'
-            sgeinfo["in_tiles_str"] = [
-                ",".join(str(intile.get(key, "")) for key in ["in_csv", "in_feature", "in_minmax", "row", "col"])
-                for intile in in_tiles
-            ]
+            sge_keys_tile = ["in_csv", "in_feature", "in_minmax", "row", "col", "rotate", "flip"]
+            # sgeinfo["in_tiles_str"] = [
+            #     ",".join(str(intile.get(key, "")) for key in ["in_csv", "in_feature", "in_minmax", "row", "col", "rotate", "flip"])
+            #     for intile in in_tiles
+            # ]
+            sgeinfo["in_tiles_str"] = generate_in_tiles_str(in_tiles, sge_keys_tile)
         else:
-            assert len(args.in_tiles) > 0, "When --sge-stitch is enabled, --in-tiles is required"
             assert len(args.in_tiles) > 1, "When --sge-stitch is enabled, at least two tiles are required"
-            sgeinfo["in_tiles_str"]=args.in_tiles
+            #sgeinfo["in_tiles_str"]=args.in_tiles
+            in_tiles=[]
+            for i, intile in enumerate(args.in_tiles):
+                intile_parts = intile.split(",")
+                assert len(intile_parts) == 7, f"Error: --in-tiles should be in the format <in_csv>,<in_feature>,<in_minmax>,<row>,<col>,<rotate>,<flip>. Found {len(intile_parts)} parts instead."
+                # get the last piece
+                intile_flip=intile_parts[-1]
+                vertical, horizontal = update_flip_to_vhflip(intile_flip)
+                intile_parts[-1] = vertical + "," + horizontal
+                intile=",".join(intile_parts)
+                in_tiles.append(intile)
+            sgeinfo["in_tiles_str"]=" ".join(in_tiles)
         cmds.append(cmd_sge_stitch(sgeinfo, args, env))
 
     # =========
