@@ -244,12 +244,10 @@ def run_ficture2(_args):
     #     in_feature_ficture = args.in_feature
     
     in_feature_ficture = args.in_feature
-    if args.include_feature_regex is None:
-        args.include_feature_regex = ".*"
-    if args.exclude_feature_regex is None:
-        args.exclude_feature_regex = "___NONE___"
-
-    
+    # if args.include_feature_regex is None:
+    #     args.include_feature_regex = ".*"
+    # if args.exclude_feature_regex is None:
+    #     args.exclude_feature_regex = "___NONE___"
 
     # out files
     if args.out_json is None:
@@ -260,15 +258,15 @@ def run_ficture2(_args):
         scheck_app(args.gzip)
 
         cmds = cmd_separator([], f"Creating tiled tsv from {os.path.basename(args.in_transcript)}...")
-        if args.in_transcript.endswith(".gz"):
-            tsv_plain = f"{args.out_dir}/transcripts.tsv"
-            cmds.append(f"{args.gzip} -dc {args.in_transcript} > {tsv_plain}")
-        else:
-            tsv_plain = f"{args.in_transcript}"
+        # if args.in_transcript.endswith(".gz"):
+        #     tsv_plain = f"{args.out_dir}/transcripts.tsv"
+        #     cmds.append(f"{args.gzip} -dc {args.in_transcript} > {tsv_plain}")
+        # else:
+        #     tsv_plain = f"{args.in_transcript}"
                             
         cmd = " ".join([
             ficture2bin, "pts2tiles",
-            f"--in-tsv {tsv_plain}",
+            f"--in-tsv {args.in_transcript}",
             f"--out-prefix {args.out_dir}/transcripts.tiled",
             f"--icol-x {args.colidx_x-1}",
             f"--icol-y {args.colidx_y-1}",
@@ -282,13 +280,13 @@ def run_ficture2(_args):
         ])
         cmds.append(cmd)
 
-        if args.in_transcript.endswith(".gz"):
-            cmds.append(f"rm -f {tsv_plain}")
+        # if args.in_transcript.endswith(".gz"):
+        #     cmds.append(f"rm -f {tsv_plain}")
 
         ## write the feature file as needed
         if in_feature_ficture is not None:
-            feature_plain = f"{args.out_dir}/features.hdr.tsv"
-            feature_nohdr = f"{args.out_dir}/features.tsv"
+            feature_plain = f"{args.out_dir}/transcripts.tiled.features.hdr.tsv"
+            feature_nohdr = f"{args.out_dir}/transcripts.tiled.features.tsv"
             with flexopen(in_feature_ficture, "rt") as f:
                 with open(feature_plain, "wt") as wf:
                     with open(feature_nohdr, "wt") as wf2:
@@ -300,15 +298,15 @@ def run_ficture2(_args):
                                 wf.write(line)
                                 wf2.write(line)
         else: ## if feature file is not provided, create one from the input transcript file
-            feature_plain = f"{args.out_dir}/features.hdr.tsv"
-            feature_nohdr = f"{args.out_dir}/features.tsv"
+            feature_plain = f"{args.out_dir}/transcripts.tiled.features.hdr.tsv"
+            feature_nohdr = f"{args.out_dir}/transcripts.tiled.features.tsv"
             in_feature = feature_plain
             in_feature_ficture = feature_plain
             args.in_feature = feature_plain
             cmds.append(f"(echo {args.colname_feature} {args.colname_count} | tr ' ' '\\t'; cat {feature_nohdr};) > {feature_plain}")
 
         if args.in_minmax is None: ## specify minmax file if not provided
-            args.in_minmax = os.path.join(args.out_dir, "coord_range.tsv")
+            args.in_minmax = os.path.join(args.out_dir, "transcripts.tiled.coord_range.tsv")
         
 
         cmds.append(f"[ -f {args.out_dir}/transcripts.tiled.tsv ] && [ -f {args.out_dir}/transcripts.tiled.index ] && touch {args.out_dir}/transcripts.tiled.done" )
@@ -375,8 +373,8 @@ def run_ficture2(_args):
                 f"--min-count-train {args.min_count_train}",
                 f"--min-count-per-feature {args.min_ct_per_feature}",
                 f"--features {feature_nohdr}",
-                f"--include-feature-regex '{args.include_feature_regex}'",
-                f"--exclude-feature-regex '{args.exclude_feature_regex}'",
+                f"--include-feature-regex '{args.include_feature_regex}'" if args.include_feature_regex is not None else "",
+                f"--exclude-feature-regex '{args.exclude_feature_regex}'" if args.exclude_feature_regex is not None else "",
                 f"--minibatch-size {args.minibatch_size}",
                 f"--seed {args.seed}",
                 f"--n-epochs {args.train_epoch}",
@@ -467,26 +465,7 @@ def run_ficture2(_args):
             cmds.append(f"[ -f {decode_fit_tsv} ] && [ -f {decode_postcount} ] && touch {decode_prefix}.done" )
             mm.add_target(f"{decode_prefix}.done", [f"{args.out_dir}/transcripts.tiled.done", f"{model_prefix}.done"], cmds)
 
-            # 3) visualization
-            # minmax = read_minmax(args.in_minmax, "row")
-            # xmin = minmax["xmin"]
-            # xmax = minmax["xmax"]
-            # ymin = minmax["ymin"]
-            # ymax = minmax["ymax"]
-            cmds=cmd_separator([], f"Decode visualization, ID: {decode_id}")
-            cmd = " ".join([
-                ficture2bin, "draw-pixel-factors",
-                f"--in-tsv {decode_fit_tsv}",
-                f"--header-json {decode_prefix}.json",
-                f"--in-color {cmap_path}",
-                f"--out {decode_prefix}.png",
-                f"--scale 1",
-                f"--range {args.in_minmax}"
-                ])
-            cmds.append(cmd)
-            mm.add_target(f"{decode_prefix}.png", [f"{decode_prefix}.done", cmap_path], cmds)
-
-            # 4) DE/report
+            # 3) DE/report
             cmds=cmd_separator([], f"Decode DE and report, ID: {decode_id}")
             # - transform-DE
             cmd = " ".join([
@@ -516,7 +495,22 @@ def run_ficture2(_args):
             cmds.append(cmd)
             # - done & target
             cmds.append(f"[ -f {decode_de} ] && [ -f {decode_prefix}.factor.info.html ] && [ -f {decode_fit_tsv}.gz ] && touch {decode_prefix}_summary.done")
-            mm.add_target(f"{decode_prefix}_summary.done", [f"{decode_prefix}.done", f"{decode_prefix}.png", cmap_path], cmds)  
+            mm.add_target(f"{decode_prefix}_summary.done", [f"{decode_prefix}.done", cmap_path], cmds)  
+
+            # 4) visualization
+            cmds=cmd_separator([], f"Decode visualization, ID: {decode_id}")
+            cmd = " ".join([
+                f"{args.gzip} -dc {decode_fit_tsv}.gz |",
+                ficture2bin, "draw-pixel-factors",
+                f"--in-tsv /dev/stdin",
+                f"--header-json {decode_prefix}.json",
+                f"--in-color {cmap_path}",
+                f"--out {decode_prefix}.png",
+                f"--scale 1",
+                f"--range {args.in_minmax}"
+                ])
+            cmds.append(cmd)
+            mm.add_target(f"{decode_prefix}.png", [f"{decode_prefix}_summary.done", cmap_path], cmds)
 
     if args.summary:
         prerequisities=[]
