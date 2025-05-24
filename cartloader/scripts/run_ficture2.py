@@ -381,20 +381,21 @@ def run_ficture2(_args):
                 f"--threads {args.threads}",
                 ])
             cmds.append(cmd)
-            cmd = f"cut -f 2- {model_prefix}.unsorted.results.tsv > {model_prefix}.unsorted.results.nohex.tsv"
-            cmds.append(cmd)
+            #cmd = f"cut -f 2- {model_prefix}.unsorted.results.tsv > {model_prefix}.unsorted.results.nohex.tsv"
+            #cmds.append(cmd)
             cmd = " ".join([
                 args.spatula, "append-topk-tsv",
                 f"--in-model {model_prefix}.unsorted.model.tsv",
+                f"--in-json {meta}",
                 f"--out-model {model_prefix}.model.tsv",
                 f"--reorder",
-                f"--in-tsv {model_prefix}.unsorted.results.nohex.tsv",
+                f"--in-tsv {model_prefix}.unsorted.results.tsv",
                 f"--out-tsv {model_prefix}.results.tsv.gz",
-                f"--offset-tsv 2",
                 f"--offset-model 1"
             ])
             cmds.append(cmd)
-            cmds.append(f"rm -f {model_prefix}.unsorted.model.tsv {model_prefix}.unsorted.results.tsv {model_prefix}.unsorted.results.nohex.tsv")
+            #cmds.append(f"rm -f {model_prefix}.unsorted.model.tsv {model_prefix}.unsorted.results.tsv {model_prefix}.unsorted.results.nohex.tsv")
+            cmds.append(f"rm -f {model_prefix}.unsorted.model.tsv {model_prefix}.unsorted.results.tsv")
             cmds.append(f"[ -f {lda_fit_tsv}.gz ] && [ -f {lda_model_matrix} ] && touch {model_prefix}.done" )
             mm.add_target(f"{model_prefix}.done", [f"{args.out_dir}/transcripts.tiled.done", f"{args.out_dir}/hexagon.d_{train_width}.done"], cmds)
 
