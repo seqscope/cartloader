@@ -285,8 +285,8 @@ def run_ficture2(_args):
 
         ## write the feature file as needed
         if in_feature_ficture is not None:
-            feature_plain = f"{args.out_dir}/transcripts.tiled.features.hdr.tsv"
-            feature_nohdr = f"{args.out_dir}/transcripts.tiled.features.tsv"
+            feature_plain = f"{args.out_dir}/transcripts.tiled.selected_features.hdr.tsv"
+            feature_nohdr = f"{args.out_dir}/transcripts.tiled.selected_features.tsv"
             with flexopen(in_feature_ficture, "rt") as f:
                 with open(feature_plain, "wt") as wf:
                     with open(feature_nohdr, "wt") as wf2:
