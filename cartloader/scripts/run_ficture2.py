@@ -337,7 +337,7 @@ def run_ficture2(_args):
                 f"--min-count {args.min_ct_per_unit_hexagon}"
                 ])
             cmds.append(cmd)                
-            cmds.append(f"{args.sort} -S {args.sort_mem} -k 1,1n {hexagon_prefix}.tsv > {hexagon_prefix}.randomized.tsv")
+            cmds.append(f"{args.sort} -S {args.sort_mem} -k 1,1 {hexagon_prefix}.tsv > {hexagon_prefix}.randomized.tsv")
             cmds.append(f"rm -f {hexagon_prefix}.tsv")
             cmds.append(f"[ -f {hexagon_prefix}.randomized.tsv ] && [ -f {hexagon_prefix}.json ] && touch {hexagon_prefix}.done" )
             mm.add_target(f"{hexagon_prefix}.done", [f"{args.out_dir}/transcripts.tiled.done"], cmds)
