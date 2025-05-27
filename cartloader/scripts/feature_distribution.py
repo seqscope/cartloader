@@ -16,22 +16,24 @@ def parse_minmax(file_path):
 def feature_distribution(_args):
     parser = argparse.ArgumentParser(
         prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}",
-        description="Generates a gene-level summary table showing the count of each gene across multiple datasets, including how many datasets each gene appears in."
+        description="""
+        Identify features shared across all input tiles and generate summary outputs.
+        """
     )
-    parser.add_argument("--in-tiles", type=str, nargs='*', default=[], help="List of input information in a specific format: <feature_path>,<row>,<col>.")
+    parser.add_argument("--in-tiles", type=str, nargs='*',  required=True, default=[], help="List of input information in a specific format: <feature_path>,<row>,<col>.")
+    parser.add_argument('--output', type=str, help='(Optional) Output distribution file for all features. The output columns includes <feature_name>, <number of tiles with the feature>, and <count> per tile per count.')
     parser.add_argument('--colname-feature-name', type=str, default='gene', help='Feature name column (default: gene)')
     parser.add_argument("--colnames-count", type=str, nargs='*', help="Columns (default: count).", default=['count'])
-    parser.add_argument('--out-dist', type=str, help='Output distribution file for all features. The output columns includes <feature_name>, <number of tiles with the feature>, and <count> per tile per count.')
-    parser.add_argument('--out-overlap', type=str, help='Output file for only the features that are present in all tiles. The output columns includes <feature_name>, <sum of count across all tiles> per count.')
+
     parser.add_argument('--log', action='store_true', default=False, help='Write log to file')
     args = parser.parse_args(_args)
 
     # outdir
-    out_dir = os.path.dirname(args.out_dist)
+    out_dir = os.path.dirname(args.output)
     os.makedirs(out_dir, exist_ok=True) 
 
     # log
-    logger = create_custom_logger(__name__, os.path.join(out_dir, f"{args.out_dist}.log") if args.log else None)
+    logger = create_custom_logger(__name__, os.path.join(out_dir, f"{args.output}.log") if args.log else None)
     logger.info(f"Command: {' '.join(sys.argv)}")
 
     # 2. input
@@ -56,7 +58,6 @@ def feature_distribution(_args):
 
         logger.info(f"Reading {feature_path} for row {row_id} col {col_id}")
         data = pd.read_csv(feature_path, sep='\\t')
-        print(data.head())
 
         # Select and rename relevant columns
         selected = data[[args.colname_feature_name ] + args.colnames_count].copy()
@@ -70,19 +71,49 @@ def feature_distribution(_args):
             ftr_data = ftr_data.merge(selected, how='outer', left_index=True, right_index=True)
 
     # feature distribution
-    ftr_data.insert(0, "count", ftr_data.notna().sum(axis=1))
+    ftr_data.insert(0, "N", ftr_data.notna().sum(axis=1))
     ftr_data.insert(0, args.colname_feature_name, ftr_data.index)
     ftr_data.reset_index(drop=True, inplace=True)
-    ftr_data.to_csv(args.out_dist, sep="\t", index=False, na_rep="NA", compression="gzip")
-    logger.info(f"Feature distribution saved to {args.out_dist}")
 
-    # overlap features
-    overlap_ftr_data = ftr_data[ftr_data["count"] == num_of_tiles]
-    for col_count in args.colnames_count:
-        overlap_ftr_data[col_count] = overlap_ftr_data[[f"{row_id}_{col_id}_{col_count}" for row_id, col_id in zip(df["row"], df["col"])]].sum(axis=1)
-    overlap_ftr_data = overlap_ftr_data[[args.colname_feature_name] + args.colnames_count]
-    overlap_ftr_data.to_csv(args.out_overlap, sep="\t", index=False, compression="gzip")
-    logger.info(f"Feature overlap saved to {args.out_overlap}")
+    ftr_data.to_csv(args.output, sep="\t", index=False, na_rep="NA", compression="gzip")
+    logger.info(f"Feature distribution saved to {args.output}")
+
+    # # filter1: keep features existing in all tiles
+    # overlap_ftr_data = ftr_data[ftr_data["N"] == num_of_tiles]
+    # logger.info(f"* Number of features shared across all tiles: {overlap_ftr_data.shape[0]}")
+
+    # # filter2: keep features min count across all tiles > threshold
+    # if args.min_ct_per_ftr_tile > 0:
+    #     if args.colname_key_count is None and len(args.colnames_count) == 1:
+    #         args.colname_key_count = args.colnames_count[0]
+    #     assert args.colname_key_count is not None, "Please specify --colname-key-count or use --colnames-count with only one column when filtering by min count."
+        
+        
+    #     overlap_ftr_data["min_count"] = overlap_ftr_data[key_counts].min(axis=1)
+        
+    #     overlap_ftr_data = overlap_ftr_data[overlap_ftr_data["min_count"] >= args.min_ct_per_ftr_tile]
+    #     logger.info(f"* Number of shared features with a minimum count of {args.min_ct_per_ftr_tile} across all tiles: {overlap_ftr_data.shape[0]}")
+
+    # # extract feature names
+    # overlap_ftrs = overlap_ftr_data[args.colname_feature_name].tolist()
+
+    # # extract feature and counts
+    # if args.in_feature:
+    #     df_ftr = pd.read_csv(args.in_feature, sep="\t")
+    #     logger.info(f"Reading a separate feature file {args.in_feature} with {df_ftr.shape[0]} features.")
+    #     df_ftr = df_ftr[df_ftr[args.colname_feature_name].isin(overlap_ftrs)]
+    # else:
+    #     logger.info(f"Using the features from the input tiles.")
+    #     for col_count in args.colnames_count:
+    #         overlap_ftr_data[col_count] = overlap_ftr_data[[f"{row_id}_{col_id}_{col_count}" for row_id, col_id in zip(df["row"], df["col"])]].sum(axis=1)
+    #     df_ftr = overlap_ftr_data
+
+    # logger.info(f"Returning {df_ftr.shape[0]} features with counts.")
+    # df_ftr = df_ftr[[args.colname_feature_name] + args.colnames_count]
+    # for col_count in args.colnames_count:
+    #     df_ftr[col_count] = df_ftr[col_count].astype(int)
+    # df_ftr.to_csv(args.out_overlap, sep="\t", index=False, compression="gzip")
+    # logger.info(f"Feature overlap saved to {args.out_overlap}")
 
 if __name__ == "__main__":
     func_name = os.path.splitext(os.path.basename(__file__))[0]

@@ -12,7 +12,7 @@ def sge_stitch(_args):
         prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}",
         description=""""
         Stitching multiple tile SGEs into one SGE.
-        Outputs: A transcript-indexed SGE file, a coordinate minmax TSV file, and a feature file counting UMIs per gene. All output are in micro-meter precision.
+        Outputs: A transcript-indexed SGE file, a coordinate minmax TSV file, and a feature file counting UMIs per feature. All output are in micro-meter precision.
 
         """
     )
@@ -23,25 +23,13 @@ def sge_stitch(_args):
     run_params.add_argument('--makefn', type=str, default="sge_stitch.mk", help='Makefile name (default: sge_stitch.mk)')
     run_params.add_argument('--threads', type=int, default=1, help='Maximum number of threads to use in each process (default: 1)')
     
-    inout_params = parser.add_argument_group("Input/Output/Action Parameters", "Input/Output/Action Parameters")
-    inout_params.add_argument("--in-tiles", type=str, nargs='*', default=[], help="List of the input tiles in a format of <transcript>,<feature>,<minmax>,<row>,<col>,<rotate>,<vertical_flip>,<horizontal_flip>. ")
-    inout_params.add_argument("--out-dir", type=str, help="Output directory.")
-    inout_params.add_argument('--out-transcript', type=str, default="transcripts.unsorted.tsv.gz", help='Output for SGE stitch. The compressed transcript-indexed SGE file in TSV format (default: transcripts.unsorted.tsv.gz).')
-    inout_params.add_argument('--out-minmax', type=str, default="coordinate_minmax.tsv", help='Output for SGE stitch. The coordinate minmax TSV file (default: coordinate_minmax.tsv).')
-    inout_params.add_argument('--out-feature', type=str, default="feature.clean.tsv.gz", help='Output for SGE stitch. The compressed UMI count per gene TSV file (default: feature.clean.tsv.gz).')
-    inout_params.add_argument('--out-tile-minmax', type=str, default="coordinate_minmax_per_tile.tsv", help='Output for SGE stitch. The coordinate minmax per tile TSV file (default: coordinate_minmax_per_tile.tsv).')
-    # generate tile minmax only
-    inout_params.add_argument('--generate-tile-minmax-only', action='store_true', default=False, help='Only generate the tile minmax file without stitching the SGE. (default: False)')
-    # create overlap genes
-    inout_params.add_argument('--list-overlapping-genes', action='store_true', default=False, help='Create overlapping genes across all tiles. (default: False)')
-    # filter by density
-    inout_params.add_argument('--filter-by-density', action='store_true', default=False, help='Filter SGE from format conversion by density (default: False). If enabled, check the density-filtering auxiliary parameters.')
-    inout_params.add_argument('--out-filtered-prefix', type=str, default="filtered", help='Output for density-filtering. If --filter-by-density, define the prefix for filtered SGE (default: filtered)')
-    # sge-visual
-    inout_params.add_argument('--sge-visual', action='store_true', default=False, help='(Optional) Plot the SGE in a greyscale PNG file. (default: False)')
-    inout_params.add_argument('--out-xy', type=str, default="xy.png", help='Output for SGE visualization image (default: xy.png)')
-
-    key_params = parser.add_argument_group("Key Parameters", "Key parameters")
+    key_params = parser.add_argument_group("Key Parameters", "Key Parameters")
+    key_params.add_argument("--in-tiles", type=str, nargs='*', default=[], help="List of the input tiles in a format of <transcript>,<feature>,<minmax>,<row>,<col>,<rotate>,<vertical_flip>,<horizontal_flip>. ")
+    key_params.add_argument("--out-dir", type=str, help="Output directory.")
+    key_params.add_argument('--out-transcript', type=str, default="transcripts.unsorted.tsv.gz", help='Output for SGE stitch. The compressed transcript-indexed SGE file in TSV format (default: transcripts.unsorted.tsv.gz).')
+    key_params.add_argument('--out-minmax', type=str, default="coordinate_minmax.tsv", help='Output for SGE stitch. The coordinate minmax TSV file (default: coordinate_minmax.tsv).')
+    key_params.add_argument('--out-feature', type=str, default="feature.clean.tsv.gz", help='Output for SGE stitch. The compressed UMI count per feature TSV file (default: feature.clean.tsv.gz).')
+    key_params.add_argument('--out-tile-minmax', type=str, default="coordinate_minmax_per_tile.tsv", help='Output for SGE stitch. The coordinate minmax per tile TSV file (default: coordinate_minmax_per_tile.tsv).')
     key_params.add_argument("--colnames-count", type=str, default="count", help="Comma-separated column names for count (default: count)")
     key_params.add_argument('--colname-feature-name', type=str, default='gene', help='Feature name column (default: gene)')
     key_params.add_argument('--colname-feature-id', type=str, default=None, help='Feature ID column (default: None)')
@@ -50,24 +38,35 @@ def sge_stitch(_args):
     key_params.add_argument('--colnames-others', nargs='*', default=[], help='Columns names to keep (e.g., cell_id, overlaps_nucleus) (default: None)')
     key_params.add_argument('--units-per-um', type=float, default=1.0, help='Units per um in the input transcript tsv files (default: 1.0)')
     key_params.add_argument("--precision", type=int, default=2, help="Precision for the output minmax and transcript files (default: 2)")
+    #key_params.add_argument('--generate-tile-minmax-only', action='store_true', default=False, help='Only generate the tile minmax file without stitching the SGE. (default: False)')
 
-    # AUX polygon-filtering params
-    aux_polyfilter_params = parser.add_argument_group('Density/Polygon Filtering Auxiliary Parameters','Auxiliary parameters for filtering polygons based on the number of vertices. Required when --filter-by-density is enabled.')
-    aux_polyfilter_params.add_argument('--genomic-feature', type=str, default=None, help='Column name of genomic feature for polygon-filtering (default to --colnames-count if --colnames-count only specifies one column)')
-    aux_polyfilter_params.add_argument('--mu-scale', type=int, default=1, help='Scale factor for the polygon area calculation (default: 1.0)')
-    aux_polyfilter_params.add_argument('--radius', type=int, default=15, help='Radius for the polygon area calculation (default: 15)')
-    aux_polyfilter_params.add_argument('--quartile', type=int, default=2, help='Quartile for the polygon area calculation (default: 2)')
-    aux_polyfilter_params.add_argument('--hex-n-move', type=int, default=1, help='Sliding step (default: 1)')
-    aux_polyfilter_params.add_argument('--polygon-min-size', type=int, default=500, help='The minimum polygon size (default: 500)')
+    # polygon-filtering params
+    polyfilter_params = parser.add_argument_group('Density/Polygon Filtering Parameters','Parameters for filtering polygons based on the number of vertices.')
+    polyfilter_params.add_argument('--filter-by-density', action='store_true', default=False, help='Filter SGE from format conversion by density (default: False). If enabled, check the density-filtering auxiliary parameters.')
+    polyfilter_params.add_argument('--out-filtered-prefix', type=str, default="filtered", help='Output for density-filtering. If --filter-by-density, define the prefix for filtered SGE (default: filtered)')
+    polyfilter_params.add_argument('--genomic-feature', type=str, default=None, help='Column name of genomic feature for polygon-filtering (default to --colnames-count if --colnames-count only specifies one column)')
+    polyfilter_params.add_argument('--mu-scale', type=int, default=1, help='Scale factor for the polygon area calculation (default: 1.0)')
+    polyfilter_params.add_argument('--radius', type=int, default=15, help='Radius for the polygon area calculation (default: 15)')
+    polyfilter_params.add_argument('--quartile', type=int, default=2, help='Quartile for the polygon area calculation (default: 2)')
+    polyfilter_params.add_argument('--hex-n-move', type=int, default=1, help='Sliding step (default: 1)')
+    polyfilter_params.add_argument('--polygon-min-size', type=int, default=500, help='The minimum polygon size (default: 500)')
     # gene_header and count_header will be automatically based on the --colname-feature-name, --colname-feature-id and --colnames-count
     
     # AUX visualization params
-    aux_visual_params = parser.add_argument_group("North-up Auxiliary Parameters", "Auxiliary parameters for visualizing the output SGE in a north-up orientation. It is optional if --sge-visual is enabled.")
-    aux_visual_params.add_argument('--north-up', action='store_true', default=False, help='If enabled, the sge will be visualized in a tif image north-up (default: False).')
-    aux_visual_params.add_argument('--out-northup-tif', type=str, default="xy_northup.tif", help='Output for SGE visualization. The prefix for the output north-up image (default: north_up.tif)')
-    aux_visual_params.add_argument('--srs', type=str, default='EPSG:3857', help='If --north-up, define the spatial reference system (default: EPSG:3857)')
-    aux_visual_params.add_argument('--resample', type=str, default='cubic', help='Define the resampling method (default: cubic). Options: near, bilinear, cubic, etc.')
+    visual_params = parser.add_argument_group("SGE Visualization Parameters", "Parameters for visualizing the output SGE in a north-up orientation.")
+    visual_params.add_argument('--sge-visual', action='store_true', default=False, help='(Optional) Plot the SGE in a greyscale PNG file. (default: False)')
+    visual_params.add_argument('--out-xy', type=str, default="xy.png", help='Output for SGE visualization image (default: xy.png)')
+    visual_params.add_argument('--north-up', action='store_true', default=False, help='If enabled, the sge will be visualized in a tif image north-up (default: False).')
+    visual_params.add_argument('--out-northup-tif', type=str, default="xy_northup.tif", help='Output for SGE visualization. The prefix for the output north-up image (default: north_up.tif)')
+    visual_params.add_argument('--srs', type=str, default='EPSG:3857', help='If --north-up, define the spatial reference system (default: EPSG:3857)')
+    visual_params.add_argument('--resample', type=str, default='cubic', help='Define the resampling method (default: cubic). Options: near, bilinear, cubic, etc.')
 
+    # # Overlapping features
+    # overlapftr_params = parser.add_argument_group("Overlapping Features", "Parameters for creating overlapping features across tiles.")
+    # overlapftr_params.add_argument('--list-overlapping-features', action='store_true', default=False, help='List overlapping features across tiles (default: False)')
+    # # overlapftr_params.add_argument('--min-ct-per-ftr-tile', type=int, default=0, help='Apply a minimum count to filter overlapping feature. Filtering process will be applied if --min-ct-per-overlapftr > 0. (default: 0)')
+    # # overlapftr_params.add_argument('--colname-key-count', type=str, default=None, help='When applying --min-ct-per-ftr-tile, specify the count column name for filtering the minimum count. Defaults to --colnames-count if --colnames-count only specifies one column.')
+   
     # env params
     env_params = parser.add_argument_group("ENV Parameters", "Environment parameters for the tools")
     env_params.add_argument('--gzip', type=str, default="gzip", help='Path to gzip binary. For faster processing, use "pigz -p 4".')
@@ -193,99 +192,135 @@ def sge_stitch(_args):
     cmds.append(transform_coord_cmd)
     mm.add_target(tile_minmax, prerequisities, cmds)
 
-    if not args.generate_tile_minmax_only:
-        out_transcript_f = os.path.join(args.out_dir, args.out_transcript)
-        out_minmax_f = os.path.join(args.out_dir, args.out_minmax)
-        out_feature_f = os.path.join(args.out_dir, args.out_feature)
-        out_xy_f = os.path.join(args.out_dir, args.out_xy)
+    # sge stitch 
+    #if not args.generate_tile_minmax_only:
+    out_transcript_f = os.path.join(args.out_dir, args.out_transcript)
+    out_minmax_f = os.path.join(args.out_dir, args.out_minmax)
+    out_feature_f = os.path.join(args.out_dir, args.out_feature)
+    out_xy_f = os.path.join(args.out_dir, args.out_xy)
 
-        # create overlapping genes
-        if args.list_overlapping_genes:
-            cmds = cmd_separator([], f"Creating overlapping genes")
-            out_overlap_f = os.path.join(args.out_dir, "feature.overlapping.tsv.gz")
-            out_dist_f = os.path.join(args.out_dir, "feature.distribution.tsv.gz")
-            overlap_cmd=" ".join([f"cartloader", "feature_distribution",
-                                f"--in-tiles {' '.join(updated_ftrs)}",
-                                f"--colname-feature-name {args.colname_feature_name}",
-                                f"--colnames-count {args.colnames_count}",
-                                f"--out-overlap {out_overlap_f}",
-                                f"--out-dist {out_dist_f}"
-                            ])
-            cmds.append(overlap_cmd)
-            mm.add_target(out_overlap_f, prerequisities, cmds)
+    if "," in args.colnames_count:
+        colnames_count = args.colnames_count.split(",")
+    else:
+        colnames_count = [args.colnames_count]
 
-         # combine sges
-        cmds = cmd_separator([], f"Combining SGEs")
-        if "," in args.colnames_count:
-            colnames_count = args.colnames_count.split(",")
-        else:
-            colnames_count = [args.colnames_count]
-        combine_cmd=" ".join([f"cartloader", "sge_combine_tiles",
-                                f"--in-tiles {' '.join(updated_tiles)}",
-                                f"--in-tile-minmax {tile_minmax}",
-                                f"--out-dir {args.out_dir}",
-                                f"--out-transcript {args.out_transcript}",
-                                f"--out-minmax {args.out_minmax}",
-                                f"--out-feature {args.out_feature}",
-                                f"--colnames-count {' '.join(colnames_count)}",
-                                f"--colname-feature-name {args.colname_feature_name}",
-                                f"--colname-feature-id {args.colname_feature_id}" if args.colname_feature_id else "",
-                                f"--colname-x {args.colname_x}",
-                                f"--colname-y {args.colname_y}",
-                                f"--units-per-um {args.units_per_um}",
-                                f"--precision {args.precision}",
-                                f"--colnames-others {' '.join(args.colnames_others)}"
-                            ])
-        cmds.append(combine_cmd)
-        sge_stitch_flag = os.path.join(args.out_dir, "sge_stitch.done")
-        cmds.append(f'[ -f {out_transcript_f} ] && [ -f {out_feature_f} ] && [ -f {out_minmax_f} ] && touch {sge_stitch_flag}')
-        mm.add_target(sge_stitch_flag, prerequisities+[tile_minmax], cmds)
+        # combine sges
+    cmds = cmd_separator([], f"Combining SGEs")
+    combine_cmd=" ".join([f"cartloader", "sge_combine_tiles",
+                            f"--in-tiles {' '.join(updated_tiles)}",
+                            f"--in-tile-minmax {tile_minmax}",
+                            f"--out-dir {args.out_dir}",
+                            f"--out-transcript {args.out_transcript}",
+                            f"--out-minmax {args.out_minmax}",
+                            f"--out-feature {args.out_feature}",
+                            f"--colnames-count {' '.join(colnames_count)}",
+                            f"--colname-feature-name {args.colname_feature_name}",
+                            f"--colname-feature-id {args.colname_feature_id}" if args.colname_feature_id else "",
+                            f"--colname-x {args.colname_x}",
+                            f"--colname-y {args.colname_y}",
+                            f"--units-per-um {args.units_per_um}",
+                            f"--precision {args.precision}",
+                            f"--colnames-others {' '.join(args.colnames_others)}"
+                        ])
+    cmds.append(combine_cmd)
+    sge_stitch_flag = os.path.join(args.out_dir, "sge_stitch.done")
+    cmds.append(f'[ -f {out_transcript_f} ] && [ -f {out_feature_f} ] && [ -f {out_minmax_f} ] && touch {sge_stitch_flag}')
+    mm.add_target(sge_stitch_flag, prerequisities+[tile_minmax], cmds)
 
-        # draw xy plot for visualization
-        if args.sge_visual:
-            mm = sge_visual(mm, out_transcript_f, out_minmax_f, out_xy_f, [sge_stitch_flag], args.spatula)
-            if args.north_up:
-                out_xyn_f = os.path.join(args.out_dir, args.out_northup_tif)
-                mm = sge_visual_northup(mm, out_xy_f, out_xyn_f, out_minmax_f, [sge_stitch_flag], 
-                                        srs=args.srs, resample=args.resample, gdalwarp=args.gdalwarp, gdal_translate=args.gdal_translate)
+    # filter by density
+    if args.filter_by_density:
+        filtered_transcript_f = os.path.join(args.out_dir, f"{args.out_filtered_prefix}.transcripts.unsorted.tsv.gz")
+        filtered_minmax_f = os.path.join(args.out_dir, f"{args.out_filtered_prefix}.coordinate_minmax.tsv")
+        filtered_feature_f = os.path.join(args.out_dir, f"{args.out_filtered_prefix}.feature.lenient.tsv.gz")
+        filtered_xy_f = os.path.join(args.out_dir, f"{args.out_filtered_prefix}.xy.png")
+        
+        sge_filtered_flag = os.path.join(args.out_dir, "sge_density_filtering.done")
+        sge_filtering_dict={
+            "raw_transcript": out_transcript_f,
+            "raw_feature": out_feature_f,
+            "prereq": [sge_stitch_flag],
+            "filtered_transcript": filtered_transcript_f,
+            "filtered_minmax": filtered_minmax_f,
+            "filtered_feature": filtered_feature_f,
+            "filtered_xy": filtered_xy_f,
+            "filtered_prefix": os.path.join(args.out_dir, args.out_filtered_prefix),
+            "flag": sge_filtered_flag,
+            "gene_header": [args.colname_feature_name] if args.colname_feature_id is None else [args.colname_feature_name, args.colname_feature_id], # list
+            "count_header": args.colnames_count.split(","), #list
+            "genomic_feature": args.genomic_feature,
+            "mu_scale": args.mu_scale,
+            "radius": args.radius,
+            "quartile": args.quartile,
+            "hex_n_move": args.hex_n_move,
+            "polygon_min_size": args.polygon_min_size,
+        }
+        mm = sge_density_filtering(mm, sge_filtering_dict)
 
-        # filter by density
+    # generate feature distribution file
+    out_dist_f = os.path.join(args.out_dir, "feature.distribution.tsv.gz")    
+    cmds = cmd_separator([], f"Creating feature distribution file: {out_dist_f}")
+    overlap_cmd=" ".join([f"cartloader", "feature_distribution",
+                        f"--in-tiles {' '.join(updated_ftrs)}",
+                        f"--colname-feature-name {args.colname_feature_name}",
+                        f"--colnames-count {args.colnames_count}",
+                        f"--output {out_dist_f}"
+                    ])
+    cmds.append(overlap_cmd)
+    mm.add_target(out_dist_f, prerequisities, cmds)
+
+    # # create overlapping genes
+    # if args.list_overlapping_features:
+    #     if "," in args.min_ct_per_ftr_tile:
+    #         min_ct_per_ftr_tile = args.min_ct_per_ftr_tile.split(",")
+    #     else:
+    #         min_ct_per_ftr_tile = [args.min_ct_per_ftr_tile]
+    #     for min_ct in min_ct_per_ftr_tile:
+    #         min_ct = int(min_ct)
+    #         out_overlap_f = os.path.join(args.out_dir, ("feature.overlapping.tsv.gz" if min_ct == 0 else f"feature.overlapping.min{min_ct}.tsv.gz"))
+    #         out_dist_f = os.path.join(args.out_dir, "feature.distribution.tsv.gz")    
+    #         cmds = cmd_separator([], f"Creating overlapping features: {out_overlap_f}") 
+    #         overlap_cmd=" ".join([f"cartloader", "feature_overlapping",
+    #                             f"--in-tiles {' '.join(updated_ftrs)}",
+    #                             f"--colname-feature-name {args.colname_feature_name}",
+    #                             f"--colnames-count {args.colnames_count}",
+    #                             f"--out-overlap {out_overlap_f}",
+    #                             f"--out-dist {out_dist_f}",
+    #                             f"--min-ct-per-ftr-tile {min_ct}" if min_ct > 0 else "",
+    #                             f"--colname-key-count {args.colname_key_count}" if min_ct > 0 and args.colname_key_count else "",
+    #                         ])
+    #         cmds.append(overlap_cmd)
+    #         mm.add_target(out_overlap_f, prerequisities, cmds)
+
+    #         if args.filter_by_density:
+    #             filtered_overlap_f = os.path.join(args.out_dir, f"{args.out_filtered_prefix}.feature.overlapping.tsv.gz" if min_ct == 0 else f"{args.out_filtered_prefix}.feature.overlapping.min{min_ct}.tsv.gz")
+    #             cmds = cmd_separator([], f"Creating filtered overlapping features: {filtered_overlap_f}")
+                
+    #             filtered_overlap_cmd=" ".join([f"cartloader", "feature_overlapping",
+    #                             f"--in-tiles {' '.join(updated_ftrs)}",
+    #                             f"--in-feature {filtered_feature_f}",
+    #                             f"--colname-feature-name {args.colname_feature_name}",
+    #                             f"--colnames-count {args.colnames_count}",
+    #                             f"--out-overlap {filtered_overlap_f}",
+    #                             f"--min-ct-per-ftr-tile {min_ct}" if min_ct > 0 else "",
+    #                             f"--colname-key-count {args.colname_key_count}" if min_ct > 0 and args.colname_key_count else "",
+    #                         ])
+    #             mm.add_target(filtered_overlap_f, prerequisities+[sge_filtered_flag], [filtered_overlap_cmd])
+
+    # draw xy plot for visualization
+    if args.sge_visual:
+        mm = sge_visual(mm, out_transcript_f, out_minmax_f, out_xy_f, [sge_stitch_flag], args.spatula)
+        if args.north_up:
+            out_xyn_f = os.path.join(args.out_dir, args.out_northup_tif)
+            mm = sge_visual_northup(mm, out_xy_f, out_xyn_f, out_minmax_f, [sge_stitch_flag], 
+                                    srs=args.srs, resample=args.resample, gdalwarp=args.gdalwarp, gdal_translate=args.gdal_translate)
+
         if args.filter_by_density:
-
-            filtered_transcript_f = os.path.join(args.out_dir, f"{args.out_filtered_prefix}.transcripts.unsorted.tsv.gz")
-            filtered_minmax_f = os.path.join(args.out_dir, f"{args.out_filtered_prefix}.coordinate_minmax.tsv")
-            filtered_feature_f = os.path.join(args.out_dir, f"{args.out_filtered_prefix}.feature.lenient.tsv.gz")
-            filtered_xy_f = os.path.join(args.out_dir, f"{args.out_filtered_prefix}.xy.png")
-            
-            sge_filtered_flag = os.path.join(args.out_dir, "sge_density_filtering.done")
-            sge_filtering_dict={
-                "raw_transcript": out_transcript_f,
-                "raw_feature": out_feature_f,
-                "prereq": [sge_stitch_flag],
-                "filtered_transcript": filtered_transcript_f,
-                "filtered_minmax": filtered_minmax_f,
-                "filtered_feature": filtered_feature_f,
-                "filtered_xy": filtered_xy_f,
-                "filtered_prefix": os.path.join(args.out_dir, args.out_filtered_prefix),
-                "flag": sge_filtered_flag,
-                "gene_header": [args.colname_feature_name] if args.colname_feature_id is None else [args.colname_feature_name, args.colname_feature_id], # list
-                "count_header": args.colnames_count.split(","), #list
-                "genomic_feature": args.genomic_feature,
-                "mu_scale": args.mu_scale,
-                "radius": args.radius,
-                "quartile": args.quartile,
-                "hex_n_move": args.hex_n_move,
-                "polygon_min_size": args.polygon_min_size,
-            }
-            mm = sge_density_filtering(mm, sge_filtering_dict)
-
-        if args.filter_by_density and args.sge_visual:
             mm = sge_visual(mm, filtered_transcript_f, filtered_minmax_f, filtered_xy_f, [sge_filtered_flag], args.spatula)
             if args.north_up:
                 filtered_xyn_f= os.path.join(args.out_dir, f"{args.out_filtered_prefix}.{args.out_northup_tif}")
                 mm = sge_visual_northup(mm, filtered_xy_f, filtered_xyn_f, filtered_minmax_f, [sge_filtered_flag],
                                         srs=args.srs, resample=args.resample, gdalwarp=args.gdalwarp, gdal_translate=args.gdal_translate)
-                    
+        
     # write makefile
     if len(mm.targets) == 0:
         logging.error("There is no target to run. Please make sure that at least one run option was turned on")

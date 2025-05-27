@@ -48,21 +48,24 @@ def parse_arguments(_args):
 
     # AUX gene-filtering params
     aux_ftrfilter_params = parser.add_argument_group( "Feature Customizing Auxiliary Parameters",
-                                                    "Auxiliary parameters for customizing features in FICTURE analysis without modifying the original input feature TSV file. This ensures the original feature TSV file is retained in the output JSON file for downstream processing .")
+                                                      "Auxiliary parameters for customizing features in FICTURE analysis without modifying the original input feature TSV file. This ensures the original feature TSV file is retained in the output JSON file for downstream processing .")
     # given the input sge should be standardized, the csv-delim, csv-colname-feature-name, ftr-delim, ftr-colname-feature-name are not necessary
-    aux_ftrfilter_params.add_argument('--out-ficture-feature', type=str, default="features.ficture.tsv.gz", help='File name for the output TSV file of feature used in FICTURE analysis (default: None)')
-    aux_ftrfilter_params.add_argument('--include-feature-list', type=str, default=None, help='A file containing a list of input genes to be included (feature name of IDs) (default: None)')
-    aux_ftrfilter_params.add_argument('--exclude-feature-list', type=str, default=None, help='A file containing a list of input genes to be excluded (feature name of IDs) (default: None)')
-    aux_ftrfilter_params.add_argument('--include-feature-substr', type=str, default=None, help='A substring of feature/gene names to be included (default: None)')
-    aux_ftrfilter_params.add_argument('--exclude-feature-substr', type=str, default=None, help='A substring of feature/gene names to be excluded (default: None)')
+    aux_ftrfilter_params.add_argument('--filter-by-overlapping-features', action='store_true', default=False, help='When the input SGE is stitched SGE, it is optional to filter the features in FICTURE analysis by only shared features')
+    aux_ftrfilter_params.add_argument('--in-feature-dist', type=str, default=None, help='Path to the input feature distribution file. This file is used to identify overlapping features for FICTURE analysis. (default: None)')
+    aux_ftrfilter_params.add_argument('--min-ct-per-ftr-tile', type=int, default=0, help='Apply a minimum count to filter overlapping feature. Filtering process will be applied if --min-ct-per-overlapftr > 0. (default: 0)')
+    #aux_ftrfilter_params.add_argument('--out-feature-ficture', type=str, default="features.ficture.tsv.gz", help='File name for the output TSV file of feature used in FICTURE analysis (default: None)')
+    # aux_ftrfilter_params.add_argument('--include-feature-list', type=str, default=None, help='A file containing a list of input genes to be included (feature name of IDs) (default: None)')
+    # aux_ftrfilter_params.add_argument('--exclude-feature-list', type=str, default=None, help='A file containing a list of input genes to be excluded (feature name of IDs) (default: None)')
+    # aux_ftrfilter_params.add_argument('--include-feature-substr', type=str, default=None, help='A substring of feature/gene names to be included (default: None)')
+    # aux_ftrfilter_params.add_argument('--exclude-feature-substr', type=str, default=None, help='A substring of feature/gene names to be excluded (default: None)')
     aux_ftrfilter_params.add_argument('--include-feature-regex', type=str, default=None, help='A regex pattern of feature/gene names to be included (default: None)')
     aux_ftrfilter_params.add_argument('--exclude-feature-regex', type=str, default=None, help='A regex pattern of feature/gene names to be excluded (default: None)')
     # type regex
-    aux_ftrfilter_params.add_argument('--include-feature-type-regex', type=str, default=None, help='A regex pattern of feature/gene type to be included (default: None). When --include-feature-type-regex, use --colname-feature-type or --feature-type-ref to provide gene type information.') # (e.g. protein_coding|lncRNA)
-    aux_ftrfilter_params.add_argument('--colname-feature-type', type=str, default=None, help='Column name in the --in-transcript that has gene type information (default: None). ')
-    aux_ftrfilter_params.add_argument('--feature-type-ref', type=str, default=None, help='Specify the path to a tab-separated reference file to provide gene type information for each each per row (default: None)')
-    aux_ftrfilter_params.add_argument('--feature-type-ref-colidx-name', type=str, default=None, help='Column index for gene name in the reference file (default: None).')
-    aux_ftrfilter_params.add_argument('--feature-type-ref-colidx-type', type=str, default=None, help='Column index for gene type in the reference file (default: None).')
+    # aux_ftrfilter_params.add_argument('--include-feature-type-regex', type=str, default=None, help='A regex pattern of feature/gene type to be included (default: None). When --include-feature-type-regex, use --colname-feature-type or --feature-type-ref to provide gene type information.') # (e.g. protein_coding|lncRNA)
+    # aux_ftrfilter_params.add_argument('--colname-feature-type', type=str, default=None, help='Column name in the --in-transcript that has gene type information (default: None). ')
+    # aux_ftrfilter_params.add_argument('--feature-type-ref', type=str, default=None, help='Specify the path to a tab-separated reference file to provide gene type information for each each per row (default: None)')
+    # aux_ftrfilter_params.add_argument('--feature-type-ref-colidx-name', type=str, default=None, help='Column index for gene name in the reference file (default: None).')
+    # aux_ftrfilter_params.add_argument('--feature-type-ref-colidx-type', type=str, default=None, help='Column index for gene type in the reference file (default: None).')
 
     # aux params
     aux_params = parser.add_argument_group("Auxiliary Parameters", "Auxiliary parameters (using default is recommended)")
@@ -77,27 +80,27 @@ def parse_arguments(_args):
     aux_params.add_argument('--min-ct-per-unit-hexagon', type=int, default=50, help='Minimum count per hexagon in hexagon segmentation in FICTURE compatible format (default: 50)')
     # minibatch
     aux_params.add_argument('--minibatch-size', type=int, default=500, help='Batch size used in minibatch processing (default: 500)')
-    aux_params.add_argument('--minibatch-buffer', type=int, default=30, help='Batch buffer used in minibatch processing (default: 30)')
+    #aux_params.add_argument('--minibatch-buffer', type=int, default=30, help='Batch buffer used in minibatch processing (default: 30)')
     # train
     aux_params.add_argument('--train-epoch', type=int, default=2, help='Training epoch for LDA model (default: 2)')
-    aux_params.add_argument('--train-epoch-id-len', type=int, default=2, help='Training epoch ID length (default: 2)')
-    aux_params.add_argument('--lda-rand-init', type=int, default=10, help='Number of random initialization during model training (default: 10)')
-    aux_params.add_argument('--lda-plot-um-per-pixel', type=float, default=1, help='Image resolution for LDA plot (default: 1)')
+    #aux_params.add_argument('--train-epoch-id-len', type=int, default=2, help='Training epoch ID length (default: 2)')
+    #aux_params.add_argument('--lda-rand-init', type=int, default=10, help='Number of random initialization during model training (default: 10)')
+    #aux_params.add_argument('--lda-plot-um-per-pixel', type=float, default=1, help='Image resolution for LDA plot (default: 1)')
     # fit
     aux_params.add_argument('--fit-width',  type=str, default=None, help='Hexagon flat-to-flat width (in um) during model fitting (default: same to train-width)')
-    aux_params.add_argument('--fit-precision', type=float, default=2, help='Output precision of model fitting (default: 2)')
+    #aux_params.add_argument('--fit-precision', type=float, default=2, help='Output precision of model fitting (default: 2)')
     aux_params.add_argument('--min-ct-per-unit-fit', type=int, default=50, help='Minimum count per hexagon unit during model fitting (default: 20)')
     aux_params.add_argument('--fit-plot-um-per-pixel', type=float, default=1, help='Image resolution for fit coarse plot (default: 1)')   # in Scopeflow, this is set to 2
     # decode
-    aux_params.add_argument('--decode-top-k', type=int, default=3, help='Top K columns to output in pixel-level decoding results (default: 3)')
-    aux_params.add_argument('--decode-block-size', type=int, default=100, help='Block size for pixel decoding output (default: 100)')
-    aux_params.add_argument('--decode-scale', type=int, default=100, help='Scale parameters for pixel decoding output (default: 100)')
-    aux_params.add_argument('--decode-precision', type=float, default=0.01, help='Precision of pixel level decoding (default: 0.01)')
-    aux_params.add_argument('--decode-plot-um-per-pixel', type=float, default=0.5, help='Image resolution for pixel decoding plot (default: 0.5)')
+    #aux_params.add_argument('--decode-top-k', type=int, default=3, help='Top K columns to output in pixel-level decoding results (default: 3)')
+    #aux_params.add_argument('--decode-block-size', type=int, default=100, help='Block size for pixel decoding output (default: 100)')
+    #aux_params.add_argument('--decode-scale', type=int, default=100, help='Scale parameters for pixel decoding output (default: 100)')
+    #aux_params.add_argument('--decode-precision', type=float, default=0.01, help='Precision of pixel level decoding (default: 0.01)')
+    #aux_params.add_argument('--decode-plot-um-per-pixel', type=float, default=0.5, help='Image resolution for pixel decoding plot (default: 0.5)')
     # merge_by_pixel
-    aux_params.add_argument('--merge-max-dist-um', type=float, default=0.1, help='Maximum distance in um for merging pixel-level decoding results (default: 0.1)')
-    aux_params.add_argument('--merge-max-k', type=int, default=1, help='Maximum number of K columns to output in merged pixel-level decoding results (default: 1)')
-    aux_params.add_argument('--merge-max-p', type=int, default=1, help='Maximum number of P columns to output in merged pixel-level decoding results (default: 1)')
+    # aux_params.add_argument('--merge-max-dist-um', type=float, default=0.1, help='Maximum distance in um for merging pixel-level decoding results (default: 0.1)')
+    # aux_params.add_argument('--merge-max-k', type=int, default=1, help='Maximum number of K columns to output in merged pixel-level decoding results (default: 1)')
+    # aux_params.add_argument('--merge-max-p', type=int, default=1, help='Maximum number of P columns to output in merged pixel-level decoding results (default: 1)')
     # color map
     aux_params.add_argument('--cmap-file', type=str, required=True, help='Define the path to the fixed color map (default: <cartloader_dir>/assets/fixed_color_map_60.tsv)')
     # others parameters shared across steps
@@ -213,31 +216,55 @@ def run_ficture2(_args):
     ficture2de = args.python + " " + os.path.join(args.ficture2, "ext/py/de_bulk.py")
     ficture2report = args.python + " " + os.path.join(args.ficture2, "ext/py/factor_report.py")
 
-    # feature customize when enabled: 1) the --in-feature-ficture is provided; 2) feature filtering conditions are provided.
+    # feature customize when enabled 
     if args.in_feature_ficture is not None:
         in_feature_ficture = args.in_feature_ficture
-    elif any([args.include_feature_list, args.exclude_feature_list, args.include_feature_substr, args.exclude_feature_substr, args.include_feature_regex, args.exclude_feature_regex, args.include_feature_type_regex]):
-        in_feature_ficture = os.path.join(args.out_dir, args.out_feature_ficture)
-        in_feature_ficture_record = os.path.join(args.out_dir, args.out_feature_ficture.replace(".tsv.gz", ".record.tsv"))
-        cmds = cmd_separator([], f"Customizing features for FICTURE analysis...")
-        cmd = " ".join(["cartloader feature_filtering ",
-                                    f"--in-csv {args.in_feature}",
-                                    f"--out-csv {in_feature_ficture}",
-                                    f"--out-record  {in_feature_ficture_record}",
-                                    f"--include-feature-list {args.include_feature_list}" if args.include_feature_list is not None else "",
-                                    f"--exclude-feature-list {args.exclude_feature_list}" if args.exclude_feature_list is not None else "",
-                                    f"--include-feature-substr '{args.include_feature_substr}'" if args.include_feature_substr is not None else "",
-                                    f"--exclude-feature-substr '{args.exclude_feature_substr}'" if args.exclude_feature_substr is not None else "",
-                                    f"--include-feature-regex '{args.include_feature_regex}'" if args.include_feature_regex is not None else "",
-                                    f"--exclude-feature-regex '{args.exclude_feature_regex}'" if args.exclude_feature_regex is not None else "",
-                                    f"--include-feature-type-regex {args.include_feature_type_regex} --feature-type-ref {args.in_transcript} --feature-type-ref-colname-name gene --feature-type-ref-colname-type {args.colname_feature_type}" if args.include_feature_type_regex is not None and args.colname_feature_type is not None else "",
-                                    f"--include-feature-type-regex {args.include_feature_type_regex} --feature-type-ref {args.feature_type_ref} --feature-type-ref-colidx-name {args.feature_type_ref_colidx_name}  --feature-type-ref-colidx-type {args.feature_type_ref_colidx_type}" if args.include_feature_type_regex is not None and args.feature_type_ref is not None else "",
-                                    f"--log"
-                                    ])
-        cmds.append(cmd)
-        mm.add_target(in_feature_ficture, [args.in_cstranscript, args.in_feature], cmds)
     else:
         in_feature_ficture = args.in_feature
+
+    if args.filter_by_overlapping_features:
+        assert os.path.exists(args.in_feature_dist), f"Provide a valid input feature distribution file by --in-feature-dist"
+        #cmds = cmd_separator([], f"Customizing features for FICTURE analysis: limited to shared features and features with a minimal count in the stitched SGE...")
+        overlapping_feature = os.path.join(args.out_dir, "feature.overlapping.tsv.gz") if args.min_ct_per_ftr_tile == 0 else os.path.join(args.out_dir, f"feature.overlapping.min{args.min_ct_per_ftr_tile}.tsv.gz")
+        cmd = " ".join(["cartloader feature_overlapping",
+                                    f"--in-dist {args.in_feature_dist}", 
+                                    f"--in-feature {in_feature_ficture}",
+                                    f"--output {overlapping_feature}", 
+                                    f"--min-ct-per-ftr-tile {args.min_ct_per_ftr_tile}",
+                                    f"--colname-count {args.colname_count}",
+                                    f"--log"
+                                    ])
+        # execute the command
+        if os.path.exists(overlapping_feature):
+            print(f"Warning: {overlapping_feature} already exists. Skipping the command.")
+        else:
+            os.system(cmd)
+        #cmds.append(cmd)
+        #mm.add_target(overlapping_feature, [args.in_feature_dist, in_feature_ficture], cmds)
+        in_feature_ficture = overlapping_feature
+    
+    # if any([args.include_feature_list, args.exclude_feature_list, args.include_feature_substr, args.exclude_feature_substr, args.include_feature_regex, args.exclude_feature_regex, args.include_feature_type_regex]):
+    #     in_feature_ficture = os.path.join(args.out_dir, args.out_feature_ficture)
+    #     in_feature_ficture_record = os.path.join(args.out_dir, args.out_feature_ficture.replace(".tsv.gz", ".record.tsv"))
+    #     cmds = cmd_separator([], f"Customizing features for FICTURE analysis...")
+    #     cmd = " ".join(["cartloader feature_filtering",
+    #                                 f"--in-csv {in_feature_customize}", 
+    #                                 f"--out-csv {in_feature_ficture}", 
+    #                                 f"--out-record  {in_feature_ficture_record}",
+    #                                 f"--include-feature-list {args.include_feature_list}" if args.include_feature_list is not None else "",
+    #                                 f"--exclude-feature-list {args.exclude_feature_list}" if args.exclude_feature_list is not None else "",
+    #                                 f"--include-feature-substr '{args.include_feature_substr}'" if args.include_feature_substr is not None else "",
+    #                                 f"--exclude-feature-substr '{args.exclude_feature_substr}'" if args.exclude_feature_substr is not None else "",
+    #                                 f"--include-feature-regex '{args.include_feature_regex}'" if args.include_feature_regex is not None else "",
+    #                                 f"--exclude-feature-regex '{args.exclude_feature_regex}'" if args.exclude_feature_regex is not None else "",
+    #                                 f"--include-feature-type-regex {args.include_feature_type_regex} --feature-type-ref {args.in_transcript} --feature-type-ref-colname-name gene --feature-type-ref-colname-type {args.colname_feature_type}" if args.include_feature_type_regex is not None and args.colname_feature_type is not None else "",
+    #                                 f"--include-feature-type-regex {args.include_feature_type_regex} --feature-type-ref {args.feature_type_ref} --feature-type-ref-colidx-name {args.feature_type_ref_colidx_name}  --feature-type-ref-colidx-type {args.feature_type_ref_colidx_type}" if args.include_feature_type_regex is not None and args.feature_type_ref is not None else "",
+    #                                 f"--log"
+    #                                 ]) 
+    #     cmds.append(cmd)
+    #     mm.add_target(in_feature_ficture, [args.in_cstranscript, in_feature_customize], cmds)
+    # else:
+    #     in_feature_ficture = in_feature_customize
 
     # out files
     if args.out_json is None:

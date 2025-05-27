@@ -25,26 +25,36 @@ aux_env_args = {
         "north_up": ["gdal_translate", "gdalwarp"],
         "hist_stitch": ["gdal_translate", "gdalbuildvrt"],
         "run_ficture": ['bgzip', "tabix", "gzip", "sort", "sort_mem"],
-        "run_cartload_join": ['pmtiles', 'gdal_translate', 'gdaladdo', 'tippecanoe', 'spatula'],
+        "run_cartload": ['gzip', 'pmtiles', 'gdal_translate', 'gdaladdo', 'tippecanoe', 'spatula'],
         "run_fig2pmtiles": ['pmtiles', 'gdal_translate', 'gdaladdo'],
         "upload_aws": ['aws']
 }
+
+aux_env_args["run_ficture1"]= aux_env_args["run_ficture"]
+aux_env_args["run_ficture2"]= aux_env_args["run_ficture"] + ["ficture2", "python", "spatula"]
 
 aux_params_args = {
     "sge_stitch": ["colname_feature_name", "colname_feature_id", "colname_x", "colname_y"] + ["radius", "quartile", "hex_n_move", "polygon_min_size"],
     "sge_convert": [item for sublist in aux_sge_args.values() for item in sublist] + ["radius", "quartile", "hex_n_move", "polygon_min_size"],
     "north_up": ["srs", "resample"],
     "run_ficture": [ 'anchor_res', 'radius_buffer', 
-                     'hexagon_n_move', 'hexagon_precision', 'min_ct_per_unit_hexagon',
-                     'minibatch_size', 'minibatch_buffer',
-                     'train_epoch', 'train_epoch_id_len', 'lda_rand_init', 'lda_plot_um_per_pixel',
-                     'fit_width', 'fit_precision', 'min_ct_per_unit_fit', 'fit_plot_um_per_pixel',
-                     'decode_top_k', 'decode_block_size', 'decode_scale', 'decode_precision', 'decode_plot_um_per_pixel',
-                     'merge_max_dist_um', 'merge_max_k', 'merge_max_p',
+                     'min_ct_per_unit_hexagon', "min_ct_per_unit_train",
+                     'minibatch_size', 
+                     'train_epoch',
+                     'fit_width', 
                      'min_ct_per_feature', 'de_max_pval', 'de_min_fold',
-                     "include_feature_list", "exclude_feature_list", "include_feature_substr", "exclude_feature_substr", "include_feature_regex", "exclude_feature_regex", "include_feature_type_regex", "feature_type_ref", "feature_type_ref_colidx_name", "feature_type_ref_colidx_type"]
+                     "include_feature_regex", "exclude_feature_regex"]
     }
 
+aux_params_args["run_ficture1"] = aux_params_args["run_ficture"] + ['hexagon_n_move', 'hexagon_precision', 
+                                                                    'minibatch_buffer',
+                                                                    'train_epoch_id_len', 'lda_rand_init', 'lda_plot_um_per_pixel',
+                                                                    'fit_precision',  'min_ct_per_unit_fit', 'fit_plot_um_per_pixel',
+                                                                    'decode_top_k', 'decode_block_size', 'decode_scale', 'decode_precision', 'decode_plot_um_per_pixel',
+                                                                    'merge_max_dist_um', 'merge_max_k', 'merge_max_p',
+                                                                    "include_feature_list", "exclude_feature_list", "include_feature_type_regex", "feature_type_ref", "feature_type_ref_colidx_name", "feature_type_ref_colidx_type"
+                                                                   ]
+aux_params_args["run_ficture2"] = aux_params_args["run_ficture"]
 
 hist_keys = [ "path",
             "transform", "lower_thres_quantile", "upper_thres_quantile", "level", "colorize",
@@ -52,7 +62,6 @@ hist_keys = [ "path",
             "rotate", "flip"
     ]
 hist_keys_tiles =  ["row", "col"] + [x for x in hist_keys if x not in ["transform", "lower_thres_quantile", "upper_thres_quantile", "level", "colorize"]]
-
 
 def merge_config(base_config, args, keys, prefix=None):
     """
@@ -68,6 +77,7 @@ def merge_config(base_config, args, keys, prefix=None):
     config = base_config.get(prefix, {}).copy() if prefix else base_config.copy()
     for key in keys:
         val = getattr(args, f"{prefix}_{key}" if prefix else key, None)
+        #print(f"{prefix}_{key}" if prefix else key)
         if isinstance(val, str) and val is not None:
             config[key] = val
         elif isinstance(val, list) and len(val) > 0:
@@ -88,7 +98,6 @@ def cmd_sge_stitch(sgeinfo, args, env, generate_tile_minmax_only=False):
         f"--n-jobs {args.n_jobs}" if args.n_jobs else "",
         f"--restart" if args.restart else "",
         "--generate-tile-minmax-only" if generate_tile_minmax_only else "",
-        "--list-overlapping-genes",
         f"--filter-by-density --out-filtered-prefix {sgeinfo['filtered_prefix']} --genomic-feature {sgeinfo['colname_count']}" if sgeinfo['filter_by_density'] else "",
         f"--north-up --out-northup-tif {sgeinfo['xy_ntif']}" if args.north_up else "",
     ])
@@ -176,7 +185,7 @@ def define_sge2fn(filter_by_density, filtered_prefix):
     }
     return sge2fn
 
-def define_sge_arg(sgefn, sge_dir, fic_dir):
+def define_sge_arg(sgefn, sge_dir, fic_dir, fic_v):
     # if sge_dir is None:
     #     sge_dir = run_dir
     tsv = os.path.join(sge_dir, sgefn["tsv"])
@@ -185,7 +194,10 @@ def define_sge_arg(sgefn, sge_dir, fic_dir):
     
     cstsv = os.path.join(fic_dir, sgefn["cstsv"])
 
-    sge_arg=f"--in-transcript {tsv} --in-feature {ftr} --in-minmax {minmax} --in-cstranscript {cstsv}"
+    if fic_v == "1":
+        sge_arg=f"--in-transcript {tsv} --in-feature {ftr} --in-minmax {minmax} --in-cstranscript {cstsv}"
+    else:
+        sge_arg=f"--in-transcript {tsv} --in-feature {ftr} --in-minmax {minmax}"
     return sge_arg
 
 def link_sge_to_fict(sge_fn, sge_dir, fic_dir):
@@ -204,20 +216,22 @@ def link_sge_to_fict(sge_fn, sge_dir, fic_dir):
                 dst2src[dst]=src
     return dst2src
 
-def cmd_run_ficture(run_i, args, env):
+def cmd_run_ficture(run_i, fic_v, args, env):
     ficture_cmds = []
     ext_path = run_i["ext_path"]
     ext_id   = run_i["ext_id"]
     
     # makefile 
-    mkbn = "run_ficture" if ext_path is None else f"run_ficture_{ext_id}"
+    mkbn = f"run_ficture{fic_v}" if ext_path is None else f"run_ficture{fic_v}_{ext_id}"
     mkbn = f"{mkbn}_{args.mk_id}" if args.mk_id is not None else mkbn
 
-    fic_dir=os.path.join(run_i["run_dir"], "ficture")
+    fic_dir=os.path.join(run_i["run_dir"], "ficture") if fic_v == "1" else os.path.join(run_i["run_dir"], "ficture2")
 
     # sge
     sge2fn = define_sge2fn(run_i["filter_by_density"], run_i["filtered_prefix"])
-    sge_arg = define_sge_arg(sge2fn, run_i["sge_dir"], fic_dir)
+    sge_arg = define_sge_arg(sge2fn, run_i["sge_dir"], fic_dir, fic_v)
+    in_dist = os.path.join(run_i["sge_dir"], "feature.distribution.tsv.gz")
+
     # * check files
     if not args.sge_convert and not args.sge_stitch:
         if not args.lenient:
@@ -226,79 +240,119 @@ def cmd_run_ficture(run_i, args, env):
     # * link files from sge to ficture
     if run_i["sge_dir"] is not None and run_i["sge_dir"] != fic_dir:
         sge_dst2src = link_sge_to_fict(sge2fn, run_i["sge_dir"], fic_dir)
-    
-    # if sge_dst2src is not an empty dict, add the files to the command
+    # * if sge_dst2src is not an empty dict, add the files to the command
     if sge_dst2src:
         for dst, src in sge_dst2src.items():
             ficture_cmds.append(f"ln -s {src} {dst}")
     
-    # cmap
-    if run_i["cmap"] is None:
-        cmap_arg = ""
-    else:
-        if not args.lenient:
-            scheck_file(run_i["cmap"])
-        cmap_arg = f"--cmap-static --static-cmap-file {run_i['cmap']}"
-
-    # model & parameters
-    assert run_i["train_width"] is not None, "Error: When --run-ficture, --train-width is required"
+    # key params
+    assert run_i["train_width"] is not None, "Error: When --run-ficture1 or --run-ficture2, provide width"
+    assert not (fic_v == "2" and ext_path), "Error: --run-ficture2 does not support --ext-path"
     if ext_path:
         assert ext_id is not None, "Error: --ext-id is required when running ficture with an external model"
         assert os.path.exists(ext_path), f"Error: --ext-path is defined with a missing file: {ext_path}"
     else:
-        assert run_i["n_factor"] is not None, "Error: --n-factor is required when running --run-ficture with LDA"
+        assert run_i["n_factor"] is not None, "Error: --n-factor is required when running --run-ficture1/--run-ficture2 with LDA"
+
+    if fic_v == "1":
+        # cmap
+        if run_i["cmap"] is None:
+            cmap_arg = ""
+        else:
+            if not args.lenient:
+                scheck_file(run_i["cmap"])
+            cmap_arg = f"--cmap-static --static-cmap-file {run_i['cmap']}"
+        # cmd
+        ficture_cmd = " ".join([
+            "cartloader", "run_ficture",
+            f"--makefn {mkbn}.mk",
+            f"--out-dir {fic_dir}",
+            sge_arg,
+            f"--major-axis {run_i['major_axis']}",
+            f"--colname-count {run_i['colname_count']}" if run_i['colname_count'] else "",
+            f"{'--init-ext' if ext_path and args.init_ext else '--main-ext' if ext_path else '--main'}",
+            f"--ext-path {ext_path}" if ext_path else "",
+            f"--ext-id {ext_id}" if ext_path else "",
+            "--copy-ext-model" if ext_path and run_i["copy_ext_model"] else "",
+            f"--n-factor {run_i['n_factor']}" if ext_path is None else "",
+            f"--train-width {run_i['train_width']}",
+            "--skip-coarse-report" if args.skip_coarse_report else "",
+            "--segment-10x" if args.segment_10x else "",
+            f"--filter-by-overlapping-features --in-feature-dist {in_dist}" if run_i["filter_by_overlapping_features"] else "",
+            f"--min-ct-per-ftr-tile {run_i['min_ct_per_ftr_tile']}" if run_i["filter_by_overlapping_features"] and run_i["min_ct_per_ftr_tile"] > 0 else "",
+            cmap_arg,
+            f"--n-jobs {args.n_jobs}" if args.n_jobs else "",
+            f"--restart" if args.restart else "",
+            f"--threads {args.threads}"
+        ])
+    else:
+        # cmap (TODO: currently ficture2 requires a fixed cmap file)
+        if not args.lenient:
+            scheck_file(run_i["cmap"])
+        cmap_arg = f"--cmap-file {run_i['cmap']}" 
+        ficture_cmd = " ".join([
+            "cartloader", "run_ficture2",
+            f"--makefn {mkbn}.mk",
+            f"--out-dir {fic_dir}",
+            sge_arg,
+            f"--colname-count {run_i['colname_count']}" if run_i['colname_count'] else "",
+            "--main",
+            f"--width {run_i['train_width']}",
+            f"--n-factor {run_i['n_factor']}",
+            f"--filter-by-overlapping-features --in-feature-dist {in_dist}" if run_i["filter_by_overlapping_features"] else "",
+            f"--min-ct-per-ftr-tile {run_i['min_ct_per_ftr_tile']}" if run_i["filter_by_overlapping_features"] and run_i["min_ct_per_ftr_tile"] > 0 else "",
+            cmap_arg,
+            f"--n-jobs {args.n_jobs}" if args.n_jobs else "",
+            f"--restart" if args.restart else "",
+            f"--threads {args.threads}"
+        ])
     
-    # cmd
-    ficture_cmd = " ".join([
-        "cartloader", "run_ficture",
-        f"--makefn {mkbn}.mk",
-        f"--out-dir {fic_dir}",
-        sge_arg,
-        f"--major-axis {run_i['major_axis']}",
-        f"--colname-count {run_i['colname_count']}" if run_i['colname_count'] else "",
-        f"{'--init-ext' if ext_path and args.init_ext else '--main-ext' if ext_path else '--main'}",
-        f"--ext-path {ext_path}" if ext_path else "",
-        f"--ext-id {ext_id}" if ext_path else "",
-        "--copy-ext-model" if ext_path and run_i["copy_ext_model"] else "",
-        f"--n-factor {run_i['n_factor']}" if ext_path is None else "",
-        f"--train-width {run_i['train_width']}",
-        "--skip-coarse-report" if args.skip_coarse_report else "",
-        "--segment-10x" if args.segment_10x else "",
-        cmap_arg,
-        f"--n-jobs {args.n_jobs}" if args.n_jobs else "",
-        f"--restart" if args.restart else "",
-        f"--threads {args.threads}"
-    ])
-    # add aux tools
-    ficture_cmd = add_param_to_cmd(ficture_cmd, env, aux_env_args["run_ficture"])
+    # add aux env/tools
+    ficture_cmd = add_param_to_cmd(ficture_cmd, env, aux_env_args[f"run_ficture{fic_v}"])
+    print(fic_v)
+    print(ficture_cmd)
     # add aux parameters
-    ficture_aug = merge_config(run_i, args, aux_params_args["run_ficture"], prefix=None)  # merge auxiliary parameters
-    ficture_cmd = add_param_to_cmd(ficture_cmd, ficture_aug, aux_params_args["run_ficture"])
+    ficture_aug = merge_config(run_i, args, aux_params_args[f"run_ficture{fic_v}"], prefix=None)  # merge auxiliary parameters
+    ficture_cmd = add_param_to_cmd(ficture_cmd, ficture_aug, aux_params_args[f"run_ficture{fic_v}"])
 
     ficture_cmds.append(ficture_cmd)
     return ficture_cmds
 
-def cmd_run_cartload_join(run_i, args, env):
-    mkbn="run_cartload_join" if args.mk_id is None else f"run_cartload_join_{args.mk_id}"
+def cmd_run_cartload(run_i, cartl_v, args, env):
 
-    fic_dir = os.path.join(run_i["run_dir"], "ficture")
-    cartload_dir = os.path.join(run_i["run_dir"], "cartload")
+    mkbn=f"run_cartload{cartl_v}" if args.mk_id is None else f"run_cartload{cartl_v}_{args.mk_id}"
+
+    fic_dir = os.path.join(run_i["run_dir"], ("ficture" if cartl_v == "1" else "ficture2"))
+    cartload_dir = os.path.join(run_i["run_dir"], ("cartload" if cartl_v == "1" else "cartload2"))
     os.makedirs(cartload_dir, exist_ok=True)
-    cartload_cmd=" ".join([
-        "cartloader", "run_cartload_join", 
-        f"--makefn {mkbn}.mk",
-        f"--fic-dir {fic_dir}", 
-        f"--out-dir {cartload_dir}",
-        f"--id {run_i['run_id']}",
-        f"--major-axis {run_i['major_axis']}",
-        f"--colname-count {run_i['colname_count']}" if run_i['colname_count'] else "",
-        f"--n-jobs {args.n_jobs}" if args.n_jobs else "",
-        f"--restart" if args.restart else "",
-        f"--threads {args.threads}"
-    ])
-    # add aux tools
-    cartload_cmd = add_param_to_cmd(cartload_cmd, env, aux_env_args["run_cartload_join"], underscore2dash=False)
 
+    if cartl_v == "1":
+        cartload_cmd=" ".join([
+            "cartloader", "run_cartload_join", 
+            f"--makefn {mkbn}.mk",
+            f"--fic-dir {fic_dir}", 
+            f"--out-dir {cartload_dir}",
+            f"--id {run_i['run_id']}",
+            f"--major-axis {run_i['major_axis']}",
+            f"--colname-count {run_i['colname_count']}" if run_i['colname_count'] else "",
+            f"--n-jobs {args.n_jobs}" if args.n_jobs else "",
+            f"--restart" if args.restart else "",
+            f"--threads {args.threads}"
+        ])
+    else:
+        cartload_cmd=" ".join([
+            "cartloader", "run_cartload2", 
+            f"--makefn {mkbn}.mk",
+            f"--fic-dir {fic_dir}", 
+            f"--out-dir {cartload_dir}",
+            f"--id {run_i['run_id']}",
+            f"--colname-count {run_i['colname_count']}" if run_i['colname_count'] else "",
+            f"--n-jobs {args.n_jobs}" if args.n_jobs else "",
+            f"--restart" if args.restart else "",
+            f"--threads {args.threads}"
+        ])
+    # add aux env/tools
+    cartload_cmd = add_param_to_cmd(cartload_cmd, env, aux_env_args[f"run_cartload"], underscore2dash=False)
     return cartload_cmd
 
 # hist_keys and hist_keys_tiles are global variables
@@ -424,7 +478,7 @@ def cmd_run_fig2pmtiles(run_i, args, env):
             "--georeference" if histology.get("georeference", False) else "",
             "--geotif2mbtiles", 
             "--mbtiles2pmtiles", 
-            f"--update-catalog --basemap-key {histology['hist_id']}" if os.path.exists(catalog_yaml) or args.run_cartload_join else "",
+            f"--update-catalog --basemap-key {histology['hist_id']}" if os.path.exists(catalog_yaml) or args.run_cartload1 or args.run_cartload2 else "",
             f"--in-fig {hist_path}",
             f"--out-prefix {hist_prefix}",
             "--flip-vertical" if histology["flip"] in ["vertical", "both"] else "",
@@ -441,8 +495,8 @@ def cmd_run_fig2pmtiles(run_i, args, env):
     return hist_cmds
     #return hist_cmds + update_catalog_cmds
 
-def cmd_upload_aws(run_i, args, env):
-    cartload_dir=os.path.join(run_i["run_dir"], "cartload")
+def cmd_upload_aws(run_i, cartl_v,  args, env):
+    cartload_dir=os.path.join(run_i["run_dir"], "cartload") if cartl_v == "1" else os.path.join(run_i["run_dir"], "cartload2")
     # Option 1: use "." to locate the file and handle by perl -lane
     # aws_cmd="\n".join([
     #     f"out={cartload_dir}",
@@ -485,18 +539,21 @@ def stepinator(_args):
     # * commands 
     cmd_params = parser.add_argument_group("Commands", "Commands to be performed")
     cmd_params.add_argument("--sge-stitch", action="store_true", help="Run sge-stitch in cartloader")
+    cmd_params.add_argument("--list-overlapping-features", action="store_true", help="(Optional if --sge-stitch) List overlapping features in sge-stitch")
     cmd_params.add_argument("--sge-convert", action="store_true", help="Run sge-convert in cartloader")
     cmd_params.add_argument('--sge-visual', action='store_true', help='Plot the SGE from sge-convert or sge-stitch in a PNG file')
-    cmd_params.add_argument("--north-up", action="store_true", help="Set the north direction to up in the SGE visual")
-    cmd_params.add_argument("--run-ficture", action="store_true", help="Run run-ficture in cartloader. Only the main function is executed.")
-    cmd_params.add_argument("--run-cartload-join", action="store_true", help="Run run-cartload-join in cartloader")
+    cmd_params.add_argument("--north-up", action="store_true", help="(Optional if --sge-visual) Set the north direction to up in the SGE visual")
+    cmd_params.add_argument("--run-ficture1", action="store_true", help="Run run-ficture in cartloader. Only the main function is executed.")
+    cmd_params.add_argument("--run-cartload1", action="store_true", help="Run run-cartload-join in cartloader")
+    cmd_params.add_argument("--run-ficture2", action="store_true", help="Run run-ficture2 in cartloader.")
+    cmd_params.add_argument("--run-cartload2", action="store_true", help="Run run-cartload-join2 in cartloader.")
     cmd_params.add_argument("--hist-stitch", action="store_true", help="Run histology stitch in cartloader. This is for stitching histology images.")
     cmd_params.add_argument("--run-fig2pmtiles", action="store_true", help="Run run-fig2pmtiles in cartloader. This s provide histology using --in-yaml or --histology.")
     cmd_params.add_argument("--upload-aws", action="store_true", help="Upload files to AWS S3 bucket. This s provide AWS bucket name using --in-yaml or --aws-bucket.")
-    cmd_params.add_argument("--copy-ext-model", action="store_true", help="Auxiliary action parameters for run-ficture. Copy external model when running FICTURE with an external model")
-    cmd_params.add_argument("--init-ext", action="store_true", help="Auxiliary action parameters for run-ficture. Only Initialize external model without run main-ext")
-    cmd_params.add_argument("--skip-coarse-report", action="store_true", help="Auxiliary action parameters for run-ficture. Skip coarse report")
-    cmd_params.add_argument('--segment-10x', action='store_true', help='(Additional function) Perform hexagon segmentation into 10x Genomics format')
+    cmd_params.add_argument("--copy-ext-model", action="store_true", help="(Optional if --run-ficture1) Auxiliary action parameters for run-ficture. Copy external model when running FICTURE with an external model")
+    cmd_params.add_argument("--init-ext", action="store_true", help="(Optional if --run-ficture1) Auxiliary action parameters for run-ficture. Only Initialize external model without run main-ext")
+    cmd_params.add_argument("--skip-coarse-report", action="store_true", help="(Optional if --run-ficture1)Auxiliary action parameters for run-ficture. Skip coarse report")
+    cmd_params.add_argument('--segment-10x', action='store_true', help='(Optional if --run-ficture1) Perform hexagon segmentation into 10x Genomics format')
 
     # * Key
     key_params = parser.add_argument_group(
@@ -526,10 +583,10 @@ def stepinator(_args):
     key_params.add_argument("--colnames-other-count", nargs="*", default=[], help="Optional if --sge-convert, --sge-stitch is enabled. It allows to keep other genomic features in the formatted SGE besides the genomic feature of interest. (default: [])")
     # for run_ficture
     key_params.add_argument("--major-axis", type=str, default="X", choices=["X","Y"], help="Major axis (default: X)")
-    key_params.add_argument("--ext-path", type=str, default=None, help="Required when --run-ficture with an external model. The path for the external model.")
-    key_params.add_argument("--ext-id", type=str, default=None, help="Required when --run-ficture  with an external model. The ID for the external model.")
+    key_params.add_argument("--ext-path", type=str, default=None, help="Required when --run-ficture1 with an external model. The path for the external model.")
+    key_params.add_argument("--ext-id", type=str, default=None, help="Required when --run-ficture1 with an external model. The ID for the external model.")
     key_params.add_argument("--train-width", '-w', type=str, default=None, help="Required if --run-ficture. Train width.")
-    key_params.add_argument("--n-factor", '-n', type=str, default=None, help="Required if --run-ficture with LDA. Number of factors. ")
+    key_params.add_argument("--n-factor", '-n', type=str, default=None, help="Required if --run-ficture1 with LDA. Number of factors. ")
     key_params.add_argument("--histology", type=str, nargs="?", default=[], help="""
                               (Optional) Provide histology info as <hist_id>;<path>;<transform>;<lower_thres_quantile>;<upper_thres_quantile>;<level>;<colorize>;<georeference>;<georef_tsv>;<georef_bounds>;<rotate_degree>;<flip_direction>. 
                               Only <hist_id> and <path> are required. Supports multiple files; use <hist_id> to distinguish them. (Default: [])
@@ -575,7 +632,9 @@ def stepinator(_args):
     env_params.add_argument('--gdal_translate', type=str, default=None, help='Path to gdal_translate binary')
     env_params.add_argument('--gdaladdo', type=str, default=None, help='Path to gdaladdo binary')
     env_params.add_argument('--aws', type=str, default=None, help='Path to aws binary')
-    
+    env_params.add_argument('--ficture2', type=str, help='Path to punkst(ficture2) repository') 
+    env_params.add_argument('--python', type=str,  help='Python3 binary')
+
     format_aux_parameter = parser.add_argument_group(
         "Auxiliary Parameters for sge_convert", 
         "Parameters for sge_convert. Required if --sge-convert is used with non-default values."
@@ -630,12 +689,12 @@ def stepinator(_args):
         "Parameters for run_ficture. Required if --run-ficture is used with non-default values. Default values are recommended."
     )
     # use fic
+    ficture_aux_params.add_argument('--filter-by-overlapping-features', action='store_true', default=False, help='Use overlapping features in FICTURE analysis (default: False)')
+    ficture_aux_params.add_argument('--min-ct-per-ftr-tile', type=int, default=0, help='Apply a minimum count to filter overlapping feature. Filtering process will be applied if --min-ct-per-overlapftr > 0. (default: 0)')
     ficture_aux_params.add_argument("--cmap", '-c', type=str, default=None, help="Required if the user prefers to use a pre-built color map (Default: None)")
-    ficture_aux_params.add_argument('--out-ficture-feature', type=str, default="features.ficture.tsv.gz", help='File name for the output TSV file of feature used in FICTURE analysis (default: None)')
+    ficture_aux_params.add_argument('--ficture-feature', type=str, default="features.ficture.tsv.gz", help='File name for the output TSV file of feature used in FICTURE analysis (default: None)')
     ficture_aux_params.add_argument('--fic-include-feature-list', type=str, default=None, help='A file containing a list of input genes to be included (feature name of IDs) (default: None)')
     ficture_aux_params.add_argument('--fic-exclude-feature-list', type=str, default=None, help='A file containing a list of input genes to be excluded (feature name of IDs) (default: None)')
-    ficture_aux_params.add_argument('--fic-include-feature-substr', type=str, default=None, help='A substring of feature/gene names to be included (default: None)')
-    ficture_aux_params.add_argument('--fic-exclude-feature-substr', type=str, default=None, help='A substring of feature/gene names to be excluded (default: None)')
     ficture_aux_params.add_argument('--fic-include-feature-regex', type=str, default=None, help='A regex pattern of feature/gene names to be included (default: None)')
     ficture_aux_params.add_argument('--fic-exclude-feature-regex', type=str, default=None, help='A regex pattern of feature/gene names to be excluded (default: None)')
     ficture_aux_params.add_argument('--fic-include-feature-type-regex', type=str, default=None, help='A regex pattern of feature/gene type to be included (default: None). Requires --csv-colname-feature-type or --feature-type-ref for gene type info') # (e.g. protein_coding|lncRNA)
@@ -692,11 +751,25 @@ def stepinator(_args):
     # =========
     #  actions
     # =========
-    assert args.sge_stitch or args.sge_convert or args.run_ficture or args.run_cartload_join or args.run_fig2pmtiles or args.upload_aws, "Error: At least one action is required"
+    assert args.sge_stitch or args.sge_convert or args.run_ficture1 or args.run_cartload1 or args.run_ficture2 or args.run_cartload2 or args.run_fig2pmtiles or args.upload_aws, "Error: At least one action is required"
+
+    # sge
     assert not (args.sge_convert and args.sge_stitch), "Error: --sge-convert and --sge-stitch cannot be applied together"
-    # sge_visual only works with sge_convert or sge_stitch
-    if args.sge_visual:
-        assert args.sge_convert or args.sge_stitch, "Error: --sge-visual can only be applied with --sge-convert or --sge-stitch"
+    assert not (args.sge_visual and not args.sge_convert and not args.sge_stitch), "Error: --sge-visual can only be applied with --sge-convert or --sge-stitch"
+    assert not (args.north_up and not args.sge_visual), "Error: --north-up can only be applied with --sge-visual"   
+
+    # version check
+    assert not (args.run_ficture1 and args.run_ficture2), "Error: --run-ficture1 and --run-ficture2 cannot be applied together"
+    assert not (args.run_cartload1 and args.run_cartload2), "Error: --run-cartload1 and --run-cartload2 cannot be applied together"
+
+    fic_v = "1" if args.run_ficture1 else "2" if args.run_ficture2 else None
+    cartl_v = "1" if args.run_cartload1 else "2" if args.run_cartload2 else None
+    if fic_v is not None and cartl_v is not None:
+        assert fic_v == cartl_v, "Error: --run-ficture and --run-cartload-join should be applied together with the same version."
+    
+    if args.upload_aws:
+        assert cartl_v is not None, "Error: --upload-aws can only be applied with --run-cartload1 or --run-cartload2 to indicate the version of cartload."
+
     # =========
     #  Read YAML/args
     # =========
@@ -747,7 +820,7 @@ def stepinator(_args):
     # =========
     #  env
     # =========
-    # * tools (collect from yaml and args)    
+    # * tools (collect from yaml and args) 
     env = merge_config(yml, args, 
                        [item for sublist in aux_env_args.values() for item in sublist] + ["imagemagick"],
                         prefix="env")  
@@ -790,7 +863,7 @@ def stepinator(_args):
     # =========
     env_cmds=[module_load_cmds] + conda_cmd
     # export path for imagemagick
-    if args.sge_stitch or args.run_cartload_join:
+    if args.sge_stitch or cartl_v:
         if getattr(env, "imagemagick", None) is not None:
             env_cmds.append("export PATH=$PATH:"+":".join([env.imagemagick]))
     env_cmds.append("\n")
@@ -868,12 +941,7 @@ def stepinator(_args):
     # =========
     #  Downstream
     # =========
-    if args.run_ficture or args.run_cartload_join or args.run_fig2pmtiles or args.upload_aws:
-        # print("run_ids", args.run_ids)
-        # print("run_ficture", args.run_ficture)
-        # print("run_cartload_join", args.run_cartload_join)
-        # print("run_fig2pmtiles", args.run_fig2pmtiles)
-        # print("upload_aws", args.upload_aws)
+    if fic_v or cartl_v or args.run_fig2pmtiles or args.upload_aws:
         runinfo=[]
         if args.in_yaml:
             avail_runs=[run_i.get("run_id") for run_i in yml.get("RUNS", [])]
@@ -895,7 +963,7 @@ def stepinator(_args):
                     run_i["ext_path"]=run_i.get("ext_path", None)
                     run_i["ext_id"]=run_i.get("ext_id", None)
                     run_i["copy_ext_model"]=run_i.get("copy_ext_model", False)
-                    run_i["cmap"]=run_i.get("cmap", None)
+                    run_i["cmap"]=run_i.get("cmap", args.cmap)
                     # analysis parameters
                     run_i["train_width"] = run_i.get("train_width", None)     
                     run_i["n_factor"] = run_i.get("n_factor", None)           # will fill in the default value in lda
@@ -935,18 +1003,24 @@ def stepinator(_args):
         #print(runinfo) 
         for run_i in runinfo:
             os.makedirs(run_i["run_dir"], exist_ok=True)
-            if args.run_ficture:
-                os.makedirs(os.path.join(run_i["run_dir"], "ficture"), exist_ok=True)
-                cmds.extend(cmd_run_ficture(run_i, args, env))
-            if args.run_cartload_join:
-                os.makedirs(os.path.join(run_i["run_dir"], "cartload"), exist_ok=True)
-                cmds.append(cmd_run_cartload_join(run_i, args, env))
+
+            if fic_v:
+                fic_dir = os.path.join(run_i["run_dir"], f"ficture{'' if fic_v == '1' else '2'}")
+                os.makedirs(fic_dir, exist_ok=True)
+                cmds.extend(cmd_run_ficture(run_i, fic_v, args, env))
+
+            if cartl_v:
+                cartl_dir = os.path.join(run_i["run_dir"], f"cartload{'' if cartl_v == '1' else '2'}")
+                os.makedirs(cartl_dir, exist_ok=True)
+                cmds.append(cmd_run_cartload(run_i, cartl_v, args, env))
+            
             if args.run_fig2pmtiles:
                 run_i["histology"] = histinfo
                 #print(histinfo)
                 cmds.extend(cmd_run_fig2pmtiles(run_i, args, env))
+            
             if args.upload_aws:
-                cmds.append(cmd_upload_aws(run_i, args, env))
+                cmds.append(cmd_upload_aws(run_i, cartl_v, args, env))
 
     #print(cmds)
 
@@ -962,13 +1036,13 @@ def stepinator(_args):
         # Define shorthand encoding
         action_code = "".join([
             "A" if args.sge_convert else "a" if args.sge_stitch else "",
-            "B" if args.run_ficture else "",
-            "C" if args.run_cartload_join else "",
+            "B" if fic_v  else "",
+            "C" if cartl_v else "",
             "D" if args.run_fig2pmtiles else "",
             "E" if args.upload_aws else ""
         ])
         # Construct job_id based on run_ids
-        if not any([args.run_ficture, args.run_cartload_join, args.run_fig2pmtiles, args.upload_aws]):
+        if not any([fic_v, cartl_v, args.run_fig2pmtiles, args.upload_aws]):
             args.job_id = f"sge_convert_{timestamp}" if args.sge_convert else f"sge_stitch_{timestamp}"
         elif len(args.run_ids) == 1:
             args.job_id = f"{args.run_ids[0]}_{action_code}_{timestamp}"

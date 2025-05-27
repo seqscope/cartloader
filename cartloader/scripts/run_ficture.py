@@ -44,7 +44,7 @@ def parse_arguments(_args):
     inout_params.add_argument('--in-minmax', type=str, default=None, help='Path to the input coordinate minmax TSV file. (default: <out-dir>/coordinate_minmax.tsv)')  
     inout_params.add_argument('--in-feature', type=str, default=None,  help='Path to the input UMI count per gene TSV file.(default: feature.clean.tsv.gz).')
     inout_params.add_argument('--in-cstranscript', type=str, default=None, help='(Optional) Use --in-cstranscript if a coordinate-sorted transcript-indexed SGE file already exists to skip sorting, or to define a custom sorted file name (default: <out-dir>/transcripts.sorted.tsv.gz)')
-    inout_params.add_argument('--in-feature-ficture', type=str, default=None, help='(Optional) Use --in-feature-ficture if a feature file for FICTURE analysis (default: <out-dir>/features.ficture.tsv.gz)')
+    inout_params.add_argument('--in-feature-ficture', type=str, default=None, help='(Optional) Use --in-feature-ficture to provide a feature file for FICTURE analysis if such feature file exists.')
 
     external_params = parser.add_argument_group("External Model Parameters", """When using --init-ext, provide the pre-trained model, its type, and ID by --ext-path, --ext-type and --ext-id. """)
     external_params.add_argument('--ext-path', type=str, default=None, help='Path to the external model file')
@@ -73,11 +73,12 @@ def parse_arguments(_args):
     aux_ftrfilter_params = parser.add_argument_group( "Feature Customizing Auxiliary Parameters", 
                                                     "Auxiliary parameters for customizing features in FICTURE analysis without modifying the original input feature TSV file. This ensures the original feature TSV file is retained in the output JSON file for downstream processing .")
     # given the input sge should be standardized, the csv-delim, csv-colname-feature-name, ftr-delim, ftr-colname-feature-name are not necessary
-    aux_ftrfilter_params.add_argument('--out-ficture-feature', type=str, default="features.ficture.tsv.gz", help='File name for the output TSV file of feature used in FICTURE analysis (default: None)')
+    aux_ftrfilter_params.add_argument('--filter-by-overlapping-features', action='store_true', default=False, help='When the input SGE is stitched SGE, it is optional to filter the features in FICTURE analysis by only shared features')
+    aux_ftrfilter_params.add_argument('--in-feature-dist', type=str, default=None, help='When the input SGE is stitched SGE, it is optional to filter the features in FICTURE analysis by only shared features and features with a minimal count in the ')
+    aux_ftrfilter_params.add_argument('--min-ct-per-ftr-tile', type=int, default=0, help='Apply a minimum count to filter overlapping feature. Filtering process will be applied if --min-ct-per-overlapftr > 0. (default: 0)')
+    aux_ftrfilter_params.add_argument('--out-feature-ficture', type=str, default="features.ficture.tsv.gz", help='File name for the output TSV file of feature used in FICTURE analysis (default: None)')
     aux_ftrfilter_params.add_argument('--include-feature-list', type=str, default=None, help='A file containing a list of input genes to be included (feature name of IDs) (default: None)')
     aux_ftrfilter_params.add_argument('--exclude-feature-list', type=str, default=None, help='A file containing a list of input genes to be excluded (feature name of IDs) (default: None)')
-    aux_ftrfilter_params.add_argument('--include-feature-substr', type=str, default=None, help='A substring of feature/gene names to be included (default: None)')
-    aux_ftrfilter_params.add_argument('--exclude-feature-substr', type=str, default=None, help='A substring of feature/gene names to be excluded (default: None)')
     aux_ftrfilter_params.add_argument('--include-feature-regex', type=str, default=None, help='A regex pattern of feature/gene names to be included (default: None)')
     aux_ftrfilter_params.add_argument('--exclude-feature-regex', type=str, default=None, help='A regex pattern of feature/gene names to be excluded (default: None)')
     # type regex
@@ -107,6 +108,7 @@ def parse_arguments(_args):
     # train 
     aux_params.add_argument('--train-epoch', type=int, default=3, help='Training epoch for LDA model (default: 3)')
     aux_params.add_argument('--train-epoch-id-len', type=int, default=2, help='Training epoch ID length (default: 2)')
+    aux_params.add_argument('--min-ct-per-unit-train', type=int, default=50, help='Minimum count for training (default: 50)')
     aux_params.add_argument('--lda-rand-init', type=int, default=10, help='Number of random initialization during model training (default: 10)')
     aux_params.add_argument('--lda-plot-um-per-pixel', type=float, default=1, help='Image resolution for LDA plot (default: 1)')
     # fit 
@@ -313,18 +315,37 @@ def run_ficture(_args):
     assert os.path.exists(args.in_feature), "Provide a valid input feature file by --in-feature"
 
     # feature customize when enabled 
-    if any([args.include_feature_list, args.exclude_feature_list, args.include_feature_substr, args.exclude_feature_substr, args.include_feature_regex, args.exclude_feature_regex, args.include_feature_type_regex]):
-        in_feature_ficture = os.path.join(args.out_dir, args.out_ficture_feature)
-        in_feature_ficture_record = os.path.join(args.out_dir, args.out_ficture_feature.replace(".tsv.gz", ".record.tsv"))
+    if args.in_feature_ficture is not None:
+        in_feature_customize = args.in_feature_ficture
+    else:
+        in_feature_customize = args.in_feature
+
+    if args.filter_by_overlapping_features:
+        assert os.path.exists(args.in_feature_dist), f"Provide a valid input feature distribution file by --in-feature-dist"
+        cmds = cmd_separator([], f"Customizing features for FICTURE analysis: limited to shared features and features with a minimal count in the stitched SGE...")
+        overlapping_feature = os.path.join(args.out_dir, "feature.overlapping.tsv.gz") if args.min_ct_per_ftr_tile == 0 else os.path.join(args.out_dir, f"feature.overlapping.min{args.min_ct_per_ftr_tile}.tsv.gz")
+        cmd = " ".join(["cartloader feature_overlapping",
+                                    f"--in-dist {in_feature_customize}", 
+                                    f"--in-feature {in_feature_customize}",
+                                    f"--output {overlapping_feature}", 
+                                    f"--min-ct-per-ftr-tile {args.min_ct_per_ftr_tile}",
+                                    f"--colname-count {args.colname_count}",
+                                    f"--log"
+                                    ])
+        cmds.append(cmd)
+        mm.add_target(overlapping_feature, [args.in_feature_dist, in_feature_customize], cmds)
+        in_feature_customize = overlapping_feature
+    
+    if any([args.include_feature_list, args.exclude_feature_list, args.include_feature_regex, args.exclude_feature_regex, args.include_feature_type_regex]):
+        in_feature_ficture = os.path.join(args.out_dir, args.out_feature_ficture)
+        in_feature_ficture_record = os.path.join(args.out_dir, args.out_feature_ficture.replace(".tsv.gz", ".record.tsv"))
         cmds = cmd_separator([], f"Customizing features for FICTURE analysis...")
-        cmd = " ".join(["cartloader feature_filtering ",
-                                    f"--in-csv {args.in_feature}", 
+        cmd = " ".join(["cartloader feature_filtering",
+                                    f"--in-csv {in_feature_customize}", 
                                     f"--out-csv {in_feature_ficture}", 
                                     f"--out-record  {in_feature_ficture_record}",
                                     f"--include-feature-list {args.include_feature_list}" if args.include_feature_list is not None else "",
                                     f"--exclude-feature-list {args.exclude_feature_list}" if args.exclude_feature_list is not None else "",
-                                    f"--include-feature-substr '{args.include_feature_substr}'" if args.include_feature_substr is not None else "",
-                                    f"--exclude-feature-substr '{args.exclude_feature_substr}'" if args.exclude_feature_substr is not None else "",
                                     f"--include-feature-regex '{args.include_feature_regex}'" if args.include_feature_regex is not None else "",
                                     f"--exclude-feature-regex '{args.exclude_feature_regex}'" if args.exclude_feature_regex is not None else "",
                                     f"--include-feature-type-regex {args.include_feature_type_regex} --feature-type-ref {args.in_transcript} --feature-type-ref-colname-name gene --feature-type-ref-colname-type {args.colname_feature_type}" if args.include_feature_type_regex is not None and args.colname_feature_type is not None else "",
@@ -332,9 +353,9 @@ def run_ficture(_args):
                                     f"--log"
                                     ]) 
         cmds.append(cmd)
-        mm.add_target(in_feature_ficture, [args.in_cstranscript, args.in_feature], cmds)
+        mm.add_target(in_feature_ficture, [args.in_cstranscript, in_feature_customize], cmds)
     else:
-        in_feature_ficture = args.in_feature
+        in_feature_ficture = in_feature_customize
 
     # out files
     if args.out_json is None:
@@ -471,6 +492,7 @@ def run_ficture(_args):
                 f"--epoch_id_length {args.train_epoch_id_len}",
                 f"--unit_attr X Y",
                 f"--key {args.colname_count}",
+                f"--min_ct_per_unit {args.min_ct_per_unit_train}",
                 f"--min_ct_per_feature {args.min_ct_per_feature}", 
                 f"--test_split 0.5",
                 f"--R {args.lda_rand_init}",
