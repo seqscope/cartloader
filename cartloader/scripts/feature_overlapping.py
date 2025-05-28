@@ -69,7 +69,8 @@ def feature_overlapping(_args):
    
     logger.info(f" * After filtering: {df_ftr.shape[0]} features.")
     df_ftr[args.colname_count] = df_ftr[args.colname_count].astype(int)
-    df_ftr.to_csv(args.output, sep="\t", index=False, compression="gzip")
+    df_ftr = df_ftr[[args.colname_feature_name, args.colname_count]]
+    df_ftr.to_csv(args.output, sep="\t", index=False, header=True)
     logger.info(f"Feature overlap saved to {args.output}")
 
 if __name__ == "__main__":
