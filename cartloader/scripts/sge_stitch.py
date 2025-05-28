@@ -100,15 +100,15 @@ def sge_stitch(_args):
             raise FileNotFoundError(f"Transcript file {transcript} does not exist.")
         
         # missing feature or minmax
-        missing_ftr = feature is None or feature == "None"
-        missing_minmax = minmax is None or minmax == "None"
+        missing_ftr = feature is None or feature == "None" or feature == ""
+        missing_minmax = minmax is None or minmax == "None" or minmax == ""
         if missing_ftr or missing_minmax:
             in_dir = os.path.dirname(transcript)
             if os.path.basename(transcript) == "transcripts.unsorted.tsv.gz":
                 in_id = None
             else:
                 in_id = os.path.basename(transcript).replace('.tsv.gz', '').replace(".transcripts", "").replace(".transcript", "")
-        if missing_minmax: # should always be true 
+        if missing_minmax: 
             cmds = cmd_separator([], f"Creating missing minmax file for {transcript}")
             out_minmax = os.path.join(in_dir, f"{in_id}.minmax.tsv") if in_id else os.path.join(in_dir, f"coordinate_minmax.tsv")
             add_minmax_cmd =" ".join([f"cartloader", "sge_adds_on",
@@ -119,7 +119,7 @@ def sge_stitch(_args):
             cmds.append(add_minmax_cmd)
             mm.add_target(out_minmax, [transcript], cmds)
             minmax = out_minmax
-        if missing_ftr and not args.generate_tile_minmax_only:
+        if missing_ftr: 
             cmds = cmd_separator([], f"Creating missing feature file for {transcript}")
             out_ftr = os.path.join(in_dir, f"{in_id}.feature.tsv.gz") if in_id else os.path.join(in_dir, f"feature.clean.tsv.gz")
             add_ftr_cmd =" ".join([f"cartloader", "sge_adds_on",
