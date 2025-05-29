@@ -23,7 +23,7 @@ def feature_distribution(_args):
     parser.add_argument("--in-tiles", type=str, nargs='*',  required=True, default=[], help="List of input information in a specific format: <feature_path>,<row>,<col>.")
     parser.add_argument('--output', type=str, help='(Optional) Output distribution file for all features. The output columns includes <feature_name>, <number of tiles with the feature>, and <count> per tile per count.')
     parser.add_argument('--colname-feature-name', type=str, default='gene', help='Feature name column (default: gene)')
-    parser.add_argument("--colnames-count", type=str, nargs='*', help="Columns (default: count).", default=['count'])
+    parser.add_argument("--colnames-count", type=str, help="Columns (default: count).", default='count')
 
     parser.add_argument('--log', action='store_true', default=False, help='Write log to file')
     args = parser.parse_args(_args)
@@ -50,7 +50,7 @@ def feature_distribution(_args):
 
     # Start with an empty DataFrame
     ftr_data = None
-
+    colnames_count = args.colnames_count.split(",") if "," in args.colnames_count else [args.colnames_count]
     for idx, row in df.iterrows():
         feature_path = row["feature_path"]
         row_id = row["row"]
@@ -60,9 +60,9 @@ def feature_distribution(_args):
         data = pd.read_csv(feature_path, sep='\\t')
 
         # Select and rename relevant columns
-        selected = data[[args.colname_feature_name ] + args.colnames_count].copy()
+        selected = data[[args.colname_feature_name ] + colnames_count].copy()
         selected.set_index(args.colname_feature_name, inplace=True)
-        selected.rename(columns={c: f"{row_id}_{col_id}_{c}" for c in args.colnames_count}, inplace=True)
+        selected.rename(columns={c: f"{row_id}_{col_id}_{c}" for c in colnames_count}, inplace=True)
 
         # Merge with running ftr_data
         if ftr_data is None:
