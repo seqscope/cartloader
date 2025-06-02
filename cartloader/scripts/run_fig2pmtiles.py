@@ -98,6 +98,22 @@ def cmds_for_orientation(georef_f, dim_f,  ort_f, rotate, flip_vertical, flip_ho
     cmds.append(cmd)
     return cmds
     
+def create_mbtile_flag(mbtile_flag, mbtile_f, partial_db, journal_db):
+    os.makedirs(os.path.dirname(mbtile_flag), exist_ok=True)
+    conditions_met = (
+        not os.path.exists(mbtile_flag) and
+        os.path.exists(mbtile_f) and
+        not os.path.exists(partial_db) and
+        not os.path.exists(journal_db)
+    )
+    if conditions_met:
+        try:
+            with open(mbtile_flag, 'a'):
+                pass 
+            print(f"Created flag file: {mbtile_flag}")
+        except OSError as e:
+            print(f"Error creating flag file {mbtile_flag}: {e}")
+            sys.exit(1)
 
 def parse_arguments(_args):
     """
@@ -186,6 +202,7 @@ def run_fig2pmtiles(_args):
     assert args.in_fig is not None and os.path.exists(args.in_fig), "Please provide a valid input figure file using --in-figure"
     # - mbtiles
     mbtile_f=f"{args.out_prefix}.pmtiles.mbtiles"
+    mbtile_flag = f"{mbtile_f}.done"
     mbtile_f_ann=f"{args.out_prefix}.pmtiles.{args.resample}.mbtiles"
     # - pmtiles
     pmtiles_f=f"{args.out_prefix}.pmtiles"
@@ -288,8 +305,18 @@ def run_fig2pmtiles(_args):
     # 4. Convert a raster image (GeoTIFF) into map tiles (MBTiles format)
     # * MBTiles expects top-left origin. If the input geotif use lower left was origin, GDAL will flip the origin to top left. 
     # * The origin could be find by running `gdalinfo <filename>` and check the `Pixel Size=(<x>,<y>)` field. If Pixel Y is negative, image is stored top-down. 
+    # * Use a flag file instead of mbtiles_f to indicate the completion of the mbtiles conversion - to avoid silently failed or interrupted conversions.
     if args.geotif2mbtiles:
         cmds = cmd_separator([], f"Converting from geotif to mbtiles: {ort_f}")
+        partial_db = mbtile_f.replace('.mbtiles', '.partial_tiles.db')
+        journal_db = f"{mbtile_f}-journal"
+
+        create_mbtile_flag(mbtile_flag, mbtile_f, partial_db, journal_db)
+
+        ## Add cleanup step to prevent the case that the previous run was interrupted and left behind a .mbtiles file with a journal file or a partial_tiles.db file. Such unfinished jobs will not be availble to detect by the makefile.
+        cleanup_cmd = f"if [ -f {journal_db} ] || [ -f {partial_db} ] ; then echo 'Warning: Cleaning up incomplete previous conversion...' ; rm -f {mbtile_f} {journal_db} {partial_db} ; fi"
+        cmds.append(cleanup_cmd)
+
         cmd = " ".join([
             args.gdal_translate, 
             "-b 1" if args.mono else "-b 1 -b 2 -b 3 -b 4" if args.rgba else "-b 1 -b 2 -b 3", # Use the Red, Green, Blue bands
@@ -305,7 +332,10 @@ def run_fig2pmtiles(_args):
             mbtile_f
         ])
         cmds.append(cmd)
-        mm.add_target(mbtile_f, [ort_f], cmds)
+        
+        validation_cmd = f" [ -f {mbtile_f}]  && [ ! -f {journal_db} ] && [ ! -f {partial_db} ] && touch {mbtile_flag}"
+        cmds.append(validation_cmd)
+        mm.add_target(mbtile_flag, [ort_f], cmds)
     
     # 5. Convert mbtiles to pmtiles
     if args.mbtiles2pmtiles:
@@ -313,7 +343,7 @@ def run_fig2pmtiles(_args):
         cmds.append(f"cp {mbtile_f} {mbtile_f_ann}")
         cmds.append(f"'{args.gdaladdo}' {mbtile_f_ann} -r {args.resample} 2 4 8 16 32 64 128 256") # Build internal overviews. 
         cmds.append(f"'{args.pmtiles}' convert --force {mbtile_f_ann} {pmtiles_f}")
-        mm.add_target(pmtiles_f, [mbtile_f], cmds)
+        mm.add_target(pmtiles_f, [mbtile_flag], cmds)
 
     # 6. Update the catalog.yaml file with the new pmtiles and upload to AWS
     if args.update_catalog:

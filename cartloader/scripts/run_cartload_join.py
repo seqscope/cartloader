@@ -141,7 +141,8 @@ def run_cartload_join(_args):
             "--restart" if args.restart else "",
         ])
         cmds.append(cmd)
-        mm.add_target(f"{args.out_dir}/sge-mono-dark.pmtiles.done", [in_molecules, in_minmax], cmds)
+        cmds.append(f"[ -f {args.out_dir}/sge-mono-dark.pmtiles.done ] && [ -f {args.out_dir}/sge-mono-light.pmtiles.done ] && touch {args.out_dir}/sge-mono.pmtiles.done")
+        mm.add_target(f"{args.out_dir}/sge-mono.pmtiles.done", [in_molecules, in_minmax], cmds)
 
     ## fic
     in_fic_params = in_data.get("train_params", [])
