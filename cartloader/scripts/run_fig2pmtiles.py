@@ -333,7 +333,7 @@ def run_fig2pmtiles(_args):
         ])
         cmds.append(cmd)
         
-        validation_cmd = f" [ -f {mbtile_f}]  && [ ! -f {journal_db} ] && [ ! -f {partial_db} ] && touch {mbtile_flag}"
+        validation_cmd = f" [ -f {mbtile_f} ]  && [ ! -f {journal_db} ] && [ ! -f {partial_db} ] && touch {mbtile_flag}"
         cmds.append(validation_cmd)
         mm.add_target(mbtile_flag, [ort_f], cmds)
     
