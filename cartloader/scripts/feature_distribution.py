@@ -24,7 +24,7 @@ def feature_distribution(_args):
     parser.add_argument('--output', type=str, help='(Optional) Output distribution file for all features. The output columns includes <feature_name>, <number of tiles with the feature>, and <count> per tile per count.')
     parser.add_argument('--colname-feature-name', type=str, default='gene', help='Feature name column (default: gene)')
     parser.add_argument("--colnames-count", type=str, nargs='*', help="Columns (default: count).", default=['count'])
-
+    parser.add_argument("--min-ct-per-ftr-tile-list", type=int, nargs='*', default=[10,20,50,100,150,200,250,300], help="Minimum count to keep a shared feature (default: 0).")
     parser.add_argument('--log', action='store_true', default=False, help='Write log to file')
     args = parser.parse_args(_args)
 
@@ -47,6 +47,7 @@ def feature_distribution(_args):
     df.columns = ["feature_path", "row", "col"]
     df["row"] = df["row"].astype(int)
     df["col"] = df["col"].astype(int)
+    colnames_count_tiles = [f"{row_id}_{col_id}_{col_count}" for row_id, col_id in zip(df["row"], df["col"]) for col_count in args.colnames_count]
 
     # Start with an empty DataFrame
     ftr_data = None
@@ -77,6 +78,15 @@ def feature_distribution(_args):
 
     ftr_data.to_csv(args.output, sep="\t", index=False, na_rep="NA", compression="gzip")
     logger.info(f"Feature distribution saved to {args.output}")
+
+    # feature thresholds
+    olftr_data = ftr_data[ftr_data["N"] == num_of_tiles]
+    logger.info(f"* Num of overlapping features: {olftr_data.shape[0]}")
+    
+    olftr_data["min_ct_per_ftr_tile"] = olftr_data[colnames_count_tiles].min(axis=1)
+    for min_ct in args.min_ct_per_ftr_tile_list:       
+        olftr_data_i = olftr_data[olftr_data["min_ct_per_ftr_tile"] >= min_ct]
+        logger.info(f"* Num of overlapping features with a minimum count of {min_ct} across all tiles: {olftr_data_i.shape[0]}")
 
     # # filter1: keep features existing in all tiles
     # overlap_ftr_data = ftr_data[ftr_data["N"] == num_of_tiles]
