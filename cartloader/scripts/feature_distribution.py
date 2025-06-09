@@ -23,8 +23,8 @@ def feature_distribution(_args):
     parser.add_argument("--in-tiles", type=str, nargs='*',  required=True, default=[], help="List of input information in a specific format: <feature_path>,<row>,<col>.")
     parser.add_argument('--output', type=str, help='(Optional) Output distribution file for all features. The output columns includes <feature_name>, <number of tiles with the feature>, and <count> per tile per count.')
     parser.add_argument('--colname-feature-name', type=str, default='gene', help='Feature name column (default: gene)')
-    parser.add_argument("--colnames-count", type=str, nargs='*', help="Columns (default: count).", default=['count'])
     parser.add_argument("--min-ct-per-ftr-tile-list", type=int, nargs='*', default=[10,20,50,100,150,200,250,300], help="Minimum count to keep a shared feature (default: 0).")
+    parser.add_argument("--colnames-count", type=str, help="Columns (default: count).", default='count')
     parser.add_argument('--log', action='store_true', default=False, help='Write log to file')
     args = parser.parse_args(_args)
 
@@ -51,7 +51,7 @@ def feature_distribution(_args):
 
     # Start with an empty DataFrame
     ftr_data = None
-
+    colnames_count = args.colnames_count.split(",") if "," in args.colnames_count else [args.colnames_count]
     for idx, row in df.iterrows():
         feature_path = row["feature_path"]
         row_id = row["row"]
@@ -61,9 +61,9 @@ def feature_distribution(_args):
         data = pd.read_csv(feature_path, sep='\\t')
 
         # Select and rename relevant columns
-        selected = data[[args.colname_feature_name ] + args.colnames_count].copy()
+        selected = data[[args.colname_feature_name ] + colnames_count].copy()
         selected.set_index(args.colname_feature_name, inplace=True)
-        selected.rename(columns={c: f"{row_id}_{col_id}_{c}" for c in args.colnames_count}, inplace=True)
+        selected.rename(columns={c: f"{row_id}_{col_id}_{c}" for c in colnames_count}, inplace=True)
 
         # Merge with running ftr_data
         if ftr_data is None:
@@ -97,10 +97,7 @@ def feature_distribution(_args):
     #     if args.colname_key_count is None and len(args.colnames_count) == 1:
     #         args.colname_key_count = args.colnames_count[0]
     #     assert args.colname_key_count is not None, "Please specify --colname-key-count or use --colnames-count with only one column when filtering by min count."
-        
-        
     #     overlap_ftr_data["min_count"] = overlap_ftr_data[key_counts].min(axis=1)
-        
     #     overlap_ftr_data = overlap_ftr_data[overlap_ftr_data["min_count"] >= args.min_ct_per_ftr_tile]
     #     logger.info(f"* Number of shared features with a minimum count of {args.min_ct_per_ftr_tile} across all tiles: {overlap_ftr_data.shape[0]}")
 

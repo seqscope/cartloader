@@ -255,6 +255,7 @@ def run_ficture2(_args):
         
         ## Features step 1. write the feature file from the tiled SGE
         if in_feature_ficture is not None:
+            ## if a specific feature file is provided, use it as "selected features" for FICTURE analysis
             in_feature_ficture_flag = in_feature_ficture
             feature_plain = f"{args.out_dir}/transcripts.tiled.selected_features.hdr.tsv"
             feature_nohdr = f"{args.out_dir}/transcripts.tiled.selected_features.tsv"
@@ -268,18 +269,21 @@ def run_ficture2(_args):
                             if count >= args.min_ct_per_feature:
                                 wf.write(line)
                                 wf2.write(line)
-        else: ## if feature file is not provided, create one from the input transcript file
+            feature_nohdr_flag = feature_nohdr
+        else: 
+            ## if feature file is not provided, create one from the input transcript file
             in_feature_ficture_flag = f"{args.out_dir}/transcripts.tiled.done"
             feature_plain = f"{args.out_dir}/transcripts.tiled.features.hdr.tsv"
             feature_nohdr = f"{args.out_dir}/transcripts.tiled.features.tsv"
+            feature_nohdr_flag = f"{args.out_dir}/transcripts.tiled.done"
             in_feature_ficture = feature_plain
             args.in_feature = feature_plain
             cmds.append(f"(echo {args.colname_feature} {args.colname_count} | tr ' ' '\\t'; cat {feature_nohdr};) > {feature_plain}")
-        
+
         cmds.append(f"[ -f {args.out_dir}/transcripts.tiled.tsv ] && [ -f {args.out_dir}/transcripts.tiled.index ] && touch {args.out_dir}/transcripts.tiled.done" )
         mm.add_target(f"{args.out_dir}/transcripts.tiled.done", [args.in_transcript], cmds)
 
-        #  Features step 2. generate overlapping features for FICTURE analysis
+        #  Features step 2. generate overlapping features for FICTURE analysis (optional only if the input SGE is stitched SGE)
         if args.filter_by_overlapping_features:
             cmds = cmd_separator([], f"Customizing features for FICTURE analysis: limited to shared features and features with a minimal count in the stitched SGE...")
             feature_overlapping_plain = os.path.join(args.out_dir, "transcripts.tiled.overlapping_features.hdr.tsv") if args.min_ct_per_ftr_tile == 0 else os.path.join(args.out_dir, f"transcripts.tiled.overlapping_features.min{args.min_ct_per_ftr_tile}.hdr.tsv")
@@ -302,6 +306,7 @@ def run_ficture2(_args):
             
             feature_plain = feature_overlapping_plain
             feature_nohdr = feature_overlapping_nohdr
+            feature_nohdr_flag = feature_overlapping_nohdr
 
     # 2. segment
     if args.segment:
@@ -331,7 +336,7 @@ def run_ficture2(_args):
             cmds.append(f"{args.sort} -S {args.sort_mem} -k 1,1 {hexagon_prefix}.tsv > {hexagon_prefix}.randomized.tsv")
             cmds.append(f"rm -f {hexagon_prefix}.tsv")
             cmds.append(f"[ -f {hexagon_prefix}.randomized.tsv ] && [ -f {hexagon_prefix}.json ] && touch {hexagon_prefix}.done" )
-            mm.add_target(f"{hexagon_prefix}.done", [f"{args.out_dir}/transcripts.tiled.done", feature_nohdr], cmds)
+            mm.add_target(f"{hexagon_prefix}.done", [f"{args.out_dir}/transcripts.tiled.done", feature_nohdr_flag], cmds)
 
     # 3. lda
     if args.init_lda:
@@ -388,7 +393,7 @@ def run_ficture2(_args):
             #cmds.append(f"rm -f {model_prefix}.unsorted.model.tsv {model_prefix}.unsorted.results.tsv {model_prefix}.unsorted.results.nohex.tsv")
             cmds.append(f"rm -f {model_prefix}.unsorted.model.tsv {model_prefix}.unsorted.results.tsv")
             cmds.append(f"[ -f {lda_fit_tsv}.gz ] && [ -f {lda_model_matrix} ] && touch {model_prefix}.done" )
-            mm.add_target(f"{model_prefix}.done", [f"{args.out_dir}/transcripts.tiled.done", f"{args.out_dir}/hexagon.d_{train_width}.done", feature_nohdr], cmds)
+            mm.add_target(f"{model_prefix}.done", [f"{args.out_dir}/transcripts.tiled.done", f"{args.out_dir}/hexagon.d_{train_width}.done", feature_nohdr_flag], cmds)
 
             # create color table
             out_cmap = f"{model_prefix}.cmap.tsv"
@@ -505,7 +510,7 @@ def run_ficture2(_args):
             mm.add_target(f"{decode_prefix}.png", [f"{decode_prefix}_summary.done", cmap_path], cmds)
 
     if args.summary:
-        prerequisities=[feature_plain]
+        prerequisities=[feature_nohdr_flag] # since feature_nohdr and feature_plain are generated at the same step, use feature_nohdr_flag as the prerequisite for feature_plain
         summary_aux_args=[]
         # lda or external model
         if args.init_lda:
