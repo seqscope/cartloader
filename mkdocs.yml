@@ -1,0 +1,85 @@
+site_name: cartloader
+site_url: https://seqscope.github.io/cartloader
+
+# Repository
+repo_name: seqscope/cartloader
+repo_url: https://github.com/seqscope/cartloader
+
+# Theme configuration
+theme:
+  name: material
+  features:
+  - navigation.tabs
+  - navigation.indexes
+  - navigation.sections
+  - content.code.annotate
+  palette:
+  - media: "(prefers-color-scheme)"
+    toggle:
+      icon: material/link
+      name: Switch to light mode
+  - media: "(prefers-color-scheme: light)"
+    scheme: default
+    primary: indigo
+    accent: indigo
+    toggle:
+      icon: material/toggle-switch
+      name: Switch to dark mode
+  - media: "(prefers-color-scheme: dark)"
+    scheme: slate
+    primary: black
+    accent: indigo
+    toggle:
+      icon: material/toggle-switch-off
+      name: Switch to system preference
+  font:
+    text: 'Roboto'
+    code: 'Roboto Mono'
+#  icon:
+#    admonition:
+#      <type>: <icon>
+
+# Navigation structure
+nav:
+  - Home: 
+      - Introduction: index.md
+  #     - Documentation Overview: home/documentation_overview.md
+  #     - Workflow Structure: home/workflow_structure.md
+  # - QuickStart:
+  #     - Introduction: quickstart/intro.md
+  #     - Docker Example: quickstart/docker.md
+  #     - Singularity Example: quickstart/singularity.md
+  #     - Running with Your Own Data: quickstart/custom.md
+  # - Installation:
+  #     - Installing NovaScope: installation/requirement.md
+  #     - Additional Installations: installation/requirement_for_plus.md
+  #     - Environment Setup: installation/env_setup.md
+  #     - SLURM: installation/slurm.md
+
+# Markdown Extensions
+markdown_extensions:
+  - abbr
+  - footnotes
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+#  - codehilite:
+#      guess_lang: false 
+  - toc:
+      permalink: true
+  - attr_list
+  - md_in_html
+  - pymdownx.highlight:
+      linenums: true
+      css_class: 'highlight'
+  - pymdownx.superfences
+# - pymdownx.inlinehilite
+
+
+plugins:
+  - search
+  - open-in-new-tab
+
+# Extra CSS
+extra_css:
+  - css/custom.css
