@@ -1,17 +1,44 @@
-# Welcome to MkDocs
+# A scalable, harmonized, and cloud-friendly ecosystem for spatial transcriptomics data
 
-For full documentation visit [mkdocs.org](https://www.mkdocs.org).
+## Overview
+Spatial transcriptomics (ST) technologies have revolutionized our ability to map molecular features with remarkable resolution—down to cellular and subcellular levels. 
 
-## Commands
+While the rapid development of sequencing-based platforms (e.g., [Seq-Scope](), [Stereo-seq](), [NovaST](), [Pixel-seq](), [10x Visium HD]()) and imaging-based platforms (e.g., [10x Xenium](), [Vizgen MERSCOPE](), [CosMx SMI](), [Singular G4X]()) has led to an explosion in the production of ST datasets across diverse tissues and species, this platform diversity has also introduced heterogeneous data formats and metadata schemas, which further obstruct efforts toward standardized data ingestion, cross-platform harmonization, and reproducible analytical workflows.
 
-* `mkdocs new [dir-name]` - Create a new project.
-* `mkdocs serve` - Start the live-reloading docs server.
-* `mkdocs build` - Build the documentation site.
-* `mkdocs -h` - Print help message and exit.
+To address this challenge, we introduce a scalable, harmonized, and cloud-friendly ecosystem for spatial transcriptomics data across platforms, composed of two components:
 
-## Project layout
+- **Cartloader** – a harmonized, scalable pipeline for high-resolution spatial omics data processing and analysis with retaining the original resolution.
+- **Cartostore** – an open-access, cloud-hosted repository for dataset sharing and visualization.
 
-    mkdocs.yml    # The configuration file.
-    docs/
-        index.md  # The documentation homepage.
-        ...       # Other markdown pages, images and other files.
+Together, this system should provide a unified solution for working with raw pixel-level spatial omics data—without sacrificing resolution or reproducibility.
+
+---
+
+## Cartloader: A Scalable Spatial Transcriptomics Pipeline
+
+This document introduces `cartloader`, which is the core engine of our ecosystem. It provides a modular, reproducible tool to harmonize, integrate, analyze, and visualize raw high-resolution ST data across platforms. The detailed descriptions of its workflow, required inputs, generated outputs, and illustrative examples are provided in the sections of [Step-by-Step]() and [Examples]().
+
+### Key Features
+
+- **Cross-Platform Harmonization**: Converts raw spatial gene expression (SGE) data from diverse ST platforms into a unified format, enabling consistent downstream processing.
+- **Spatial Factor Inference**: Applies [FICTURE]() to infer spatial factors directly from pixel-level data, capturing biological patterns without requiring cell segmentation.
+- **Multi-Modal Alignment**: Aligns and overlays histology images to SGE data so all layers (histology, SGE, and histological images) share a common coordinate system for pixel-accurate comparisons.
+- **Cloud-Friendly Outputs**: Produces compact, geospatially-indexed data formats suitable for web visualization and cloud storage.
+- **Batch Integration and Sample Stitching**: Supports joint analysis and SGE stitching across samples or platforms to reveal shared or differential features across tissues.
+- **Modular and Reproducible Workflow**: Orchestrates all steps through a Makefile-based system to ensure scalability, transparency, and reproducibility.
+
+---
+
+## Cartostore: Cloud Access and Visualization
+
+As a natural companion to `cartloader`, **cartostore** hosts the output of processed datasets for public access and exploration. Designed for scalability and interoperability, cartostore uses spatially indexed formats like **PMTiles** to support interactive visualization and seamless integration.
+
+Explore the [Cartostore documentation](link-to-be-added) to learn more about dataset access and how to contribute.
+
+---
+
+## Citations:
+
+* cartloader+cartostore: [doi-to-be-added](link-to-be-added)
+* FICTURE: [doi-to-be-added](link-to-be-added)
+

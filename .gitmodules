@@ -23,3 +23,6 @@
 [submodule "submodules/go-pmtiles"]
 	path = submodules/go-pmtiles
 	url = git@github.com:protomaps/go-pmtiles.git
+[submodule "submodules/punkst"]
+	path = submodules/punkst
+	url = https://github.com/Yichen-Si/punkst.git

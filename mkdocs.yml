@@ -1,3 +1,4 @@
+# Projection information
 site_name: cartloader
 site_url: https://seqscope.github.io/cartloader
 
@@ -12,6 +13,8 @@ theme:
   - navigation.tabs
   - navigation.indexes
   - navigation.sections
+  - navigation.expand
+  - navigation.path
   - content.code.annotate
   palette:
   - media: "(prefers-color-scheme)"
@@ -43,6 +46,12 @@ theme:
 nav:
   - Home: 
       - Introduction: index.md
+      - Installation: installation.md
+  - Step-by-Step Guide:
+      - Introduction: step_by_step/intro.md
+      - SGE Harmonization: step_by_step/sge_harmonization.md
+      - FICTURE Analysis: step_by_step/run_ficture2.md
+      - Deployment: step_by_step/run_cartload.md
   #     - Documentation Overview: home/documentation_overview.md
   #     - Workflow Structure: home/workflow_structure.md
   # - QuickStart:
@@ -67,6 +76,7 @@ markdown_extensions:
 #      guess_lang: false 
   - toc:
       permalink: true
+      toc_depth: 3
   - attr_list
   - md_in_html
   - pymdownx.highlight:
