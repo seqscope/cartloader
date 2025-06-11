@@ -45,6 +45,7 @@ def parse_arguments(_args):
     run_params = parser.add_argument_group("Run Options", "Run options for FICTURE commands")
     run_params.add_argument('--restart', action='store_true', default=False, help='Restart the run. Ignore all intermediate files and start from the beginning')
     run_params.add_argument('--n-jobs', type=int, default=1, help='Number of jobs (processes) to run in parallel')
+    run_params.add_argument('--threads', type=int, default=4, help='Maximum number of threads per job (for tippecanoe)')
 
     aux_params = parser.add_argument_group("Auxiliary Parameters", "Auxiliary parameters (using default is recommended)")
     aux_params.add_argument('--in-molecules-delim', type=str, default='\t', help='Delimiter used in the input molecules files. Default is tab.')  
@@ -54,6 +55,8 @@ def parse_arguments(_args):
     aux_params.add_argument('--out-molecules-suffix', type=str, default="molecules.csv", help='The output file to store individual molecule count matrix. Each file name will be [out-prefix].split.[bin_id].[out-molecules-suffix]. Default: molecules.tsv.gz')
     aux_params.add_argument('--out-features-suffix', type=str, default="features.tsv.gz", help='The output file to store feature count matrix. Each file name will be [out-prefix].split.[bin_id].[out-features-suffix]. Default: features.tsv.gz')
     aux_params.add_argument('--tippecanoe', type=str, default=f"{repo_dir}/submodules/tippecanoe/tippecanoe", help='Path to tippecanoe binary')
+    aux_params.add_argument('--keep-intermediate-files', action='store_true', default=False, help='Keep intermediate output files')
+    aux_params.add_argument('--tmp-dir', type=str, help='Temporary directory to be used (default: out-dir/tmp; specify /tmp if needed)')
 
     if len(_args) == 0:
         parser.print_help()
@@ -80,8 +83,8 @@ def run_tsv2pmtiles(_args):
     ## rename X/Y to lon/lat for tippecanoe compatibility
     if args.col_rename is None:
         args.col_rename = []
-    args.col_rename.append("X:lon")
-    args.col_rename.append("Y:lat")
+        args.col_rename.append("X:lon")
+        args.col_rename.append("Y:lat")
 
     # start mm
     mm = minimake()
@@ -91,6 +94,11 @@ def run_tsv2pmtiles(_args):
     out_base = os.path.basename(args.out_prefix)
     if not os.path.exists(out_dir):
         os.makedirs(out_dir, exist_ok=True)
+
+    if args.tmp_dir is None:
+        args.tmp_dir = os.path.join(out_dir, "tmp")
+        if not os.path.exists(args.tmp_dir):
+            os.makedirs(args.tmp_dir, exist_ok=True)
     
     # 1. Perform split without running makefile
     if args.split:
@@ -137,7 +145,7 @@ def run_tsv2pmtiles(_args):
             else:
                 pmtiles_path = args.out_prefix + "_bin" + bin_id + ".pmtiles"
             cmds = cmd_separator([], f"Converting bin {bin_id} to pmtiles")
-            cmds.append(f"{args.tippecanoe} -o {pmtiles_path} -Z {args.min_zoom} -z {args.max_zoom} --force -s EPSG:3857 -M {args.max_tile_bytes} -O {args.max_feature_counts} --drop-densest-as-needed --extend-zooms-if-still-dropping '--preserve-point-density-threshold={args.preserve_point_density_thres}' --no-duplication --no-clipping --buffer 0 {csv_path}")
+            cmds.append(f"TIPPECANOE_MAX_THREADS={args.threads} '{args.tippecanoe}' -t {args.tmp_dir} -o {pmtiles_path} -Z {args.min_zoom} -z {args.max_zoom} --force -s EPSG:3857 -M {args.max_tile_bytes} -O {args.max_feature_counts} --drop-densest-as-needed --extend-zooms-if-still-dropping '--preserve-point-density-threshold={args.preserve_point_density_thres}' --no-duplication --no-clipping --buffer 0 {csv_path}")
             mm.add_target(pmtiles_path, [csv_path], cmds)
 
         if len(mm.targets) == 0:
@@ -151,21 +159,22 @@ def run_tsv2pmtiles(_args):
 
         result = subprocess.run(f"make -f {args.out_prefix}.Makefile -j {args.n_jobs} {'-B' if args.restart else ''}", shell=True)
         if result.returncode != 0:
-            logger.error("Error in splitting the input TSV file into CSV files")
+            logger.error("Error in converting the CSV files to pmtiles")
             sys.exit(1)
 
     # 3. clean the intermediate files and write new output files
-    logger.info("Cleaning intermediate files")
+    if not args.keep_intermediate_files:
+        logger.info("Cleaning intermediate files")
 
-    df = pd.read_csv(f"{args.out_prefix}_index.tsv", sep="\t")
-    for i, row in df.iterrows():
-        bin_id = row["bin_id"]
-        csv_path = out_dir + "/" + row["molecules_path"]
-        if args.clean and os.path.exists(csv_path):
-            os.remove(csv_path)
-        ftr_path = out_dir + "/" + row["features_path"]
-        if args.clean and os.path.exists(ftr_path):
-            os.remove(ftr_path)
+        df = pd.read_csv(f"{args.out_prefix}_index.tsv", sep="\t")
+        for i, row in df.iterrows():
+            bin_id = row["bin_id"]
+            csv_path = out_dir + "/" + row["molecules_path"]
+            if args.clean and os.path.exists(csv_path):
+                os.remove(csv_path)
+            ftr_path = out_dir + "/" + row["features_path"]
+            if args.clean and os.path.exists(ftr_path):
+                os.remove(ftr_path)
 
     df_out = df.drop(columns=['molecules_path','features_path'])
     df_out['pmtiles_path'] = [f"{out_base}_all.pmtiles" if x == "all" else f"{out_base}_bin{x}.pmtiles" for x in df_out['bin_id']]

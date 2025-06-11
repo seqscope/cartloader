@@ -23,6 +23,7 @@ def convert_generic_tsv_to_pmtiles(_args):
 
     aux_params = parser.add_argument_group("Auxiliary Parameters", "Auxiliary parameters frequently used by users")
     aux_params.add_argument('--log', action='store_true', default=False, help='Write log to file')
+    aux_params.add_argument('--threads', type=int, default=4, help='Maximum number of threads per job (for tippecanoe)')
     aux_params.add_argument('--skip-pmtiles', action='store_true', default=False, help='Keep intermediate output files')
     aux_params.add_argument('--keep-intermediate-files', action='store_true', default=False, help='Keep intermediate output files')
     aux_params.add_argument('--chunk-size', type=int, default=1000000, help='Number of rows to read at a time. Default is 1000000')
@@ -37,10 +38,22 @@ def convert_generic_tsv_to_pmtiles(_args):
     aux_params.add_argument('--max-tile-bytes', type=int, default=5000000, help='Maximum bytes for each tile in PMTiles')
     aux_params.add_argument('--max-feature-counts', type=int, default=500000, help='Max feature limits per tile in PMTiles')
     aux_params.add_argument('--preserve-point-density-thres', type=int, default=1024, help='Threshold for preserving point density in PMTiles')
+    aux_params.add_argument('--tmp-dir', type=str, help='Temporary directory to be used (default: out-dir/tmp; specify /tmp if needed)')
 
     args = parser.parse_args(_args)
 
     logger = create_custom_logger(__name__, args.out_prefix + "_convert_generic_tsv_to_pmtiles" + args.log_suffix if args.log else None)
+
+    # create output directory if needed
+    out_dir = os.path.dirname(args.out_prefix)
+    out_base = os.path.basename(args.out_prefix)
+    if not os.path.exists(out_dir):
+        os.makedirs(out_dir, exist_ok=True)
+
+    if args.tmp_dir is None:
+        args.tmp_dir = os.path.join(out_dir, "tmp")
+        if not os.path.exists(args.tmp_dir):
+            os.makedirs(args.tmp_dir, exist_ok=True)
 
     logger.info("Reading the metadata")
 
@@ -130,9 +143,11 @@ def convert_generic_tsv_to_pmtiles(_args):
     ## Converting the output to pmtiles
     if not args.skip_pmtiles:
         logger.info("Converting the CSV file to PMTiles format")
-        cmd = f"{args.tippecanoe} -o {args.out_prefix}{args.out_pmtiles_suffix} -Z {args.min_zoom} -z {args.max_zoom} --force -s EPSG:3857 -M {args.max_tile_bytes} -O {args.max_feature_counts} --drop-densest-as-needed --extend-zooms-if-still-dropping '--preserve-point-density-threshold={args.preserve_point_density_thres}' --no-duplication --no-clipping --buffer 0 {args.out_prefix}{args.out_csv_suffix}"
+        my_env = os.environ.copy()
+        my_env["TIPPECANOE_MAX_THREADS"] = str(args.threads)
+        cmd = f"'{args.tippecanoe}' -t {args.tmp_dir} -o {args.out_prefix}{args.out_pmtiles_suffix} -Z {args.min_zoom} -z {args.max_zoom} --force -s EPSG:3857 -M {args.max_tile_bytes} -O {args.max_feature_counts} --drop-densest-as-needed --extend-zooms-if-still-dropping '--preserve-point-density-threshold={args.preserve_point_density_thres}' --no-duplication --no-clipping --buffer 0 {args.out_prefix}{args.out_csv_suffix}"
         print("Command to run:" + cmd)
-        result = subprocess.run(cmd, shell=True)
+        result = subprocess.run(cmd, shell=True, env=my_env)
         if result.returncode != 0:
             logger.error("Error in converting the input TSV file into output CSV/TSV file")
             sys.exit(1)

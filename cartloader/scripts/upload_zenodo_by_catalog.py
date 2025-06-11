@@ -67,19 +67,18 @@ def upload_zenodo(_args):
     parser.add_argument('--zenodo-id', type=str, required=True, help='The Zenodo deposition ID.')
     parser.add_argument('--zenodo-token', type=str, required=True, help='The path of file for your access token for Zenodo.')
     parser.add_argument('--in-dir', type=str, required=True, help='The input directory where the files are located.')
-    parser.add_argument('--token-path', type=str, required=True, help='The path to your Zenodo access token file.')
-    parser.add_argument('--upload-method', type=str, default="user_list", choices=["all", "yaml_list", "user_list"], help='Specify which files to upload to Zenodo. Choose "all_files" to upload all files in the input directory, "yaml_list" to upload files listed in a YAML file, or "user_list" to upload files specified by the user.')
+    parser.add_argument('--upload-method', type=str, default="user_list", choices=["all", "catalog", "user_list"], help='Specify which files to upload to Zenodo. Choose "all" to upload all files in the input directory, "catalog" to upload files listed in the catalog YAML file, or "user_list" to upload files specified by the user.')
     parser.add_argument('--in-list', type=str, nargs='+', default=[], help='If --upload-method is "user_list", provide the name of files to be uploaded to Zenodo.')
-    parser.add_argument('--in-yaml', type=str, default=None, help='If --upload-method is "yaml_list", provide the YAML file that lists the files to be uploaded to Zenodo.')
+    parser.add_argument('--catalog-yaml', type=str, default=None, help='If --upload-method is "catalog_yaml", provide the catalog YAML file that lists the files to be uploaded to Zenodo.')
     parser.add_argument('--overwrite', action='store_true', default=False, help='If set, overwrite existing files in the Zenodo bucket. If not set, skip existing files.')
     args = parser.parse_args(_args)
 
     # define input by the upload_method
-    if args.upload_method == "all_files":
+    if args.upload_method == "all":
         in_files_raw = glob.glob(f"{args.input_dir}/*")
-    elif args.upload_method == "yaml_list":
-        assert args.in_yaml is not None, "Please provide a YAML file that lists the files to be uploaded to Zenodo."
-        with open(args.in_yaml, 'r') as file:
+    elif args.upload_method == "catalog":
+        assert args.catalog_yaml is not None, "Please provide a YAML file that lists the files to be uploaded to Zenodo."
+        with open(args.catalog_yaml, 'r') as file:
             yaml_dat = yaml.safe_load(file)
         fn_list = collect_files_from_yaml(yaml_dat["assets"])
         in_files_raw = [os.path.join(args.in_dir, fn) for fn in fn_list]
@@ -98,8 +97,8 @@ def upload_zenodo(_args):
     ACCESS_TOKEN = open(args.zenodo_token).read().strip()
 
     # get the deposition
-    print(f"Get the deposition {args.id}")
-    r = requests.get(f'https://zenodo.org/api/deposit/depositions/{args.id}',
+    print(f"Get the deposition {args.zenodo_id}")
+    r = requests.get(f'https://zenodo.org/api/deposit/depositions/{args.zenodo_id}',
                     params={'access_token': ACCESS_TOKEN})
     
     if r.status_code != 200:
@@ -139,7 +138,7 @@ def upload_zenodo(_args):
             print(f"    - Error uploading {in_file}: {e}")
 
     # check the status
-    print(f"Check the status of the deposition {args.id}")
+    print(f"Check the status of the deposition {args.zenodo_id}")
     print(r.json())
 
 if __name__ == "__main__":

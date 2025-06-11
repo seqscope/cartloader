@@ -1,4 +1,18 @@
-import logging, os, shutil, sys, importlib, csv, shlex, subprocess, json, yaml
+import logging, os, shutil, sys, importlib, csv, shlex, subprocess, json, yaml, re, gzip
+import os
+
+
+def get_func(name):
+    """
+    Get the function object among the runnable scripts based on the script name
+    """
+    #print(f"get_func({name}) was called")
+    module = importlib.import_module(f"cartloader.scripts.{name}")
+    return getattr(module,name)
+
+# ====
+# cmd
+# ====
 
 def cmd_separator(cmds, info):
     """
@@ -9,21 +23,79 @@ def cmd_separator(cmds, info):
     cmds.append(rf"$(info --------------------------------------------------------------)")
     return cmds
 
+def add_param_to_cmd(cmd, args, aux_argset, underscore2dash=True):
+    aux_args = {k: v for k, v in vars(args).items() if k in aux_argset}
+    for arg, value in aux_args.items():
+        if value or isinstance(value, bool):
+            if underscore2dash:
+                arg_name = arg.replace('_', '-')
+            else:
+                arg_name = arg
+            if isinstance(value, bool) and value:
+                cmd += f" --{arg_name}"
+            elif isinstance(value, list) and len(value) > 0:
+                cmd += f" --{arg_name} {' '.join(map(str, value))}"
+            elif not isinstance(value, bool):
+                # Ensure regex patterns are properly quoted
+                if "regex" in arg_name:
+                    quoted_value = shlex.quote(str(value))
+                    cmd += f" --{arg_name} {quoted_value}"
+                else:
+                    cmd += f" --{arg_name} {value}"
+    return cmd
+
+# def run_bash_command(command):
+#     try:
+#         result = subprocess.run(command, 
+#                   shell=True, 
+#                   stdout=subprocess.PIPE, 
+#                   stderr=subprocess.PIPE, 
+#                   text=True, 
+#                   check=True)
+#         return result.stdout
+#     except subprocess.CalledProcessError as e:
+#         print(f"Command failed with error:\n\t{command}\n\t{e.stderr}\n")
+#         raise
+
+def run_command(command, use_bash=False):
+    executable_shell = "/bin/bash" if use_bash else "/bin/sh"
+    try:
+        result = subprocess.run(
+            command, 
+            shell=True, 
+            executable=executable_shell,  # Choose the shell based on the use_bash flag
+            stdout=subprocess.PIPE, 
+            stderr=subprocess.PIPE, 
+            text=True, 
+            check=True
+        )
+        return result.stdout
+    except subprocess.CalledProcessError as e:
+        print(f"Command failed with error:\n{e.stderr}")
+        raise
+
+# ====
+# sanity check
+# ====
 def scheck_app(app_cmd):
     """
     Check if the specified application is available
     """
-    if not shutil.which(app_cmd.split(" ")[0]):
+    #if not shutil.which(app_cmd.split(" ")[0]):
+    if not shutil.which(app_cmd):
         logging.error(f"Cannot find {app_cmd}. Please make sure that the path to specify {app_cmd} is correct")
         sys.exit(1)
 
-def get_func(name):
-    """
-    Get the function object among the runnable scripts based on the script name
-    """
-    #print(f"get_func({name}) was called")
-    module = importlib.import_module(f"cartloader.scripts.{name}")
-    return getattr(module,name)
+def scheck_file(file_path):
+    if not (os.path.isfile(file_path) or os.path.islink(file_path)):
+        print(f"Input file not found: {file_path}")
+        sys.exit(1)
+    else:
+        print(f"Checked: {file_path}")
+
+# ====
+# logging
+# ====
 
 def create_custom_logger(name, logfile=None, level=logging.INFO):
     """
@@ -55,6 +127,43 @@ def create_custom_logger(name, logfile=None, level=logging.INFO):
         logger.addHandler(log_file_handler)
     
     return logger
+
+
+def log_info(msg, logger=None):
+    """
+    Logs a message if a logger is provided; otherwise, prints it.
+    """
+    if logger:
+        if logger == "logging":
+            logging.info(msg)
+        else:
+            logger.info(msg)
+    else:
+        print(msg)
+
+
+def log_dataframe(df, msg="DataFrame Info:", logger=None, indentation=""): 
+    ## purpose:format the log messages so that each column value occupies a fixed width
+
+    # Calculate column widths
+    col_widths = {col: max(df[col].astype(str).apply(len).max(), len(col)) for col in df.columns}
+
+    # Prepare the header string with column names aligned
+    header = ' | '.join([col.ljust(col_widths[col]) for col in df.columns])
+
+    # Log the header
+    log_info(f"{msg}")
+    log_info(indentation+header)
+    log_info(indentation+"-" * len(header))  # Divider line
+    
+    # Iterate over DataFrame rows and log each, maintaining alignment
+    for _, row in df.iterrows():
+        row_str = ' | '.join([str(row[col]).ljust(col_widths[col]) for col in df.columns])
+        log_info(indentation+row_str)
+        
+# ======
+# SGE
+# ======
 
 # copied from NovaScope
 def find_major_axis(filename, format):
@@ -95,40 +204,50 @@ def find_major_axis(filename, format):
         return "X"
     else:
         return "Y"
-    
-# def add_param_to_cmd(cmd, args, aux_argset):
-#     aux_args = {k: v for k, v in vars(args).items() if k in aux_argset}
-#     for arg, value in aux_args.items():
-#         if value or isinstance(value, bool):
-#             arg_name = arg.replace('_', '-')
-#             if isinstance(value, bool) and value:
-#                 cmd += f" --{arg_name}"
-#             elif isinstance(value, list):
-#                 cmd += f" --{arg_name} {' '.join(value)}"
-#             elif not isinstance(value, bool):
-#                 if "regex" in arg_name:
-#                     cmd += f" --{arg_name} '{value}'"
-#                 else:
-#                     cmd += f" --{arg_name} {value}"
-#     return cmd
 
-def add_param_to_cmd(cmd, args, aux_argset):
-    aux_args = {k: v for k, v in vars(args).items() if k in aux_argset}
-    for arg, value in aux_args.items():
-        if value or isinstance(value, bool):
-            arg_name = arg.replace('_', '-')
-            if isinstance(value, bool) and value:
-                cmd += f" --{arg_name}"
-            elif isinstance(value, list):
-                cmd += f" --{arg_name} {' '.join(map(str, value))}"
-            elif not isinstance(value, bool):
-                # Ensure regex patterns are properly quoted
-                if "regex" in arg_name:
-                    quoted_value = shlex.quote(str(value))
-                    cmd += f" --{arg_name} {quoted_value}"
-                else:
-                    cmd += f" --{arg_name} {value}"
-    return cmd
+def read_minmax(filename, format):
+    # purpose: find the longer axis of the image
+    # (1) detect from the "{uid}.coordinate_minmax.tsv"  
+    if format == "row":
+        data = {}
+        with open(filename, 'r') as file:
+            for line in file:
+                key, value = line.split()
+                data[key] = float(value)
+        if not all(k in data for k in ['xmin', 'xmax', 'ymin', 'ymax']):
+            raise ValueError("Missing one or more required keys (xmin, xmax, ymin, ymax)")
+        xmin = data['xmin']
+        xmax = data['xmax']
+        ymin = data['ymin']
+        ymax = data['ymax']
+    # (2) detect from the barcodes.minmax.tsv
+    elif format == "col":
+        with open(filename, 'r') as file:
+            reader = csv.DictReader(file, delimiter='\t')
+            try:
+                row = next(reader)  # Read the first row
+            except StopIteration:
+                raise ValueError("File is empty")
+            try:
+                next(reader)
+                raise ValueError("Error: More than one row of data found.")
+            except StopIteration:
+                pass  
+            xmin = int(row['xmin'])
+            xmax = int(row['xmax'])
+            ymin = int(row['ymin'])
+            ymax = int(row['ymax'])
+    return {
+        "xmin": xmin,
+        "xmax": xmax,
+        "ymin": ymin,
+        "ymax": ymax
+    }
+    
+
+#======
+# file - dict
+#======
 
 ## code suggested by ChatGPT
 def load_file_to_dict(file_path, file_type=None):
@@ -184,37 +303,300 @@ def write_dict_to_file(data, file_path, file_type=None):
     else:
         raise ValueError("Unsupported file type. Please provide 'json' or 'yaml'/'yml' as file_type.")
 
-# def run_bash_command(command):
-#     try:
-#         result = subprocess.run(command, 
-#                   shell=True, 
-#                   stdout=subprocess.PIPE, 
-#                   stderr=subprocess.PIPE, 
-#                   text=True, 
-#                   check=True)
-#         return result.stdout
-#     except subprocess.CalledProcessError as e:
-#         print(f"Command failed with error:\n\t{command}\n\t{e.stderr}\n")
-#         raise
 
-def run_command(command, use_bash=False):
-    executable_shell = "/bin/bash" if use_bash else "/bin/sh"
-    try:
-        result = subprocess.run(
-            command, 
-            shell=True, 
-            executable=executable_shell,  # Choose the shell based on the use_bash flag
-            stdout=subprocess.PIPE, 
-            stderr=subprocess.PIPE, 
-            text=True, 
-            check=True
-        )
-        return result.stdout
-    except subprocess.CalledProcessError as e:
-        print(f"Command failed with error:\n{e.stderr}")
-        raise
+def factor_id_to_name(factor_id):
+    pattern = re.compile(r"(?:(t\d+)-)?(?:(f\d+)-)?(?:(p\d+)-)?(?:(a\d+)-)?(?:(r\d+))?")
+    match = pattern.match(factor_id)
+    if match and match.group(0) == factor_id:
+        # Filter out None values and organize the result
+        res = {key: value for key, value in zip(['t', 'f', 'p', 'a', 'r'], match.groups()) if value}
+        if "t" in res and "f" in res:
+            if "p" in res: ## projection
+                if "a" in res:
+                    if "r" in res:
+                        return f"FICTURE {res['f']} factors - radius {res['r']}um / LDA {res['t']}-{res['p']}-{res['a']}um"
+                    else:
+                        return f"FICTURE {res['f']} factors / LDA {res['t']}-{res['p']}-{res['a']}um"
+                else:
+                    return f"FICTURE {res['f']} factors / LDA {res['t']}-{res['p']}um"
+            else:
+                return f"FICTURE {res['f']} factors / LDA {res['t']}um"
+        else: ## not parseable
+            return factor_id
+    else:
+        return factor_id
+    
+def hex_to_rgb(hex_code):
+    """
+    Parse an RGB hex code (e.g., "#FFA500") to three integer values (R, G, B).
+    """
+    hex_code = hex_code.lstrip('#')  # Remove the '#' character if present
+    r = int(hex_code[0:2], 16)  # First two characters -> Red
+    g = int(hex_code[2:4], 16)  # Next two characters -> Green
+    b = int(hex_code[4:6], 16)  # Last two characters -> Blue
+    return r, g, b
 
-import os
+## transform FICTURE parameters to FACTOR assets (new standard)
+def ficture_params_to_factor_assets(params, skip_raster=False):
+    ## model_id
+    ## proj_params -> proj_id
+    ## proj_params -> decode_params -> decode_id
+    suffix_factormap = "-factor-map.tsv"
+    suffix_de = "-bulk-de.tsv"
+    suffix_info = "-info.tsv"
+    suffix_model = "-model-matrix.tsv.gz"
+    suffix_post = "-posterior-counts.tsv.gz"
+    suffix_rgb = "-rgb.tsv"
+    suffix_hex_coarse = ".pmtiles"
+    suffix_hex_fine = ".pmtiles"
+    suffix_raster = "-pixel-raster.pmtiles"
+
+    out_assets = []
+    for param in params: ## train_params is a list of dictionaries
+        if not "model_id" in param:
+            raise ValueError(f"model_id is missing from FICTURE parameters")
+        model_id = param["model_id"].replace("_", "-")
+
+        len_proj_params = len(param["proj_params"])
+
+        if len_proj_params == 0: ## train_param only
+            out_asset = {
+                "id": model_id,
+                "name": factor_id_to_name(model_id),
+                "model_id": model_id,
+                "de": model_id + suffix_de,
+                "info": model_id + suffix_info,
+                "model": model_id + suffix_model,
+                "post": model_id + suffix_post,
+                "rgb": model_id + suffix_rgb,
+                "pmtiles": {
+                    "hex_coarse": model_id + suffix_hex_coarse
+                }
+            }
+            if "factor_map" in param:
+                out_asset["factor_map"] = model_id + suffix_factormap
+            out_assets.append(out_asset)
+        elif len_proj_params == 1:
+            proj_param = param["proj_params"][0]
+            if not "proj_id" in proj_param:
+                raise ValueError(f"proj_id is missing from FICTURE parameter for {model_id}")
+            proj_id = proj_param["proj_id"].replace("_", "-")
+
+            len_decode_params = len(proj_param["decode_params"])
+
+            if len_decode_params == 0:
+                out_asset = {
+                    "id": model_id,
+                    "name": factor_id_to_name(model_id),
+                    "model_id": model_id,
+                    "proj_id": proj_id,
+                    "de": model_id + suffix_de,
+                    "info": model_id + suffix_info,
+                    "model": model_id + suffix_model,
+                    "post": model_id + suffix_post,
+                    "rgb": model_id + suffix_rgb,
+                    "pmtiles": {
+                        "hex_coarse": model_id + suffix_hex_coarse,
+                        "hex_fine": proj_id + suffix_hex_fine
+                    }
+                }
+                if "factor_map" in param:
+                    out_asset["factor_map"] = model_id + suffix_factormap
+                out_assets.append(out_asset)
+            elif len_decode_params == 1:
+                decode_param = proj_param["decode_params"][0]
+                if not "decode_id" in decode_param:
+                    raise ValueError(f"decode_id is missing from FICTURE parameter for {model_id}-{proj_id}")
+                decode_id = decode_param["decode_id"].replace("_", "-")
+
+                out_asset = {
+                    "id": model_id,
+                    "name": factor_id_to_name(model_id),
+                    "model_id": model_id,
+                    "proj_id": proj_id,
+                    "decode_id": decode_id,
+                    "de": decode_id + suffix_de,
+                    "info": decode_id + suffix_info,
+                    "model": model_id + suffix_model,
+                    "post": decode_id + suffix_post,
+                    "rgb": model_id + suffix_rgb,
+                    "pmtiles": {
+                        "hex_coarse": model_id + suffix_hex_coarse,
+                        "hex_fine": proj_id + suffix_hex_fine,
+                        **({"raster": decode_id + suffix_raster} if not skip_raster else {})
+                    }
+                }
+                if "factor_map" in param:
+                    out_asset["factor_map"] = model_id + suffix_factormap
+                out_assets.append(out_asset)
+            else:
+                for decode_param in proj_param["decode_params"]:
+                    if not "decode_id" in decode_param:
+                        raise ValueError(f"decode_id is missing from FICTURE parameter for {model_id}-{proj_id}")
+                    decode_id = decode_param["decode_id"].replace("_", "-")
+
+                    out_asset = {
+                        "id": decode_id,
+                        "name": factor_id_to_name(model_id),
+                        "model_id": model_id,
+                        "proj_id": proj_id,
+                        "decode_id": decode_id,
+                        "de": decode_id + suffix_de,
+                        "info": decode_id + suffix_info,
+                        "model": decode_id + suffix_model,
+                        "post": decode_id + suffix_post,
+                        "rgb": model_id + suffix_rgb,
+                        "pmtiles": {
+                            "hex_coarse": model_id + suffix_hex_coarse,
+                            "hex_fine": proj_id + suffix_hex_fine,
+                            **({"raster": decode_id + suffix_raster} if not skip_raster else {})
+                        }
+                    }
+                    if "factor_map" in param:
+                        out_asset["factor_map"] = model_id + suffix_factormap
+                    out_assets.append(out_asset)
+        else: ## multiple proj_params
+            for proj_param in param["proj_params"]:
+                if not "proj_id" in proj_param:
+                    raise ValueError(f"proj_id is missing from FICTURE parameter for {model_id}")
+                proj_id = proj_param["proj_id"].replace("_", "-")
+
+                len_decode_params = len(proj_param["decode_params"])
+
+                if len_decode_params == 0: ## train and projection only
+                    out_asset = {
+                        "id": model_id,
+                        "name": factor_id_to_name(model_id),
+                        "model_id": model_id,
+                        "proj_id": proj_id,
+                        "de": model_id + suffix_de,
+                        "info": model_id + suffix_info,
+                        "model": model_id + suffix_model,
+                        "post": model_id + suffix_post,
+                        "rgb": model_id + suffix_rgb,
+                        "pmtiles": {
+                            "hex_coarse": model_id + suffix_hex_coarse,
+                            "hex_fine": proj_id + suffix_hex_fine
+                        }
+                    }
+                    if "factor_map" in param:
+                        out_asset["factor_map"] = model_id + suffix_factormap
+                    out_assets.append(out_asset)
+                else:
+                    for decode_param in proj_param["decode_params"]:
+                        if not "decode_id" in decode_param:
+                            raise ValueError(f"decode_id is missing from FICTURE parameter for {model_id}-{proj_id}")
+                        decode_id = decode_param["decode_id"].replace("_", "-")
+
+                        out_asset = {
+                            "id": decode_id,
+                            "name": factor_id_to_name(model_id),
+                            "model_id": model_id,
+                            "proj_id": proj_id,
+                            "decode_id": decode_id,
+                            "de": decode_id + suffix_de,
+                            "info": decode_id + suffix_info,
+                            "model": decode_id + suffix_model,
+                            "post": decode_id + suffix_post,
+                            "rgb": model_id + suffix_rgb,
+                            "pmtiles": {
+                                "hex_coarse": model_id + suffix_hex_coarse,
+                                "hex_fine": proj_id + suffix_hex_fine,
+                                **({"raster": decode_id + suffix_raster} if not skip_raster else {})
+                            }
+                        }
+                        if "factor_map" in param:
+                            out_asset["factor_map"] = model_id + suffix_factormap
+                        out_assets.append(out_asset)
+    return out_assets
+
+## transform FICTURE parameters to FACTOR assets (new standard)
+def ficture2_params_to_factor_assets(params, skip_raster=False):
+    ## model_id
+    ## proj_params -> proj_id
+    ## proj_params -> decode_params -> decode_id
+    suffix_factormap = "-factor-map.tsv"
+    suffix_de = "-bulk-de.tsv"
+    suffix_info = "-info.tsv"
+    suffix_model = "-model.tsv"
+    suffix_post = "-pseudobulk.tsv"
+    suffix_rgb = "-rgb.tsv"
+    suffix_hex_coarse = ".pmtiles"
+    suffix_raster = "-pixel-raster.pmtiles"
+
+    out_assets = []
+    for param in params: ## train_params is a list of dictionaries
+        if not "model_id" in param:
+            raise ValueError(f"model_id is missing from FICTURE parameters")
+        model_id = param["model_id"].replace("_", "-")
+
+        len_decode_params = len(param["decode_params"])
+
+        if len_decode_params == 0: ## train_param only
+            out_asset = {
+                "id": model_id,
+                "name": factor_id_to_name(model_id),
+                "model_id": model_id,
+                "de": model_id + suffix_de,
+                "info": model_id + suffix_info,
+                "model": model_id + suffix_model,
+                "rgb": model_id + suffix_rgb,
+                "pmtiles": {
+                    "hex_coarse": model_id + suffix_hex_coarse
+                }
+            }
+            if "factor_map" in param:
+                out_asset["factor_map"] = model_id + suffix_factormap
+            out_assets.append(out_asset)
+        elif len_decode_params == 1:
+            decode_param = param["decode_params"][0]
+            if not "decode_id" in decode_param:
+                raise ValueError(f"decode_id is missing from FICTURE parameter for {model_id}")
+            decode_id = decode_param["decode_id"].replace("_", "-")
+
+            out_asset = {
+                "id": model_id,
+                "name": factor_id_to_name(model_id),
+                "model_id": model_id,
+                "decode_id": decode_id,
+                "de": model_id + suffix_de,
+                "info": model_id + suffix_info,
+                "model": model_id + suffix_model,
+                "post": decode_id + suffix_post,
+                "rgb": model_id + suffix_rgb,
+                "pmtiles": {
+                    "hex_coarse": model_id + suffix_hex_coarse,
+                    **({"raster": decode_id + suffix_raster} if not skip_raster else {})
+                }
+            }
+            if "factor_map" in param:
+                out_asset["factor_map"] = model_id + suffix_factormap
+            out_assets.append(out_asset)
+        else: ## multiple decode_params
+            for decode_param in param["decode_params"]:
+                if not "decode_id" in decode_param:
+                    raise ValueError(f"decode_id is missing from FICTURE parameter for {model_id}")
+                decode_id = decode_param["decode_id"].replace("_", "-")
+
+                out_asset = {
+                    "id": model_id,
+                    "name": factor_id_to_name(model_id),
+                    "model_id": model_id,
+                    "decode_id": decode_id,
+                    "de": model_id + suffix_de,
+                    "info": model_id + suffix_info,
+                    "model": model_id + suffix_model,
+                    "post": decode_id + suffix_post,
+                    "rgb": model_id + suffix_rgb,
+                    "pmtiles": {
+                        "hex_coarse": model_id + suffix_hex_coarse,
+                        **({"raster": decode_id + suffix_raster} if not skip_raster else {})
+                    }
+                }
+                if "factor_map" in param:
+                    out_asset["factor_map"] = model_id + suffix_factormap
+                out_assets.append(out_asset)
+    return out_assets
 
 def create_symlink(A, B):
     # Purpose: Create a soft link from A to B
@@ -247,3 +629,36 @@ def create_symlink(A, B):
     # Step 3: Create the soft link
     os.symlink(A, B)
     print(f"Soft link created from {A} to {B}.")
+
+# flexopen - open either plan or gzip file
+def flexopen(filename, mode='rt'):
+    if filename.endswith('.gz'):
+        return gzip.open(filename, mode, encoding='utf-8' if 't' in mode else None)
+    else:
+        return open(filename, mode, encoding='utf-8' if 't' in mode else None)
+
+# unquote a string
+def unquote_str(s):
+    if len(s) >= 2 and s[0] == s[-1] and s[0] in ("'", '"'):
+        return s[1:-1]
+    return s
+
+# smart sorting - sort as integers only if all are integers
+def smartsort(strings):
+    # Convert to list if it's a set
+    strings = list(strings)
+
+    # Check if all elements are integers
+    all_integers = all(s.lstrip('-').isdigit() for s in strings)
+
+    if all_integers:
+        # Sort numerically
+        sorted_strings = sorted(strings, key=lambda x: int(x))
+    else:
+        # Sort lexicographically
+        sorted_strings = sorted(strings)
+
+    # Create the mapping from string to its order
+    order_mapping = {s: idx for idx, s in enumerate(sorted_strings)}
+
+    return sorted_strings, order_mapping

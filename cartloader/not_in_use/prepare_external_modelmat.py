@@ -26,23 +26,6 @@ def parse_arguments(_args):
 def prepare_external_modelmat(_args):
     # args
     args=parse_arguments(_args)
-    # parser = argparse.ArgumentParser(prog=f"cartloader run_ficture", 
-    #                                     description="""
-    #                                     Helper script to prepare a directory for running FICTURE with external model and target data.
-    #                                     """)
-    # key_params = parser.add_argument_group("Key Parameters", "Key parameters that requires user's attention")
-    # key_params.add_argument('--model', type=str, default=None, help='Path to the external model file')
-    # key_params.add_argument('--train-width', type=str, default="0", help='If the external model has a training width, specify it here. Default: 0')
-    # key_params.add_argument('--target-dir', type=str, default=None, help='Path to the directory containing the projection files. We assume the cartloader run_ficture has been applied to the target data, including sorttsv, minibatch')
-    # key_params.add_argument('--target-cstranscript', type=str, default=None, help='Path to the coordinate-sorted transcript-indexed SGE file in TSV format')
-    # key_params.add_argument('--target-minmax', type=str, default=None, help='Path to the coordinate minmax TSV file')
-    # key_params.add_argument('--target-feature', type=str, default=None, help='Path to the feature TSV file')
-    # key_params.add_argument('--out-dir', type=str, help='Output directory')
-    # args = parser.parse_args()
-    # args.model = "/nfs/turbo/sph-hmkang/index/data/weiqiuc/testruns/testcases/umst_mouse_brain/snRNA/proc/snRNA_count_celltype.tsv.gz"
-    # args.train_width = "0"
-    # args.out_dir = "/nfs/turbo/sph-hmkang/index/data/weiqiuc/testruns/testcases/umst_mouse_brain/snRNA/proj_10x_xenium"
-    # args.target_dir="/nfs/turbo/sph-hmkang/index/data/weiqiuc/testruns/testcases/umst_mouse_brain/10x_xenium/out3"
 
     # input/output
     # 1. input external model
@@ -86,8 +69,6 @@ def prepare_external_modelmat(_args):
     done_flag = os.path.join(args.out_dir, f"{model_prefix}.done")
     with open(done_flag, "w") as f:
         f.write("")
-
-
 
 if __name__ == "__main__":
     # Get the path to the cartloader repository

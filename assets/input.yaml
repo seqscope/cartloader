@@ -1,0 +1,78 @@
+# This is an example input yaml file for `cartloader stepinator` function.
+
+#===============
+# Set up working environment
+#===============
+## ENV
+env:
+  spatula: "/path/to/spatula"
+  tippecanoe: "/path/to/tippecanoe"
+  pmtiles: "/path/to/pmtiles"
+  aws: "/path/to/aws"
+  magick: "/path/to/magick"
+  
+  ## If HPC modules are required, list them here. Below is an example of including mutiple modules.
+  # hpc_modules:          
+  #   - "aws-cli"
+  #   - "gcc"
+  #   - "gdal/3.5.1"
+  #   - "imagemagick/7.1.0-25.lua"
+  
+  ## If a conda environment is used, provide both the base path and the environment prefix.
+  conda:
+    base_path: "/net/wonderland/home/weiqiuc/miniconda3"
+    env_prefix: "gdal_env"      ## If the environment installed in the default location, provide only the environment name. If installed in a custom location, provide the full path here.
+
+## SLURM
+## If the job is to be submitted to a SLURM cluster, provide the following parameters. To run locally, skip this section.
+slurm:
+  account: null                   ## Account name 
+  partition: "main"               ## Partition name
+  mail_user: "weiqiuc@umich.edu"  ## Email address to receive notifications
+  cpus_per_task: 10               ## Number of CPUs per task
+  mem: "6500mb"                   ## Memory per task
+  hours: 24                       ## Walltime
+
+## AWS
+## If the data is to be uploaded to AWS, provide the bucket name here.
+## This file will be uploaded to S3://<aws_bucket>/<run_id>
+aws_bucket: "cartoscope-catalog-warehouse" 
+
+#===============
+# Job specific parameters
+#===============
+
+## Output directory
+out_dir: "/net/1000g/hmkang/weiqiuc/cart/stereoseq-mouse-brain-adult-mosta"
+
+## SGE information
+SGE:
+  ## Required for --sge-convert
+  platform: <platform_of_input_data>            ## Options: 10x_visium_hd, seqscope, 10x_xenium, bgi_stereoseq, cosmx_smi, vizgen_merscope, pixel_seq, nova_st
+  in_mex: /path/to/input/directory              ## Required for 10x_visium_hd, seqscope input data. Path to the input directory that hosting the input data in MEX format
+  in_parquet: /path/to/tissue_positions.parquet ## Required for 10x_visium_hd input data. Path to the tissue_positions.parquet file
+  scale_json: /path/to/scalefactors_json.json   ## Required for 10x_visium_hd input data. Path to the scalefactors_json.json file
+  in_csv: /path/to/input.csv                    ## Required for 10x_xenium, bgi_stereoseq, cosmx_smi, vizgen_merscope, pixel_seq, nova_st input data. Path to the input csv file
+  units_per_um: 1.00                            ## Coordinate units per micrometer. If scale_json is provided, skip this parameter.
+  exclude_feature_regex: '^(BLANK|NegCon|NegPrb|mt-|Gm\d+$)' ## Regular expression to exclude genes
+  ## Required for --sge-convert and --run-ficture
+  filter_by_density: true                       ## If enabled, filter out low density spots
+  
+
+## Histology information
+# HISTOLOGY:
+# - hist_id: 
+#   path: 
+#   transform: 
+#   georeference:
+#   georef_bounds: 
+#   rotate: 
+#   flip:
+
+# RUN (CSG)
+RUNS:
+  - run_id: "stereoseq-mouse-brain-adult-mosta-v1" # Run ID, typically named by <platform>-<species/tissue/conditions>-<version>, which will also be used to create the aws directory S3://<aws_bucket>/<id>
+    major_axis: "X"
+    train_width: 18
+    n_factor: 12,24
+    anchor_res: 6
