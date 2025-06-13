@@ -4,7 +4,7 @@
 
 Spatial Digital Gene Expression (SGE) datasets vary widely in format and resolution across platforms. To enable consistent downstream analysis, `cartloader` toolkit provides a `sge_convert` module to harmonize raw SGE data by converting it into standardized transcript-based SGE in a compressed TSV format, with spatial coordinates converted to a micrometer-based unit system without altering the original resolution.
 
-The current `sge_convert` supports standarizing SGE from sequencing-based platforms (e.g., [Seq-Scope](), [Stereo-seq](), [NovaST](), [Pixel-seq](), [10x Visium HD]()) and imaging-based platforms (e.g., [10x Xenium](), [Vizgen MERSCOPE](), [CosMx SMI](), [Singular G4X]()).
+The current `sge_convert` supports standarizing SGE from sequencing-based platforms (e.g., [Seq-Scope](), [Stereo-seq](), [Pixel-seq](), [10x Visium HD]()) and imaging-based platforms (e.g., [10x Xenium](), [Vizgen MERSCOPE](), [CosMx SMI]()).
 
 ## Example Usage
 
@@ -63,6 +63,7 @@ cartloader sge_convert \
 
 ---
 ## Actions
+
 ### SGE Conversion
 
 See more parameters using `cartloader sge_convert --help`.
@@ -77,12 +78,12 @@ See more parameters using `cartloader sge_convert --help`.
 * `--units-per-um`: Coordinate units per micrometer (default: 1.00). Skip if `--scale-json` is provided.
 * `--out-dir`: Path to the output directory.
 
-#### Optional Input MEX Parameters
+#### Auxiliary Input MEX Parameters
 
 * `--icols-mtx`: Comma-separated, 1-based indices of the target genomic features among the count columns in the input matrix file. (Default: 1)
 * `--colnames-count`: Comma-separated output column names for the specified genomic features. (Default: count). The number of names specified by `--colnames-count` must match the number of indices provided in `--icols-mtx`.
 
-#### Optional Input CSV/TSV Parameters
+#### Auxiliary Input CSV/TSV Parameters
 
 * `--csv-comment`: If enabled, lines starts with `#` will be skipped (default: `False` for 10X Xenium, StereoSeq, CosMx SMI, MERSCOPE, and Pixel-seq; `True` for NovaST).
 * `--csv-delim`: Delimiter for the input file (default: `","` for 10X Xenium, CosMx SMI, and MERSCOPE; `"\t"` for StereoSeq, Pixel-seq, and NovaST).
@@ -95,7 +96,7 @@ See more parameters using `cartloader sge_convert --help`.
 * `--csv-colname-phredscore`: Column name for Phred-scaled quality value estimating the probability of incorrect calls (default: `qv` for 10X Xenium).
 * `--min-phred-score`: Phred-scaled quality score cutoff (default: `20` for 10X Xenium).
 
-#### Optional Output Parameters
+#### Auxiliary Output Parameters
 
 * `--out-transcript`: File name for output compressed transcript-indexed SGE file in TSV format (default: `transcripts.unsorted.tsv.gz`).
 * `--out-minmax`: File name for coordinate min-max values in TSV format (default: `coordinate_minmax.tsv`).
