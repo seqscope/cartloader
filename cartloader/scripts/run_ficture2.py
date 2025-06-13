@@ -27,10 +27,10 @@ def parse_arguments(_args):
     inout_params.add_argument('--out-dir', required= True, type=str, help='Output directory')
     inout_params.add_argument('--out-json', type=str, default=None, help="Output JSON file for summarizing the ficture parameters (default: <out-dir>/ficture.params.json)")
     inout_params.add_argument('--in-transcript', type=str, default=None, help='Path to the input unsorted transcript-indexed SGE file in TSV format (default: <out-dir>/transcripts.unsorted.tsv.gz)')
-    inout_params.add_argument('--in-minmax', type=str, default=None, help='Path to the input coordinate minmax TSV file. (default: <out-dir>/coordinate_minmax.tsv)')  
+    inout_params.add_argument('--in-minmax', type=str, default=None, help='Path to the input coordinate minmax TSV file. (default: <out-dir>/coordinate_minmax.tsv)')
     inout_params.add_argument('--in-feature', type=str, default=None,  help='Path to the input UMI count per gene TSV file.(default: feature.clean.tsv.gz).')
-    inout_params.add_argument('--in-feature-ficture', type=str, default=None, help='(Optional) Use --in-feature-ficture if a feature file for FICTURE analysis (default: <out-dir>/features.ficture.tsv.gz)')
-    
+    inout_params.add_argument('--in-feature-ficture', type=str, default=None, help='(Optional) Use --in-feature-ficture to provide a feature file for FICTURE analysis if such feature file exists. Alternatively, see "Feature Customizing Auxiliary Parameters" to customize the features in FICTURE analysis.')
+
     key_params = parser.add_argument_group("Key Parameters", "Key parameters that requires user's attention")
     key_params.add_argument('--width', type=str, default=None, help='Comma-separated hexagon flat-to-flat widths (in um) for LDA training (default: None)')
     key_params.add_argument('--n-factor', type=str, default=None, help='Comma-separated list of factor counts for LDA training.')
@@ -43,14 +43,17 @@ def parse_arguments(_args):
     env_params.add_argument('--sort', type=str, default="sort", help='Path to sort binary. For faster processing, you may add arguments like "sort -T /path/to/new/tmpdir --parallel=20 -S 10G"')
     env_params.add_argument('--sort-mem', type=str, default="1G", help='Memory size for each process')
     env_params.add_argument('--spatula', type=str, default=f"spatula",  help='Path to spatula binary') # default=f"{repo_dir}/submodules/spatula/bin/spatula",
-    env_params.add_argument('--ficture2', type=str, required=True,  help='Path to punkst(ficture2) repository') 
+    env_params.add_argument('--ficture2', type=str, required=True,  help='Path to punkst(ficture2) repository')
     env_params.add_argument('--python', type=str, default="python3",  help='Python3 binary')
 
     # AUX gene-filtering params
-    aux_ftrfilter_params = parser.add_argument_group( "Feature Customizing Auxiliary Parameters", 
-                                                    "Auxiliary parameters for customizing features in FICTURE analysis without modifying the original input feature TSV file. This ensures the original feature TSV file is retained in the output JSON file for downstream processing .")
+    aux_ftrfilter_params = parser.add_argument_group( "Feature Customizing Auxiliary Parameters",
+                                                      "Auxiliary parameters for customizing features in FICTURE analysis without modifying the original input feature TSV file. This ensures the original feature TSV file is retained in the output JSON file for downstream processing .")
     # given the input sge should be standardized, the csv-delim, csv-colname-feature-name, ftr-delim, ftr-colname-feature-name are not necessary
-    # aux_ftrfilter_params.add_argument('--out-ficture-feature', type=str, default="features.ficture.tsv.gz", help='File name for the output TSV file of feature used in FICTURE analysis (default: None)')
+    aux_ftrfilter_params.add_argument('--filter-by-overlapping-features', action='store_true', default=False, help='When the input SGE is stitched SGE, it is optional to filter the features in FICTURE analysis by only shared features')
+    aux_ftrfilter_params.add_argument('--in-feature-dist', type=str, default=None, help='Path to the input feature distribution file. This file is used to identify overlapping features for FICTURE analysis. (default: None)')
+    aux_ftrfilter_params.add_argument('--min-ct-per-ftr-tile', type=int, default=0, help='Apply a minimum count to filter overlapping feature. Filtering process will be applied if --min-ct-per-overlapftr > 0. (default: 0)')
+    # aux_ftrfilter_params.add_argument('--out-feature-ficture', type=str, default="features.ficture.tsv.gz", help='File name for the output TSV file of feature used in FICTURE analysis (default: None)')
     # aux_ftrfilter_params.add_argument('--include-feature-list', type=str, default=None, help='A file containing a list of input genes to be included (feature name of IDs) (default: None)')
     # aux_ftrfilter_params.add_argument('--exclude-feature-list', type=str, default=None, help='A file containing a list of input genes to be excluded (feature name of IDs) (default: None)')
     # aux_ftrfilter_params.add_argument('--include-feature-substr', type=str, default=None, help='A substring of feature/gene names to be included (default: None)')
@@ -78,27 +81,27 @@ def parse_arguments(_args):
     aux_params.add_argument('--min-ct-per-unit-hexagon', type=int, default=50, help='Minimum count per hexagon in hexagon segmentation in FICTURE compatible format (default: 50)')
     # minibatch
     aux_params.add_argument('--minibatch-size', type=int, default=500, help='Batch size used in minibatch processing (default: 500)')
-    aux_params.add_argument('--minibatch-buffer', type=int, default=30, help='Batch buffer used in minibatch processing (default: 30)')
-    # train 
+    #aux_params.add_argument('--minibatch-buffer', type=int, default=30, help='Batch buffer used in minibatch processing (default: 30)')
+    # train
     aux_params.add_argument('--train-epoch', type=int, default=2, help='Training epoch for LDA model (default: 2)')
-    aux_params.add_argument('--train-epoch-id-len', type=int, default=2, help='Training epoch ID length (default: 2)')
-    aux_params.add_argument('--lda-rand-init', type=int, default=10, help='Number of random initialization during model training (default: 10)')
-    aux_params.add_argument('--lda-plot-um-per-pixel', type=float, default=1, help='Image resolution for LDA plot (default: 1)')
-    # fit 
+    #aux_params.add_argument('--train-epoch-id-len', type=int, default=2, help='Training epoch ID length (default: 2)')
+    #aux_params.add_argument('--lda-rand-init', type=int, default=10, help='Number of random initialization during model training (default: 10)')
+    #aux_params.add_argument('--lda-plot-um-per-pixel', type=float, default=1, help='Image resolution for LDA plot (default: 1)')
+    # fit
     aux_params.add_argument('--fit-width',  type=str, default=None, help='Hexagon flat-to-flat width (in um) during model fitting (default: same to train-width)')
-    aux_params.add_argument('--fit-precision', type=float, default=2, help='Output precision of model fitting (default: 2)')
+    #aux_params.add_argument('--fit-precision', type=float, default=2, help='Output precision of model fitting (default: 2)')
     aux_params.add_argument('--min-ct-per-unit-fit', type=int, default=50, help='Minimum count per hexagon unit during model fitting (default: 20)')
     aux_params.add_argument('--fit-plot-um-per-pixel', type=float, default=1, help='Image resolution for fit coarse plot (default: 1)')   # in Scopeflow, this is set to 2
     # decode
-    aux_params.add_argument('--decode-top-k', type=int, default=3, help='Top K columns to output in pixel-level decoding results (default: 3)')
-    aux_params.add_argument('--decode-block-size', type=int, default=100, help='Block size for pixel decoding output (default: 100)')
-    aux_params.add_argument('--decode-scale', type=int, default=100, help='Scale parameters for pixel decoding output (default: 100)')
-    aux_params.add_argument('--decode-precision', type=float, default=0.01, help='Precision of pixel level decoding (default: 0.01)')
-    aux_params.add_argument('--decode-plot-um-per-pixel', type=float, default=0.5, help='Image resolution for pixel decoding plot (default: 0.5)')
+    #aux_params.add_argument('--decode-top-k', type=int, default=3, help='Top K columns to output in pixel-level decoding results (default: 3)')
+    #aux_params.add_argument('--decode-block-size', type=int, default=100, help='Block size for pixel decoding output (default: 100)')
+    #aux_params.add_argument('--decode-scale', type=int, default=100, help='Scale parameters for pixel decoding output (default: 100)')
+    #aux_params.add_argument('--decode-precision', type=float, default=0.01, help='Precision of pixel level decoding (default: 0.01)')
+    #aux_params.add_argument('--decode-plot-um-per-pixel', type=float, default=0.5, help='Image resolution for pixel decoding plot (default: 0.5)')
     # merge_by_pixel
-    aux_params.add_argument('--merge-max-dist-um', type=float, default=0.1, help='Maximum distance in um for merging pixel-level decoding results (default: 0.1)') 
-    aux_params.add_argument('--merge-max-k', type=int, default=1, help='Maximum number of K columns to output in merged pixel-level decoding results (default: 1)')
-    aux_params.add_argument('--merge-max-p', type=int, default=1, help='Maximum number of P columns to output in merged pixel-level decoding results (default: 1)')
+    # aux_params.add_argument('--merge-max-dist-um', type=float, default=0.1, help='Maximum distance in um for merging pixel-level decoding results (default: 0.1)')
+    # aux_params.add_argument('--merge-max-k', type=int, default=1, help='Maximum number of K columns to output in merged pixel-level decoding results (default: 1)')
+    # aux_params.add_argument('--merge-max-p', type=int, default=1, help='Maximum number of P columns to output in merged pixel-level decoding results (default: 1)')
     # color map
     aux_params.add_argument('--cmap-file', type=str, required=True, help='Define the path to the fixed color map (default: <cartloader_dir>/assets/fixed_color_map_60.tsv)')
     # others parameters shared across steps
@@ -128,7 +131,7 @@ def define_lda_runs(args):
     train_params= [
         {
          "model_type": "lda",
-         "train_width": train_width, 
+         "train_width": train_width,
          "n_factor": n_factor,
          "model_id":f"t{train_width}_f{n_factor}",
         }
@@ -216,54 +219,15 @@ def run_ficture2(_args):
     ficture2bin = os.path.join(args.ficture2, "bin/punkst")
     ficture2de = args.python + " " + os.path.join(args.ficture2, "ext/py/de_bulk.py")
     ficture2report = args.python + " " + os.path.join(args.ficture2, "ext/py/factor_report.py")
-
-    # feature customize when enabled 
-    # if any([args.include_feature_list, args.exclude_feature_list, args.include_feature_substr, args.exclude_feature_substr, args.include_feature_regex, args.exclude_feature_regex, args.include_feature_type_regex]):
-    #     if args.in_feature is None:
-    #         raise ValueError("When customizing features, provide a valid input feature file by --in-feature")
-    #     in_feature_ficture = os.path.join(args.out_dir, args.out_ficture_feature)
-    #     in_feature_ficture_record = os.path.join(args.out_dir, args.out_ficture_feature.replace(".tsv.gz", ".record.tsv"))
-    #     cmds = cmd_separator([], f"Customizing features for FICTURE analysis...")
-    #     cmd = " ".join(["cartloader feature_filtering ",
-    #                                 f"--in-csv {args.in_feature}", 
-    #                                 f"--out-csv {in_feature_ficture}", 
-    #                                 f"--out-record  {in_feature_ficture_record}",
-    #                                 f"--include-feature-list {args.include_feature_list}" if args.include_feature_list is not None else "",
-    #                                 f"--exclude-feature-list {args.exclude_feature_list}" if args.exclude_feature_list is not None else "",
-    #                                 f"--include-feature-substr '{args.include_feature_substr}'" if args.include_feature_substr is not None else "",
-    #                                 f"--exclude-feature-substr '{args.exclude_feature_substr}'" if args.exclude_feature_substr is not None else "",
-    #                                 f"--include-feature-regex '{args.include_feature_regex}'" if args.include_feature_regex is not None else "",
-    #                                 f"--exclude-feature-regex '{args.exclude_feature_regex}'" if args.exclude_feature_regex is not None else "",
-    #                                 f"--include-feature-type-regex {args.include_feature_type_regex} --feature-type-ref {args.in_transcript} --feature-type-ref-colname-name gene --feature-type-ref-colname-type {args.colname_feature_type}" if args.include_feature_type_regex is not None and args.colname_feature_type is not None else "",
-    #                                 f"--include-feature-type-regex {args.include_feature_type_regex} --feature-type-ref {args.feature_type_ref} --feature-type-ref-colidx-name {args.feature_type_ref_colidx_name}  --feature-type-ref-colidx-type {args.feature_type_ref_colidx_type}" if args.include_feature_type_regex is not None and args.feature_type_ref is not None else "",
-    #                                 f"--log"
-    #                                 ]) 
-    #     cmds.append(cmd)
-    #     mm.add_target(in_feature_ficture, [args.in_transcript], cmds)
-    # else:
-    #     in_feature_ficture = args.in_feature
     
-    in_feature_ficture = args.in_feature
-    # if args.include_feature_regex is None:
-    #     args.include_feature_regex = ".*"
-    # if args.exclude_feature_regex is None:
-    #     args.exclude_feature_regex = "___NONE___"
-
     # out files
     if args.out_json is None:
-        args.out_json = os.path.join(args.out_dir, f"ficture.params.json") 
+        args.out_json = os.path.join(args.out_dir, f"ficture.params.json")
 
     # 1. tiling :
     if args.tile:
         scheck_app(args.gzip)
-
         cmds = cmd_separator([], f"Creating tiled tsv from {os.path.basename(args.in_transcript)}...")
-        # if args.in_transcript.endswith(".gz"):
-        #     tsv_plain = f"{args.out_dir}/transcripts.tsv"
-        #     cmds.append(f"{args.gzip} -dc {args.in_transcript} > {tsv_plain}")
-        # else:
-        #     tsv_plain = f"{args.in_transcript}"
-                            
         cmd = " ".join([
             ficture2bin, "pts2tiles",
             f"--in-tsv {args.in_transcript}",
@@ -280,11 +244,19 @@ def run_ficture2(_args):
         ])
         cmds.append(cmd)
 
-        # if args.in_transcript.endswith(".gz"):
-        #     cmds.append(f"rm -f {tsv_plain}")
-
-        ## write the feature file as needed
+        if args.in_minmax is None: ## specify minmax file if not provided
+            args.in_minmax = os.path.join(args.out_dir, "transcripts.tiled.coord_range.tsv")
+        
+        # feature file
+        if args.in_feature_ficture is None:
+            in_feature_ficture = args.in_feature_ficture
+        else:
+            in_feature_ficture = args.in_feature
+        
+        ## Features step 1. write the feature file from the tiled SGE
         if in_feature_ficture is not None:
+            ## if a specific feature file is provided, use it as "selected features" for FICTURE analysis
+            in_feature_ficture_flag = in_feature_ficture
             feature_plain = f"{args.out_dir}/transcripts.tiled.selected_features.hdr.tsv"
             feature_nohdr = f"{args.out_dir}/transcripts.tiled.selected_features.tsv"
             with flexopen(in_feature_ficture, "rt") as f:
@@ -297,20 +269,44 @@ def run_ficture2(_args):
                             if count >= args.min_ct_per_feature:
                                 wf.write(line)
                                 wf2.write(line)
-        else: ## if feature file is not provided, create one from the input transcript file
+            feature_nohdr_flag = feature_nohdr
+        else: 
+            ## if feature file is not provided, create one from the input transcript file
+            in_feature_ficture_flag = f"{args.out_dir}/transcripts.tiled.done"
             feature_plain = f"{args.out_dir}/transcripts.tiled.features.hdr.tsv"
             feature_nohdr = f"{args.out_dir}/transcripts.tiled.features.tsv"
-            in_feature = feature_plain
+            feature_nohdr_flag = f"{args.out_dir}/transcripts.tiled.done"
             in_feature_ficture = feature_plain
             args.in_feature = feature_plain
             cmds.append(f"(echo {args.colname_feature} {args.colname_count} | tr ' ' '\\t'; cat {feature_nohdr};) > {feature_plain}")
 
-        if args.in_minmax is None: ## specify minmax file if not provided
-            args.in_minmax = os.path.join(args.out_dir, "transcripts.tiled.coord_range.tsv")
-        
-
         cmds.append(f"[ -f {args.out_dir}/transcripts.tiled.tsv ] && [ -f {args.out_dir}/transcripts.tiled.index ] && touch {args.out_dir}/transcripts.tiled.done" )
         mm.add_target(f"{args.out_dir}/transcripts.tiled.done", [args.in_transcript], cmds)
+
+        #  Features step 2. generate overlapping features for FICTURE analysis (optional only if the input SGE is stitched SGE)
+        if args.filter_by_overlapping_features:
+            cmds = cmd_separator([], f"Customizing features for FICTURE analysis: limited to shared features and features with a minimal count in the stitched SGE...")
+            feature_overlapping_plain = os.path.join(args.out_dir, "transcripts.tiled.overlapping_features.hdr.tsv") if args.min_ct_per_ftr_tile == 0 else os.path.join(args.out_dir, f"transcripts.tiled.overlapping_features.min{args.min_ct_per_ftr_tile}.hdr.tsv")
+            cmd = " ".join(["cartloader feature_overlapping",
+                                        f"--in-dist {args.in_feature_dist}", 
+                                        f"--in-feature {in_feature_ficture}",
+                                        f"--output {feature_overlapping_plain}", 
+                                        f"--min-ct-per-ftr-tile {args.min_ct_per_ftr_tile}",
+                                        f"--colname-count {args.colname_count}",
+                                        f"--colname-feature-name {args.colname_feature}",
+                                        f"--log"
+                                        ])
+            cmds.append(cmd)
+            mm.add_target(feature_overlapping_plain, [args.in_feature_dist, in_feature_ficture_flag], cmds)
+            
+            feature_overlapping_nohdr = os.path.join(args.out_dir, "transcripts.tiled.overlapping_features.tsv") if args.min_ct_per_ftr_tile == 0 else os.path.join(args.out_dir, f"transcripts.tiled.overlapping_features.min{args.min_ct_per_ftr_tile}.tsv")
+            cmds = cmd_separator([], f"Generating feature without header for overlapping features...")
+            cmds.append(f"cat {feature_overlapping_plain} | tail +2 > {feature_overlapping_nohdr}")
+            mm.add_target(feature_overlapping_nohdr, [feature_overlapping_plain], cmds)
+            
+            feature_plain = feature_overlapping_plain
+            feature_nohdr = feature_overlapping_nohdr
+            feature_nohdr_flag = feature_overlapping_nohdr
 
     # 2. segment
     if args.segment:
@@ -340,8 +336,8 @@ def run_ficture2(_args):
             cmds.append(f"{args.sort} -S {args.sort_mem} -k 1,1 {hexagon_prefix}.tsv > {hexagon_prefix}.randomized.tsv")
             cmds.append(f"rm -f {hexagon_prefix}.tsv")
             cmds.append(f"[ -f {hexagon_prefix}.randomized.tsv ] && [ -f {hexagon_prefix}.json ] && touch {hexagon_prefix}.done" )
-            mm.add_target(f"{hexagon_prefix}.done", [f"{args.out_dir}/transcripts.tiled.done"], cmds)
-    
+            mm.add_target(f"{hexagon_prefix}.done", [f"{args.out_dir}/transcripts.tiled.done", feature_nohdr_flag], cmds)
+
     # 3. lda
     if args.init_lda:
         lda_runs = define_lda_runs(args)
@@ -397,7 +393,7 @@ def run_ficture2(_args):
             #cmds.append(f"rm -f {model_prefix}.unsorted.model.tsv {model_prefix}.unsorted.results.tsv {model_prefix}.unsorted.results.nohex.tsv")
             cmds.append(f"rm -f {model_prefix}.unsorted.model.tsv {model_prefix}.unsorted.results.tsv")
             cmds.append(f"[ -f {lda_fit_tsv}.gz ] && [ -f {lda_model_matrix} ] && touch {model_prefix}.done" )
-            mm.add_target(f"{model_prefix}.done", [f"{args.out_dir}/transcripts.tiled.done", f"{args.out_dir}/hexagon.d_{train_width}.done"], cmds)
+            mm.add_target(f"{model_prefix}.done", [f"{args.out_dir}/transcripts.tiled.done", f"{args.out_dir}/hexagon.d_{train_width}.done", feature_nohdr_flag], cmds)
 
             # create color table
             out_cmap = f"{model_prefix}.cmap.tsv"
@@ -437,7 +433,7 @@ def run_ficture2(_args):
             fit_width = decode_params["fit_width"]
             decode_id = decode_params["decode_id"]
             decode_prefix = os.path.join(args.out_dir, decode_id)
-            
+
             fit_n_move = int(fit_width / args.anchor_res)
             decode_postcount = f"{decode_prefix}.pseudobulk.tsv"
             decode_fit_tsv = f"{decode_prefix}.tsv"
@@ -496,7 +492,7 @@ def run_ficture2(_args):
             cmds.append(cmd)
             # - done & target
             cmds.append(f"[ -f {decode_de} ] && [ -f {decode_prefix}.factor.info.html ] && [ -f {decode_fit_tsv}.gz ] && touch {decode_prefix}_summary.done")
-            mm.add_target(f"{decode_prefix}_summary.done", [f"{decode_prefix}.done", cmap_path], cmds)  
+            mm.add_target(f"{decode_prefix}_summary.done", [f"{decode_prefix}.done", cmap_path], cmds)
 
             # 4) visualization
             cmds=cmd_separator([], f"Decode visualization, ID: {decode_id}")
@@ -514,7 +510,7 @@ def run_ficture2(_args):
             mm.add_target(f"{decode_prefix}.png", [f"{decode_prefix}_summary.done", cmap_path], cmds)
 
     if args.summary:
-        prerequisities=[]
+        prerequisities=[feature_nohdr_flag] # since feature_nohdr and feature_plain are generated at the same step, use feature_nohdr_flag as the prerequisite for feature_plain
         summary_aux_args=[]
         # lda or external model
         if args.init_lda:
@@ -536,7 +532,7 @@ def run_ficture2(_args):
             decode_runs = define_decode_runs(args)
             for decode_params in decode_runs:
                 model_type = decode_params["model_type"]
-                model_id = decode_params["model_id"]                
+                model_id = decode_params["model_id"]
                 fit_width = decode_params["fit_width"]
                 decode_id = decode_params["decode_id"]
                 # prerequisities

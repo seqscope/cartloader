@@ -1,7 +1,20 @@
+import rasterio
+import os 
+
+def scheck_georeference(tif_path):
+    """
+    Check if a TIFF file is georeferenced (i.e., a GeoTIFF).
+    """
+    with rasterio.open(tif_path) as src:
+        has_transform = src.transform != rasterio.Affine.identity()
+        has_crs = src.crs is not None
+        return has_transform and has_crs
+    
 
 orient2axisorder = {
     # rotate, flip_vertical, flip_horizontal: order_arg
     # no rotation,
+    (None, False, False): "1,2",     # No rotation
     (None, False, True): "-1,2",     # Flip X-axis
     (None, True, False): "1,-2",     # Flip Y-axis
     (None, True, True): "-1,-2",     # Flip both axes
@@ -28,6 +41,7 @@ orient2axisorder = {
 
 # Simplified map of equivalent transformations
 def update_orient(rotation, flip_vertical, flip_horizontal, image_f):
+    rotation = str(rotation) if rotation is not None else None
     orient_map = {
         # No transformation
         (None, False, False): (None, False, False),
@@ -64,8 +78,8 @@ def update_orient(rotation, flip_vertical, flip_horizontal, image_f):
     if rotation is not None:
         if isinstance(rotation, int):
             rotation = str(rotation)
-        if rotation not in ["90", "180", "270"]:
-            raise ValueError(f"Error: Invalid rotate value ({rotation}) for {image_f}. Rotation must be None, 90, 180, or 270.")
+            if rotation not in ["90", "180", "270"]:
+                raise ValueError(f"Error: Invalid rotate value ({rotation}) for {image_f}. Rotation must be None, 90, 180, or 270.")
 
     new_rot, new_vflip, new_hflip = orient_map.get(
         (rotation, flip_vertical, flip_horizontal)
@@ -96,3 +110,28 @@ def update_orient_in_histology(histology):
     else:
         histology["flip"] = None
     return histology
+
+# return the number of bands in a raster image
+def get_band_count(input_path, max_bands=4):
+    """Return the number of bands in a raster image."""
+    with rasterio.open(input_path) as src:
+        Nbands= src.count
+    if Nbands > max_bands:
+        raise ValueError(f"Error: {input_path} has {Nbands} bands, which is more than the defined maximum of {max_bands}.")
+    return Nbands
+
+def check_north_up(filename):
+    with rasterio.open(filename) as src:
+        t = src.transform
+        return not (t.e > 0 or t.b != 0 or t.d != 0)
+
+#write a funtion to check if a file is georeferenced using rasterio
+def check_georef(file_path):
+    try:
+        with rasterio.open(file_path) as src:
+            has_transform = src.transform is not None and src.transform != rasterio.Affine.identity()
+            has_crs = src.crs is not None
+            return has_transform and has_crs
+    except Exception as e:
+        raise ValueError(f"Error checking georeference for {file_path}: {e}")
+        

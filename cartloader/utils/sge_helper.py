@@ -30,8 +30,7 @@ aux_sge_args = {
         'print_feature_id', 'allow_duplicate_gene_names'
     ],
     "ftrname": [
-        'include_feature_list', 'exclude_feature_list', 'include_feature_substr',
-        'exclude_feature_substr', 'include_feature_regex', 'exclude_feature_regex'
+        'include_feature_list', 'exclude_feature_list','include_feature_regex', 'exclude_feature_regex'
     ],
     "ftrtype": [
         'include_feature_type_regex', 'csv_colname_feature_type', 'feature_type_ref', "feature_type_ref_colidx_name","feature_type_ref_colidx_type"
@@ -148,3 +147,10 @@ def update_csvformat_by_platform(args):
         args.csv_comment = platform_settings["comment"]
     return args
 
+# def read_minmax(minmax_f):
+#     minmax = {}
+#     with open(minmax_f, "r") as f:
+#         for line in f:
+#             key, value = line.strip().split("\t")
+#             minmax[key] = float(value)
+#     return minmax

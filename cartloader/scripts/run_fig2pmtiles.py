@@ -16,12 +16,6 @@ aux_image_arg={
     "transform": ["page", "level", "series", "upper_thres_quantile", "upper_thres_intensity", "lower_thres_quantile", "lower_thres_intensity", "colorize"]
     }
 
-def cmds_for_dimensions(geotif_f, dim_f):
-    cmds = cmd_separator([], f"Extract dimensions from: {geotif_f}")
-    dim_f = geotif_f.replace(".tif",".dim.tsv") 
-    cmds.append(f"{gdal_get_size_script} {geotif_f} {dim_f}")
-    return cmds
-
 def check_ome_tiff(tiff_path):
     assert os.path.exists(tiff_path), f"The file '{tiff_path}' does not exist."
     with tifffile.TiffFile(tiff_path) as tif:
@@ -52,7 +46,75 @@ def get_mono(args):
         assert args.mono is True, "In --transform, the colorize option is only available for black-and-white images"
         args.mono = False
     return args.mono
+
+def cmds_for_dimensions(geotif_f, dim_f):
+    cmds = cmd_separator([], f"Extract dimensions from: {geotif_f}")
+    dim_f = geotif_f.replace(".tif",".dim.tsv") 
+    cmds.append(f"{gdal_get_size_script} {geotif_f} {dim_f}")
+    return cmds
+
+def get_orientation_suffix(rotate, flip_vertical, flip_horizontal):
+    ort_suffix = []
+    if rotate is not None:
+        ort_suffix.append(f"rot{rotate}")
+    if flip_vertical:
+        ort_suffix.append("vflip")
+    if flip_horizontal:
+        ort_suffix.append("hflip")
+    return "-".join(ort_suffix)
+
+def cmds_for_orientation(georef_f, dim_f,  ort_f, rotate, flip_vertical, flip_horizontal, mono=False, rgba=False):
+    # extract axis order
+    axis_order = orient2axisorder.get(
+        (rotate, flip_vertical, flip_horizontal)
+    )
+    if axis_order is None:
+        raise ValueError("Invalid combination of rotation and flip options.")
+
+    # out dimensions
+    if axis_order.startswith("1") or axis_order.startswith("-1"):
+        out_dim="$WIDTH $HEIGHT"
+    else:
+        out_dim="$HEIGHT $WIDTH"
     
+    # cmds
+    msg=" ".join([f"Orientate the geotif, including ",
+            "vertical flip;" if flip_vertical else "",
+            "horizontal flip;" if flip_horizontal else "",
+            f"rotate {rotate} degree clockwise;" if rotate is not None else "",
+            georef_f])
+    cmds = cmd_separator([], msg)
+    cmds.append(f"WIDTH=$(awk '/WIDTH/' {dim_f}|cut -f 2) && \\")
+    cmds.append(f"HEIGHT=$(awk '/HEIGHT/' {dim_f}|cut -f 2) && \\")
+    cmd = " ".join([
+            "gdalwarp",
+            f'"{georef_f}"',  # Add quotes around file names to handle spaces
+            f'"{ort_f}"',
+            "-b 1" if mono else "-b 1 -b 2 -b 3 -b 4" if rgba else "-b 1 -b 2 -b 3",
+            "-ct", f"\"+proj=pipeline +step +proj=axisswap +order={axis_order}\"",
+            "-overwrite",
+            "-ts", f"{out_dim}"
+        ])
+    cmds.append(cmd)
+    return cmds
+    
+def create_mbtile_flag(mbtile_flag, mbtile_f, partial_db, journal_db):
+    os.makedirs(os.path.dirname(mbtile_flag), exist_ok=True)
+    conditions_met = (
+        not os.path.exists(mbtile_flag) and
+        os.path.exists(mbtile_f) and
+        not os.path.exists(partial_db) and
+        not os.path.exists(journal_db)
+    )
+    if conditions_met:
+        try:
+            with open(mbtile_flag, 'a'):
+                pass 
+            print(f"Created flag file: {mbtile_flag}")
+        except OSError as e:
+            print(f"Error creating flag file {mbtile_flag}: {e}")
+            sys.exit(1)
+
 def parse_arguments(_args):
     """
     Parse command-line arguments.
@@ -140,6 +202,7 @@ def run_fig2pmtiles(_args):
     assert args.in_fig is not None and os.path.exists(args.in_fig), "Please provide a valid input figure file using --in-figure"
     # - mbtiles
     mbtile_f=f"{args.out_prefix}.pmtiles.mbtiles"
+    mbtile_flag = f"{mbtile_f}.done"
     mbtile_f_ann=f"{args.out_prefix}.pmtiles.{args.resample}.mbtiles"
     # - pmtiles
     pmtiles_f=f"{args.out_prefix}.pmtiles"
@@ -188,7 +251,15 @@ def run_fig2pmtiles(_args):
         if args.transform:
             # add a bash cmd to read ulx, uly, lrx, lry from the bounds file, which is one line file with the format of "ulx,uly,lrx,lry"
             cmds.append(f"bounds=$(sed 's/,/ /g' {transform_prefix}.bounds.csv) ")
-            cmds.append(f"{args.gdal_translate} -of GTiff -a_srs {args.srs} -a_ullr $bounds {transform_f} {georef_f}")
+            cmd = " ".join([
+                "gdal_translate",
+                "-of GTiff",
+                "-a_srs", args.srs,
+                "-a_ullr", "$bounds",
+                transform_f, 
+                georef_f
+            ])
+            #cmds.append(f"{args.gdal_translate} -of GTiff -a_srs {args.srs} -a_ullr $bounds {transform_f} {georef_f}")
             mm.add_target(georef_f, [f"{transform_prefix}.done"], cmds)
             # update the flip/rotate information since the transform will be carried out in georeferencing.
             args.rotate=None
@@ -209,33 +280,6 @@ def run_fig2pmtiles(_args):
             else:
                 raise ValueError("Please provide either --in-bounds or --in-tsv to georeference the figure")
 
-            # if args.flip_vertical or args.flip_horizontal or args.rotate is not None:
-            #     axis_order = orient2axisorder.get(
-            #         (args.rotate, args.flip_vertical, args.flip_horizontal)
-            #     )
-                
-            #     axis_order_1, axis_order_2 = axis_order.split(",")
-            #     #print(f"axis_order: {axis_order}, axis_order_1: {axis_order_1}, axis_order_2: {axis_order_2}")
-            #     if axis_order_1 == "1":
-            #         ulx_new, lrx_new = ulx, lrx
-            #     elif axis_order_1 == "-1":
-            #         ulx_new, lrx_new = f"-{lrx}", f"-{ulx}"
-            #     elif axis_order_1 == "2":
-            #         ulx_new, lrx_new = uly, lry
-            #     elif axis_order_1 == "-2":
-            #         ulx_new, lrx_new = f"-{lry}", f"-{uly}"
-                
-            #     if axis_order_2 == "2":
-            #         uly_new, lry_new = uly, lry
-            #     elif axis_order_2 == "-2":
-            #         uly_new, lry_new = f"-{lry}", f"-{uly}"
-            #     elif axis_order_2 == "1":
-            #         uly_new, lry_new = ulx, lrx
-            #     elif axis_order_2 == "-1":
-            #         uly_new, lry_new = f"-{lrx}", f"-{ulx}"
-                
-            #     ulx, uly, lrx, lry = ulx_new, uly_new, lrx_new, lry_new
-                
             cmds.append(f"{args.gdal_translate} -of GTiff -a_srs {args.srs} -a_ullr {ulx} {uly} {lrx} {lry} {transform_f} {georef_f}")
             mm.add_target(georef_f, [transform_f], cmds)
     else:
@@ -249,85 +293,71 @@ def run_fig2pmtiles(_args):
         mm.add_target(dim_f, [georef_f], cmds)
     
         # 1) Output FILENAME
-        ort_suffix=[]
-        if args.rotate is not None:
-            ort_suffix.append(f"rot{args.rotate}")
-        if args.flip_vertical :
-            ort_suffix.append("vflip")
-        if args.flip_horizontal:
-            ort_suffix.append("hflip")
+        ort_suffix=get_orientation_suffix(args.rotate, args.flip_vertical, args.flip_horizontal)
+        ort_f = f"{args.out_prefix}.{ort_suffix}.tif"
 
-        ort_f = f"{args.out_prefix}-{'-'.join(ort_suffix)}.tif"
-
-        # 3) Axis order for gdalwrap and Output dimensions
-        axis_order = orient2axisorder.get(
-                    (args.rotate, args.flip_vertical, args.flip_horizontal)
-                )
-        if axis_order is None:
-            raise ValueError("Invalid combination of rotation and flip options.")
-
-        if axis_order.startswith("1") or axis_order.startswith("-1"):
-            out_dim="$WIDTH $HEIGHT"
-        else:
-            out_dim="$HEIGHT $WIDTH"
-        
-        # 4) cmds
-        msg=" ".join([f"Orientate the geotif, including ",
-                "vertical flip;" if args.flip_vertical else "",
-                "horizontal flip;" if args.flip_horizontal else "",
-                f"rotate {args.rotate} degree clockwise;" if args.rotate is not None else "",
-                georef_f])
-        cmds = cmd_separator([], msg) 
-        cmds.append(f"WIDTH=$(awk '/WIDTH/' {dim_f}|cut -f 2) && \\")
-        cmds.append(f"HEIGHT=$(awk '/HEIGHT/' {dim_f}|cut -f 2) && \\")
-        cmd = " ".join([
-                "gdalwarp",
-                f'"{georef_f}"',  # Add quotes around file names to handle spaces
-                f'"{ort_f}"',
-                "-b 1" if args.mono else "-b 1 -b 2 -b 3 -b 4" if args.rgba else "-b 1 -b 2 -b 3",
-                "-ct", f"\"+proj=pipeline +step +proj=axisswap +order={axis_order}\"",
-                "-overwrite",
-                "-ts", f"{out_dim}"
-            ])
-        cmds.append(cmd)
+        # 2) Orientation
+        cmds =  cmds_for_orientation(georef_f, dim_f, ort_f, args.rotate, args.flip_vertical, args.flip_horizontal, args.mono, args.rgba)
         mm.add_target(ort_f, [georef_f, dim_f], cmds)
     else:
         ort_f = georef_f
 
-    # 4. Convert a geotiff file to mbtiles
+    # 4. Convert a raster image (GeoTIFF) into map tiles (MBTiles format)
+    # * MBTiles expects top-left origin. If the input geotif use lower left was origin, GDAL will flip the origin to top left. 
+    # * The origin could be find by running `gdalinfo <filename>` and check the `Pixel Size=(<x>,<y>)` field. If Pixel Y is negative, image is stored top-down. 
+    # * Use a flag file instead of mbtiles_f to indicate the completion of the mbtiles conversion - to avoid silently failed or interrupted conversions.
     if args.geotif2mbtiles:
         cmds = cmd_separator([], f"Converting from geotif to mbtiles: {ort_f}")
+        partial_db = mbtile_f.replace('.mbtiles', '.partial_tiles.db')
+        journal_db = f"{mbtile_f}-journal"
+
+        create_mbtile_flag(mbtile_flag, mbtile_f, partial_db, journal_db)
+
+        ## Add cleanup step to prevent the case that the previous run was interrupted and left behind a .mbtiles file with a journal file or a partial_tiles.db file. Such unfinished jobs will not be availble to detect by the makefile.
+        cleanup_cmd = f"if [ -f {journal_db} ] || [ -f {partial_db} ] ; then echo 'Warning: Cleaning up incomplete previous conversion...' ; rm -f {mbtile_f} {journal_db} {partial_db} ; fi"
+        cmds.append(cleanup_cmd)
+
         cmd = " ".join([
             args.gdal_translate, 
-            "-b 1" if args.mono else "-b 1 -b 2 -b 3 -b 4" if args.rgba else "-b 1 -b 2 -b 3",
-            "-strict",
-            "-co", "\"ZOOM_LEVEL_STRATEGY=UPPER\"",
-            "-co", f"\"RESAMPLING={args.resample}\"",
-            "-co", f"\"BLOCKSIZE={args.blocksize}\"",
-            "-ot", "Byte",
-            "-scale", 
+            "-b 1" if args.mono else "-b 1 -b 2 -b 3 -b 4" if args.rgba else "-b 1 -b 2 -b 3", # Use the Red, Green, Blue bands
+            "-strict",                                      # Enforce strict format compliance
+            "-co", "\"ZOOM_LEVEL_STRATEGY=UPPER\"",         # Use higher zoom levels to preserve detail
+            "-co", f"\"RESAMPLING={args.resample}\"",       # Use cubic interpolation when scaling tiles
+            "-co", f"\"BLOCKSIZE={args.blocksize}\"",       # Use 512x512 pixel tile blocks (standard for MBTiles)
+            "-ot", "Byte",                                  # Convert pixel values to 8-bit integers (0-255)
+            "-scale",                                       # Automatically scale pixel values to 0-255
             "-of", "mbtiles",
-            "-a_srs", args.srs,
+            "-a_srs", args.srs,                             # default to EPSG:3857. Assign the target projection: Web Mercator (used by web maps)
             ort_f, 
             mbtile_f
         ])
         cmds.append(cmd)
-        mm.add_target(mbtile_f, [ort_f], cmds)
+        
+        validation_cmd = f" [ -f {mbtile_f} ]  && [ ! -f {journal_db} ] && [ ! -f {partial_db} ] && touch {mbtile_flag}"
+        cmds.append(validation_cmd)
+        mm.add_target(mbtile_flag, [ort_f], cmds)
     
     # 5. Convert mbtiles to pmtiles
     if args.mbtiles2pmtiles:
         cmds = cmd_separator([], f"Resampling mbtiles and converting to pmtiles: {mbtile_f}")
         cmds.append(f"cp {mbtile_f} {mbtile_f_ann}")
-        cmds.append(f"'{args.gdaladdo}' {mbtile_f_ann} -r {args.resample} 2 4 8 16 32 64 128 256")
+        cmds.append(f"'{args.gdaladdo}' {mbtile_f_ann} -r {args.resample} 2 4 8 16 32 64 128 256") # Build internal overviews. 
         cmds.append(f"'{args.pmtiles}' convert --force {mbtile_f_ann} {pmtiles_f}")
-        mm.add_target(pmtiles_f, [mbtile_f], cmds)
+        mm.add_target(pmtiles_f, [mbtile_flag], cmds)
 
     # 6. Update the catalog.yaml file with the new pmtiles and upload to AWS
     if args.update_catalog:
         cmds = cmd_separator([], f"Updating yaml for pmtiles: {pmtiles_f}")
         pmtiles_name=os.path.basename(pmtiles_f)
         pmtiles_dir=os.path.dirname(pmtiles_f)
-        cmds.append(f"cartloader update_catalog_for_basemap --in-yaml {catalog_f} --basemap {args.basemap_key}:{pmtiles_name} --basemap-dir {pmtiles_dir} --overwrite")
+        cmd= " ".join([
+            "cartloader write_catalog_for_assets",
+            f"--out-catalog {catalog_f}",
+            f"--basemap {args.basemap_key}:{pmtiles_name}",
+            f"--basemap-dir {pmtiles_dir}"
+        ])
+        cmds.append(cmd)
+        #cmds.append(f"cartloader update_catalog_for_basemap --in-yaml {catalog_f} --basemap {args.basemap_key}:{pmtiles_name} --basemap-dir {pmtiles_dir} --overwrite")
         cmds.append(f"touch {pmtiles_f}.yaml.done")
         mm.add_target(f"{pmtiles_f}.yaml.done", [pmtiles_f, catalog_f], cmds)
 

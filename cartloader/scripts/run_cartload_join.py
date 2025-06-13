@@ -35,7 +35,7 @@ def parse_arguments(_args):
     key_params.add_argument('--log-suffix', type=str, default=".log", help='The suffix for the log file (appended to the output directory). Default: .log')
 
     env_params = parser.add_argument_group("Env Parameters", "Environment parameters, e.g., tools.")
-    # aux_params.add_argument('--magick', type=str, default=f"magick", help='Path to ImageMagick binary') # Disable this function. The user need to add the path to the ImageMagick binary directory to the PATH environment variable
+    env_params.add_argument('--gzip', type=str, default="gzip", help='Path to gzip binary. For faster processing, use "pigz -p4"')
     env_params.add_argument('--pmtiles', type=str, default=f"pmtiles", help='Path to pmtiles binary from go-pmtiles')
     env_params.add_argument('--gdal_translate', type=str, default=f"gdal_translate", help='Path to gdal_translate binary')
     env_params.add_argument('--gdaladdo', type=str, default=f"gdaladdo", help='Path to gdaladdo binary')
@@ -137,10 +137,12 @@ def run_cartload_join(_args):
             f"--gdal_translate '{args.gdal_translate}'",
             f"--gdaladdo '{args.gdaladdo}'",
             f"--spatula '{args.spatula}'",
-            "--keep-intermediate-files" if args.keep_intermediate_files else ""
+            "--keep-intermediate-files" if args.keep_intermediate_files else "",
+            "--restart" if args.restart else "",
         ])
         cmds.append(cmd)
-        mm.add_target(f"{args.out_dir}/sge-mono-dark.pmtiles.done", [in_molecules, in_minmax], cmds)
+        cmds.append(f"[ -f {args.out_dir}/sge-mono-dark.pmtiles.done ] && [ -f {args.out_dir}/sge-mono-light.pmtiles.done ] && touch {args.out_dir}/sge-mono.pmtiles.done")
+        mm.add_target(f"{args.out_dir}/sge-mono.pmtiles.done", [in_molecules, in_minmax], cmds)
 
     ## fic
     in_fic_params = in_data.get("train_params", [])
@@ -312,7 +314,8 @@ def run_cartload_join(_args):
                         f"--pmtiles '{args.pmtiles}'",
                         f"--gdal_translate '{args.gdal_translate}'",
                         f"--gdaladdo '{args.gdaladdo}'",
-                        "--keep-intermediate-files" if args.keep_intermediate_files else ""
+                        "--keep-intermediate-files" if args.keep_intermediate_files else "",
+                        "--restart" if args.restart else "",
                     ])
                     cmds.append(cmd)
                     cmds.append(f"touch {out_prefix}-pixel-raster.done")
@@ -336,7 +339,7 @@ def run_cartload_join(_args):
         out_pixel_tsvf = f"{out_pixel_tsvprefix}.tsv.gz"
         sort_cols = "2,2g" if major_axis == "X" else "3,3g"
         # for sort commands, use a done file as target -- in case more than one job is running
-        cmd = f"(gzip -cd {in_pixel_tsvf} | head | grep ^#; gzip -cd {in_pixel_tsvf} | grep -v ^# | sort -T {args.tmp_dir} -k{sort_cols} -S 1G;) | gzip -c > {out_pixel_tsvf} && touch {out_pixel_tsvprefix}.done"
+        cmd = f"({args.gzip} -cd {in_pixel_tsvf} | head | grep ^#; {args.gzip} -cd {in_pixel_tsvf} | grep -v ^# | sort -T {args.tmp_dir} -k{sort_cols} -S 1G;) | {args.gzip} -c > {out_pixel_tsvf} && touch {out_pixel_tsvprefix}.done"
         cmds.append(cmd)
         mm.add_target(f"{out_pixel_tsvprefix}.done", [in_pixel_tsvf], cmds)
         pixel_tsvs_to_be_joined.append(out_pixel_tsvf)
@@ -379,7 +382,8 @@ def run_cartload_join(_args):
         f"--log --log-suffix '{args.log_suffix}'" if args.log else "",
         f"--tippecanoe '{args.tippecanoe}'",
         f"--tmp-dir '{args.tmp_dir}'",
-        "--keep-intermediate-files" if args.keep_intermediate_files else ""
+        "--keep-intermediate-files" if args.keep_intermediate_files else "",
+        "--restart" if args.restart else "",
     ])
     cmds.append(cmd)
     mm.add_target(f"{out_molecules_prefix}_pmtiles_index.tsv", [f"{out_join_pixel_prefix}.tsv.gz"], cmds)
@@ -440,7 +444,7 @@ def run_cartload_join(_args):
     #         sys.exit(1)
 
     if args.dry_run:
-        os.system(f"make -f {make_f} -n")
+        os.system(f"make -f {make_f} -n {'-B' if args.restart else ''} ")
         print(f"To execute the pipeline, run the following command:\nmake -f {make_f} -j {args.n_jobs}")
     else:
         exe_cmd=f"make -f {make_f} -j {args.n_jobs} {'-B' if args.restart else ''}"
