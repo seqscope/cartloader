@@ -118,7 +118,7 @@ def parse_arguments(_args):
     aux_visual_params.add_argument('--out-northup-tif', type=str, default="xy_northup.tif", help='Output for SGE visualization after north-up orientation (default: xy_northup.tif).')
     aux_visual_params.add_argument('--srs', type=str, default='EPSG:3857', help='If --north-up, define the spatial reference system (default: EPSG:3857)')
     aux_visual_params.add_argument('--resample', type=str, default='cubic', help='If --north-up, define the resampling method (default: cubic). Options: near, bilinear, cubic, etc.')
-s
+
     # env params
     env_params = parser.add_argument_group("ENV Parameters", "Environment parameters for the tools")
     env_params.add_argument('--gzip', type=str, default="gzip", help='Path to gzip binary. For faster processing, use "pigz -p 4".')
