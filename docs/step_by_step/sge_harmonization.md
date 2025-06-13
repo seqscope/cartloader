@@ -4,7 +4,7 @@
 
 Spatial Digital Gene Expression (SGE) datasets vary widely in format and resolution across platforms. To enable consistent downstream analysis, `cartloader` toolkit provides a `sge_convert` module to harmonize raw SGE data by converting it into standardized transcript-based SGE in a compressed TSV format, with spatial coordinates converted to a micrometer-based unit system without altering the original resolution.
 
-The current `sge_convert` supports standarizing SGE from sequencing-based platforms (e.g., [Seq-Scope](), [Stereo-seq](), [Pixel-seq](), [10x Visium HD]()) and imaging-based platforms (e.g., [10x Xenium](), [Vizgen MERSCOPE](), [CosMx SMI]()).
+The current `sge_convert` supports standarizing SGE from sequencing-based platforms (e.g., [Seq-Scope](https://www.nature.com/articles/s41596-024-01065-0), [Stereo-seq](https://www.bgi.com/global/service/spatial-transcriptome-stereo-seq), [Pixel-seq](https://www.cell.com/cell/fulltext/S0092-8674(22)01367-8), [10x Visium HD](https://www.10xgenomics.com/platforms/visium)) and imaging-based platforms (e.g., [10x Xenium](https://www.10xgenomics.com/platforms/xenium), [Vizgen MERSCOPE](https://vizgen.com/merscope-ultra/), [CosMx SMI](https://nanostring.com/products/cosmx-spatial-molecular-imager)).
 
 ## Example Usage
 
@@ -70,7 +70,7 @@ See more parameters using `cartloader sge_convert --help`.
 
 #### Required Parameters
 
-* `--platform`: Source platform to infer the input file format. 
+* `--platform`: Source platform to infer the input file format.
 * `--in-mex`: Path to the input SGE directory in MEX format. Required for MEX-formatted data (e.g., 10X Visium HD, SeqScope).
 * `--in-csv`: Path to the input SGE file in CSV or TSV format. Required for CSV/TSV-formatted data (e.g., 10X Xenium, StereoSeq, CosMX SMI, MERSCOPE, Pixel-seq, NovaST).
 * `--in-parquet`: Path to the input Parquet file containing spatial coordinates, if available. Typically named `tissue_positions.parquet` (10X Visium HD).

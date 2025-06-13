@@ -4,8 +4,6 @@
 
 Following spatial factor inference via FICTURE analysis, `cartloader` offers the `run_cartload2` module package SGE data and spatial factor output from [FICTURE analysis](./run_ficture2.md) into standardized, spatially indexed, and storage-efficient [PMTiles](https://github.com/protomaps/PMTiles), a web-native tiling format. These PMTiles outputs are optimized for downstream analysis, interactive web visualization (e.g., in CartoScope), and data sharing across platforms.
 
-
-
 ## Requirements
 
 - A completed FICTURE run (pixel-level decoding outputs) (from `run_ficture2`)
