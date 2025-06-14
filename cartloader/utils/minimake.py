@@ -30,6 +30,9 @@ class minimake:
             for command in commands:
                     #update 20240807: Whenever the regex contains $, the Makefile cannot interpret $ properly because Make interprets special characters (used for referencing variables) and escapes them.
                     #                 To escape the $ character, updated the function to double it ($$) so that Make interprets it as a literal $ character.
+                ## make sure that command is string and not a list
+                if isinstance(command, list):
+                    raise ValueError(f"Command {command} for target {target} should be a string, not a list.")
                 escaped_command = command if "$(info" in command else command.replace('$', '$$')
                 file.write(f"\t{escaped_command}\n")
             file.write("\n")  # Add a newline for readability between targets
