@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    <url>
+         <loc>https://seqscope.github.io/cartloader/</loc>
+         <lastmod>2025-06-16</lastmod>
+    </url>
+    <url>
+         <loc>https://seqscope.github.io/cartloader/installation/</loc>
+         <lastmod>2025-06-16</lastmod>
+    </url>
+    <url>
+         <loc>https://seqscope.github.io/cartloader/includes/glossary/</loc>
+         <lastmod>2025-06-16</lastmod>
+    </url>
+    <url>
+         <loc>https://seqscope.github.io/cartloader/showcase/exampledat/</loc>
+         <lastmod>2025-06-16</lastmod>
+    </url>
+    <url>
+         <loc>https://seqscope.github.io/cartloader/showcase/intro/</loc>
+         <lastmod>2025-06-16</lastmod>
+    </url>
+    <url>
+         <loc>https://seqscope.github.io/cartloader/step_by_step/run_cartload2/</loc>
+         <lastmod>2025-06-16</lastmod>
+    </url>
+    <url>
+         <loc>https://seqscope.github.io/cartloader/step_by_step/run_ficture2/</loc>
+         <lastmod>2025-06-16</lastmod>
+    </url>
+    <url>
+         <loc>https://seqscope.github.io/cartloader/step_by_step/sge_harmonization/</loc>
+         <lastmod>2025-06-16</lastmod>
+    </url>
+</urlset>
