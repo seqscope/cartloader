@@ -11,6 +11,10 @@
         <link rel="canonical" href="https://seqscope.github.io/cartloader/showcase/intro/">
       
       
+        <link rel="prev" href="../../installation/">
+      
+      
+        <link rel="next" href="../exampledat/">
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
@@ -18,7 +22,7 @@
     
     
       
-        <title>Intro - cartloader</title>
+        <title>Overview - cartloader</title>
       
     
     
@@ -71,6 +75,11 @@
     <label class="md-overlay" for="__drawer"></label>
     <div data-md-component="skip">
       
+        
+        <a href="#getting-started-with-cartloader" class="md-skip">
+          Skip to content
+        </a>
+      
     </div>
     <div data-md-component="announce">
       
@@ -101,7 +110,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Intro
+              Overview
             
           </span>
         </div>
@@ -236,11 +245,13 @@
         
   
   
+    
+  
   
     
     
-      <li class="md-tabs__item">
-        <a href="../exampledat/" class="md-tabs__link">
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="./" class="md-tabs__link">
           
   
     
@@ -265,7 +276,7 @@
   
     
   
-  Step-by-Step Guide
+  Reference Pages
 
         </a>
       </li>
@@ -412,31 +423,36 @@
       
   
   
+    
   
   
+  
     
     
+      
+        
       
         
       
     
     
       
+        
+        
+      
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
         
           
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
-        
-          
-          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
             
   
   <span class="md-ellipsis">
@@ -448,12 +464,84 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_2">
             <span class="md-nav__icon md-icon"></span>
             Get Started
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#quick-start-with-a-single-sge-dataset" class="md-nav__link">
+    <span class="md-ellipsis">
+      Quick Start with a Single SGE Dataset
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
             
               
                 
@@ -520,7 +608,7 @@
             
   
   <span class="md-ellipsis">
-    Step-by-Step Guide
+    Reference Pages
     
   </span>
   
@@ -531,7 +619,7 @@
         <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
-            Step-by-Step Guide
+            Reference Pages
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
@@ -625,6 +713,25 @@
   
   
   
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#quick-start-with-a-single-sge-dataset" class="md-nav__link">
+    <span class="md-ellipsis">
+      Quick Start with a Single SGE Dataset
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
   
 </nav>
                   </div>
@@ -643,9 +750,20 @@
   
 
 
-  <h1>Intro</h1>
-
-
+<h1 id="getting-started-with-cartloader">Getting Started with <code>cartloader</code><a class="headerlink" href="#getting-started-with-cartloader" title="Permanent link">&para;</a></h1>
+<p>We offer a series of tutorials to help users get started with <code>cartloader</code>. For a more detailed explanation of each step in the pipeline, refer to our <a href="../../step_by_step/sge_harmonization/">Reference Pages</a>.</p>
+<div class="admonition warning">
+<p class="admonition-title">Requirement</p>
+<p>Before getting started, please ensure that cartloader and all prerequisites are installed by following the <a href="../../installation/">Installation</a> guide.</p>
+</div>
+<h2 id="quick-start-with-a-single-sge-dataset">Quick Start with a Single <abbr title="Spatial Digital Gene Expression">SGE</abbr> Dataset<a class="headerlink" href="#quick-start-with-a-single-sge-dataset" title="Permanent link">&para;</a></h2>
+<p>If you're new to the toolkit, we recommend beginning with the <a href="../exampledat/">Quick Start</a> tutorial. It uses a small mouse hippocampus dataset generated by SeqScope and walks through the full pipeline:  </p>
+<ol>
+<li><abbr title="Spatial Digital Gene Expression">SGE</abbr> harmonization</li>
+<li>Spatial factor inference with <code>FICTURE</code>  </li>
+<li>Packaging outputs using <code>cartloader</code> for deployment.</li>
+</ol>
+<p>This hands-on example is designed to help you validate your setup and get comfortable with each stage of the workflow.</p>
 
 
 
