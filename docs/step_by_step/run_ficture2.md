@@ -1,4 +1,4 @@
-# Spatial Factor Inference using FICTURE
+# Spatial Factor Inference Analysis using FICTURE
 
 ## Overview
 Following harmonization, cartloader provides `run_ficture2` module to run spatial factor inference using [**`FICTURE`**](https://www.nature.com/articles/s41592-024-02415-2) (Si et al., *Nature Methods*, 2024). This method infers spatial factors directly at the pixel level with submicron resolution, eliminating the need for segmentation.

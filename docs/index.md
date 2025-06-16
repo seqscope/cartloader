@@ -16,9 +16,9 @@ Together, this system should provide a unified solution for working with raw pix
 
 ## Cartloader: A Scalable Spatial Transcriptomics Pipeline
 
-This document introduces `cartloader`, which is the core engine of our ecosystem. It provides a modular, reproducible tool to harmonize, integrate, analyze, and visualize raw high-resolution ST data across platforms. The detailed descriptions of its workflow, required inputs, generated outputs, and illustrative examples are provided in the sections of [Step-by-Step](./step_by_step/intro.md) and [Examples]().
+This document introduces `cartloader`, which is the core engine of our ecosystem. It provides a modular, reproducible tool to harmonize, integrate, analyze, and visualize raw high-resolution ST data across platforms. Usage examples are provided in the [Get Started](./showcase/intro.md). Detailed descriptions of its workflow, inputs, outputs, and parameters are provided in the [Reference Pages](./step_by_step/sge_harmonization.md).
 
-### Key Features
+**Key Features**
 
 - **Cross-Platform Harmonization**: Converts raw spatial gene expression (SGE) data from diverse ST platforms into a unified format, enabling consistent downstream processing.
 - **Spatial Factor Inference**: Applies [FICTURE](https://www.nature.com/articles/s41592-024-02415-2) to infer spatial factors directly from pixel-level data, capturing biological patterns without requiring cell segmentation.
