@@ -7,8 +7,8 @@ While the rapid development of sequencing-based platforms (e.g., [Seq-Scope](htt
 
 To address this challenge, we introduce a scalable, harmonized, and cloud-friendly ecosystem for spatial transcriptomics data across platforms, composed of two components:
 
-- **Cartloader** – a harmonized, scalable pipeline for high-resolution spatial omics data processing and analysis with retaining the original resolution.
-- **Cartostore** – an open-access, cloud-hosted repository for dataset sharing and visualization.
+- **cartloader** – a harmonized, scalable pipeline for high-resolution spatial omics data processing and analysis with retaining the original resolution.
+- **cartostore** – an open-access, cloud-hosted repository for dataset sharing and visualization.
 
 Together, this system should provide a unified solution for working with raw pixel-level spatial omics data—without sacrificing resolution or reproducibility.
 

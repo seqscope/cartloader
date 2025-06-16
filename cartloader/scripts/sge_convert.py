@@ -61,7 +61,7 @@ def parse_arguments(_args):
     aux_in_mex_params.add_argument('--pos-colname-x', type=str, default='pxl_row_in_fullres', help='(10x_visium_hd only) Column name for X-axis in the input parquet file (default: pxl_row_in_fullres)')
     aux_in_mex_params.add_argument('--pos-colname-y', type=str, default='pxl_col_in_fullres', help='(10x_visium_hd only) Column name for Y-axis in the input parquet file (default: pxl_col_in_fullres)')
     aux_in_mex_params.add_argument('--pos-delim', type=str, default=',', help='(10x_visium_hd only) Delimiter for the input parquet file (default: ",")')
-    aux_in_mex_params.add_argument('--print-feature-id', action='store_true', help='Print feature ID in the output (default: False)')
+    #aux_in_mex_params.add_argument('--print-feature-id', action='store_true', help='Print feature ID in the output (default: False)')
     aux_in_mex_params.add_argument('--allow-duplicate-gene-names', action='store_true', help='Allow duplicate gene names in the output (default: False)')
     aux_in_mex_params.add_argument('--keep-mismatches', action='store_true', help='(seqscope only) For debugging purposes, keep mismatches in the output (default: False)')
 
@@ -73,11 +73,11 @@ def parse_arguments(_args):
     aux_in_csv_params.add_argument('--csv-colname-y',  type=str, default=None, help='Column name for Y-axis (default: y_location for 10x_xenium; y for bgi_stereoseq; y_local_px for cosmx_smi; global_y for vizgen_merscope; ycoord for pixel_seq; y for nova_st)')
     aux_in_csv_params.add_argument('--csv-colnames-count', type=str, default=None, help='Comma-separated Column name for expression count. If not provided, a count of 1 will be added for a feature in a pixel (default: MIDCounts for bgi_stereoseq; MIDCount for nova_st; None for the rest platforms).')
     aux_in_csv_params.add_argument('--csv-colname-feature-name', type=str, default=None, help='Column name for gene name (default: feature_name for 10x_xenium; geneID for bgi_stereoseq; target for cosmx_smi; gene for vizgen_merscope; geneName for pixel_seq; geneID for nova_st)')
-    aux_in_csv_params.add_argument('--csv-colname-feature-id', type=str, default=None, help='Column name for gene id (default: None)')
+    # aux_in_csv_params.add_argument('--csv-colname-feature-id', type=str, default=None, help='Column name for gene id (default: None)')
     aux_in_csv_params.add_argument('--csv-colnames-others', nargs='*', default=[], help='Columns names to keep (e.g., cell_id, overlaps_nucleus) (default: None)')
     aux_in_csv_params.add_argument('--csv-colname-phredscore', type=str, default=None, help='Column name for Phred-scaled quality value (Q-Score) estimating the probability of incorrect call (default: qv for 10x_xenium and None for the rest platforms).') # qv
     aux_in_csv_params.add_argument('--min-phred-score', type=float, default=None, help='Specify the Phred-scaled quality score cutoff (default: 20 for 10x_xenium and None for the rest platforms).')
-    aux_in_csv_params.add_argument('--add-molecule-id', action='store_true', default=False, help='If enabled, a column of "molecule_id" will be added to the output file to track the index of the original input will be stored in (default: False).')
+    #aux_in_csv_params.add_argument('--add-molecule-id', action='store_true', default=False, help='If enabled, a column of "molecule_id" will be added to the output file to track the index of the original input will be stored in (default: False).')
     
     # AUX output params
     aux_out_params = parser.add_argument_group("Output Auxiliary Parameters", "Auxiliary parameters for the output files (Recommand to use the default values)")
@@ -86,27 +86,27 @@ def parse_arguments(_args):
     aux_out_params.add_argument('--colname-y', type=str, default='Y', help='Column name for Y (default: Y)')
     aux_out_params.add_argument('--colnames-count', type=str, default='count', help='Comma-separated column names for count (default: count)')
     aux_out_params.add_argument('--colname-feature-name', type=str, default='gene', help='Column name for gene name (default: gene)')
-    aux_out_params.add_argument('--colname-feature-id', type=str, default=None, help='Column name for gene ID. Required only when --csv-colname-feature-id or --print-feature-id is applied (default: None)') 
+    # aux_out_params.add_argument('--colname-feature-id', type=str, default=None, help='Column name for gene ID. Required only when --csv-colname-feature-id or --print-feature-id is applied (default: None)') 
 
     # AUX gene-filtering params
     aux_ftrfilter_params = parser.add_argument_group( "Feature Filtering Auxiliary Parameters", "Auxiliary parameters for filtering features by their name or type using an additional file, or regex pattern")
-    aux_ftrfilter_params.add_argument('--include-feature-list', type=str, default=None, help='A file containing a list of input genes to be included (feature name of IDs) (default: None)')
-    aux_ftrfilter_params.add_argument('--exclude-feature-list', type=str, default=None, help='A file containing a list of input genes to be excluded (feature name of IDs) (default: None)')
+    # aux_ftrfilter_params.add_argument('--include-feature-list', type=str, default=None, help='A file containing a list of input genes to be included (feature name of IDs) (default: None)')
+    # aux_ftrfilter_params.add_argument('--exclude-feature-list', type=str, default=None, help='A file containing a list of input genes to be excluded (feature name of IDs) (default: None)')
     aux_ftrfilter_params.add_argument('--include-feature-regex', type=str, default=None, help='A regex pattern of feature/gene names to be included (default: None)')
     aux_ftrfilter_params.add_argument('--exclude-feature-regex', type=str, default=None, help='A regex pattern of feature/gene names to be excluded (default: None)')
-    aux_ftrfilter_params.add_argument('--include-feature-type-regex', type=str, default=None, help='A regex pattern of feature/gene type to be included (default: None).') # (e.g. protein_coding|lncRNA)
-    aux_ftrfilter_params.add_argument('--csv-colname-feature-type', type=str, default=None, help='The input column name in the input that corresponding to the gene type information, if your input file has gene type information(default: None)')
-    aux_ftrfilter_params.add_argument('--feature-type-ref', type=str, default=None, help='Specify the path to a tab-separated reference file to provide gene type information for each gene per row (default: None)')
-    aux_ftrfilter_params.add_argument('--feature-type-ref-delim', type=str, default=None, help='Delimiter used in the reference file (default: tab).')
-    aux_ftrfilter_params.add_argument('--feature-type-ref-colidx-name', type=str, default=None, help='Column index for gene name in the reference file (default: None).')
-    aux_ftrfilter_params.add_argument('--feature-type-ref-colidx-type', type=str, default=None, help='Column index for gene type in the reference file (default: None).')
-    aux_ftrfilter_params.add_argument('--print-removed-transcripts', action='store_true', default=False, help='Print the list of removed transcript with corresponding filtering criteria (default: False)')
+    # aux_ftrfilter_params.add_argument('--include-feature-type-regex', type=str, default=None, help='A regex pattern of feature/gene type to be included (default: None).') # (e.g. protein_coding|lncRNA)
+    # aux_ftrfilter_params.add_argument('--csv-colname-feature-type', type=str, default=None, help='The input column name in the input that corresponding to the gene type information, if your input file has gene type information(default: None)')
+    # aux_ftrfilter_params.add_argument('--feature-type-ref', type=str, default=None, help='Specify the path to a tab-separated reference file to provide gene type information for each gene per row (default: None)')
+    # aux_ftrfilter_params.add_argument('--feature-type-ref-delim', type=str, default=None, help='Delimiter used in the reference file (default: tab).')
+    # aux_ftrfilter_params.add_argument('--feature-type-ref-colidx-name', type=str, default=None, help='Column index for gene name in the reference file (default: None).')
+    # aux_ftrfilter_params.add_argument('--feature-type-ref-colidx-type', type=str, default=None, help='Column index for gene type in the reference file (default: None).')
+    # aux_ftrfilter_params.add_argument('--print-removed-transcripts', action='store_true', default=False, help='Print the list of removed transcript with corresponding filtering criteria (default: False)')
 
     # AUX polygon-filtering params
     aux_polyfilter_params = parser.add_argument_group('Density/Polygon Filtering Auxiliary Parameters','Auxiliary parameters for filtering polygons based on the number of vertices. Required when --filter-by-density is enabled.')
     aux_polyfilter_params.add_argument('--genomic-feature', type=str, default=None, help='Column name of genomic feature for polygon-filtering (default to --colnames-count if --colnames-count only specifies one column)')
-    aux_polyfilter_params.add_argument('--mu-scale', type=int, default=1, help='Scale factor for the polygon area calculation (default: 1.0)')
-    aux_polyfilter_params.add_argument('--radius', type=int, default=15, help='Radius for the polygon area calculation (default: 15)')
+    #aux_polyfilter_params.add_argument('--mu-scale', type=int, default=1, help='Scale factor for the polygon area calculation (default: 1.0)')
+    aux_polyfilter_params.add_argument('--radius', type=int, default=15, help='Advanced parameter. Radius for the polygon area calculation (default: 15)')
     aux_polyfilter_params.add_argument('--quartile', type=int, default=2, help='Quartile for the polygon area calculation (default: 2)')
     aux_polyfilter_params.add_argument('--hex-n-move', type=int, default=1, help='Sliding step (default: 1)')
     aux_polyfilter_params.add_argument('--polygon-min-size', type=int, default=500, help='The minimum polygon size (default: 500)')
@@ -124,8 +124,8 @@ def parse_arguments(_args):
     env_params.add_argument('--gzip', type=str, default="gzip", help='Path to gzip binary. For faster processing, use "pigz -p 4".')
     env_params.add_argument('--spatula', type=str, default="spatula", help='Path to spatula binary.')
     env_params.add_argument('--parquet-tools', type=str, default="parquet-tools", help='If --in-parquet is enabled, path to parquet-tools binary')
-    env_params.add_argument('--gdal_translate', type=str, default=f"gdal_translate", help='If --sge-visual with --north-up, provide path to gdal_translate binary')
-    env_params.add_argument('--gdalwarp', type=str, default=f"gdalwarp", help='If --sge-visual with --north-up, provide path to gdalwarp binary')
+    env_params.add_argument('--gdal_translate', type=str, default=f"gdal_translate", help='If --north-up, provide path to gdal_translate binary')
+    env_params.add_argument('--gdalwarp', type=str, default=f"gdalwarp", help='If --north-up, provide path to gdalwarp binary')
 
     # not in use 
     #aux_ftrfilter_params.add_argument('--unique', action='store_true', default=False, help='Merge pixels with (almost?) identical coordinates. Applies to cosmx_smi only.')
@@ -171,13 +171,10 @@ def add_mexparam_to_cmd(format_cmd, args, arg_mapping):
     return format_cmd
 
 def convert_visiumhd(cmds, args):
-    # tools:
-    # 1) spatula
-    # if args.spatula is None:
-    #     args.spatula = os.path.join(cartloader_repo, "submodules", "spatula", "bin", "spatula")
+    ## tools:
     scheck_app(args.spatula)
-    # input: in_mex, in_parquet, scale_json
-    # output: out_transcript, out_minmax, out_feature
+    ## input: in_mex, in_parquet, scale_json
+    ## output: out_transcript, out_minmax, out_feature
     tmp_parquet = f"{args.out_dir}/tissue_positions.csv.gz"
     # * --in_parquet: convert parquet to csv
     cmds.append(f"{args.parquet_tools} csv {args.in_parquet} |  {args.gzip} -c > {tmp_parquet}")
@@ -185,24 +182,24 @@ def convert_visiumhd(cmds, args):
     if args.scale_json is not None:
         args.units_per_um = extract_unit2px_from_json(args.scale_json)
     # * --included_feature_type_regex
-    if args.include_feature_type_regex is not None:
-        # purpose: Given the spatula doesn't support filtering based on gene type, this function prepares a feature list based on the gene type reference file.
-        #           Note, when the --include-feature-type-regex is enabled, the --include-feature-list argument will be updated with the path to the prepared feature list.
-        # since MEX will not be able to provide ftr type column.
-        ftrlist_tsv = f"{args.out_dir}/feature_list.tsv"
-        cmd = " ".join(["cartloader", "feature_filtering_by_type",
-                        f"--include-feature-type-regex {args.include_feature_type_regex}", 
-                        f"--feature-type-ref {args.feature_type_ref}",
-                        f"--feature-type-ref-colidx-name {args.feature_type_ref_colidx_name}",
-                        f"--feature-type-ref-colidx-type {args.feature_type_ref_colidx_type}",
-                        f"--feature-type-ref-delim {args.feature_type_ref_delim}" if args.feature_type_ref_delim is not None else "",
-                        f"--include-feature-list {args.include_feature_list}"  if args.include_feature_list is not None else "",
-                        f"--exclude-feature-list {args.exclude_feature_list}"  if args.include_feature_list is not None else "",
-                        f"--out-feature {ftrlist_tsv}",
-                        "--log"])
-        args.include_feature_list = ftrlist_tsv
-        args.exclude_feature_list = None
-        cmds.append(cmd)
+    # if args.include_feature_type_regex is not None:
+    #     # purpose: Given the spatula doesn't support filtering based on gene type, this function prepares a feature list based on the gene type reference file.
+    #     #           Note, when the --include-feature-type-regex is enabled, the --include-feature-list argument will be updated with the path to the prepared feature list.
+    #     # since MEX will not be able to provide ftr type column.
+    #     ftrlist_tsv = f"{args.out_dir}/feature_list.tsv"
+    #     cmd = " ".join(["cartloader", "feature_filtering_by_type",
+    #                     f"--include-feature-type-regex {args.include_feature_type_regex}", 
+    #                     f"--feature-type-ref {args.feature_type_ref}",
+    #                     f"--feature-type-ref-colidx-name {args.feature_type_ref_colidx_name}",
+    #                     f"--feature-type-ref-colidx-type {args.feature_type_ref_colidx_type}",
+    #                     f"--feature-type-ref-delim {args.feature_type_ref_delim}" if args.feature_type_ref_delim is not None else "",
+    #                     f"--include-feature-list {args.include_feature_list}"  if args.include_feature_list is not None else "",
+    #                     f"--exclude-feature-list {args.exclude_feature_list}"  if args.include_feature_list is not None else "",
+    #                     f"--out-feature {ftrlist_tsv}",
+    #                     "--log"])
+    #     args.include_feature_list = ftrlist_tsv
+    #     args.exclude_feature_list = None
+    #     cmds.append(cmd)
     # * check --icols-mtx has the same number as --colnames-count
     args.icols_mtx=str(args.icols_mtx)
     if len(args.icols_mtx.split(",")) != len(args.colnames_count.split(",")):
@@ -217,32 +214,29 @@ def convert_visiumhd(cmds, args):
     return cmds
 
 def convert_seqscope(cmds, args):
-    # tools:
-    # 1) spatula
-    # if args.spatula is None:
-    #     args.spatula = os.path.join(cartloader_repo, "submodules", "spatula", "bin", "spatula")
+    ## tools:
     scheck_app(args.spatula)
-    # input: in_mex
-    # output: out_transcript, out_minmax, out_feature
+    ## input: in_mex
+    ## output: out_transcript, out_minmax, out_feature
     # * --included_feature_type_regex
-    if args.include_feature_type_regex is not None:
-        # purpose: Given the spatula doesn't support filtering based on gene type, this function prepares a feature list based on the gene type reference file.
-        #           Note, when the --include-feature-type-regex is enabled, the --include-feature-list argument will be updated with the path to the prepared feature list.
-        # since MEX will not be able to provide ftr type column.
-        ftrlist_tsv = f"{args.out_dir}/feature_list.tsv"
-        cmd = " ".join(["cartloader", "feature_filtering_by_type",
-                        f"--include-feature-type-regex {args.include_feature_type_regex}", 
-                        f"--feature-type-ref {args.feature_type_ref}",
-                        f"--feature-type-ref-colidx-name {args.feature_type_ref_colidx_name}",
-                        f"--feature-type-ref-colidx-type {args.feature_type_ref_colidx_type}",
-                        f"--feature-type-ref-delim {args.feature_type_ref_delim}" if args.feature_type_ref_delim is not None else "",
-                        f"--include-feature-list {args.include_feature_list}"  if args.include_feature_list is not None else "",
-                        f"--exclude-feature-list {args.exclude_feature_list}"  if args.include_feature_list is not None else "",
-                        f"--out-feature {ftrlist_tsv}",
-                        "--log"])
-        args.include_feature_list = ftrlist_tsv
-        args.exclude_feature_list = None
-        cmds.append(cmd)
+    # if args.include_feature_type_regex is not None:
+    #     # purpose: Given the spatula doesn't support filtering based on gene type, this function prepares a feature list based on the gene type reference file.
+    #     #           Note, when the --include-feature-type-regex is enabled, the --include-feature-list argument will be updated with the path to the prepared feature list.
+    #     # since MEX will not be able to provide ftr type column.
+    #     ftrlist_tsv = f"{args.out_dir}/feature_list.tsv"
+    #     cmd = " ".join(["cartloader", "feature_filtering_by_type",
+    #                     f"--include-feature-type-regex {args.include_feature_type_regex}", 
+    #                     f"--feature-type-ref {args.feature_type_ref}",
+    #                     f"--feature-type-ref-colidx-name {args.feature_type_ref_colidx_name}",
+    #                     f"--feature-type-ref-colidx-type {args.feature_type_ref_colidx_type}",
+    #                     f"--feature-type-ref-delim {args.feature_type_ref_delim}" if args.feature_type_ref_delim is not None else "",
+    #                     f"--include-feature-list {args.include_feature_list}"  if args.include_feature_list is not None else "",
+    #                     f"--exclude-feature-list {args.exclude_feature_list}"  if args.include_feature_list is not None else "",
+    #                     f"--out-feature {ftrlist_tsv}",
+    #                     "--log"])
+    #     args.include_feature_list = ftrlist_tsv
+    #     args.exclude_feature_list = None
+    #     cmds.append(cmd)
     # * check --icols-mtx has the same number as --colnames-count
     args.icols_mtx=str(args.icols_mtx)
     if len(args.icols_mtx.split(",")) != len(args.colnames_count.split(",")):
@@ -283,8 +277,11 @@ def convert_tsv(cmds, args):
     transcript_tsv = args.out_transcript.replace(".gz", "")
     format_cmd=f"cartloader format_generic --input {args.in_csv} --out-dir {args.out_dir} --out-transcript {transcript_tsv} --out-feature {args.out_feature} --out-minmax {args.out_minmax}"
     # aux args
-    aux_argset = set(item for lst in [aux_sge_args["out"], aux_sge_args["incsv"], aux_sge_args["ftrname"], aux_sge_args["ftrtype"]] for item in lst)
-    aux_argset.add('print_removed_transcripts')
+    aux_argset = set(item for lst in [aux_sge_args["out"], 
+                                      aux_sge_args["incsv"], 
+                                      aux_sge_args["ftrname"] #, aux_sge_args["ftrtype"]
+                                      ] for item in lst)
+    #aux_argset.add('print_removed_transcripts')
     format_cmd = add_param_to_cmd(format_cmd, args, aux_argset)
     # append to cmds
     cmds.append(format_cmd)
@@ -297,41 +294,6 @@ def convert_tsv(cmds, args):
 # density filtering functions
 #
 #================================================================================================
-
-# def sge_density_filtering(mm, args):
-#     gene_header=[args.colname_feature_name] if args.colname_feature_id is None else [args.colname_feature_name, args.colname_feature_id]
-#     count_header=args.colnames_count.split(",")
-
-#     if args.genomic_feature is None:
-#         if len(args.colnames_count.split(",")) > 1:
-#             logging.error("Missing --genomic-feature. Cannot use --colnames-count with multiple columns as --genomic-feature. Please provide one column name for density-filtering.")
-#             sys.exit(1)
-#         args.genomic_feature = args.colnames_count
-        
-#     sge_convert_flag = os.path.join(args.out_dir, "sge_convert.done")
-#     out_transcript_f = os.path.join(args.out_dir, args.out_transcript)
-#     out_feature_f = os.path.join(args.out_dir, args.out_feature)
-#     filtered_transcript_f = os.path.join(args.out_dir, f"{args.out_filtered_prefix}.transcripts.unsorted.tsv.gz")
-#     cmds=cmd_separator([], "Filtering the converted data by density...")
-#     cmd = " ".join([
-#             "ficture", "filter_by_density",
-#             f"--input {out_transcript_f}",
-#             f"--feature {out_feature_f}",
-#             f"--output {filtered_transcript_f}",
-#             f"--output_boundary {args.out_dir}/{args.out_filtered_prefix}",
-#             f"--filter_based_on {args.genomic_feature}",
-#             f"--mu_scale {args.mu_scale}",
-#             f"--radius {args.radius}",
-#             f"--quartile {args.quartile}",
-#             f"--hex_n_move {args.hex_n_move}",
-#             f"--remove_small_polygons {args.polygon_min_size}",
-#             f"--gene_header {' '.join(gene_header)}",
-#             f"--count_header {' '.join(count_header)}",
-#         ])
-#     cmds.append(cmd)
-#     mm.add_target(f"{filtered_transcript_f}", [sge_convert_flag], cmds)
-#     return mm
-
 def sge_density_filtering(mm, sge_filtering_dict):
     genomic_feature=sge_filtering_dict["genomic_feature"]
     count_header=sge_filtering_dict["count_header"]
@@ -473,7 +435,7 @@ def sge_convert(_args):
             "gene_header": [args.colname_feature_name] if args.colname_feature_id is None else [args.colname_feature_name, args.colname_feature_id], # list
             "count_header": args.colnames_count.split(","), #list
             "genomic_feature": args.genomic_feature,
-            "mu_scale": args.mu_scale,
+            "mu_scale": 1,
             "radius": args.radius,
             "quartile": args.quartile,
             "hex_n_move": args.hex_n_move,

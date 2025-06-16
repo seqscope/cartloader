@@ -39,48 +39,55 @@ Specifically, it will perform all the following steps:
 
 ## Parameters
 
-### Required Parameters
+The following outlines the **minimum required parameters** for running spatial asset packaging. 
 
-#### Input/Output Parameters
+For auxiliary parameters, we recommend using the default values unless you possess a thorough understanding of `run_cartload2`. For further details, refer to the collapsible sections below or run:
+
+```bash
+cartloader run_cartload2 --help
+```
+
+### Input/Output Parameters
 
 * `--fic-dir` (str): Path to the input directory containing FICTURE output.
 * `--out-dir` (str): Path to the output directory for storing generated assets.
 
-#### Dataset ID and Descriptions
+### Dataset ID and Descriptions
 
 * `--id` (str): Unique identifier for the output asset set.
 * `--title` (str): Optional title for the output assets.
 * `--desc` (str): Optional description for the output assets.
 
-### Auxiliary Parameters
+??? note "Auxiliary `run_cartload2` Paramaters"
 
-#### Conversion Parameters 
-* `--in-fic-params` (str): Path to input JSON file with SGE files and FICTURE parameters (Default: `ficture.params.json`).
-* `--out-fic-assets` (str): Path to output JSON file to write FICTURE assets (Default: `ficture_assets.json`).
-* `--out-catalog` (str): Path to output YAML file for assets (Default: catalog.yaml).
-* `--background-assets` (str list): List of background asset descriptors in `[id:file]` or `[id1:id2:file]` format.
-* `--rename-x` (str): Column renaming rule for X axis in `tippecanoe` (Default: x:lon).
-* `--rename-y` (str): Column renaming rule for Y axis in `tippecanoe` (Default: y:lat).
-* `--colname-feature` (str): Column name for gene/feature name (Default: gene).
-* `--colname-count` (str): Column name for feature count (Default: count).
-* `--out-molecules-id` (str): Prefix for output molecule PMTiles files (Default: genes).
-* `--max-join-dist-um` (float): Maximum join distance (µm) between molecules and pixels (Default: 0.1).
-* `--join-tile-size` (float): Tile size (µm) for molecule–pixel joining. (Default: 500).
-* `--max-tile-bytes` (int): Maximum allowed tile size in bytes for PMTiles (Default: 5e6).
-* `--max-feature-counts` (int): Maximum number of features per tile (Default: 5e5).
-* `--preserve-point-density-thres` (int): Threshold to preserve point density in PMTiles (Default: 1024).
-* `--keep-intermediate-files` (flag): If set, retain intermediate files generated.
-* `--skip-raster` (flag): If set, skip raster tile generation and related dependencies.
-* `--tmp-dir` (str): Path to a temporary directory (Default: `<out-dir>/tmp`).
+    **Auxiliary Conversion Parameters**:
+    
+    * `--in-fic-params` (str): Path to input JSON file with SGE files and FICTURE parameters (Default: `ficture.params.json`).
+    * `--out-fic-assets` (str): Path to output JSON file to write FICTURE assets (Default: `ficture_assets.json`).
+    * `--out-catalog` (str): Path to output YAML file for assets (Default: catalog.yaml).
+    * `--background-assets` (str list): List of background asset descriptors in `[id:file]` or `[id1:id2:file]` format.
+    * `--rename-x` (str): Column renaming rule for X axis in `tippecanoe` (Default: x:lon).
+    * `--rename-y` (str): Column renaming rule for Y axis in `tippecanoe` (Default: y:lat).
+    * `--colname-feature` (str): Column name for gene/feature name (Default: gene).
+    * `--colname-count` (str): Column name for feature count (Default: count).
+    * `--out-molecules-id` (str): Prefix for output molecule PMTiles files (Default: genes).
+    * `--max-join-dist-um` (float): Maximum join distance (µm) between molecules and pixels (Default: 0.1).
+    * `--join-tile-size` (float): Tile size (µm) for molecule–pixel joining. (Default: 500).
+    * `--max-tile-bytes` (int): Maximum allowed tile size in bytes for PMTiles (Default: 5e6).
+    * `--max-feature-counts` (int): Maximum number of features per tile (Default: 5e5).
+    * `--preserve-point-density-thres` (int): Threshold to preserve point density in PMTiles (Default: 1024).
+    * `--keep-intermediate-files` (flag): If set, retain intermediate files generated.
+    * `--skip-raster` (flag): If set, skip raster tile generation and related dependencies.
+    * `--tmp-dir` (str): Path to a temporary directory (Default: `<out-dir>/tmp`).
 
-#### Environment Parameters
+    **Auxiliary Environment Parameters**:
 
-* `--gzip` (str): Path to the `gzip` binary. For faster compression, use `"pigz -p4"` (Default: gzip).
-* `--pmtiles` (str): Path to the `pmtiles` binary from go-pmtiles (Default: pmtiles).
-* `--gdal_translate` (str): Path to the `gdal_translate` binary (Default: gdal_translate).
-* `--gdaladdo` (str): Path to the `gdaladdo` binary (Default: gdaladdo).
-* `--tippecanoe` (str): Path to the `tippecanoe` binary (Default: tippecanoe).
-* `--spatula` (str): Path to the `spatula` binary (Default: spatula).
+    * `--gzip` (str): Path to the `gzip` binary. For faster compression, use `"pigz -p4"` (Default: gzip).
+    * `--pmtiles` (str): Path to the `pmtiles` binary from go-pmtiles (Default: pmtiles).
+    * `--gdal_translate` (str): Path to the `gdal_translate` binary (Default: gdal_translate).
+    * `--gdaladdo` (str): Path to the `gdaladdo` binary (Default: gdaladdo).
+    * `--tippecanoe` (str): Path to the `tippecanoe` binary (Default: tippecanoe).
+    * `--spatula` (str): Path to the `spatula` binary (Default: spatula).
 
 ## Output
 

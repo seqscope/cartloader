@@ -61,7 +61,13 @@ The summarization step generate a JSON file to include all details of the FICTUR
 
 ## Parameters
 
-### Required Parameters
+The following outlines the **minimum required parameters** for running FICTURE2. 
+
+For auxiliary parameters, we recommend using the default values unless you possess a thorough understanding of FICTURE. For further details, refer to the collapsible sections below or run:
+
+```bash
+cartloader run_ficture2 --help
+```
 
 #### Action Parameters
 
@@ -80,61 +86,59 @@ The summarization step generate a JSON file to include all details of the FICTUR
 * `--out-dir` (str): Output directory to store all result files.
 * `--out-json` (str): Output JSON file summarizing FICTURE parameters (Default: `<out-dir>/ficture.params.json`).
 * `--in-transcript` (str): Input transcript-indexed SGE file in TSV format.
-* `--in-minmax` (str): Input coordinate min-max file.
-* `--in-feature` (str): Input UMI count per gene TSV file.
-* `--in-feature-ficture` (str): (Optional) A separate feature file applied to FICTURE analysis. Alternative to customizing via auxiliary parameters.
+* `--in-minmax` (str): Optional input coordinate min-max file.
+* `--in-feature` (str): Optional input UMI count per gene TSV file.
 
 #### Key Parameters
 
 * `--width` (str): Comma-separated hexagon flat-to-flat widths (in µm) for LDA training.
 * `--n-factor` (str): Comma-separated list of factor counts for LDA training.
-* `--anchor-res` (int): Anchor resolution used in decoding (Default: 6).
-* `--radius-buffer` (int): Buffer added to anchor resolution for decoding (Default: 1).
-
-### Auxiliary Parameters
-
-#### Feature Customizing Parameters
-
 * `--include-feature-regex` (str): Regex pattern for including features/genes.
 * `--exclude-feature-regex` (str): Regex pattern for excluding features/genes.
+* `--cmap-file` (str): Optional path to fixed color map TSV file. If not provided, FICTURE will generate a color map.
 
-#### Input Parameters
+??? note "Auxiliary `run_ficture2` Paramaters"
 
-* `--colidx-x` (int): Column index of X in the transcript file (Default: 1).
-* `--colidx-y` (int): Column index of Y in the transcript file (Default: 2).
-* `--colname-count` (str): Column name to use as count value (Default: count).
-* `--colname-feature` (str): Column name for gene/feature name (Default: gene).
+    **Auxiliary Input Parameters**
 
-#### FICTURE Parameters
+    * `--in-feature-ficture` (str): (Optional) A separate feature file applied to FICTURE analysis. Alternative to customizing via auxiliary parameters.
+    * `--colidx-x` (int): Column index of X in the transcript file (Default: 1).
+    * `--colidx-y` (int): Column index of Y in the transcript file (Default: 2).
+    * `--colname-count` (str): Column name to use as count value (Default: count).
+    * `--colname-feature` (str): Column name for gene/feature name (Default: gene).
 
-* Tiling-specific parameters:
-    * `--tile-size` (int): Size of tiles for processing (Default: 500).
-    * `--tile-buffer` (int): Buffer zone around each tile (Default: 1000).
-* Segmentation-specific parameters:
-    * `--min-ct-per-unit-hexagon` (int): Minimum count per hexagon (Default: 50).
-    * `--minibatch-size` (int): Minibatch size for preprocessing (Default: 500).
-* LDA training-specific parameters:
-    * `--min-ct-per-unit-train` (int): Minimum count for training (Default: 50).
-    * `--train-epoch` (int): Number of epochs to train LDA model (Default: 2).
-* Decoding-specific paramaters:
-    * `--fit-width` (int): Hexagon width (in µm) for model fitting (Default: same as train width).
-    * `--min-ct-per-unit-fit` (int): Minimum count per unit during model fitting (Default: 50).
-    * `--fit-plot-um-per-pixel` (int): Image resolution for fit coarse plots (Default: 1).
-* Shared paramaters across steps:
-    * `--cmap-file` (str): Path to fixed color map TSV file.
-    * `--seed` (int): Random seed for reproducibility (Default: 1).
-    * `--min-ct-per-feature` (int): Minimum count per feature for LDA and decoding (Default: 20).
-    * `--de-max-pval` (float): p-value cutoff for differential expression (Default: 1e-3).
-    * `--de-min-fold` (float): Fold-change threshold for differential expression (Default: 1.5).
+    **Auxiliary FICTURE Parameters**:
 
-#### Environment Parameters
+    * Tiling-specific parameters:
+        * `--tile-size` (int): Size of tiles for processing (Default: 500).
+        * `--tile-buffer` (int): Buffer zone around each tile (Default: 1000).
+    * Segmentation-specific parameters:
+        * `--min-ct-per-unit-hexagon` (int): Minimum count per hexagon (Default: 50).
+        * `--minibatch-size` (int): Minibatch size for preprocessing (Default: 500).
+    * LDA training-specific parameters:
+        * `--min-ct-per-unit-train` (int): Minimum count for training (Default: 50).
+        * `--train-epoch` (int): Number of epochs to train LDA model (Default: 2).
+    * Decoding-specific paramaters:
+        * `--fit-width` (int): Hexagon width (in µm) for model fitting (Default: same as train width).
+        * `--min-ct-per-unit-fit` (int): Minimum count per unit during model fitting (Default: 50).
+        * `--anchor-res` (int): Anchor resolution used in decoding (Default: 6).
+        * `--radius-buffer` (int): Buffer added to anchor resolution for decoding (Default: 1).
+        * `--fit-plot-um-per-pixel` (int): Image resolution for fit coarse plots (Default: 1).
+    * Shared paramaters across steps:
+        * `--seed` (int): Random seed for reproducibility (Default: 1).
+        * `--min-ct-per-feature` (int): Minimum count per feature for LDA and decoding (Default: 20).
+        * `--de-max-pval` (float): p-value cutoff for differential expression (Default: 1e-3).
+        * `--de-min-fold` (float): Fold-change threshold for differential expression (Default: 1.5).
 
-* `--gzip` (str): Path to `gzip` binary; consider `pigz -p 4` for speed (Default: `gzip`).
-* `--sort` (str): Path to `sort` binary; can include args like `--parallel`, `-T`, `-S` (Default: `sort`).
-* `--sort-mem` (str): Memory allocated per `sort` process (Default: 1G).
-* `--spatula` (str): Path to `spatula` binary (Default: `spatula`).
-* `--ficture2` (str): Path to the `punkst` repository (Default to `punkst` directory in `submodules`)
-* `--python` (str): Path to Python 3 binary (Default: `python3`).
+    **Auxiliary Environment Parameters**:
+    For tools that require specifying the path to their executable binaries, you may omit the path if the binary is already included in your system's `PATH`.
+
+    * `--gzip` (str): Path to `gzip` binary; consider `pigz -p 4` for speed (Default: `gzip`).
+    * `--sort` (str): Path to `sort` binary (Default: `sort`).
+    * `--sort-mem` (str): Memory allocated per `sort` process (Default: 1G).
+    * `--spatula` (str): Path to `spatula` binary (Default: `spatula`).
+    * `--ficture2` (str): Path to the `punkst` repository (Default to `punkst` directory in `submodules`)
+    * `--python` (str): Path to Python 3 binary (Default: `python3`).
 
 ## Output
 

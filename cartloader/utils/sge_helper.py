@@ -7,7 +7,7 @@ aux_sge_args = {
     "out": [
         'units_per_um', 'precision_um',
         'colname_x', 'colname_y', 'colnames_count',
-        'colname_feature_name', 'colname_feature_id'
+        'colname_feature_name' #, 'colname_feature_id'
     ],
     "inbcd": [
         'icol_bcd_barcode', 'icol_bcd_x', 'icol_bcd_y'
@@ -23,18 +23,19 @@ aux_sge_args = {
     ],
     "incsv": [
         'csv_comment', 'csv_delim', 'csv_colname_x', 'csv_colname_y', 'csv_colname_feature_name',
-        'csv_colnames_count', 'csv_colname_feature_id', 'csv_colnames_others',
-        'csv_colname_phredscore', 'min_phred_score', 'add_molecule_id'
+        'csv_colnames_count',  'csv_colnames_others', # 'csv_colname_feature_id',
+        'csv_colname_phredscore', 'min_phred_score' #, 'add_molecule_id'
     ],
     "spatula": [
-        'print_feature_id', 'allow_duplicate_gene_names'
+        'allow_duplicate_gene_names' #, 'print_feature_id'
     ],
     "ftrname": [
-        'include_feature_list', 'exclude_feature_list','include_feature_regex', 'exclude_feature_regex'
+       # 'include_feature_list', 'exclude_feature_list','include_feature_regex', 'exclude_feature_regex'
+       'include_feature_regex', 'exclude_feature_regex'
     ],
-    "ftrtype": [
-        'include_feature_type_regex', 'csv_colname_feature_type', 'feature_type_ref', "feature_type_ref_colidx_name","feature_type_ref_colidx_type"
-    ]
+    # "ftrtype": [
+    #     'include_feature_type_regex', 'csv_colname_feature_type', 'feature_type_ref', "feature_type_ref_colidx_name","feature_type_ref_colidx_type"
+    # ]
 }
 
 def input_by_platform(args):
