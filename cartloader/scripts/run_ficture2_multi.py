@@ -20,8 +20,8 @@ def parse_arguments(_args):
     inout_params.add_argument('--in-list', type=str, default=None, help='Path to the input list file containing the sample name and input transcript file')
 
     key_params = parser.add_argument_group("Key Parameters", "Key parameters that requires user's attention")
-    key_params.add_argument('--width', type=str, default=None, help='Comma-separated hexagon flat-to-flat widths (in um) for LDA training (default: None)')
-    key_params.add_argument('--n-factor', type=str, default=None, help='Comma-separated list of factor counts for LDA training.')
+    key_params.add_argument('--width', type=str, required=True, help='Comma-separated hexagon flat-to-flat widths (in um) for LDA training (default: None)')
+    key_params.add_argument('--n-factor', type=str, required=True, help='Comma-separated list of factor counts for LDA training.')
     key_params.add_argument('--anchor-res', type=int, default=6, help='Anchor resolution for decoding (default: 6)')
 
     # env params
@@ -67,6 +67,7 @@ def parse_arguments(_args):
     aux_params.add_argument('--de-min-ct-per-feature', type=int, default=20, help='Minimum count per feature for differential expression test (default: 20)')
     aux_params.add_argument('--de-max-pval', type=float, default=1e-3, help='p-value cutoff for differential expression (default: 1e-3)')
     aux_params.add_argument('--de-min-fold', type=float, default=1.5, help='Fold-change cutoff for differential expression (default: 1.5)')
+    aux_params.add_argument('--redo-pseudobulk-decode', action='store_true', default=False, help='Recompute pseudobulk decode with spatula. If set, the existing pseudobulk decode will be overwritten.')
 
     if len(_args) == 0:
         parser.print_help()
@@ -154,8 +155,8 @@ def run_ficture2_multi(_args):
     if args.out_json is None:
         args.out_json = os.path.join(args.out_dir, f"ficture.params.json")
 
-    if "," in args.width:
-        raise ValueError("In multi-sample pipeline, when --train-width is provided, it should be a single value, not a comma-separated list. Use --width instead.")
+    #if "," in args.width:
+    #    raise ValueError("In multi-sample pipeline, when --train-width is provided, it should be a single value, not a comma-separated list. Use --width instead.")
 
     ## parse the input list file
     in_samples = []
@@ -183,15 +184,21 @@ def run_ficture2_multi(_args):
         f"--tile-size {args.tile_size}",
         f"--tile-buffer {args.tile_buffer}",
         f"--threads {args.threads}",
-        f"--hex-grid-dist {args.width}",
+        f"--hex-grid-dist {args.width.replace(',', ' ')}",
         f"--min-total-count-per-sample {args.min_count_per_sample}",
         f"--min-count {args.min_ct_per_unit_hexagon}",
         f"--include-feature-regex '{args.include_feature_regex}'" if args.include_feature_regex is not None else "",
         f"--exclude-feature-regex '{args.exclude_feature_regex}'" if args.exclude_feature_regex is not None else "",
     ])
     cmds.append(cmd)
-    
-    cmds.append(f"[ -f {args.out_dir}/multi.features.tsv ] && [ -f {args.out_dir}/multi.hex_{args.width}.txt ] && touch {args.out_dir}/multi.done" )
+
+    widths = args.width.split(",")
+    cmd = f"[ -f {args.out_dir}/multi.features.tsv ]"
+    for width in widths:
+        cmd += f" && [ -f {args.out_dir}/multi.hex_{width}.txt ]"
+    cmd += f" && touch {args.out_dir}/multi.done"
+    cmds.append(cmd)
+    #cmds.append(f"[ -f {args.out_dir}/multi.features.tsv ] && [ -f {args.out_dir}/multi.hex_{args.width}.txt ] && touch {args.out_dir}/multi.done" )
     mm.add_target(f"{args.out_dir}/multi.done", [args.in_list], cmds)
 
     # step 2. multi-sample LDA training
@@ -315,6 +322,7 @@ def run_ficture2_multi(_args):
         # params & prefix
         fit_width = decode_params["fit_width"]
         decode_id = decode_params["decode_id"]
+        n_factor = decode_params["n_factor"]
         fit_n_move = int(fit_width / args.anchor_res)
 
         for i in range(len(in_samples)):
@@ -332,7 +340,7 @@ def run_ficture2_multi(_args):
                 f"--in-tsv {args.out_dir}/samples/{sample}/{sample}.tiled.tsv",
                 f"--in-index {args.out_dir}/samples/{sample}/{sample}.tiled.index",
                 f"--temp-dir {args.out_dir}/tmp/{sample}_{decode_id}",
-                f"--out {decode_prefix}.tsv",
+                f"--out-pref {decode_prefix}",
                 f"--icol-x {args.colidx_x-1}",
                 f"--icol-y {args.colidx_y-1}",
                 f"--icol-feature 2",
@@ -345,6 +353,16 @@ def run_ficture2_multi(_args):
                 f"--output-original"
                 ])
             cmds.append(cmd) 
+
+            if args.redo_pseudobulk_decode:
+                cmds.append(f"rm -f {decode_postcount}")
+                cmd = " ".join([
+                    args.spatula, "pseudobulk-from-decode",
+                    f"--tsv {decode_fit_tsv}",
+                    f"--out {decode_postcount}",
+                    f"--n-factors {n_factor}"
+                ])
+                cmds.append(cmd)
             cmds.append(f"[ -f {decode_fit_tsv} ] && [ -f {decode_postcount} ] && touch {decode_prefix}.tsv.done")
             mm.add_target(f"{decode_prefix}.tsv.done", [cmap_path, f"{args.out_dir}/multi.done", f"{model_prefix}.done"], cmds)  
 
