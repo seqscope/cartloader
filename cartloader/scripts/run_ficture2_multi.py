@@ -58,8 +58,8 @@ def parse_arguments(_args):
     aux_params.add_argument('--minibatch-size', type=int, default=500, help='Batch size used in minibatch processing (default: 500)')
     # train
     aux_params.add_argument('--train-epoch', type=int, default=2, help='Training epoch for LDA model (default: 2)')
-    aux_params.add_argument('--min-ct-per-unit-fit', type=int, default=50, help='Minimum count per hexagon unit during model fitting (default: 20)')
-    aux_params.add_argument('--fit-plot-um-per-pixel', type=float, default=1, help='Image resolution for fit coarse plot (default: 1)')   # in Scopeflow, this is set to 2
+    #aux_params.add_argument('--min-ct-per-unit-fit', type=int, default=50, help='Minimum count per hexagon unit during model fitting (default: 20)')
+    #aux_params.add_argument('--fit-plot-um-per-pixel', type=float, default=1, help='Image resolution for fit coarse plot (default: 1)')  # in Scopeflow, this is set to 2
     # color map
     aux_params.add_argument('--cmap-file', type=str, required=True, help='Define the path to the fixed color map (default: <cartloader_dir>/assets/fixed_color_map_60.tsv)')
     # others parameters shared across steps
@@ -68,6 +68,7 @@ def parse_arguments(_args):
     aux_params.add_argument('--de-max-pval', type=float, default=1e-3, help='p-value cutoff for differential expression (default: 1e-3)')
     aux_params.add_argument('--de-min-fold', type=float, default=1.5, help='Fold-change cutoff for differential expression (default: 1.5)')
     aux_params.add_argument('--redo-pseudobulk-decode', action='store_true', default=False, help='Recompute pseudobulk decode with spatula. If set, the existing pseudobulk decode will be overwritten.')
+    aux_params.add_argument('--redo-merge-units', action='store_true', default=False, help='Recompute merge units. If set, the existing mergeed hexagons and LDA results will be overwritten.')
 
     if len(_args) == 0:
         parser.print_help()
@@ -191,6 +192,25 @@ def run_ficture2_multi(_args):
         f"--exclude-feature-regex '{args.exclude_feature_regex}'" if args.exclude_feature_regex is not None else "",
     ])
     cmds.append(cmd)
+
+    ## redo merge units command (temporarily needed to handle a bug)
+    if args.redo_merge_units:
+        widths = args.width.split(",")
+        for width in widths:
+            ## write the input list file for merge units
+            with flexopen(f"{args.out_dir}/multi.hex_{width}.list.tsv", "wt") as wf:
+                for sample in in_samples:
+                    wf.write(f"{sample}\t{args.out_dir}/samples/{sample}/{sample}.features.tsv\t{args.out_dir}/samples/{sample}/{sample}.hex_{width}.txt\t{args.out_dir}/samples/{sample}/{sample}.hex_{width}.json\t-2\n")
+            ## redo merge units
+            cmd = " ".join([
+                ficture2bin, "merge-units",
+                f"--in-list {args.out_dir}/multi.hex_{width}.list.tsv",
+                f"--min-total-count-per-sample {args.min_count_per_sample}",
+                f"--min-count-per-unit {args.min_ct_per_unit_hexagon}",
+                f"--out-pref {args.out_dir}/multi.hex_{width}",
+                f"--threads {args.threads}",
+                f"--temp-dir {args.out_dir}/tmp/multi_hex_{width}"])
+            cmds.append(cmd)
 
     widths = args.width.split(",")
     cmd = f"[ -f {args.out_dir}/multi.features.tsv ]"
