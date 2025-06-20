@@ -135,10 +135,10 @@ def cmd_sge_convert(sgeinfo, args, env):
         in_arg= f"--in-mex {sgeinfo['in_mex']}"
     elif platform in ["10x_xenium", "bgi_stereoseq", "cosmx_smi", "vizgen_merscope", "pixel_seq", "nova_st"]:
         assert sgeinfo.get("in_csv", None) is not None, f"Please provide --in-csv for {platform}"
-        in_arg= f"--in-csv {sgeinfo['in_csv']} --print-removed-transcripts"
+        in_arg= f"--in-csv {sgeinfo['in_csv']}"
     elif platform in ["generic"]:
         assert sgeinfo.get("in_csv", None) is not None, f"Please provide --in-csv for {platform}"
-        in_arg= f"--in-csv {sgeinfo['in_csv']} --print-removed-transcripts"
+        in_arg= f"--in-csv {sgeinfo['in_csv']}"
 
     sgeinfo["csv_colnames_others"]= sgeinfo["csv_colnames_others"].split(",") if sgeinfo.get("csv_colnames_others", None) is not None else []
 
@@ -165,7 +165,7 @@ def cmd_sge_convert(sgeinfo, args, env):
         format_cmd = add_param_to_cmd(format_cmd, northup_aug, aux_params_args["north_up"])
 
     # add aux tools
-    format_cmd = add_param_to_cmd(format_cmd, env, aux_env_args["sge_convert"]++aux_env_args["north_up"]) if args.north_up else add_param_to_cmd(format_cmd, env, aux_env_args["sge_convert"])
+    format_cmd = add_param_to_cmd(format_cmd, env, aux_env_args["sge_convert"]+aux_env_args["north_up"]) if args.north_up else add_param_to_cmd(format_cmd, env, aux_env_args["sge_convert"])
 
     return format_cmd
 

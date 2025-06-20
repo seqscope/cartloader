@@ -1,36 +1,26 @@
 
 
 import requests
-import requests
 import json, os, sys, argparse, inspect, glob
 import yaml
 
 def get_existing_files(bucket_url, ACCESS_TOKEN):
-    """
-    Gets a list of files that already exist in the specified bucket.
-    :param bucket_url: The URL of the bucket to check.
-    :param ACCESS_TOKEN: The access token used for authentication.
-    :return: A list of filenames that already exist in the bucket.
-    """
     r = requests.get(
         bucket_url,
         params={'access_token': ACCESS_TOKEN},
     )
+    print(f"Bucket Status: {r.status_code}")
     if r.status_code == 200:
         files = [file['filename'] for file in r.json()['contents']]
         return files
+    elif r.status_code == 500:
+        return []
     else:
         print(f"Error fetching existing files: {r.status_code} - {r.text}")
         exit(1)
         return []
 
-def upload_file_to_bucket(r, filepath, bucket_url, ACCESS_TOKEN):
-    """
-    Uploads a given file to the specified bucket URL using an access token.
-    :param filepath: The path to the file to be uploaded.
-    :param bucket_url: The URL of the bucket to which the file will be uploaded.
-    :param ACCESS_TOKEN: The access token used for authentication.
-    """
+def upload_file_to_bucket(filepath, bucket_url, ACCESS_TOKEN):
     filename = os.path.basename(filepath)
     with open(filepath, "rb") as fp:
         r = requests.put(
@@ -42,11 +32,6 @@ def upload_file_to_bucket(r, filepath, bucket_url, ACCESS_TOKEN):
 
 # define a function to check if a variable is a list or a dict
 def collect_files_from_yaml(yaml_dat):
-    """
-    Collects and returns a list of unique file paths from the given YAML file.
-    :param yaml_file: Path to the YAML file.
-    :return: A list of unique file paths.
-    """
     file_set = set()
     def recurse_items(items):
         if isinstance(items, dict):
@@ -62,7 +47,7 @@ def collect_files_from_yaml(yaml_dat):
     file_list=sorted(list(file_set))
     return file_list
 
-def upload_zenodo(_args):
+def upload_zenodo_by_catalog(_args):
     parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", description="Upload results files to Zenodo for cartoscope.")
     parser.add_argument('--zenodo-id', type=str, required=True, help='The Zenodo deposition ID.')
     parser.add_argument('--zenodo-token', type=str, required=True, help='The path of file for your access token for Zenodo.')
@@ -71,11 +56,12 @@ def upload_zenodo(_args):
     parser.add_argument('--in-list', type=str, nargs='+', default=[], help='If --upload-method is "user_list", provide the name of files to be uploaded to Zenodo.')
     parser.add_argument('--catalog-yaml', type=str, default=None, help='If --upload-method is "catalog_yaml", provide the catalog YAML file that lists the files to be uploaded to Zenodo.')
     parser.add_argument('--overwrite', action='store_true', default=False, help='If set, overwrite existing files in the Zenodo bucket. If not set, skip existing files.')
+
     args = parser.parse_args(_args)
 
     # define input by the upload_method
     if args.upload_method == "all":
-        in_files_raw = glob.glob(f"{args.input_dir}/*")
+        in_files_raw = glob.glob(f"{args.in_dir}/*")
     elif args.upload_method == "catalog":
         assert args.catalog_yaml is not None, "Please provide a YAML file that lists the files to be uploaded to Zenodo."
         with open(args.catalog_yaml, 'r') as file:
@@ -107,33 +93,37 @@ def upload_zenodo(_args):
 
     bucket_url = r.json()["links"]["bucket"]
 
-    # locate the existing files in the bucket
-    existing_files = get_existing_files(bucket_url, ACCESS_TOKEN)
-    in_files_existing = [f for f in in_files_raw if os.path.basename(f) in existing_files]
+    # check if any file exists in the bucket
     print(f"Check Overlapping: ")
-    if len(in_files_existing) > 0:
-        print(f" - Found {len(in_files_existing)} files that already exist in the Zenodo bucket:")
-        for in_file in in_files_existing:
-            print(f"    - {in_file}")
-        if args.overwrite:
-            print(" - Will overwrite existing files in the Zenodo bucket.")
-            in_files = in_files_raw
+    existing_files = get_existing_files(bucket_url, ACCESS_TOKEN)
+    if len(existing_files)>0:
+        in_files_existing = [f for f in in_files_raw if os.path.basename(f) in existing_files]
+        if len(in_files_existing) > 0:
+            print(f" - Found {len(in_files_existing)} files that already exist in the Zenodo bucket:")
+            for in_file in in_files_existing:
+                print(f"    - {in_file}")
+            if args.overwrite:
+                print(" - Will overwrite existing files in the Zenodo bucket.")
+                in_files = in_files_raw
+            else:
+                print(" - Will skip existing files in the Zenodo bucket.")
+                in_files = [f for f in in_files_raw if f not in in_files_existing]
         else:
-            print(" - Will skip existing files in the Zenodo bucket.")
-            in_files = [f for f in in_files_raw if f not in in_files_existing]
+            print(f" - No input file exists in the Zenodo bucket.")
+            in_files = in_files_raw
     else:
-        print(f" - None of the files exists in the Zenodo bucket.")
+        print(" - Empty bucket")
         in_files = in_files_raw
 
     # upload the files
     print(f"Uploading: Uploading files to Zenodo bucket {bucket_url}...")
     for in_file in in_files:
         try:
-            r = upload_file_to_bucket(in_file, bucket_url, ACCESS_TOKEN)
-            if r.status_code == 200:
-                print(f"    - Successfully uploaded: {in_file}")
+            res = upload_file_to_bucket(in_file, bucket_url, ACCESS_TOKEN)
+            if res.status_code not in (200, 201):
+                print(f"    - Failed to upload {in_file}: {res.status_code} - {res.text}")
             else:
-                print(f"    - Failed to upload {in_file}: {r.status_code} - {r.text}")
+                print(f"    - Successfully uploaded {in_file}")
         except Exception as e:
             print(f"    - Error uploading {in_file}: {e}")
 
