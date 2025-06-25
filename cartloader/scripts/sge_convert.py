@@ -432,7 +432,7 @@ def sge_convert(_args):
             "filtered_xy": filtered_xy_f,
             "filtered_prefix": os.path.join(args.out_dir, args.out_filtered_prefix),
             "flag": sge_filtered_flag,
-            "gene_header": [args.colname_feature_name] if args.colname_feature_id is None else [args.colname_feature_name, args.colname_feature_id], # list
+            "gene_header": [args.colname_feature_name],
             "count_header": args.colnames_count.split(","), #list
             "genomic_feature": args.genomic_feature,
             "mu_scale": 1,
