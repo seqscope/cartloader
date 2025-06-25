@@ -1,0 +1,1599 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://seqscope.github.io/cartloader/vignettes/subregion_tutorials/stereoseq/">
+      
+      
+        <link rel="prev" href="../../intro/">
+      
+      
+        <link rel="next" href="../visiumhd/">
+      
+      
+      <link rel="icon" href="../../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.2">
+    
+    
+      
+        <title>StereoSeq Starter Tutorial - cartloader</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.d7758b05.min.css">
+      
+        
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../../css/extra.css">
+    
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#stereoseq-starter-tutorial" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../../.." title="cartloader" class="md-header__button md-logo" aria-label="cartloader" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            cartloader
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              StereoSeq Starter Tutorial
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7a5 5 0 0 0-5 5 5 5 0 0 0 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1M8 13h8v-2H8zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4a5 5 0 0 0 5-5 5 5 0 0 0-5-5"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_2" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 7H7a5 5 0 0 0-5 5 5 5 0 0 0 5 5h10a5 5 0 0 0 5-5 5 5 0 0 0-5-5m0 8a3 3 0 0 1-3-3 3 3 0 0 1 3-3 3 3 0 0 1 3 3 3 3 0 0 1-3 3"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="indigo"  aria-label="Switch to system preference"  type="radio" name="__palette" id="__palette_2">
+    
+      <label class="md-header__button md-icon" title="Switch to system preference" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 7H7a5 5 0 0 0-5 5 5 5 0 0 0 5 5h10a5 5 0 0 0 5-5 5 5 0 0 0-5-5M7 15a3 3 0 0 1-3-3 3 3 0 0 1 3-3 3 3 0 0 1 3 3 3 3 0 0 1-3 3"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/seqscope/cartloader" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81"/></svg>
+  </div>
+  <div class="md-source__repository">
+    seqscope/cartloader
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../.." class="md-tabs__link">
+          
+  
+    
+  
+  Home
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../../installation/" class="md-tabs__link">
+        
+  
+    
+  
+  Installation
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../quickstart/" class="md-tabs__link">
+        
+  
+    
+  
+  Quick Start
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../../intro/" class="md-tabs__link">
+          
+  
+    
+  
+  Vignettes
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../reference/sge_convert/" class="md-tabs__link">
+          
+  
+    
+  
+  References
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../.." title="cartloader" class="md-nav__button md-logo" aria-label="cartloader" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    cartloader
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/seqscope/cartloader" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81"/></svg>
+  </div>
+  <div class="md-source__repository">
+    seqscope/cartloader
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_1" >
+        
+          
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../.." class="md-nav__link ">
+              
+  
+  <span class="md-ellipsis">
+    Home
+    
+  </span>
+  
+
+            </a>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_1">
+            <span class="md-nav__icon md-icon"></span>
+            Home
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../installation/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Installation
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../quickstart/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Quick Start
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  <span class="md-ellipsis">
+    Vignettes
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            Vignettes
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../intro/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4_2" id="__nav_4_2_label" tabindex="">
+            
+  
+  <span class="md-ellipsis">
+    Getting Started with `cartloader`
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4_2">
+            <span class="md-nav__icon md-icon"></span>
+            Getting Started with `cartloader`
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    StereoSeq Starter Tutorial
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  <span class="md-ellipsis">
+    StereoSeq Starter Tutorial
+    
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#input-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      Input Data
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#set-up-the-environment" class="md-nav__link">
+    <span class="md-ellipsis">
+      Set Up the Environment
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sge-format-conversion" class="md-nav__link">
+    <span class="md-ellipsis">
+      SGE Format Conversion
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ficture-analysis" class="md-nav__link">
+    <span class="md-ellipsis">
+      FICTURE analysis
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cartloader-compilation" class="md-nav__link">
+    <span class="md-ellipsis">
+      cartloader Compilation
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#upload-to-data-repository" class="md-nav__link">
+    <span class="md-ellipsis">
+      Upload to Data Repository
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../visiumhd/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Visium HD Starter Tutorial
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../pixelseq/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Pixel-Seq Starter Tutorial
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../xenium/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Xenium Starter Tutorial
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../merscope/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    MERSCOPE Starter Tutorial
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cosmx_smi/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    CoxMX SMI Starter Tutorial
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    References
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            References
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/sge_convert/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    SGE Format Conversion
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/run_ficture2/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    FICTURE Analysis
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/run_cartload2/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    cartloader Compilation
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#input-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      Input Data
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#set-up-the-environment" class="md-nav__link">
+    <span class="md-ellipsis">
+      Set Up the Environment
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sge-format-conversion" class="md-nav__link">
+    <span class="md-ellipsis">
+      SGE Format Conversion
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ficture-analysis" class="md-nav__link">
+    <span class="md-ellipsis">
+      FICTURE analysis
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cartloader-compilation" class="md-nav__link">
+    <span class="md-ellipsis">
+      cartloader Compilation
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#upload-to-data-repository" class="md-nav__link">
+    <span class="md-ellipsis">
+      Upload to Data Repository
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="stereoseq-starter-tutorial">StereoSeq Starter Tutorial<a class="headerlink" href="#stereoseq-starter-tutorial" title="Permanent link">&para;</a></h1>
+<h2 id="input-data">Input Data<a class="headerlink" href="#input-data" title="Permanent link">&para;</a></h2>
+<p>The input data represents mouse hippocampus. For demonstration purposes, we selected the adult mouse brain coronal section from the official release and extracted only the hippocampus region. The full-section data sourced from the <a href="https://www.bgi.com/global/service/spatial-transcriptome-stereo-seq">Stereo-seq</a> platform, as part of the <a href="https://db.cngb.org/stomics/mosta/download/">MOSTA</a> project.</p>
+<p><strong>File Format</strong></p>
+<p>The StereoSeq <abbr title="Spatial Digital Gene Expression">SGE</abbr> includes one tab-delimited “Bin1” gene expression matrix file:</p>
+<div class="admonition info">
+<p class="admonition-title">TSV File Format</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span></pre></div></td><td class="code"><div><pre><span></span><code>geneID          x       y       MIDCounts
+0610005C13Rik   6632    9074    1
+0610005C13Rik   8651    8935    1
+0610005C13Rik   7228    12814   2
+</code></pre></div></td></tr></table></div>
+<ul>
+<li>"<code>geneID</code>": gene symbols</li>
+<li>"<code>x</code>": x coordinates of each <abbr title="DNA Nanoball (DNB)">DNB</abbr> on the captured chip</li>
+<li>"<code>y</code>": y coordinates of each <abbr title="DNA Nanoball (DNB)">DNB</abbr> on the captured chip</li>
+<li>"<code>MIDCounts</code>": the number of <abbr title="Unique Molecular Identifier">UMI</abbr> for each gene at each <abbr title="DNA Nanoball (DNB)">DNB</abbr></li>
+</ul>
+</div>
+<p><strong>Data Access</strong></p>
+<p>The example data is hosted on Zenedo ().</p>
+<p>Follow the commands below to download the example data.</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nv">work_dir</span><span class="o">=</span>/path/to/work/directory
+<span class="nb">cd</span><span class="w"> </span><span class="nv">$work_dir</span>
+wget<span class="w"> </span>
+tar<span class="w"> </span>-zxvf<span class="w"> </span>
+</code></pre></div></td></tr></table></div>
+<h2 id="set-up-the-environment">Set Up the Environment<a class="headerlink" href="#set-up-the-environment" title="Permanent link">&para;</a></h2>
+<p>Define paths to all required binaries and resources, and target AWS S3 bucket. Optionally, specify a fixed color map for consistent rendering.</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># ====</span>
+<span class="c1"># Replace each placeholder with the actual path on your system.  </span>
+<span class="c1"># ====</span>
+
+<span class="c1"># Define paths to required binaries and resources</span>
+<span class="nv">spatula</span><span class="o">=</span>/path/to/spatula/binary<span class="w">         </span><span class="c1"># path to spatula executable</span>
+<span class="nv">punkst</span><span class="o">=</span>/path/to/punkst/binary<span class="w">           </span><span class="c1"># path to FICTURE2/punkst executable</span>
+<span class="nv">tippecanoe</span><span class="o">=</span>/path/to/tippecanoe/binary<span class="w">   </span><span class="c1"># path to tippecanoe executable</span>
+<span class="nv">pmtiles</span><span class="o">=</span>/path/to/pmtiles/binary<span class="w">         </span><span class="c1"># path to pmtiles executable</span>
+<span class="nv">aws</span><span class="o">=</span>/path/to/aws/cli/binary<span class="w">             </span><span class="c1"># path to AWS CLI binary</span>
+
+<span class="c1"># (Optional) Define path to color map. </span>
+<span class="nv">cmap</span><span class="o">=</span>/path/to/color/map<span class="w">                 </span><span class="c1"># Path to the fixed color map for rendering. cartloader provides a fixed color map at cartloader/assets/fixed_color_map_256.tsv.</span>
+
+<span class="c1"># AWS S3 target location for cartostore</span>
+<span class="nv">AWS_BUCKET</span><span class="o">=</span><span class="s2">&quot;EXAMPLE_AWS_BUCKET&quot;</span><span class="w">         </span><span class="c1"># replace this with your actual S3 bucket name</span>
+</code></pre></div></td></tr></table></div>
+<p>Define data ID and analysis parameters:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nb">cd</span><span class="w"> </span><span class="nv">$work_dir</span>
+
+<span class="c1"># Unique identifier for your dataset</span>
+<span class="nv">DATA_ID</span><span class="o">=</span><span class="s2">&quot;stereoseq_hippo&quot;</span><span class="w">                </span><span class="c1"># change this to reflect your dataset name</span>
+<span class="nv">PLATFORM</span><span class="o">=</span><span class="s2">&quot;bgi_stereoseq&quot;</span><span class="w">                 </span><span class="c1"># platform information</span>
+<span class="nv">SCALE</span><span class="o">=</span><span class="m">2</span><span class="w">                                  </span><span class="c1"># scale from coordinate to micrometer</span>
+
+<span class="c1"># LDA parameters</span>
+<span class="nv">train_width</span><span class="o">=</span><span class="m">18</span><span class="w">                           </span><span class="c1"># define LDA training hexagon width (comma-separated if multiple widths are applied)</span>
+<span class="nv">n_factor</span><span class="o">=</span><span class="m">6</span>,12<span class="w">                            </span><span class="c1"># define number of factors in LDA training (comma-separated if multiple n-factor are applied)</span>
+</code></pre></div></td></tr></table></div>
+<div class="admonition info">
+<p class="admonition-title">How to Define Scaling Factors for StereoSeq?</p>
+<p>According to the <a href="https://doi.org/10.1016/j.cell.2022.04.003">StereoSeq paper</a>, the technology features spot sizes of approximately 220 nanometers in diameter with center-to-center distances of about 500 nanometers. Thus, each pixel corresponds to approximately 0.5 micrometers. The scaling factor from coordinate to um is defined as 2.</p>
+</div>
+<h2 id="sge-format-conversion"><abbr title="Spatial Digital Gene Expression">SGE</abbr> Format Conversion<a class="headerlink" href="#sge-format-conversion" title="Permanent link">&para;</a></h2>
+<p>Convert the raw input to the unified <abbr title="Spatial Digital Gene Expression">SGE</abbr> format. See more details in <a href="../../../reference/sge_convert/">Reference page</a>.</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code>cartloader<span class="w"> </span>sge_convert<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--makefn<span class="w"> </span>sge_convert.mk<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--platform<span class="w"> </span><span class="si">${</span><span class="nv">PLATFORM</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--in-csv<span class="w"> </span>./input.tsv.gz<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--units-per-um<span class="w"> </span><span class="si">${</span><span class="nv">SCALE</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--out-dir<span class="w"> </span>./sge<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--exclude-feature-regex<span class="w"> </span><span class="s1">&#39;^(BLANK|NegCon|NegPrb)&#39;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--sge-visual<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--spatula<span class="w"> </span><span class="si">${</span><span class="nv">spatula</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--n-jobs<span class="w"> </span><span class="m">10</span>
+</code></pre></div></td></tr></table></div>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Required</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--makefn</code></td>
+<td></td>
+<td>string</td>
+<td>File name for the generated Makefile</td>
+</tr>
+<tr>
+<td><code>--platform</code></td>
+<td>required</td>
+<td>string</td>
+<td>platform (options: "10x_visium_hd", "seqscope", "10x_xenium", "bgi_stereoseq", "cosmx_smi", "vizgen_merscope", "pixel_seq", "nova_st", "generic")</td>
+</tr>
+<tr>
+<td><code>--in-csv</code></td>
+<td>required</td>
+<td>string</td>
+<td>Path to the input TSV/CSV file</td>
+</tr>
+<tr>
+<td><code>--units-per-um</code></td>
+<td>required</td>
+<td>float</td>
+<td>Conversion factor: how many input coordinate units per micron</td>
+</tr>
+<tr>
+<td><code>--out-dir</code></td>
+<td>required</td>
+<td>string</td>
+<td>Output directory for the generated <abbr title="Spatial Digital Gene Expression">SGE</abbr> files</td>
+</tr>
+<tr>
+<td><code>--exclude-feature-regex</code></td>
+<td></td>
+<td>regex</td>
+<td>Pattern to exclude features (e.g., BLANK, NegCon)</td>
+</tr>
+<tr>
+<td><code>--sge-visual</code></td>
+<td></td>
+<td>flag</td>
+<td>Enable generation of diagnostic visualization of the <abbr title="Spatial Digital Gene Expression">SGE</abbr> matrix</td>
+</tr>
+<tr>
+<td><code>--spatula</code></td>
+<td></td>
+<td>string</td>
+<td>Path to the spatula binary</td>
+</tr>
+<tr>
+<td><code>--n-jobs</code></td>
+<td></td>
+<td>int</td>
+<td>Number of parallel jobs for processing</td>
+</tr>
+</tbody>
+</table>
+<h2 id="ficture-analysis"><code>FICTURE</code> analysis<a class="headerlink" href="#ficture-analysis" title="Permanent link">&para;</a></h2>
+<p>Compute spatial factors using <code>punkst</code> (FICTURE2 mode). See more details in <a href="../../../reference/run_ficture2/">Reference page</a>.</p>
+<!-- ```bash
+cartloader run_ficture2 \
+    --makefn run_ficture2.mk \                          # (optional) file name of the output make file
+    --main \                                            # run all five steps in `run_ficture2`
+    --in-transcript ./sge/transcripts.unsorted.tsv.gz \ # path to input transcript-level SGE file
+    --in-feature ./sge/feature.clean.tsv.gz \           # (optional) path to input feature file
+    --in-minmax ./sge/coordinate_minmax.tsv \           # (optional) path to input minmax file
+    --cmap-file ${cmap} \                               # (optional) path to input color map file
+    --exclude-feature-regex '^(mt-.*$|Gm\d+$)' \        # regex pattern to exclude features (removing mitochondrial and predicted genes in the example analysis)
+    --out-dir ./ficture2 \                              # path to output directory
+    --width ${train_width} \                            # LDA training hexagon width (comma-separated if multiple widths are applied)
+    --n-factor ${n_factor} \                            # number of factors in LDA training (comma-separated if multiple n-factor are applied)
+    --spatula ${spatula} \                              # (optional) path to the spatula binary
+    --ficture2 ${punkst} \                              # (optional) path to the punkst directory
+    --n-jobs 10  \                                      # (optional) number of parallel jobs 
+    --threads 10                                        # (optional) number of threads per job
+``` -->
+
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span></pre></div></td><td class="code"><div><pre><span></span><code>cartloader<span class="w"> </span>run_ficture2<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--makefn<span class="w"> </span>run_ficture2.mk<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--main<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--in-transcript<span class="w"> </span>./sge/transcripts.unsorted.tsv.gz<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--in-feature<span class="w"> </span>./sge/feature.clean.tsv.gz<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--in-minmax<span class="w"> </span>./sge/coordinate_minmax.tsv<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--cmap-file<span class="w"> </span><span class="si">${</span><span class="nv">cmap</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--exclude-feature-regex<span class="w"> </span><span class="s1">&#39;^(mt-.*$|Gm\d+$)&#39;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--out-dir<span class="w"> </span>./ficture2<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--width<span class="w"> </span><span class="si">${</span><span class="nv">train_width</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--n-factor<span class="w"> </span><span class="si">${</span><span class="nv">n_factor</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--spatula<span class="w"> </span><span class="si">${</span><span class="nv">spatula</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--ficture2<span class="w"> </span><span class="si">${</span><span class="nv">punkst</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--n-jobs<span class="w"> </span><span class="m">10</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--threads<span class="w"> </span><span class="m">10</span>
+</code></pre></div></td></tr></table></div>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Required</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--makefn</code></td>
+<td></td>
+<td>string</td>
+<td>File name for the generated Makefile</td>
+</tr>
+<tr>
+<td><code>--main</code></td>
+<td>required</td>
+<td>flag</td>
+<td>Run all five steps in <code>run_ficture2</code></td>
+</tr>
+<tr>
+<td><code>--in-transcript</code></td>
+<td>required</td>
+<td>string</td>
+<td>Path to input transcript-level <abbr title="Spatial Digital Gene Expression">SGE</abbr> file</td>
+</tr>
+<tr>
+<td><code>--in-feature</code></td>
+<td></td>
+<td>string</td>
+<td>Path to input feature file</td>
+</tr>
+<tr>
+<td><code>--in-minmax</code></td>
+<td></td>
+<td>string</td>
+<td>Path to coordinate min/max file</td>
+</tr>
+<tr>
+<td><code>--cmap-file</code></td>
+<td></td>
+<td>string</td>
+<td>Path to color map file</td>
+</tr>
+<tr>
+<td><code>--exclude-feature-regex</code></td>
+<td></td>
+<td>regex</td>
+<td>Pattern to exclude features (e.g., mitochondrial or predicted genes)</td>
+</tr>
+<tr>
+<td><code>--out-dir</code></td>
+<td>required</td>
+<td>string</td>
+<td>Path to output directory</td>
+</tr>
+<tr>
+<td><code>--width</code></td>
+<td>required</td>
+<td>int or comma-separated list</td>
+<td><abbr title="Latent Dirichlet Allocation">LDA</abbr> training hexagon width(s)</td>
+</tr>
+<tr>
+<td><code>--n-factor</code></td>
+<td>required</td>
+<td>int or comma-separated list</td>
+<td>Number of <abbr title="Latent Dirichlet Allocation">LDA</abbr> factors</td>
+</tr>
+<tr>
+<td><code>--spatula</code></td>
+<td></td>
+<td>string</td>
+<td>Path to the <code>spatula</code> binary</td>
+</tr>
+<tr>
+<td><code>--ficture2</code></td>
+<td></td>
+<td>string</td>
+<td>Path to the <code>punkst</code> directory</td>
+</tr>
+<tr>
+<td><code>--n-jobs</code></td>
+<td></td>
+<td>int</td>
+<td>Number of parallel jobs</td>
+</tr>
+<tr>
+<td><code>--threads</code></td>
+<td></td>
+<td>int</td>
+<td>Number of threads per job</td>
+</tr>
+</tbody>
+</table>
+<h2 id="cartloader-compilation"><code>cartloader</code> Compilation<a class="headerlink" href="#cartloader-compilation" title="Permanent link">&para;</a></h2>
+<p>Generate pmtiles and web-compatible tile directories. See more details in <a href="../../../reference/run_cartload2/">Reference page</a>.</p>
+<!-- ```bash
+cartloader run_cartload2 \
+    --makefn run_cartload2.mk \         # (optional) file name of the output make file
+    --fic-dir ./ficture2 \              # path to input directory containing FICTURE2 output
+    --out-dir ./cartload2 \             # path to output directory for PMTiles and web tiles
+    --id ${DATA_ID} \                   # dataset ID used for naming outputs and metadata
+    --spatula ${spatula} \              # (optional) path to the spatula binary
+    --pmtiles ${pmtiles} \              # (optional) path to the pmtiles binary
+    --tippecanoe ${tippecanoe} \        # (optional) path to the tippecanoe binary
+    --n-jobs 10 \                       # (optional) number of parallel jobs
+    --threads 10                        # (optional) number of threads per job
+``` -->
+
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code>cartloader<span class="w"> </span>run_cartload2<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--makefn<span class="w"> </span>run_cartload2.mk<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--fic-dir<span class="w"> </span>./ficture2<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--out-dir<span class="w"> </span>./cartload2<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--id<span class="w"> </span><span class="si">${</span><span class="nv">DATA_ID</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--spatula<span class="w"> </span><span class="si">${</span><span class="nv">spatula</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--pmtiles<span class="w"> </span><span class="si">${</span><span class="nv">pmtiles</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--tippecanoe<span class="w"> </span><span class="si">${</span><span class="nv">tippecanoe</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--n-jobs<span class="w"> </span><span class="m">10</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--threads<span class="w"> </span><span class="m">10</span>
+</code></pre></div></td></tr></table></div>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Required</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--makefn</code></td>
+<td></td>
+<td>string</td>
+<td>File name for the generated Makefile</td>
+</tr>
+<tr>
+<td><code>--fic-dir</code></td>
+<td>required</td>
+<td>string</td>
+<td>Path to the input directory containing FICTURE2 output</td>
+</tr>
+<tr>
+<td><code>--out-dir</code></td>
+<td>required</td>
+<td>string</td>
+<td>Path to the output directory for PMTiles and web tiles</td>
+</tr>
+<tr>
+<td><code>--id</code></td>
+<td>required</td>
+<td>string</td>
+<td>Dataset ID used for naming outputs and metadata</td>
+</tr>
+<tr>
+<td><code>--spatula</code></td>
+<td></td>
+<td>string</td>
+<td>Path to the <code>spatula</code> binary</td>
+</tr>
+<tr>
+<td><code>--pmtiles</code></td>
+<td></td>
+<td>string</td>
+<td>Path to the <code>pmtiles</code> binary</td>
+</tr>
+<tr>
+<td><code>--tippecanoe</code></td>
+<td></td>
+<td>string</td>
+<td>Path to the <code>tippecanoe</code> binary</td>
+</tr>
+<tr>
+<td><code>--n-jobs</code></td>
+<td></td>
+<td>int</td>
+<td>Number of parallel jobs</td>
+</tr>
+<tr>
+<td><code>--threads</code></td>
+<td></td>
+<td>int</td>
+<td>Number of threads per job</td>
+</tr>
+</tbody>
+</table>
+<h2 id="upload-to-data-repository">Upload to Data Repository<a class="headerlink" href="#upload-to-data-repository" title="Permanent link">&para;</a></h2>
+<h3 id="upload-to-aws">Upload to AWS<a class="headerlink" href="#upload-to-aws" title="Permanent link">&para;</a></h3>
+<p>Copy the generated cartloader outputs to your designated AWS S3 catalog path:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span></pre></div></td><td class="code"><div><pre><span></span><code>cartloader<span class="w"> </span>upload_aws_by_catalog<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--in-dir<span class="w"> </span>./cartload2<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--s3-dir<span class="w"> </span><span class="s2">&quot;s3://</span><span class="si">${</span><span class="nv">AWS_BUCKET</span><span class="si">}</span><span class="s2">/</span><span class="si">${</span><span class="nv">DATA_ID</span><span class="si">}</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--aws<span class="w"> </span><span class="si">${</span><span class="nv">aws</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--n-jobs<span class="w"> </span><span class="m">10</span>
+</code></pre></div></td></tr></table></div>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Required</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--in-dir</code></td>
+<td>required</td>
+<td>string</td>
+<td>Path to the input directory containing the cartloader compilation output</td>
+</tr>
+<tr>
+<td><code>--s3-dir</code></td>
+<td>required</td>
+<td>string</td>
+<td>Path to the target S3 directory for uploading</td>
+</tr>
+<tr>
+<td><code>--aws</code></td>
+<td></td>
+<td>string</td>
+<td>Path to the AWS CLI binary</td>
+</tr>
+<tr>
+<td><code>--n-jobs</code></td>
+<td></td>
+<td>int</td>
+<td>Number of parallel jobs</td>
+</tr>
+</tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "../../..", "features": ["navigation.tabs", "navigation.indexes", "navigation.sections", "navigation.expand", "navigation.path", "content.code.annotate", "content.grid", "content.cards"], "search": "../../../assets/javascripts/workers/search.f8cc74c7.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    
+    
+      <script src="../../../assets/javascripts/bundle.f13b1293.min.js"></script>
+      
+        <script src="../../../js/open_in_new_tab.js"></script>
+      
+    
+  </body>
+</html>

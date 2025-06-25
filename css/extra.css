@@ -1,0 +1,103 @@
+/* Use to check if css is working */
+/* body {
+  background-color: pink;
+} */
+
+
+/* single card alignment and fixed size */
+.grid.cards.single-left {
+  justify-content: flex-start !important;
+  place-items: start !important;
+}
+
+.grid.cards.single-left > ul > li {
+  width: 280px;         /* Set desired width */
+  height: auto;         /* Or: auto for more flexible height */
+  padding: 0.5rem;
+  box-sizing: border-box;
+}
+
+
+
+/* .grid.cards.generic > ul > li,
+.grid.cards.single-left > ul > li {
+  width: 320px;
+  height: auto;
+  padding: 1rem;
+  box-sizing: border-box;
+} */
+
+/* .grid.cards.generic > ul > li {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
+} */
+
+.grid.cards.generic > ul {
+  display: flex;                     /* Use Flexbox to layout list items */
+  flex-wrap: wrap;                   /* Allow items to wrap to the next line */
+  gap: 0.5rem;                       /* Add space between cards */
+  justify-content: flex-start;       /* Align cards to the left */
+  padding: 0.5rem;                   /* Remove default padding on the list */
+  margin: 0;                         /* Remove default margin */
+}
+
+.grid.cards.generic > ul > li {
+  width: 280px;                      /* Fixed card width */
+  height: auto;                      /* Let height expand with content */
+  flex: 0 0 auto;                    /* Prevent growing/shrinking */
+  padding: 0.5rem 0.5rem 0.2rem 0.5rem;  /* smaller bottom padding */
+  gap: 0;                            /* Spacing inside card's flex layout (for children) ? 0.05rem */
+  box-sizing: border-box;            /* Include padding in the total width/height */
+  display: flex;                     /* Layout internal card content with Flexbox */
+  flex-direction: column;            /* Stack elements vertically */
+  justify-content: flex-start;       /* Align card content to the top */
+  overflow: hidden;                  /* Prevent overflow from breaking layout */
+}
+
+.grid.cards.generic figure {
+  margin: 0;                        /* Remove default figure margin */
+  width: 100%;                      /* Take full card width */
+  display: flex;                    /* Use Flexbox for image and caption */
+  flex-direction: column;           /* Stack image and caption vertically */
+}
+
+.grid.cards.generic figure img {
+  width: 100%;                      /* Stretch image to full container width */
+  height: 150px;                    /* Fixed image height for uniformity */
+  object-fit: cover;                /* Crop image to fill without distortion */
+  display: block;                   /* Remove inline image spacing */
+}
+
+.grid.cards.generic figcaption {
+  font-size: 0.8rem;                /* Smaller font for caption */
+  text-align: center;               /* Center caption text */
+  padding-top: 0.2rem;              /* Space between image and caption */
+  margin-bottom: 0;       /* remove space below */
+  padding-bottom: 0;      /* ensure no extra padding */
+}
+
+figure {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.figure-caption-vigintro-large {
+  margin: 0.4rem 0 0 0 !important;  /* Top: small, Bottom: tighter */
+  padding: 0 !important;
+  font-size: 0.8rem;
+  text-align: center;
+  color: var(--text-color);
+  font-style: normal;
+}
+
+.button-tight-small {
+  display: block;
+  width: 100%;
+  height: 2rem;
+  text-align: center;
+  font-size: 0.6rem;
+  padding: 0;
+  margin: 0, 0, 0, 0 !important;
+}
