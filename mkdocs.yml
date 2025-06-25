@@ -16,6 +16,8 @@ theme:
   - navigation.expand
   - navigation.path
   - content.code.annotate
+  - content.grid
+  - content.cards
   palette:
   - media: "(prefers-color-scheme)"
     toggle:
@@ -46,46 +48,60 @@ theme:
 nav:
   - Home: 
       - Introduction: index.md
-      - Installation: installation.md
-  - Get Started:
-      - Overview: showcase/intro.md
-      - A Quick Start: showcase/exampledat.md
-      # - Docker Example: quickstart/docker.md
-      # - Singularity Example: quickstart/singularity.md
-      # - Running with Your Own Data: quickstart/custom.md
-  - Reference Pages:
-      - SGE Harmonization: step_by_step/sge_harmonization.md
-      - FICTURE Analysis: step_by_step/run_ficture2.md
-      - cartloader Compilation: step_by_step/run_cartload2.md
+  - Installation: installation.md
+  - Quick Start: vignettes/quickstart.md
+  - Vignettes:
+      - Overview: vignettes/intro.md
+      #- Quick Start: vignettes/quickstart.md
+      - Getting Started with `cartloader`:
+        #- SeqScope Starter Tutorial: vignettes/subregion_tutorials/seqscope.md
+        - StereoSeq Starter Tutorial: vignettes/subregion_tutorials/stereoseq.md
+        - Visium HD Starter Tutorial: vignettes/subregion_tutorials/visiumhd.md
+        - Pixel-Seq Starter Tutorial: vignettes/subregion_tutorials/pixelseq.md
+        - Xenium Starter Tutorial: vignettes/subregion_tutorials/xenium.md
+        - MERSCOPE Starter Tutorial: vignettes/subregion_tutorials/merscope.md
+        - CoxMX SMI Starter Tutorial: vignettes/subregion_tutorials/cosmx_smi.md
+
+  - References:
+      - SGE Format Conversion: reference/sge_convert.md
+      - FICTURE Analysis: reference/run_ficture2.md
+      - cartloader Compilation: reference/run_cartload2.md
+
+# Watch for changes
+watch:
+  - includes
+
 # Markdown Extensions
 markdown_extensions:
   - abbr
   - footnotes
   - admonition
-  - pymdownx.details
-  - pymdownx.superfences
 #  - codehilite:
 #      guess_lang: false 
   - toc:
       permalink: true
-      toc_depth: 3
+      toc_depth: 2
   - attr_list
   - md_in_html
+  - pymdownx.details
   - pymdownx.highlight:
       linenums: true
       css_class: 'highlight'
   - pymdownx.superfences
   - pymdownx.snippets:
       auto_append:
-        - docs/includes/glossary.md
+        - includes/glossary.md
       check_paths: True
 # - pymdownx.inlinehilite
-
+  - pymdownx.blocks.caption
 
 plugins:
   - search
   - open-in-new-tab
+  - include-markdown
+  # - macros
 
 # Extra CSS
 extra_css:
-  - css/custom.css
+  - css/extra.css
+  #- css/neoteroi-mkdocs.css
