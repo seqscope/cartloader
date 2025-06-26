@@ -33,6 +33,12 @@
       
       
 
+  
+  
+  
+  
+  <style>:root{--md-annotation-icon:url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M22 12a10 10 0 0 1-10 10A10 10 0 0 1 2 12 10 10 0 0 1 12 2a10 10 0 0 1 10 10M6 13h8l-3.5 3.5 1.42 1.42L17.84 12l-5.92-5.92L10.5 7.5 14 11H6z"/></svg>');}</style>
+
 
     
     
@@ -558,6 +564,8 @@
       
         
       
+        
+      
     
     
       
@@ -593,6 +601,28 @@
             Getting Started with `cartloader`
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../vignettes/subregion_tutorials/seqscope/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    SeqScope Starter Tutorial
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -1078,7 +1108,7 @@
 </div>
 <h2 id="requirements">Requirements<a class="headerlink" href="#requirements" title="Permanent link">&para;</a></h2>
 <ul>
-<li>An <abbr title="Spatial Digital Gene Expression">SGE</abbr> in the unified format (from <abbr title="Spatial Digital Gene Expression">SGE</abbr> format conversion) </li>
+<li>An <abbr title="Spatial Digital Gene Expression">SGE</abbr> in <a href="">the unified format</a></li>
 <li>Pre-installed tools: <code>spatula</code>, <code>punkst</code>, <code>gzip</code>, <code>sort</code>, <code>python</code></li>
 </ul>
 <h2 id="example-usage">Example Usage<a class="headerlink" href="#example-usage" title="Permanent link">&para;</a></h2>
@@ -1099,16 +1129,16 @@
 <span class="normal">15</span></pre></div></td><td class="code"><div><pre><span></span><code>cartloader<span class="w"> </span>run_ficture2<span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>--main<span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>--in-transcript<span class="w"> </span>/path/to/input/harmonized/transcripts/tsv/file<span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>--in-feature<span class="w"> </span>/path/to/input/harmonized/feature/tsv/file<span class="w"> </span><span class="se">\ </span><span class="w">              </span><span class="c1"># optional</span>
-<span class="w">    </span>--in-minmax<span class="w"> </span>/path/to/input/harmonized/coordinates/minmax/tsv/file<span class="w"> </span><span class="se">\ </span><span class="w">    </span><span class="c1"># optional</span>
-<span class="w">    </span>--cmap-file<span class="w"> </span>/path/to/cartloader/assets/fixed_color_map_256.tsv<span class="w"> </span><span class="se">\ </span><span class="w">       </span><span class="c1"># optional</span>
+<span class="w">    </span>--in-feature<span class="w"> </span>/path/to/input/harmonized/feature/tsv/file<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--in-minmax<span class="w"> </span>/path/to/input/harmonized/coordinates/minmax/tsv/file<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--cmap-file<span class="w"> </span>/path/to/cartloader/assets/fixed_color_map_256.tsv<span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>--colname-count<span class="w"> </span>count<span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>--out-dir<span class="w"> </span>/path/to/output/directory<span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>--width<span class="w"> </span><span class="m">18</span><span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>--n-factor<span class="w"> </span><span class="m">24</span><span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>--spatula<span class="w"> </span>/path/to/spatula/binary<span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>--ficture2<span class="w"> </span>/path/to/punkst/directory<span class="w"> </span><span class="se">\ </span><span class="w"> </span>
-<span class="w">    </span>--exclude-feature-regex<span class="w"> </span><span class="s1">&#39;^(mt-|Gm\d+$)&#39;</span><span class="w"> </span><span class="se">\ </span><span class="w">                              </span><span class="c1"># optional</span>
+<span class="w">    </span>--exclude-feature-regex<span class="w"> </span><span class="s1">&#39;^(mt-|Gm\d+$)&#39;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>--n-jobs<span class="w"> </span><span class="m">20</span><span class="w">  </span><span class="se">\</span>
 <span class="w">    </span>--threads<span class="w"> </span><span class="m">20</span><span class="w"> </span>
 </code></pre></div></td></tr></table></div>
@@ -1153,9 +1183,9 @@
 <ul>
 <li><code>--width</code> (str): Comma-separated hexagon flat-to-flat widths (in <abbr title="micrometer">µm</abbr>) for <abbr title="Latent Dirichlet Allocation">LDA</abbr> training.</li>
 <li><code>--n-factor</code> (str): Comma-separated list of factor counts for <abbr title="Latent Dirichlet Allocation">LDA</abbr> training.</li>
-<li><code>--include-feature-regex</code> (str): Regex pattern for including features/genes.</li>
-<li><code>--exclude-feature-regex</code> (str): Regex pattern for excluding features/genes.</li>
-<li><code>--cmap-file</code> (str): Optional path to fixed color map TSV file. If not provided, FICTURE will generate a color map.</li>
+<li><code>--include-feature-regex</code> (str): (Optional) Regex pattern for including features/genes.</li>
+<li><code>--exclude-feature-regex</code> (str): (Optional) Regex pattern for excluding features/genes.</li>
+<li><code>--cmap-file</code> (str): (Optional) Path to fixed color map TSV file. If not provided, FICTURE will generate a color map.</li>
 </ul>
 <details class="note">
 <summary>Auxiliary <code>run_ficture2</code> Paramaters</summary>
@@ -1184,15 +1214,20 @@
 <li><code>--train-epoch</code> (int): Number of epochs to train <abbr title="Latent Dirichlet Allocation">LDA</abbr> model (Default: 2).</li>
 </ul>
 </li>
-<li>Decoding-specific paramaters:<ul>
+<li>
+<p>Decoding-specific paramaters:</p>
+<ul>
 <li><code>--fit-width</code> (int): Hexagon width (in <abbr title="micrometer">µm</abbr>) for model fitting (Default: same as train width).</li>
 <li><code>--min-ct-per-unit-fit</code> (int): Minimum count per unit during model fitting (Default: 50).</li>
 <li><code>--anchor-res</code> (int): Anchor resolution used in decoding (Default: 6).</li>
 <li><code>--radius-buffer</code> (int): Buffer added to anchor resolution for decoding (Default: 1).</li>
 <li><code>--fit-plot-um-per-pixel</code> (int): Image resolution for fit coarse plots (Default: 1).</li>
+<li><code>--decode-scale</code> (int): Scales input coordinates to pixels in the output image (Default: 1)')</li>
 </ul>
 </li>
-<li>Shared paramaters across steps:<ul>
+<li>
+<p>Shared paramaters across steps:</p>
+<ul>
 <li><code>--seed</code> (int): Random seed for reproducibility (Default: 1).</li>
 <li><code>--min-ct-per-feature</code> (int): Minimum count per feature for <abbr title="Latent Dirichlet Allocation">LDA</abbr> and decoding (Default: 20).</li>
 <li><code>--de-max-pval</code> (float): p-value cutoff for differential expression (Default: 1e-3).</li>
@@ -1549,7 +1584,7 @@ Neu4     648.5156  0.0000  0.9999  0.0000  0.0000  2.1425  1316.2651  0.0000  0.
     </div>
     
     
-    <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.tabs", "navigation.indexes", "navigation.sections", "navigation.expand", "navigation.path", "content.code.annotate", "content.grid", "content.cards"], "search": "../../assets/javascripts/workers/search.f8cc74c7.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.tabs", "navigation.indexes", "navigation.sections", "navigation.expand", "navigation.path", "content.code.annotate", "content.grid", "content.cards", "content.footnote.tooltips"], "search": "../../assets/javascripts/workers/search.f8cc74c7.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
       <script src="../../assets/javascripts/bundle.f13b1293.min.js"></script>

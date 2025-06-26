@@ -33,6 +33,12 @@
       
       
 
+  
+  
+  
+  
+  <style>:root{--md-annotation-icon:url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M22 12a10 10 0 0 1-10 10A10 10 0 0 1 2 12 10 10 0 0 1 12 2a10 10 0 0 1 10 10M6 13h8l-3.5 3.5 1.42 1.42L17.84 12l-5.92-5.92L10.5 7.5 14 11H6z"/></svg>');}</style>
+
 
     
     
@@ -518,15 +524,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#sge-format-conversion" class="md-nav__link">
-    <span class="md-ellipsis">
-      SGE Format Conversion
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#ficture-analysis" class="md-nav__link">
     <span class="md-ellipsis">
       FICTURE analysis
@@ -653,6 +650,8 @@
       
         
       
+        
+      
     
     
       
@@ -688,6 +687,28 @@
             Getting Started with `cartloader`
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../subregion_tutorials/seqscope/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    SeqScope Starter Tutorial
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -1005,15 +1026,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#sge-format-conversion" class="md-nav__link">
-    <span class="md-ellipsis">
-      SGE Format Conversion
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#ficture-analysis" class="md-nav__link">
     <span class="md-ellipsis">
       FICTURE analysis
@@ -1060,95 +1072,85 @@
 
 
 <h1 id="a-quick-start">A Quick Start<a class="headerlink" href="#a-quick-start" title="Permanent link">&para;</a></h1>
-<p>This page provides a quick-start example with a small dataset to help users verify their installation and get familiar with <code>cartloader</code> and the <code>cartostore</code> workflow.</p>
-<p>The workflow consists of four major steps:</p>
+<p>This page provides a quick-start example with a small dataset from mouse hippocampus to help users verify their installation and get familiar with <code>cartloader</code> and the <code>cartostore</code> workflow.</p>
+<p>The workflow consists of three major steps:</p>
 <ol>
-<li><abbr title="Spatial Digital Gene Expression">SGE</abbr> Format Conversion — prepares raw <abbr title="Spatial Digital Gene Expression">SGE</abbr> into a harmonized format.</li>
-<li>FICTURE Analysis — computes factor embeddings and visualizations via <code>punkst</code>.</li>
-<li>Cartloader Compilation — generates web-compatible tiles using <code>tippecanoe</code> and <code>pmtiles</code>.</li>
-<li>AWS Upload — places results into an AWS S3 bucket for sharing via <code>cartostore</code>.</li>
+<li><code>FICTURE</code> Analysis — computes factor embeddings and visualizations via <code>punkst</code>.</li>
+<li><code>cartloader</code> Compilation — generates web-compatible tiles.</li>
+<li><code>AWS</code> Upload — places results into an AWS S3 bucket for sharing via <code>cartostore</code>.</li>
 </ol>
 <div class="admonition warning">
 <p class="admonition-title">Requirement</p>
-<p>Before getting started, please ensure that cartloader and all prerequisites are installed by following the <a href="../../installation/">Installation</a> guide.</p>
+<p>Before getting started, please ensure that cartloader and all prerequisites are installed (see <a href="../../installation/">Installation</a> guide).</p>
 </div>
 <h2 id="input-data">Input Data<a class="headerlink" href="#input-data" title="Permanent link">&para;</a></h2>
-<div class="admonition info">
-<p class="admonition-title">Input Data Requirement:</p>
-<p>Input data should be a transcript-indexed <abbr title="Spatial Digital Gene Expression">SGE</abbr> containing at least:</p>
-<ul>
-<li>Spatial coordinates (X coordinates, Y coordinates)</li>
-<li>Feature metadata (gene symbols)</li>
-<li>Expression Counts</li>
-</ul>
+<p>This tutorial used an <abbr title="Spatial Digital Gene Expression">SGE</abbr> representing the mouse hippocampus as input data. The input <abbr title="Spatial Digital Gene Expression">SGE</abbr> file was prepared in a format compatible with <code>FICTURE</code> using the <a href="../../reference/sge_convert/"><code>sge_convert</code></a> function from the <code>cartloader</code> package.</p>
+<div class="admonition warning">
+<p class="admonition-title">Prepare Input <abbr title="Spatial Digital Gene Expression">SGE</abbr> for <code>FICTURE</code></p>
+<p><code>FICTURE</code> requires input in the form of a transcript-indexed <abbr title="Spatial Digital Gene Expression">SGE</abbr> file in TSV format with at least: X and Y spatial coordinates, gene identifiers, and expression counts. </p>
+<p>Because spatial transcriptomics (<abbr title="Spatial transcriptomics">ST</abbr>) platforms vary widely in their data formats and metadata structures, the <code>cartloader</code> package provides the <a href="../../reference/sge_convert/"><code>sge_convert</code></a> function to convert raw <abbr title="Spatial Digital Gene Expression">SGE</abbr> data into the standardized format required by <code>FICTURE</code>.</p>
+<p>For detailed platform-specific instructions on preparing compatible <abbr title="Spatial Digital Gene Expression">SGE</abbr> files, see the <a href="../intro/#getting-started-per-platform">Vignettes</a>.</p>
 </div>
-<p><strong>Example Dataset</strong></p>
-<p>This tutorial uses an example <abbr title="Spatial Digital Gene Expression">SGE</abbr> from <em>mouse hippocampus</em>, extracted via spatial masking from a <a href="https://www.nature.com/articles/s41596-024-01065-0">Seq-Scope</a> coronal brain slice.</p>
 <p><strong>File Format</strong></p>
-<p>Actual input formats are platform-dependent. Please refer to the <a href="../intro/">Vignettes</a> for detailed input specifications by each platform.</p>
-<p>SeqScope provides <abbr title="Spatial Digital Gene Expression">SGE</abbr> with three files:</p>
+<p>The example <abbr title="Spatial Digital Gene Expression">SGE</abbr> includes the following files:</p>
 <details>
-<summary><code>barcodes.tsv.gz</code> – spatial barcode metadata</summary>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span></pre></div></td><td class="code"><div><pre><span></span><code>AAAACAAAAACCTTCTTCGGACACTGGTCT  1   20  1   1   295288  1422349 0,1,0,0,0
-AAAACAAAAATCCTGTTATACATGCCATGG  2   45  1   1   1745544 1110720 2,2,1,0,1
-AAAACAAAACACGGGAAAAAACTATAGGTG  3   58  1   1   887244  250820  7,7,5,0,1
-</code></pre></div></td></tr></table></div>
-<ul>
-<li>Column 1: Sorted spatial barcodes</li>
-<li>Column 2: 1-based integer index of spatial barcodes, used in <code>matrix.mtx.gz</code></li>
-<li>Column 3: 1-based integer index from the full barcode that is in the STARsolo output</li>
-<li>Column 4: Lane ID (fixed as <code>1</code>)  </li>
-<li>Column 5: Tile ID (fixed as <code>1</code>)  </li>
-<li>Column 6: X-coordinates</li>
-<li>Column 7: Y-coordinates</li>
-<li>Column 8: Five comma-separated numbers denote the count per spatial barcode for "Gene", "GeneFull", "Spliced", "Unspliced", and "Ambiguous".</li>
-</ul>
-</details>
-<details>
-<summary><code>features.tsv.gz</code> – feature metadata </summary>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span></pre></div></td><td class="code"><div><pre><span></span><code>ENSMUSG00000100764  Gm29155 1   1,1,1,0,0
-ENSMUSG00000100635  Gm29157 2   0,0,0,0,0
-ENSMUSG00000100480  Gm29156 3   0,0,0,0,0
-</code></pre></div></td></tr></table></div>
-<ul>
-<li>Column 1: Feature ID</li>
-<li>Column 2: Feature symbol</li>
-<li>Column 3: 1-based integer index of genes, used in <code>matrix.mtx.gz</code></li>
-<li>Column 4: Five comma-separated numbers denote the count per gene "Gene", "GeneFull", "Spliced", "Unspliced", and "Ambiguous".</li>
-</ul>
-</details>
-<details>
-<summary><code>matrix.mtx.gz</code> – expression count matrix </summary>
+<summary><code>transcripts.unsorted.tsv.gz</code>: transcript-indexed <abbr title="Spatial Digital Gene Expression">SGE</abbr> in TSV</summary>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
 <span class="normal">3</span>
-<span class="normal">4</span>
-<span class="normal">5</span></pre></div></td><td class="code"><div><pre><span></span><code>%%MatrixMarket matrix coordinate integer general
-%
-33989 2928173 5404336
-2487 1 0 1 0 0 0
-5104 2 1 1 0 0 1
+<span class="normal">4</span></pre></div></td><td class="code"><div><pre><span></span><code>X        Y        gene     count
+295.29   1422.35  Myo3a    0
+1745.54  1110.72  Med14    1
+1745.54  1110.72  Ntpcr    1
 </code></pre></div></td></tr></table></div>
 <ul>
-<li><code>Header</code>: Initial lines form the header, declaring the matrix's adherence to the <a href="https://math.nist.gov/MatrixMarket/formats.html">Market Matrix (MTX) format</a>, outlining its traits. This may include comments (lines beginning with <code>%</code>) for extra metadata, all marked by a “%”.</li>
-<li><code>Dimensions</code>: Following the header, the first line details the matrix dimensions: the count of rows (features), columns (barcodes), and non-zero entries.</li>
-<li><code>Data Entries</code>: Post-dimensions, subsequent lines enumerate non-zero entries in seven columns: row index (feature index), column index (barcode index), and five values (expression levels) corresponds to "Gene", "GeneFull", "Spliced", "Unspliced", and "Ambiguous".       <ul>
-<li>"Gene": represents unique, confidently mapped transcript count ("gene name"-based);</li>
-<li>"GeneFull": denotes total transcript count assigned to gene (includes ambiguities).</li>
+<li><code>X</code>: X coordinates in um</li>
+<li><code>Y</code>: Y coordinates in um</li>
+<li><code>gene</code>: gene symbols</li>
+<li><code>count</code>: expression count per pixel per gene</li>
 </ul>
-</li>
+</details>
+<details>
+<summary><code>feature.clean.tsv.gz</code>: (optional) <abbr title="Unique Molecular Identifier">UMI</abbr> counts on a per-gene basis in TSV</summary>
+<p><div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span></pre></div></td><td class="code"><div><pre><span></span><code>gene           gene_id             count
+Gm29155        ENSMUSG00000100764  1
+Pcmtd1         ENSMUSG00000051285  431
+Gm26901        ENSMUSG00000097797  1
+</code></pre></div></td></tr></table></div>
+* <code>gene</code>: gene symbols
+* <code>gene_id</code>: gene IDs
+* <code>count</code>: expression count per gene</p>
+</details>
+<details>
+<summary><code>coordinate_minmax.tsv</code>: (optional) X Y min/max coordinates</summary>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span></pre></div></td><td class="code"><div><pre><span></span><code>xmin    0.14
+xmax    2359.90
+ymin    0.23
+ymax    1439.95
+</code></pre></div></td></tr></table></div>
+<ul>
+<li><code>xmin</code> <code>xmax</code>: min and max X coordinates in um</li>
+<li><code>ymin</code> <code>ymax</code>: min and max Y coordinates in um</li>
 </ul>
 </details>
 <p><strong>Data Access</strong></p>
 <p>The example data is hosted on Zenedo (10.5281/zenodo.15701394).</p>
 <p>Follow the commands below to download the example data.</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span></pre></div></td><td class="code"><div><pre><span></span><code>wget<span class="w">  </span>https://zenodo.org/api/records/15701394/draft/files/seqscope_mousebrain_subset.raw.tar.gz/content<span class="w"> </span>
-tar<span class="w"> </span>zxvf<span class="w"> </span>seqscope_mousebrain_subset.raw.tar.gz
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nv">work_dir</span><span class="o">=</span>/path/to/work/directory
+<span class="nb">cd</span><span class="w"> </span><span class="nv">$work_dir</span>
+
+wget<span class="w">  </span>https://zenodo.org/records/15701394/files/seqscope_starter.std.tar.gz
+tar<span class="w"> </span>-zxvf<span class="w"> </span>seqscope_starter.std.tar.gz
 </code></pre></div></td></tr></table></div>
 <h2 id="set-up-the-environment">Set Up the Environment<a class="headerlink" href="#set-up-the-environment" title="Permanent link">&para;</a></h2>
 <p>Define paths to all required binaries and resources, and target AWS S3 bucket. Optionally, specify a fixed color map for consistent rendering.</p>
@@ -1167,9 +1169,16 @@ tar<span class="w"> </span>zxvf<span class="w"> </span>seqscope_mousebrain_subse
 <span class="normal">13</span>
 <span class="normal">14</span>
 <span class="normal">15</span>
-<span class="normal">16</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># ====</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># ====</span>
 <span class="c1"># Replace each placeholder with the actual path on your system.  </span>
 <span class="c1"># ====</span>
+<span class="nv">work_dir</span><span class="o">=</span>/path/to/work/directory<span class="w">        </span><span class="c1"># path to work directory that contains the downloaded input data</span>
+<span class="nb">cd</span><span class="w"> </span><span class="nv">$work_dir</span>
 
 <span class="c1"># Define paths to required binaries and resources</span>
 <span class="nv">spatula</span><span class="o">=</span>/path/to/spatula/binary<span class="w">         </span><span class="c1"># path to spatula executable</span>
@@ -1182,145 +1191,30 @@ tar<span class="w"> </span>zxvf<span class="w"> </span>seqscope_mousebrain_subse
 <span class="nv">cmap</span><span class="o">=</span>/path/to/color/map<span class="w">                 </span><span class="c1"># Path to the fixed color map for rendering. cartloader provides a fixed color map at cartloader/assets/fixed_color_map_256.tsv.</span>
 
 <span class="c1"># AWS S3 target location for cartostore</span>
-<span class="nv">AWS_BUCKET</span><span class="o">=</span><span class="s2">&quot;EXAMPLE_AWS_BUCKET&quot;</span><span class="w">         </span><span class="c1"># replace this with your actual S3 bucket name</span>
+<span class="nv">AWS_BUCKET</span><span class="o">=</span><span class="s2">&quot;EXAMPLE_AWS_BUCKET&quot;</span><span class="w">         </span><span class="c1"># replace EXAMPLE_AWS_BUCKET with your actual S3 bucket name</span>
+
+<span class="c1"># Activate the bioconda environment</span>
+conda<span class="w"> </span>activate<span class="w"> </span>BIOENV_NAME<span class="w">              </span><span class="c1"># replace BIOENV_NAME with your bioconda environment name</span>
 </code></pre></div></td></tr></table></div>
 <p>Define data ID and analysis parameters:</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
-<span class="normal"> 2</span>
-<span class="normal"> 3</span>
-<span class="normal"> 4</span>
-<span class="normal"> 5</span>
-<span class="normal"> 6</span>
-<span class="normal"> 7</span>
-<span class="normal"> 8</span>
-<span class="normal"> 9</span>
-<span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nb">cd</span><span class="w"> </span><span class="nv">$work_dir</span>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span>
+<span class="normal">6</span>
+<span class="normal">7</span>
+<span class="normal">8</span>
+<span class="normal">9</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nb">cd</span><span class="w"> </span><span class="nv">$work_dir</span>
 
 <span class="c1"># Unique identifier for your dataset</span>
 <span class="nv">DATA_ID</span><span class="o">=</span><span class="s2">&quot;seqscope_hippo&quot;</span><span class="w">                </span><span class="c1"># change this to reflect your dataset name</span>
 <span class="nv">PLATFORM</span><span class="o">=</span><span class="s2">&quot;seqscope&quot;</span><span class="w">                     </span><span class="c1"># platform information</span>
-<span class="nv">SCALE</span><span class="o">=</span><span class="m">1000</span><span class="w">                            </span><span class="c1"># scale from coordinate to micrometer</span>
 
 <span class="c1"># LDA parameters</span>
 <span class="nv">train_width</span><span class="o">=</span><span class="m">18</span><span class="w">                           </span><span class="c1"># define LDA training hexagon width (comma-separated if multiple widths are applied)</span>
 <span class="nv">n_factor</span><span class="o">=</span><span class="m">6</span>,12<span class="w">                            </span><span class="c1"># define number of factors in LDA training (comma-separated if multiple n-factor are applied)</span>
 </code></pre></div></td></tr></table></div>
-<div class="admonition info">
-<p class="admonition-title">How to Define Scaling Factors for Seq-Scope</p>
-<p>The latest <a href="https://www.nature.com/articles/s41596-024-01065-0">SeqScope</a> with an Illumina NovaSeq 6000 uses <a href="https://seqscope.github.io/NovaScope/"><code>NovaScope</code></a> pipeline to process sequencing data. <a href="https://seqscope.github.io/NovaScope/"><code>NovaScope</code></a> defaults to generate <abbr title="Spatial Digital Gene Expression">SGE</abbr> at nanometer (nm) resolution, meaning each pixel corresponds to 1 nm.</p>
-<p>Thus, use 1000 as scaling factor from coordinate to micrometer since 1000 nm = 1 <abbr title="micrometer">µm</abbr>.</p>
-</div>
-<h2 id="sge-format-conversion"><abbr title="Spatial Digital Gene Expression">SGE</abbr> Format Conversion<a class="headerlink" href="#sge-format-conversion" title="Permanent link">&para;</a></h2>
-<p>Convert the raw input to the unified <abbr title="Spatial Digital Gene Expression">SGE</abbr> format. See more details in <a href="../../reference/sge_convert/"><abbr title="Spatial Digital Gene Expression">SGE</abbr> Format Conversion</a>.</p>
-<!-- ```bash
-cartloader sge_convert \
-    --makefn sge_convert.mk \           # (optional) file name of the output make file
-    --platform generic \                # use the 'generic' platform parser (adapt as needed for others like 10x_visium_hd, seqscope etc.)
-    --in-csv ./input.tsv.gz \           # path to the input.tsv.gz containing raw transcript-indexed SGE
-    --csv-colnames-count gn \           # column name for expression counts in the input file (use 'gn' for unique counts in the example data)
-    --csv-colname-feature-name gene \   # column name for gene symbols in the input file
-    --units-per-um 1000.0 \             # scale to convert coordinates to microns (the example input data is in nanometers, use 1000.0 since 1000 nm = 1 µm)
-    --out-dir ./sge \                   # path to output directory where the unified SGE will be saved
-    --colnames-count count  \           # output column name for expression count
-    --sge-visual \                      # (optional) enable SGE visualization step
-    --spatula ${spatula} \              # (optional) path to the spatula binary
-    --n-jobs 10                         # (optional) number of parallel jobs for processing
-``` -->
-
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
-<span class="normal"> 2</span>
-<span class="normal"> 3</span>
-<span class="normal"> 4</span>
-<span class="normal"> 5</span>
-<span class="normal"> 6</span>
-<span class="normal"> 7</span>
-<span class="normal"> 8</span>
-<span class="normal"> 9</span>
-<span class="normal">10</span>
-<span class="normal">11</span></pre></div></td><td class="code"><div><pre><span></span><code>cartloader<span class="w"> </span>sge_convert<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--makefn<span class="w"> </span>sge_convert.mk<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--platform<span class="w"> </span><span class="si">${</span><span class="nv">PLATFORM</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--in-mex<span class="w"> </span>./raw<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--units-per-um<span class="w"> </span><span class="si">${</span><span class="nv">SCALE</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--icols-mtx<span class="w"> </span><span class="m">1</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--out-dir<span class="w"> </span>./sge<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--exclude-feature-regex<span class="w"> </span><span class="s1">&#39;^(BLANK|NegCon|NegPrb)&#39;</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--sge-visual<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--spatula<span class="w"> </span><span class="si">${</span><span class="nv">spatula</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--n-jobs<span class="w"> </span><span class="m">10</span>
-</code></pre></div></td></tr></table></div>
-<table>
-<thead>
-<tr>
-<th>Parameter</th>
-<th>Required</th>
-<th>Type</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>--makefn</code></td>
-<td></td>
-<td>string</td>
-<td>File name for the generated Makefile</td>
-</tr>
-<tr>
-<td><code>--platform</code></td>
-<td>required</td>
-<td>string</td>
-<td>Platform (options: "10x_visium_hd", "seqscope", "10x_xenium", "bgi_stereoseq", "cosmx_smi", "vizgen_merscope", "pixel_seq", "nova_st", "generic")</td>
-</tr>
-<tr>
-<td><code>--in-mex</code></td>
-<td>required</td>
-<td>string</td>
-<td>Path to the input <abbr title="Market Exchange">MEX</abbr> directory containing gene × barcode matrix</td>
-</tr>
-<tr>
-<td><code>--units-per-um</code></td>
-<td>required</td>
-<td>float</td>
-<td>scale to convert coordinates to microns</td>
-</tr>
-<tr>
-<td><code>--icols-mtx</code></td>
-<td></td>
-<td>comma-separated list</td>
-<td>Comma-separated 1-based indices for the target genomic features among the count columns in input matrix.mtx.gz (the example only takes "Gene")</td>
-</tr>
-<tr>
-<td><code>--out-dir</code></td>
-<td>required</td>
-<td>string</td>
-<td>Output directory for the converted <abbr title="Spatial Digital Gene Expression">SGE</abbr> files</td>
-</tr>
-<tr>
-<td><code>--exclude-feature-regex</code></td>
-<td></td>
-<td>regex</td>
-<td>Pattern to exclude control features (e.g., BLANK, NegCon, NegPrb)</td>
-</tr>
-<tr>
-<td><code>--sge-visual</code></td>
-<td></td>
-<td>flag</td>
-<td>Enable <abbr title="Spatial Digital Gene Expression">SGE</abbr> visualization step (generates diagnostic image)</td>
-</tr>
-<tr>
-<td><code>--spatula</code></td>
-<td></td>
-<td>string</td>
-<td>Path to the spatula binary</td>
-</tr>
-<tr>
-<td><code>--n-jobs</code></td>
-<td></td>
-<td>int</td>
-<td>Number of parallel jobs for processing</td>
-</tr>
-</tbody>
-</table>
 <h2 id="ficture-analysis"><code>FICTURE</code> analysis<a class="headerlink" href="#ficture-analysis" title="Permanent link">&para;</a></h2>
 <p>Compute spatial factors using <code>punkst</code> (FICTURE2 mode). See more details in <a href="../../reference/run_ficture2/">Reference page</a>.</p>
 <!-- ```bash
@@ -1371,6 +1265,7 @@ cartloader run_ficture2 \
 <span class="w">  </span>--n-jobs<span class="w"> </span><span class="m">10</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--threads<span class="w"> </span><span class="m">10</span>
 </code></pre></div></td></tr></table></div>
+<!--parameter-start-->
 <table>
 <thead>
 <tr>
@@ -1382,46 +1277,16 @@ cartloader run_ficture2 \
 </thead>
 <tbody>
 <tr>
-<td><code>--makefn</code></td>
-<td></td>
-<td>string</td>
-<td>File name for the generated Makefile</td>
-</tr>
-<tr>
 <td><code>--main</code></td>
-<td>required</td>
+<td>required <sup>1</sup></td>
 <td>flag</td>
-<td>Run all five steps in <code>run_ficture2</code></td>
+<td>Enable <code>cartloader</code> to run <a href="../../reference/run_ficture2.md#actions">all five steps</a></td>
 </tr>
 <tr>
 <td><code>--in-transcript</code></td>
 <td>required</td>
 <td>string</td>
 <td>Path to input transcript-level <abbr title="Spatial Digital Gene Expression">SGE</abbr> file</td>
-</tr>
-<tr>
-<td><code>--in-feature</code></td>
-<td></td>
-<td>string</td>
-<td>Path to input feature file</td>
-</tr>
-<tr>
-<td><code>--in-minmax</code></td>
-<td></td>
-<td>string</td>
-<td>Path to coordinate min/max file</td>
-</tr>
-<tr>
-<td><code>--cmap-file</code></td>
-<td></td>
-<td>string</td>
-<td>Path to color map file</td>
-</tr>
-<tr>
-<td><code>--exclude-feature-regex</code></td>
-<td></td>
-<td>regex</td>
-<td>Pattern to exclude features (e.g., mitochondrial or predicted genes)</td>
 </tr>
 <tr>
 <td><code>--out-dir</code></td>
@@ -1442,31 +1307,64 @@ cartloader run_ficture2 \
 <td>Number of <abbr title="Latent Dirichlet Allocation">LDA</abbr> factors</td>
 </tr>
 <tr>
+<td><code>--makefn</code></td>
+<td></td>
+<td>string</td>
+<td>File name for the generated Makefile (default: <code>run_ficture2.mk</code> )</td>
+</tr>
+<tr>
+<td><code>--in-feature</code></td>
+<td></td>
+<td>string</td>
+<td>Path to input feature file</td>
+</tr>
+<tr>
+<td><code>--in-minmax</code></td>
+<td></td>
+<td>string</td>
+<td>Path to input coordinate min/max file</td>
+</tr>
+<tr>
+<td><code>--cmap-file</code></td>
+<td></td>
+<td>string</td>
+<td>Path to color map file</td>
+</tr>
+<tr>
+<td><code>--exclude-feature-regex</code></td>
+<td></td>
+<td>regex</td>
+<td>Pattern to exclude features</td>
+</tr>
+<tr>
 <td><code>--spatula</code></td>
 <td></td>
 <td>string</td>
-<td>Path to the <code>spatula</code> binary</td>
+<td>Path to the <code>spatula</code> binary (default: <code>spatula</code>)</td>
 </tr>
 <tr>
 <td><code>--ficture2</code></td>
 <td></td>
 <td>string</td>
-<td>Path to the <code>punkst</code> directory</td>
+<td>Path to the <code>punkst</code> directory (defaults to <code>punkst</code> repository within <code>submodules</code> directory of  <code>cartloader</code>)</td>
 </tr>
 <tr>
 <td><code>--n-jobs</code></td>
 <td></td>
 <td>int</td>
-<td>Number of parallel jobs</td>
+<td>Number of parallel jobs (default: <code>1</code>)</td>
 </tr>
 <tr>
 <td><code>--threads</code></td>
 <td></td>
 <td>int</td>
-<td>Number of threads per job</td>
+<td>Number of threads per job (default: <code>1</code>)</td>
 </tr>
 </tbody>
 </table>
+<p><sub><sup>1</sup>: <code>cartloader</code> requires the user to specify <strong>at least one action</strong>. Available actions includes: <code>--tile</code> to run tiling step; <code>--segment</code> to run segmentation step; <code>--init-lda</code> to run <abbr title="Latent Dirichlet Allocation">LDA</abbr> training step; <code>--decode</code> to run decoding step; <code>--summary</code> to run summarization step; <code>--main</code> to run all above five actions.</sub></p>
+<!--parameter-end-->
+
 <h2 id="cartloader-compilation"><code>cartloader</code> Compilation<a class="headerlink" href="#cartloader-compilation" title="Permanent link">&para;</a></h2>
 <p>Generate pmtiles and web-compatible tile directories. See more details in <a href="../../reference/run_cartload2/">Reference page</a>.</p>
 <!-- ```bash
@@ -1513,12 +1411,6 @@ cartloader run_cartload2 \
 </thead>
 <tbody>
 <tr>
-<td><code>--makefn</code></td>
-<td></td>
-<td>string</td>
-<td>File name for the generated Makefile</td>
-</tr>
-<tr>
 <td><code>--fic-dir</code></td>
 <td>required</td>
 <td>string</td>
@@ -1537,34 +1429,40 @@ cartloader run_cartload2 \
 <td>Dataset ID used for naming outputs and metadata</td>
 </tr>
 <tr>
+<td><code>--makefn</code></td>
+<td></td>
+<td>string</td>
+<td>File name for the generated Makefile (default: <code>run_cartload2.mk</code>)</td>
+</tr>
+<tr>
 <td><code>--spatula</code></td>
 <td></td>
 <td>string</td>
-<td>Path to the <code>spatula</code> binary</td>
+<td>Path to the <code>spatula</code> binary (default: <code>spatula</code>)</td>
 </tr>
 <tr>
 <td><code>--pmtiles</code></td>
 <td></td>
 <td>string</td>
-<td>Path to the <code>pmtiles</code> binary</td>
+<td>Path to the <code>pmtiles</code> binary (default: <code>pmtiles</code>)</td>
 </tr>
 <tr>
 <td><code>--tippecanoe</code></td>
 <td></td>
 <td>string</td>
-<td>Path to the <code>tippecanoe</code> binary</td>
+<td>Path to the <code>tippecanoe</code> binary (default: <code>tippecanoe</code>)</td>
 </tr>
 <tr>
 <td><code>--n-jobs</code></td>
 <td></td>
 <td>int</td>
-<td>Number of parallel jobs</td>
+<td>Number of parallel jobs (default: <code>1</code>)</td>
 </tr>
 <tr>
 <td><code>--threads</code></td>
 <td></td>
 <td>int</td>
-<td>Number of threads per job</td>
+<td>Number of threads per job (default: <code>1</code>)</td>
 </tr>
 </tbody>
 </table>
@@ -1663,7 +1561,7 @@ cartloader run_cartload2 \
     </div>
     
     
-    <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.tabs", "navigation.indexes", "navigation.sections", "navigation.expand", "navigation.path", "content.code.annotate", "content.grid", "content.cards"], "search": "../../assets/javascripts/workers/search.f8cc74c7.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.tabs", "navigation.indexes", "navigation.sections", "navigation.expand", "navigation.path", "content.code.annotate", "content.grid", "content.cards", "content.footnote.tooltips"], "search": "../../assets/javascripts/workers/search.f8cc74c7.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
       <script src="../../assets/javascripts/bundle.f13b1293.min.js"></script>

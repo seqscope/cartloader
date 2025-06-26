@@ -33,6 +33,12 @@
       
       
 
+  
+  
+  
+  
+  <style>:root{--md-annotation-icon:url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M22 12a10 10 0 0 1-10 10A10 10 0 0 1 2 12 10 10 0 0 1 12 2a10 10 0 0 1 10 10M6 13h8l-3.5 3.5 1.42 1.42L17.84 12l-5.92-5.92L10.5 7.5 14 11H6z"/></svg>');}</style>
+
 
     
     
@@ -563,6 +569,8 @@
       
         
       
+        
+      
     
     
       
@@ -599,6 +607,28 @@
             Getting Started with `cartloader`
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../seqscope/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    SeqScope Starter Tutorial
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -1094,7 +1124,13 @@
 <p><strong>Data Access</strong></p>
 <p>The example data is hosted on Zenedo ().</p>
 <p>Follow the commands below to download the example data.</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code>wget<span class="w">  </span>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nv">work_dir</span><span class="o">=</span>/path/to/work/directory
+<span class="nb">cd</span><span class="w"> </span><span class="nv">$work_dir</span>
+wget<span class="w">  </span>https://zenodo.org/records/15701394/files/xenium_starter.raw.tar.gz<span class="w"> </span>
+tar<span class="w"> </span>--strip-components<span class="o">=</span><span class="m">1</span><span class="w"> </span>-zxvf<span class="w"> </span>xenium_starter.raw.tar.gz<span class="w">  </span>
 </code></pre></div></td></tr></table></div>
 <h2 id="set-up-the-environment">Set Up the Environment<a class="headerlink" href="#set-up-the-environment" title="Permanent link">&para;</a></h2>
 <p>Define paths to all required binaries and resources, and target AWS S3 bucket. Optionally, specify a fixed color map for consistent rendering.</p>
@@ -1113,9 +1149,16 @@
 <span class="normal">13</span>
 <span class="normal">14</span>
 <span class="normal">15</span>
-<span class="normal">16</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># ====</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># ====</span>
 <span class="c1"># Replace each placeholder with the actual path on your system.  </span>
 <span class="c1"># ====</span>
+<span class="nv">work_dir</span><span class="o">=</span>/path/to/work/directory<span class="w">        </span><span class="c1"># path to work directory that contains the downloaded input data</span>
+<span class="nb">cd</span><span class="w"> </span><span class="nv">$work_dir</span>
 
 <span class="c1"># Define paths to required binaries and resources</span>
 <span class="nv">spatula</span><span class="o">=</span>/path/to/spatula/binary<span class="w">         </span><span class="c1"># path to spatula executable</span>
@@ -1128,21 +1171,20 @@
 <span class="nv">cmap</span><span class="o">=</span>/path/to/color/map<span class="w">                 </span><span class="c1"># Path to the fixed color map for rendering. cartloader provides a fixed color map at cartloader/assets/fixed_color_map_256.tsv.</span>
 
 <span class="c1"># AWS S3 target location for cartostore</span>
-<span class="nv">AWS_BUCKET</span><span class="o">=</span><span class="s2">&quot;EXAMPLE_AWS_BUCKET&quot;</span><span class="w">         </span><span class="c1"># replace this with your actual S3 bucket name</span>
+<span class="nv">AWS_BUCKET</span><span class="o">=</span><span class="s2">&quot;EXAMPLE_AWS_BUCKET&quot;</span><span class="w">         </span><span class="c1"># replace EXAMPLE_AWS_BUCKET with your actual S3 bucket name</span>
+
+<span class="c1"># Activate the bioconda environment</span>
+conda<span class="w"> </span>activate<span class="w"> </span>BIOENV_NAME<span class="w">              </span><span class="c1"># replace BIOENV_NAME with your bioconda environment name</span>
 </code></pre></div></td></tr></table></div>
 <p>Define data ID and analysis parameters:</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
-<span class="normal"> 2</span>
-<span class="normal"> 3</span>
-<span class="normal"> 4</span>
-<span class="normal"> 5</span>
-<span class="normal"> 6</span>
-<span class="normal"> 7</span>
-<span class="normal"> 8</span>
-<span class="normal"> 9</span>
-<span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nb">cd</span><span class="w"> </span><span class="nv">$work_dir</span>
-
-<span class="c1"># Unique identifier for your dataset</span>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span>
+<span class="normal">6</span>
+<span class="normal">7</span>
+<span class="normal">8</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># Unique identifier for your dataset</span>
 <span class="nv">DATA_ID</span><span class="o">=</span><span class="s2">&quot;xenium_hippo&quot;</span><span class="w">                  </span><span class="c1"># change this to reflect your dataset name</span>
 <span class="nv">PLATFORM</span><span class="o">=</span><span class="s2">&quot;10x_xenium&quot;</span><span class="w">                   </span><span class="c1"># platform information</span>
 <span class="nv">SCALE</span><span class="o">=</span><span class="m">1</span><span class="w">                                 </span><span class="c1"># coordinate to micrometer scaling factor</span>
@@ -1188,16 +1230,10 @@
 </thead>
 <tbody>
 <tr>
-<td><code>--makefn</code></td>
-<td></td>
-<td>string</td>
-<td>File name for the generated Makefile</td>
-</tr>
-<tr>
 <td><code>--platform</code></td>
 <td>required</td>
 <td>string</td>
-<td>platform (options: "10x_visium_hd", "seqscope", "10x_xenium", "bgi_stereoseq", "cosmx_smi", "vizgen_merscope", "pixel_seq", "nova_st", "generic")</td>
+<td>Platform (options: "10x_visium_hd", "seqscope", "10x_xenium", "bgi_stereoseq", "cosmx_smi", "vizgen_merscope", "pixel_seq", "nova_st", "generic")</td>
 </tr>
 <tr>
 <td><code>--in-csv</code></td>
@@ -1209,37 +1245,43 @@
 <td><code>--units-per-um</code></td>
 <td>required</td>
 <td>float</td>
-<td>Conversion factor: how many input coordinate units per micron</td>
+<td>Scale to convert coordinates to microns (default: <code>1.0</code>)</td>
 </tr>
 <tr>
 <td><code>--out-dir</code></td>
 <td>required</td>
 <td>string</td>
-<td>Output directory for the generated <abbr title="Spatial Digital Gene Expression">SGE</abbr> files</td>
+<td>Output directory for the converted <abbr title="Spatial Digital Gene Expression">SGE</abbr> files</td>
+</tr>
+<tr>
+<td><code>--makefn</code></td>
+<td></td>
+<td>string</td>
+<td>File name for the generated Makefile (default: <code>sge_convert.mk</code>)</td>
 </tr>
 <tr>
 <td><code>--exclude-feature-regex</code></td>
 <td></td>
 <td>regex</td>
-<td>Pattern to exclude features (e.g., BLANK, NegCon)</td>
+<td>Pattern to exclude control features</td>
 </tr>
 <tr>
 <td><code>--sge-visual</code></td>
 <td></td>
 <td>flag</td>
-<td>Enable generation of diagnostic visualization of the <abbr title="Spatial Digital Gene Expression">SGE</abbr> matrix</td>
+<td>Enable <abbr title="Spatial Digital Gene Expression">SGE</abbr> visualization step (generates diagnostic image) (default: <code>FALSE</code>)</td>
 </tr>
 <tr>
 <td><code>--spatula</code></td>
 <td></td>
 <td>string</td>
-<td>Path to the spatula binary</td>
+<td>Path to the spatula binary (default: <code>spatula</code>)</td>
 </tr>
 <tr>
 <td><code>--n-jobs</code></td>
 <td></td>
 <td>int</td>
-<td>Number of parallel jobs for processing</td>
+<td>Number of parallel jobs for processing (default: <code>1</code>)</td>
 </tr>
 </tbody>
 </table>
@@ -1293,6 +1335,7 @@ cartloader run_ficture2 \
 <span class="w">  </span>--n-jobs<span class="w"> </span><span class="m">10</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--threads<span class="w"> </span><span class="m">10</span>
 </code></pre></div></td></tr></table></div>
+<!--parameter-start-->
 <table>
 <thead>
 <tr>
@@ -1304,46 +1347,16 @@ cartloader run_ficture2 \
 </thead>
 <tbody>
 <tr>
-<td><code>--makefn</code></td>
-<td></td>
-<td>string</td>
-<td>File name for the generated Makefile</td>
-</tr>
-<tr>
 <td><code>--main</code></td>
-<td>required</td>
+<td>required <sup>1</sup></td>
 <td>flag</td>
-<td>Run all five steps in <code>run_ficture2</code></td>
+<td>Enable <code>cartloader</code> to run <a href="../../../reference/run_ficture2/#actions">all five steps</a></td>
 </tr>
 <tr>
 <td><code>--in-transcript</code></td>
 <td>required</td>
 <td>string</td>
 <td>Path to input transcript-level <abbr title="Spatial Digital Gene Expression">SGE</abbr> file</td>
-</tr>
-<tr>
-<td><code>--in-feature</code></td>
-<td></td>
-<td>string</td>
-<td>Path to input feature file</td>
-</tr>
-<tr>
-<td><code>--in-minmax</code></td>
-<td></td>
-<td>string</td>
-<td>Path to coordinate min/max file</td>
-</tr>
-<tr>
-<td><code>--cmap-file</code></td>
-<td></td>
-<td>string</td>
-<td>Path to color map file</td>
-</tr>
-<tr>
-<td><code>--exclude-feature-regex</code></td>
-<td></td>
-<td>regex</td>
-<td>Pattern to exclude features (e.g., mitochondrial or predicted genes)</td>
 </tr>
 <tr>
 <td><code>--out-dir</code></td>
@@ -1364,31 +1377,64 @@ cartloader run_ficture2 \
 <td>Number of <abbr title="Latent Dirichlet Allocation">LDA</abbr> factors</td>
 </tr>
 <tr>
+<td><code>--makefn</code></td>
+<td></td>
+<td>string</td>
+<td>File name for the generated Makefile (default: <code>run_ficture2.mk</code> )</td>
+</tr>
+<tr>
+<td><code>--in-feature</code></td>
+<td></td>
+<td>string</td>
+<td>Path to input feature file</td>
+</tr>
+<tr>
+<td><code>--in-minmax</code></td>
+<td></td>
+<td>string</td>
+<td>Path to input coordinate min/max file</td>
+</tr>
+<tr>
+<td><code>--cmap-file</code></td>
+<td></td>
+<td>string</td>
+<td>Path to color map file</td>
+</tr>
+<tr>
+<td><code>--exclude-feature-regex</code></td>
+<td></td>
+<td>regex</td>
+<td>Pattern to exclude features</td>
+</tr>
+<tr>
 <td><code>--spatula</code></td>
 <td></td>
 <td>string</td>
-<td>Path to the <code>spatula</code> binary</td>
+<td>Path to the <code>spatula</code> binary (default: <code>spatula</code>)</td>
 </tr>
 <tr>
 <td><code>--ficture2</code></td>
 <td></td>
 <td>string</td>
-<td>Path to the <code>punkst</code> directory</td>
+<td>Path to the <code>punkst</code> directory (defaults to <code>punkst</code> repository within <code>submodules</code> directory of  <code>cartloader</code>)</td>
 </tr>
 <tr>
 <td><code>--n-jobs</code></td>
 <td></td>
 <td>int</td>
-<td>Number of parallel jobs</td>
+<td>Number of parallel jobs (default: <code>1</code>)</td>
 </tr>
 <tr>
 <td><code>--threads</code></td>
 <td></td>
 <td>int</td>
-<td>Number of threads per job</td>
+<td>Number of threads per job (default: <code>1</code>)</td>
 </tr>
 </tbody>
 </table>
+<p><sub><sup>1</sup>: <code>cartloader</code> requires the user to specify <strong>at least one action</strong>. Available actions includes: <code>--tile</code> to run tiling step; <code>--segment</code> to run segmentation step; <code>--init-lda</code> to run <abbr title="Latent Dirichlet Allocation">LDA</abbr> training step; <code>--decode</code> to run decoding step; <code>--summary</code> to run summarization step; <code>--main</code> to run all above five actions.</sub></p>
+<!--parameter-end-->
+
 <h2 id="cartloader-compilation"><code>cartloader</code> Compilation<a class="headerlink" href="#cartloader-compilation" title="Permanent link">&para;</a></h2>
 <p>Generate pmtiles and web-compatible tile directories. See more details in <a href="../../../reference/run_cartload2/">Reference page</a>.</p>
 <!-- ```bash
@@ -1435,12 +1481,6 @@ cartloader run_cartload2 \
 </thead>
 <tbody>
 <tr>
-<td><code>--makefn</code></td>
-<td></td>
-<td>string</td>
-<td>File name for the generated Makefile</td>
-</tr>
-<tr>
 <td><code>--fic-dir</code></td>
 <td>required</td>
 <td>string</td>
@@ -1459,34 +1499,40 @@ cartloader run_cartload2 \
 <td>Dataset ID used for naming outputs and metadata</td>
 </tr>
 <tr>
+<td><code>--makefn</code></td>
+<td></td>
+<td>string</td>
+<td>File name for the generated Makefile (default: <code>run_cartload2.mk</code>)</td>
+</tr>
+<tr>
 <td><code>--spatula</code></td>
 <td></td>
 <td>string</td>
-<td>Path to the <code>spatula</code> binary</td>
+<td>Path to the <code>spatula</code> binary (default: <code>spatula</code>)</td>
 </tr>
 <tr>
 <td><code>--pmtiles</code></td>
 <td></td>
 <td>string</td>
-<td>Path to the <code>pmtiles</code> binary</td>
+<td>Path to the <code>pmtiles</code> binary (default: <code>pmtiles</code>)</td>
 </tr>
 <tr>
 <td><code>--tippecanoe</code></td>
 <td></td>
 <td>string</td>
-<td>Path to the <code>tippecanoe</code> binary</td>
+<td>Path to the <code>tippecanoe</code> binary (default: <code>tippecanoe</code>)</td>
 </tr>
 <tr>
 <td><code>--n-jobs</code></td>
 <td></td>
 <td>int</td>
-<td>Number of parallel jobs</td>
+<td>Number of parallel jobs (default: <code>1</code>)</td>
 </tr>
 <tr>
 <td><code>--threads</code></td>
 <td></td>
 <td>int</td>
-<td>Number of threads per job</td>
+<td>Number of threads per job (default: <code>1</code>)</td>
 </tr>
 </tbody>
 </table>
@@ -1585,7 +1631,7 @@ cartloader run_cartload2 \
     </div>
     
     
-    <script id="__config" type="application/json">{"base": "../../..", "features": ["navigation.tabs", "navigation.indexes", "navigation.sections", "navigation.expand", "navigation.path", "content.code.annotate", "content.grid", "content.cards"], "search": "../../../assets/javascripts/workers/search.f8cc74c7.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    <script id="__config" type="application/json">{"base": "../../..", "features": ["navigation.tabs", "navigation.indexes", "navigation.sections", "navigation.expand", "navigation.path", "content.code.annotate", "content.grid", "content.cards", "content.footnote.tooltips"], "search": "../../../assets/javascripts/workers/search.f8cc74c7.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
       <script src="../../../assets/javascripts/bundle.f13b1293.min.js"></script>

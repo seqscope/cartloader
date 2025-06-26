@@ -3,6 +3,7 @@
   background-color: pink;
 } */
 
+/* ==================GRID & CARDS=================== */
 
 /* single card alignment and fixed size */
 .grid.cards.single-left {
@@ -16,8 +17,6 @@
   padding: 0.5rem;
   box-sizing: border-box;
 }
-
-
 
 /* .grid.cards.generic > ul > li,
 .grid.cards.single-left > ul > li {
@@ -100,4 +99,18 @@ figure {
   font-size: 0.6rem;
   padding: 0;
   margin: 0, 0, 0, 0 !important;
+}
+
+/* ==================TABLE=================== */
+
+/* Use auto layout for tables (natural width based on content) */
+.md-typeset table:not([class]) {
+  table-layout: auto !important;
+  width: auto !important;
+}
+
+/* Optional: reduce padding for tighter spacing */
+.md-typeset table td,
+.md-typeset table th {
+  padding: 6px 10px;
 }
