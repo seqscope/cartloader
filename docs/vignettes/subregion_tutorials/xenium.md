@@ -17,7 +17,10 @@ The example data is hosted on Zenedo ().
 Follow the commands below to download the example data.
 
 ```bash
-wget  
+work_dir=/path/to/work/directory
+cd $work_dir
+wget  https://zenodo.org/records/15701394/files/xenium_starter.raw.tar.gz 
+tar --strip-components=1 -zxvf xenium_starter.raw.tar.gz  
 ```
 
 
@@ -30,8 +33,6 @@ wget
 Define data ID and analysis parameters:
 
 ```bash
-cd $work_dir
-
 # Unique identifier for your dataset
 DATA_ID="xenium_hippo"                  # change this to reflect your dataset name
 PLATFORM="10x_xenium"                   # platform information

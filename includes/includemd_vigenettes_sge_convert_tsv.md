@@ -14,14 +14,14 @@ cartloader sge_convert \
   --n-jobs 10
 ```
 
-| Parameter                 | Required | Type   | Description                                                        |
-|---------------------------|----------|--------|--------------------------------------------------------------------|
-| `--makefn`                |          | string | File name for the generated Makefile                               |
-| `--platform`              | required | string | platform (options: "10x_visium_hd", "seqscope", "10x_xenium", "bgi_stereoseq", "cosmx_smi", "vizgen_merscope", "pixel_seq", "nova_st", "generic")                             |
+| Parameter                 | Required | Type   | Description                                                                                                                                       | 
+|---------------------------|----------|--------|---------------------------------------------------------------------------------------------------------------------------------------------------|
+| `--platform`              | required | string | Platform (options: "10x_visium_hd", "seqscope", "10x_xenium", "bgi_stereoseq", "cosmx_smi", "vizgen_merscope", "pixel_seq", "nova_st", "generic") | 
 | `--in-csv`                | required | string | Path to the input TSV/CSV file                                     |
-| `--units-per-um`          | required | float  | Conversion factor: how many input coordinate units per micron      |
-| `--out-dir`               | required | string | Output directory for the generated SGE files                       |
-| `--exclude-feature-regex` |          | regex  | Pattern to exclude features (e.g., BLANK, NegCon)                  |
-| `--sge-visual`            |          | flag   | Enable generation of diagnostic visualization of the SGE matrix    |
-| `--spatula`               |          | string | Path to the spatula binary                                         |
-| `--n-jobs`                |          | int    | Number of parallel jobs for processing                             |
+| `--units-per-um`          | required | float  | Scale to convert coordinates to microns (default: `1.0`)                                                                                           | 
+| `--out-dir`               | required | string | Output directory for the converted SGE files                                                                                                      | 
+| `--makefn`                |          | string | File name for the generated Makefile (default: `sge_convert.mk`)                                                                                  |
+| `--exclude-feature-regex` |          | regex  | Pattern to exclude control features                                                                                                               |
+| `--sge-visual`            |          | flag   | Enable SGE visualization step (generates diagnostic image) (default: `FALSE`)                                                                     |
+| `--spatula`               |          | string | Path to the spatula binary (default: `spatula`)                                                                                                   |
+| `--n-jobs`                |          | int    | Number of parallel jobs for processing (default: `1`)                                                                                             |

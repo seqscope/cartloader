@@ -20,8 +20,8 @@ Follow the commands below to download the example data.
 ```bash
 work_dir=/path/to/work/directory
 cd $work_dir
-wget 
-tar -zxvf 
+wget  https://zenodo.org/records/15701394/files/visiumhd_starter.raw.tar.gz 
+tar -zxvf visiumhd_starter.raw.tar.gz  
 ```
 
 ## Set Up the Environment
@@ -33,8 +33,6 @@ tar -zxvf
 Define data ID and analysis parameters:
 
 ```bash
-cd $work_dir
-
 # Unique identifier for your dataset
 DATA_ID="visiumhd_hippo"                 # change this to reflect your dataset name
 PLATFORM="10x_visium_hd"                 # platform information
@@ -56,12 +54,32 @@ n_factor=6,12                            # define number of factors in LDA train
 {%
   include-markdown "../../../includes/includemd_vigenettes_sge_convert_visiumhd.md"
 %}
-    
+
 ## `FICTURE` analysis
 
-{%
-  include-markdown "../../../includes/includemd_vigenettes_run_ficture2.md"
-%}
+<!-- !! Visium HD uses --decode-scale 2. So cannot use the md directly -->
+
+```bash
+cartloader run_ficture2 \
+  --makefn run_ficture2.mk \
+  --main \
+  --in-transcript ./sge/transcripts.unsorted.tsv.gz \
+  --in-feature ./sge/feature.clean.tsv.gz \
+  --in-minmax ./sge/coordinate_minmax.tsv \
+  --cmap-file ${cmap} \
+  --exclude-feature-regex '^(mt-.*$|Gm\d+$)' \
+  --decode-scale 2 \
+  --out-dir ./ficture2 \
+  --width ${train_width} \
+  --n-factor ${n_factor} \
+  --spatula ${spatula} \
+  --ficture2 ${punkst} \
+  --n-jobs 10 \
+  --threads 10
+```
+
+{% include-markdown "../../../includes/includemd_vigenettes_run_ficture2.md"" start="<!--parameter-start-->" end="<!--parameter-end-->" %}
+
 
 ## `cartloader` Compilation
 

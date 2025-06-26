@@ -19,7 +19,7 @@ Following format conversion, cartloader provides `run_ficture2` module to run sp
 
 ## Requirements
 
-- An SGE in the unified format (from SGE format conversion) 
+- An SGE in [the unified format]()
 - Pre-installed tools: `spatula`, `punkst`, `gzip`, `sort`, `python`
 
 ## Example Usage
@@ -28,16 +28,16 @@ Following format conversion, cartloader provides `run_ficture2` module to run sp
 cartloader run_ficture2 \
     --main \
     --in-transcript /path/to/input/harmonized/transcripts/tsv/file \
-    --in-feature /path/to/input/harmonized/feature/tsv/file \               # optional
-    --in-minmax /path/to/input/harmonized/coordinates/minmax/tsv/file \     # optional
-    --cmap-file /path/to/cartloader/assets/fixed_color_map_256.tsv \        # optional
+    --in-feature /path/to/input/harmonized/feature/tsv/file \
+    --in-minmax /path/to/input/harmonized/coordinates/minmax/tsv/file \
+    --cmap-file /path/to/cartloader/assets/fixed_color_map_256.tsv \
     --colname-count count \
     --out-dir /path/to/output/directory \
     --width 18 \
     --n-factor 24 \
     --spatula /path/to/spatula/binary \
     --ficture2 /path/to/punkst/directory \  
-    --exclude-feature-regex '^(mt-|Gm\d+$)' \                               # optional
+    --exclude-feature-regex '^(mt-|Gm\d+$)' \
     --n-jobs 20  \
     --threads 20 
 ```
@@ -93,9 +93,9 @@ cartloader run_ficture2 --help
 
 * `--width` (str): Comma-separated hexagon flat-to-flat widths (in µm) for LDA training.
 * `--n-factor` (str): Comma-separated list of factor counts for LDA training.
-* `--include-feature-regex` (str): Regex pattern for including features/genes.
-* `--exclude-feature-regex` (str): Regex pattern for excluding features/genes.
-* `--cmap-file` (str): Optional path to fixed color map TSV file. If not provided, FICTURE will generate a color map.
+* `--include-feature-regex` (str): (Optional) Regex pattern for including features/genes.
+* `--exclude-feature-regex` (str): (Optional) Regex pattern for excluding features/genes.
+* `--cmap-file` (str): (Optional) Path to fixed color map TSV file. If not provided, FICTURE will generate a color map.
 
 ??? note "Auxiliary `run_ficture2` Paramaters"
 
@@ -124,6 +124,8 @@ cartloader run_ficture2 --help
         * `--anchor-res` (int): Anchor resolution used in decoding (Default: 6).
         * `--radius-buffer` (int): Buffer added to anchor resolution for decoding (Default: 1).
         * `--fit-plot-um-per-pixel` (int): Image resolution for fit coarse plots (Default: 1).
+        * `--decode-scale` (int): Scales input coordinates to pixels in the output image (Default: 1)')
+
     * Shared paramaters across steps:
         * `--seed` (int): Random seed for reproducibility (Default: 1).
         * `--min-ct-per-feature` (int): Minimum count per feature for LDA and decoding (Default: 20).
@@ -158,7 +160,7 @@ cartloader run_ficture2 --help
     # ymax	13476.4
     0	7	0	        13103550	569474
     0	8	13103550	40259340	1180529
-    ```
+    ``` 
 * `transcripts.tiled.coord_range.tsv`: A tab-delimited TSV file provides xmin, xmax, ymin, and ymax as key–value pairs.
     ```text
     xmin	0.28

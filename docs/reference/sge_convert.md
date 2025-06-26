@@ -2,9 +2,22 @@
 
 ## Overview
 
-Spatial Digital Gene Expression (SGE) datasets vary widely in format and resolution across platforms. To enable consistent downstream analysis, `cartloader` toolkit provides a `sge_convert` module to harmonize raw SGE data by converting it into standardized transcript-based SGE in a compressed TSV format, with spatial coordinates converted to a micrometer-based unit system without altering the original resolution.
+Spatial Digital Gene Expression (SGE) datasets vary widely in format and resolution across platforms. `FICTURE` requires SGE in TSV format with at least X Y coordinates, gene, and expression count. Thus, to enable consistent downstream analysis, `cartloader` toolkit provides a `sge_convert` module to harmonize raw SGE data by converting it into standardized transcript-based SGE in a FICTURE-compatible format.
 
 The current `sge_convert` supports standarizing SGE from sequencing-based platforms (e.g., [Seq-Scope](https://www.nature.com/articles/s41596-024-01065-0), [Stereo-seq](https://www.bgi.com/global/service/spatial-transcriptome-stereo-seq), [Pixel-seq](https://www.cell.com/cell/fulltext/S0092-8674(22)01367-8), [10x Visium HD](https://www.10xgenomics.com/platforms/visium)) and imaging-based platforms (e.g., [10x Xenium](https://www.10xgenomics.com/platforms/xenium), [Vizgen MERSCOPE](https://vizgen.com/merscope-ultra/), [CosMx SMI](https://nanostring.com/products/cosmx-spatial-molecular-imager)).
+
+## Input Data
+
+The SGE data from different ST platforms differs in format. Please make sure it contains at least the following information.
+
+!!! info "Input Data Requirement:"
+    Input data should be a transcript-indexed SGE containing at least:
+
+    * Spatial coordinates (X coordinates, Y coordinates)
+    * Feature metadata (such as gene symbols)
+    * Expression Counts
+
+    Currently cartloader
 
 ## Example Usages
 
@@ -32,10 +45,9 @@ cartloader sge_convert \
 cartloader sge_convert \
     --platform 10x_visium_hd \
     --in-mex /path/to/input/dir/of/mex \   
-    --icols-mtx 1 \
     --in-parquet /path/to/input/parquet/file \
     --scale-json /path/to/input/json/file \
-    --exclude-feature-regex '^(BLANK.*$|NegCon.*$|NegPrb.*$|mt-.*$|Gm\d+$)' \
+    --exclude-feature-regex '^(BLANK.*$|NegCon.*$|NegPrb.*$)' \
     --out-dir /path/to/output/dir \
     --spatula /path/to/spatul/binary \
     --sge-visual 
@@ -52,7 +64,7 @@ cartloader sge_convert \
     --units-per-um 28.75 \
     --out-dir /path/to/output/dir \
     --colnames-count count \
-    --exclude-feature-regex '^(BLANK.*$|NegCon.*$|NegPrb.*$|mt-.*$|Gm\d+$)' \
+    --exclude-feature-regex '^(BLANK.*$|NegCon.*$|NegPrb.*$)' \
     --filter-by-density \
     --out-filtered-prefix filtered \
     --genomic-feature count \
@@ -64,9 +76,9 @@ cartloader sge_convert \
 ---
 ## Actions
 
-The following outlines the **minimum required parameters** for running SGE format conversion. 
+The following outlines the **minimum required parameters** for running SGE format conversion.
 
-For most auxiliary parameters, the **default values are recommended** and should only be modified when they do not suit your use case, e.g., the auxiliary input parameters. See more details in the collapsible sections below or by running:
+For most auxiliary parameters, the **default values are recommended** and could be modified when they do not suit your use case. See more details in the collapsible sections below or by running:
 ```bash
 cartloader sge_convert --help
 ```

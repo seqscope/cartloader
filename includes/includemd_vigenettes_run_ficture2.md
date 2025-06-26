@@ -37,19 +37,24 @@ cartloader run_ficture2 \
   --threads 10
 ```
 
-| Parameter                   | Required  | Type                          | Description                                                                                     |
-|-----------------------------|-----------|-------------------------------|-------------------------------------------------------------------------------------------------|
-| `--makefn`                  |           | string                        | File name for the generated Makefile                                                            |
-| `--main`                    | required  | flag                          | Run all five steps in `run_ficture2`                                                            |
-| `--in-transcript`           | required  | string                        | Path to input transcript-level SGE file                                                         |
-| `--in-feature`              |           | string                        | Path to input feature file                                                                      |
-| `--in-minmax`               |           | string                        | Path to coordinate min/max file                                                                 |
-| `--cmap-file`               |           | string                        | Path to color map file                                                                          |
-| `--exclude-feature-regex`   |           | regex                         | Pattern to exclude features (e.g., mitochondrial or predicted genes)                            |
-| `--out-dir`                 | required  | string                        | Path to output directory                                                                        |
-| `--width`                   | required  | int or comma-separated list   | LDA training hexagon width(s)                                                                   |
-| `--n-factor`                | required  | int or comma-separated list   | Number of LDA factors                                                                           |
-| `--spatula`                 |           | string                        | Path to the `spatula` binary                                                                      |
-| `--ficture2`                |           | string                        | Path to the `punkst` directory                                                                    |
-| `--n-jobs`                  |           | int                           | Number of parallel jobs                                                                         |
-| `--threads`                 |           | int                           | Number of threads per job                                                                       |
+<!--parameter-start-->
+| Parameter                 | Required              | Type                        | Description                                                                                                     |
+|---------------------------|-----------------------|-----------------------------|-----------------------------------------------------------------------------------------------------------------|
+| `--main`                  | required <sup>1</sup> | flag                        | Enable `cartloader` to run [all five steps](../../reference/run_ficture2.md#actions)                            |
+| `--in-transcript`         | required              | string                      | Path to input transcript-level SGE file                                                                         |
+| `--out-dir`               | required              | string                      | Path to output directory                                                                                        |
+| `--width`                 | required              | int or comma-separated list | LDA training hexagon width(s)                                                                                   |
+| `--n-factor`              | required              | int or comma-separated list | Number of LDA factors                                                                                           |
+| `--makefn`                |                       | string                      | File name for the generated Makefile (default: `run_ficture2.mk` )                                              |
+| `--in-feature`            |                       | string                      | Path to input feature file                                                                                      |
+| `--in-minmax`             |                       | string                      | Path to input coordinate min/max file                                                                           |
+| `--cmap-file`             |                       | string                      | Path to color map file                                                                                          |
+| `--exclude-feature-regex` |                       | regex                       | Pattern to exclude features                                                                                     |
+| `--spatula`               |                       | string                      | Path to the `spatula` binary (default: `spatula`)                                                               |
+| `--ficture2`              |                       | string                      | Path to the `punkst` directory (defaults to `punkst` repository within `submodules` directory of  `cartloader`) |
+| `--n-jobs`                |                       | int                         | Number of parallel jobs (default: `1`)                                                                          |
+| `--threads`               |                       | int                         | Number of threads per job (default: `1`)                                                                        |
+
+
+<sub><sup>1</sup>: `cartloader` requires the user to specify **at least one action**. Available actions includes: `--tile` to run tiling step; `--segment` to run segmentation step; `--init-lda` to run LDA training step; `--decode` to run decoding step; `--summary` to run summarization step; `--main` to run all above five actions.</sub>
+<!--parameter-end-->

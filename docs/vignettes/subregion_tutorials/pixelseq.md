@@ -19,8 +19,8 @@ Follow the commands below to download the example data.
 ```bash
 work_dir=/path/to/work/directory
 cd $work_dir
-wget 
-tar -zxvf 
+wget  https://zenodo.org/records/15701394/files/pixelseq_starter.raw.tar.gz 
+tar --strip-components=1 -zxvf pixelseq_starter.raw.tar.gz 
 ```
 
 
@@ -33,8 +33,6 @@ tar -zxvf
 Define data ID and analysis parameters:
 
 ```bash
-cd $work_dir
-
 # Unique identifier for your dataset
 DATA_ID="pixelseq_hippo"                # change this to reflect your dataset name
 PLATFORM="pixel_seq"                    # platform information

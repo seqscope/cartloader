@@ -18,6 +18,7 @@ theme:
   - content.code.annotate
   - content.grid
   - content.cards
+  - content.footnote.tooltips
   palette:
   - media: "(prefers-color-scheme)"
     toggle:
@@ -40,6 +41,8 @@ theme:
   font:
     text: 'Roboto'
     code: 'Roboto Mono'
+  icon:
+    annotation: material/arrow-right-circle
 #  icon:
 #    admonition:
 #      <type>: <icon>
@@ -54,7 +57,7 @@ nav:
       - Overview: vignettes/intro.md
       #- Quick Start: vignettes/quickstart.md
       - Getting Started with `cartloader`:
-        #- SeqScope Starter Tutorial: vignettes/subregion_tutorials/seqscope.md
+        - SeqScope Starter Tutorial: vignettes/subregion_tutorials/seqscope.md
         - StereoSeq Starter Tutorial: vignettes/subregion_tutorials/stereoseq.md
         - Visium HD Starter Tutorial: vignettes/subregion_tutorials/visiumhd.md
         - Pixel-Seq Starter Tutorial: vignettes/subregion_tutorials/pixelseq.md
@@ -76,13 +79,13 @@ markdown_extensions:
   - abbr
   - footnotes
   - admonition
-#  - codehilite:
-#      guess_lang: false 
+  - attr_list
+  - md_in_html
+  - codehilite:
+      guess_lang: false 
   - toc:
       permalink: true
       toc_depth: 2
-  - attr_list
-  - md_in_html
   - pymdownx.details
   - pymdownx.highlight:
       linenums: true

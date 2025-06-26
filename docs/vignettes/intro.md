@@ -65,7 +65,7 @@ For each platform, we extract a subset of SGE representing the mouse **hippocamp
 <div class="grid cards generic" markdown>
 -   <figure markdown="span">
     ![example3](../images/starter_vignettes/xenium.t12_f12_p12_a6.png){ width="100%" }
-    <figcaption class="figure-caption-vigintro-large">**10x Xenium** Starter Guide</figcaption>
+    <figcaption class="figure-caption-vigintro-large">**10X Xenium** Starter Guide</figcaption>
     </figure>
 
     [Read](./subregion_tutorials/xenium.md){ .md-button .md-button--primary .button-tight-small }

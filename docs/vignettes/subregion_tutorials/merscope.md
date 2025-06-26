@@ -19,8 +19,8 @@ Follow the commands below to download the example data.
 ```bash
 work_dir=/path/to/work/directory
 cd $work_dir
-wget 
-tar -zxvf 
+wget  https://zenodo.org/records/15701394/files/merscope_starter.raw.tar.gz
+tar --strip-components=1 -zxvf merscope_starter.raw.tar.gz
 ```
 
 ## Set Up the Environment
@@ -32,8 +32,6 @@ tar -zxvf
 Define data ID and analysis parameters:
 
 ```bash
-cd $work_dir
-
 # Unique identifier for your dataset
 DATA_ID="merscope_hippo"                # change this to reflect your dataset name
 PLATFORM="vizgen_merscope"              # platform information

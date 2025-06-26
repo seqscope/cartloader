@@ -26,14 +26,14 @@ cartloader run_cartload2 \
   --threads 10
 ```
 
-| Parameter         | Required  | Type     | Description                                                                 |
-|-------------------|-----------|----------|-----------------------------------------------------------------------------|
-| `--makefn`        |           | string   | File name for the generated Makefile                                       |
-| `--fic-dir`       | required  | string   | Path to the input directory containing FICTURE2 output                     |
-| `--out-dir`       | required  | string   | Path to the output directory for PMTiles and web tiles                     |
-| `--id`            | required  | string   | Dataset ID used for naming outputs and metadata                            |
-| `--spatula`       |           | string   | Path to the `spatula` binary                                                 |
-| `--pmtiles`       |           | string   | Path to the `pmtiles` binary                                                 |
-| `--tippecanoe`    |           | string   | Path to the `tippecanoe` binary                                              |
-| `--n-jobs`        |           | int      | Number of parallel jobs                                                    |
-| `--threads`       |           | int      | Number of threads per job                                                  |
+| Parameter      | Required | Type   | Description                                                        |
+|----------------|----------|--------|--------------------------------------------------------------------|
+| `--fic-dir`    | required | string | Path to the input directory containing FICTURE2 output             |
+| `--out-dir`    | required | string | Path to the output directory for PMTiles and web tiles             |
+| `--id`         | required | string | Dataset ID used for naming outputs and metadata                    |
+| `--makefn`     |          | string | File name for the generated Makefile (default: `run_cartload2.mk`) |
+| `--spatula`    |          | string | Path to the `spatula` binary (default: `spatula`)                  |
+| `--pmtiles`    |          | string | Path to the `pmtiles` binary (default: `pmtiles`)                  |
+| `--tippecanoe` |          | string | Path to the `tippecanoe` binary (default: `tippecanoe`)            |
+| `--n-jobs`     |          | int    | Number of parallel jobs (default: `1`)                             |
+| `--threads`    |          | int    | Number of threads per job (default: `1`)                           |
