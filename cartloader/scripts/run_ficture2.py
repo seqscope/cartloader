@@ -12,7 +12,7 @@ def parse_arguments(_args):
     run_params.add_argument('--restart', action='store_true', default=False, help='Restart the run. Ignore all intermediate files and start from the beginning')
     run_params.add_argument('--threads', type=int, default=8, help='Maximum number of threads to use in each process')
     run_params.add_argument('--n-jobs', type=int, default=2, help='Number of jobs (processes) to run in parallel')
-    run_params.add_argument('--makefn', type=str, default="run_ficture.mk", help='The name of the Makefile to generate (default: run_ficture.mk)')
+    run_params.add_argument('--makefn', type=str, default="run_ficture2.mk", help='The name of the Makefile to generate (default: run_ficture2.mk)')
 
     cmd_params = parser.add_argument_group("Commands", "FICTURE commands to run together")
     cmd_params.add_argument('--main', action='store_true', default=False, help='Run the main functions (tile, segment, init-lda, decode, summary)')
@@ -35,6 +35,7 @@ def parse_arguments(_args):
     key_params.add_argument('--n-factor', type=str, default=None, help='Comma-separated list of factor counts for LDA training.')
     key_params.add_argument('--anchor-res', type=int, default=6, help='Anchor resolution for decoding (default: 6)')
     key_params.add_argument('--radius-buffer', type=int, default=1, help='Buffer to radius(=anchor_res + radius_buffer) for pixel-level decoding (default: 1)')
+    key_params.add_argument('--decode-scale', type=int, default=1, help='scales input coordinates to pixels in the output image (default: 1)')
 
     # env params
     env_params = parser.add_argument_group("ENV Parameters", "Environment parameters, e.g., tools.")
@@ -501,7 +502,7 @@ def run_ficture2(_args):
                 f"--header-json {decode_prefix}.json",
                 f"--in-color {cmap_path}",
                 f"--out {decode_prefix}.png",
-                f"--scale 1",
+                f"--scale {args.decode_scale}",
                 f"--range {args.in_minmax}"
                 ])
             cmds.append(cmd)
