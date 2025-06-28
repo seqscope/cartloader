@@ -507,7 +507,7 @@ def cmd_upload_aws(run_i, cartl_v,  args, env):
     # ])
     # Option 2: use cartloader upload_aws_by_catalog.py
     aws_cmd=" ".join([
-        "cartloader", "upload_aws_by_catalog",
+        "cartloader", "upload_aws",
         f"--in-dir {cartload_dir}",
         f"--s3-dir \"s3://{args.aws_bucket}/{run_i['run_id']}\"",
         f"--n-jobs {args.n_jobs}" if args.n_jobs else "",

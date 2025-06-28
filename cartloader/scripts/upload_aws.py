@@ -3,7 +3,7 @@ import subprocess
 import argparse
 import sys
 import yaml
-
+from typing import Dict, List, Tuple
 
 from cartloader.utils.minimake import minimake
 from cartloader.utils.utils import cmd_separator, scheck_app, create_custom_logger
@@ -27,7 +27,34 @@ def traverse_dict(d, parent_key=''):
             pairs.append((new_key, value))  # Append key-value pair
     return pairs
 
-def upload_aws_by_catalog(_args):
+def collect_files_from_yaml(catalog_f):
+    print(catalog_f)
+    with open(catalog_f, "r") as catalog_file:
+        catalog = yaml.safe_load(catalog_file)
+    catalog_pair=traverse_dict(catalog)
+    print(catalog_pair)
+
+    keys_id = {"id", "title", "name", "model_id", "proj_id", "decode_id"}
+    cartload_files = []
+    basemap_files = []
+
+    for key, value in catalog_pair:
+        if key.startswith("assets.basemap"):
+            if key.startswith("assets.basemap.sge") and not key.endswith("default"):
+                cartload_files.append(value)
+            elif not key.startswith("assets.basemap.sge") and not key.endswith("default"):
+                basemap_files.append(value)
+        else:
+            subkey = key.split(".")[-1] if "." in key else key
+            if subkey not in keys_id:
+                cartload_files.append(value)
+
+    # Deduplicate cartload_files
+    cartload_files = list(set(cartload_files))
+
+    return cartload_files, basemap_files
+
+def upload_aws(_args):
     parser = argparse.ArgumentParser(description="Upload files to S3 as specified in catalog.yaml. All files must be in the input directory.")
     run_params = parser.add_argument_group("Run Options", "")
     run_params.add_argument('--dry-run', action='store_true', default=False, help='Dry run. Generate only the Makefile without running it')
@@ -48,12 +75,9 @@ def upload_aws_by_catalog(_args):
     else:
         catalog_f = args.catalog_yaml
 
-    s3_catalog_f = f"{args.s3_dir}/catalog.yaml"
-
-    # catalog info
-    with open(catalog_f, "r") as catalog_file:
-        catalog = yaml.safe_load(catalog_file)
-    catalog_pair=traverse_dict(catalog)
+    assert os.path.exists(catalog_f), "Provide an invalid catalog yaml file"
+    # get the cartload output and basemaps files from catalog
+    cartload_files, basemap_files = collect_files_from_yaml(catalog_f)
 
     # start mm
     mm = minimake()
@@ -68,39 +92,42 @@ def upload_aws_by_catalog(_args):
     #             file_name = line.strip().split()[-1]
     #             file_path = os.path.join(args.in_dir, file_name)
     #             s3_file_path = f"{args.s3_dir}/{file_name}"
-
     #             commands.append(f"echo 'Uploading {file_name} to S3...'")
     #             commands.append(["aws", "s3", "cp", file_path, s3_file_path])
-
     # Option 2: use traverse_dict to locate the files.
     # Note, if catalog.yaml file structure changes, this keys_id may need to be updated.
-    keys_id=["id", "title", "name", "model_id", "proj_id", "decode_id"]
-    cartload_files=[]
-    basemap_files=[]
+    # === put into a function now (see collect_files_from_yaml)===
+    # keys_id=["id", "title", "name", "model_id", "proj_id", "decode_id"]
+    # cartload_files=[]
+    # basemap_files=[]
+    # for key, value in catalog_pair:
+    #     # skip all basemaps except the sge
+    #     if key.startswith("assets.basemap"):
+    #         if key.startswith("assets.basemap.sge") and not key.endswith("default"):
+    #             cartload_files.append(value)
+    #         elif not key.startswith("assets.basemap.sge") and not key.endswith("default"):
+    #             basemap_files.append(value)
+    #     else:
+    #         subkey=key.split(".")[-1] if "." in key else key
+    #         if subkey not in keys_id:
+    #             cartload_files.append(value)
+    # cartload_files=list(set(cartload_files))
+    # ===
 
-    for key, value in catalog_pair:
-        # skip all basemaps except the sge
-        if key.startswith("assets.basemap"):
-            if key.startswith("assets.basemap.sge") and not key.endswith("default"):
-                cartload_files.append(value)
-            elif not key.startswith("assets.basemap.sge") and not key.endswith("default"):
-                basemap_files.append(value)
-        else:
-            subkey=key.split(".")[-1] if "." in key else key
-            if subkey not in keys_id:
-                cartload_files.append(value)
-
-    cartload_files=list(set(cartload_files))
     cartload_prerequisites=[os.path.join(args.in_dir, filename) for filename in cartload_files]
     cartload_prerequisites.append(catalog_f)
+
+    s3_catalog_f = f"{args.s3_dir}/catalog.yaml"
+    cmds.append(f"{args.aws} s3 cp  {catalog_f} {s3_catalog_f}")
+
     for filename in cartload_files:
         file_path=os.path.join(args.in_dir, filename)
         s3_file_path = os.path.join(args.s3_dir, filename) 
         cmds.append(f"{args.aws} s3 cp {file_path} {s3_file_path}")
+
     cartload_flag=os.path.join(args.in_dir, "cartload.aws.done")
-    # upload catalog.yaml to AWS
-    cmds.append(f"{args.aws} s3 cp  {catalog_f} {s3_catalog_f}")
     cmds.append(f"touch {cartload_flag}")
+
     mm.add_target(cartload_flag, cartload_prerequisites, cmds)
 
     # step 2. Upload basemap files to AWS besides sge
@@ -113,36 +140,6 @@ def upload_aws_by_catalog(_args):
         cmds.append(f"{args.aws} s3 cp {catalog_f} {s3_catalog_f}")
         cmds.append(f"touch {file_path}.aws.done")
         mm.add_target(f"{file_path}.aws.done", [file_path], cmds)
-
-    # # # Step 2.2: By default, the histology should already registered in the catalog.yaml. 
-    # # # Added this --histology option to faciliate additional histology files.
-    # # if args.histology is not None:
-    # #     for hist_f in args.histology:
-    # #         hist_bn = os.path.basename(hist_f)
-    # #         hist_copy = os.path.join(args.in_dir, hist_bn)
-    # #         s3_hist_f=f"{args.s3_dir}/{hist_bn}"
-    # #         hist_yaml_flag = f"{hist_copy}.yaml.done"
-    # #         hist_aws_flag = f"{hist_copy}.aws.done"
-
-    # #         if hist_f != hist_copy:
-    # #             cmds=cmd_separator([], f"Copying histology files to input directory...")
-    # #             cmds.append(f"cp {hist_f} {hist_copy}")
-    # #             mm.add_target(f"{hist_copy}", [hist_f], cmds)
-
-    # #         # # updating catalog.yaml
-    # #         # cmds = cmd_separator([], f"Registering histology files to catalogy yaml...'")
-    # #         # cmds.append(" ".join ([
-    # #         #     "cartloader", "update_yaml_for_basemap",
-    # #         #     "--catalog-yaml", catalog_f,
-    # #         #     "--pmtiles", hist_f
-    # #         # ]))
-    # #         # cmds.append(f"touch hist_yaml_flag")
-    # #         # mm.add_target(hist_yaml_flag, [hist_copy], cmds)
-            
-    # #         # uploading histology files to AWS
-    # #         cmds.append(f"{args.aws} s3 cp {hist_copy} {s3_hist_f}")
-    # #         cmds.append(f"touch {hist_flag}")
-    # #         mm.add_target(hist_flag, [hist_copy], cmds)
 
     ## write makefile
     make_f = os.path.join(args.in_dir, args.makefn)
@@ -159,12 +156,6 @@ def upload_aws_by_catalog(_args):
             print(f"Error in executing: {exe_cmd}")
             sys.exit(1)
 
-    # # Execute or print all commands
-    # for cmd in commands:
-    #     if isinstance(cmd, str):
-    #         print(cmd)  # Always print echo statements
-    #     else:
-    #         run_command(cmd, args.dry_run)
 
 if __name__ == "__main__":
     # get the cartloader path
