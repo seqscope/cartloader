@@ -35,7 +35,7 @@ Define data ID and analysis parameters:
 # Unique identifier for your dataset
 DATA_ID="merscope_hippo"                # change this to reflect your dataset name
 PLATFORM="vizgen_merscope"              # platform information
-SCALE=1                               # scale from coordinate to micrometer
+SCALE=1                                 # scale from coordinate to micrometer
 
 # LDA parameters
 train_width=12                           # define LDA training hexagon width (comma-separated if multiple widths are applied)

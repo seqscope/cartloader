@@ -61,7 +61,7 @@ The summarization step generate a JSON file to include all details of the FICTUR
 
 ## Parameters
 
-The following outlines the **minimum required parameters** for running FICTURE2. 
+The following outlines the **minimum required parameters**. 
 
 For auxiliary parameters, we recommend using the default values unless you possess a thorough understanding of FICTURE. For further details, refer to the collapsible sections below or run:
 

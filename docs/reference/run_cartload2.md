@@ -6,8 +6,9 @@ Following spatial factor inference via FICTURE analysis, `cartloader` offers the
 
 ## Requirements
 
-- A completed FICTURE run (pixel-level decoding outputs) (from `run_ficture2`)
-- A metadata file describing the input-output structure (`ficture.params.json`)
+- A completed FICTURE run from [`run_ficture2`](./run_ficture2.md), including
+    - pixel-level decoding outputs 
+    - a metadata file describing the input-output structure (`ficture.params.json`)
 - Pre-installed CLI tools: `tippecanoe`, `gdal_translate`, `gdaladdo`, `pmtiles`, `spatula`, `gzip`
 
 ## Example Usage
@@ -28,7 +29,7 @@ cartloader run_cartload2 \
 
 ## Actions
 
-Specifically, it will perform all the following steps:
+Specifically, `run_cartload2` performs all of the following steps:
 
 - Converts transcript-level SGE to raster-format PMTiles.
 - Converts topic proportions (.results.tsv.gz) into vector PMTiles for spatial factors.
@@ -39,7 +40,7 @@ Specifically, it will perform all the following steps:
 
 ## Parameters
 
-The following outlines the **minimum required parameters** for running spatial asset packaging. 
+The following outlines the **minimum required parameters**. 
 
 For auxiliary parameters, we recommend using the default values unless you possess a thorough understanding of `run_cartload2`. For further details, refer to the collapsible sections below or run:
 

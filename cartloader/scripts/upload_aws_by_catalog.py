@@ -27,7 +27,7 @@ def traverse_dict(d, parent_key=''):
             pairs.append((new_key, value))  # Append key-value pair
     return pairs
 
-def upload_aws_by_catalog(_args):
+def upload_aws(_args):
     parser = argparse.ArgumentParser(description="Upload files to S3 as specified in catalog.yaml. All files must be in the input directory.")
     run_params = parser.add_argument_group("Run Options", "")
     run_params.add_argument('--dry-run', action='store_true', default=False, help='Dry run. Generate only the Makefile without running it')

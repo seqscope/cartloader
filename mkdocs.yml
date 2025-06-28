@@ -52,10 +52,10 @@ nav:
   - Home: 
       - Introduction: index.md
   - Installation: installation.md
-  - Quick Start: vignettes/quickstart.md
+  - Quick Start: vignettes/quickstart/quickstart.md
   - Vignettes:
       - Overview: vignettes/intro.md
-      #- Quick Start: vignettes/quickstart.md
+      #- Quick Start: vignettes/quickstart/quickstart.md
       - Getting Started with `cartloader`:
         - SeqScope Starter Tutorial: vignettes/subregion_tutorials/seqscope.md
         - StereoSeq Starter Tutorial: vignettes/subregion_tutorials/stereoseq.md
@@ -69,7 +69,7 @@ nav:
       - SGE Format Conversion: reference/sge_convert.md
       - FICTURE Analysis: reference/run_ficture2.md
       - cartloader Compilation: reference/run_cartload2.md
-
+      - Data Repository Upload: reference/upload_repository.md
 # Watch for changes
 watch:
   - includes

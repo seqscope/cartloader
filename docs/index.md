@@ -14,9 +14,9 @@ Together, this system should provide a unified solution for working with raw pix
 
 ---
 
-## Cartloader: A Scalable Spatial Transcriptomics Pipeline
+## `cartloader`: A Scalable Spatial Transcriptomics Pipeline
 
-This document introduces `cartloader`, which is the core engine of our ecosystem. It provides a modular, reproducible tool to harmonize, integrate, analyze, and visualize raw high-resolution ST data across platforms. Usage examples are provided in the [Get Started](./vignettes/quickstart.md). Detailed descriptions of its workflow, inputs, outputs, and parameters are provided in the [Reference Pages](./reference/sge_convert.md).
+This document introduces `cartloader`, which is the core engine of our ecosystem. It provides a modular, reproducible tool to harmonize, integrate, analyze, and visualize raw high-resolution ST data across platforms. Usage examples are provided in the [Get Started](./vignettes/quickstart/quickstart.md). Detailed descriptions of its workflow, inputs, outputs, and parameters are provided in the [Reference Pages](./reference/sge_convert.md).
 
 **Key Features**
 

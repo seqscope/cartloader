@@ -1,4 +1,4 @@
-# Getting Started with `cartloader`
+# Vignettes
 
 We offer a series of tutorials to help users master the `cartloader` toolkit across a range of scenarios — from simple getting-started examples to processing full-scale ST datasets. 
 
@@ -6,7 +6,7 @@ For a more detailed explanation of each step, refer to our [References](../refer
 
 ## Quick Start
 
-If you're new to `cartloader`, we recommend beginning with the [Quick Start](./quickstart.md) tutorial. 
+If you're new to `cartloader`, we recommend beginning with the [Quick Start](./quickstart/quickstart.md) tutorial. 
 
 This vignette provides a beginner-friendly walkthrough using a small mouse hippocampus dataset to walks through `cartloader` functions.
 
@@ -17,15 +17,17 @@ This vignette provides a beginner-friendly walkthrough using a small mouse hippo
     <figcaption class="figure-caption-vigintro-large">Quick Start Tutorial</figcaption>
     </figure>
 
-    [Read](./quickstart.md){ .md-button .md-button--primary .button-tight-small }
+    [Read](./quickstart/quickstart.md){ .md-button .md-button--primary .button-tight-small }
 
 </div>
 
 ## Getting Started per Platform
 
-These tutorials show how to process data from different ST platforms using small, representative subregions.
+These tutorials show how to run the `cartloader` pipeline on a variety of ST platforms, using small, representative datasets.
 
-For each platform, we extract a subset of SGE representing the mouse **hippocampus** as input. If hippocampal data is not available for a given platform, we select one subregion from the mouse brain to illustrate the workflow.
+Each tutorial begins with data in the platform’s native format.
+
+For consistency, we curated hippocampus from the mouse brain for each platform, when possible. If hippocampal data is unavailable for a given platform, we selected another brain subregion to illustrate the process.
 
 ### Sequencing-based Platforms
 
@@ -36,7 +38,7 @@ For each platform, we extract a subset of SGE representing the mouse **hippocamp
     <figcaption class="figure-caption-vigintro-large">**SeqScope** Starter Guide</figcaption>
     </figure>
 
-    [Read](./quickstart.md){ .md-button .md-button--primary .button-tight-small }
+    [Read](./quickstart/quickstart.md){ .md-button .md-button--primary .button-tight-small }
 
 -   <figure markdown="span">
     ![example2](../images/starter_vignettes/visiumhd.t18_f12_p18_a6.png)

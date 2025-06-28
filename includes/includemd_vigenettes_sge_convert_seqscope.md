@@ -30,7 +30,7 @@ cartloader sge_convert \
 
 | Parameter                 | Required | Type   | Description                                                                                                                                       |
 |---------------------------|----------|--------|---------------------------------------------------------------------------------------------------------------------------------------------------|
-| `--platform`              | required | string | Platform (options: "10x_visium_hd", "seqscope", "10x_xenium", "bgi_stereoseq", "cosmx_smi", "vizgen_merscope", "pixel_seq", "nova_st", "generic") |
+| `--platform`              | required | string | Platform (options: "`10x_visium_hd`", "`seqscope`", "`10x_xenium`", "`bgi_stereoseq`", "`cosmx_smi`", "`vizgen_merscope`", "`pixel_seq`", "`generic`") |
 | `--in-mex`                | required | string | Path to the input MEX directory containing gene × barcode matrix                                                                                  |
 | `--units-per-um`          | required | float  | Scale to convert coordinates to microns (default: `1.0`)                                                                                          |
 | `--out-dir`               | required | string | Output directory for the converted SGE files                                                                                                      |

@@ -1,9 +1,9 @@
-### Upload to AWS
+### AWS Uploads
 
 Copy the generated cartloader outputs to your designated AWS S3 catalog path:
 
 ```bash
-cartloader upload_aws_by_catalog \
+cartloader upload_aws \
   --in-dir ./cartload2 \
   --s3-dir "s3://${AWS_BUCKET}/${DATA_ID}" \
   --aws ${aws} \
