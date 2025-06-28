@@ -270,7 +270,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../../quickstart/" class="md-tabs__link">
+      <a href="../../quickstart/quickstart/" class="md-tabs__link">
         
   
     
@@ -458,7 +458,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../quickstart/" class="md-nav__link">
+      <a href="../../quickstart/quickstart/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -887,6 +887,8 @@
       
         
       
+        
+      
     
     
       
@@ -979,6 +981,28 @@
   
   <span class="md-ellipsis">
     cartloader Compilation
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/upload_repository/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Data Repository Upload
     
   </span>
   
@@ -1232,7 +1256,7 @@ conda<span class="w"> </span>activate<span class="w"> </span>BIOENV_NAME<span cl
 <td><code>--platform</code></td>
 <td>required</td>
 <td>string</td>
-<td>Platform (options: "10x_visium_hd", "seqscope", "10x_xenium", "bgi_stereoseq", "cosmx_smi", "vizgen_merscope", "pixel_seq", "nova_st", "generic")</td>
+<td>Platform (options: "<code>10x_visium_hd</code>", "<code>seqscope</code>", "<code>10x_xenium</code>", "<code>bgi_stereoseq</code>", "<code>cosmx_smi</code>", "<code>vizgen_merscope</code>", "<code>pixel_seq</code>", "<code>generic</code>")</td>
 </tr>
 <tr>
 <td><code>--in-csv</code></td>
@@ -1536,13 +1560,13 @@ cartloader run_cartload2 \
 </tbody>
 </table>
 <h2 id="upload-to-data-repository">Upload to Data Repository<a class="headerlink" href="#upload-to-data-repository" title="Permanent link">&para;</a></h2>
-<h3 id="upload-to-aws">Upload to AWS<a class="headerlink" href="#upload-to-aws" title="Permanent link">&para;</a></h3>
+<h3 id="aws-uploads">AWS Uploads<a class="headerlink" href="#aws-uploads" title="Permanent link">&para;</a></h3>
 <p>Copy the generated cartloader outputs to your designated AWS S3 catalog path:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
 <span class="normal">3</span>
 <span class="normal">4</span>
-<span class="normal">5</span></pre></div></td><td class="code"><div><pre><span></span><code>cartloader<span class="w"> </span>upload_aws_by_catalog<span class="w"> </span><span class="se">\</span>
+<span class="normal">5</span></pre></div></td><td class="code"><div><pre><span></span><code>cartloader<span class="w"> </span>upload_aws<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--in-dir<span class="w"> </span>./cartload2<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--s3-dir<span class="w"> </span><span class="s2">&quot;s3://</span><span class="si">${</span><span class="nv">AWS_BUCKET</span><span class="si">}</span><span class="s2">/</span><span class="si">${</span><span class="nv">DATA_ID</span><span class="si">}</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--aws<span class="w"> </span><span class="si">${</span><span class="nv">aws</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>

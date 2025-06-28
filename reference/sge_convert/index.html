@@ -270,7 +270,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../../vignettes/quickstart/" class="md-tabs__link">
+      <a href="../../vignettes/quickstart/quickstart/" class="md-tabs__link">
         
   
     
@@ -458,7 +458,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../vignettes/quickstart/" class="md-nav__link">
+      <a href="../../vignettes/quickstart/quickstart/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -788,6 +788,8 @@
       
         
       
+        
+      
     
     
       
@@ -889,9 +891,9 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#input-data" class="md-nav__link">
+  <a href="#requirements" class="md-nav__link">
     <span class="md-ellipsis">
-      Input Data
+      Requirements
     </span>
   </a>
   
@@ -910,6 +912,15 @@
   <a href="#actions" class="md-nav__link">
     <span class="md-ellipsis">
       Actions
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      Parameters
     </span>
   </a>
   
@@ -977,6 +988,28 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upload_repository/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Data Repository Upload
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1020,9 +1053,9 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#input-data" class="md-nav__link">
+  <a href="#requirements" class="md-nav__link">
     <span class="md-ellipsis">
-      Input Data
+      Requirements
     </span>
   </a>
   
@@ -1041,6 +1074,15 @@
   <a href="#actions" class="md-nav__link">
     <span class="md-ellipsis">
       Actions
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      Parameters
     </span>
   </a>
   
@@ -1076,19 +1118,72 @@
 
 <h1 id="spatial-gene-expression-sge-format-conversion">Spatial Gene Expression (<abbr title="Spatial Digital Gene Expression">SGE</abbr>) Format Conversion<a class="headerlink" href="#spatial-gene-expression-sge-format-conversion" title="Permanent link">&para;</a></h1>
 <h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
-<p>Spatial Digital Gene Expression (<abbr title="Spatial Digital Gene Expression">SGE</abbr>) datasets vary widely in format and resolution across platforms. <code>FICTURE</code> requires <abbr title="Spatial Digital Gene Expression">SGE</abbr> in TSV format with at least X Y coordinates, gene, and expression count. Thus, to enable consistent downstream analysis, <code>cartloader</code> toolkit provides a <code>sge_convert</code> module to harmonize raw <abbr title="Spatial Digital Gene Expression">SGE</abbr> data by converting it into standardized transcript-based <abbr title="Spatial Digital Gene Expression">SGE</abbr> in a FICTURE-compatible format.</p>
-<p>The current <code>sge_convert</code> supports standarizing <abbr title="Spatial Digital Gene Expression">SGE</abbr> from sequencing-based platforms (e.g., <a href="https://www.nature.com/articles/s41596-024-01065-0">Seq-Scope</a>, <a href="https://www.bgi.com/global/service/spatial-transcriptome-stereo-seq">Stereo-seq</a>, <a href="https://www.cell.com/cell/fulltext/S0092-8674(22)01367-8">Pixel-seq</a>, <a href="https://www.10xgenomics.com/platforms/visium">10x Visium HD</a>) and imaging-based platforms (e.g., <a href="https://www.10xgenomics.com/platforms/xenium">10x Xenium</a>, <a href="https://vizgen.com/merscope-ultra/">Vizgen MERSCOPE</a>, <a href="https://nanostring.com/products/cosmx-spatial-molecular-imager">CosMx SMI</a>).</p>
-<h2 id="input-data">Input Data<a class="headerlink" href="#input-data" title="Permanent link">&para;</a></h2>
-<p>The <abbr title="Spatial Digital Gene Expression">SGE</abbr> data from different <abbr title="Spatial transcriptomics">ST</abbr> platforms differs in format. Please make sure it contains at least the following information.</p>
+<p><abbr title="Spatial Digital Gene Expression">SGE</abbr> datasets vary widely in format and resolution across platforms. Since <code>FICTURE</code> requires <abbr title="Spatial Digital Gene Expression">SGE</abbr> in a specific format, <code>cartloader</code> toolkit provides this <code>sge_convert</code> module to standardize the raw, platform-specific <abbr title="Spatial Digital Gene Expression">SGE</abbr> into a FICTURE-compatible format.</p>
+<h2 id="requirements">Requirements<a class="headerlink" href="#requirements" title="Permanent link">&para;</a></h2>
 <div class="admonition info">
 <p class="admonition-title">Input Data Requirement:</p>
-<p>Input data should be a transcript-indexed <abbr title="Spatial Digital Gene Expression">SGE</abbr> containing at least:</p>
+<p>Please make sure the input data (raw, platform-specific <abbr title="Spatial Digital Gene Expression">SGE</abbr>) contains at least the following information. should be a transcript-indexed <abbr title="Spatial Digital Gene Expression">SGE</abbr> containing at least:</p>
 <ul>
 <li>Spatial coordinates (X coordinates, Y coordinates)</li>
 <li>Feature metadata (such as gene symbols)</li>
 <li>Expression Counts</li>
 </ul>
-<p>Currently cartloader</p>
+</div>
+<div class="admonition info">
+<p class="admonition-title">Platform Compatibility</p>
+<p>The current <code>sge_convert</code> supports standarizing <abbr title="Spatial Digital Gene Expression">SGE</abbr> from the following platforms:</p>
+<table>
+<thead>
+<tr>
+<th>Source</th>
+<th><code>--platform</code> Option</th>
+<th>Required Input Files</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="https://www.10xgenomics.com/platforms/visium">10x Visium HD</a></td>
+<td><code>10x_visium_hd</code></td>
+<td><code>--in-mex</code>, <code>--in-parquet</code>, <code>--scale-json</code></td>
+</tr>
+<tr>
+<td><a href="https://www.nature.com/articles/s41596-024-01065-0">Seq-Scope</a></td>
+<td><code>seqscope</code></td>
+<td><code>--in-mex</code></td>
+</tr>
+<tr>
+<td><a href="https://www.10xgenomics.com/platforms/xenium">10x Xenium</a></td>
+<td><code>10x_xenium</code></td>
+<td><code>--in-csv</code></td>
+</tr>
+<tr>
+<td><a href="https://www.bgi.com/global/service/spatial-transcriptome-stereo-seq">Stereo-seq</a></td>
+<td><code>bgi_stereoseq</code></td>
+<td><code>--in-csv</code></td>
+</tr>
+<tr>
+<td><a href="https://nanostring.com/products/cosmx-spatial-molecular-imager">CosMx SMI</a></td>
+<td><code>cosmx_smi</code></td>
+<td><code>--in-csv</code></td>
+</tr>
+<tr>
+<td><a href="https://vizgen.com/merscope-ultra/">Vizgen MERSCOPE</a></td>
+<td><code>vizgen_merscope</code></td>
+<td><code>--in-csv</code></td>
+</tr>
+<tr>
+<td><a href="https://www.cell.com/cell/fulltext/S0092-8674(22)01367-8">Pixel-seq</a></td>
+<td><code>pixel_seq</code></td>
+<td><code>--in-csv</code></td>
+</tr>
+<tr>
+<td>Generic CSV/TSV input <sup>1</sup></td>
+<td><code>generic</code></td>
+<td><code>--in-csv</code></td>
+</tr>
+</tbody>
+</table>
+<p><sub><sup>1</sup>: For <abbr title="Spatial Digital Gene Expression">SGE</abbr> from platforms not yet explicitly supported by <code>cartloader</code>, or from custom/preprocessed sources, <code>sge_convert</code> provides a <code>generic</code> option that accepts CSV/TSV files with basic required fields (e.g., gene, spatial coordinates, expression count) for standardization and processing.</p>
 </div>
 <h2 id="example-usages">Example Usages<a class="headerlink" href="#example-usages" title="Permanent link">&para;</a></h2>
 <h3 id="input-sge-in-mex-format">Input <abbr title="Spatial Digital Gene Expression">SGE</abbr> in <abbr title="Market Exchange">MEX</abbr> Format<a class="headerlink" href="#input-sge-in-mex-format" title="Permanent link">&para;</a></h3>
@@ -1139,7 +1234,8 @@
 <span class="w">    </span>--sge-visual<span class="w"> </span>
 </code></pre></div></td></tr></table></div>
 <h3 id="input-sge-in-tsvcsv-format">Input <abbr title="Spatial Digital Gene Expression">SGE</abbr> in TSV/CSV Format<a class="headerlink" href="#input-sge-in-tsvcsv-format" title="Permanent link">&para;</a></h3>
-<p>This applied to input <abbr title="Spatial Digital Gene Expression">SGE</abbr> in TSV/CSV format from platforms including 10X Xenium, StereoSeq, Cosmx SMI, MERSCOPE, Pixel-seq. Below is an example converting <abbr title="Spatial Digital Gene Expression">SGE</abbr> from StereoSeq.</p>
+<p>This applies to input <abbr title="Spatial Digital Gene Expression">SGE</abbr> in TSV/CSV format from platforms including 10X Xenium, StereoSeq, Cosmx SMI, MERSCOPE, Pixel-seq. To simplify preprocessing, <code>sge_convert</code> automatically applies platform-specific defaults for common CSV/TSV parameters.</p>
+<p>Below is an example converting <abbr title="Spatial Digital Gene Expression">SGE</abbr> from StereoSeq.</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -1166,71 +1262,136 @@
 <span class="w">    </span>--north-up<span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>--spatula<span class="w"> </span>/path/to/spatul/binary<span class="w"> </span>
 </code></pre></div></td></tr></table></div>
+<div class="admonition warning">
+<p class="admonition-title">Verify your input structure</p>
+<p>Always double-check the column names and metadata format of your input files. If they differ from the expected defaults, override them using <code>--csv-*</code> and <code>--min-phred-score</code> options.</p>
+</div>
+<details>
+<summary>Click to view platform-specific default settings</summary>
+<p>To streamline the process, <code>sge_convert</code> automatically applies platform-dependent defaults for CSV/TSV parsing based on known file formats and column conventions.
+Below summarizes the default values for key parameters per supported platform:</p>
+<table>
+<thead>
+<tr>
+<th>Platform</th>
+<th><code>--csv-comment</code><sup>1</sup></th>
+<th><code>--csv-delim</code></th>
+<th><code>--csv-colname-x</code></th>
+<th><code>--csv-colname-y</code></th>
+<th><code>--csv-colnames-count</code></th>
+<th><code>--csv-colname-feature-name</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>10X Xenium<sup>2</sup></td>
+<td><code>False</code></td>
+<td><code>,</code></td>
+<td><code>x_location</code></td>
+<td><code>y_location</code></td>
+<td>-</td>
+<td><code>feature_name</code></td>
+</tr>
+<tr>
+<td>StereoSeq</td>
+<td><code>False</code></td>
+<td><code>\t</code></td>
+<td><code>x</code></td>
+<td><code>y</code></td>
+<td><code>MIDCounts</code></td>
+<td><code>geneID</code></td>
+</tr>
+<tr>
+<td>CosMx SMI</td>
+<td><code>False</code></td>
+<td><code>,</code></td>
+<td><code>x_local_px</code></td>
+<td><code>y_local_px</code></td>
+<td>-</td>
+<td><code>target</code></td>
+</tr>
+<tr>
+<td>MERSCOPE</td>
+<td><code>False</code></td>
+<td><code>,</code></td>
+<td><code>global_x</code></td>
+<td><code>global_y</code></td>
+<td>-</td>
+<td><code>gene</code></td>
+</tr>
+<tr>
+<td>Pixel-seq</td>
+<td><code>False</code></td>
+<td><code>\t</code></td>
+<td><code>xcoord</code></td>
+<td><code>ycoord</code></td>
+<td>-</td>
+<td><code>geneName</code></td>
+</tr>
+</tbody>
+</table>
+<p><sub><sup>1</sup> <code>--csv-comment</code>: If <code>True</code>, the lines starts with <code>#</code> will be treated as comments and will be skipped.</p>
+<p><sub><sup>2</sup> 10X Xenium: Besides the above default settings, for 10X Xenium data, <code>sge_convert</code> also applies <code>--csv-colname-phredscore qv</code> and <code>--min-phred-score 20</code>.</p>
+</details>
 <hr />
 <h2 id="actions">Actions<a class="headerlink" href="#actions" title="Permanent link">&para;</a></h2>
-<p>The following outlines the <strong>minimum required parameters</strong> for running <abbr title="Spatial Digital Gene Expression">SGE</abbr> format conversion.</p>
+<h3 id="sge-conversion"><abbr title="Spatial Digital Gene Expression">SGE</abbr> Conversion<a class="headerlink" href="#sge-conversion" title="Permanent link">&para;</a></h3>
+<p>Converting <abbr title="Spatial Digital Gene Expression">SGE</abbr> into a FICTURE-compatible TSV format. During conversion, <abbr title="Spatial Digital Gene Expression">SGE</abbr> coordinates are rescaled to micrometer units based on the pixel resolution specified in the input. It's also available to apply feature (typically, genes) filtering.</p>
+<h3 id="optional-density-based-filtering">(Optional) Density-based Filtering<a class="headerlink" href="#optional-density-based-filtering" title="Permanent link">&para;</a></h3>
+<p>Automatically identify and retain high-quality tissue regions based on transcript density and spatial structure. This step takes the format-standardized <abbr title="Spatial Digital Gene Expression">SGE</abbr> as input and generate a density-based filtered <abbr title="Spatial Digital Gene Expression">SGE</abbr>.</p>
+<h3 id="optional-sge-visualization">(Optional) <abbr title="Spatial Digital Gene Expression">SGE</abbr> Visualization<a class="headerlink" href="#optional-sge-visualization" title="Permanent link">&para;</a></h3>
+<p>Draws an image of 2D points provided as an input. In this step, it is optional to enable the <code>--north-up</code> option to ensuring correct spatial orientation (i.e., Y-axis increases upward/north and X-axis increases to the right/east).</p>
+<hr />
+<h2 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">&para;</a></h2>
+<p>The following outlines the <strong>minimum required parameters</strong>.</p>
 <p>For most auxiliary parameters, the <strong>default values are recommended</strong> and could be modified when they do not suit your use case. See more details in the collapsible sections below or by running:
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code>cartloader<span class="w"> </span>sge_convert<span class="w"> </span>--help
 </code></pre></div></td></tr></table></div></p>
-<h3 id="sge-conversion"><abbr title="Spatial Digital Gene Expression">SGE</abbr> Conversion<a class="headerlink" href="#sge-conversion" title="Permanent link">&para;</a></h3>
+<h3 id="sge-conversion_1"><abbr title="Spatial Digital Gene Expression">SGE</abbr> Conversion<a class="headerlink" href="#sge-conversion_1" title="Permanent link">&para;</a></h3>
 <ul>
-<li>
-<p><code>--platform</code>: Source platform to infer the input file format and default setting. </p>
-<details>
-<summary><code>platform</code> options</summary>
-<ul>
-<li><code>10x_visium_hd</code>: 10X Visium HD. Provide raw <abbr title="Spatial Digital Gene Expression">SGE</abbr> by <code>--in-mex</code>, <code>--in-parquet</code>, <code>--scale-json</code>.</li>
-<li><code>seqscope</code>: SeqScope. Provide raw <abbr title="Spatial Digital Gene Expression">SGE</abbr> by <code>--in-mex</code>.</li>
-<li><code>10x_xenium</code>: 10X Xenium. Provide raw <abbr title="Spatial Digital Gene Expression">SGE</abbr> by <code>--in-csv</code>.</li>
-<li><code>bgi_stereoseq</code>: StereoSeq. Provide raw <abbr title="Spatial Digital Gene Expression">SGE</abbr> by <code>--in-csv</code>.</li>
-<li><code>cosmx_smi</code>: CosMX SMI. Provide raw <abbr title="Spatial Digital Gene Expression">SGE</abbr> by <code>--in-csv</code>.</li>
-<li><code>vizgen_merscope</code>: Vizgen MERSCOPE. Provide raw <abbr title="Spatial Digital Gene Expression">SGE</abbr> by <code>--in-csv</code>.</li>
-<li><code>pixel_seq</code>: Pixel-seq. Provide raw <abbr title="Spatial Digital Gene Expression">SGE</abbr> by <code>--in-csv</code>.</li>
-<li><code>nova_st</code>: NovaST. Provide raw <abbr title="Spatial Digital Gene Expression">SGE</abbr> by <code>--in-csv</code>.</li>
-<li><code>generic</code>: Generic TSV input. Provide raw <abbr title="Spatial Digital Gene Expression">SGE</abbr> by <code>--in-csv</code>.</li>
+<li><code>--platform</code> (str): Source platform to infer the input file format and default setting (options: "<code>10x_visium_hd</code>", "<code>seqscope</code>", "<code>10x_xenium</code>", "<code>bgi_stereoseq</code>", "<code>cosmx_smi</code>", "<code>vizgen_merscope</code>", "<code>pixel_seq</code>", "<code>generic</code>").</li>
+<li><code>--in-mex</code> (str): Path to the input <abbr title="Spatial Digital Gene Expression">SGE</abbr> directory in <abbr title="Market Exchange">MEX</abbr> format. Required for <abbr title="Market Exchange">MEX</abbr>-formatted data (e.g., 10X Visium HD, SeqScope).</li>
+<li><code>--in-csv</code> (str): Path to the input <abbr title="Spatial Digital Gene Expression">SGE</abbr> file in CSV or TSV format. Required for CSV/TSV-formatted data (e.g., 10X Xenium, StereoSeq, CosMX SMI, MERSCOPE, Pixel-seq).</li>
+<li><code>--in-parquet</code> (str) : Path to the input parquet file with spatial coordinates, if available. Typically named <code>tissue_positions.parquet</code> (10X Visium HD).</li>
+<li><code>--scale-json</code> (str): Path to the scale JSON file to compute <code>--units-per-um</code>, if available. Typically named <code>scalefactors_json.json</code> (10X Visium HD).</li>
+<li><code>--units-per-um</code> (float): Coordinate units per micrometer (default: 1.00). Skip if <code>--scale-json</code> is provided.</li>
+<li><code>--out-dir</code> (str) : Path to the output directory.</li>
+<li><code>--include-feature-regex</code> (regex): (Optional) A regex pattern of feature/gene names to be included.</li>
+<li><code>--exclude-feature-regex</code> (regex): (Optional) A regex pattern of feature/gene names to be excluded.</li>
 </ul>
-</details>
-</li>
-<li>
-<p><code>--in-mex</code>: Path to the input <abbr title="Spatial Digital Gene Expression">SGE</abbr> directory in <abbr title="Market Exchange">MEX</abbr> format. Required for <abbr title="Market Exchange">MEX</abbr>-formatted data (e.g., 10X Visium HD, SeqScope).</p>
-</li>
-<li><code>--in-csv</code>: Path to the input <abbr title="Spatial Digital Gene Expression">SGE</abbr> file in CSV or TSV format. Required for CSV/TSV-formatted data (e.g., 10X Xenium, StereoSeq, CosMX SMI, MERSCOPE, Pixel-seq, NovaST).</li>
-<li><code>--in-parquet</code>: Path to the input parquet file with spatial coordinates, if available. Typically named <code>tissue_positions.parquet</code> (10X Visium HD).</li>
-<li><code>--scale-json</code>: Path to the scale JSON file used to compute <code>--units-per-um</code>, if available. Typically named <code>scalefactors_json.json</code> (10X Visium HD).</li>
-<li><code>--units-per-um</code>: Coordinate units per micrometer (default: 1.00). Skip if <code>--scale-json</code> is provided.</li>
-<li><code>--out-dir</code>: Path to the output directory.</li>
-</ul>
+<!-- * `--include-feature-list` and `--exclude-feature-list`: A file containing a list of input genes to be included or excluded. 
+* `--include-feature-type-regex`: A regex pattern of feature/gene type to be included.
+* `--csv-colname-feature-type`: If `--include-feature-type-regex`, column name in the input TSV/CSV that contains gene type information.
+* `--feature-type-ref`, `--feature-type-ref-delim`, `--feature-type-ref-colidx-name`, and `--feature-type-ref-colidx-type`: If `--include-feature-type-regex`, define the file path, delimiter, and column indices for gene names and types of an additional reference file to provide gene type information. -->
 <details class="note">
 <summary>Auxiliary <abbr title="Spatial Digital Gene Expression">SGE</abbr> Conversion Paramaters</summary>
 <p><strong>Auxiliary Input <abbr title="Market Exchange">MEX</abbr> Parameters</strong>:</p>
 <ul>
-<li><code>--icols-mtx</code>: Comma-separated, 1-based indices of the target genomic features among the count columns in the input matrix file. (Default: 1)</li>
-<li><code>--colnames-count</code>: Comma-separated output column names for the specified genomic features. (Default: count). The number of names specified by <code>--colnames-count</code> must match the number of indices provided in <code>--icols-mtx</code>.</li>
+<li><code>--icols-mtx</code> (int or comma-spearated list): Comma-separated, 1-based indices of the target genomic features among the count columns in the input matrix file. (Default: 1)</li>
+<li><code>--colnames-count</code> (string or comma-spearated list): Comma-separated output column names for the specified genomic features. (Default: count). The number of names specified by <code>--colnames-count</code> must match the number of indices provided in <code>--icols-mtx</code>.</li>
 </ul>
 <p><strong>Auxiliary Input CSV/TSV Parameters</strong>:</p>
 <ul>
-<li><code>--csv-comment</code>: If enabled, lines starts with <code>#</code> will be skipped (default: <code>False</code> for 10X Xenium, StereoSeq, CosMx SMI, MERSCOPE, and Pixel-seq; <code>True</code> for NovaST).</li>
-<li><code>--csv-delim</code>: Delimiter for the input file (default: <code>","</code> for 10X Xenium, CosMx SMI, and MERSCOPE; <code>"\t"</code> for StereoSeq, Pixel-seq, and NovaST).</li>
-<li><code>--csv-colname-x</code>: Column name for X coordinates (default: <code>x_location</code> for 10X Xenium; <code>x</code> for StereoSeq and NovaST; <code>x_local_px</code> for CosMx SMI; <code>global_x</code> for MERSCOPE; <code>xcoord</code> for Pixel-seq).</li>
-<li><code>--csv-colname-y</code>: Column name for Y coordinates (default: <code>y_location</code> for 10X Xenium; <code>y</code> for StereoSeq and NovaST; <code>y_local_px</code> for CosMx SMI; <code>global_y</code> for MERSCOPE; <code>ycoord</code> for Pixel-seq).</li>
-<li><code>--csv-colnames-count</code>: Comma-separated column names for expression count. If not provided, a count of 1 per transcript (default: <code>MIDCounts</code> for StereoSeq; <code>MIDCount</code> for NovaST).</li>
-<li><code>--csv-colname-feature-name</code>: Column name for gene name (default: <code>feature_name</code> for 10X Xenium; <code>geneID</code> for StereoSeq; <code>target</code> for CosMx SMI; <code>gene</code> for MERSCOPE; <code>geneName</code> for Pixel-seq; <code>geneID</code> for NovaST).
-<!-- * <code>--csv-colname-feature-id</code>: Column name for gene id. --></li>
-<li><code>--csv-colnames-others</code>: Columns names to keep.</li>
-<li><code>--csv-colname-phredscore</code>: Column name for Phred-scaled quality value estimating the probability of incorrect calls (default: <code>qv</code> for 10X Xenium).</li>
-<li><code>--min-phred-score</code>: Phred-scaled quality score cutoff (default: <code>20</code> for 10X Xenium).</li>
+<li><code>--csv-comment</code> (flag): If enabled, lines starts with <code>#</code> will be skipped (default: <code>False</code> for 10X Xenium, StereoSeq, CosMx SMI, MERSCOPE, and Pixel-seq).</li>
+<li><code>--csv-delim</code> (str): Delimiter for the input file (default: <code>","</code> for 10X Xenium, CosMx SMI, and MERSCOPE; <code>"\t"</code> for StereoSeq, Pixel-seq).</li>
+<li><code>--csv-colname-x</code> (str): Column name for X coordinates (default: <code>x_location</code> for 10X Xenium; <code>x</code> for StereoSeq; <code>x_local_px</code> for CosMx SMI; <code>global_x</code> for MERSCOPE; <code>xcoord</code> for Pixel-seq).</li>
+<li><code>--csv-colname-y</code> (str): Column name for Y coordinates (default: <code>y_location</code> for 10X Xenium; <code>y</code> for StereoSeq; <code>y_local_px</code> for CosMx SMI; <code>global_y</code> for MERSCOPE; <code>ycoord</code> for Pixel-seq).</li>
+<li><code>--csv-colnames-count</code> (str): Comma-separated column names for expression count. If not provided, a count of 1 per transcript (default: <code>MIDCounts</code> for StereoSeq).</li>
+<li><code>--csv-colname-feature-name</code> (str): Column name for gene name (default: <code>feature_name</code> for 10X Xenium; <code>geneID</code> for StereoSeq; <code>target</code> for CosMx SMI; <code>gene</code> for MERSCOPE; <code>geneName</code> for Pixel-seq).</li>
+<li><code>--csv-colnames-others</code> (str): Columns names to keep.</li>
+<li><code>--csv-colname-phredscore</code> (str): Column name for Phred-scaled quality value estimating the probability of incorrect calls (default: <code>qv</code> for 10X Xenium).</li>
+<li><code>--min-phred-score</code> (int): Phred-scaled quality score cutoff (default: <code>20</code> for 10X Xenium).</li>
 </ul>
 <p><strong>Auxiliary Output Parameters</strong>: </p>
 <ul>
-<li><code>--out-transcript</code>: File name for output compressed transcript-indexed <abbr title="Spatial Digital Gene Expression">SGE</abbr> file in TSV format (default: <code>transcripts.unsorted.tsv.gz</code>).</li>
-<li><code>--out-minmax</code>: File name for coordinate min-max values in TSV format (default: <code>coordinate_minmax.tsv</code>).</li>
-<li><code>--out-feature</code>: File name for compressed <abbr title="Unique Molecular Identifier">UMI</abbr> count per gene in TSV format (default: <code>feature.clean.tsv.gz</code>).</li>
-<li><code>--precision-um</code>: Decimal precision for transcript coordinates; set to <code>0</code> to round to integers (default: 2).</li>
-<li><code>--colname-x</code>: Column name for the X-coordinate in the output <abbr title="Spatial Digital Gene Expression">SGE</abbr> (default: X).</li>
-<li><code>--colname-y</code>: Column name for the Y-coordinate in the output <abbr title="Spatial Digital Gene Expression">SGE</abbr> (default: Y).</li>
-<li><code>--colnames-count</code>: Comma-separated column names for expression count in the output <abbr title="Spatial Digital Gene Expression">SGE</abbr> (default: count).</li>
-<li><code>--colname-feature-name</code>: Column name for the gene name in the output <abbr title="Spatial Digital Gene Expression">SGE</abbr>(default: gene).
-<!-- * <code>--colname-feature-id</code>: Column name for the gene ID in the output SGE; required only when <code>--csv-colname-feature-id</code> is defined (default: None). --></li>
+<li><code>--out-transcript</code> (str): File name for output compressed transcript-indexed <abbr title="Spatial Digital Gene Expression">SGE</abbr> file in TSV format (default: <code>transcripts.unsorted.tsv.gz</code>).</li>
+<li><code>--out-minmax</code> (str): File name for coordinate min-max values in TSV format (default: <code>coordinate_minmax.tsv</code>).</li>
+<li><code>--out-feature</code> (str): File name for compressed <abbr title="Unique Molecular Identifier">UMI</abbr> count per gene in TSV format (default: <code>feature.clean.tsv.gz</code>).</li>
+<li><code>--precision-um</code> (int): Decimal precision for transcript coordinates; set to <code>0</code> to round to integers (default: 2).</li>
+<li><code>--colname-x</code> (str): Column name for the X-coordinate in the output <abbr title="Spatial Digital Gene Expression">SGE</abbr> (default: X).</li>
+<li><code>--colname-y</code> (str): Column name for the Y-coordinate in the output <abbr title="Spatial Digital Gene Expression">SGE</abbr> (default: Y).</li>
+<li><code>--colnames-count</code> (str): Comma-separated column names for expression count in the output <abbr title="Spatial Digital Gene Expression">SGE</abbr> (default: count).</li>
+<li><code>--colname-feature-name</code> (str): Column name for the gene name in the output <abbr title="Spatial Digital Gene Expression">SGE</abbr>(default: gene).</li>
 </ul>
 <p><strong>Auxiliary Environment Parameters</strong><br />
 If the binaries are already available in your system's <code>PATH</code>, you may omit these options.</p>
@@ -1240,36 +1401,26 @@ If the binaries are already available in your system's <code>PATH</code>, you ma
 <li><code>--parquet-tools</code> (str): Required if <code>--in-parquet</code> is used; path to <code>parquet-tools</code> binary. (Default: <code>parquet-tools</code>)</li>
 </ul>
 </details>
-<h3 id="optional-gene-filtering">Optional Gene Filtering<a class="headerlink" href="#optional-gene-filtering" title="Permanent link">&para;</a></h3>
+<h3 id="optional-density-based-filtering_1">(Optional) Density-based Filtering<a class="headerlink" href="#optional-density-based-filtering_1" title="Permanent link">&para;</a></h3>
 <ul>
-<li><code>--include-feature-regex</code>: A regex pattern of feature/gene names to be included.</li>
-<li><code>--exclude-feature-regex</code>: A regex pattern of feature/gene names to be excluded.</li>
-</ul>
-<!-- * `--include-feature-list` and `--exclude-feature-list`: A file containing a list of input genes to be included or excluded. 
-* `--include-feature-type-regex`: A regex pattern of feature/gene type to be included.
-* `--csv-colname-feature-type`: If `--include-feature-type-regex`, column name in the input TSV/CSV that contains gene type information.
-* `--feature-type-ref`, `--feature-type-ref-delim`, `--feature-type-ref-colidx-name`, and `--feature-type-ref-colidx-type`: If `--include-feature-type-regex`, define the file path, delimiter, and column indices for gene names and types of an additional reference file to provide gene type information. -->
-
-<h3 id="optional-density-based-filtering">Optional Density-based Filtering<a class="headerlink" href="#optional-density-based-filtering" title="Permanent link">&para;</a></h3>
-<ul>
-<li><code>--filter-by-density</code>: Enable filtering of <abbr title="Spatial Digital Gene Expression">SGE</abbr> by density.</li>
-<li><code>--out-filtered-prefix</code>: Prefix for output filtered <abbr title="Spatial Digital Gene Expression">SGE</abbr> files (default: filtered).</li>
-<li><code>--genomic-feature</code>: Genomic feature to be used for density-based filtering. Defaults to the value of <code>--colnames-count</code> if only one column name is provided.</li>
+<li><code>--filter-by-density</code> (flag): Enable filtering of <abbr title="Spatial Digital Gene Expression">SGE</abbr> by density.</li>
+<li><code>--out-filtered-prefix</code> (str): Prefix for output filtered <abbr title="Spatial Digital Gene Expression">SGE</abbr> files (default: filtered).</li>
+<li><code>--genomic-feature</code> (str): Genomic feature to be used for density-based filtering. Defaults to the value of <code>--colnames-count</code> if only one column name is provided.</li>
 </ul>
 <details class="note">
 <summary>Auxiliary Density-based Filtering Paramaters</summary>
 <ul>
-<li><code>--mu-scale</code>: Scale factor for the polygon area calculation (default: 1.0).</li>
-<li><code>--radius</code>: Radius for the polygon area calculation (default: 15).</li>
-<li><code>--quartile</code>: Quartile for the polygon area calculation (default: 2).</li>
-<li><code>--hex-n-move</code>: Sliding step (default: 1).</li>
-<li><code>--polygon-min-size</code>: The minimum polygon size (default: 500).</li>
+<li><code>--mu-scale</code> (float): Scale factor for the polygon area calculation (default: 1.0).</li>
+<li><code>--radius</code> (int): Radius for the polygon area calculation (default: 15).</li>
+<li><code>--quartile</code> (int): Quartile for the polygon area calculation (default: 2).</li>
+<li><code>--hex-n-move</code> (int): Sliding step (default: 1).</li>
+<li><code>--polygon-min-size</code> (int): The minimum polygon size (default: 500).</li>
 </ul>
 </details>
-<h3 id="optional-sge-visualization">Optional <abbr title="Spatial Digital Gene Expression">SGE</abbr> Visualization<a class="headerlink" href="#optional-sge-visualization" title="Permanent link">&para;</a></h3>
+<h3 id="optional-sge-visualization_1">(Optional) <abbr title="Spatial Digital Gene Expression">SGE</abbr> Visualization<a class="headerlink" href="#optional-sge-visualization_1" title="Permanent link">&para;</a></h3>
 <ul>
-<li><code>sge-visual</code>: Enable <abbr title="Spatial Digital Gene Expression">SGE</abbr> visualization.</li>
-<li><code>--north-up</code>: Enable the north-up orientation for the <abbr title="Spatial Digital Gene Expression">SGE</abbr> visualization.</li>
+<li><code>sge-visual</code> (flag): Enable <abbr title="Spatial Digital Gene Expression">SGE</abbr> visualization.</li>
+<li><code>--north-up</code> (flag): Enable the north-up orientation for the <abbr title="Spatial Digital Gene Expression">SGE</abbr> visualization.</li>
 </ul>
 <details class="note">
 <summary>Auxiliary <abbr title="Spatial Digital Gene Expression">SGE</abbr> Visualization Paramaters</summary>
@@ -1284,14 +1435,55 @@ If the binaries are already available in your system's <code>PATH</code>, you ma
 </details>
 <hr />
 <h2 id="output">Output<a class="headerlink" href="#output" title="Permanent link">&para;</a></h2>
-<p>Cartloader generates the following harmonized outputs:</p>
+<p><code>cartloader</code> generates the following harmonized outputs:</p>
 <h3 id="unified-sge-matrix">Unified <abbr title="Spatial Digital Gene Expression">SGE</abbr> matrix<a class="headerlink" href="#unified-sge-matrix" title="Permanent link">&para;</a></h3>
-<p>Both <abbr title="Spatial Digital Gene Expression">SGE</abbr> conversion and density-based filtering generate a unified spatial gene expression (<abbr title="Spatial Digital Gene Expression">SGE</abbr>) matrix, consisting of:</p>
+<p>Both <abbr title="Spatial Digital Gene Expression">SGE</abbr> conversion and density-based filtering generate a unified <abbr title="Spatial Digital Gene Expression">SGE</abbr> matrix, consisting of:</p>
+<details>
+<summary><code>transcripts.unsorted.tsv.gz</code>: transcript-indexed <abbr title="Spatial Digital Gene Expression">SGE</abbr> in TSV</summary>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span></pre></div></td><td class="code"><div><pre><span></span><code>X        Y        gene     count
+295.29   1422.35  Myo3a    0
+1745.54  1110.72  Med14    1
+1745.54  1110.72  Ntpcr    1
+</code></pre></div></td></tr></table></div>
 <ul>
-<li>A compressed transcript-indexed <abbr title="Spatial Digital Gene Expression">SGE</abbr> file in TSV format.</li>
-<li>A TSV file for min and max X and Y coordinates.</li>
-<li>A TSV file collects <abbr title="Unique Molecular Identifier">UMI</abbr> counts on a per-gene basis.</li>
+<li><code>X</code>: X coordinates in um</li>
+<li><code>Y</code>: Y coordinates in um</li>
+<li><code>gene</code>: gene symbols</li>
+<li><code>count</code>: expression count per pixel per gene</li>
 </ul>
+</details>
+<details>
+<summary><code>feature.clean.tsv.gz</code>: <abbr title="Unique Molecular Identifier">UMI</abbr> counts on a per-gene basis in TSV</summary>
+<p><div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span></pre></div></td><td class="code"><div><pre><span></span><code>gene           gene_id             count
+Gm29155        ENSMUSG00000100764  1
+Pcmtd1         ENSMUSG00000051285  431
+Gm26901        ENSMUSG00000097797  1
+</code></pre></div></td></tr></table></div>
+* <code>gene</code>: gene symbols
+* <code>gene_id</code>: gene IDs
+* <code>count</code>: expression count per gene</p>
+</details>
+<details>
+<summary><code>coordinate_minmax.tsv</code>: X Y min/max includemd_vigenettes_sgeformat.mdcoordinates</summary>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span></pre></div></td><td class="code"><div><pre><span></span><code>xmin    0.14
+xmax    2359.90
+ymin    0.23
+ymax    1439.95
+</code></pre></div></td></tr></table></div>
+<ul>
+<li><code>xmin</code> <code>xmax</code>: min and max X coordinates in um</li>
+<li><code>ymin</code> <code>ymax</code>: min and max Y coordinates in um</li>
+</ul>
+</details>
 <h3 id="sge-images"><abbr title="Spatial Digital Gene Expression">SGE</abbr> Images<a class="headerlink" href="#sge-images" title="Permanent link">&para;</a></h3>
 <ul>
 <li>When <code>--sge-visual</code> is enabled, a monochrome PNG image is generated to visualize the <abbr title="Spatial Digital Gene Expression">SGE</abbr> data.</li>

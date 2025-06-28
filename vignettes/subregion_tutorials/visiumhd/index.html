@@ -270,7 +270,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../../quickstart/" class="md-tabs__link">
+      <a href="../../quickstart/quickstart/" class="md-tabs__link">
         
   
     
@@ -458,7 +458,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../quickstart/" class="md-nav__link">
+      <a href="../../quickstart/quickstart/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -887,6 +887,8 @@
       
         
       
+        
+      
     
     
       
@@ -979,6 +981,28 @@
   
   <span class="md-ellipsis">
     cartloader Compilation
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/upload_repository/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Data Repository Upload
     
   </span>
   
@@ -1302,7 +1326,7 @@ conda<span class="w"> </span>activate<span class="w"> </span>BIOENV_NAME<span cl
 <td><code>--platform</code></td>
 <td>required</td>
 <td>string</td>
-<td>Platform (options: "10x_visium_hd", "seqscope", "10x_xenium", "bgi_stereoseq", "cosmx_smi", "vizgen_merscope", "pixel_seq", "nova_st", "generic")</td>
+<td>Platform (options: "<code>10x_visium_hd</code>", "<code>seqscope</code>", "<code>10x_xenium</code>", "<code>bgi_stereoseq</code>", "<code>cosmx_smi</code>", "<code>vizgen_merscope</code>", "<code>pixel_seq</code>", "<code>generic</code>")</td>
 </tr>
 <tr>
 <td><code>--in-mex</code></td>
@@ -1362,8 +1386,8 @@ conda<span class="w"> </span>activate<span class="w"> </span>BIOENV_NAME<span cl
 </table>
 <p><sub><sup>1</sup>: To define the scaling factor, <code>cartloader</code> requires either a JSON file (via <code>--scale-json</code>) or a direct scale value using <code>--units-per-um</code>. When using <code>--scale-json</code>, make sure the JSON file has <code>microns_per_pixel</code> information.</sub></p>
 <h2 id="ficture-analysis"><code>FICTURE</code> analysis<a class="headerlink" href="#ficture-analysis" title="Permanent link">&para;</a></h2>
-<!-- !! Visium HD uses --decode-scale 2. So cannot use the md directly -->
-
+<!-- !! Visium HD uses --decode-scale this should be updated. -->
+<!-- 
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -1379,7 +1403,46 @@ conda<span class="w"> </span>activate<span class="w"> </span>BIOENV_NAME<span cl
 <span class="normal">13</span>
 <span class="normal">14</span>
 <span class="normal">15</span>
-<span class="normal">16</span></pre></div></td><td class="code"><div><pre><span></span><code>cartloader<span class="w"> </span>run_ficture2<span class="w"> </span><span class="se">\</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span>
+<span class="normal">22</span>
+<span class="normal">23</span>
+<span class="normal">24</span>
+<span class="normal">25</span>
+<span class="normal">26</span>
+<span class="normal">27</span>
+<span class="normal">28</span>
+<span class="normal">29</span>
+<span class="normal">30</span>
+<span class="normal">31</span>
+<span class="normal">32</span>
+<span class="normal">33</span>
+<span class="normal">34</span>
+<span class="normal">35</span>
+<span class="normal">36</span>
+<span class="normal">37</span>
+<span class="normal">38</span>
+<span class="normal">39</span>
+<span class="normal">40</span>
+<span class="normal">41</span>
+<span class="normal">42</span>
+<span class="normal">43</span>
+<span class="normal">44</span>
+<span class="normal">45</span>
+<span class="normal">46</span>
+<span class="normal">47</span>
+<span class="normal">48</span>
+<span class="normal">49</span>
+<span class="normal">50</span>
+<span class="normal">51</span>
+<span class="normal">52</span>
+<span class="normal">53</span>
+<span class="normal">54</span>
+<span class="normal">55</span></pre></div></td><td class="code"><div><pre><span></span><code>cartloader<span class="w"> </span>run_ficture2<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--makefn<span class="w"> </span>run_ficture2.mk<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--main<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--in-transcript<span class="w"> </span>./sge/transcripts.unsorted.tsv.gz<span class="w"> </span><span class="se">\</span>
@@ -1395,7 +1458,48 @@ conda<span class="w"> </span>activate<span class="w"> </span>BIOENV_NAME<span cl
 <span class="w">  </span>--ficture2<span class="w"> </span><span class="si">${</span><span class="nv">punkst</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--n-jobs<span class="w"> </span><span class="m">10</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--threads<span class="w"> </span><span class="m">10</span>
+<span class="sb">```</span><span class="w"> </span>--&gt;
+
+Compute<span class="w"> </span>spatial<span class="w"> </span>factors<span class="w"> </span>using<span class="w"> </span><span class="sb">`</span>punkst<span class="sb">`</span><span class="w"> </span><span class="o">(</span>FICTURE2<span class="w"> </span>mode<span class="o">)</span>.<span class="w"> </span>See<span class="w"> </span>more<span class="w"> </span>details<span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="o">[</span>Reference<span class="w"> </span>page<span class="o">](</span>../../reference/run_ficture2.md<span class="o">)</span>.
+
+&lt;!--<span class="w"> </span><span class="sb">```</span>bash
+cartloader<span class="w"> </span>run_ficture2<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--makefn<span class="w"> </span>run_ficture2.mk<span class="w"> </span><span class="se">\ </span><span class="w">                         </span><span class="c1"># (optional) file name of the output make file</span>
+<span class="w">    </span>--main<span class="w"> </span><span class="se">\ </span><span class="w">                                           </span><span class="c1"># run all five steps in `run_ficture2`</span>
+<span class="w">    </span>--in-transcript<span class="w"> </span>./sge/transcripts.unsorted.tsv.gz<span class="w"> </span><span class="se">\ </span><span class="c1"># path to input transcript-level SGE file</span>
+<span class="w">    </span>--in-feature<span class="w"> </span>./sge/feature.clean.tsv.gz<span class="w"> </span><span class="se">\ </span><span class="w">          </span><span class="c1"># (optional) path to input feature file</span>
+<span class="w">    </span>--in-minmax<span class="w"> </span>./sge/coordinate_minmax.tsv<span class="w"> </span><span class="se">\ </span><span class="w">          </span><span class="c1"># (optional) path to input minmax file</span>
+<span class="w">    </span>--cmap-file<span class="w"> </span><span class="si">${</span><span class="nv">cmap</span><span class="si">}</span><span class="w"> </span><span class="se">\ </span><span class="w">                              </span><span class="c1"># (optional) path to input color map file</span>
+<span class="w">    </span>--exclude-feature-regex<span class="w"> </span><span class="s1">&#39;^(mt-.*$|Gm\d+$)&#39;</span><span class="w"> </span><span class="se">\ </span><span class="w">       </span><span class="c1"># regex pattern to exclude features (removing mitochondrial and predicted genes in the example analysis)</span>
+<span class="w">    </span>--out-dir<span class="w"> </span>./ficture2<span class="w"> </span><span class="se">\ </span><span class="w">                             </span><span class="c1"># path to output directory</span>
+<span class="w">    </span>--width<span class="w"> </span><span class="si">${</span><span class="nv">train_width</span><span class="si">}</span><span class="w"> </span><span class="se">\ </span><span class="w">                           </span><span class="c1"># LDA training hexagon width (comma-separated if multiple widths are applied)</span>
+<span class="w">    </span>--n-factor<span class="w"> </span><span class="si">${</span><span class="nv">n_factor</span><span class="si">}</span><span class="w"> </span><span class="se">\ </span><span class="w">                           </span><span class="c1"># number of factors in LDA training (comma-separated if multiple n-factor are applied)</span>
+<span class="w">    </span>--spatula<span class="w"> </span><span class="si">${</span><span class="nv">spatula</span><span class="si">}</span><span class="w"> </span><span class="se">\ </span><span class="w">                             </span><span class="c1"># (optional) path to the spatula binary</span>
+<span class="w">    </span>--ficture2<span class="w"> </span><span class="si">${</span><span class="nv">punkst</span><span class="si">}</span><span class="w"> </span><span class="se">\ </span><span class="w">                             </span><span class="c1"># (optional) path to the punkst directory</span>
+<span class="w">    </span>--n-jobs<span class="w"> </span><span class="m">10</span><span class="w">  </span><span class="se">\ </span><span class="w">                                     </span><span class="c1"># (optional) number of parallel jobs </span>
+<span class="w">    </span>--threads<span class="w"> </span><span class="m">10</span><span class="w">                                        </span><span class="c1"># (optional) number of threads per job</span>
+<span class="sb">```</span><span class="w"> </span>--&gt;
+
+
+<span class="sb">```</span>bash
+cartloader<span class="w"> </span>run_ficture2<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--makefn<span class="w"> </span>run_ficture2.mk<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--main<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--in-transcript<span class="w"> </span>./sge/transcripts.unsorted.tsv.gz<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--in-feature<span class="w"> </span>./sge/feature.clean.tsv.gz<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--in-minmax<span class="w"> </span>./sge/coordinate_minmax.tsv<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--cmap-file<span class="w"> </span><span class="si">${</span><span class="nv">cmap</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--exclude-feature-regex<span class="w"> </span><span class="s1">&#39;^(mt-.*$|Gm\d+$)&#39;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--out-dir<span class="w"> </span>./ficture2<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--width<span class="w"> </span><span class="si">${</span><span class="nv">train_width</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--n-factor<span class="w"> </span><span class="si">${</span><span class="nv">n_factor</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--spatula<span class="w"> </span><span class="si">${</span><span class="nv">spatula</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--ficture2<span class="w"> </span><span class="si">${</span><span class="nv">punkst</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--n-jobs<span class="w"> </span><span class="m">10</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--threads<span class="w"> </span><span class="m">10</span>
 </code></pre></div></td></tr></table></div>
+
+<!--parameter-start-->
 <table>
 <thead>
 <tr>
@@ -1410,7 +1514,7 @@ conda<span class="w"> </span>activate<span class="w"> </span>BIOENV_NAME<span cl
 <td><code>--main</code></td>
 <td>required <sup>1</sup></td>
 <td>flag</td>
-<td>Enable <code>cartloader</code> to run <a href="../../../../reference/run_ficture2.md#actions">all five steps</a></td>
+<td>Enable <code>cartloader</code> to run <a href="../../../reference/run_ficture2/#actions">all five steps</a></td>
 </tr>
 <tr>
 <td><code>--in-transcript</code></td>
@@ -1493,6 +1597,8 @@ conda<span class="w"> </span>activate<span class="w"> </span>BIOENV_NAME<span cl
 </tbody>
 </table>
 <p><sub><sup>1</sup>: <code>cartloader</code> requires the user to specify <strong>at least one action</strong>. Available actions includes: <code>--tile</code> to run tiling step; <code>--segment</code> to run segmentation step; <code>--init-lda</code> to run <abbr title="Latent Dirichlet Allocation">LDA</abbr> training step; <code>--decode</code> to run decoding step; <code>--summary</code> to run summarization step; <code>--main</code> to run all above five actions.</sub></p>
+<!--parameter-end-->
+
 <h2 id="cartloader-compilation"><code>cartloader</code> Compilation<a class="headerlink" href="#cartloader-compilation" title="Permanent link">&para;</a></h2>
 <p>Generate pmtiles and web-compatible tile directories. See more details in <a href="../../../reference/run_cartload2/">Reference page</a>.</p>
 <!-- ```bash
@@ -1595,13 +1701,13 @@ cartloader run_cartload2 \
 </tbody>
 </table>
 <h2 id="upload-to-data-repository">Upload to Data Repository<a class="headerlink" href="#upload-to-data-repository" title="Permanent link">&para;</a></h2>
-<h3 id="upload-to-aws">Upload to AWS<a class="headerlink" href="#upload-to-aws" title="Permanent link">&para;</a></h3>
+<h3 id="aws-uploads">AWS Uploads<a class="headerlink" href="#aws-uploads" title="Permanent link">&para;</a></h3>
 <p>Copy the generated cartloader outputs to your designated AWS S3 catalog path:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
 <span class="normal">3</span>
 <span class="normal">4</span>
-<span class="normal">5</span></pre></div></td><td class="code"><div><pre><span></span><code>cartloader<span class="w"> </span>upload_aws_by_catalog<span class="w"> </span><span class="se">\</span>
+<span class="normal">5</span></pre></div></td><td class="code"><div><pre><span></span><code>cartloader<span class="w"> </span>upload_aws<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--in-dir<span class="w"> </span>./cartload2<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--s3-dir<span class="w"> </span><span class="s2">&quot;s3://</span><span class="si">${</span><span class="nv">AWS_BUCKET</span><span class="si">}</span><span class="s2">/</span><span class="si">${</span><span class="nv">DATA_ID</span><span class="si">}</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--aws<span class="w"> </span><span class="si">${</span><span class="nv">aws</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>

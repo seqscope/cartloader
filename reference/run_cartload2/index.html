@@ -14,6 +14,8 @@
         <link rel="prev" href="../run_ficture2/">
       
       
+        <link rel="next" href="../upload_repository/">
+      
       
       <link rel="icon" href="../../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.2">
@@ -268,7 +270,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../../vignettes/quickstart/" class="md-tabs__link">
+      <a href="../../vignettes/quickstart/quickstart/" class="md-tabs__link">
         
   
     
@@ -456,7 +458,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../vignettes/quickstart/" class="md-nav__link">
+      <a href="../../vignettes/quickstart/quickstart/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -786,6 +788,8 @@
       
         
       
+        
+      
     
     
       
@@ -984,6 +988,28 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upload_repository/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Data Repository Upload
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1095,8 +1121,11 @@
 <p>Following spatial factor inference via FICTURE analysis, <code>cartloader</code> offers the <code>run_cartload2</code> module package <abbr title="Spatial Digital Gene Expression">SGE</abbr> data and spatial factor output from <a href="../run_ficture2/">FICTURE analysis</a> into standardized, spatially indexed, and storage-efficient <a href="https://github.com/protomaps/PMTiles">PMTiles</a>, a web-native tiling format. These PMTiles outputs are optimized for downstream analysis, interactive web visualization (e.g., in CartoScope), and data sharing across platforms.</p>
 <h2 id="requirements">Requirements<a class="headerlink" href="#requirements" title="Permanent link">&para;</a></h2>
 <ul>
-<li>A completed FICTURE run (pixel-level decoding outputs) (from <code>run_ficture2</code>)</li>
-<li>A metadata file describing the input-output structure (<code>ficture.params.json</code>)</li>
+<li>A completed FICTURE run from <a href="../run_ficture2/"><code>run_ficture2</code></a>, including<ul>
+<li>pixel-level decoding outputs </li>
+<li>a metadata file describing the input-output structure (<code>ficture.params.json</code>)</li>
+</ul>
+</li>
 <li>Pre-installed CLI tools: <code>tippecanoe</code>, <code>gdal_translate</code>, <code>gdaladdo</code>, <code>pmtiles</code>, <code>spatula</code>, <code>gzip</code></li>
 </ul>
 <h2 id="example-usage">Example Usage<a class="headerlink" href="#example-usage" title="Permanent link">&para;</a></h2>
@@ -1123,7 +1152,7 @@
 <span class="w">    </span>--tippecanoe<span class="w"> </span>/path/to/tippecanoe/binary
 </code></pre></div></td></tr></table></div>
 <h2 id="actions">Actions<a class="headerlink" href="#actions" title="Permanent link">&para;</a></h2>
-<p>Specifically, it will perform all the following steps:</p>
+<p>Specifically, <code>run_cartload2</code> performs all of the following steps:</p>
 <ul>
 <li>Converts transcript-level <abbr title="Spatial Digital Gene Expression">SGE</abbr> to raster-format PMTiles.</li>
 <li>Converts topic proportions (.results.tsv.gz) into vector PMTiles for spatial factors.</li>
@@ -1133,7 +1162,7 @@
 <li>Generates a JSON file listing all FICTURE assets and a YAML catalog describing the final visualization layers.</li>
 </ul>
 <h2 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">&para;</a></h2>
-<p>The following outlines the <strong>minimum required parameters</strong> for running spatial asset packaging. </p>
+<p>The following outlines the <strong>minimum required parameters</strong>. </p>
 <p>For auxiliary parameters, we recommend using the default values unless you possess a thorough understanding of <code>run_cartload2</code>. For further details, refer to the collapsible sections below or run:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code>cartloader<span class="w"> </span>run_cartload2<span class="w"> </span>--help
 </code></pre></div></td></tr></table></div>

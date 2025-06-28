@@ -114,3 +114,13 @@ figure {
 .md-typeset table th {
   padding: 6px 10px;
 }
+
+/* .md-typeset table td code {
+  white-space: nowrap;
+} */
+
+/* Prevent wrapping ONLY for inline code inside table cells */
+.md-typeset table td > code,
+.md-typeset table th > code {
+  white-space: nowrap;
+}
