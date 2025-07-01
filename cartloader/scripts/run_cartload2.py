@@ -61,6 +61,7 @@ def parse_arguments(_args):
     aux_params.add_argument('--keep-intermediate-files', action='store_true', default=False, help='Keep intermediate output files')
     aux_params.add_argument('--skip-raster', action='store_true', default=False, help='Skip processing raster files, removing dependency to gdal, go-pmtiles')
     aux_params.add_argument('--tmp-dir', type=str, help='Temporary directory to be used (default: {out-dir}/tmp')
+    aux_params.add_argument('--bin-count', type=int, default=50, help='Number of bins for splitting the input molecules')
     if len(_args) == 0:
         parser.print_help()
         sys.exit(1)
@@ -346,6 +347,7 @@ def run_cartload2(_args):
         "--max-tile-bytes", str(args.max_tile_bytes),
         "--max-feature-counts", str(args.max_feature_counts),
         "--preserve-point-density-thres", str(args.preserve_point_density_thres),
+        "--bin-count", str(args.bin_count),
         "--all",
         "--n-jobs", str(args.n_jobs),
         f"--log --log-suffix '{args.log_suffix}'" if args.log else "",
