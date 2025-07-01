@@ -18,7 +18,7 @@ def get_existing_files(bucket_url, ACCESS_TOKEN):
         return []
     else:
         print(f"Error fetching existing files: {r.status_code} - {r.text}")
-        exit(1)
+        sys.exit(1)
         return []
 
 def upload_file_to_bucket(filepath, bucket_url, ACCESS_TOKEN):
@@ -31,24 +31,6 @@ def upload_file_to_bucket(filepath, bucket_url, ACCESS_TOKEN):
         )
     return r
 
-# use collect_files_from_yaml from upload aws
-# # define a function to check if a variable is a list or a dict
-# def collect_files_from_yaml(yaml_dat):
-#     file_set = set()
-#     def recurse_items(items):
-#         if isinstance(items, dict):
-#             for key, value in items.items():
-#                 recurse_items(value)
-#         elif isinstance(items, list):
-#             for item in items:
-#                 recurse_items(item)
-#         elif isinstance(items, str):
-#             file_set.add(items)
-#     recurse_items(yaml_dat)
-#     # sort the file list
-#     file_list=sorted(list(file_set))
-#     return file_list
-
 def upload_zenodo(_args):
     parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", description="Upload results files to Zenodo for cartoscope.")
     parser.add_argument('--zenodo-id', type=str, required=True, help='The Zenodo deposition ID.')
@@ -56,18 +38,26 @@ def upload_zenodo(_args):
     parser.add_argument('--in-dir', type=str, required=True, help='The input directory where the files are located.')
     parser.add_argument('--upload-method', type=str, default="user_list", choices=["all", "catalog", "user_list"], help='Specify which files to upload to Zenodo. Choose "all" to upload all files in the input directory, "catalog" to upload files listed in the catalog YAML file, or "user_list" to upload files specified by the user.')
     parser.add_argument('--in-list', type=str, nargs='+', default=[], help='If --upload-method is "user_list", provide the name of files to be uploaded to Zenodo.')
-    parser.add_argument('--catalog-yaml', type=str, default=None, help='If --upload-method is "catalog_yaml", provide the catalog YAML file that lists the files to be uploaded to Zenodo.')
+    parser.add_argument('--catalog-yaml', type=str, default=None, help='If --upload-method is "catalog", provide the catalog YAML file that lists the files to be uploaded to Zenodo.')
     parser.add_argument('--overwrite', action='store_true', default=False, help='If set, overwrite existing files in the Zenodo bucket. If not set, skip existing files.')
-    parser.add_argument('--dry-run', action='store_true', default=False, help='If set, overwrite existing files in the Zenodo bucket. If not set, skip existing files.')
+    parser.add_argument('--dry-run', action='store_true', default=False, help='If set, simulate the upload without actually uploading files.')
     args = parser.parse_args(_args)
 
+    # ==========
     # 1. Obtain info from zenodo deposition
+    # ==========
     print(f"="*10)
     print(f" 1. Accessing Zenodo ")
     print(f"="*10)
+
+    # get token file
     print(f" * Zenodo Token File: {args.zenodo_token}")
     ACCESS_TOKEN = open(args.zenodo_token).read().strip()
+    if not ACCESS_TOKEN:
+        print("ERROR: Zenodo access token file is empty.")
+        sys.exit(1)
 
+    # check deposition
     print(f" * Accessing the deposition ID: {args.zenodo_id}")
     r = requests.get(f'https://zenodo.org/api/deposit/depositions/{args.zenodo_id}',
                     params={'access_token': ACCESS_TOKEN})
@@ -75,8 +65,10 @@ def upload_zenodo(_args):
     if r.status_code != 200:
         print(f"Error fetching deposition: {r.status_code} - {r.text}")
         sys.exit(1)
-
+    
+    # extract bucket url
     bucket_url = r.json()["links"]["bucket"]
+
 
     # check if any file exists in the bucket
     print(f" * Checking files in the bucket_URL {bucket_url}")
@@ -84,51 +76,92 @@ def upload_zenodo(_args):
     n_exfiles=len(existing_files)
     print(f"    - Found {n_exfiles} existing files")
 
-    # define input by the upload_method
-    print(f"="*10)
-    print(f" 2. Accessing input ")
-    print(f"="*10)
+    # ==========
+    # 2. Define input by the upload_method
+    # ==========
+    print("="*10)
+    print(" 2. Accessing Input Files")
+    print("="*10)
     if args.upload_method == "all":
-        in_files_raw = glob.glob(f"{args.in_dir}/*")
+        in_files_raw = glob.glob(os.path.join(args.in_dir, "*"))
     elif args.upload_method == "catalog":
-        if args.catalog_yaml is None:
-            catalog_f= os.path.join(args.in_dir, "catalog.yaml")
-        else:
-            catalog_f = args.catalog_yaml
-        assert os.path.exists(catalog_f), "Provide an invalid catalog yaml file when using --upload-method catalog"
-        # with open(args.catalog_yaml, 'r') as file:
-        #     yaml_dat = yaml.safe_load(file)
-        # fn_list = collect_files_from_yaml(yaml_dat["assets"])
+        catalog_f = args.catalog_yaml or os.path.join(args.in_dir, "catalog.yaml")
+        assert os.path.exists(catalog_f), f" * Missing catalog file: {catalog_f}"
         cartload_files, basemap_files = collect_files_from_yaml(catalog_f)
-        fn_list=list(cartload_files)+basemap_files
+        fn_list = list(cartload_files) + basemap_files
         in_files_raw = [os.path.join(args.in_dir, fn) for fn in fn_list]
     elif args.upload_method == "user_list":
         in_files_raw = [os.path.join(args.in_dir, fn) for fn in args.in_list]
-    
-    if len(in_files_raw) == 0:
-        print("Error: No file to be uploaded.")
+    else:
+        raise ValueError(f"Unsupported upload method: {args.upload_method}")
+
+    # raw list of input files
+    if not in_files_raw:
+        print(f" * No input files found using method: {args.upload_method}")
+        sys.exit(1)
+    print(f" * Initially, located {len(in_files_raw)} input file(s) for upload.")
+
+    in_files_invalid = [f for f in in_files_raw if not os.path.exists(f)]
+    if in_files_invalid:
+        print(" * Error: The following input file(s) do not exist:")
+        for f in in_files_invalid:
+            print(f"    - {f}")
         sys.exit(1)
 
-    if len(existing_files)>0:
-        in_files_existing = [f for f in in_files_raw if os.path.basename(f) in existing_files]
-        if len(in_files_existing) > 0:
-            print(f" * Found {len(in_files_existing)} files that already exist in the Zenodo bucket:")
-            for in_file in in_files_existing:
-                print(f"    - {in_file}")
-            if args.overwrite:
-                print(" * Will overwrite existing files in the Zenodo bucket.")
-                in_files = in_files_raw
-            else:
-                print(" * Will skip existing files in the Zenodo bucket.")
-                in_files = [f for f in in_files_raw if f not in in_files_existing]
-        else:
-            print(f" * No input file exists in the Zenodo bucket.")
-            in_files = in_files_raw
+    # ==========
+    # 3. Compare input with existing Zenodo files
+    # ==========
+    print("\n" + "="*10)
+    print(" 3. Zenodo File Comparison")
+    print("="*10)
+
+    input_fnames = {os.path.basename(f): f for f in in_files_raw}
+    existing_fnames = set(existing_files)
+
+    input_overlap = [input_fnames[f] for f in input_fnames if f in existing_fnames]
+    input_new = [input_fnames[f] for f in input_fnames if f not in existing_fnames]
+    existing_only = [f for f in existing_files if f not in input_fnames]
+
+    in_files = in_files_raw if args.overwrite else input_new
+
+    if input_new:
+        print(f"\n * New input file(s) (not in deposition): {len(input_new)}")
+        for f in input_new:
+            print(f"    - {f}")
     else:
-        in_files = in_files_raw
-    
+        print("\n * No new input files.")
+
+    if input_overlap:
+        if args.overwrite:
+            print(f"\n * Overlapping input file(s) (already in deposition): {len(input_overlap)} (will be overwritten)")
+        else:
+            print(f"\n * Overlapping input file(s) (already in deposition): {len(input_overlap)} (will be skipped)")
+        print(f"    - {f}")
+    else:
+        print("\n * No overlapping input files.")
+
+    if existing_only:
+        print(f"\n * Existing file(s) in Zenodo not listed in input: {len(existing_only)}")
+        for f in existing_only:
+            print(f"    - {f}")
+    else:
+        print("\n * No additional existing files in the deposition.")
+
+    files_after_upload = existing_fnames.union({os.path.basename(f) for f in in_files})
+    n_expected = len(files_after_upload)
     n_infiles=len(in_files)
-    print(f" * Found {n_infiles} to be uploaded...")
+
+    print(f"\n * {n_infiles} file(s) will be uploaded.")
+    print(f" * Expected total files in Zenodo bucket after upload: {n_expected}")
+
+    if n_infiles == 0:
+        print("\nWARNING: No files to be uploaded. Aborting upload.")
+        return
+
+    if n_expected > 100:
+        print("\nWARNING: Total number of expected files exceeds 100 (Doesn't support by Zenodo). Aborting upload.")
+        sys.exit(1)
+
     # upload the files
     if args.dry_run:
         print(f"Showing the files to be uploaded to Zenodo")
