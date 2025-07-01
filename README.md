@@ -1,6 +1,6 @@
 # cartloader
 
-## Overview 
+## Overview
 
 Cartloader is a scalable, harmonized, and cloud-friendly pipeline for spatial omics data.
 
@@ -9,7 +9,7 @@ Spatial transcriptomics (ST) technologies have revolutionized our ability to map
 **Cartloader** is a harmonized, scalable pipeline for high-resolution spatial omics data processing and analysis with retaining the original resolution.
 
 ## Installation
-A step-by-step instruction is provided in [INSTALLATION.md](./docs/INSTALLATION.md).
+A step-by-step instruction is provided in [INSTALLATION.md](./docs/installation.md).
 
 ## Detailed Documentation
 

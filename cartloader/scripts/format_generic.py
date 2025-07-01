@@ -46,7 +46,7 @@ def format_generic(_args):
                                            1) Use --csv-colname-feature-id and --colname-feature-id to add a gene ID column to the output transcript-indexed SGE tsv file.
                                            2) Use --add-molecule-id to add a molecule ID to the output transcript-indexed SGE tsv file.
                                            3) Use --csv-colname-phredscore with --min-phred-score to filter out low-quality reads. 
-                                           4) Use --*-feature-list or --*-feature-substr or --*-feature-regex to filter out features by feature name.
+                                           4) Use --*-feature-list or --*-feature-regex to filter out features by feature name.
                                            5) Use --include-feature-type-regex with --csv-colname-feature-type or --feature-type-ref to filter out features by gene type.
                                            """)
     aux_params.add_argument('--csv-colname-feature-id', type=str, default=None, help='Specify the input column name for gene ID if available (default: None)')
@@ -137,16 +137,14 @@ def format_generic(_args):
     # 3) feature preprocessing, read all features from the input and apply all ftr-related filters. 
     #   This returns a df with columns [feature, filtering]
     #   For a keep feature, the filtering column is na
-    if any([args.include_feature_list, args.exclude_feature_list, args.include_feature_substr, args.exclude_feature_substr, args.include_feature_regex, args.exclude_feature_regex, args.include_feature_type_regex]):
+    if any([args.include_feature_list, args.exclude_feature_list,  args.include_feature_regex, args.exclude_feature_regex, args.include_feature_type_regex]):
         # ftrinfo_id = hashlib.md5(";".join([
         #     str(i) if i is not None else ""  
-        #     for i in [args.include_feature_list, args.exclude_feature_list, args.include_feature_substr, args.exclude_feature_substr, args.include_feature_regex, args.exclude_feature_regex, args.include_feature_type_regex, args.csv_colname_feature_type, args.feature_type_ref]]).encode()).hexdigest()[:10]
+        #     for i in [args.include_feature_list, args.exclude_feature_list, args.include_feature_regex, args.exclude_feature_regex, args.include_feature_type_regex, args.csv_colname_feature_type, args.feature_type_ref]]).encode()).hexdigest()[:10]
         df_ftrinfo = pd.read_csv(args.input, usecols=[args.csv_colname_feature_name], sep=args.csv_delim, index_col=None, header=0, comment=csv_comment)
         feature_filter_args = {
             "include_feature_list": args.include_feature_list,
             "exclude_feature_list": args.exclude_feature_list,
-            "include_feature_substr": args.include_feature_substr,
-            "exclude_feature_substr": args.exclude_feature_substr,
             "include_feature_regex": args.include_feature_regex,
             "exclude_feature_regex": args.exclude_feature_regex,
             "include_feature_type_regex": args.include_feature_type_regex,

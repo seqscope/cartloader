@@ -12,16 +12,15 @@ def parse_arguments(_args):
     run_params.add_argument('--restart', action='store_true', default=False, help='Restart the run. Ignore all intermediate files and start from the beginning')
     run_params.add_argument('--threads', type=int, default=8, help='Maximum number of threads to use in each process')
     run_params.add_argument('--n-jobs', type=int, default=2, help='Number of jobs (processes) to run in parallel')
-    run_params.add_argument('--makefn', type=str, default="run_ficture.mk", help='The name of the Makefile to generate (default: run_ficture.mk)')
+    run_params.add_argument('--makefn', type=str, default="run_ficture2.mk", help='The name of the Makefile to generate (default: run_ficture2.mk)')
 
     cmd_params = parser.add_argument_group("Commands", "FICTURE commands to run together")
-    cmd_params.add_argument('--main', action='store_true', default=False, help='Run the main functions (sorttsv, minibatch, segment, lda, decode, summary)')
+    cmd_params.add_argument('--main', action='store_true', default=False, help='Run the main functions (tile, segment, init-lda, decode, summary)')
     cmd_params.add_argument('--tile', action='store_true', default=False, help='(Main function) Perform tiling step')
     cmd_params.add_argument('--segment', action='store_true', default=False, help='(Main function) Perform hexagon segmentation into FICTURE-compatible format')
     cmd_params.add_argument('--init-lda', action='store_true', default=False, help='(Main function) Initialize model with LDA model training')
     cmd_params.add_argument('--decode', action='store_true', default=False, help='(Main function) Perform pixel-level decoding')
     cmd_params.add_argument('--summary', action='store_true', default=False, help='(Main function) Generate a JSON file summarizing all fixture parameters for which outputs are available in the <out-dir>.')
-    cmd_params.add_argument('--skip-coarse-report', action='store_true', default=False, help='(Optional) Skip visualization and report generation for init-lda step')
 
     inout_params = parser.add_argument_group("Input/Output Parameters", "Input and output parameters for FICTURE")
     inout_params.add_argument('--out-dir', required= True, type=str, help='Output directory')
@@ -36,6 +35,7 @@ def parse_arguments(_args):
     key_params.add_argument('--n-factor', type=str, default=None, help='Comma-separated list of factor counts for LDA training.')
     key_params.add_argument('--anchor-res', type=int, default=6, help='Anchor resolution for decoding (default: 6)')
     key_params.add_argument('--radius-buffer', type=int, default=1, help='Buffer to radius(=anchor_res + radius_buffer) for pixel-level decoding (default: 1)')
+    key_params.add_argument('--decode-scale', type=int, default=1, help='scales input coordinates to pixels in the output image (default: 1)')
 
     # env params
     env_params = parser.add_argument_group("ENV Parameters", "Environment parameters, e.g., tools.")
@@ -43,7 +43,7 @@ def parse_arguments(_args):
     env_params.add_argument('--sort', type=str, default="sort", help='Path to sort binary. For faster processing, you may add arguments like "sort -T /path/to/new/tmpdir --parallel=20 -S 10G"')
     env_params.add_argument('--sort-mem', type=str, default="1G", help='Memory size for each process')
     env_params.add_argument('--spatula', type=str, default=f"spatula",  help='Path to spatula binary') # default=f"{repo_dir}/submodules/spatula/bin/spatula",
-    env_params.add_argument('--ficture2', type=str, required=True,  help='Path to punkst(ficture2) repository')
+    env_params.add_argument('--ficture2', type=str, default=os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "submodules", "punkst"),  help='Path to punkst(ficture2) repositor (default: <cartloader_dir>/submodules/punkst)')
     env_params.add_argument('--python', type=str, default="python3",  help='Python3 binary')
 
     # AUX gene-filtering params
@@ -56,8 +56,6 @@ def parse_arguments(_args):
     # aux_ftrfilter_params.add_argument('--out-feature-ficture', type=str, default="features.ficture.tsv.gz", help='File name for the output TSV file of feature used in FICTURE analysis (default: None)')
     # aux_ftrfilter_params.add_argument('--include-feature-list', type=str, default=None, help='A file containing a list of input genes to be included (feature name of IDs) (default: None)')
     # aux_ftrfilter_params.add_argument('--exclude-feature-list', type=str, default=None, help='A file containing a list of input genes to be excluded (feature name of IDs) (default: None)')
-    # aux_ftrfilter_params.add_argument('--include-feature-substr', type=str, default=None, help='A substring of feature/gene names to be included (default: None)')
-    # aux_ftrfilter_params.add_argument('--exclude-feature-substr', type=str, default=None, help='A substring of feature/gene names to be excluded (default: None)')
     aux_ftrfilter_params.add_argument('--include-feature-regex', type=str, default=None, help='A regex pattern of feature/gene names to be included (default: None)')
     aux_ftrfilter_params.add_argument('--exclude-feature-regex', type=str, default=None, help='A regex pattern of feature/gene names to be excluded (default: None)')
     # type regex
@@ -83,6 +81,7 @@ def parse_arguments(_args):
     aux_params.add_argument('--minibatch-size', type=int, default=500, help='Batch size used in minibatch processing (default: 500)')
     #aux_params.add_argument('--minibatch-buffer', type=int, default=30, help='Batch buffer used in minibatch processing (default: 30)')
     # train
+    aux_params.add_argument('--min-ct-per-unit-train', type=int, default=50, help='Minimum count for training (default: 50)')
     aux_params.add_argument('--train-epoch', type=int, default=2, help='Training epoch for LDA model (default: 2)')
     #aux_params.add_argument('--train-epoch-id-len', type=int, default=2, help='Training epoch ID length (default: 2)')
     #aux_params.add_argument('--lda-rand-init', type=int, default=10, help='Number of random initialization during model training (default: 10)')
@@ -105,7 +104,6 @@ def parse_arguments(_args):
     # color map
     aux_params.add_argument('--cmap-file', type=str, required=True, help='Define the path to the fixed color map (default: <cartloader_dir>/assets/fixed_color_map_60.tsv)')
     # others parameters shared across steps
-    aux_params.add_argument('--min-count-train', type=int, default=50, help='Minimum count for training (default: 50)')
     aux_params.add_argument('--min-ct-per-feature', type=int, default=20, help='Minimum count per feature during LDA training, transform and decoding (default: 20)')
     aux_params.add_argument('--de-max-pval', type=float, default=1e-3, help='p-value cutoff for differential expression (default: 1e-3)')
     aux_params.add_argument('--de-min-fold', type=float, default=1.5, help='Fold-change cutoff for differential expression (default: 1.5)')
@@ -216,6 +214,7 @@ def run_ficture2(_args):
     if args.in_feature is not None:
         assert os.path.exists(args.in_feature), "Provide a valid input feature file by --in-feature, or skip specifying it"
 
+    assert os.path.exists(args.ficture2), f"Provide a valid path to the FICTURE2 repository by --ficture2, or set it to the default path: {args.ficture2}"
     ficture2bin = os.path.join(args.ficture2, "bin/punkst")
     ficture2de = args.python + " " + os.path.join(args.ficture2, "ext/py/de_bulk.py")
     ficture2report = args.python + " " + os.path.join(args.ficture2, "ext/py/factor_report.py")
@@ -366,7 +365,7 @@ def run_ficture2(_args):
                 f"--out-prefix {model_prefix}.unsorted",
                 f"--n-topics {n_factor}",
                 f"--transform",
-                f"--min-count-train {args.min_count_train}",
+                f"--min-count-train {args.min_ct_per_unit_train}",
                 f"--min-count-per-feature {args.min_ct_per_feature}",
                 f"--features {feature_nohdr}",
                 f"--include-feature-regex '{args.include_feature_regex}'" if args.include_feature_regex is not None else "",
@@ -503,7 +502,7 @@ def run_ficture2(_args):
                 f"--header-json {decode_prefix}.json",
                 f"--in-color {cmap_path}",
                 f"--out {decode_prefix}.png",
-                f"--scale 1",
+                f"--scale {args.decode_scale}",
                 f"--range {args.in_minmax}"
                 ])
             cmds.append(cmd)

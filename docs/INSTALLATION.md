@@ -109,7 +109,7 @@ cd ..
 
 Install [`punkst`](https://github.com/Yichen-Si/punkst) toolkit to use [`FICTURE` (Si et al., Nature Methods 2024)](https://www.nature.com/articles/s41592-024-02415-2).
 
-[`FICTURE`](https://www.nature.com/articles/s41592-024-02415-2) is a segmentation-free method that models spatial gene expression as a continuous field across space. It infers latent spatial factors—coherent spatial patterns of gene activity—that correspond to underlying transcriptional programs or tissue structures. These factors can then be projected back to the pixel level. Although `FICTURE` is built on a Latent Dirichlet Allocation (LDA) framework by default, it is also compatible with clustering outputs from external tools like `Seurat` for pixel-level projection.
+[`FICTURE`](https://www.nature.com/articles/s41592-024-02415-2) is a segmentation-free method that infers latent spatial factors—coherent spatial patterns of gene activity—that correspond to underlying transcriptional programs or tissue structures. These factors can then be projected back to the pixel level. Although `FICTURE` is built on a Latent Dirichlet Allocation (LDA) framework by default, it is also compatible with clustering outputs from external tools like `Seurat` for pixel-level projection.
 
 The [`punkst`](https://github.com/Yichen-Si/punkst) toolkit is a streamlined implementation of the [`FICTURE`](https://www.nature.com/articles/s41592-024-02415-2), designed for improved computational efficiency and scalability while producing results equivalent to the original [`FICTURE`](https://www.nature.com/articles/s41592-024-02415-2).
 
@@ -138,7 +138,7 @@ tar zxvf ./go-pmtiles_1.28.0_Linux_x86_64.tar.gz
 
 ### 4.5 Installing ImageMagic
 
-If you have already installed ImageMagic when [setting conda environment](#23-installing-dependencies-with-conda), skip this step.
+If you have already installed ImageMagic when [setting conda environment](#23-installing-dependencies), skip this step.
 
 ```bash
 cd ${env_dir}/cartloader/submodules/ImageMagick

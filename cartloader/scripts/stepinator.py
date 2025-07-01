@@ -48,6 +48,7 @@ aux_params_args = {
 
 aux_params_args["run_ficture1"] = aux_params_args["run_ficture"] + ['hexagon_n_move', 'hexagon_precision', 
                                                                     'minibatch_buffer',
+                                                                    "hexagon_width_10x",
                                                                     'train_epoch_id_len', 'lda_rand_init', 'lda_plot_um_per_pixel',
                                                                     'fit_precision',  'min_ct_per_unit_fit', 'fit_plot_um_per_pixel',
                                                                     'decode_top_k', 'decode_block_size', 'decode_scale', 'decode_precision', 'decode_plot_um_per_pixel',
@@ -135,10 +136,10 @@ def cmd_sge_convert(sgeinfo, args, env):
         in_arg= f"--in-mex {sgeinfo['in_mex']}"
     elif platform in ["10x_xenium", "bgi_stereoseq", "cosmx_smi", "vizgen_merscope", "pixel_seq", "nova_st"]:
         assert sgeinfo.get("in_csv", None) is not None, f"Please provide --in-csv for {platform}"
-        in_arg= f"--in-csv {sgeinfo['in_csv']} --print-removed-transcripts"
+        in_arg= f"--in-csv {sgeinfo['in_csv']}"
     elif platform in ["generic"]:
         assert sgeinfo.get("in_csv", None) is not None, f"Please provide --in-csv for {platform}"
-        in_arg= f"--in-csv {sgeinfo['in_csv']} --print-removed-transcripts"
+        in_arg= f"--in-csv {sgeinfo['in_csv']}"
 
     sgeinfo["csv_colnames_others"]= sgeinfo["csv_colnames_others"].split(",") if sgeinfo.get("csv_colnames_others", None) is not None else []
 
@@ -165,7 +166,7 @@ def cmd_sge_convert(sgeinfo, args, env):
         format_cmd = add_param_to_cmd(format_cmd, northup_aug, aux_params_args["north_up"])
 
     # add aux tools
-    format_cmd = add_param_to_cmd(format_cmd, env, aux_env_args["sge_convert"]++aux_env_args["north_up"]) if args.north_up else add_param_to_cmd(format_cmd, env, aux_env_args["sge_convert"])
+    format_cmd = add_param_to_cmd(format_cmd, env, aux_env_args["sge_convert"]+aux_env_args["north_up"]) if args.north_up else add_param_to_cmd(format_cmd, env, aux_env_args["sge_convert"])
 
     return format_cmd
 
@@ -309,12 +310,11 @@ def cmd_run_ficture(run_i, fic_v, args, env):
     
     # add aux env/tools
     ficture_cmd = add_param_to_cmd(ficture_cmd, env, aux_env_args[f"run_ficture{fic_v}"])
-    print(fic_v)
-    print(ficture_cmd)
     # add aux parameters
     ficture_aug = merge_config(run_i, args, aux_params_args[f"run_ficture{fic_v}"], prefix=None)  # merge auxiliary parameters
     ficture_cmd = add_param_to_cmd(ficture_cmd, ficture_aug, aux_params_args[f"run_ficture{fic_v}"])
-
+    print(fic_v)
+    print(ficture_cmd)
     ficture_cmds.append(ficture_cmd)
     return ficture_cmds
 
@@ -507,7 +507,7 @@ def cmd_upload_aws(run_i, cartl_v,  args, env):
     # ])
     # Option 2: use cartloader upload_aws_by_catalog.py
     aws_cmd=" ".join([
-        "cartloader", "upload_aws_by_catalog",
+        "cartloader", "upload_aws",
         f"--in-dir {cartload_dir}",
         f"--s3-dir \"s3://{args.aws_bucket}/{run_i['run_id']}\"",
         f"--n-jobs {args.n_jobs}" if args.n_jobs else "",
