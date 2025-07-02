@@ -102,7 +102,7 @@ def parse_arguments(_args):
     # aux_params.add_argument('--merge-max-k', type=int, default=1, help='Maximum number of K columns to output in merged pixel-level decoding results (default: 1)')
     # aux_params.add_argument('--merge-max-p', type=int, default=1, help='Maximum number of P columns to output in merged pixel-level decoding results (default: 1)')
     # color map
-    aux_params.add_argument('--cmap-file', type=str, required=True, help='Define the path to the fixed color map (default: <cartloader_dir>/assets/fixed_color_map_60.tsv)')
+    aux_params.add_argument('--cmap-file', type=str, default=None, help='Define the path to the fixed color map (default: <cartloader_dir>/assets/fixed_color_map_60.tsv)')
     # others parameters shared across steps
     aux_params.add_argument('--min-ct-per-feature', type=int, default=20, help='Minimum count per feature during LDA training, transform and decoding (default: 20)')
     aux_params.add_argument('--de-max-pval', type=float, default=1e-3, help='p-value cutoff for differential expression (default: 1e-3)')
@@ -213,6 +213,15 @@ def run_ficture2(_args):
         assert os.path.exists(args.in_minmax), "Provide a valid input coordinate minmax file by --in-minmax, or skip specifying it"
     if args.in_feature is not None:
         assert os.path.exists(args.in_feature), "Provide a valid input feature file by --in-feature, or skip specifying it"
+    
+    if args.cmap_file is None:
+        script_path = os.path.abspath(__file__)
+        cartloader_root = os.path.abspath(os.path.join(script_path, "..", "..", ".."))
+        args.cmap_file=os.path.join(cartloader_root, "assets", "fixed_color_map_256.tsv")
+    
+    print(f"cmap path: {args.cmap_file}")
+    if not os.path.exists(args.cmap_file):
+        raise FileNotFoundError(f"Color map not found at: {args.cmap_file}")
 
     assert os.path.exists(args.ficture2), f"Provide a valid path to the FICTURE2 repository by --ficture2, or set it to the default path: {args.ficture2}"
     ficture2bin = os.path.join(args.ficture2, "bin/punkst")

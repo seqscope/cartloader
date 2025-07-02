@@ -34,7 +34,7 @@ def hist_stitch(_args):
     inout_params.add_argument("--in-tiles", type=str, nargs='*', default=[], help="List of input tiles in the format: <row>,<col>,<path>,<georef>,<georef_tsv>,<georef_bounds>,<rotate>,<vertical_flip>,<horizontal_flip>. "
                                                                                 "<georef> is a boolean indicating if georeferencing is needed. "
                                                                                 "<georef_tsv> is the path to the *.pixel.sorted.tsv.gz from run_ficture to provide georeferenced bounds."
-                                                                                "<georef_bounds> is '<ulx>,<uly>,<lrx>,<lry>' if georeferencing is required. "
+                                                                                "<georef_bounds> is '<ulx>_<uly>_<lrx>_<lry>' if georeferencing is required. "
                                                                                 "<rotate> is one of 0, 90, 180, 270. <vertical_flip> and <horizontal_flip> are booleans indicating if the image should be flipped vertically or horizontally.")
     inout_params.add_argument("--output", type=str, help="Output path for the stitched tif file.")
     inout_params.add_argument("--in-offsets", type=str, default=None, help="Path to the input offsets file, in which the following columns are required: row, col, x_offset, y_offset, units_per_um")
@@ -125,7 +125,7 @@ def hist_stitch(_args):
             assert not (georef_bound is None and georef_tsv is None), f"Tile (row {row}, col {col}): Georeferencing requires either georef_bound or georef_tsv to be provided."
             assert not (georef_bound is not None and georef_tsv is not None), f"Tile (row {row}, col {col}): Georeferencing requires only one of georef_bound or georef_tsv to be provided, not both."
             if georef_bound is not None:
-                ulx, uly, lrx, lry = map(float, georef_bound.split(","))
+                ulx, uly, lrx, lry = map(float, georef_bound.split("_"))
             elif georef_tsv is not None:
                 with gzip.open(georef_tsv, 'rt') as f:
                     for i in range(3):
@@ -145,7 +145,8 @@ def hist_stitch(_args):
         # 2) rotate
         if orient:
             # Generate Dimension file to provide height and width
-            dim_f = current_f.replace(".tif", "") + ".dim.tsv"
+            # dim_f = current_f.replace(".tif", "") + ".dim.tsv"
+            dim_f = os.path.splitext(current_f)[0] + ".dim.tsv"     # Modify this since encountered a case with two tif in the figure name
             cmds = cmds_for_dimensions(current_f, dim_f)
             mm.add_target(dim_f, [current_f], cmds)
             # Generate the orientated file

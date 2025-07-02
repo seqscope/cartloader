@@ -288,9 +288,13 @@ def cmd_run_ficture(run_i, fic_v, args, env):
         ])
     else:
         # cmap (TODO: currently ficture2 requires a fixed cmap file)
-        if not args.lenient:
-            scheck_file(run_i["cmap"])
-        cmap_arg = f"--cmap-file {run_i['cmap']}" 
+        print(run_i["cmap"])
+        if run_i["cmap"] is None:
+            cmap_arg = ""
+        else:
+            if not args.lenient:
+                scheck_file(run_i["cmap"])
+            cmap_arg = f"--cmap-file {run_i['cmap']}" 
         ficture_cmd = " ".join([
             "cartloader", "run_ficture2",
             f"--makefn {mkbn}.mk",
@@ -405,6 +409,10 @@ def generate_in_tiles_str(in_tiles, param_keys):
         values = []
         for key in param_keys:
             val = tile.get(key, "")
+            if key == "georef_bounds":
+                val=val.replace("(","")
+                val=val.replace(")","")
+                val=val.replace(",","_")
             #print(key+":"+str(val))
             if val in [None, "null", "Null"]:
                 val = ""
@@ -519,7 +527,7 @@ def cmd_upload_aws(run_i, cartl_v,  args, env):
 
 def stepinator(_args):
     parser = argparse.ArgumentParser(description="""
-    Stepinator: A tool to run steps in cartloader to do SGE format conversion (--sge-convert) or downstream process (--run-ficture, --run-cartload-join, --run-fig2pmtiles, --upload-aws) in cartloader.
+    Stepinator: A tool to run steps in cartloader to do SGE format conversion (--sge-convert) or downstream process (--run-ficture*, --run-cartload*, --run-fig2pmtiles, --upload-aws) in cartloader.
     The input, actions, parameters, and tools can be provided in two ways: 1) using a YAML file or 2) using individual command-line arguments in IN/OUT Configuration, Environment Configuration, and Auxiliary Parameters for FICTURE.
     It also allows the job execution in two modes: local and slurm.
     """)
@@ -768,7 +776,7 @@ def stepinator(_args):
         assert fic_v == cartl_v, "Error: --run-ficture and --run-cartload-join should be applied together with the same version."
     
     if args.upload_aws:
-        assert cartl_v is not None, "Error: --upload-aws can only be applied with --run-cartload1 or --run-cartload2 to indicate the version of cartload."
+        assert cartl_v is not None or args.run_fig2pmtiles, "Error: --upload-aws can only be applied with --run-cartload1 or --run-cartload2 or --run-fig2pmtiles."
 
     # =========
     #  Read YAML/args
