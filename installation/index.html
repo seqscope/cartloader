@@ -1096,7 +1096,7 @@
 
 
 <h1 id="installation-guide">Installation Guide<a class="headerlink" href="#installation-guide" title="Permanent link">&para;</a></h1>
-<p>This is an instruction to set up the required environment, install necessary dependencies, and install <code>cartloader</code>.</p>
+<p>This is an instruction to set up the required environment, and install dependencies and <code>cartloader</code>.</p>
 <hr />
 <h2 id="1-dependencies">1. Dependencies<a class="headerlink" href="#1-dependencies" title="Permanent link">&para;</a></h2>
 <p>To ensure full functionality of <code>cartloader</code>, the following dependencies must be installed:</p>
@@ -1153,11 +1153,11 @@ bash<span class="w"> </span>Miniconda3-latest-Linux-x86_64.sh
 <span class="normal">2</span>
 <span class="normal">3</span>
 <span class="normal">4</span>
-<span class="normal">5</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nv">conda_env</span><span class="o">=</span>cartenv<span class="w">               </span><span class="c1"># replace cartenv with the name of your conda environment</span>
+<span class="normal">5</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nv">conda_env</span><span class="o">=</span>ENV_NAME<span class="w">              </span><span class="c1"># replace ENV_NAME with the name of your conda environment</span>
 <span class="nv">python_version</span><span class="o">=</span><span class="m">3</span>.13.1<span class="w">           </span><span class="c1"># replace 3.13.1 with the version you prefer</span>
 
-conda<span class="w"> </span>create<span class="w"> </span>-n<span class="w"> </span>cartenv<span class="w"> </span><span class="nv">python</span><span class="o">=</span><span class="nv">$python_version</span>
-conda<span class="w"> </span>activate<span class="w"> </span>cartenv
+conda<span class="w"> </span>create<span class="w"> </span>-n<span class="w"> </span>ENV_NAME<span class="w"> </span><span class="nv">python</span><span class="o">=</span><span class="nv">$python_version</span>
+conda<span class="w"> </span>activate<span class="w"> </span>ENV_NAME
 </code></pre></div></td></tr></table></div>
 <h3 id="23-installing-dependencies">2.3 Installing Dependencies<a class="headerlink" href="#23-installing-dependencies" title="Permanent link">&para;</a></h3>
 <p>Once inside the environment, install the required dependencies:</p>
@@ -1214,7 +1214,7 @@ make
 </code></pre></div></td></tr></table></div>
 <h3 id="42-installing-punkst">4.2 Installing <code>punkst</code><a class="headerlink" href="#42-installing-punkst" title="Permanent link">&para;</a></h3>
 <p>Install <a href="https://github.com/Yichen-Si/punkst"><code>punkst</code></a> toolkit to use <a href="https://www.nature.com/articles/s41592-024-02415-2"><code>FICTURE</code> (Si et al., Nature Methods 2024)</a>.</p>
-<p>Please following the <a href="https://yichen-si.github.io/punkst/install/"><code>punkst</code> installation guide</a> to install <a href="https://github.com/Yichen-Si/punkst"><code>punkst</code></a></p>
+<p>Please following the <a href="https://yichen-si.github.io/punkst/install/"><code>punkst</code> installation guide</a>.</p>
 <details>
 <summary>What is <code>FICTURE</code> and <code>punkst</code></summary>
 <p><a href="https://www.nature.com/articles/s41592-024-02415-2"><code>FICTURE</code></a> is a segmentation-free method that infers latent spatial factors—coherent spatial patterns of gene activity—that correspond to underlying transcriptional programs or tissue structures. These factors can then be projected back to the pixel level. Although <code>FICTURE</code> is built on a Latent Dirichlet Allocation (<abbr title="Latent Dirichlet Allocation">LDA</abbr>) framework by default, it is also compatible with clustering outputs from external tools like <code>Seurat</code> for pixel-level projection.</p>

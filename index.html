@@ -967,7 +967,7 @@
         <li class="md-nav__item">
   <a href="#cartostore-cloud-access-and-visualization" class="md-nav__link">
     <span class="md-ellipsis">
-      Cartostore: Cloud Access and Visualization
+      cartostore: Cloud Access and Visualization
     </span>
   </a>
   
@@ -1008,12 +1008,12 @@
 <p>To address this challenge, we introduce a scalable, harmonized, and cloud-friendly ecosystem for spatial transcriptomics data across platforms, composed of two components:</p>
 <ul>
 <li><strong>cartloader</strong> – a harmonized, scalable pipeline for high-resolution spatial omics data processing and analysis with retaining the original resolution.</li>
-<li><strong>cartostore</strong> – an open-access, cloud-hosted repository for dataset sharing and visualization.</li>
+<li><a href="https://github.com/seqscope/cartostore"><strong>cartostore</strong></a> – an open-access, cloud-hosted repository for dataset sharing and visualization.</li>
 </ul>
 <p>Together, this system should provide a unified solution for working with raw pixel-level spatial omics data—without sacrificing resolution or reproducibility.</p>
 <hr />
 <h2 id="cartloader-a-scalable-spatial-transcriptomics-pipeline"><code>cartloader</code>: A Scalable Spatial Transcriptomics Pipeline<a class="headerlink" href="#cartloader-a-scalable-spatial-transcriptomics-pipeline" title="Permanent link">&para;</a></h2>
-<p>This document introduces <code>cartloader</code>, which is the core engine of our ecosystem. It provides a modular, reproducible tool to harmonize, integrate, analyze, and visualize raw high-resolution <abbr title="Spatial transcriptomics">ST</abbr> data across platforms. Usage examples are provided in the <a href="vignettes/quickstart/quickstart/">Get Started</a>. Detailed descriptions of its workflow, inputs, outputs, and parameters are provided in the <a href="reference/sge_convert/">Reference Pages</a>.</p>
+<p>This document introduces <code>cartloader</code>, which is the core engine of our ecosystem. It provides a modular, reproducible tool to harmonize, integrate, analyze, and visualize raw high-resolution <abbr title="Spatial transcriptomics">ST</abbr> data across platforms. Usage examples are provided in the <a href="vignettes/intro/">Vignettes</a>. Detailed descriptions of its workflow, inputs, outputs, and parameters are provided in the <a href="reference/sge_convert/">Reference Pages</a>.</p>
 <p><strong>Key Features</strong></p>
 <ul>
 <li><strong>Cross-Platform Format Conversion</strong>: Converts raw spatial gene expression (<abbr title="Spatial Digital Gene Expression">SGE</abbr>) data from diverse <abbr title="Spatial transcriptomics">ST</abbr> platforms into a unified format, enabling consistent downstream processing.</li>
@@ -1024,9 +1024,10 @@
 <li><strong>Modular and Reproducible Workflow</strong>: Orchestrates all steps through a Makefile-based system to ensure scalability, transparency, and reproducibility.</li>
 </ul>
 <hr />
-<h2 id="cartostore-cloud-access-and-visualization">Cartostore: Cloud Access and Visualization<a class="headerlink" href="#cartostore-cloud-access-and-visualization" title="Permanent link">&para;</a></h2>
-<p>As a natural companion to <code>cartloader</code>, <strong>cartostore</strong> hosts the output of processed datasets for public access and exploration. Designed for scalability and interoperability, cartostore uses spatially indexed formats like <strong>PMTiles</strong> to support interactive visualization and seamless integration.</p>
-<p>Explore the <a href="https://github.com/seqscope/cartostore">Cartostore documentation</a> to learn more about dataset access and how to contribute.</p>
+<h2 id="cartostore-cloud-access-and-visualization"><a href="https://github.com/seqscope/cartostore">cartostore</a>: Cloud Access and Visualization<a class="headerlink" href="#cartostore-cloud-access-and-visualization" title="Permanent link">&para;</a></h2>
+<p>As a natural companion to <code>cartloader</code>, <a href="https://github.com/seqscope/cartostore"><code>cartostore</code></a> hosts the dataset and the output from <code>cartloader</code> for public access and exploration.</p>
+<p>Designed for scalability and interoperability, <a href="https://github.com/seqscope/cartostore"><code>cartostore</code></a> uses spatially indexed formats like <strong>PMTiles</strong> to support interactive visualization and seamless integration.</p>
+<p>Explore the <a href="https://github.com/seqscope/cartostore"><code>cartostore</code> documentation</a> to learn more about dataset access and how to contribute.</p>
 <hr />
 <h2 id="citations">Citations:<a class="headerlink" href="#citations" title="Permanent link">&para;</a></h2>
 <!-- * cartloader+cartostore: [doi-to-be-added](link-to-be-added) -->

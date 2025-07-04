@@ -1108,11 +1108,12 @@
 <p>Before getting started, please ensure that cartloader and all prerequisites are installed (see <a href="../../../installation/">Installation</a> guide).</p>
 </div>
 <h2 id="input-data">Input Data<a class="headerlink" href="#input-data" title="Permanent link">&para;</a></h2>
-<p>This tutorial used an <abbr title="Spatial Digital Gene Expression">SGE</abbr> representing the mouse hippocampus as input data. The input <abbr title="Spatial Digital Gene Expression">SGE</abbr> file was prepared in a format compatible with <code>FICTURE</code> using <a href="../../../reference/sge_convert/"><code>sge_convert</code></a> in <code>cartloader</code> .</p>
+<p>This tutorial used an <abbr title="Spatial Digital Gene Expression">SGE</abbr> representing the mouse hippocampus as input data. </p>
+<p>The input <abbr title="Spatial Digital Gene Expression">SGE</abbr> file was already converted to a format compatible with <code>FICTURE</code> using <a href="../../../reference/sge_convert/"><code>sge_convert</code></a> in <code>cartloader</code> .</p>
 <div class="admonition warning">
 <p class="admonition-title">Prepare Input <abbr title="Spatial Digital Gene Expression">SGE</abbr> for <code>FICTURE</code></p>
 <p><code>FICTURE</code> requires input in the form of a transcript-indexed <abbr title="Spatial Digital Gene Expression">SGE</abbr> file in TSV format with at least: X and Y spatial coordinates, gene identifiers, and expression counts. </p>
-<p>Because spatial transcriptomics (<abbr title="Spatial transcriptomics">ST</abbr>) platforms vary widely in their data formats and metadata structures, <code>cartloader</code> provides the <a href="../../../reference/sge_convert/"><code>sge_convert</code></a> module to convert raw <abbr title="Spatial Digital Gene Expression">SGE</abbr> data into the standardized format required by <code>FICTURE</code>.</p>
+<p>Because <abbr title="Spatial transcriptomics">ST</abbr> platforms vary widely in their data formats and metadata structures, <code>cartloader</code> provides the <a href="../../../reference/sge_convert/"><code>sge_convert</code></a> module to convert raw <abbr title="Spatial Digital Gene Expression">SGE</abbr> data into the standardized format required by <code>FICTURE</code>.</p>
 <p>For detailed platform-specific instructions on preparing compatible <abbr title="Spatial Digital Gene Expression">SGE</abbr> files, see the <a href="../../intro/#getting-started-per-platform">Vignettes</a>.</p>
 </div>
 <p><strong>File Format</strong></p>
@@ -1164,7 +1165,7 @@ ymax    1439.95
 </ul>
 </details>
 <p><strong>Data Access</strong></p>
-<p>The example data is hosted on Zenedo (10.5281/zenodo.15701394).</p>
+<p>The input example data is hosted on Zenedo <a href="https://doi.org/10.5281/zenodo.15701393">DOI: 10.5281/zenodo.15701393</a>.</p>
 <p>Follow the commands below to download the example data.</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
@@ -1173,7 +1174,7 @@ ymax    1439.95
 <span class="normal">5</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nv">work_dir</span><span class="o">=</span>/path/to/work/directory
 <span class="nb">cd</span><span class="w"> </span><span class="nv">$work_dir</span>
 
-wget<span class="w">  </span>https://zenodo.org/records/15701394/files/seqscope_starter.std.tar.gz
+wget<span class="w"> </span>https://zenodo.org/records/15786632/files/seqscope_starter.std.tar.gz
 tar<span class="w"> </span>-zxvf<span class="w"> </span>seqscope_starter.std.tar.gz
 </code></pre></div></td></tr></table></div>
 <h2 id="set-up-the-environment">Set Up the Environment<a class="headerlink" href="#set-up-the-environment" title="Permanent link">&para;</a></h2>
@@ -1218,7 +1219,7 @@ tar<span class="w"> </span>-zxvf<span class="w"> </span>seqscope_starter.std.tar
 <span class="nv">AWS_BUCKET</span><span class="o">=</span><span class="s2">&quot;EXAMPLE_AWS_BUCKET&quot;</span><span class="w">         </span><span class="c1"># replace EXAMPLE_AWS_BUCKET with your actual S3 bucket name</span>
 
 <span class="c1"># Activate the bioconda environment</span>
-conda<span class="w"> </span>activate<span class="w"> </span>BIOENV_NAME<span class="w">              </span><span class="c1"># replace BIOENV_NAME with your bioconda environment name</span>
+conda<span class="w"> </span>activate<span class="w"> </span>ENV_NAME<span class="w">              </span><span class="c1"># replace BIOENV_NAME with your bioconda environment name</span>
 </code></pre></div></td></tr></table></div>
 <p>Define data ID and analysis parameters:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
@@ -1491,8 +1492,10 @@ cartloader run_cartload2 \
 </tbody>
 </table>
 <h2 id="upload-to-data-repository">Upload to Data Repository<a class="headerlink" href="#upload-to-data-repository" title="Permanent link">&para;</a></h2>
+<p><code>cartloader</code> supports two upload options (<code>AWS</code> and <code>Zenodo</code>) for storing PMTiles of <abbr title="Spatial Digital Gene Expression">SGE</abbr> and spatial factors in a data repository.</p>
+<p>Choose the one that best suits your needs.</p>
 <h3 id="aws-uploads">AWS Uploads<a class="headerlink" href="#aws-uploads" title="Permanent link">&para;</a></h3>
-<p>Copy the generated cartloader outputs to your designated AWS S3 catalog path:</p>
+<p>Upload the generated cartloader outputs to your designated AWS S3 directory:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
 <span class="normal">3</span>
@@ -1539,6 +1542,86 @@ cartloader run_cartload2 \
 </tr>
 </tbody>
 </table>
+<h3 id="zenodo-uploads">Zenodo Uploads<a class="headerlink" href="#zenodo-uploads" title="Permanent link">&para;</a></h3>
+<p>Upload the generated cartloader outputs to your designated Zenodo deposition or a new deposition.</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span>
+<span class="normal">6</span>
+<span class="normal">7</span>
+<span class="normal">8</span></pre></div></td><td class="code"><div><pre><span></span><code>cartloader<span class="w"> </span>upload_zenodo<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--in-dir<span class="w"> </span>./cartload2<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--upload-method<span class="w"> </span>catalog<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--zenodo-token<span class="w"> </span>/path/to/zenodo/token/file<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--create-new-deposition<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--title<span class="w">  </span><span class="s2">&quot;cartloader SeqScope Starter Tutorial Results&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--creators<span class="w"> </span><span class="s2">&quot;Your Name&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--description<span class="w"> </span><span class="s2">&quot;This is an example description&quot;</span>
+</code></pre></div></td></tr></table></div>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Required</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--in-dir</code></td>
+<td>required</td>
+<td>string</td>
+<td>Path to the input directory containing the cartloader compilation output</td>
+</tr>
+<tr>
+<td><code>--upload-method</code></td>
+<td>required</td>
+<td>string</td>
+<td>Method to determine which files to upload. Options: <code>all</code> to upload all files in <code>--in-dir</code>; <code>catalog</code> to upload files listed in a catalog YAML file, <code>user_list</code> to upload files explicitly listed via <code>--in-list</code></td>
+</tr>
+<tr>
+<td><code>--catalog-yaml</code></td>
+<td></td>
+<td>string</td>
+<td>Required if <code>--upload-method catalog</code>.  Path to the catalog.yaml file generated in <code>run_cartload2</code>. If absent, will use the catalog.yaml in the input directory specified by <code>--in-dir</code>.</td>
+</tr>
+<tr>
+<td><code>--zenodo-token</code></td>
+<td>required</td>
+<td>string</td>
+<td>Path to your Zenodo access file</td>
+</tr>
+<tr>
+<td><code>--create-new-deposition</code></td>
+<td></td>
+<td>flag</td>
+<td>a new Zenodo deposition will be created.</td>
+</tr>
+<tr>
+<td><code>--title</code></td>
+<td>required</td>
+<td>string</td>
+<td>Required if <code>--create-new-deposition</code>. Title for the new Zenodo deposition.</td>
+</tr>
+<tr>
+<td><code>--creators</code></td>
+<td>required</td>
+<td>list of str</td>
+<td>List of creators in "Lastname, Firstname" format.</td>
+</tr>
+</tbody>
+</table>
+<!-- ## Output
+
+
+### Spatial Factors Inferences from FICTURE
+
+#### Spatial Factors Map
+![FICTURE](../../images/starter_vignettes/seqscope.t18_f12_p18_a6.png "Spatial factor map")
+ -->
 
 
 

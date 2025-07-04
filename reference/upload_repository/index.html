@@ -964,9 +964,18 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#example-usage" class="md-nav__link">
+  <a href="#aws-uploads" class="md-nav__link">
     <span class="md-ellipsis">
-      Example Usage
+      AWS Uploads
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#zenodo-uploads" class="md-nav__link">
+    <span class="md-ellipsis">
+      Zenodo Uploads
     </span>
   </a>
   
@@ -1033,9 +1042,18 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#example-usage" class="md-nav__link">
+  <a href="#aws-uploads" class="md-nav__link">
     <span class="md-ellipsis">
-      Example Usage
+      AWS Uploads
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#zenodo-uploads" class="md-nav__link">
+    <span class="md-ellipsis">
+      Zenodo Uploads
     </span>
   </a>
   
@@ -1082,7 +1100,7 @@
 <p><strong>For Zenodo uploads</strong>:</p>
 <ul>
 <li>A personal access token saved in a file, required for authentication with the Zenodo API</li>
-<li>A Zenodo deposition ID</li>
+<li>(Optional) A Zenodo deposition ID if the user prefers to upload files to an existing deposition.</li>
 </ul>
 <details>
 <summary>What are the Zenodo token and deposition ID, why do you need them, and how do you get them?</summary>
@@ -1108,10 +1126,13 @@ If you’ve already created a deposition, you can find its ID at the end of the 
 </details>
 </li>
 </ul>
-<h2 id="example-usage">Example Usage<a class="headerlink" href="#example-usage" title="Permanent link">&para;</a></h2>
-<!-- ### AWS Uploads
+<!-- `cartloader` supports two upload options (`AWS` and `Zenodo`) for storing PMTiles of SGE and spatial factors in a data repository.
 
- Copy the generated cartloader outputs to your designated AWS S3 catalog path:
+ Choose the one that best suits your needs.
+
+ ### AWS Uploads
+
+ Upload the generated cartloader outputs to your designated AWS S3 directory:
 
  <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
@@ -1130,8 +1151,41 @@ If you’ve already created a deposition, you can find its ID at the end of the 
  | `--s3-dir`      | required  | string | Path to the target S3 directory for uploading                               |
  | `--aws`         |           | string | Path to the AWS CLI binary                                                  |
  | `--n-jobs`      |           | int    | Number of parallel jobs                                                     |
+
+ ### Zenodo Uploads
+
+ Upload the generated cartloader outputs to your designated Zenodo deposition or a new deposition.
+
+
+ <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span>
+<span class="normal">6</span>
+<span class="normal">7</span>
+<span class="normal">8</span></pre></div></td><td class="code"><div><pre><span></span><code>cartloader<span class="w"> </span>upload_zenodo<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--in-dir<span class="w"> </span>./cartload2<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--upload-method<span class="w"> </span>catalog<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--zenodo-token<span class="w"> </span>/path/to/zenodo/token/file<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--create-new-deposition<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--title<span class="w">  </span><span class="s2">&quot;cartloader SeqScope Starter Tutorial Results&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--creators<span class="w"> </span><span class="s2">&quot;Your Name&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--description<span class="w"> </span><span class="s2">&quot;This is an example description&quot;</span>
+</code></pre></div></td></tr></table></div>
+
+ | Parameter                 | Required | Type        | Description                                                                                                                                                                                                         |
+ |---------------------------|----------|-------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+ | `--in-dir`                | required | string      | Path to the input directory containing the cartloader compilation output                                                                                                                                            |
+ | `--upload-method`         | required | string      | Method to determine which files to upload. Options: `all` to upload all files in `--in-dir`; `catalog` to upload files listed in a catalog YAML file, `user_list` to upload files explicitly listed via `--in-list` |
+ | `--catalog-yaml`          |          | string      | Required if `--upload-method catalog`.  Path to the catalog.yaml file generated in `run_cartload2`. If absent, will use the catalog.yaml in the input directory specified by `--in-dir`.                            |
+ | `--zenodo-token `         | required | string      | Path to your Zenodo access file                                                                                                                                                                                     |
+ | `--create-new-deposition` |          | flag        | a new Zenodo deposition will be created.                                                                                                                                                                            |
+ | `--title`                 | required | string      | Required if `--create-new-deposition`. Title for the new Zenodo deposition.                                                                                                                                         |
+ | `--creators`              | required | list of str | List of creators in "Lastname, Firstname" format.                                                                                                                                                                   |
+
  -->
-<h3 id="aws-uploads">AWS Uploads<a class="headerlink" href="#aws-uploads" title="Permanent link">&para;</a></h3>
+<h2 id="aws-uploads">AWS Uploads<a class="headerlink" href="#aws-uploads" title="Permanent link">&para;</a></h2>
 <p>We recommend to create create a directory within your AWS S3 bucket using a data id as directory name.</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
@@ -1156,7 +1210,16 @@ cartloader<span class="w"> </span>upload_aws<span class="w"> </span><span class=
 <li><code>--n-jobs</code> (str): Number of parallel jobs</li>
 <li><code>--catalog-yaml</code> (str): Path to the <code>catalog.yaml</code> file generated in <code>run_cartload2</code>. If absent, will use the <code>catalog.yaml</code> in the input directory specified by <code>--in-dir</code>.</li>
 </ul>
-<h3 id="zenodo-uploads">Zenodo Uploads<a class="headerlink" href="#zenodo-uploads" title="Permanent link">&para;</a></h3>
+<h2 id="zenodo-uploads">Zenodo Uploads<a class="headerlink" href="#zenodo-uploads" title="Permanent link">&para;</a></h2>
+<div class="admonition warning">
+<p class="admonition-title">Define Zenodo deposition</p>
+<p>You must choose one of the following modes:</p>
+<ul>
+<li>Use an existing deposition via <code>--zenodo-deposition-id</code></li>
+<li>Create a new deposition via <code>--create-new-deposition</code></li>
+</ul>
+</div>
+<p>(1) To upload files to an exist deposition ID:
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
 <span class="normal">3</span>
@@ -1166,18 +1229,61 @@ cartloader<span class="w"> </span>upload_aws<span class="w"> </span><span class=
 <span class="normal">7</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nv">zenodo_depostion_ID</span><span class="o">=</span>DEPOSTION_ID<span class="w">                </span><span class="c1"># Replace DEPOSTION_ID with yours</span>
 
 cartloader<span class="w"> </span>upload_zenodo<span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>--zenodo-id<span class="w"> </span><span class="si">${</span><span class="nv">zenodo_depostion_ID</span><span class="si">}</span>
-<span class="w">    </span>--zenodo-token<span class="w"> </span>/path/to/zenodo_token.txt<span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>--in-dir<span class="w"> </span>/path/to/run_cartload2/output/directory<span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>--upload-method<span class="w"> </span>catalog
-</code></pre></div></td></tr></table></div>
+<span class="w">    </span>--upload-method<span class="w"> </span>catalog<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--zenodo-token<span class="w"> </span>/path/to/zenodo_token.txt<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--zenodo-deposition-id<span class="w"> </span><span class="si">${</span><span class="nv">zenodo_depostion_ID</span><span class="si">}</span>
+</code></pre></div></td></tr></table></div></p>
+<p>(2) To upload files to a new deposition ID:
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span>
+<span class="normal">6</span>
+<span class="normal">7</span>
+<span class="normal">8</span></pre></div></td><td class="code"><div><pre><span></span><code>cartloader<span class="w"> </span>upload_zenodo<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--upload-method<span class="w"> </span>catalog<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--in-dir<span class="w"> </span>/path/to/run_cartload2/output/directory<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--zenodo-token<span class="w"> </span>/path/to/zenodo_token.txt<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--create-new-deposition<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--title<span class="w">  </span><span class="s2">&quot;Title Info&quot;</span><span class="w"> </span><span class="se">\ </span><span class="w">       </span>
+<span class="w">  </span>--creators<span class="w"> </span><span class="s2">&quot;Creator Name&quot;</span><span class="w"> </span><span class="se">\ </span><span class="w">  </span>
+<span class="w">  </span>--description<span class="w"> </span><span class="s2">&quot;Description Info&quot;</span>
+</code></pre></div></td></tr></table></div></p>
+<h3 id="input-parameters">Input Parameters<a class="headerlink" href="#input-parameters" title="Permanent link">&para;</a></h3>
 <ul>
-<li><code>--in-dir</code> (str): Path to the input directory containing the cartloader compilation output</li>
-<li><code>--zenodo-id</code> (str): Zenodo Deposition ID</li>
-<li><code>--zenodo-token</code> (str): Path to the Zenodo token file</li>
-<li><code>--upload-method</code> (str): Specifiy <code>catalog</code> to use the catalog file to locate files to be uploaded</li>
-<li><code>--catalog-yaml</code> (str): Path to the <code>catalog.yaml</code> file generated in <code>run_cartload2</code>. If absent, will use the <code>catalog.yaml</code> in the input directory specified by <code>--in-dir</code>.</li>
+<li><code>--in-dir</code> (str):Path to the input directory containing the <code>run_cartload2</code> output files.</li>
+<li><code>--upload-method</code> (str, default: <code>all</code>):  Method to determine which files to upload. Options:  <ul>
+<li><code>all</code>: Upload all files in <code>--in-dir</code>  </li>
+<li><code>catalog</code>: Upload files listed in a catalog YAML file  </li>
+<li><code>user_list</code>: Upload files explicitly listed via <code>--in-list</code></li>
 </ul>
+</li>
+<li><code>--in-list</code> (list of str): Required if if using <code>--upload-method user_list</code>. Allow multiple filenames.</li>
+<li><code>--catalog-yaml</code> (str): Required if <code>--upload-method catalog</code>. Path to the <code>catalog.yaml</code> file generated in <code>run_cartload2</code>. If absent, will use the <code>catalog.yaml</code> in the input directory specified by <code>--in-dir</code>.</li>
+</ul>
+<h3 id="zenodo-configuration">Zenodo Configuration<a class="headerlink" href="#zenodo-configuration" title="Permanent link">&para;</a></h3>
+<p>Must specify exactly one of <code>--zenodo-deposition-id</code> or <code>--create-new-deposition</code>.</p>
+<ul>
+<li><code>--zenodo-token</code> (str): Path to your Zenodo access token file.</li>
+<li><code>--zenodo-deposition-id</code> (str): A Zenodo deposition ID to upload files to. </li>
+<li><code>--create-new-deposition</code> (flag): If set, a new Zenodo deposition will be created.</li>
+<li><code>--create-new-version</code> (flag): If set, a new version will be created for the provided deposition ID. This is useful to update the files for a published deposition. When enabled, <code>--zenodo-deposition-id</code> must be applied.</li>
+</ul>
+<h3 id="deposition-metadata">Deposition Metadata<a class="headerlink" href="#deposition-metadata" title="Permanent link">&para;</a></h3>
+<p>Required only if creating a new deposition.</p>
+<ul>
+<li><code>--title</code> (str): Title for the new Zenodo deposition.</li>
+<li><code>--upload-type</code> (str, default: dataset): Type of deposition. Options: dataset, software, publication, poster, presentation, image, video, lesson, other</li>
+<li><code>--creators</code> (list of str): List of creators in "Lastname, Firstname" format.</li>
+</ul>
+<h3 id="behavior-flags">Behavior Flags:<a class="headerlink" href="#behavior-flags" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>--overwrite</code> (flag): If set, overwrite existing files in the Zenodo deposition.</li>
+<li><code>--dry-run</code> (flag): If set, simulate the upload without modifying the Zenodo deposition.</li>
+</ul>
+<!-- * `--publish` (flag): If set, publish the deposition immediately after the upload. Recommended to review the deposition on Zenodo manually before publishing. -->
 
 
 

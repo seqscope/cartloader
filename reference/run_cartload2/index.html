@@ -1139,11 +1139,15 @@
 <span class="normal"> 8</span>
 <span class="normal"> 9</span>
 <span class="normal">10</span>
-<span class="normal">11</span></pre></div></td><td class="code"><div><pre><span></span><code>cartloader<span class="w"> </span>run_cartload2<span class="w"> </span><span class="se">\</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nv">DATA_ID</span><span class="o">=</span><span class="s2">&quot;dataset_id&quot;</span><span class="w">               </span><span class="c1">## replace dataset_id with the id for your dataset</span>
+
+cartloader<span class="w"> </span>run_cartload2<span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>--makefn<span class="w"> </span>run_cartload2.mk<span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>--fic-dir<span class="w"> </span>/path/to/run_ficture2/results<span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>--out-dir<span class="w"> </span>/path/to/output/directory<span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>--id<span class="w"> </span>dataset_id<span class="w"> </span><span class="se">\ </span><span class="w">                           </span><span class="c1">## replace dataset_id with the id for this dataset</span>
+<span class="w">    </span>--id<span class="w"> </span><span class="si">${</span><span class="nv">DATA_ID</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>--colname-count<span class="w"> </span>count<span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>--n-jobs<span class="w"> </span><span class="m">20</span><span class="w">  </span><span class="se">\</span>
 <span class="w">    </span>--threads<span class="w"> </span><span class="m">20</span><span class="w"> </span><span class="se">\</span>
@@ -1224,12 +1228,12 @@
 <h3 id="joined-molecule-factor-pmtiles">Joined molecule-factor PMTiles<a class="headerlink" href="#joined-molecule-factor-pmtiles" title="Permanent link">&para;</a></h3>
 <ul>
 <li>Joined molecule-factor TSV (<code>transcripts_pixel_joined.tsv.gz</code>): Merged file linking transcript-level <abbr title="Spatial Digital Gene Expression">SGE</abbr> with decoded pixel factors.</li>
-<li>Final molecule PMTiles (*_pmtiles_index.tsv, <code>*_bin_counts.json</code>): Indexed, multi-feature PMTiles built from joined pixel-factor data for CartoScope.</li>
+<li>Final molecule PMTiles (<code>genes_bin*.pmtiles</code>, <code>genes_index.tsv</code>, <code>genes_pmtiles_index.tsv</code>, <code>genes_bin_counts.json</code>): Indexed, multi-feature PMTiles built from joined pixel-factor data for CartoScope.</li>
 </ul>
 <h3 id="summary-files">Summary Files<a class="headerlink" href="#summary-files" title="Permanent link">&para;</a></h3>
 <ul>
-<li>FICTURE assets file (ficture_assets.json): JSON catalog listing all output files and their roles for each trained model.</li>
-<li>Catalog file (catalog.yaml): Final YAML file summarizing all visual assets and layers for further deployment and visualization.</li>
+<li>FICTURE assets file (<code>ficture_assets.json</code>): JSON catalog listing all output files and their roles for each trained model.</li>
+<li>Catalog file (<code>catalog.yaml</code>): Final YAML file summarizing all visual assets and layers for further deployment and visualization.</li>
 </ul>
 
 
