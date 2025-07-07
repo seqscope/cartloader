@@ -14,7 +14,7 @@
         <link rel="prev" href="../xenium/">
       
       
-        <link rel="next" href="../cosmx_smi/">
+        <link rel="next" href="../cosmxsmi/">
       
       
       <link rel="icon" href="../../../assets/images/favicon.png">
@@ -826,6 +826,15 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#output-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      Output Data
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -842,7 +851,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../cosmx_smi/" class="md-nav__link">
+      <a href="../cosmxsmi/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1095,6 +1104,15 @@
   <a href="#upload-to-data-repository" class="md-nav__link">
     <span class="md-ellipsis">
       Upload to Data Repository
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#output-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      Output Data
     </span>
   </a>
   
@@ -1562,8 +1580,11 @@ cartloader run_cartload2 \
 </tbody>
 </table>
 <h2 id="upload-to-data-repository">Upload to Data Repository<a class="headerlink" href="#upload-to-data-repository" title="Permanent link">&para;</a></h2>
+<div class="admonition info">
+<p class="admonition-title">Choose a data repository to host/share your output</p>
 <p><code>cartloader</code> supports two upload options (<code>AWS</code> and <code>Zenodo</code>) for storing PMTiles of <abbr title="Spatial Digital Gene Expression">SGE</abbr> and spatial factors in a data repository.</p>
-<p>Choose the one that best suits your needs.</p>
+<p><strong>Choose the one that best suits your needs.</strong></p>
+</div>
 <h3 id="aws-uploads">AWS Uploads<a class="headerlink" href="#aws-uploads" title="Permanent link">&para;</a></h3>
 <p>Upload the generated cartloader outputs to your designated AWS S3 directory:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
@@ -1626,7 +1647,7 @@ cartloader run_cartload2 \
 <span class="w">  </span>--upload-method<span class="w"> </span>catalog<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--zenodo-token<span class="w"> </span>/path/to/zenodo/token/file<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--create-new-deposition<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--title<span class="w">  </span><span class="s2">&quot;cartloader SeqScope Starter Tutorial Results&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--title<span class="w">  </span><span class="s2">&quot;Yur Title&quot;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--creators<span class="w"> </span><span class="s2">&quot;Your Name&quot;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--description<span class="w"> </span><span class="s2">&quot;This is an example description&quot;</span>
 </code></pre></div></td></tr></table></div>
@@ -1684,6 +1705,145 @@ cartloader run_cartload2 \
 </tr>
 </tbody>
 </table>
+<h2 id="output-data">Output Data<a class="headerlink" href="#output-data" title="Permanent link">&para;</a></h2>
+<p>See more details of output at the Reference pages for <a href="../../../reference/run_ficture2/">run_ficture2</a> and <a href="../../../reference/run_cartload2/">run_cartload2</a>.</p>
+<h3 id="spatial-factor-inference-from-ficture">Spatial Factor Inference from <code>FICTURE</code><a class="headerlink" href="#spatial-factor-inference-from-ficture" title="Permanent link">&para;</a></h3>
+<p>Below is an example of spatial factor inference results produced by <code>FICTURE</code> using a training width of 12, 12 factors, a fit width of 12, and an anchor resolution of 6.</p>
+<p><img alt="FICTURE" src="../../../images/starter_vignettes/merscope.t12_f12_p12_a6.png" title="Spatial factor map" /></p>
+<div id="color-legend-container"></div>
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    loadColorLegend("../../../tabs/colormap/merscope_starter.t12-f12-rgb.tsv", "color-legend-container");
+  });
+</script>
+
+<table>
+<thead>
+<tr>
+<th style="text-align: right;">Factor</th>
+<th style="text-align: left;">RGB</th>
+<th style="text-align: right;">Weight</th>
+<th style="text-align: right;">PostUMI</th>
+<th style="text-align: left;">TopGene_pval</th>
+<th style="text-align: left;">TopGene_fc</th>
+<th style="text-align: left;">TopGene_weight</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;">0</td>
+<td style="text-align: left;">255,101,101</td>
+<td style="text-align: right;">0.30225</td>
+<td style="text-align: right;">799546</td>
+<td style="text-align: left;">Slc17a7,Epha4,Amigo2,Kit,Syt4,Epha6,Anxa11,Npy2r,Nrp1,Adora1,Chrm3,Gpr26,Ackr1,Gpr158,Celsr2,Gabbr2,Gpr22,Chrm1,Adra1d,Epha5</td>
+<td style="text-align: left;">Avpr1b,Blank-85,Kit,Amigo2,Blank-158,Hcrtr2,Npy6r,Blank-49,Oxtr,Npy2r,Gpr26,Hcrtr1,Blank-146,Cckbr,Adgrg7,Mrgprb1,Blank-28,Adgrf4,Blank-32,Blank-151</td>
+<td style="text-align: left;">Slc17a7,Epha4,Cx3cl1,Epha6,Gabbr1,Gabbr2,Adora1,Baiap2,Celsr2,Grin2b,Chrm1,Syt4,Anxa11,Grm5,Epha7,Ntrk3,Adgrl1,Nrp1,Chrm3,Lmtk2</td>
+</tr>
+<tr>
+<td style="text-align: right;">1</td>
+<td style="text-align: left;">237,238,0</td>
+<td style="text-align: right;">0.14118</td>
+<td style="text-align: right;">373464</td>
+<td style="text-align: left;">Grm2,Ntrk3,Baiap2,Epha7,Tmem108,Cxcl12,Adcyap1r1,Chrm1,Htr4,Mas1,Npy1r,Grm7,Anxa11,Grm1,Drd1,Epha4,Sstr2,Grin2b,Gprc5b,Grm5</td>
+<td style="text-align: left;">Grm2,Ghsr,Drd1,Npy1r,Glp2r,Sstr2,Htr4,Igfbpl1,Gpr139,Mc4r,Rho,Sstr1,Lgr6,P2ry4,Tmem108,Mas1,Cxcl12,Blank-31,Epha1,Peg10</td>
+<td style="text-align: left;">Slc17a7,Epha4,Ntrk3,Baiap2,Gabbr1,Epha7,Cx3cl1,Grin2b,Chrm1,Gabbr2,Grm5,Grm2,Gprc5b,Anxa11,Adgrl1,Celsr2,Grm7,Adcyap1r1,Epha6,Gad1</td>
+</tr>
+<tr>
+<td style="text-align: right;">2</td>
+<td style="text-align: left;">101,255,101</td>
+<td style="text-align: right;">0.12849</td>
+<td style="text-align: right;">339911</td>
+<td style="text-align: left;">Sstr4,Gpr161,Cx3cl1,Chrm3,Grin2b,Epha6,Htr1a,Epha7,Man1a,Htr1b,Chrm5,Baiap2,Tyro3,Adgrb3,Gpr63,Grm5,Gabbr1,Htr5b,Ror1,Chrm1</td>
+<td style="text-align: left;">Chrm5,Htr5b,Gpr161,Htr1b,Gpr101,Ackr2,Htr1a,Sstr4,Ror1,Ntsr1,Man1a,Gpr151,Ephb3,Gpr63,Chrm4,Gpr6,Htr1f,Tyro3,Chrm3,Crhr1</td>
+<td style="text-align: left;">Slc17a7,Cx3cl1,Gabbr1,Epha6,Epha4,Grin2b,Epha7,Baiap2,Sstr4,Chrm3,Chrm1,Grm5,Celsr2,Ntrk3,Gabbr2,Adgrb3,Adgrl1,Adgrb1,Lmtk2,Gpr161</td>
+</tr>
+<tr>
+<td style="text-align: right;">3</td>
+<td style="text-align: left;">101,254,255</td>
+<td style="text-align: right;">0.09486</td>
+<td style="text-align: right;">250947</td>
+<td style="text-align: left;">Gpr37l1,Ntsr2,Fgfr3,S1pr1,Aqp4,Cspg5,Ntrk2,Aldh1l1,Sox9,Slc25a18,Mertk,Ednrb,Mlc1,Timp4,Gfap,Fzd2,Axl,Gramd3,Gprc5b,Adgrg1</td>
+<td style="text-align: left;">Gpr37l1,Fgfr3,Aqp4,Sctr,Fzd2,Celsr1,S1pr1,Ppp1r3g,Ntsr2,Hrh1,Ednrb,Blank-133,Egfr,Gpr156,Adora2b,Aldh1l1,Mertk,Blank-45,Sox9,Slc25a18</td>
+<td style="text-align: left;">Gpr37l1,Ntsr2,Cspg5,Gfap,Ntrk2,Fgfr3,S1pr1,Aqp4,Gprc5b,Sox9,Slc25a18,Aldh1l1,Gabbr1,Mertk,Slc17a7,Mlc1,Adcyap1r1,Timp4,Axl,Adgrl1</td>
+</tr>
+<tr>
+<td style="text-align: right;">4</td>
+<td style="text-align: left;">101,101,255</td>
+<td style="text-align: right;">0.08956</td>
+<td style="text-align: right;">236909</td>
+<td style="text-align: left;">Gfap,Adgrl1,Gpr27,Slc17a7,Ntrk2,Adora1,Mlc1,Timp4,Aldh1l1,Slc25a18,Axl,Sox9,Cspg5,Gpr162,Fgfrl1,Adra2c,Gpr26,Gprc5b,Kiss1r,Slc32a1</td>
+<td style="text-align: left;">Adra2c,Gpr82,Vmn1r54,Blank-65,Cxcr2,Gpr27,Gpr143,Blank-20,Vmn1r42,Gfap,Blank-128,Blank-51,Mlc1,Blank-121,Kiss1r,F2rl2,Timp4,Cxcr6,Th,Prokr1</td>
+<td style="text-align: left;">Slc17a7,Gfap,Adgrl1,Gabbr1,Adora1,Ntrk2,Cspg5,Gabbr2,Gpr27,Gprc5b,Gpr162,Olig1,Ntsr2,Mlc1,Chrm1,Epha6,Slc25a18,Epha7,Sox9,Celsr2</td>
+</tr>
+<tr>
+<td style="text-align: right;">5</td>
+<td style="text-align: left;">255,101,254</td>
+<td style="text-align: right;">0.05543</td>
+<td style="text-align: right;">146630</td>
+<td style="text-align: left;">Grm4,Slc17a6,Adgra1,Gabbr1,Hrh3,Drd2,Gabbr2,Opn3,Adra1b,Epha8,Fzd10,Gpr153,Ptger3,Prokr2,Grm1,Adgrl2,Cx3cl1,Htr7,Adrb1,Hrh2</td>
+<td style="text-align: left;">Slc17a6,Opn3,Drd2,Epha8,Adra1b,Grm4,Agtr1b,Ptger3,Adgra1,Fzd10,Hrh3,Adgrd1,Blank-157,Prokr2,Adra2b,Dgkk,Gpr153,Blank-93,Gpr139,Blank-43</td>
+<td style="text-align: left;">Gabbr1,Gabbr2,Slc17a7,Cx3cl1,Grm4,Adgra1,Epha4,Slc17a6,Adgrl1,Grin2b,Hrh3,Cspg5,Celsr2,Gpr162,Grm1,Syt4,Igf1r,Lmtk2,Ntrk2,Adgrb1</td>
+</tr>
+<tr>
+<td style="text-align: right;">6</td>
+<td style="text-align: left;">255,178,101</td>
+<td style="text-align: right;">0.05248</td>
+<td style="text-align: right;">138815</td>
+<td style="text-align: left;">Gad1,Cnr1,Erbb4,Slc32a1,Slc17a8,Alk,Oprd1,Rxfp3,Chrm2,Nmbr,Grpr,Oprm1,Adra1a,Qrfpr,Hrh3,Hrh2,Gabbr1,Gpr176,Gpr83,Oprk1</td>
+<td style="text-align: left;">Slc17a8,Rxfp3,Chrm2,Qrfpr,Grpr,Oprm1,Slc32a1,Gad1,Nmbr,Oprk1,Alk,Erbb4,Oprd1,Tacr1,Rxfp1,Cnr1,Gpr149,Blank-83,Htr2b,Ptger2</td>
+<td style="text-align: left;">Gad1,Cnr1,Gabbr1,Erbb4,Gabbr2,Cx3cl1,Epha6,Slc32a1,Slc17a7,Cspg5,Ntrk3,Grm5,Adgrl1,Syt4,Grin2b,Epha4,Celsr2,Adgrb1,Gpr162,Epha7</td>
+</tr>
+<tr>
+<td style="text-align: right;">8</td>
+<td style="text-align: left;">0,223,95</td>
+<td style="text-align: right;">0.03778</td>
+<td style="text-align: right;">99949</td>
+<td style="text-align: left;">C1qb,C1qa,Cx3cr1,Selplg,Gfap,Csf1r,P2ry12,P2yr13,Adgre1,Slc15a3,Cmklr1,Mertk,P2ry6,Gpr183,Gpr34,Cd300c2,Adrb2,C3ar1,Gpr84,Ptafr</td>
+<td style="text-align: left;">Selplg,Cx3cr1,Gpr84,Adora3,P2yr13,Gpr183,C3ar1,C1qa,C1qb,Csf1r,Slc15a3,P2ry12,Ptafr,Cmklr1,Adgre1,Cd300c2,Gpr34,Cxcr6,P2ry6,Adrb2</td>
+<td style="text-align: left;">Gfap,C1qb,C1qa,Cx3cr1,Selplg,Csf1r,Slc17a7,P2ry12,Ntrk2,Cspg5,Mertk,Gprc5b,Gabbr1,Ntsr2,Aqp4,Gpr37l1,Sox9,Adgrl1,Adgre1,Slc25a18</td>
+</tr>
+<tr>
+<td style="text-align: right;">7</td>
+<td style="text-align: left;">178,255,101</td>
+<td style="text-align: right;">0.03655</td>
+<td style="text-align: right;">96700</td>
+<td style="text-align: left;">Flt1,Cldn5,Fn1,Adgrf5,Adgrl4,Kdr,Cxcl12,Tek,Slco1a4,Abcc9,Atp13a5,Tie1,Igf1r,Emcn,Arhgap29,Pdgfrb,Kcnj8,Flt4,Gpr4,Fzd6</td>
+<td style="text-align: left;">Cldn5,Flt1,Fn1,Adgrf5,Flt4,Abcc9,Adgrl4,Tek,Gper1,Tie1,Slco1a4,Kdr,Ccrl2,Vmn1r46,Atp13a5,Emcn,Gpr39,Gpr4,Tbxa2r,Blank-82</td>
+<td style="text-align: left;">Flt1,Cldn5,Fn1,Adgrf5,Igf1r,Cxcl12,Adgrl4,Kdr,Gfap,S1pr1,Arhgap29,Slc17a7,Slco1a4,Pdgfrb,Tek,Gabbr1,Atp13a5,Abcc9,Tie1,Nrp1</td>
+</tr>
+<tr>
+<td style="text-align: right;">9</td>
+<td style="text-align: left;">101,178,255</td>
+<td style="text-align: right;">0.03245</td>
+<td style="text-align: right;">85847</td>
+<td style="text-align: left;">Gjc3,Olig1,Lpar1,S1pr5,Erbb3,Gpr62,Sox8,Gprc5b,Plxnb3,Fgfr2,Sema4d,Ddr1,Tyro3,Grm3,Tjap1,Ephb1,Gipr,Gramd3,Peg10,Erbb4</td>
+<td style="text-align: left;">S1pr5,Erbb3,Gjc3,Plxnb3,Lpar1,Gpr62,Gipr,Adgrg2,Fgfr2,Olig1,Sox8,Sema4d,Grm3,Ddr1,Fzd5,Tyro3,Blank-41,Tjap1,Blank-36,Gprc5b</td>
+<td style="text-align: left;">Gjc3,Olig1,Gprc5b,Sox8,Ddr1,Lpar1,Sema4d,Tyro3,Gabbr1,Gfap,Fgfr2,Grm3,S1pr5,Gpr62,Erbb3,Plxnb3,Ephb1,Tjap1,Igf1r,Adora1</td>
+</tr>
+<tr>
+<td style="text-align: right;">10</td>
+<td style="text-align: left;">178,101,255</td>
+<td style="text-align: right;">0.01681</td>
+<td style="text-align: right;">44462</td>
+<td style="text-align: left;">Gpr17,Olig1,Pdgfra,Cspg5,Pcdh15,Traf4,Sox8,Mki67,Gjc3,Top2a,Gpr37l1,Ascl1,Plxnb3,Ednrb,Fzd9,Erbb3,Sstr1,Mc5r,S1pr2,Calcrl</td>
+<td style="text-align: left;">Gpr17,Mki67,Pdgfra,Top2a,Pcdh15,Traf4,Blank-109,Ascl1,Olig1,Mc5r,Fzd9,S1pr2,Sox8,Sstr1,Prlhr,Prokr1,Blank-116,Plxnb3,Blank-72,Cspg5</td>
+<td style="text-align: left;">Olig1,Cspg5,Gpr17,Pdgfra,Gpr37l1,Gjc3,Sox8,Traf4,Pcdh15,Ntrk2,Gfap,Ntrk3,Adcyap1r1,Adgrb1,Gabbr1,Ednrb,Adora1,Erbb4,Slc17a7,Adgrl1</td>
+</tr>
+<tr>
+<td style="text-align: right;">11</td>
+<td style="text-align: left;">255,153,204</td>
+<td style="text-align: right;">0.01216</td>
+<td style="text-align: right;">32170</td>
+<td style="text-align: left;">Htr2c,Gpr182,Efemp1,Cxcl12,Myh11,Crhr2,Igfbpl1,Lmod1,Cxcr4,Fzd4,Gprc5c,Ptgdr,Ddr2,Arhgap29,Hcar1,Ror2,Dlk1,Sox9,Ddr1,Fzd2</td>
+<td style="text-align: left;">Gpr55,Gpr182,Ptgdr,Lpar3,Hcar1,Htr2c,Cxcr3,Ror2,Mc3r,Crhr2,Lmod1,Musk,Slc47a1,Gpr20,Gpr88,Gpr132,Mrgprf,Efemp1,Igfbpl1,Dlk1</td>
+<td style="text-align: left;">Cxcl12,Sox9,Ddr1,Ntrk2,Htr2c,Anxa11,Gprc5b,Igf1r,Arhgap29,Gfap,Gpr182,Efemp1,Myh11,Fgfr2,Smo,Pdgfra,Tmem108,Fzd4,Axl,Man1a</td>
+</tr>
+</tbody>
+</table>
+<h3 id="packed-sge-and-spatial-factor-outputs-from-run_cartload2">Packed <abbr title="Spatial Digital Gene Expression">SGE</abbr> and Spatial Factor Outputs from <code>run_cartload2</code><a class="headerlink" href="#packed-sge-and-spatial-factor-outputs-from-run_cartload2" title="Permanent link">&para;</a></h3>
+<p>The packed <abbr title="Spatial Digital Gene Expression">SGE</abbr> data and spatial factor inferences generated by <code>FICTURE</code> are available in PMTile format on Zenodo: <a href="https://zenodo.org/records/15824932">DOI:10.5281/zenodo.15824932</a>.</p>
+<p>These datasets can also be loaded directly using the following catalog YAML file:<br />
+<code>https://zenodo.org/records/15824933/catalog.yaml</code></p>
 
 
 
@@ -1734,6 +1894,8 @@ cartloader run_cartload2 \
     
     
       <script src="../../../assets/javascripts/bundle.f13b1293.min.js"></script>
+      
+        <script src="../../../js/load_tsv.js"></script>
       
         <script src="../../../js/open_in_new_tab.js"></script>
       

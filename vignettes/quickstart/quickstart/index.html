@@ -550,6 +550,15 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#output-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      Output Data
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -827,7 +836,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../subregion_tutorials/cosmx_smi/" class="md-nav__link">
+      <a href="../../subregion_tutorials/cosmxsmi/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1071,6 +1080,15 @@
   <a href="#upload-to-data-repository" class="md-nav__link">
     <span class="md-ellipsis">
       Upload to Data Repository
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#output-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      Output Data
     </span>
   </a>
   
@@ -1492,8 +1510,11 @@ cartloader run_cartload2 \
 </tbody>
 </table>
 <h2 id="upload-to-data-repository">Upload to Data Repository<a class="headerlink" href="#upload-to-data-repository" title="Permanent link">&para;</a></h2>
+<div class="admonition info">
+<p class="admonition-title">Choose a data repository to host/share your output</p>
 <p><code>cartloader</code> supports two upload options (<code>AWS</code> and <code>Zenodo</code>) for storing PMTiles of <abbr title="Spatial Digital Gene Expression">SGE</abbr> and spatial factors in a data repository.</p>
-<p>Choose the one that best suits your needs.</p>
+<p><strong>Choose the one that best suits your needs.</strong></p>
+</div>
 <h3 id="aws-uploads">AWS Uploads<a class="headerlink" href="#aws-uploads" title="Permanent link">&para;</a></h3>
 <p>Upload the generated cartloader outputs to your designated AWS S3 directory:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
@@ -1556,7 +1577,7 @@ cartloader run_cartload2 \
 <span class="w">  </span>--upload-method<span class="w"> </span>catalog<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--zenodo-token<span class="w"> </span>/path/to/zenodo/token/file<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--create-new-deposition<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--title<span class="w">  </span><span class="s2">&quot;cartloader SeqScope Starter Tutorial Results&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--title<span class="w">  </span><span class="s2">&quot;Yur Title&quot;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--creators<span class="w"> </span><span class="s2">&quot;Your Name&quot;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--description<span class="w"> </span><span class="s2">&quot;This is an example description&quot;</span>
 </code></pre></div></td></tr></table></div>
@@ -1614,14 +1635,127 @@ cartloader run_cartload2 \
 </tr>
 </tbody>
 </table>
-<!-- ## Output
+<h2 id="output-data">Output Data<a class="headerlink" href="#output-data" title="Permanent link">&para;</a></h2>
+<p>See more details of output at the Reference pages for <a href="../../../reference/run_ficture2/">run_ficture2</a> and <a href="../../../reference/run_cartload2/">run_cartload2</a>.</p>
+<h3 id="spatial-factor-inference-from-ficture">Spatial Factor Inference from <code>FICTURE</code><a class="headerlink" href="#spatial-factor-inference-from-ficture" title="Permanent link">&para;</a></h3>
+<p>Below is an example of spatial factor inference results produced by <code>FICTURE</code> using a training width of 18, 12 factors, a fit width of 18, and an anchor resolution of 6.</p>
+<p><img alt="FICTURE" src="../../../images/starter_vignettes/seqscope.t18_f12_p18_a6.png" title="Spatial factor map" /></p>
+<div id="color-legend-container"></div>
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    loadColorLegend("../../../tabs/colormap/seqscope_starter.t18-f12-rgb.tsv", "color-legend-container");
+  });
+</script>
 
-
-### Spatial Factors Inferences from FICTURE
-
-#### Spatial Factors Map
-![FICTURE](../../images/starter_vignettes/seqscope.t18_f12_p18_a6.png "Spatial factor map")
- -->
+<table>
+<thead>
+<tr>
+<th style="text-align: right;">Factor</th>
+<th style="text-align: left;">RGB</th>
+<th style="text-align: right;">Weight</th>
+<th style="text-align: right;">PostUMI</th>
+<th style="text-align: left;">TopGene_pval</th>
+<th style="text-align: left;">TopGene_fc</th>
+<th style="text-align: left;">TopGene_weight</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;">0</td>
+<td style="text-align: left;">255,101,101</td>
+<td style="text-align: right;">0.57145</td>
+<td style="text-align: right;">2577934</td>
+<td style="text-align: left;">Snap25,Cck,Hpca,Syt1,Atp1b1,Selenow,Ywhah,Scg5,Cnih2,Atp1a3,Vsnl1,Gnas,Cpe,Prkcb,Stmn2,Atp2b1,Gng3,Prkcg,Snrpn,Norad</td>
+<td style="text-align: left;">Nr2c1,Calca,Wdr91,Ccbe1,Esyt1,Epha3,Slc9a4,Thap7,Mapk11,Klk8,Arhgef6,1110018N20Rik,Iba57,Klk10,Gjd2,Leng9,Zbtb46,Slc9a2,Akr1c18,Dlx6os1</td>
+<td style="text-align: left;">Snap25,Tmsb4x,Atp1b1,Actb,Cpe,Ywhah,Nrgn,Ppp3ca,Selenow,Calm1,Atp1a3,Calm2,Fth1,Rtn1,Cox8a,Gnas,Camk2a,Norad,Aldoa_v1,Ndrg4</td>
+</tr>
+<tr>
+<td style="text-align: right;">1</td>
+<td style="text-align: left;">237,238,0</td>
+<td style="text-align: right;">0.15458</td>
+<td style="text-align: right;">697338</td>
+<td style="text-align: left;">Ppp3ca,Nrgn,Ptk2b,Olfm1,Ppp3r1,Gria2,Ncdn,Nsf,Syne1,Snca,Chn1,Tmsb4x,Rasgrf1,Grin2a,Enc1,Kalrn,Wasf1,Camk2b,Calm2,Epha7</td>
+<td style="text-align: left;">Vwa8,Zfp583,Sppl2b,Faap24,Recql5,A230051N06Rik,Ints6l,Rnaseh2b,Strada,Scnn1a,Snhg17,Prelid3a,Grhl1,Icam4,Slc44a5,Tyw1,Parp8,Asb11,Vipr1,Zfp668</td>
+<td style="text-align: left;">Ppp3ca,Nrgn,Tmsb4x,Actb,Snap25,Atp1b1,Olfm1,Ywhah,Calm2,Ncdn,Rtn1,Ptk2b,Calm1,Ppp3r1,Actg1,Chn1,Fth1,Ndrg4,Fkbp1a,Cfl1</td>
+</tr>
+<tr>
+<td style="text-align: right;">2</td>
+<td style="text-align: left;">101,255,101</td>
+<td style="text-align: right;">0.116</td>
+<td style="text-align: right;">523314</td>
+<td style="text-align: left;">Cst3,Glul,Slc1a2,Mt1,Apoe,Sparcl1,Aldoc,Clu,Atp1a2,Slc1a3,Camk2a,Ndrg2,Gfap,Mt2,Gpr37l1,Atp1b2,Fam107a,Prdx6,Bc1,Plpp3</td>
+<td style="text-align: left;">Pdk4,Bgn,Unc93b1,Rfx4,Ccr5,Phkg1,Slc38a3,Pax6,Chil1,Gli3,Thbs4,Ppp1r18,Sh3pxd2b,Lyz2,Cpt1a,Aif1,Pdlim4,Cd33,Lcat,Arhgef19</td>
+<td style="text-align: left;">Cst3,Glul,Slc1a2,Sparcl1,Camk2a,Cpe,Mt1,Apoe,Mbp,Fth1,Aldoc,Clu,Ttr,Camk2n1,Ckb,Ddn,Rps29,Atp1a2,Scd2,Mt3</td>
+</tr>
+<tr>
+<td style="text-align: right;">3</td>
+<td style="text-align: left;">101,254,255</td>
+<td style="text-align: right;">0.09284</td>
+<td style="text-align: right;">418815</td>
+<td style="text-align: left;">Fam163b,Prox1,Adcy1,Stxbp6,C1ql2,Btbd3,Synpr,Sema5a,Dsp,Eef1a1,Ncdn,Jun,Lrrtm4,Rfx3,Olfm1,Dgkh,Marcksl1,Ncald,Pitpnm2,Nrgn</td>
+<td style="text-align: left;">Il20rb,Tdo2,Col22a1,C1ql2,St3gal1,Plk5,Dsp,Prox1os,Fam163b,Prox1,Rph3al,H2bc6,Lrrtm4,Mcm6,Khdrbs2,Vwa3b,Prdm5,Npnt,Dact1,Stxbp6</td>
+<td style="text-align: left;">Nrgn,Eef1a1,Ncdn,Olfm1,Ppp3ca,Actb,Tmsb4x,Calm1,Camk2a,Sparcl1,Atp1b1,Adcy1,Fam163b,Tspan7,Ndrg4,Rplp1,Arf3,Camk2n1,Rpl17,Ptk2b</td>
+</tr>
+<tr>
+<td style="text-align: right;">4</td>
+<td style="text-align: left;">101,101,255</td>
+<td style="text-align: right;">0.03885</td>
+<td style="text-align: right;">175240</td>
+<td style="text-align: left;">Plp1,Mbp,Gatm,Mobp,Cnp,Cldn11,Fth1,Car2,Ermn,Cryab,Qdpr,Tubb4a,Trf,Plekhb1,Qki,Tspan2,Mal,Bcas1,Tmem88b,Septin4</td>
+<td style="text-align: left;">Insc,Creb5,Tmem125,Trim36,Hapln2,Pde1c,Gjc2,Prr5l,Gjc3,Sec14l5,Gatm,Nkx6-2,Tmem88b,Adamts4,Plekhh1,Ermn,Plp1,Trim59,Plekhg3,Enpp6</td>
+<td style="text-align: left;">Mbp,Plp1,Fth1,Mobp,Ptgds,Actb,Gatm,Tubb4a,Cnp,Car2,Cldn11,Tpt1,Scd2,Glul,Qdpr,App,Qki,Ptma,Malat1,Lars2</td>
+</tr>
+<tr>
+<td style="text-align: right;">5</td>
+<td style="text-align: left;">255,101,254</td>
+<td style="text-align: right;">0.02347</td>
+<td style="text-align: right;">105862</td>
+<td style="text-align: left;">Ttr,Ptgds,Enpp2,Tac2,Gng8,Sostdc1,Ecrg4,Zic1,Calb2,Nnat,Dcn,Tmem212,Adcyap1,Gpr151,2900040C04Rik,Necab2,Apod,Nhlh2,Pou4f1,Ace</td>
+<td style="text-align: left;">Tmem212,Kcne2,Cldn2,Dcn,Septin10,Col8a2,Pou4f1,Nhlh2,Gng8,Wif1,Chrna3,Adcyap1,Folr1,Col1a2,Clec3b,Gng14,Sostdc1,Foxc1,Ecrg4,Tac2</td>
+<td style="text-align: left;">Ttr,Ptgds,Enpp2,Apoe,Cpe,Pcp4,Actb,Eef1a1,Nnat,Psap,Fth1,Tpt1,Cst3,Dbi,Atp1b1,Cox8a,Sparcl1,Clu,Rpl23,Cox7c</td>
+</tr>
+<tr>
+<td style="text-align: right;">6</td>
+<td style="text-align: left;">255,178,101</td>
+<td style="text-align: right;">0.00163</td>
+<td style="text-align: right;">7366</td>
+<td style="text-align: left;">Nkx2-2,Abtb2,Myo1d,C030029H02Rik,Pogk,Dusp16,Smco3,Gjb1,Ldlrad3,Rhobtb3,Lrrc8c,Cdr2,Piga,Tjap1,Carns1,Gpt,Prim1,Sh3gl3,Plk3,Cerox1</td>
+<td style="text-align: left;">Nkx2-2,Abtb2,C030029H02Rik,Myo1d,Dusp16,Smco3,Gjb1,Pogk,Prim1,Ldlrad3,Plk3,Vgll4,Carns1,Gpt,Letm2,Cdr2,Piga,Fign,Lmln,Tjap1</td>
+<td style="text-align: left;">Mbp,Fth1,Pogk,Malat1,Qdpr,Plp1,Myo1d,Tubb4a,Abtb2,Rps27a,Rhobtb3,Glul,Gatm,Nkx2-2,Sh3gl3,Alkbh5,C030029H02Rik,Smco3,Tpt1,Gjb1</td>
+</tr>
+<tr>
+<td style="text-align: right;">7</td>
+<td style="text-align: left;">178,255,101</td>
+<td style="text-align: right;">0.00073</td>
+<td style="text-align: right;">3290</td>
+<td style="text-align: left;">Sst,Crhbp,Npy,Cort,Reln,Uhrf1bp1,Rab3b,2310010J17Rik,Elfn1,Lypd6b,Lgals1,Rpp25,Gad2,Cdh13,Clic5,Cenpf,Dlx1,Bcam,Foxred2,Sec14l5</td>
+<td style="text-align: left;">Sst,Uhrf1bp1,Crhbp,Cort,Reln,Lypd6b,2310010J17Rik,Elfn1,Rab3b,Npy,Clic5,Rpp25,Cenpf,Bcam,Lgals1,Sec14l5,Dlx1,Foxred2,Gpc3,Cdh13</td>
+<td style="text-align: left;">Sst,Npy,Crhbp,Atp1b1,Reln,Cort,Zwint,Gad2,Rab3b,Syt1,2310010J17Rik,Snap25,Sparcl1,Atp1a3,Oxr1,Scg2,Mdh1,Atp6v0c,Atp6v1e1,Vgf</td>
+</tr>
+<tr>
+<td style="text-align: right;">9</td>
+<td style="text-align: left;">101,178,255</td>
+<td style="text-align: right;">0.0004</td>
+<td style="text-align: right;">1817</td>
+<td style="text-align: left;">Hba-a2,Hbb-bs,Hba-a1,Hbb-bt,Tent5c,Polr2l,Aven,Tinagl1,Map2k3,Rgs6,Bst2,Zfp318,Stk40,Plekha8,Ube2l6,Rad50,Slc12a4,Kank2,Srgap1,Klf2</td>
+<td style="text-align: left;">Hba-a1,Hbb-bs,Hbb-bt,Hba-a2,Tent5c,Polr2l,Aven,Tinagl1,Map2k3,Rgs6,Bst2,Slc12a4,Stk40,Ube2l6,Plekha8,Kank2,Rad50,Zfp318,Prtg,Srgap1</td>
+<td style="text-align: left;">Hba-a2,Hbb-bs,Hba-a1,Hbb-bt,Polr2l,Atp1b1,Camk2a,Plekhb1,Tent5c,Rpl31,Praf2,Tpd52,Ptgds,Ddn,Fth1,Calm3,Rpl38,Mobp,Psme3,Mkrn1</td>
+</tr>
+<tr>
+<td style="text-align: right;">8</td>
+<td style="text-align: left;">0,223,95</td>
+<td style="text-align: right;">5e-05</td>
+<td style="text-align: right;">214</td>
+<td style="text-align: left;">Sass6,Recql5,Jmjd4,A230072C01Rik,Zfp583,Eef1akmt2,Rnaseh2b,Orc6,Akap10,Mak16,Slc25a35,Dclre1b,C130074G19Rik,Fbxw4,Arhgap10,Il17ra,Zbtb2,Katnip,Hook2,Ints6l</td>
+<td style="text-align: left;">Sass6,Recql5,Jmjd4,A230072C01Rik,Zfp583,Rnaseh2b,Eef1akmt2,Akap10,Orc6,Slc25a35,Dclre1b,C130074G19Rik,Mak16,Arhgap10,Il17ra,Fbxw4,Katnip,Zbtb2,Hook2,Ints6l</td>
+<td style="text-align: left;">Sass6,Recql5,Jmjd4,Cst3,Mak16,A230072C01Rik,Orc6,Tmsb4x,Zfp583,Hexb,Eef1akmt2,Capzb,Gabarapl1,Mdh2,Odc1,Rpl6,Olfm1,Rps8,Golga1,Zfp106</td>
+</tr>
+</tbody>
+</table>
+<h3 id="packed-sge-and-spatial-factor-outputs-from-run_cartload2">Packed <abbr title="Spatial Digital Gene Expression">SGE</abbr> and Spatial Factor Outputs from <code>run_cartload2</code><a class="headerlink" href="#packed-sge-and-spatial-factor-outputs-from-run_cartload2" title="Permanent link">&para;</a></h3>
+<p>The packed <abbr title="Spatial Digital Gene Expression">SGE</abbr> data and spatial factor inferences generated by <code>FICTURE</code> are available in PMTile format on Zenodo: <a href="https://zenodo.org/records/15759403">DOI:10.5281/zenodo.15759403</a>.</p>
+<p>These datasets can also be loaded directly using the following catalog YAML file:<br />
+<code>https://zenodo.org/records/15802634/catalog.yaml</code></p>
 
 
 
@@ -1672,6 +1806,8 @@ cartloader run_cartload2 \
     
     
       <script src="../../../assets/javascripts/bundle.f13b1293.min.js"></script>
+      
+        <script src="../../../js/load_tsv.js"></script>
       
         <script src="../../../js/open_in_new_tab.js"></script>
       
