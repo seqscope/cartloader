@@ -28,10 +28,11 @@ def traverse_dict(d, parent_key=''):
     return pairs
 
 def collect_files_from_yaml(catalog_f):
+
+    print(f"Extracting input files from catalog file: {catalog_f}")
     with open(catalog_f, "r") as catalog_file:
         catalog = yaml.safe_load(catalog_file)
     catalog_pair=traverse_dict(catalog)
-    #print(catalog_pair)
 
     keys_id = {"id", "title", "name", "model_id", "proj_id", "decode_id"}
     cartload_files = []
