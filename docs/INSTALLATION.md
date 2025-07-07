@@ -92,10 +92,10 @@ cd $env_dir
 git clone git@github.com:seqscope/cartloader.git
 cd cartloader
 
-pip install -e ./
-
 # Install its requirements:
 pip install -r ./requirements.txt
+
+pip install -e ./
 ```
 
 ---
