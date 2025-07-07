@@ -113,6 +113,7 @@ figure {
 .md-typeset table td,
 .md-typeset table th {
   padding: 6px 10px;
+  text-align: left !important;
 }
 
 /* .md-typeset table td code {
@@ -124,3 +125,54 @@ figure {
 .md-typeset table th > code {
   white-space: nowrap;
 }
+
+/* Table for the info tsv */
+.custom-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1em 0;
+  font-size: 0.95em;
+  font-family: sans-serif;
+  border: 1px solid #ccc;
+}
+
+.custom-table th,
+.custom-table td {
+  border: 1px solid #ccc;
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.custom-table thead {
+  background-color: #f5f5f5;
+  font-weight: bold;
+}
+
+.custom-table tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+/* Color table */
+
+.color-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 1em 0;
+}
+
+.color-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.9em;
+  font-family: sans-serif;
+}
+
+.color-swatch {
+  width: 20px;
+  height: 20px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+

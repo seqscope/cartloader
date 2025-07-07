@@ -19,7 +19,7 @@ Follow the commands below to download the example data.
 ```bash
 work_dir=/path/to/work/directory
 cd $work_dir
-wget  https://zenodo.org/records/15701394/files/cosmxsmi_starter.raw.tar.gz
+wget  https://zenodo.org/records/15786632/files/cosmxsmi_starter.raw.tar.gz
 tar --strip-components=1 -zxvf cosmxsmi_starter.raw.tar.gz
 ```
 
@@ -68,4 +68,10 @@ n_factor=6,12                            # define number of factors in LDA train
 ## Upload to Data Repository
 {%
   include-markdown "../../../includes/includemd_vigenettes_upload2aws.md"
+%}
+
+## Output Data
+
+{%
+  include-markdown "../../../includes/includemd_vigenettes_output_cosmxsmi.md"
 %}

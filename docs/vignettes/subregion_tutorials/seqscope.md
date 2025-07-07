@@ -14,14 +14,14 @@ Actual input formats are platform-dependent. Please refer to the [Vignettes](../
 
 **Data Access**
 
-The example data is hosted on Zenedo (10.5281/zenodo.15701394).
+The example data is hosted on Zenedo (10.5281/zenodo.15786632).
 
 Follow the commands below to download the example data.
 
 ```bash
 work_dir=/path/to/work/directory
 cd $work_dir
-wget  https://zenodo.org/records/15701394/files/seqscope_starter.raw.tar.gz 
+wget  https://zenodo.org/records/15786632/files/seqscope_starter.raw.tar.gz 
 tar -zxvf seqscope_starter.raw.tar.gz 
 ```
 
@@ -73,4 +73,11 @@ n_factor=6,12                            # define number of factors in LDA train
 
 {%
   include-markdown "../../../includes/includemd_vigenettes_upload2aws.md"
+%}
+
+
+## Output Data
+
+{%
+  include-markdown "../../../includes/includemd_vigenettes_output_seqscope.md"
 %}

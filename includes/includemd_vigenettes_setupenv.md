@@ -21,5 +21,5 @@ cmap=/path/to/color/map                 # Path to the fixed color map for render
 AWS_BUCKET="EXAMPLE_AWS_BUCKET"         # replace EXAMPLE_AWS_BUCKET with your actual S3 bucket name
 
 # Activate the bioconda environment
-conda activate BIOENV_NAME              # replace BIOENV_NAME with your bioconda environment name
+conda activate ENV_NAME              # replace BIOENV_NAME with your bioconda environment name
 ```

@@ -1,4 +1,4 @@
-# Spatial Gene Expression (SGE) Format Conversion
+# Spatial Gene Expression Format Conversion
 
 ## Overview
 

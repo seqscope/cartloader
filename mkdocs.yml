@@ -63,7 +63,7 @@ nav:
         - Pixel-Seq Starter Tutorial: vignettes/subregion_tutorials/pixelseq.md
         - Xenium Starter Tutorial: vignettes/subregion_tutorials/xenium.md
         - MERSCOPE Starter Tutorial: vignettes/subregion_tutorials/merscope.md
-        - CoxMX SMI Starter Tutorial: vignettes/subregion_tutorials/cosmx_smi.md
+        - CoxMX SMI Starter Tutorial: vignettes/subregion_tutorials/cosmxsmi.md
 
   - References:
       - SGE Format Conversion: reference/sge_convert.md
@@ -77,6 +77,7 @@ watch:
 # Markdown Extensions
 markdown_extensions:
   - abbr
+  - tables
   - footnotes
   - admonition
   - attr_list
@@ -102,9 +103,13 @@ plugins:
   - search
   - open-in-new-tab
   - include-markdown
+  - table-reader
   # - macros
 
 # Extra CSS
 extra_css:
   - css/extra.css
   #- css/neoteroi-mkdocs.css
+
+extra_javascript:
+  - js/load_tsv.js

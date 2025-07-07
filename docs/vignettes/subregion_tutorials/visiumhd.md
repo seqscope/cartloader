@@ -20,7 +20,7 @@ Follow the commands below to download the example data.
 ```bash
 work_dir=/path/to/work/directory
 cd $work_dir
-wget  https://zenodo.org/records/15701394/files/visiumhd_starter.raw.tar.gz 
+wget  https://zenodo.org/records/15786632/files/visiumhd_starter.raw.tar.gz 
 tar -zxvf visiumhd_starter.raw.tar.gz  
 ```
 
@@ -90,4 +90,10 @@ cartloader run_ficture2 \
 ## Upload to Data Repository
 {%
   include-markdown "../../../includes/includemd_vigenettes_upload2aws.md"
+%}
+
+## Output Data
+
+{%
+  include-markdown "../../../includes/includemd_vigenettes_output_visiumhd.md"
 %}

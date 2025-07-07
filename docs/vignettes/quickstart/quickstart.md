@@ -16,13 +16,15 @@ The workflow consists of three major steps:
 
 ## Input Data
 
-This tutorial used an SGE representing the mouse hippocampus as input data. The input SGE file was prepared in a format compatible with `FICTURE` using [`sge_convert`](../../reference/sge_convert.md) in `cartloader` .
+This tutorial used an SGE representing the mouse hippocampus as input data. 
+
+The input SGE file was already converted to a format compatible with `FICTURE` using [`sge_convert`](../../reference/sge_convert.md) in `cartloader` .
 
 !!! warning "Prepare Input SGE for `FICTURE`"
 
     `FICTURE` requires input in the form of a transcript-indexed SGE file in TSV format with at least: X and Y spatial coordinates, gene identifiers, and expression counts. 
     
-    Because spatial transcriptomics (ST) platforms vary widely in their data formats and metadata structures, `cartloader` provides the [`sge_convert`](../../reference/sge_convert.md) module to convert raw SGE data into the standardized format required by `FICTURE`.
+    Because ST platforms vary widely in their data formats and metadata structures, `cartloader` provides the [`sge_convert`](../../reference/sge_convert.md) module to convert raw SGE data into the standardized format required by `FICTURE`.
     
     For detailed platform-specific instructions on preparing compatible SGE files, see the [Vignettes](../intro.md#getting-started-per-platform).
 
@@ -36,7 +38,7 @@ The example SGE includes the following files:
 
 **Data Access**
 
-The example data is hosted on Zenedo (10.5281/zenodo.15701394).
+The input example data is hosted on Zenedo [DOI: 10.5281/zenodo.15701393](https://doi.org/10.5281/zenodo.15701393).
 
 Follow the commands below to download the example data.
 
@@ -44,7 +46,7 @@ Follow the commands below to download the example data.
 work_dir=/path/to/work/directory
 cd $work_dir
 
-wget  https://zenodo.org/records/15701394/files/seqscope_starter.std.tar.gz
+wget https://zenodo.org/records/15786632/files/seqscope_starter.std.tar.gz
 tar -zxvf seqscope_starter.std.tar.gz
 ```
 
@@ -81,6 +83,14 @@ n_factor=6,12                            # define number of factors in LDA train
 %}
 
 ## Upload to Data Repository
+
 {%
   include-markdown "../../../includes/includemd_vigenettes_upload2aws.md"
 %}
+
+## Output Data
+
+{%
+  include-markdown "../../../includes/includemd_vigenettes_output_seqscope.md"
+%}
+

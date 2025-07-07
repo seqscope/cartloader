@@ -25,9 +25,12 @@ This vignette provides a beginner-friendly walkthrough using a small mouse hippo
 
 These tutorials show how to run the `cartloader` pipeline on a variety of ST platforms, using small, representative datasets.
 
-Each tutorial begins with data in the platform’s native format.
-
 For consistency, we curated hippocampus from the mouse brain for each platform, when possible. If hippocampal data is unavailable for a given platform, we selected another brain subregion to illustrate the process.
+
+!!! warning
+
+    Each tutorial begins with data in the platform’s native format.
+
 
 ### Sequencing-based Platforms
 
@@ -84,12 +87,14 @@ For consistency, we curated hippocampus from the mouse brain for each platform, 
     <figcaption class="figure-caption-vigintro-large">**CosMX SMI** Starter Guide</figcaption>
     </figure>
 
-    [Read](./subregion_tutorials/cosmx_smi.md){ .md-button .md-button--primary .button-tight-small }
+    [Read](./subregion_tutorials/cosmxsmi.md){ .md-button .md-button--primary .button-tight-small }
 </div>
 
 ## Real-World Use Cases
 These examples demonstrate how to process walk through real-world **whole-sample** ST datasets. Each example uses a whole mouse brain sample for consistency.
 
+!!! warning 
+    Tutorials will be updated.
 
 ## Multi-Sample Batch Analysis
 

@@ -14,11 +14,13 @@ Following spatial factor inference via FICTURE analysis, `cartloader` offers the
 ## Example Usage
 
 ```bash
+DATA_ID="dataset_id"               ## replace dataset_id with the id for your dataset
+
 cartloader run_cartload2 \
     --makefn run_cartload2.mk \
     --fic-dir /path/to/run_ficture2/results \
     --out-dir /path/to/output/directory \
-    --id dataset_id \                            ## replace dataset_id with the id for this dataset
+    --id ${DATA_ID} \
     --colname-count count \
     --n-jobs 20  \
     --threads 20 \
@@ -105,8 +107,8 @@ Copied FICTURE output from `<fic_dir>`. See formats in [FICTURE analysis](./run_
 
 ### Joined molecule-factor PMTiles
 * Joined molecule-factor TSV (`transcripts_pixel_joined.tsv.gz`): Merged file linking transcript-level SGE with decoded pixel factors.
-* Final molecule PMTiles (*_pmtiles_index.tsv, `*_bin_counts.json`): Indexed, multi-feature PMTiles built from joined pixel-factor data for CartoScope.
+* Final molecule PMTiles (`genes_bin*.pmtiles`, `genes_index.tsv`, `genes_pmtiles_index.tsv`, `genes_bin_counts.json`): Indexed, multi-feature PMTiles built from joined pixel-factor data for CartoScope.
 
 ### Summary Files
-* FICTURE assets file (ficture_assets.json): JSON catalog listing all output files and their roles for each trained model.
-* Catalog file (catalog.yaml): Final YAML file summarizing all visual assets and layers for further deployment and visualization.
+* FICTURE assets file (`ficture_assets.json`): JSON catalog listing all output files and their roles for each trained model.
+* Catalog file (`catalog.yaml`): Final YAML file summarizing all visual assets and layers for further deployment and visualization.

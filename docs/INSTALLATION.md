@@ -1,6 +1,6 @@
 # Installation Guide
 
-This is an instruction to set up the required environment, install necessary dependencies, and install `cartloader`.
+This is an instruction to set up the required environment, and install dependencies and `cartloader`.
 
 ---
 
@@ -66,11 +66,11 @@ bash Miniconda3-latest-Linux-x86_64.sh
 Create a dedicated Conda environment for `cartloader`:
 
 ```bash
-conda_env=cartenv               # replace cartenv with the name of your conda environment
+conda_env=ENV_NAME              # replace ENV_NAME with the name of your conda environment
 python_version=3.13.1           # replace 3.13.1 with the version you prefer
 
-conda create -n cartenv python=$python_version
-conda activate cartenv
+conda create -n ENV_NAME python=$python_version
+conda activate ENV_NAME
 ```
 
 ### 2.3 Installing Dependencies
@@ -128,7 +128,7 @@ make
 
 Install [`punkst`](https://github.com/Yichen-Si/punkst) toolkit to use [`FICTURE` (Si et al., Nature Methods 2024)](https://www.nature.com/articles/s41592-024-02415-2).
 
-Please following the [`punkst` installation guide](https://yichen-si.github.io/punkst/install/) to install [`punkst`](https://github.com/Yichen-Si/punkst)
+Please following the [`punkst` installation guide](https://yichen-si.github.io/punkst/install/).
 
 ??? "What is `FICTURE` and `punkst`"
 
