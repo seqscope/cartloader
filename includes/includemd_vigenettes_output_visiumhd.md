@@ -4,13 +4,15 @@ See more details of output at the Reference pages for [run_ficture2](../docs/ref
 Below is an example of spatial factor inference results produced by `FICTURE` using a training width of 18, 12 factors, a fit width of 18, and an anchor resolution of 6.
 
 ![FICTURE](../docs/images/starter_vignettes/visiumhd.t18_f12_p18_a6.png "Spatial factor map")
+![cmap](../docs/images/starter_vignettes/visiumhd.t18-f12-rgb.png)
 
+<!-- 
 <div id="color-legend-container"></div>
 <script>
   document.addEventListener("DOMContentLoaded", function() {
     loadColorLegend("../../../tabs/colormap/visiumhd_starter.t18-f12-rgb.tsv", "color-legend-container");
   });
-</script>
+</script> -->
 
 {{ read_csv('../../tabs/visiumhd_starter.t18-f12-p18-a6-info.tsv',sep = '\t') }}
 
