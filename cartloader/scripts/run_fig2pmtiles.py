@@ -50,8 +50,6 @@ def get_mono(args):
 def cmds_for_dimensions(geotif_f, dim_f):
     cmds = cmd_separator([], f"Extract dimensions from: {geotif_f}")
     dim_f = os.path.splitext(geotif_f)[0] + ".dim.tsv"
-    print(geotif_f)
-    print(dim_f)
     cmds.append(f"{gdal_get_size_script} {geotif_f} {dim_f}")
     return cmds
 
