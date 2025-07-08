@@ -79,7 +79,8 @@ RUN python3 -m pip install --no-cache-dir -r requirements.txt
 # * Add this step due to missing python packages
 RUN cd assets && \
     wget https://raw.githubusercontent.com/seqscope/ficture/refs/heads/main/requirements.txt --output-document ./ficture_requirements.txt && \
-    python3 -m pip install -r ./ficture_requirements.txt
+    grep -v '^importlib' ficture_requirements.txt > ficture_requirements.fixed.txt && \
+    python3 -m pip install -r ./ficture_requirements.fixed.txt
 
 # Install cartloader itself
 RUN python3 -m pip install -e ./
