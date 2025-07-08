@@ -25,7 +25,7 @@
     * `gene_id`: gene IDs
     * `count`: expression count per gene
 
-??? "`coordinate_minmax.tsv`: X Y min/max includemd_vigenettes_sgeformat.mdcoordinates"
+??? "`coordinate_minmax.tsv`: X Y min/max coordinates"
 
     ```text
     xmin	0.14
