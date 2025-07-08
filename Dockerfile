@@ -70,15 +70,16 @@ RUN git clone https://github.com/seqscope/cartloader.git
 WORKDIR /app/cartloader
 
 # sync up submodules 
-RUN git submodule update --init submodules/punkst submodules/spatula submodules/tippecanoe submodules/ficture
+RUN git submodule update --init submodules/punkst submodules/spatula submodules/tippecanoe
 
 # Install Python dependencies
 RUN python3 -m pip install --no-cache-dir -r requirements.txt
 
 # Install Python dependencies from ficture 
 # * Add this step due to missing python packages
-RUN cd submodules/ficture && \
-    python3 -m pip install -r requirements.txt
+RUN cd assets && \
+    wget https://raw.githubusercontent.com/seqscope/ficture/refs/heads/main/requirements.txt --output-document ./ficture_requirements.txt && \
+    python3 -m pip install -r ./ficture_requirements.txt
 
 # Install cartloader itself
 RUN python3 -m pip install -e ./
