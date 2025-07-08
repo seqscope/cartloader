@@ -64,8 +64,7 @@ WORKDIR /app
 #       - factor_viz 
 #       - go_pmtiles: (download from the release directly)
 
-RUN git clone https://github.com/seqscope/cartloader.git && \
-    cd cartloader
+RUN git clone https://github.com/seqscope/cartloader.git 
 
 # Set working directory to the cloned repository
 WORKDIR /app/cartloader
