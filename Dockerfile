@@ -65,22 +65,21 @@ WORKDIR /app
 #       - go_pmtiles: (download from the release directly)
 
 RUN git clone https://github.com/seqscope/cartloader.git && \
-    cd cartloader && \
-    git submodule update --init submodules/punkst submodules/spatula submodules/tippecanoe && \
-    cd submodules/spatula && \
-    git checkout docker-dev && \
-    git submodule update --init --recursive submodules/htslib submodules/qgenlib  && \
-    cd ../punkst && \
-    git checkout main && \
-    git pull origin main && \
-    git submodule update --init
-
+    cd cartloader
 
 # Set working directory to the cloned repository
 WORKDIR /app/cartloader
 
+# sync up submodules 
+RUN git submodule update --init submodules/punkst submodules/spatula submodules/tippecanoe submodules/ficture
+
 # Install Python dependencies
 RUN python3 -m pip install --no-cache-dir -r requirements.txt
+
+# Install Python dependencies from ficture 
+# * Add this step due to missing python packages
+RUN cd submodules/ficture && \
+    python3 -m pip install -r requirements.txt
 
 # Install cartloader itself
 RUN python3 -m pip install -e ./
@@ -88,6 +87,10 @@ RUN python3 -m pip install -e ./
 # ===============================
 # Install submodules
 # ===============================
+RUN cd submodules/spatula && \
+    git checkout docker-dev && \
+    git submodule update --init --recursive submodules/htslib submodules/qgenlib  
+
 # Build submodule: htslib
 RUN cd submodules/spatula/submodules/htslib && \
     autoreconf -i && \
@@ -115,6 +118,11 @@ RUN cd submodules/tippecanoe && \
 # Build submodule: punkst
 # * libtbb-dev and libopencv-dev are installed at the step of installing system dependencies
 # * add this sed cmd to update the markerselection.hpp file to include <optional> to avoid the error of `/app/cartloader/submodules/punkst/src/markerselection.hpp:173:14: error: 'optional' is not a member of 'std'`
+RUN cd submodules/punkst && \
+    git checkout main && \
+    git pull origin main && \
+    git submodule update --init
+
 RUN sed -i '/#include <tbb\/global_control.h>/a #include <optional>' submodules/punkst/src/markerselection.hpp
 RUN cd submodules/punkst && \
     mkdir -p build && cd build && \
@@ -127,6 +135,7 @@ RUN wget https://github.com/protomaps/go-pmtiles/releases/download/v1.28.0/go-pm
     tar -zxvf go-pmtiles_1.28.0_Linux_x86_64.tar.gz --one-top-level=/opt/go-pmtiles && \
     mv /opt/go-pmtiles/pmtiles /usr/local/bin/ && \
     rm -rf go-pmtiles_1.28.0_Linux_x86_64.tar.gz /opt/go-pmtiles
+
 
 # ===============================
 # Add a test dataset
