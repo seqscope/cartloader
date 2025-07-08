@@ -364,7 +364,7 @@ def run_cartload2(_args):
 
     ## Write the output asset json for FICTURE output
     logger.info("Writing a json file for expected FICTURE output assets")
-    write_dict_to_file(out_fic_assets, out_assets_f)
+    write_dict_to_file(out_fic_assets, out_assets_f, check_equal=True)
 
     # 3. Create a yaml for all output assets
     cmds = cmd_separator([], f"Writing a YAML file for all output assets")
