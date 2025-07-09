@@ -5,9 +5,14 @@ This tutorial walks through the `cartloader` workflow — all packaged inside a 
 !!! info "Use Cases"
 
     This is the fastest and simplest way to try `cartloader` — no setup, installation, or data download required.
-    
 
-## Setting up docker
+!!! warning "Requirements"
+    Users will need to:
+
+    * Set up `Docker` on their system (see [Set Up Docker](#setting-up-docker) guide).
+
+
+## Set Up Docker
 
 If you are new to [Docker](https://www.docker.com/), please refer to the [Docker documentation](https://docs.docker.com/get-started/) for installation and basic usage.
 
@@ -69,7 +74,7 @@ train_width=18                           # define LDA training hexagon width (co
 n_factor=6,12                            # define number of factors in LDA training (comma-separated if multiple n-factor are applied)
 ```
 
-## `FICTURE` analysis
+## `FICTURE` Analysis
 
 {%
   include-markdown "../../../includes/includemd_vigenettes_run_ficture2_docker.md"

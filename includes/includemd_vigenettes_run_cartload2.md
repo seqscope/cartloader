@@ -23,7 +23,7 @@ cartloader run_cartload2 \
   --pmtiles ${pmtiles} \
   --tippecanoe ${tippecanoe} \
   --n-jobs ${n_jobs} \
-  --threads 10
+  --threads ${n_jobs}
 ```
 
 <!--parameter-start-->

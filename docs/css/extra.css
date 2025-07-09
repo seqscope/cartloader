@@ -12,7 +12,7 @@
 }
 
 .grid.cards.single-left > ul > li {
-  width: 280px;         /* Set desired width */
+  width: 300px;         /* Set desired width */
   height: auto;         /* Or: auto for more flexible height */
   padding: 0.5rem;
   box-sizing: border-box;
@@ -43,7 +43,7 @@
 }
 
 .grid.cards.generic > ul > li {
-  width: 280px;                      /* Fixed card width */
+  width: 300px;                      /* Fixed card width */
   height: auto;                      /* Let height expand with content */
   flex: 0 0 auto;                    /* Prevent growing/shrinking */
   padding: 0.5rem 0.5rem 0.2rem 0.5rem;  /* smaller bottom padding */

@@ -55,7 +55,7 @@ n_factor=6,12                            # define number of factors in LDA train
   include-markdown "../../../includes/includemd_vigenettes_sge_convert_visiumhd.md"
 %}
 
-## `FICTURE` analysis
+## `FICTURE` Analysis
 
 <!-- !! Visium HD uses --decode-scale this should be updated. -->
 <!-- 
@@ -75,7 +75,7 @@ cartloader run_ficture2 \
   --spatula ${spatula} \
   --ficture2 ${punkst} \
   --n-jobs 10 \
-  --threads 10
+  --threads ${n_jobs}
 ``` -->
 
 {% include-markdown "../../../includes/includemd_vigenettes_run_ficture2.md" %}

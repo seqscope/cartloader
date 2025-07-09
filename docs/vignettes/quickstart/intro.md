@@ -8,7 +8,7 @@ This page introduces **two options** to help you get started with `cartloader` u
 <div class="grid cards single-left">
 
 <ul>
-  <li>
+  <li style="width: 360px;">
     <h3>🚀 Run with Docker</h3>
     <p>Run <code>cartloader</code> inside a prebuilt Docker image.</p>
     <ul>
@@ -16,10 +16,10 @@ This page introduces **two options** to help you get started with `cartloader` u
       <li>📦 Includes all dependencies</li>
       <li>🧪 Preloaded input data</li>
     </ul>
-    <p><a href="./docker-example.md">Get Started →</a></p>
+    <p><a href="../run_in_docker/">Get Started →</a></p>
   </li>
 
-  <li>
+  <li style="width: 360px;">
     <h3>🔧 Run Locally</h3>
     <p>Install <code>cartloader</code> and dependencies on your system.</p>
     <ul>
@@ -27,7 +27,7 @@ This page introduces **two options** to help you get started with `cartloader` u
       <li>⚙️ Full flexibility</li>
       <li>📂 Customize workflow</li>
     </ul>
-    <p><a href="./local-example.md">Get Started →</a></p>
+    <p><a href="../run_locally/">Get Started →</a></p>
   </li>
 </ul>
 

@@ -53,7 +53,7 @@ n_factor=6,12                            # define number of factors in LDA train
   include-markdown "../../../includes/includemd_vigenettes_sge_convert_tsv.md"
 %}
 
-## `FICTURE` analysis
+## `FICTURE` Analysis
 
 {%
   include-markdown "../../../includes/includemd_vigenettes_run_ficture2.md"

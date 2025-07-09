@@ -34,7 +34,7 @@ cartloader run_ficture2 \
   --spatula ${spatula} \
   --ficture2 ${punkst} \
   --n-jobs ${n_jobs} \
-  --threads 10
+  --threads ${n_jobs}
 ```
 
 <!--parameter-start-->

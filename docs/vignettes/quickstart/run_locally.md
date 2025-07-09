@@ -1,19 +1,20 @@
 
 # 🔧 Quick Start: Run Locally
 
-This tutorial walks you through running the `cartloader` workflow on your own machine using a minimal example dataset from the mouse hippocampus.
+This tutorial walks you through running the `cartloader` workflow using a minimal example dataset from the mouse hippocampus.
 
 !!! info "Use Cases"
     This tutorial is ideal for users who want to:
 
     - Take full control over the environment
-    - Use their own data
+    - Customize workflow
     - Stay up-to-date with the latest development versions 
 
+!!! warning "Requirements"
+    Users will need to:
 
-!!! warning "Requirement"
-
-    Before getting started, please ensure that cartloader and all prerequisites are installed (see [Installation](../../installation.md) guide).
+    * Set up `cartloader` and its dependencies locally (see [Installation](../../installation.md) guide).
+    * Download the example input data (see [Input Data](#input-data))
 
 ## Input Data
 
@@ -70,7 +71,7 @@ n_factor=6,12                            # define number of factors in LDA train
 ```
 
 
-## `FICTURE` analysis
+## `FICTURE` Analysis
 
 {%
   include-markdown "../../../includes/includemd_vigenettes_run_ficture2.md"
