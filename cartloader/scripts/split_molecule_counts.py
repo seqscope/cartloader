@@ -24,8 +24,8 @@ def get_equal_bins(n_bins, in_features, out_prefix, out_features_suffix, delim, 
     current_sum = 0
     current_bin = 1
     for index, row in df.iterrows():
-#        print("***", total_sum, target_sum, current_sum, current_bin, row[colname_count])
-        if current_sum + row[colname_count] < target_sum: # keep adding more features
+        #print("***", total_sum, target_sum, current_sum, current_bin, row[colname_count])
+        if current_sum + row[colname_count] < target_sum or current_bin >= n_bins: # keep adding more features
             current_sum += row[colname_count]
             df.at[index, 'bin'] = current_bin
         else: # stop here
@@ -57,7 +57,7 @@ def get_equal_bins(n_bins, in_features, out_prefix, out_features_suffix, delim, 
 def get_log2_bins(multiplier, in_features, out_prefix, out_features_suffix, delim, colname_feature, colname_count, skip_original):
     #print(f"delim = {delim} {len(delim)}")
     df = pd.read_csv(in_features, sep=delim)
-    df['bin'] = np.floor(multiplier * np.log2(df[colname_count])).astype(int)
+    df['bin'] = np.floor(multiplier * np.log2(df[colname_count]+1)).astype(int)
     log2_bins = df.set_index(colname_feature)['bin'].to_dict()
 
     if not skip_original:

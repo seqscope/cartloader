@@ -1,6 +1,6 @@
 import logging, os, shutil, sys, importlib, csv, shlex, subprocess, json, yaml, re, gzip
 import os
-
+from collections import Counter
 
 def get_func(name):
     """
@@ -278,7 +278,7 @@ def load_file_to_dict(file_path, file_type=None):
         raise ValueError("Unsupported file type. Please provide 'json' or 'yaml'/'yml' as file_type.")
 
 ## code suggested by ChatGPT
-def write_dict_to_file(data, file_path, file_type=None):
+def write_dict_to_file(data, file_path, file_type=None, check_equal=True):
     """
     Write a dictionary to a JSON or YAML file.
 
@@ -286,6 +286,7 @@ def write_dict_to_file(data, file_path, file_type=None):
     data (dict): The dictionary to write to the file.
     file_path (str): Path to the output file.
     file_type (str, optional): The type of the file ('json' or 'yaml'). If None, the type is inferred from the file extension.
+    check_equal (bool): If True, compare with existing file and skip writing if content is equal.
 
     Raises:
     ValueError: If the file type is unsupported.
@@ -293,6 +294,34 @@ def write_dict_to_file(data, file_path, file_type=None):
     if file_type is None:
         _, file_extension = os.path.splitext(file_path)
         file_type = file_extension.lower()[1:]  # Strip the dot and use the extension
+
+    def load_existing():
+        if not os.path.exists(file_path):
+            return None
+        with open(file_path, 'r') as file:
+            if file_type == 'json':
+                return json.load(file)
+            elif file_type in ['yaml', 'yml']:
+                return yaml.safe_load(file)
+        return None
+
+    def are_equal(a, b):
+        if isinstance(a, dict) and isinstance(b, dict):
+            return a == b
+        elif isinstance(a, list) and isinstance(b, list):
+            try:
+                a_serialized = Counter(json.dumps(i, sort_keys=True) for i in a)
+                b_serialized = Counter(json.dumps(i, sort_keys=True) for i in b)
+                return a_serialized == b_serialized
+            except TypeError:
+                return sorted(a) == sorted(b)
+        return a == b
+
+    
+    # Skip writing if it has an equal file
+    existing = load_existing() if check_equal else None
+    if check_equal and are_equal(data, existing):
+        return  
 
     if file_type == 'json':
         with open(file_path, 'w') as file:
@@ -302,7 +331,6 @@ def write_dict_to_file(data, file_path, file_type=None):
             yaml.safe_dump(data, file, default_flow_style=False)
     else:
         raise ValueError("Unsupported file type. Please provide 'json' or 'yaml'/'yml' as file_type.")
-
 
 def factor_id_to_name(factor_id):
     pattern = re.compile(r"(?:(t\d+)-)?(?:(f\d+)-)?(?:(p\d+)-)?(?:(a\d+)-)?(?:(r\d+))?")

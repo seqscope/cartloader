@@ -12,7 +12,7 @@ def parse_arguments(_args):
     run_params.add_argument('--restart', action='store_true', default=False, help='Restart the run. Ignore all intermediate files and start from the beginning')
     run_params.add_argument('--threads', type=int, default=8, help='Maximum number of threads to use in each process')
     run_params.add_argument('--n-jobs', type=int, default=2, help='Number of jobs (processes) to run in parallel')
-    run_params.add_argument('--makefn', type=str, default="run_ficture.mk", help='The name of the Makefile to generate (default: run_ficture.mk)')
+    run_params.add_argument('--makefn', type=str, default="run_ficture2.mk", help='The name of the Makefile to generate (default: run_ficture2.mk)')
 
     cmd_params = parser.add_argument_group("Commands", "FICTURE commands to run together")
     cmd_params.add_argument('--main', action='store_true', default=False, help='Run the main functions (tile, segment, init-lda, decode, summary)')
@@ -35,6 +35,7 @@ def parse_arguments(_args):
     key_params.add_argument('--n-factor', type=str, default=None, help='Comma-separated list of factor counts for LDA training.')
     key_params.add_argument('--anchor-res', type=int, default=6, help='Anchor resolution for decoding (default: 6)')
     key_params.add_argument('--radius-buffer', type=int, default=1, help='Buffer to radius(=anchor_res + radius_buffer) for pixel-level decoding (default: 1)')
+    key_params.add_argument('--decode-scale', type=int, default=1, help='scales input coordinates to pixels in the output image (default: 1)')
 
     # env params
     env_params = parser.add_argument_group("ENV Parameters", "Environment parameters, e.g., tools.")
@@ -101,7 +102,7 @@ def parse_arguments(_args):
     # aux_params.add_argument('--merge-max-k', type=int, default=1, help='Maximum number of K columns to output in merged pixel-level decoding results (default: 1)')
     # aux_params.add_argument('--merge-max-p', type=int, default=1, help='Maximum number of P columns to output in merged pixel-level decoding results (default: 1)')
     # color map
-    aux_params.add_argument('--cmap-file', type=str, required=True, help='Define the path to the fixed color map (default: <cartloader_dir>/assets/fixed_color_map_60.tsv)')
+    aux_params.add_argument('--cmap-file', type=str, default=None, help='Define the path to the fixed color map (default: <cartloader_dir>/assets/fixed_color_map_60.tsv)')
     # others parameters shared across steps
     aux_params.add_argument('--min-ct-per-feature', type=int, default=20, help='Minimum count per feature during LDA training, transform and decoding (default: 20)')
     aux_params.add_argument('--de-max-pval', type=float, default=1e-3, help='p-value cutoff for differential expression (default: 1e-3)')
@@ -212,6 +213,14 @@ def run_ficture2(_args):
         assert os.path.exists(args.in_minmax), "Provide a valid input coordinate minmax file by --in-minmax, or skip specifying it"
     if args.in_feature is not None:
         assert os.path.exists(args.in_feature), "Provide a valid input feature file by --in-feature, or skip specifying it"
+    
+    if args.cmap_file is None:
+        script_path = os.path.abspath(__file__)
+        cartloader_root = os.path.abspath(os.path.join(script_path, "..", "..", ".."))
+        args.cmap_file=os.path.join(cartloader_root, "assets", "fixed_color_map_256.tsv")
+    
+    if not os.path.exists(args.cmap_file):
+        raise FileNotFoundError(f"Color map not found at: {args.cmap_file}")
 
     assert os.path.exists(args.ficture2), f"Provide a valid path to the FICTURE2 repository by --ficture2, or set it to the default path: {args.ficture2}"
     ficture2bin = os.path.join(args.ficture2, "bin/punkst")
@@ -394,11 +403,10 @@ def run_ficture2(_args):
             mm.add_target(f"{model_prefix}.done", [f"{args.out_dir}/transcripts.tiled.done", f"{args.out_dir}/hexagon.d_{train_width}.done", feature_nohdr_flag], cmds)
 
             # create color table
-            out_cmap = f"{model_prefix}.cmap.tsv"
-            with open(args.cmap_file, "r") as f:
-                with open(out_cmap, "w") as f2:
-                    for i in range(n_factor+1):
-                        f2.write(f.readline())
+            cmds = cmd_separator([], f"Generate the color map ")
+            color_map=f"{model_prefix}.cmap.tsv"
+            cmds.append(f'head -n $(({n_factor} + 1)) "{args.cmap_file}" > "{color_map}"')
+            mm.add_target(color_map, [args.cmap_file], cmds)
 
             # 2) DE
             cmds = cmd_separator([], f" LDA DE/report for {train_width}um and {n_factor} factors...")
@@ -408,25 +416,28 @@ def run_ficture2(_args):
                 f"--de {lda_de}",
                 f"--pseudobulk {lda_model_matrix}",
                 f"--feature_label Feature",
-                f"--color_table {out_cmap}",
+                f"--color_table {color_map}",
                 f"--output_pref {model_prefix}"
                 ])
             cmds.append(cmd)
             cmds.append(f"[ -f {lda_de} ] && [ -f {model_prefix}.cmap.tsv ] && [ -f {model_prefix}.factor.info.html ] && touch {model_prefix}_summary.done")
             #cmds.append(f"[ -f {lda_de} ] && touch {model_prefix}_summary.done")
-            mm.add_target(f"{model_prefix}_summary.done", [f"{model_prefix}.done"], cmds)
+            mm.add_target(f"{model_prefix}_summary.done", [f"{model_prefix}.done", color_map], cmds)
 
     if args.decode:
         scheck_app(args.sort)
-        tiled_tsv = f"{args.out_dir}/transcript.tiled.tsv"
+        scheck_app(args.gzip)
+
         decode_runs = define_decode_runs(args)
         for decode_params in decode_runs:
             # input
             model_prefix = os.path.join(args.out_dir, decode_params["model_id"])
             model_path = decode_params["model_path"]
-            cmap_path = decode_params["cmap_path"]
+            color_map = decode_params["cmap_path"]
+            
             # prerequisities
             fit_prereq = decode_params["prerequisite_path"]
+            
             # params & prefix
             fit_width = decode_params["fit_width"]
             decode_id = decode_params["decode_id"]
@@ -435,7 +446,12 @@ def run_ficture2(_args):
             fit_n_move = int(fit_width / args.anchor_res)
             decode_postcount = f"{decode_prefix}.pseudobulk.tsv"
             decode_fit_tsv = f"{decode_prefix}.tsv"
+            decode_flag = f"{decode_prefix}.done"
+
             decode_de = f"{decode_prefix}.bulk_chisq.tsv"
+            decode_report = f"{decode_prefix}.factor.info.html"
+            decode_summary_flag=f"{decode_prefix}_summary.done"
+
             #1) transform/fit
             cmds=cmd_separator([], f"Creating decode, ID: {decode_id}")
             cmd = " ".join([
@@ -457,8 +473,10 @@ def run_ficture2(_args):
                 f"--output-original"
                 ])
             cmds.append(cmd)
-            cmds.append(f"[ -f {decode_fit_tsv} ] && [ -f {decode_postcount} ] && touch {decode_prefix}.done" )
-            mm.add_target(f"{decode_prefix}.done", [f"{args.out_dir}/transcripts.tiled.done", f"{model_prefix}.done"], cmds)
+            # compress the decode tsv file
+            cmds.append(f"{args.gzip} -f {decode_fit_tsv}")
+            cmds.append(f"[ -f {decode_fit_tsv}.gz ] && [ -f {decode_postcount} ] && touch {decode_flag}" )
+            mm.add_target(decode_flag, [f"{args.out_dir}/transcripts.tiled.done", f"{model_prefix}.done"], cmds)
 
             # 3) DE/report
             cmds=cmd_separator([], f"Decode DE and report, ID: {decode_id}")
@@ -479,33 +497,28 @@ def run_ficture2(_args):
                 f"--de {decode_de}",
                 f"--pseudobulk {decode_postcount}",
                 f"--feature_label Feature",
-                f"--color_table {cmap_path}",
+                f"--color_table {color_map}",
                 f"--output_pref {decode_prefix}"
                 ])
             cmds.append(cmd)
-            # compress the decode tsv file
-            cmd = " ".join([
-                args.gzip, "-f", decode_fit_tsv
-            ])
-            cmds.append(cmd)
             # - done & target
-            cmds.append(f"[ -f {decode_de} ] && [ -f {decode_prefix}.factor.info.html ] && [ -f {decode_fit_tsv}.gz ] && touch {decode_prefix}_summary.done")
-            mm.add_target(f"{decode_prefix}_summary.done", [f"{decode_prefix}.done", cmap_path], cmds)
+            cmds.append(f"[ -f {decode_de} ] && [ -f {decode_report} ] && touch {decode_summary_flag}")
+            mm.add_target(decode_summary_flag, [f"{decode_prefix}.done", color_map], cmds)
 
-            # 4) visualization
+            # 7) visualization
             cmds=cmd_separator([], f"Decode visualization, ID: {decode_id}")
             cmd = " ".join([
                 f"{args.gzip} -dc {decode_fit_tsv}.gz |",
                 ficture2bin, "draw-pixel-factors",
                 f"--in-tsv /dev/stdin",
                 f"--header-json {decode_prefix}.json",
-                f"--in-color {cmap_path}",
+                f"--in-color {color_map}",
                 f"--out {decode_prefix}.png",
-                f"--scale 1",
+                f"--scale {args.decode_scale}",
                 f"--range {args.in_minmax}"
                 ])
             cmds.append(cmd)
-            mm.add_target(f"{decode_prefix}.png", [f"{decode_prefix}_summary.done", cmap_path], cmds)
+            mm.add_target(f"{decode_prefix}.png", [decode_summary_flag, color_map], cmds)
 
     if args.summary:
         prerequisities=[feature_nohdr_flag] # since feature_nohdr and feature_plain are generated at the same step, use feature_nohdr_flag as the prerequisite for feature_plain

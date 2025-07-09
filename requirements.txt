@@ -3,3 +3,9 @@ pandas
 ficture
 tifffile
 imagecodecs
+Pillow
+psutil
+rasterio
+requests
+setuptools
+PyYAML
