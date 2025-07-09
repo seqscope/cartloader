@@ -252,16 +252,19 @@
   
   
   
-    <li class="md-tabs__item">
-      <a href="../../../installation.md" class="md-tabs__link">
-        
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../quickstart/intro/" class="md-tabs__link">
+          
   
     
   
-  Installation
+  Quick Start
 
-      </a>
-    </li>
+        </a>
+      </li>
+    
   
 
       
@@ -270,12 +273,12 @@
   
   
     <li class="md-tabs__item">
-      <a href="../../quickstart/quickstart/" class="md-tabs__link">
+      <a href="../../../installation/" class="md-tabs__link">
         
   
     
   
-  Quick Start
+  Installation
 
       </a>
     </li>
@@ -436,17 +439,120 @@
   
   
   
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Quick Start
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            Quick Start
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
     <li class="md-nav__item">
-      <a href="../../../installation.md" class="md-nav__link">
+      <a href="../../quickstart/intro/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
-    Installation
+    Overview
     
   </span>
   
 
       </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../quickstart/run_in_docker/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Run with Docker
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../quickstart/run_locally/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Run Locally
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
     </li>
   
 
@@ -458,11 +564,11 @@
   
   
     <li class="md-nav__item">
-      <a href="../../quickstart/quickstart/" class="md-nav__link">
+      <a href="../../../installation/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
-    Quick Start
+    Installation
     
   </span>
   
@@ -1264,7 +1370,10 @@ tar<span class="w"> </span>-zxvf<span class="w"> </span>visiumhd_starter.raw.tar
 <span class="normal">18</span>
 <span class="normal">19</span>
 <span class="normal">20</span>
-<span class="normal">21</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># ====</span>
+<span class="normal">21</span>
+<span class="normal">22</span>
+<span class="normal">23</span>
+<span class="normal">24</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># ====</span>
 <span class="c1"># Replace each placeholder with the actual path on your system.  </span>
 <span class="c1"># ====</span>
 <span class="nv">work_dir</span><span class="o">=</span>/path/to/work/directory<span class="w">        </span><span class="c1"># path to work directory that contains the downloaded input data</span>
@@ -1282,6 +1391,9 @@ tar<span class="w"> </span>-zxvf<span class="w"> </span>visiumhd_starter.raw.tar
 
 <span class="c1"># AWS S3 target location for cartostore</span>
 <span class="nv">AWS_BUCKET</span><span class="o">=</span><span class="s2">&quot;EXAMPLE_AWS_BUCKET&quot;</span><span class="w">         </span><span class="c1"># replace EXAMPLE_AWS_BUCKET with your actual S3 bucket name</span>
+
+<span class="c1"># Number of jobs</span>
+<span class="nv">n_jobs</span><span class="o">=</span><span class="m">10</span>
 
 <span class="c1"># Activate the bioconda environment</span>
 conda<span class="w"> </span>activate<span class="w"> </span>ENV_NAME<span class="w">              </span><span class="c1"># replace BIOENV_NAME with your bioconda environment name</span>
@@ -1328,7 +1440,7 @@ conda<span class="w"> </span>activate<span class="w"> </span>ENV_NAME<span class
 <span class="w">  </span>--exclude-feature-regex<span class="w"> </span><span class="s1">&#39;^(BLANK|NegCon|NegPrb)&#39;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--sge-visual<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--spatula<span class="w"> </span><span class="si">${</span><span class="nv">spatula</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--n-jobs<span class="w"> </span><span class="m">10</span>
+<span class="w">  </span>--n-jobs<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span>
 </code></pre></div></td></tr></table></div>
 <table>
 <thead>
@@ -1494,8 +1606,8 @@ cartloader<span class="w"> </span>run_ficture2<span class="w"> </span><span clas
 <span class="w">    </span>--n-factor<span class="w"> </span><span class="si">${</span><span class="nv">n_factor</span><span class="si">}</span><span class="w"> </span><span class="se">\ </span><span class="w">                           </span><span class="c1"># number of factors in LDA training (comma-separated if multiple n-factor are applied)</span>
 <span class="w">    </span>--spatula<span class="w"> </span><span class="si">${</span><span class="nv">spatula</span><span class="si">}</span><span class="w"> </span><span class="se">\ </span><span class="w">                             </span><span class="c1"># (optional) path to the spatula binary</span>
 <span class="w">    </span>--ficture2<span class="w"> </span><span class="si">${</span><span class="nv">punkst</span><span class="si">}</span><span class="w"> </span><span class="se">\ </span><span class="w">                             </span><span class="c1"># (optional) path to the punkst directory</span>
-<span class="w">    </span>--n-jobs<span class="w"> </span><span class="m">10</span><span class="w">  </span><span class="se">\ </span><span class="w">                                     </span><span class="c1"># (optional) number of parallel jobs </span>
-<span class="w">    </span>--threads<span class="w"> </span><span class="m">10</span><span class="w">                                        </span><span class="c1"># (optional) number of threads per job</span>
+<span class="w">    </span>--n-jobs<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span><span class="w">  </span><span class="se">\ </span><span class="w">                                     </span><span class="c1"># (optional) number of parallel jobs </span>
+<span class="w">    </span>--threads<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span><span class="w">                                       </span><span class="c1"># (optional) number of threads per job</span>
 <span class="sb">```</span><span class="w"> </span>--&gt;
 
 
@@ -1513,7 +1625,7 @@ cartloader<span class="w"> </span>run_ficture2<span class="w"> </span><span clas
 <span class="w">  </span>--n-factor<span class="w"> </span><span class="si">${</span><span class="nv">n_factor</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--spatula<span class="w"> </span><span class="si">${</span><span class="nv">spatula</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--ficture2<span class="w"> </span><span class="si">${</span><span class="nv">punkst</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--n-jobs<span class="w"> </span><span class="m">10</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--n-jobs<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--threads<span class="w"> </span><span class="m">10</span>
 </code></pre></div></td></tr></table></div>
 
@@ -1628,8 +1740,8 @@ cartloader run_cartload2 \
     --spatula ${spatula} \              # (optional) path to the spatula binary
     --pmtiles ${pmtiles} \              # (optional) path to the pmtiles binary
     --tippecanoe ${tippecanoe} \        # (optional) path to the tippecanoe binary
-    --n-jobs 10 \                       # (optional) number of parallel jobs
-    --threads 10                        # (optional) number of threads per job
+    --n-jobs ${n_jobs} \                       # (optional) number of parallel jobs
+    --threads ${n_jobs}                       # (optional) number of threads per job
 ``` -->
 
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
@@ -1649,9 +1761,10 @@ cartloader run_cartload2 \
 <span class="w">  </span>--spatula<span class="w"> </span><span class="si">${</span><span class="nv">spatula</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--pmtiles<span class="w"> </span><span class="si">${</span><span class="nv">pmtiles</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--tippecanoe<span class="w"> </span><span class="si">${</span><span class="nv">tippecanoe</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--n-jobs<span class="w"> </span><span class="m">10</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--n-jobs<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--threads<span class="w"> </span><span class="m">10</span>
 </code></pre></div></td></tr></table></div>
+<!--parameter-start-->
 <table>
 <thead>
 <tr>
@@ -1718,7 +1831,10 @@ cartloader run_cartload2 \
 </tr>
 </tbody>
 </table>
+<!--parameter-end-->
+
 <h2 id="upload-to-data-repository">Upload to Data Repository<a class="headerlink" href="#upload-to-data-repository" title="Permanent link">&para;</a></h2>
+<!--section1-start-->
 <div class="admonition info">
 <p class="admonition-title">Choose a data repository to host/share your output</p>
 <p><code>cartloader</code> supports two upload options (<code>AWS</code> and <code>Zenodo</code>) for storing PMTiles of <abbr title="Spatial Digital Gene Expression">SGE</abbr> and spatial factors in a data repository.</p>
@@ -1726,6 +1842,8 @@ cartloader run_cartload2 \
 </div>
 <h3 id="aws-uploads">AWS Uploads<a class="headerlink" href="#aws-uploads" title="Permanent link">&para;</a></h3>
 <p>Upload the generated cartloader outputs to your designated AWS S3 directory:</p>
+<!--section1-end-->
+
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
 <span class="normal">3</span>
@@ -1734,8 +1852,9 @@ cartloader run_cartload2 \
 <span class="w">  </span>--in-dir<span class="w"> </span>./cartload2<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--s3-dir<span class="w"> </span><span class="s2">&quot;s3://</span><span class="si">${</span><span class="nv">AWS_BUCKET</span><span class="si">}</span><span class="s2">/</span><span class="si">${</span><span class="nv">DATA_ID</span><span class="si">}</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--aws<span class="w"> </span><span class="si">${</span><span class="nv">aws</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--n-jobs<span class="w"> </span><span class="m">10</span>
+<span class="w">  </span>--n-jobs<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span>
 </code></pre></div></td></tr></table></div>
+<!--section2-start-->
 <table>
 <thead>
 <tr>
@@ -1774,22 +1893,29 @@ cartloader run_cartload2 \
 </table>
 <h3 id="zenodo-uploads">Zenodo Uploads<a class="headerlink" href="#zenodo-uploads" title="Permanent link">&para;</a></h3>
 <p>Upload the generated cartloader outputs to your designated Zenodo deposition or a new deposition.</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span>
-<span class="normal">5</span>
-<span class="normal">6</span>
-<span class="normal">7</span>
-<span class="normal">8</span></pre></div></td><td class="code"><div><pre><span></span><code>cartloader<span class="w"> </span>upload_zenodo<span class="w"> </span><span class="se">\</span>
+<!--section2-end-->
+
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nv">zenodo_token</span><span class="o">=</span>/path/to/zenodo/token/file<span class="w">    </span><span class="c1"># replace /path/to/zenodo/token/file by path to your zenodo token file</span>
+
+cartloader<span class="w"> </span>upload_zenodo<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--in-dir<span class="w"> </span>./cartload2<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--upload-method<span class="w"> </span>catalog<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--zenodo-token<span class="w"> </span>/path/to/zenodo/token/file<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--zenodo-token<span class="w"> </span><span class="nv">$zenodo_token</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--create-new-deposition<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--title<span class="w">  </span><span class="s2">&quot;Yur Title&quot;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--creators<span class="w"> </span><span class="s2">&quot;Your Name&quot;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--description<span class="w"> </span><span class="s2">&quot;This is an example description&quot;</span>
 </code></pre></div></td></tr></table></div>
+<!--section3-start-->
 <table>
 <thead>
 <tr>
@@ -1844,6 +1970,8 @@ cartloader run_cartload2 \
 </tr>
 </tbody>
 </table>
+<!--section3-end-->
+
 <h2 id="output-data">Output Data<a class="headerlink" href="#output-data" title="Permanent link">&para;</a></h2>
 <p>See more details of output at the Reference pages for <a href="../../../reference/run_ficture2/">run_ficture2</a> and <a href="../../../reference/run_cartload2/">run_cartload2</a>.</p>
 <h3 id="spatial-factor-inference-from-ficture">Spatial Factor Inference from <code>FICTURE</code><a class="headerlink" href="#spatial-factor-inference-from-ficture" title="Permanent link">&para;</a></h3>

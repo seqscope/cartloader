@@ -8,13 +8,13 @@
       
       
       
-        <link rel="canonical" href="https://seqscope.github.io/cartloader/vignettes/subregion_tutorials/cosmxsmi/">
+        <link rel="canonical" href="https://seqscope.github.io/cartloader/vignettes/quickstart/run_in_docker/">
       
       
-        <link rel="prev" href="../merscope/">
+        <link rel="prev" href="../intro/">
       
       
-        <link rel="next" href="../../../reference/sge_convert/">
+        <link rel="next" href="../run_locally/">
       
       
       <link rel="icon" href="../../../assets/images/favicon.png">
@@ -22,7 +22,7 @@
     
     
       
-        <title>CoxMX SMI Starter Tutorial - cartloader</title>
+        <title>Run with Docker - cartloader</title>
       
     
     
@@ -82,7 +82,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#cosmx-smi-starter-tutorial" class="md-skip">
+        <a href="#quick-start-run-with-docker" class="md-skip">
           Skip to content
         </a>
       
@@ -116,7 +116,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              CoxMX SMI Starter Tutorial
+              Run with Docker
             
           </span>
         </div>
@@ -251,11 +251,13 @@
         
   
   
+    
+  
   
     
     
-      <li class="md-tabs__item">
-        <a href="../../quickstart/intro/" class="md-tabs__link">
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../intro/" class="md-tabs__link">
           
   
     
@@ -288,12 +290,10 @@
         
   
   
-    
-  
   
     
     
-      <li class="md-tabs__item md-tabs__item--active">
+      <li class="md-tabs__item">
         <a href="../../intro/" class="md-tabs__link">
           
   
@@ -437,8 +437,10 @@
       
   
   
+    
   
   
+  
     
     
       
@@ -451,21 +453,22 @@
     
     
       
+        
+        
+      
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
         
           
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
-        
-          
-          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
             
   
   <span class="md-ellipsis">
@@ -477,7 +480,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_2">
             <span class="md-nav__icon md-icon"></span>
             Quick Start
@@ -491,7 +494,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../quickstart/intro/" class="md-nav__link">
+      <a href="../intro/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -510,10 +513,31 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../quickstart/run_in_docker/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Run with Docker
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   <span class="md-ellipsis">
@@ -523,6 +547,89 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#setting-up-docker" class="md-nav__link">
+    <span class="md-ellipsis">
+      Setting up docker
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#input-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      Input Data
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#set-up-the-environment" class="md-nav__link">
+    <span class="md-ellipsis">
+      Set Up the Environment
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ficture-analysis" class="md-nav__link">
+    <span class="md-ellipsis">
+      FICTURE analysis
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cartloader-compilation" class="md-nav__link">
+    <span class="md-ellipsis">
+      cartloader Compilation
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#upload-to-data-repository" class="md-nav__link">
+    <span class="md-ellipsis">
+      Upload to Data Repository
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#output-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      Output Data
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -535,7 +642,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../quickstart/run_locally/" class="md-nav__link">
+      <a href="../run_locally/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -582,10 +689,8 @@
       
   
   
-    
   
   
-  
     
     
       
@@ -596,22 +701,21 @@
     
     
       
-        
-        
-      
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
         
           
-          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
             
   
   <span class="md-ellipsis">
@@ -623,7 +727,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_4">
             <span class="md-nav__icon md-icon"></span>
             Vignettes
@@ -656,10 +760,8 @@
                 
   
   
-    
   
   
-  
     
     
       
@@ -681,21 +783,20 @@
     
       
       
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
         
           
-          
         
-      
-    
-    
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_2" checked>
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_2" >
         
           
-          <label class="md-nav__link" for="__nav_4_2" id="__nav_4_2_label" tabindex="">
+          <label class="md-nav__link" for="__nav_4_2" id="__nav_4_2_label" tabindex="0">
             
   
   <span class="md-ellipsis">
@@ -707,7 +808,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_2_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_2_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_4_2">
             <span class="md-nav__icon md-icon"></span>
             Getting Started with `cartloader`
@@ -721,7 +822,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../seqscope/" class="md-nav__link">
+      <a href="../../subregion_tutorials/seqscope/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -743,7 +844,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../stereoseq/" class="md-nav__link">
+      <a href="../../subregion_tutorials/stereoseq/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -765,7 +866,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../visiumhd/" class="md-nav__link">
+      <a href="../../subregion_tutorials/visiumhd/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -787,7 +888,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../pixelseq/" class="md-nav__link">
+      <a href="../../subregion_tutorials/pixelseq/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -809,7 +910,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../xenium/" class="md-nav__link">
+      <a href="../../subregion_tutorials/xenium/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -831,7 +932,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../merscope/" class="md-nav__link">
+      <a href="../../subregion_tutorials/merscope/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -850,31 +951,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  <span class="md-ellipsis">
-    CoxMX SMI Starter Tutorial
-    
-  </span>
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../subregion_tutorials/cosmxsmi/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -884,89 +964,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#input-data" class="md-nav__link">
-    <span class="md-ellipsis">
-      Input Data
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#set-up-the-environment" class="md-nav__link">
-    <span class="md-ellipsis">
-      Set Up the Environment
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#sge-format-conversion" class="md-nav__link">
-    <span class="md-ellipsis">
-      SGE Format Conversion
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#ficture-analysis" class="md-nav__link">
-    <span class="md-ellipsis">
-      FICTURE analysis
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#cartloader-compilation" class="md-nav__link">
-    <span class="md-ellipsis">
-      cartloader Compilation
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#upload-to-data-repository" class="md-nav__link">
-    <span class="md-ellipsis">
-      Upload to Data Repository
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#output-data" class="md-nav__link">
-    <span class="md-ellipsis">
-      Output Data
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1162,6 +1159,15 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#setting-up-docker" class="md-nav__link">
+    <span class="md-ellipsis">
+      Setting up docker
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#input-data" class="md-nav__link">
     <span class="md-ellipsis">
       Input Data
@@ -1174,15 +1180,6 @@
   <a href="#set-up-the-environment" class="md-nav__link">
     <span class="md-ellipsis">
       Set Up the Environment
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#sge-format-conversion" class="md-nav__link">
-    <span class="md-ellipsis">
-      SGE Format Conversion
     </span>
   </a>
   
@@ -1243,44 +1240,111 @@
   
 
 
-<h1 id="cosmx-smi-starter-tutorial">CosMX SMI Starter Tutorial<a class="headerlink" href="#cosmx-smi-starter-tutorial" title="Permanent link">&para;</a></h1>
-<h2 id="input-data">Input Data<a class="headerlink" href="#input-data" title="Permanent link">&para;</a></h2>
-<p>The input data is from an adult mouse hippocampus, extracted by masking a coronal brain section. The original full-section </p>
-<p><strong>File Format</strong></p>
-<p>The CosMx SMI by NanoString generates high-resolution spatial transcriptomics data with single-molecule resolution with a comma-separated values (CSV) table.</p>
+<h1 id="quick-start-run-with-docker">🚀 Quick Start: Run with Docker<a class="headerlink" href="#quick-start-run-with-docker" title="Permanent link">&para;</a></h1>
+<p>This tutorial walks through the <code>cartloader</code> workflow — all packaged inside a prebuilt Docker image with dependencies and input data included.</p>
 <div class="admonition info">
-<p class="admonition-title">CSV File Format</p>
+<p class="admonition-title">Use Cases</p>
+<p>This is the fastest and simplest way to try <code>cartloader</code> — no setup, installation, or data download required.</p>
+</div>
+<h2 id="setting-up-docker">Setting up docker<a class="headerlink" href="#setting-up-docker" title="Permanent link">&para;</a></h2>
+<p>If you are new to <a href="https://www.docker.com/">Docker</a>, please refer to the <a href="https://docs.docker.com/get-started/">Docker documentation</a> for installation and basic usage.</p>
+<p>Verify whether Docker is properly set up on your system:
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
 <span class="normal">3</span>
-<span class="normal">4</span></pre></div></td><td class="code"><div><pre><span></span><code>&quot;fov&quot;,&quot;cell_ID&quot;,&quot;x_global_px&quot;,&quot;y_global_px&quot;,&quot;x_local_px&quot;,&quot;y_local_px&quot;,&quot;z&quot;,&quot;target&quot;,&quot;CellComp&quot;
-64,0,-473043,7954.533,4015.3,4246.2,1,&quot;Gfap&quot;,&quot;None&quot;
-64,0,-473022.9,7902.723,4035.48,4194.39,1,&quot;Fth1&quot;,&quot;None&quot;
-64,0,-473132,7836.476,3926.34,4128.143,1,&quot;Ptn&quot;,&quot;None&quot;
+<span class="normal">4</span>
+<span class="normal">5</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># Check if Docker is installed and show its version</span>
+docker<span class="w"> </span>--version
+
+<span class="c1"># Test if Docker can successfully run a container</span>
+docker<span class="w"> </span>run<span class="w"> </span>hello-world
+</code></pre></div></td></tr></table></div></p>
+<p>If these commands fail, <a href="https://docs.docker.com/get-docker/">install Docker</a> in your system.</p>
+<h2 id="input-data">Input Data<a class="headerlink" href="#input-data" title="Permanent link">&para;</a></h2>
+<p>The input is an mouse hippocampus <abbr title="Spatial Digital Gene Expression">SGE</abbr> in a <code>FICTURE</code>-compatible format compatible, prepared by <a href="../../../reference/sge_convert/"><code>sge_convert</code></a> in <code>cartloader</code> .</p>
+<p><strong>File Format</strong></p>
+<details>
+<summary><code>transcripts.unsorted.tsv.gz</code>: transcript-indexed <abbr title="Spatial Digital Gene Expression">SGE</abbr> in TSV</summary>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span></pre></div></td><td class="code"><div><pre><span></span><code>X        Y        gene     count
+295.29   1422.35  Myo3a    0
+1745.54  1110.72  Med14    1
+1745.54  1110.72  Ntpcr    1
 </code></pre></div></td></tr></table></div>
 <ul>
-<li><code>fov</code>: The field of view (FOV) number.</li>
-<li><code>cell_ID</code>: Unique identifier for a single cell within a given FOV. 0 if background or unassigned molecules.</li>
-<li><code>x_global_px</code>, <code>y_global_px</code>: Global pixel coordinates relative to the tisse.</li>
-<li><code>x_local_px</code>, <code>y_local_px</code>: The x or y position (in pixels) relative to the given FOV.</li>
-<li><code>z</code>: Z-plane index representing the depth (optical section) where the transcript was detected.</li>
-<li><code>target</code>: Name of the target.</li>
-<li><code>CellComp</code>: Subcellular location of target.</li>
+<li><code>X</code>: X coordinates in um</li>
+<li><code>Y</code>: Y coordinates in um</li>
+<li><code>gene</code>: gene symbols</li>
+<li><code>count</code>: expression count per pixel per gene</li>
 </ul>
-</div>
-<p><strong>Data Access</strong></p>
-<p>The example data is hosted on Zenedo ().</p>
-<p>Follow the commands below to download the example data.</p>
+</details>
+<details>
+<summary><code>feature.clean.tsv.gz</code>: <abbr title="Unique Molecular Identifier">UMI</abbr> counts on a per-gene basis in TSV</summary>
+<p><div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span></pre></div></td><td class="code"><div><pre><span></span><code>gene           gene_id             count
+Gm29155        ENSMUSG00000100764  1
+Pcmtd1         ENSMUSG00000051285  431
+Gm26901        ENSMUSG00000097797  1
+</code></pre></div></td></tr></table></div>
+* <code>gene</code>: gene symbols
+* <code>gene_id</code>: gene IDs
+* <code>count</code>: expression count per gene</p>
+</details>
+<details>
+<summary><code>coordinate_minmax.tsv</code>: X Y min/max coordinates</summary>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
 <span class="normal">3</span>
-<span class="normal">4</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nv">work_dir</span><span class="o">=</span>/path/to/work/directory
-<span class="nb">cd</span><span class="w"> </span><span class="nv">$work_dir</span>
-wget<span class="w">  </span>https://zenodo.org/records/15786632/files/cosmxsmi_starter.raw.tar.gz
-tar<span class="w"> </span>--strip-components<span class="o">=</span><span class="m">1</span><span class="w"> </span>-zxvf<span class="w"> </span>cosmxsmi_starter.raw.tar.gz
+<span class="normal">4</span></pre></div></td><td class="code"><div><pre><span></span><code>xmin    0.14
+xmax    2359.90
+ymin    0.23
+ymax    1439.95
 </code></pre></div></td></tr></table></div>
+<ul>
+<li><code>xmin</code> <code>xmax</code>: min and max X coordinates in um</li>
+<li><code>ymin</code> <code>ymax</code>: min and max Y coordinates in um</li>
+</ul>
+</details>
+<p><strong>Data Access</strong></p>
+<div class="admonition warning">
+<p class="admonition-title">Input data already included</p>
+<p>The <a href="https://zenodo.org/records/15786632/files/seqscope_starter.std.tar.gz">example dataset</a> is preloaded in the Docker image — no need to download separately.</p>
+<p>If needs, it is also available on Zenodo: <a href="https://doi.org/10.5281/zenodo.15701393">DOI: 10.5281/zenodo.15701393</a></p>
+</div>
+<hr />
 <h2 id="set-up-the-environment">Set Up the Environment<a class="headerlink" href="#set-up-the-environment" title="Permanent link">&para;</a></h2>
-<p>Define paths to all required binaries and resources, and target AWS S3 bucket. Optionally, specify a fixed color map for consistent rendering.</p>
+<p>Skip defining paths to all required binaries and resources, and target AWS S3 bucket, as they are fixe in the docker image.</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># ====</span>
+<span class="c1"># Replace each placeholder with the actual path on your system.  </span>
+<span class="c1"># ====</span>
+<span class="nv">work_dir</span><span class="o">=</span>/path/to/work/directory<span class="w">        </span><span class="c1"># path to work directory that contains the downloaded input data</span>
+<span class="nb">cd</span><span class="w"> </span><span class="nv">$work_dir</span>
+</code></pre></div></td></tr></table></div>
+<p>Define data ID and analysis parameters:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span>
+<span class="normal">6</span>
+<span class="normal">7</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># Unique identifier for your dataset</span>
+<span class="nv">DATA_ID</span><span class="o">=</span><span class="s2">&quot;seqscope_hippo&quot;</span><span class="w">                </span><span class="c1"># change this to reflect your dataset name</span>
+<span class="nv">PLATFORM</span><span class="o">=</span><span class="s2">&quot;seqscope&quot;</span><span class="w">                     </span><span class="c1"># platform information</span>
+
+<span class="c1"># LDA parameters</span>
+<span class="nv">train_width</span><span class="o">=</span><span class="m">18</span><span class="w">                           </span><span class="c1"># define LDA training hexagon width (comma-separated if multiple widths are applied)</span>
+<span class="nv">n_factor</span><span class="o">=</span><span class="m">6</span>,12<span class="w">                            </span><span class="c1"># define number of factors in LDA training (comma-separated if multiple n-factor are applied)</span>
+</code></pre></div></td></tr></table></div>
+<h2 id="ficture-analysis"><code>FICTURE</code> analysis<a class="headerlink" href="#ficture-analysis" title="Permanent link">&para;</a></h2>
+<p>Compute spatial factors using <code>punkst</code> (FICTURE2 mode). See more details in <a href="../../../reference/run_ficture2/">Reference page</a>.</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -1298,197 +1362,25 @@ tar<span class="w"> </span>--strip-components<span class="o">=</span><span class
 <span class="normal">15</span>
 <span class="normal">16</span>
 <span class="normal">17</span>
-<span class="normal">18</span>
-<span class="normal">19</span>
-<span class="normal">20</span>
-<span class="normal">21</span>
-<span class="normal">22</span>
-<span class="normal">23</span>
-<span class="normal">24</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># ====</span>
-<span class="c1"># Replace each placeholder with the actual path on your system.  </span>
-<span class="c1"># ====</span>
-<span class="nv">work_dir</span><span class="o">=</span>/path/to/work/directory<span class="w">        </span><span class="c1"># path to work directory that contains the downloaded input data</span>
-<span class="nb">cd</span><span class="w"> </span><span class="nv">$work_dir</span>
-
-<span class="c1"># Define paths to required binaries and resources</span>
-<span class="nv">spatula</span><span class="o">=</span>/path/to/spatula/binary<span class="w">         </span><span class="c1"># path to spatula executable</span>
-<span class="nv">punkst</span><span class="o">=</span>/path/to/punkst/binary<span class="w">           </span><span class="c1"># path to FICTURE2/punkst executable</span>
-<span class="nv">tippecanoe</span><span class="o">=</span>/path/to/tippecanoe/binary<span class="w">   </span><span class="c1"># path to tippecanoe executable</span>
-<span class="nv">pmtiles</span><span class="o">=</span>/path/to/pmtiles/binary<span class="w">         </span><span class="c1"># path to pmtiles executable</span>
-<span class="nv">aws</span><span class="o">=</span>/path/to/aws/cli/binary<span class="w">             </span><span class="c1"># path to AWS CLI binary</span>
-
-<span class="c1"># (Optional) Define path to color map. </span>
-<span class="nv">cmap</span><span class="o">=</span>/path/to/color/map<span class="w">                 </span><span class="c1"># Path to the fixed color map for rendering. cartloader provides a fixed color map at cartloader/assets/fixed_color_map_256.tsv.</span>
-
-<span class="c1"># AWS S3 target location for cartostore</span>
-<span class="nv">AWS_BUCKET</span><span class="o">=</span><span class="s2">&quot;EXAMPLE_AWS_BUCKET&quot;</span><span class="w">         </span><span class="c1"># replace EXAMPLE_AWS_BUCKET with your actual S3 bucket name</span>
-
-<span class="c1"># Number of jobs</span>
-<span class="nv">n_jobs</span><span class="o">=</span><span class="m">10</span>
-
-<span class="c1"># Activate the bioconda environment</span>
-conda<span class="w"> </span>activate<span class="w"> </span>ENV_NAME<span class="w">              </span><span class="c1"># replace BIOENV_NAME with your bioconda environment name</span>
+<span class="normal">18</span></pre></div></td><td class="code"><div><pre><span></span><code>docker<span class="w"> </span>run<span class="w"> </span>-it<span class="w"> </span>--rm<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-v<span class="w"> </span><span class="k">$(</span><span class="nb">pwd</span><span class="k">)</span>:/data<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>weiqiuc/cartloader:20250708b<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>run_ficture2<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--makefn<span class="w"> </span>run_ficture2.mk<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--main<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--in-transcript<span class="w"> </span>/app/data/sge/transcripts.unsorted.tsv.gz<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--in-feature<span class="w"> </span>/app/data/sge/feature.clean.tsv.gz<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--in-minmax<span class="w"> </span>/app/data/sge/coordinate_minmax.tsv<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--cmap-file<span class="w"> </span>/app/cartloader/assets/fixed_color_map_256.tsv<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--exclude-feature-regex<span class="w"> </span><span class="s1">&#39;^(mt-.*$|Gm\d+$)&#39;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--out-dir<span class="w"> </span>/data/ficture2<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--width<span class="w"> </span><span class="si">${</span><span class="nv">train_width</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--n-factor<span class="w"> </span><span class="si">${</span><span class="nv">n_factor</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--ficture2<span class="w"> </span>/app/cartloader/submodules/punkst<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--spatula<span class="w"> </span>/app/cartloader/submodules/spatula/bin/spatula<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--n-jobs<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--threads<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span>
 </code></pre></div></td></tr></table></div>
-<p>Define data ID and analysis parameters:</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span>
-<span class="normal">5</span>
-<span class="normal">6</span>
-<span class="normal">7</span>
-<span class="normal">8</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># Unique identifier for your dataset</span>
-<span class="nv">DATA_ID</span><span class="o">=</span><span class="s2">&quot;cosmxsmi_hippo&quot;</span><span class="w">                </span><span class="c1"># change this to reflect your dataset name</span>
-<span class="nv">PLATFORM</span><span class="o">=</span><span class="s2">&quot;cosmx_smi&quot;</span><span class="w">                    </span><span class="c1"># platform information</span>
-<span class="nv">SCALE</span><span class="o">=</span><span class="k">$(</span><span class="nb">echo</span><span class="w"> </span><span class="m">1000</span>/120<span class="p">|</span>bc<span class="w"> </span>-l<span class="k">)</span><span class="w">              </span><span class="c1"># scale from coordinate to micrometer</span>
-
-<span class="c1"># LDA parameters</span>
-<span class="nv">train_width</span><span class="o">=</span><span class="m">12</span><span class="w">                           </span><span class="c1"># define LDA training hexagon width (comma-separated if multiple widths are applied)</span>
-<span class="nv">n_factor</span><span class="o">=</span><span class="m">6</span>,12<span class="w">                            </span><span class="c1"># define number of factors in LDA training (comma-separated if multiple n-factor are applied)</span>
-</code></pre></div></td></tr></table></div>
-<div class="admonition info">
-<p class="admonition-title">How to Define Scaling Factors for CosMX SMI?</p>
-<p>According to the README.html provided with the Pixel-seq dataset, each pixel has an edge length of 120 nm. To calculate the number of pixels per micrometer, use the formula: scale = 1000 / 120.</p>
-</div>
-<h2 id="sge-format-conversion"><abbr title="Spatial Digital Gene Expression">SGE</abbr> Format Conversion<a class="headerlink" href="#sge-format-conversion" title="Permanent link">&para;</a></h2>
-<p>Convert the raw input to the unified <abbr title="Spatial Digital Gene Expression">SGE</abbr> format. See more details in <a href="../../../reference/sge_convert/">Reference page</a>.</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
-<span class="normal"> 2</span>
-<span class="normal"> 3</span>
-<span class="normal"> 4</span>
-<span class="normal"> 5</span>
-<span class="normal"> 6</span>
-<span class="normal"> 7</span>
-<span class="normal"> 8</span>
-<span class="normal"> 9</span>
-<span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code>cartloader<span class="w"> </span>sge_convert<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--makefn<span class="w"> </span>sge_convert.mk<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--platform<span class="w"> </span><span class="si">${</span><span class="nv">PLATFORM</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--in-csv<span class="w"> </span>./input.tsv.gz<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--units-per-um<span class="w"> </span><span class="si">${</span><span class="nv">SCALE</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--out-dir<span class="w"> </span>./sge<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--exclude-feature-regex<span class="w"> </span><span class="s1">&#39;^(BLANK|NegCon|NegPrb)&#39;</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--sge-visual<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--spatula<span class="w"> </span><span class="si">${</span><span class="nv">spatula</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--n-jobs<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span>
-</code></pre></div></td></tr></table></div>
-<table>
-<thead>
-<tr>
-<th>Parameter</th>
-<th>Required</th>
-<th>Type</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>--platform</code></td>
-<td>required</td>
-<td>string</td>
-<td>Platform (options: "<code>10x_visium_hd</code>", "<code>seqscope</code>", "<code>10x_xenium</code>", "<code>bgi_stereoseq</code>", "<code>cosmx_smi</code>", "<code>vizgen_merscope</code>", "<code>pixel_seq</code>", "<code>generic</code>")</td>
-</tr>
-<tr>
-<td><code>--in-csv</code></td>
-<td>required</td>
-<td>string</td>
-<td>Path to the input TSV/CSV file</td>
-</tr>
-<tr>
-<td><code>--units-per-um</code></td>
-<td>required</td>
-<td>float</td>
-<td>Scale to convert coordinates to microns (default: <code>1.0</code>)</td>
-</tr>
-<tr>
-<td><code>--out-dir</code></td>
-<td>required</td>
-<td>string</td>
-<td>Output directory for the converted <abbr title="Spatial Digital Gene Expression">SGE</abbr> files</td>
-</tr>
-<tr>
-<td><code>--makefn</code></td>
-<td></td>
-<td>string</td>
-<td>File name for the generated Makefile (default: <code>sge_convert.mk</code>)</td>
-</tr>
-<tr>
-<td><code>--exclude-feature-regex</code></td>
-<td></td>
-<td>regex</td>
-<td>Pattern to exclude control features</td>
-</tr>
-<tr>
-<td><code>--sge-visual</code></td>
-<td></td>
-<td>flag</td>
-<td>Enable <abbr title="Spatial Digital Gene Expression">SGE</abbr> visualization step (generates diagnostic image) (default: <code>FALSE</code>)</td>
-</tr>
-<tr>
-<td><code>--spatula</code></td>
-<td></td>
-<td>string</td>
-<td>Path to the spatula binary (default: <code>spatula</code>)</td>
-</tr>
-<tr>
-<td><code>--n-jobs</code></td>
-<td></td>
-<td>int</td>
-<td>Number of parallel jobs for processing (default: <code>1</code>)</td>
-</tr>
-</tbody>
-</table>
-<h2 id="ficture-analysis"><code>FICTURE</code> analysis<a class="headerlink" href="#ficture-analysis" title="Permanent link">&para;</a></h2>
-<p>Compute spatial factors using <code>punkst</code> (FICTURE2 mode). See more details in <a href="../../../reference/run_ficture2/">Reference page</a>.</p>
-<!-- ```bash
-cartloader run_ficture2 \
-    --makefn run_ficture2.mk \                          # (optional) file name of the output make file
-    --main \                                            # run all five steps in `run_ficture2`
-    --in-transcript ./sge/transcripts.unsorted.tsv.gz \ # path to input transcript-level SGE file
-    --in-feature ./sge/feature.clean.tsv.gz \           # (optional) path to input feature file
-    --in-minmax ./sge/coordinate_minmax.tsv \           # (optional) path to input minmax file
-    --cmap-file ${cmap} \                               # (optional) path to input color map file
-    --exclude-feature-regex '^(mt-.*$|Gm\d+$)' \        # regex pattern to exclude features (removing mitochondrial and predicted genes in the example analysis)
-    --out-dir ./ficture2 \                              # path to output directory
-    --width ${train_width} \                            # LDA training hexagon width (comma-separated if multiple widths are applied)
-    --n-factor ${n_factor} \                            # number of factors in LDA training (comma-separated if multiple n-factor are applied)
-    --spatula ${spatula} \                              # (optional) path to the spatula binary
-    --ficture2 ${punkst} \                              # (optional) path to the punkst directory
-    --n-jobs ${n_jobs}  \                                      # (optional) number of parallel jobs 
-    --threads ${n_jobs}                                       # (optional) number of threads per job
-``` -->
-
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
-<span class="normal"> 2</span>
-<span class="normal"> 3</span>
-<span class="normal"> 4</span>
-<span class="normal"> 5</span>
-<span class="normal"> 6</span>
-<span class="normal"> 7</span>
-<span class="normal"> 8</span>
-<span class="normal"> 9</span>
-<span class="normal">10</span>
-<span class="normal">11</span>
-<span class="normal">12</span>
-<span class="normal">13</span>
-<span class="normal">14</span>
-<span class="normal">15</span></pre></div></td><td class="code"><div><pre><span></span><code>cartloader<span class="w"> </span>run_ficture2<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--makefn<span class="w"> </span>run_ficture2.mk<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--main<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--in-transcript<span class="w"> </span>./sge/transcripts.unsorted.tsv.gz<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--in-feature<span class="w"> </span>./sge/feature.clean.tsv.gz<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--in-minmax<span class="w"> </span>./sge/coordinate_minmax.tsv<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--cmap-file<span class="w"> </span><span class="si">${</span><span class="nv">cmap</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--exclude-feature-regex<span class="w"> </span><span class="s1">&#39;^(mt-.*$|Gm\d+$)&#39;</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--out-dir<span class="w"> </span>./ficture2<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--width<span class="w"> </span><span class="si">${</span><span class="nv">train_width</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--n-factor<span class="w"> </span><span class="si">${</span><span class="nv">n_factor</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--spatula<span class="w"> </span><span class="si">${</span><span class="nv">spatula</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--ficture2<span class="w"> </span><span class="si">${</span><span class="nv">punkst</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--n-jobs<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--threads<span class="w"> </span><span class="m">10</span>
-</code></pre></div></td></tr></table></div>
-<!--parameter-start-->
 <table>
 <thead>
 <tr>
@@ -1503,7 +1395,7 @@ cartloader run_ficture2 \
 <td><code>--main</code></td>
 <td>required <sup>1</sup></td>
 <td>flag</td>
-<td>Enable <code>cartloader</code> to run <a href="../../../reference/run_ficture2/#actions">all five steps</a></td>
+<td>Enable <code>cartloader</code> to run <a href="../../../../reference/run_ficture2.md#actions">all five steps</a></td>
 </tr>
 <tr>
 <td><code>--in-transcript</code></td>
@@ -1586,23 +1478,8 @@ cartloader run_ficture2 \
 </tbody>
 </table>
 <p><sub><sup>1</sup>: <code>cartloader</code> requires the user to specify <strong>at least one action</strong>. Available actions includes: <code>--tile</code> to run tiling step; <code>--segment</code> to run segmentation step; <code>--init-lda</code> to run <abbr title="Latent Dirichlet Allocation">LDA</abbr> training step; <code>--decode</code> to run decoding step; <code>--summary</code> to run summarization step; <code>--main</code> to run all above five actions.</sub></p>
-<!--parameter-end-->
-
 <h2 id="cartloader-compilation"><code>cartloader</code> Compilation<a class="headerlink" href="#cartloader-compilation" title="Permanent link">&para;</a></h2>
 <p>Generate pmtiles and web-compatible tile directories. See more details in <a href="../../../reference/run_cartload2/">Reference page</a>.</p>
-<!-- ```bash
-cartloader run_cartload2 \
-    --makefn run_cartload2.mk \         # (optional) file name of the output make file
-    --fic-dir ./ficture2 \              # path to input directory containing FICTURE2 output
-    --out-dir ./cartload2 \             # path to output directory for PMTiles and web tiles
-    --id ${DATA_ID} \                   # dataset ID used for naming outputs and metadata
-    --spatula ${spatula} \              # (optional) path to the spatula binary
-    --pmtiles ${pmtiles} \              # (optional) path to the pmtiles binary
-    --tippecanoe ${tippecanoe} \        # (optional) path to the tippecanoe binary
-    --n-jobs ${n_jobs} \                       # (optional) number of parallel jobs
-    --threads ${n_jobs}                       # (optional) number of threads per job
-``` -->
-
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -1612,18 +1489,23 @@ cartloader run_cartload2 \
 <span class="normal"> 7</span>
 <span class="normal"> 8</span>
 <span class="normal"> 9</span>
-<span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code>cartloader<span class="w"> </span>run_cartload2<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--makefn<span class="w"> </span>run_cartload2.mk<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--fic-dir<span class="w"> </span>./ficture2<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--out-dir<span class="w"> </span>./cartload2<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--id<span class="w"> </span><span class="si">${</span><span class="nv">DATA_ID</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--spatula<span class="w"> </span><span class="si">${</span><span class="nv">spatula</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--pmtiles<span class="w"> </span><span class="si">${</span><span class="nv">pmtiles</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--tippecanoe<span class="w"> </span><span class="si">${</span><span class="nv">tippecanoe</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--n-jobs<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--threads<span class="w"> </span><span class="m">10</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span></pre></div></td><td class="code"><div><pre><span></span><code>docker<span class="w"> </span>run<span class="w"> </span>-it<span class="w"> </span>--rm<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-v<span class="w"> </span><span class="k">$(</span><span class="nb">pwd</span><span class="k">)</span>:/data<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>weiqiuc/cartloader:20250708b<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>run_cartload2<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--makefn<span class="w"> </span>run_cartload2.mk<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--fic-dir<span class="w"> </span>/data/ficture2<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--out-dir<span class="w"> </span>/data/cartload2<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--id<span class="w"> </span><span class="si">${</span><span class="nv">DATA_ID</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--spatula<span class="w"> </span>/app/cartloader/submodules/spatula/bin/spatula<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--pmtiles<span class="w"> </span>/usr/local/bin/pmtiles<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--tippecanoe<span class="w"> </span>/usr/local/bin/tippecanoe<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--n-jobs<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--threads<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span>
 </code></pre></div></td></tr></table></div>
-<!--parameter-start-->
 <table>
 <thead>
 <tr>
@@ -1690,10 +1572,7 @@ cartloader run_cartload2 \
 </tr>
 </tbody>
 </table>
-<!--parameter-end-->
-
 <h2 id="upload-to-data-repository">Upload to Data Repository<a class="headerlink" href="#upload-to-data-repository" title="Permanent link">&para;</a></h2>
-<!--section1-start-->
 <div class="admonition info">
 <p class="admonition-title">Choose a data repository to host/share your output</p>
 <p><code>cartloader</code> supports two upload options (<code>AWS</code> and <code>Zenodo</code>) for storing PMTiles of <abbr title="Spatial Digital Gene Expression">SGE</abbr> and spatial factors in a data repository.</p>
@@ -1701,19 +1580,22 @@ cartloader run_cartload2 \
 </div>
 <h3 id="aws-uploads">AWS Uploads<a class="headerlink" href="#aws-uploads" title="Permanent link">&para;</a></h3>
 <p>Upload the generated cartloader outputs to your designated AWS S3 directory:</p>
-<!--section1-end-->
-
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
 <span class="normal">3</span>
 <span class="normal">4</span>
-<span class="normal">5</span></pre></div></td><td class="code"><div><pre><span></span><code>cartloader<span class="w"> </span>upload_aws<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--in-dir<span class="w"> </span>./cartload2<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--s3-dir<span class="w"> </span><span class="s2">&quot;s3://</span><span class="si">${</span><span class="nv">AWS_BUCKET</span><span class="si">}</span><span class="s2">/</span><span class="si">${</span><span class="nv">DATA_ID</span><span class="si">}</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--aws<span class="w"> </span><span class="si">${</span><span class="nv">aws</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--n-jobs<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span>
+<span class="normal">5</span>
+<span class="normal">6</span>
+<span class="normal">7</span>
+<span class="normal">8</span></pre></div></td><td class="code"><div><pre><span></span><code>docker<span class="w"> </span>run<span class="w"> </span>-it<span class="w"> </span>--rm<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-v<span class="w"> </span><span class="k">$(</span><span class="nb">pwd</span><span class="k">)</span>:/data<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>weiqiuc/cartloader:20250708b<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>upload_aws<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--in-dir<span class="w"> </span>/data/cartload2<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--s3-dir<span class="w"> </span><span class="s2">&quot;s3://</span><span class="si">${</span><span class="nv">AWS_BUCKET</span><span class="si">}</span><span class="s2">/</span><span class="si">${</span><span class="nv">DATA_ID</span><span class="si">}</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--aws<span class="w"> </span>/usr/local/bin/aws<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--n-jobs<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span>
 </code></pre></div></td></tr></table></div>
-<!--section2-start-->
 <table>
 <thead>
 <tr>
@@ -1752,8 +1634,6 @@ cartloader run_cartload2 \
 </table>
 <h3 id="zenodo-uploads">Zenodo Uploads<a class="headerlink" href="#zenodo-uploads" title="Permanent link">&para;</a></h3>
 <p>Upload the generated cartloader outputs to your designated Zenodo deposition or a new deposition.</p>
-<!--section2-end-->
-
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -1763,18 +1643,23 @@ cartloader run_cartload2 \
 <span class="normal"> 7</span>
 <span class="normal"> 8</span>
 <span class="normal"> 9</span>
-<span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nv">zenodo_token</span><span class="o">=</span>/path/to/zenodo/token/file<span class="w">    </span><span class="c1"># replace /path/to/zenodo/token/file by path to your zenodo token file</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nv">zenodo_token</span><span class="o">=</span>/path/to/zenodo/token/file<span class="w">    </span><span class="c1"># replace /path/to/zenodo/token/file by path to your zenodo token file</span>
 
-cartloader<span class="w"> </span>upload_zenodo<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--in-dir<span class="w"> </span>./cartload2<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--upload-method<span class="w"> </span>catalog<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--zenodo-token<span class="w"> </span><span class="nv">$zenodo_token</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--create-new-deposition<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--title<span class="w">  </span><span class="s2">&quot;Yur Title&quot;</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--creators<span class="w"> </span><span class="s2">&quot;Your Name&quot;</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--description<span class="w"> </span><span class="s2">&quot;This is an example description&quot;</span>
+docker<span class="w"> </span>run<span class="w"> </span>-it<span class="w"> </span>--rm<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-v<span class="w"> </span><span class="k">$(</span><span class="nb">pwd</span><span class="k">)</span>:/data<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>weiqiuc/cartloader:20250708b<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>upload_zenodo<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--in-dir<span class="w"> </span>/data/cartload2<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--upload-method<span class="w"> </span>catalog<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--zenodo-token<span class="w"> </span><span class="si">${</span><span class="nv">zenodo_token</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--create-new-deposition<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--title<span class="w">  </span><span class="s2">&quot;Yur Title&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--creators<span class="w"> </span><span class="s2">&quot;Your Name&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--description<span class="w"> </span><span class="s2">&quot;This is an example description&quot;</span>
 </code></pre></div></td></tr></table></div>
-<!--section3-start-->
 <table>
 <thead>
 <tr>
@@ -1829,18 +1714,17 @@ cartloader<span class="w"> </span>upload_zenodo<span class="w"> </span><span cla
 </tr>
 </tbody>
 </table>
-<!--section3-end-->
-
+<hr />
 <h2 id="output-data">Output Data<a class="headerlink" href="#output-data" title="Permanent link">&para;</a></h2>
 <p>See more details of output at the Reference pages for <a href="../../../reference/run_ficture2/">run_ficture2</a> and <a href="../../../reference/run_cartload2/">run_cartload2</a>.</p>
 <h3 id="spatial-factor-inference-from-ficture">Spatial Factor Inference from <code>FICTURE</code><a class="headerlink" href="#spatial-factor-inference-from-ficture" title="Permanent link">&para;</a></h3>
-<p>Below is an example of spatial factor inference results produced by <code>FICTURE</code> using a training width of 12, 12 factors, a fit width of 12, and an anchor resolution of 6.</p>
-<p><img alt="FICTURE" src="../../../images/starter_vignettes/cosmxsmi.t12_f12_p12_a6.png" />
-<img alt="cmap" src="../../../images/starter_vignettes/cosmxsmi.t12-f12-rgb.png" /></p>
+<p>Below is an example of spatial factor inference results from <code>FICTURE</code> using a training width of 18, 12 factors, a fit width of 18, and an anchor resolution of 6.</p>
+<p><img alt="FICTURE" src="../../../images/starter_vignettes/seqscope.t18_f12_p18_a6.png" />
+<img alt="cmap" src="../../../images/starter_vignettes/seqscope.t18-f12-rgb.png" /></p>
 <!-- <div id="color-legend-container"></div>
 <script>
   document.addEventListener("DOMContentLoaded", function() {
-    loadColorLegend("../../../tabs/colormap/cosmxsmi_starter.t12-f12-rgb.tsv", "color-legend-container");
+    loadColorLegend("../../../tabs/colormap/seqscope_starter.t18-f12-rgb.tsv", "color-legend-container");
   });
 </script> -->
 
@@ -1858,119 +1742,101 @@ cartloader<span class="w"> </span>upload_zenodo<span class="w"> </span><span cla
 </thead>
 <tbody>
 <tr>
-<td style="text-align: right;">1</td>
-<td style="text-align: left;">237,238,0</td>
-<td style="text-align: right;">0.17207</td>
-<td style="text-align: right;">548469625</td>
-<td style="text-align: left;">Tmsb4x,Calm2,Snap25,Calm1,Ywhaz,Slc17a7,Cck,Dnm1,Ywhag,Aldoa,Hsp90ab1,Calm3,Atp2b1,Nell2,Rtn3,Snca,Gpm6a,Prkcb,Prkca,Cyfip2</td>
-<td style="text-align: left;">Cck,Camk4,Prkca,Camk1d,Slc17a7,Ywhag,Epha6,Atp2b1,Calm2,Sv2b,Snca,Syn2,Prkcb,Lpl,Nell2,Snap25,Stmn2,Pde1a,Kcnq5,Cnksr2</td>
-<td style="text-align: left;">Tmsb4x,Snap25,Calm2,Calm1,Ywhaz,Atp1b1,Aldoa,Hsp90ab1,Dnm1,Slc17a7,Rtn3,Calm3,Camk2a,Ywhag,Gpm6a,Cck,Ppp3ca,Rtn1,Nrgn,Cpe</td>
-</tr>
-<tr>
 <td style="text-align: right;">0</td>
 <td style="text-align: left;">255,101,101</td>
-<td style="text-align: right;">0.16</td>
-<td style="text-align: right;">510000383</td>
-<td style="text-align: left;">Camk2b,Adcy1,Ppp3ca,Kalrn,Nrgn,Olfm1,Ppfia2,Ctxn1,Gria1,Gria2,Prkce,Ryr2,Camk2a,Grin2a,Gabrb3,Zbtb20,Wasf1,Tiam1,Ntrk3,Mapk1</td>
-<td style="text-align: left;">Ppfia2,Adcy1,Sema5a,Camk2b,Kalrn,Plxna4,Calb1,Tiam1,Jun,Rasgrf2,Nedd4l,Dapk1,Grin2a,Npy1r,Itga8,Ryr2,Auts2,Ppp3ca,Dgkg,Grm7</td>
-<td style="text-align: left;">Malat1,Camk2b,Camk2a,Calm1,Ppp3ca,Tmsb4x,Adcy1,Nrgn,Calm2,Olfm1,Atp1b1,Ndrg4,Gria2,Ywhaz,Kalrn,Gria1,Ctxn1,Prkce,Aldoa,Snap25</td>
+<td style="text-align: right;">0.57145</td>
+<td style="text-align: right;">2577934</td>
+<td style="text-align: left;">Snap25,Cck,Hpca,Syt1,Atp1b1,Selenow,Ywhah,Scg5,Cnih2,Atp1a3,Vsnl1,Gnas,Cpe,Prkcb,Stmn2,Atp2b1,Gng3,Prkcg,Snrpn,Norad</td>
+<td style="text-align: left;">Nr2c1,Calca,Wdr91,Ccbe1,Esyt1,Epha3,Slc9a4,Thap7,Mapk11,Klk8,Arhgef6,1110018N20Rik,Iba57,Klk10,Gjd2,Leng9,Zbtb46,Slc9a2,Akr1c18,Dlx6os1</td>
+<td style="text-align: left;">Snap25,Tmsb4x,Atp1b1,Actb,Cpe,Ywhah,Nrgn,Ppp3ca,Selenow,Calm1,Atp1a3,Calm2,Fth1,Rtn1,Cox8a,Gnas,Camk2a,Norad,Aldoa_v1,Ndrg4</td>
 </tr>
 <tr>
-<td style="text-align: right;">3</td>
-<td style="text-align: left;">101,254,255</td>
-<td style="text-align: right;">0.11601</td>
-<td style="text-align: right;">369772892</td>
-<td style="text-align: left;">Malat1,Hnrnpa2b1,Tardbp,Tnik,Grk3,Mid1,Ptprs,Nf1,Prkn,Vegfa,Kidins220,Tnrc6a,Dmd,Camk2g,Uggt2,Pou2f1,Meg3,Sema6d,Spag9,Ntsr2</td>
-<td style="text-align: left;">Gal,Malat1,Avp,Cd109,Grk3,Lilra5,C2,Prkn,Crhr1,Ngfr,Gcgr,Dmd,Vegfa,C3,Dapk2,Pcsk6,Nrf1,Uggt2,P2rx4,Slc18a2</td>
-<td style="text-align: left;">Malat1,Hnrnpa2b1,Hmgb1,Meg3,Gria2,Ptprs,Tardbp,Gnao1,Tnik,Apoe,Kidins220,Slc1a2,Ahcyl1,Nf1,Bcan,Mid1,Spag9,Camk2g,Fus,Tuba1a/b/c</td>
-</tr>
-<tr>
-<td style="text-align: right;">5</td>
-<td style="text-align: left;">255,101,254</td>
-<td style="text-align: right;">0.09996</td>
-<td style="text-align: right;">318610467</td>
-<td style="text-align: left;">Nap1l5,Atp1b1,Gad1,Ndrg4,Meg3,Cnr1,Sncb,Gad2,Sst,Snap25,Syt1,Zwint,Tmsb10,Snrpn,Gnas,Npy,Sv2a,Cacnb4,Ldhb,Mdh1</td>
-<td style="text-align: left;">Sst,Gad2,Npy,Cnr1,Nap1l5,Gad1,Pvalb,Slc32a1,Vip,Gap43,Adgrl2,Cntn4,Sncb,Atp2b4,Cckbr,Grik1,Grm8,Rims2,Cacnb4,Tmsb10</td>
-<td style="text-align: left;">Atp1b1,Malat1,Snap25,Ndrg4,Meg3,Nap1l5,Ckb,Rtn3,Snrpn,Gnas,Calm1,Syt1,Zwint,Mdh1,Dnm1,Calm2,Aldoa,Sncb,Gad1,Dynll2</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: left;">237,238,0</td>
+<td style="text-align: right;">0.15458</td>
+<td style="text-align: right;">697338</td>
+<td style="text-align: left;">Ppp3ca,Nrgn,Ptk2b,Olfm1,Ppp3r1,Gria2,Ncdn,Nsf,Syne1,Snca,Chn1,Tmsb4x,Rasgrf1,Grin2a,Enc1,Kalrn,Wasf1,Camk2b,Calm2,Epha7</td>
+<td style="text-align: left;">Vwa8,Zfp583,Sppl2b,Faap24,Recql5,A230051N06Rik,Ints6l,Rnaseh2b,Strada,Scnn1a,Snhg17,Prelid3a,Grhl1,Icam4,Slc44a5,Tyw1,Parp8,Asb11,Vipr1,Zfp668</td>
+<td style="text-align: left;">Ppp3ca,Nrgn,Tmsb4x,Actb,Snap25,Atp1b1,Olfm1,Ywhah,Calm2,Ncdn,Rtn1,Ptk2b,Calm1,Ppp3r1,Actg1,Chn1,Fth1,Ndrg4,Fkbp1a,Cfl1</td>
 </tr>
 <tr>
 <td style="text-align: right;">2</td>
 <td style="text-align: left;">101,255,101</td>
-<td style="text-align: right;">0.09064</td>
-<td style="text-align: right;">288906127</td>
-<td style="text-align: left;">Plp1,Ptgds,Scd2,Apod,Mag,Cryab,Ndrg1,Mog,Ugt8a,Bin1,Gpr37,Aspa,Mobp,Fa2h,Gsn,Mbp,Abca2,Cntn2,Slc44a1,Jam3</td>
-<td style="text-align: left;">Plp1,Mag,Mog,Ugt8a,Aspa,Ptgds,Cryab,Apod,Fa2h,Myrf,Ndrg1,Gpr37,Gjb1,Pde8a,Cntn2,Gsn,Fgfr2,Scd2,Jam3,Abca2</td>
-<td style="text-align: left;">Plp1,Malat1,Ptgds,Scd2,Mbp,Fth1,Glul,Apod,Mobp,Mag,Cryab,Bin1,Ndrg1,Gpm6b,Mog,Ywhaq,Cd81,Gpr37,Tmsb4x,Hmgb1</td>
+<td style="text-align: right;">0.116</td>
+<td style="text-align: right;">523314</td>
+<td style="text-align: left;">Cst3,Glul,Slc1a2,Mt1,Apoe,Sparcl1,Aldoc,Clu,Atp1a2,Slc1a3,Camk2a,Ndrg2,Gfap,Mt2,Gpr37l1,Atp1b2,Fam107a,Prdx6,Bc1,Plpp3</td>
+<td style="text-align: left;">Pdk4,Bgn,Unc93b1,Rfx4,Ccr5,Phkg1,Slc38a3,Pax6,Chil1,Gli3,Thbs4,Ppp1r18,Sh3pxd2b,Lyz2,Cpt1a,Aif1,Pdlim4,Cd33,Lcat,Arhgef19</td>
+<td style="text-align: left;">Cst3,Glul,Slc1a2,Sparcl1,Camk2a,Cpe,Mt1,Apoe,Mbp,Fth1,Aldoc,Clu,Ttr,Camk2n1,Ckb,Ddn,Rps29,Atp1a2,Scd2,Mt3</td>
+</tr>
+<tr>
+<td style="text-align: right;">3</td>
+<td style="text-align: left;">101,254,255</td>
+<td style="text-align: right;">0.09284</td>
+<td style="text-align: right;">418815</td>
+<td style="text-align: left;">Fam163b,Prox1,Adcy1,Stxbp6,C1ql2,Btbd3,Synpr,Sema5a,Dsp,Eef1a1,Ncdn,Jun,Lrrtm4,Rfx3,Olfm1,Dgkh,Marcksl1,Ncald,Pitpnm2,Nrgn</td>
+<td style="text-align: left;">Il20rb,Tdo2,Col22a1,C1ql2,St3gal1,Plk5,Dsp,Prox1os,Fam163b,Prox1,Rph3al,H2bc6,Lrrtm4,Mcm6,Khdrbs2,Vwa3b,Prdm5,Npnt,Dact1,Stxbp6</td>
+<td style="text-align: left;">Nrgn,Eef1a1,Ncdn,Olfm1,Ppp3ca,Actb,Tmsb4x,Calm1,Camk2a,Sparcl1,Atp1b1,Adcy1,Fam163b,Tspan7,Ndrg4,Rplp1,Arf3,Camk2n1,Rpl17,Ptk2b</td>
 </tr>
 <tr>
 <td style="text-align: right;">4</td>
 <td style="text-align: left;">101,101,255</td>
-<td style="text-align: right;">0.08492</td>
-<td style="text-align: right;">270686250</td>
-<td style="text-align: left;">Apoe,Clu,Slc1a2,Glul,Aldoc,Atp1a2,Slc1a3,Cst3,Gja1,Plpp3,Ckb,Ndrg2,Sparcl1,Gpr37l1,Gfap,Gstm1,Aqp4,Mt1,Mt3,Mfge8</td>
-<td style="text-align: left;">Gja1,Slc1a3,Aldoc,Apoe,Atp1a2,Clu,Gpr37l1,Aqp4,Plpp3,Slc1a2,Gfap,Mt1,Mfge8,Gstm1,Slc6a11,Ndrg2,Glul,Ednrb,Ntsr2,Agt</td>
-<td style="text-align: left;">Apoe,Clu,Glul,Slc1a2,Cst3,Aldoc,Malat1,Ckb,Atp1a2,Sparcl1,Slc1a3,Mt3,Cpe,Ndrg2,Plpp3,Scd2,Tspan7,Gja1,Ntrk2,Dbi</td>
+<td style="text-align: right;">0.03885</td>
+<td style="text-align: right;">175240</td>
+<td style="text-align: left;">Plp1,Mbp,Gatm,Mobp,Cnp,Cldn11,Fth1,Car2,Ermn,Cryab,Qdpr,Tubb4a,Trf,Plekhb1,Qki,Tspan2,Mal,Bcas1,Tmem88b,Septin4</td>
+<td style="text-align: left;">Insc,Creb5,Tmem125,Trim36,Hapln2,Pde1c,Gjc2,Prr5l,Gjc3,Sec14l5,Gatm,Nkx6-2,Tmem88b,Adamts4,Plekhh1,Ermn,Plp1,Trim59,Plekhg3,Enpp6</td>
+<td style="text-align: left;">Mbp,Plp1,Fth1,Mobp,Ptgds,Actb,Gatm,Tubb4a,Cnp,Car2,Cldn11,Tpt1,Scd2,Glul,Qdpr,App,Qki,Ptma,Malat1,Lars2</td>
+</tr>
+<tr>
+<td style="text-align: right;">5</td>
+<td style="text-align: left;">255,101,254</td>
+<td style="text-align: right;">0.02347</td>
+<td style="text-align: right;">105862</td>
+<td style="text-align: left;">Ttr,Ptgds,Enpp2,Tac2,Gng8,Sostdc1,Ecrg4,Zic1,Calb2,Nnat,Dcn,Tmem212,Adcyap1,Gpr151,2900040C04Rik,Necab2,Apod,Nhlh2,Pou4f1,Ace</td>
+<td style="text-align: left;">Tmem212,Kcne2,Cldn2,Dcn,Septin10,Col8a2,Pou4f1,Nhlh2,Gng8,Wif1,Chrna3,Adcyap1,Folr1,Col1a2,Clec3b,Gng14,Sostdc1,Foxc1,Ecrg4,Tac2</td>
+<td style="text-align: left;">Ttr,Ptgds,Enpp2,Apoe,Cpe,Pcp4,Actb,Eef1a1,Nnat,Psap,Fth1,Tpt1,Cst3,Dbi,Atp1b1,Cox8a,Sparcl1,Clu,Rpl23,Cox7c</td>
 </tr>
 <tr>
 <td style="text-align: right;">6</td>
 <td style="text-align: left;">255,178,101</td>
-<td style="text-align: right;">0.08061</td>
-<td style="text-align: right;">256947664</td>
-<td style="text-align: left;">Pcp4,Itm2c,Calb2,Nnat,Pcsk1n,Rtn1,Map1b,Cacna1e,Thy1,Clstn1,Cbln2,Gabbr2,Tcf7l2,Bex1/2,Rit2,Kcnd2,Slc2a13,Apba1,Tac1,Nsg1</td>
-<td style="text-align: left;">Calb2,Cbln2,Tac1,Nnat,Oprm1,Tcf7l2,Pcp4,Apba1,Slc5a7,Rit2,Slc2a13,Sstr2,Rgs6,Itm2c,Cartpt,Synpr,Gabbr2,Pcsk1n,Gria4,Fgf1</td>
-<td style="text-align: left;">Itm2c,Rtn1,Pcp4,Malat1,Map1b,Pcsk1n,Cpe,Atp1b1,Aldoa,Tuba1a/b/c,Hsp90ab1,Thy1,Psap,Rtn3,Eif4a2,Clstn1,Gnao1,Meg3,Cacna1e,Slc25a4</td>
+<td style="text-align: right;">0.00163</td>
+<td style="text-align: right;">7366</td>
+<td style="text-align: left;">Nkx2-2,Abtb2,Myo1d,C030029H02Rik,Pogk,Dusp16,Smco3,Gjb1,Ldlrad3,Rhobtb3,Lrrc8c,Cdr2,Piga,Tjap1,Carns1,Gpt,Prim1,Sh3gl3,Plk3,Cerox1</td>
+<td style="text-align: left;">Nkx2-2,Abtb2,C030029H02Rik,Myo1d,Dusp16,Smco3,Gjb1,Pogk,Prim1,Ldlrad3,Plk3,Vgll4,Carns1,Gpt,Letm2,Cdr2,Piga,Fign,Lmln,Tjap1</td>
+<td style="text-align: left;">Mbp,Fth1,Pogk,Malat1,Qdpr,Plp1,Myo1d,Tubb4a,Abtb2,Rps27a,Rhobtb3,Glul,Gatm,Nkx2-2,Sh3gl3,Alkbh5,C030029H02Rik,Smco3,Tpt1,Gjb1</td>
 </tr>
 <tr>
 <td style="text-align: right;">7</td>
 <td style="text-align: left;">178,255,101</td>
-<td style="text-align: right;">0.04347</td>
-<td style="text-align: right;">138561767</td>
-<td style="text-align: left;">Bsg,Slc2a1,Cldn5,Flt1,Itm2a,Rgs5,Pltp,Igfbp7,Serinc3,Esam,Vim,Slc7a5,Acta2,Igf1r,Id1,Fn1,Sptbn1,Srgn,Pecam1,St3gal6</td>
-<td style="text-align: left;">Flt1,Cldn5,Itm2a,Rgs5,Pltp,Acta2,Fn1,Pecam1,Esam,Slc2a1,Igfbp7,Myl9,Lsr,Emcn,Slc7a5,Kdr,Tagln,Srgn,St3gal6,Vim</td>
-<td style="text-align: left;">Bsg,Malat1,Slc2a1,Tmsb4x,Serinc3,Cldn5,Sptbn1,H3f3b,Flt1,Myl6,Aplp2,Itm2a,Gnb1,Pltp,Rgs5,Cpe,Itm2b,Hmgb1,Calm1,Igfbp7</td>
-</tr>
-<tr>
-<td style="text-align: right;">11</td>
-<td style="text-align: left;">255,153,204</td>
-<td style="text-align: right;">0.0429</td>
-<td style="text-align: right;">136738469</td>
-<td style="text-align: left;">Ptprz1,Cspg5,Pdgfra,Olig1,Gpr17,Epn2,Tnr,Pllp,Vcan,Fyn,Serpine2,Cd9,Tuba1a/b/c,Olig2,Pcdh15,S100a16,S100b,Sulf2,Serinc5,Cntn1</td>
-<td style="text-align: left;">Vcan,Pdgfra,Gpr17,Pcdh15,Olig2,Tnr,S100b,Olig1,Ptprz1,Cspg5,Fyn,Epn2,Itpr2,Serpine2,Cd9,S100a16,Sox6,Megf11,Pllp,Sulf2</td>
-<td style="text-align: left;">Malat1,Tuba1a/b/c,Ptprz1,Cspg5,Olig1,Epn2,Pllp,Camk2a,Cd9,Serpine2,Calm1,Ncam1,Fyn,Bcan,Ckb,Tnr,Pdgfra,Cntn1,Hnrnpa2b1,Hmgb1</td>
-</tr>
-<tr>
-<td style="text-align: right;">10</td>
-<td style="text-align: left;">178,101,255</td>
-<td style="text-align: right;">0.03812</td>
-<td style="text-align: right;">121510243</td>
-<td style="text-align: left;">Ttr,Psap,Cab39l,Chchd10,Lamp2,Cox8a,Htr2c,Slc12a2,Ppp1r1b,Timp2,Ctsd,Mdh1,Gpi1,Bsg,Ndufa4,Itpr1,Ftl1,App,Sem1,Itgb8</td>
-<td style="text-align: left;">Ttr,Htr2c,Cab39l,Ppp1r1b,Lepr,Slc12a2,Col4a5,Foxj1,Lamp2,Msr1,Dlk1,Timp2,Ctnna1,Chchd10,Maob,Sil1,Itpr1,Tspo,Cd55,Dcn</td>
-<td style="text-align: left;">Ttr,Psap,Malat1,Atp1b1,Cox8a,Mdh1,Bsg,Gpi1,Ctsd,Cab39l,Chchd10,App,Ndufa4,Clu,Ckb,Hspa8,Lamp2,Ptgds,Cst3,Slc12a2</td>
+<td style="text-align: right;">0.00073</td>
+<td style="text-align: right;">3290</td>
+<td style="text-align: left;">Sst,Crhbp,Npy,Cort,Reln,Uhrf1bp1,Rab3b,2310010J17Rik,Elfn1,Lypd6b,Lgals1,Rpp25,Gad2,Cdh13,Clic5,Cenpf,Dlx1,Bcam,Foxred2,Sec14l5</td>
+<td style="text-align: left;">Sst,Uhrf1bp1,Crhbp,Cort,Reln,Lypd6b,2310010J17Rik,Elfn1,Rab3b,Npy,Clic5,Rpp25,Cenpf,Bcam,Lgals1,Sec14l5,Dlx1,Foxred2,Gpc3,Cdh13</td>
+<td style="text-align: left;">Sst,Npy,Crhbp,Atp1b1,Reln,Cort,Zwint,Gad2,Rab3b,Syt1,2310010J17Rik,Snap25,Sparcl1,Atp1a3,Oxr1,Scg2,Mdh1,Atp6v0c,Atp6v1e1,Vgf</td>
 </tr>
 <tr>
 <td style="text-align: right;">9</td>
 <td style="text-align: left;">101,178,255</td>
-<td style="text-align: right;">0.03663</td>
-<td style="text-align: right;">116755577</td>
-<td style="text-align: left;">Cst3,Camk2a,C1qc,Hexb,Ctsd,C1qa,C1qb,Ctss,Csf1r,Vtn,P2ry12,Sparc,Selplg,Cx3cr1,Hmgb1,Tyrobp,Itm2b,Rps9,Tmem119,Tgfbr1</td>
-<td style="text-align: left;">C1qc,Csf1r,Ctss,C1qb,C1qa,Hexb,Selplg,P2ry12,Tmem119,Cx3cr1,Tyrobp,Vtn,Trem2,Ptprc,Csf3r,Tgfbr1,Lyz1/2,Cd84,Higd1b,Epb41l2</td>
-<td style="text-align: left;">Cst3,Camk2a,Tmsb4x,Hmgb1,Ctsd,Itm2b,Malat1,Rps9,Sparc,Hexb,Glul,C1qc,C1qa,Fau,C1qb,Ctsb,Ctss,Csf1r,Vtn,Fth1</td>
+<td style="text-align: right;">0.0004</td>
+<td style="text-align: right;">1817</td>
+<td style="text-align: left;">Hba-a2,Hbb-bs,Hba-a1,Hbb-bt,Tent5c,Polr2l,Aven,Tinagl1,Map2k3,Rgs6,Bst2,Zfp318,Stk40,Plekha8,Ube2l6,Rad50,Slc12a4,Kank2,Srgap1,Klf2</td>
+<td style="text-align: left;">Hba-a1,Hbb-bs,Hbb-bt,Hba-a2,Tent5c,Polr2l,Aven,Tinagl1,Map2k3,Rgs6,Bst2,Slc12a4,Stk40,Ube2l6,Plekha8,Kank2,Rad50,Zfp318,Prtg,Srgap1</td>
+<td style="text-align: left;">Hba-a2,Hbb-bs,Hba-a1,Hbb-bt,Polr2l,Atp1b1,Camk2a,Plekhb1,Tent5c,Rpl31,Praf2,Tpd52,Ptgds,Ddn,Fth1,Calm3,Rpl38,Mobp,Psme3,Mkrn1</td>
 </tr>
 <tr>
 <td style="text-align: right;">8</td>
 <td style="text-align: left;">0,223,95</td>
-<td style="text-align: right;">0.03466</td>
-<td style="text-align: right;">110484904</td>
-<td style="text-align: left;">Mbp,Fth1,Mobp,Cpe,Bcas1,Hipk2,Kif5c,Pink1,Dync1li2,Gfap,Rims1,Cd6,Frs2,Lpar1,Ptpn11,Gpm6b,Map4k4,Ndrg1,S100b,Drd1</td>
-<td style="text-align: left;">Mbp,Mobp,Bcas1,Fth1,Hipk2,Pink1,Cd6,Cpe,Dync1li2,Kif5c,Gfap,Rims1,Frs2,Lpar1,Ptpn11,S100b,Map4k4,Drd1,Gpm6b,Ndrg1</td>
-<td style="text-align: left;">Mbp,Fth1,Mobp,Cpe,Malat1,Kif5c,Clu,Apoe,Glul,Plp1,Bcas1,Tmsb4x,Dync1li2,Hipk2,Pink1,Gfap,Hsp90ab1,Slc1a2,Gpm6b,Calm1</td>
+<td style="text-align: right;">5e-05</td>
+<td style="text-align: right;">214</td>
+<td style="text-align: left;">Sass6,Recql5,Jmjd4,A230072C01Rik,Zfp583,Eef1akmt2,Rnaseh2b,Orc6,Akap10,Mak16,Slc25a35,Dclre1b,C130074G19Rik,Fbxw4,Arhgap10,Il17ra,Zbtb2,Katnip,Hook2,Ints6l</td>
+<td style="text-align: left;">Sass6,Recql5,Jmjd4,A230072C01Rik,Zfp583,Rnaseh2b,Eef1akmt2,Akap10,Orc6,Slc25a35,Dclre1b,C130074G19Rik,Mak16,Arhgap10,Il17ra,Fbxw4,Katnip,Zbtb2,Hook2,Ints6l</td>
+<td style="text-align: left;">Sass6,Recql5,Jmjd4,Cst3,Mak16,A230072C01Rik,Orc6,Tmsb4x,Zfp583,Hexb,Eef1akmt2,Capzb,Gabarapl1,Mdh2,Odc1,Rpl6,Olfm1,Rps8,Golga1,Zfp106</td>
 </tr>
 </tbody>
 </table>
 <h3 id="packed-sge-and-spatial-factor-outputs-from-run_cartload2">Packed <abbr title="Spatial Digital Gene Expression">SGE</abbr> and Spatial Factor Outputs from <code>run_cartload2</code><a class="headerlink" href="#packed-sge-and-spatial-factor-outputs-from-run_cartload2" title="Permanent link">&para;</a></h3>
-<p>The packed <abbr title="Spatial Digital Gene Expression">SGE</abbr> data and spatial factor inferences generated by <code>FICTURE</code> are available in PMTile format on Zenodo: <a href="https://zenodo.org/records/15824926">DOI:10.5281/zenodo.15824926</a>.</p>
+<p>The packed <abbr title="Spatial Digital Gene Expression">SGE</abbr> data and spatial factor inferences generated by <code>FICTURE</code> are available in PMTile format on Zenodo: <a href="https://zenodo.org/records/15759403">DOI:10.5281/zenodo.15759403</a>.</p>
 <p>These datasets can also be loaded directly using the following catalog YAML file:<br />
-<code>https://zenodo.org/records/15824927/catalog.yaml</code></p>
+<code>https://zenodo.org/records/15802634/catalog.yaml</code></p>
 
 
 

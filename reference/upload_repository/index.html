@@ -250,16 +250,19 @@
   
   
   
-    <li class="md-tabs__item">
-      <a href="../../installation.md" class="md-tabs__link">
-        
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../vignettes/quickstart/intro/" class="md-tabs__link">
+          
   
     
   
-  Installation
+  Quick Start
 
-      </a>
-    </li>
+        </a>
+      </li>
+    
   
 
       
@@ -268,12 +271,12 @@
   
   
     <li class="md-tabs__item">
-      <a href="../../vignettes/quickstart/quickstart/" class="md-tabs__link">
+      <a href="../../installation/" class="md-tabs__link">
         
   
     
   
-  Quick Start
+  Installation
 
       </a>
     </li>
@@ -434,17 +437,120 @@
   
   
   
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Quick Start
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            Quick Start
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
     <li class="md-nav__item">
-      <a href="../../installation.md" class="md-nav__link">
+      <a href="../../vignettes/quickstart/intro/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
-    Installation
+    Overview
     
   </span>
   
 
       </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../vignettes/quickstart/run_in_docker/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Run with Docker
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../vignettes/quickstart/run_locally/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Run Locally
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
     </li>
   
 
@@ -456,11 +562,11 @@
   
   
     <li class="md-nav__item">
-      <a href="../../vignettes/quickstart/quickstart/" class="md-nav__link">
+      <a href="../../installation/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
-    Quick Start
+    Installation
     
   </span>
   
@@ -1126,17 +1232,18 @@ If you’ve already created a deposition, you can find its ID at the end of the 
 </details>
 </li>
 </ul>
-<!-- !!! info "Choose a data repository to host/share your output"
+<!-- <!--section1-start-->
+<p>!!! info "Choose a data repository to host/share your output"</p>
+<div class="codehilite"><pre><span></span><code> `cartloader` supports two upload options (`AWS` and `Zenodo`) for storing PMTiles of SGE and spatial factors in a data repository.
 
-     `cartloader` supports two upload options (`AWS` and `Zenodo`) for storing PMTiles of SGE and spatial factors in a data repository.
+ **Choose the one that best suits your needs.**
+</code></pre></div>
 
-     **Choose the one that best suits your needs.**
-
- ### AWS Uploads
-
- Upload the generated cartloader outputs to your designated AWS S3 directory:
-
- <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<p>### AWS Uploads</p>
+<p>Upload the generated cartloader outputs to your designated AWS S3 directory:
+ <!--section1-end-->
+</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
 <span class="normal">3</span>
 <span class="normal">4</span>
@@ -1144,49 +1251,131 @@ If you’ve already created a deposition, you can find its ID at the end of the 
 <span class="w">  </span>--in-dir<span class="w"> </span>./cartload2<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--s3-dir<span class="w"> </span><span class="s2">&quot;s3://</span><span class="si">${</span><span class="nv">AWS_BUCKET</span><span class="si">}</span><span class="s2">/</span><span class="si">${</span><span class="nv">DATA_ID</span><span class="si">}</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--aws<span class="w"> </span><span class="si">${</span><span class="nv">aws</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--n-jobs<span class="w"> </span><span class="m">10</span>
+<span class="w">  </span>--n-jobs<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span>
 </code></pre></div></td></tr></table></div>
+<!--section2-start-->
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Required</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--in-dir</code></td>
+<td>required</td>
+<td>string</td>
+<td>Path to the input directory containing the cartloader compilation output</td>
+</tr>
+<tr>
+<td><code>--s3-dir</code></td>
+<td>required</td>
+<td>string</td>
+<td>Path to the target S3 directory for uploading</td>
+</tr>
+<tr>
+<td><code>--aws</code></td>
+<td></td>
+<td>string</td>
+<td>Path to the AWS CLI binary</td>
+</tr>
+<tr>
+<td><code>--n-jobs</code></td>
+<td></td>
+<td>int</td>
+<td>Number of parallel jobs</td>
+</tr>
+</tbody>
+</table>
+<p>### Zenodo Uploads</p>
+<p>Upload the generated cartloader outputs to your designated Zenodo deposition or a new deposition.
+ <!--section2-end-->
+</p>
+<p><div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nv">zenodo_token</span><span class="o">=</span>/path/to/zenodo/token/file<span class="w">    </span><span class="c1"># replace /path/to/zenodo/token/file by path to your zenodo token file</span>
 
- | Parameter       | Required  | Type   | Description                                                                 |
- |-----------------|-----------|--------|-----------------------------------------------------------------------------|
- | `--in-dir`      | required  | string | Path to the input directory containing the cartloader compilation output    |
- | `--s3-dir`      | required  | string | Path to the target S3 directory for uploading                               |
- | `--aws`         |           | string | Path to the AWS CLI binary                                                  |
- | `--n-jobs`      |           | int    | Number of parallel jobs                                                     |
-
- ### Zenodo Uploads
-
- Upload the generated cartloader outputs to your designated Zenodo deposition or a new deposition.
-
-
- <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span>
-<span class="normal">5</span>
-<span class="normal">6</span>
-<span class="normal">7</span>
-<span class="normal">8</span></pre></div></td><td class="code"><div><pre><span></span><code>cartloader<span class="w"> </span>upload_zenodo<span class="w"> </span><span class="se">\</span>
+cartloader<span class="w"> </span>upload_zenodo<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--in-dir<span class="w"> </span>./cartload2<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--upload-method<span class="w"> </span>catalog<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--zenodo-token<span class="w"> </span>/path/to/zenodo/token/file<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--zenodo-token<span class="w"> </span><span class="nv">$zenodo_token</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--create-new-deposition<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--title<span class="w">  </span><span class="s2">&quot;Yur Title&quot;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--creators<span class="w"> </span><span class="s2">&quot;Your Name&quot;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--description<span class="w"> </span><span class="s2">&quot;This is an example description&quot;</span>
 </code></pre></div></td></tr></table></div>
-
- | Parameter                 | Required | Type        | Description                                                                                                                                                                                                         |
- |---------------------------|----------|-------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
- | `--in-dir`                | required | string      | Path to the input directory containing the cartloader compilation output                                                                                                                                            |
- | `--upload-method`         | required | string      | Method to determine which files to upload. Options: `all` to upload all files in `--in-dir`; `catalog` to upload files listed in a catalog YAML file, `user_list` to upload files explicitly listed via `--in-list` |
- | `--catalog-yaml`          |          | string      | Required if `--upload-method catalog`.  Path to the catalog.yaml file generated in `run_cartload2`. If absent, will use the catalog.yaml in the input directory specified by `--in-dir`.                            |
- | `--zenodo-token `         | required | string      | Path to your Zenodo access file                                                                                                                                                                                     |
- | `--create-new-deposition` |          | flag        | a new Zenodo deposition will be created.                                                                                                                                                                            |
- | `--title`                 | required | string      | Required if `--create-new-deposition`. Title for the new Zenodo deposition.                                                                                                                                         |
- | `--creators`              | required | list of str | List of creators in "Lastname, Firstname" format.                                                                                                                                                                   |
-
- -->
+ <!--section3-start--></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Required</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--in-dir</code></td>
+<td>required</td>
+<td>string</td>
+<td>Path to the input directory containing the cartloader compilation output</td>
+</tr>
+<tr>
+<td><code>--upload-method</code></td>
+<td>required</td>
+<td>string</td>
+<td>Method to determine which files to upload. Options: <code>all</code> to upload all files in <code>--in-dir</code>; <code>catalog</code> to upload files listed in a catalog YAML file, <code>user_list</code> to upload files explicitly listed via <code>--in-list</code></td>
+</tr>
+<tr>
+<td><code>--catalog-yaml</code></td>
+<td></td>
+<td>string</td>
+<td>Required if <code>--upload-method catalog</code>.  Path to the catalog.yaml file generated in <code>run_cartload2</code>. If absent, will use the catalog.yaml in the input directory specified by <code>--in-dir</code>.</td>
+</tr>
+<tr>
+<td><code>--zenodo-token</code></td>
+<td>required</td>
+<td>string</td>
+<td>Path to your Zenodo access file</td>
+</tr>
+<tr>
+<td><code>--create-new-deposition</code></td>
+<td></td>
+<td>flag</td>
+<td>a new Zenodo deposition will be created.</td>
+</tr>
+<tr>
+<td><code>--title</code></td>
+<td>required</td>
+<td>string</td>
+<td>Required if <code>--create-new-deposition</code>. Title for the new Zenodo deposition.</td>
+</tr>
+<tr>
+<td><code>--creators</code></td>
+<td>required</td>
+<td>list of str</td>
+<td>List of creators in "Lastname, Firstname" format.</td>
+</tr>
+<tr>
+<td><!--section3-end--></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>--&gt;</p>
 <h2 id="aws-uploads">AWS Uploads<a class="headerlink" href="#aws-uploads" title="Permanent link">&para;</a></h2>
 <p>We recommend to create create a directory within your AWS S3 bucket using a data id as directory name.</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>

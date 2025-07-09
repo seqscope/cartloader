@@ -8,13 +8,13 @@
       
       
       
-        <link rel="canonical" href="https://seqscope.github.io/cartloader/vignettes/quickstart/quickstart/">
+        <link rel="canonical" href="https://seqscope.github.io/cartloader/vignettes/quickstart/run_locally/">
       
       
-        <link rel="prev" href="../../..">
+        <link rel="prev" href="../run_in_docker/">
       
       
-        <link rel="next" href="../../intro/">
+        <link rel="next" href="../../../installation/">
       
       
       <link rel="icon" href="../../../assets/images/favicon.png">
@@ -22,7 +22,7 @@
     
     
       
-        <title>Quick Start - cartloader</title>
+        <title>Run Locally - cartloader</title>
       
     
     
@@ -82,7 +82,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#a-quick-start" class="md-skip">
+        <a href="#quick-start-run-locally" class="md-skip">
           Skip to content
         </a>
       
@@ -116,7 +116,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Quick Start
+              Run Locally
             
           </span>
         </div>
@@ -251,33 +251,36 @@
         
   
   
+    
   
-    <li class="md-tabs__item">
-      <a href="../../../installation.md" class="md-tabs__link">
-        
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../intro/" class="md-tabs__link">
+          
   
     
   
-  Installation
+  Quick Start
 
-      </a>
-    </li>
+        </a>
+      </li>
+    
   
 
       
         
   
   
-    
   
-  
-    <li class="md-tabs__item md-tabs__item--active">
-      <a href="./" class="md-tabs__link">
+    <li class="md-tabs__item">
+      <a href="../../../installation/" class="md-tabs__link">
         
   
     
   
-  Quick Start
+  Installation
 
       </a>
     </li>
@@ -434,14 +437,68 @@
       
   
   
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  <span class="md-ellipsis">
+    Quick Start
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            Quick Start
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
   
   
     <li class="md-nav__item">
-      <a href="../../../installation.md" class="md-nav__link">
+      <a href="../intro/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
-    Installation
+    Overview
     
   </span>
   
@@ -450,9 +507,32 @@
     </li>
   
 
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../run_in_docker/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Run with Docker
     
-      
-      
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
   
   
     
@@ -471,7 +551,7 @@
           
   
   <span class="md-ellipsis">
-    Quick Start
+    Run Locally
     
   </span>
   
@@ -483,7 +563,7 @@
         
   
   <span class="md-ellipsis">
-    Quick Start
+    Run Locally
     
   </span>
   
@@ -563,6 +643,35 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../installation/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Installation
+    
+  </span>
+  
+
+      </a>
     </li>
   
 
@@ -1113,29 +1222,34 @@
   
 
 
-<h1 id="a-quick-start">A Quick Start<a class="headerlink" href="#a-quick-start" title="Permanent link">&para;</a></h1>
-<p>This page provides a quick-start example with a small dataset from mouse hippocampus to help users verify their installation and get familiar with <code>cartloader</code> and the <code>cartostore</code> workflow.</p>
-<p>The workflow consists of three major steps:</p>
-<ol>
-<li><code>FICTURE</code> Analysis — computes factor embeddings and visualizations via <code>punkst</code>.</li>
-<li><code>cartloader</code> Compilation — generates web-compatible tiles.</li>
-<li><code>AWS</code> Upload — places results into an AWS S3 bucket for sharing via <code>cartostore</code>.</li>
-</ol>
+<h1 id="quick-start-run-locally">🔧 Quick Start: Run Locally<a class="headerlink" href="#quick-start-run-locally" title="Permanent link">&para;</a></h1>
+<p>This tutorial walks you through running the <code>cartloader</code> workflow on your own machine using a minimal example dataset from the mouse hippocampus.</p>
+<div class="admonition info">
+<p class="admonition-title">Use Cases</p>
+<p>This tutorial is ideal for users who want to:</p>
+<ul>
+<li>Take full control over the environment</li>
+<li>Use their own data</li>
+<li>Stay up-to-date with the latest development versions </li>
+</ul>
+</div>
 <div class="admonition warning">
 <p class="admonition-title">Requirement</p>
-<p>Before getting started, please ensure that cartloader and all prerequisites are installed (see <a href="../../installation.md">Installation</a> guide).</p>
+<p>Before getting started, please ensure that cartloader and all prerequisites are installed (see <a href="../../../installation/">Installation</a> guide).</p>
 </div>
 <h2 id="input-data">Input Data<a class="headerlink" href="#input-data" title="Permanent link">&para;</a></h2>
-<p>This tutorial used an <abbr title="Spatial Digital Gene Expression">SGE</abbr> representing the mouse hippocampus as input data. </p>
-<p>The input <abbr title="Spatial Digital Gene Expression">SGE</abbr> file was already converted to a format compatible with <code>FICTURE</code> using <a href="../../../reference/sge_convert/"><code>sge_convert</code></a> in <code>cartloader</code> .</p>
-<div class="admonition warning">
-<p class="admonition-title">Prepare Input <abbr title="Spatial Digital Gene Expression">SGE</abbr> for <code>FICTURE</code></p>
-<p><code>FICTURE</code> requires input in the form of a transcript-indexed <abbr title="Spatial Digital Gene Expression">SGE</abbr> file in TSV format with at least: X and Y spatial coordinates, gene identifiers, and expression counts. </p>
-<p>Because <abbr title="Spatial transcriptomics">ST</abbr> platforms vary widely in their data formats and metadata structures, <code>cartloader</code> provides the <a href="../../../reference/sge_convert/"><code>sge_convert</code></a> module to convert raw <abbr title="Spatial Digital Gene Expression">SGE</abbr> data into the standardized format required by <code>FICTURE</code>.</p>
-<p>For detailed platform-specific instructions on preparing compatible <abbr title="Spatial Digital Gene Expression">SGE</abbr> files, see the <a href="../../intro/#getting-started-per-platform">Vignettes</a>.</p>
-</div>
+<p>The input is an mouse hippocampus <abbr title="Spatial Digital Gene Expression">SGE</abbr>, which is already converted to a format compatible with <code>FICTURE</code> using <a href="../../../reference/sge_convert/"><code>sge_convert</code></a> in <code>cartloader</code> .</p>
+<!-- 
+!!! warning "Prepare Input SGE for `FICTURE`"
+
+    `FICTURE` requires input in the form of a transcript-indexed SGE file in TSV format with at least: X and Y spatial coordinates, gene identifiers, and expression counts. 
+
+    Because ST platforms vary widely in their data formats and metadata structures, `cartloader` provides the [`sge_convert`](../../reference/sge_convert.md) module to convert raw SGE data into the standardized format required by `FICTURE`.
+
+    For detailed platform-specific instructions on preparing compatible SGE files, see the [Vignettes](../intro.md#getting-started-per-platform). -->
+
 <p><strong>File Format</strong></p>
-<p>The example <abbr title="Spatial Digital Gene Expression">SGE</abbr> includes the following files:</p>
+<p><abbr title="Spatial Digital Gene Expression">SGE</abbr> in FICTURE-compatible format includes:</p>
 <details>
 <summary><code>transcripts.unsorted.tsv.gz</code>: transcript-indexed <abbr title="Spatial Digital Gene Expression">SGE</abbr> in TSV</summary>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
@@ -1184,17 +1298,18 @@ ymax    1439.95
 </details>
 <p><strong>Data Access</strong></p>
 <p>The input example data is hosted on Zenedo <a href="https://doi.org/10.5281/zenodo.15701393">DOI: 10.5281/zenodo.15701393</a>.</p>
-<p>Follow the commands below to download the example data.</p>
+<p>Download the example data:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
 <span class="normal">3</span>
 <span class="normal">4</span>
-<span class="normal">5</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nv">work_dir</span><span class="o">=</span>/path/to/work/directory
+<span class="normal">5</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nv">work_dir</span><span class="o">=</span>/path/to/work/directory<span class="w">        </span><span class="c1"># path to work directory that contains the downloaded input data</span>
 <span class="nb">cd</span><span class="w"> </span><span class="nv">$work_dir</span>
 
 wget<span class="w"> </span>https://zenodo.org/records/15786632/files/seqscope_starter.std.tar.gz
 tar<span class="w"> </span>-zxvf<span class="w"> </span>seqscope_starter.std.tar.gz
 </code></pre></div></td></tr></table></div>
+<hr />
 <h2 id="set-up-the-environment">Set Up the Environment<a class="headerlink" href="#set-up-the-environment" title="Permanent link">&para;</a></h2>
 <p>Define paths to all required binaries and resources, and target AWS S3 bucket. Optionally, specify a fixed color map for consistent rendering.</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
@@ -1217,7 +1332,10 @@ tar<span class="w"> </span>-zxvf<span class="w"> </span>seqscope_starter.std.tar
 <span class="normal">18</span>
 <span class="normal">19</span>
 <span class="normal">20</span>
-<span class="normal">21</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># ====</span>
+<span class="normal">21</span>
+<span class="normal">22</span>
+<span class="normal">23</span>
+<span class="normal">24</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># ====</span>
 <span class="c1"># Replace each placeholder with the actual path on your system.  </span>
 <span class="c1"># ====</span>
 <span class="nv">work_dir</span><span class="o">=</span>/path/to/work/directory<span class="w">        </span><span class="c1"># path to work directory that contains the downloaded input data</span>
@@ -1236,6 +1354,9 @@ tar<span class="w"> </span>-zxvf<span class="w"> </span>seqscope_starter.std.tar
 <span class="c1"># AWS S3 target location for cartostore</span>
 <span class="nv">AWS_BUCKET</span><span class="o">=</span><span class="s2">&quot;EXAMPLE_AWS_BUCKET&quot;</span><span class="w">         </span><span class="c1"># replace EXAMPLE_AWS_BUCKET with your actual S3 bucket name</span>
 
+<span class="c1"># Number of jobs</span>
+<span class="nv">n_jobs</span><span class="o">=</span><span class="m">10</span>
+
 <span class="c1"># Activate the bioconda environment</span>
 conda<span class="w"> </span>activate<span class="w"> </span>ENV_NAME<span class="w">              </span><span class="c1"># replace BIOENV_NAME with your bioconda environment name</span>
 </code></pre></div></td></tr></table></div>
@@ -1246,11 +1367,7 @@ conda<span class="w"> </span>activate<span class="w"> </span>ENV_NAME<span class
 <span class="normal">4</span>
 <span class="normal">5</span>
 <span class="normal">6</span>
-<span class="normal">7</span>
-<span class="normal">8</span>
-<span class="normal">9</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nb">cd</span><span class="w"> </span><span class="nv">$work_dir</span>
-
-<span class="c1"># Unique identifier for your dataset</span>
+<span class="normal">7</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># Unique identifier for your dataset</span>
 <span class="nv">DATA_ID</span><span class="o">=</span><span class="s2">&quot;seqscope_hippo&quot;</span><span class="w">                </span><span class="c1"># change this to reflect your dataset name</span>
 <span class="nv">PLATFORM</span><span class="o">=</span><span class="s2">&quot;seqscope&quot;</span><span class="w">                     </span><span class="c1"># platform information</span>
 
@@ -1274,8 +1391,8 @@ cartloader run_ficture2 \
     --n-factor ${n_factor} \                            # number of factors in LDA training (comma-separated if multiple n-factor are applied)
     --spatula ${spatula} \                              # (optional) path to the spatula binary
     --ficture2 ${punkst} \                              # (optional) path to the punkst directory
-    --n-jobs 10  \                                      # (optional) number of parallel jobs 
-    --threads 10                                        # (optional) number of threads per job
+    --n-jobs ${n_jobs}  \                                      # (optional) number of parallel jobs 
+    --threads ${n_jobs}                                       # (optional) number of threads per job
 ``` -->
 
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
@@ -1305,7 +1422,7 @@ cartloader run_ficture2 \
 <span class="w">  </span>--n-factor<span class="w"> </span><span class="si">${</span><span class="nv">n_factor</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--spatula<span class="w"> </span><span class="si">${</span><span class="nv">spatula</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--ficture2<span class="w"> </span><span class="si">${</span><span class="nv">punkst</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--n-jobs<span class="w"> </span><span class="m">10</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--n-jobs<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--threads<span class="w"> </span><span class="m">10</span>
 </code></pre></div></td></tr></table></div>
 <!--parameter-start-->
@@ -1419,8 +1536,8 @@ cartloader run_cartload2 \
     --spatula ${spatula} \              # (optional) path to the spatula binary
     --pmtiles ${pmtiles} \              # (optional) path to the pmtiles binary
     --tippecanoe ${tippecanoe} \        # (optional) path to the tippecanoe binary
-    --n-jobs 10 \                       # (optional) number of parallel jobs
-    --threads 10                        # (optional) number of threads per job
+    --n-jobs ${n_jobs} \                       # (optional) number of parallel jobs
+    --threads ${n_jobs}                       # (optional) number of threads per job
 ``` -->
 
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
@@ -1440,9 +1557,10 @@ cartloader run_cartload2 \
 <span class="w">  </span>--spatula<span class="w"> </span><span class="si">${</span><span class="nv">spatula</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--pmtiles<span class="w"> </span><span class="si">${</span><span class="nv">pmtiles</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--tippecanoe<span class="w"> </span><span class="si">${</span><span class="nv">tippecanoe</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--n-jobs<span class="w"> </span><span class="m">10</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--n-jobs<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--threads<span class="w"> </span><span class="m">10</span>
 </code></pre></div></td></tr></table></div>
+<!--parameter-start-->
 <table>
 <thead>
 <tr>
@@ -1509,7 +1627,10 @@ cartloader run_cartload2 \
 </tr>
 </tbody>
 </table>
+<!--parameter-end-->
+
 <h2 id="upload-to-data-repository">Upload to Data Repository<a class="headerlink" href="#upload-to-data-repository" title="Permanent link">&para;</a></h2>
+<!--section1-start-->
 <div class="admonition info">
 <p class="admonition-title">Choose a data repository to host/share your output</p>
 <p><code>cartloader</code> supports two upload options (<code>AWS</code> and <code>Zenodo</code>) for storing PMTiles of <abbr title="Spatial Digital Gene Expression">SGE</abbr> and spatial factors in a data repository.</p>
@@ -1517,6 +1638,8 @@ cartloader run_cartload2 \
 </div>
 <h3 id="aws-uploads">AWS Uploads<a class="headerlink" href="#aws-uploads" title="Permanent link">&para;</a></h3>
 <p>Upload the generated cartloader outputs to your designated AWS S3 directory:</p>
+<!--section1-end-->
+
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
 <span class="normal">3</span>
@@ -1525,8 +1648,9 @@ cartloader run_cartload2 \
 <span class="w">  </span>--in-dir<span class="w"> </span>./cartload2<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--s3-dir<span class="w"> </span><span class="s2">&quot;s3://</span><span class="si">${</span><span class="nv">AWS_BUCKET</span><span class="si">}</span><span class="s2">/</span><span class="si">${</span><span class="nv">DATA_ID</span><span class="si">}</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--aws<span class="w"> </span><span class="si">${</span><span class="nv">aws</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--n-jobs<span class="w"> </span><span class="m">10</span>
+<span class="w">  </span>--n-jobs<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span>
 </code></pre></div></td></tr></table></div>
+<!--section2-start-->
 <table>
 <thead>
 <tr>
@@ -1565,22 +1689,29 @@ cartloader run_cartload2 \
 </table>
 <h3 id="zenodo-uploads">Zenodo Uploads<a class="headerlink" href="#zenodo-uploads" title="Permanent link">&para;</a></h3>
 <p>Upload the generated cartloader outputs to your designated Zenodo deposition or a new deposition.</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span>
-<span class="normal">5</span>
-<span class="normal">6</span>
-<span class="normal">7</span>
-<span class="normal">8</span></pre></div></td><td class="code"><div><pre><span></span><code>cartloader<span class="w"> </span>upload_zenodo<span class="w"> </span><span class="se">\</span>
+<!--section2-end-->
+
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nv">zenodo_token</span><span class="o">=</span>/path/to/zenodo/token/file<span class="w">    </span><span class="c1"># replace /path/to/zenodo/token/file by path to your zenodo token file</span>
+
+cartloader<span class="w"> </span>upload_zenodo<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--in-dir<span class="w"> </span>./cartload2<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--upload-method<span class="w"> </span>catalog<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--zenodo-token<span class="w"> </span>/path/to/zenodo/token/file<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--zenodo-token<span class="w"> </span><span class="nv">$zenodo_token</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--create-new-deposition<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--title<span class="w">  </span><span class="s2">&quot;Yur Title&quot;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--creators<span class="w"> </span><span class="s2">&quot;Your Name&quot;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--description<span class="w"> </span><span class="s2">&quot;This is an example description&quot;</span>
 </code></pre></div></td></tr></table></div>
+<!--section3-start-->
 <table>
 <thead>
 <tr>
@@ -1635,10 +1766,13 @@ cartloader run_cartload2 \
 </tr>
 </tbody>
 </table>
+<!--section3-end-->
+
+<hr />
 <h2 id="output-data">Output Data<a class="headerlink" href="#output-data" title="Permanent link">&para;</a></h2>
 <p>See more details of output at the Reference pages for <a href="../../../reference/run_ficture2/">run_ficture2</a> and <a href="../../../reference/run_cartload2/">run_cartload2</a>.</p>
 <h3 id="spatial-factor-inference-from-ficture">Spatial Factor Inference from <code>FICTURE</code><a class="headerlink" href="#spatial-factor-inference-from-ficture" title="Permanent link">&para;</a></h3>
-<p>Below is an example of spatial factor inference results produced by <code>FICTURE</code> using a training width of 18, 12 factors, a fit width of 18, and an anchor resolution of 6.</p>
+<p>Below is an example of spatial factor inference results from <code>FICTURE</code> using a training width of 18, 12 factors, a fit width of 18, and an anchor resolution of 6.</p>
 <p><img alt="FICTURE" src="../../../images/starter_vignettes/seqscope.t18_f12_p18_a6.png" />
 <img alt="cmap" src="../../../images/starter_vignettes/seqscope.t18-f12-rgb.png" /></p>
 <!-- <div id="color-legend-container"></div>
