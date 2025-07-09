@@ -218,6 +218,7 @@ def run_ficture2_multi(_args):
                 f"--out-pref {args.out_dir}/multi.hex_{width}",
                 f"--threads {args.threads}",
                 f"--temp-dir {args.out_dir}/tmp/multi_hex_{width}"])
+            cmds.append(cmd)
 
     widths = args.width.split(",")
     cmd = f"[ -f {args.out_dir}/multi.features.tsv ]"
