@@ -14,8 +14,8 @@ cartloader run_ficture2 \
     --n-factor ${n_factor} \                            # number of factors in LDA training (comma-separated if multiple n-factor are applied)
     --spatula ${spatula} \                              # (optional) path to the spatula binary
     --ficture2 ${punkst} \                              # (optional) path to the punkst directory
-    --n-jobs 10  \                                      # (optional) number of parallel jobs 
-    --threads 10                                        # (optional) number of threads per job
+    --n-jobs ${n_jobs}  \                                      # (optional) number of parallel jobs 
+    --threads ${n_jobs}                                       # (optional) number of threads per job
 ``` -->
 
 
@@ -33,7 +33,7 @@ cartloader run_ficture2 \
   --n-factor ${n_factor} \
   --spatula ${spatula} \
   --ficture2 ${punkst} \
-  --n-jobs 10 \
+  --n-jobs ${n_jobs} \
   --threads 10
 ```
 

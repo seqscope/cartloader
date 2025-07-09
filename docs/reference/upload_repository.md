@@ -46,7 +46,7 @@
 
 
 <!-- {%
-  include-markdown "../../includes/includemd_vigenettes_upload2aws.md"
+  include-markdown "../../includes/includemd_vigenettes_upload.md"
 %}
  -->
 ## AWS Uploads

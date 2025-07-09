@@ -72,7 +72,7 @@ n_factor=6,12                            # define number of factors in LDA train
 ## Upload to Data Repository
 
 {%
-  include-markdown "../../../includes/includemd_vigenettes_upload2aws.md"
+  include-markdown "../../../includes/includemd_vigenettes_upload.md"
 %}
 
 

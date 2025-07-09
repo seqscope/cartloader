@@ -1,13 +1,14 @@
 
-# A Quick Start
+# 🔧 Quick Start: Run Locally
 
-This page provides a quick-start example with a small dataset from mouse hippocampus to help users verify their installation and get familiar with `cartloader` and the `cartostore` workflow.
+This tutorial walks you through running the `cartloader` workflow on your own machine using a minimal example dataset from the mouse hippocampus.
 
-The workflow consists of three major steps:
+!!! info "Use Cases"
+    This tutorial is ideal for users who want to:
 
-1.	`FICTURE` Analysis — computes factor embeddings and visualizations via `punkst`.
-2.	`cartloader` Compilation — generates web-compatible tiles.
-3.	`AWS` Upload — places results into an AWS S3 bucket for sharing via `cartostore`.
+    - Take full control over the environment
+    - Use their own data
+    - Stay up-to-date with the latest development versions 
 
 
 !!! warning "Requirement"
@@ -16,21 +17,19 @@ The workflow consists of three major steps:
 
 ## Input Data
 
-This tutorial used an SGE representing the mouse hippocampus as input data. 
-
-The input SGE file was already converted to a format compatible with `FICTURE` using [`sge_convert`](../../reference/sge_convert.md) in `cartloader` .
-
+The input is an mouse hippocampus SGE, which is already converted to a format compatible with `FICTURE` using [`sge_convert`](../../reference/sge_convert.md) in `cartloader` .
+<!-- 
 !!! warning "Prepare Input SGE for `FICTURE`"
 
     `FICTURE` requires input in the form of a transcript-indexed SGE file in TSV format with at least: X and Y spatial coordinates, gene identifiers, and expression counts. 
     
     Because ST platforms vary widely in their data formats and metadata structures, `cartloader` provides the [`sge_convert`](../../reference/sge_convert.md) module to convert raw SGE data into the standardized format required by `FICTURE`.
     
-    For detailed platform-specific instructions on preparing compatible SGE files, see the [Vignettes](../intro.md#getting-started-per-platform).
+    For detailed platform-specific instructions on preparing compatible SGE files, see the [Vignettes](../intro.md#getting-started-per-platform). -->
 
 **File Format**
 
-The example SGE includes the following files:
+SGE in FICTURE-compatible format includes:
 
 {%
   include-markdown "../../../includes/includemd_vigenettes_sgeformat.md"
@@ -40,15 +39,17 @@ The example SGE includes the following files:
 
 The input example data is hosted on Zenedo [DOI: 10.5281/zenodo.15701393](https://doi.org/10.5281/zenodo.15701393).
 
-Follow the commands below to download the example data.
+Download the example data:
 
 ```bash
-work_dir=/path/to/work/directory
+work_dir=/path/to/work/directory        # path to work directory that contains the downloaded input data
 cd $work_dir
 
 wget https://zenodo.org/records/15786632/files/seqscope_starter.std.tar.gz
 tar -zxvf seqscope_starter.std.tar.gz
 ```
+
+---------------
 
 ## Set Up the Environment
 
@@ -59,8 +60,6 @@ tar -zxvf seqscope_starter.std.tar.gz
 Define data ID and analysis parameters:
 
 ```bash
-cd $work_dir
-
 # Unique identifier for your dataset
 DATA_ID="seqscope_hippo"                # change this to reflect your dataset name
 PLATFORM="seqscope"                     # platform information
@@ -69,6 +68,7 @@ PLATFORM="seqscope"                     # platform information
 train_width=18                           # define LDA training hexagon width (comma-separated if multiple widths are applied)
 n_factor=6,12                            # define number of factors in LDA training (comma-separated if multiple n-factor are applied)
 ```
+
 
 ## `FICTURE` analysis
 
@@ -85,8 +85,10 @@ n_factor=6,12                            # define number of factors in LDA train
 ## Upload to Data Repository
 
 {%
-  include-markdown "../../../includes/includemd_vigenettes_upload2aws.md"
+  include-markdown "../../../includes/includemd_vigenettes_upload.md"
 %}
+
+---------------
 
 ## Output Data
 

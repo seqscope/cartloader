@@ -9,8 +9,8 @@ cartloader run_cartload2 \
     --spatula ${spatula} \              # (optional) path to the spatula binary
     --pmtiles ${pmtiles} \              # (optional) path to the pmtiles binary
     --tippecanoe ${tippecanoe} \        # (optional) path to the tippecanoe binary
-    --n-jobs 10 \                       # (optional) number of parallel jobs
-    --threads 10                        # (optional) number of threads per job
+    --n-jobs ${n_jobs} \                       # (optional) number of parallel jobs
+    --threads ${n_jobs}                       # (optional) number of threads per job
 ``` -->
 
 ```bash
@@ -22,10 +22,11 @@ cartloader run_cartload2 \
   --spatula ${spatula} \
   --pmtiles ${pmtiles} \
   --tippecanoe ${tippecanoe} \
-  --n-jobs 10 \
+  --n-jobs ${n_jobs} \
   --threads 10
 ```
 
+<!--parameter-start-->
 | Parameter      | Required | Type   | Description                                                        |
 |----------------|----------|--------|--------------------------------------------------------------------|
 | `--fic-dir`    | required | string | Path to the input directory containing FICTURE2 output             |
@@ -37,3 +38,4 @@ cartloader run_cartload2 \
 | `--tippecanoe` |          | string | Path to the `tippecanoe` binary (default: `tippecanoe`)            |
 | `--n-jobs`     |          | int    | Number of parallel jobs (default: `1`)                             |
 | `--threads`    |          | int    | Number of threads per job (default: `1`)                           |
+<!--parameter-end-->

@@ -11,7 +11,7 @@ cartloader sge_convert \
   --exclude-feature-regex '^(BLANK|NegCon|NegPrb)' \
   --sge-visual \
   --spatula ${spatula} \
-  --n-jobs 10
+  --n-jobs ${n_jobs}
 ```
 
 | Parameter                 | Required      | Type   | Description                                                                                                                                       |

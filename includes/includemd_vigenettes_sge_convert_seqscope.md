@@ -12,7 +12,7 @@ cartloader sge_convert \
     --colnames-count count  \           # output column name for expression count
     --sge-visual \                      # (optional) enable SGE visualization step
     --spatula ${spatula} \              # (optional) path to the spatula binary
-    --n-jobs 10                         # (optional) number of parallel jobs for processing
+    --n-jobs ${n_jobs}                         # (optional) number of parallel jobs for processing
 ``` -->
 
 ```bash
@@ -25,7 +25,7 @@ cartloader sge_convert \
   --exclude-feature-regex '^(BLANK|NegCon|NegPrb)' \
   --sge-visual \
   --spatula ${spatula} \
-  --n-jobs 10
+  --n-jobs ${n_jobs}
 ```
 
 | Parameter                 | Required | Type   | Description                                                                                                                                       |

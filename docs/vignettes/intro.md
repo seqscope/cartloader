@@ -6,7 +6,7 @@ For a more detailed explanation of each step, refer to our [References](../refer
 
 ## Quick Start
 
-If you're new to `cartloader`, we recommend beginning with the [Quick Start](./quickstart/quickstart.md) tutorial. 
+If you're new to `cartloader`, we recommend beginning with the [Quick Start](./quickstart/run_locally.md) tutorial. 
 
 This vignette provides a beginner-friendly walkthrough using a small mouse hippocampus dataset to walks through `cartloader` functions.
 
@@ -17,7 +17,7 @@ This vignette provides a beginner-friendly walkthrough using a small mouse hippo
     <figcaption class="figure-caption-vigintro-large">Quick Start Tutorial</figcaption>
     </figure>
 
-    [Read](./quickstart/quickstart.md){ .md-button .md-button--primary .button-tight-small }
+    [Read](./quickstart/run_locally.md){ .md-button .md-button--primary .button-tight-small }
 
 </div>
 
@@ -41,7 +41,7 @@ For consistency, we curated hippocampus from the mouse brain for each platform, 
     <figcaption class="figure-caption-vigintro-large">**SeqScope** Starter Guide</figcaption>
     </figure>
 
-    [Read](./quickstart/quickstart.md){ .md-button .md-button--primary .button-tight-small }
+    [Read](./quickstart/run_locally.md){ .md-button .md-button--primary .button-tight-small }
 
 -   <figure markdown="span">
     ![example2](../images/starter_vignettes/visiumhd.t18_f12_p18_a6.png)

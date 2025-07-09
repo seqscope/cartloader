@@ -51,11 +51,14 @@ theme:
 nav:
   - Home: 
       - Introduction: index.md
+  - Quick Start: 
+      - Overview: vignettes/quickstart/intro.md
+      - Run with Docker: vignettes/quickstart/run_in_docker.md
+      - Run Locally: vignettes/quickstart/run_locally.md
   - Installation: installation.md
-  - Quick Start: vignettes/quickstart/quickstart.md
   - Vignettes:
       - Overview: vignettes/intro.md
-      #- Quick Start: vignettes/quickstart/quickstart.md
+      #- Quick Start: vignettes/quickstart/run_locally.md
       - Getting Started with `cartloader`:
         - SeqScope Starter Tutorial: vignettes/subregion_tutorials/seqscope.md
         - StereoSeq Starter Tutorial: vignettes/subregion_tutorials/stereoseq.md

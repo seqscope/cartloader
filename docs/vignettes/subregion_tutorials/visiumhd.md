@@ -89,7 +89,7 @@ cartloader run_ficture2 \
 
 ## Upload to Data Repository
 {%
-  include-markdown "../../../includes/includemd_vigenettes_upload2aws.md"
+  include-markdown "../../../includes/includemd_vigenettes_upload.md"
 %}
 
 ## Output Data
