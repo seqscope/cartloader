@@ -1,6 +1,6 @@
 import logging, os, shutil, sys, importlib, csv, shlex, subprocess, json, yaml, re, gzip
 import os
-
+from collections import Counter
 
 def get_func(name):
     """
@@ -309,8 +309,14 @@ def write_dict_to_file(data, file_path, file_type=None, check_equal=True):
         if isinstance(a, dict) and isinstance(b, dict):
             return a == b
         elif isinstance(a, list) and isinstance(b, list):
-            return sorted(a) == sorted(b)
+            try:
+                a_serialized = Counter(json.dumps(i, sort_keys=True) for i in a)
+                b_serialized = Counter(json.dumps(i, sort_keys=True) for i in b)
+                return a_serialized == b_serialized
+            except TypeError:
+                return sorted(a) == sorted(b)
         return a == b
+
     
     # Skip writing if it has an equal file
     existing = load_existing() if check_equal else None
