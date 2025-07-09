@@ -11,6 +11,9 @@ Upload the generated cartloader outputs to your designated AWS S3 directory:
 <!--section1-end-->
 
 ```bash
+# AWS S3 target location for cartostore
+AWS_BUCKET="EXAMPLE_AWS_BUCKET"         # replace EXAMPLE_AWS_BUCKET with your actual S3 bucket name
+
 cartloader upload_aws \
   --in-dir ./cartload2 \
   --s3-dir "s3://${AWS_BUCKET}/${DATA_ID}" \

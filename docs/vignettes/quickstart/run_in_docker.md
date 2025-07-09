@@ -46,19 +46,20 @@ The input is an mouse hippocampus SGE in a `FICTURE`-compatible format compatibl
 
 ## Set Up the Environment
 
-Skip defining paths to all required binaries and resources, and target AWS S3 bucket, as they are fixe in the docker image.
+!!! info "Fixed paths in the Docker Image"
+
+    Tools and dependencies have fixed paths in the Docker image (e.g., `/usr/local/bin/pmtiles`), which are used directly in the commands below. Skip specifying them manually.
 
 ```bash
 # ====
 # Replace each placeholder with the actual path on your system.  
 # ====
+
 work_dir=/path/to/work/directory        # path to work directory that contains the downloaded input data
 cd $work_dir
-```
 
-Define data ID and analysis parameters:
+## Define data ID and analysis parameters:
 
-```bash
 # Unique identifier for your dataset
 DATA_ID="seqscope_hippo"                # change this to reflect your dataset name
 PLATFORM="seqscope"                     # platform information
