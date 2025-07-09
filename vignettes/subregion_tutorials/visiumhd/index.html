@@ -842,7 +842,7 @@
         <li class="md-nav__item">
   <a href="#ficture-analysis" class="md-nav__link">
     <span class="md-ellipsis">
-      FICTURE analysis
+      FICTURE Analysis
     </span>
   </a>
   
@@ -1191,7 +1191,7 @@
         <li class="md-nav__item">
   <a href="#ficture-analysis" class="md-nav__link">
     <span class="md-ellipsis">
-      FICTURE analysis
+      FICTURE Analysis
     </span>
   </a>
   
@@ -1389,10 +1389,10 @@ tar<span class="w"> </span>-zxvf<span class="w"> </span>visiumhd_starter.raw.tar
 <span class="nv">cmap</span><span class="o">=</span>/path/to/color/map<span class="w">                 </span><span class="c1"># Path to the fixed color map for rendering. cartloader provides a fixed color map at cartloader/assets/fixed_color_map_256.tsv.</span>
 
 <span class="c1"># Number of jobs</span>
-<span class="nv">n_jobs</span><span class="o">=</span><span class="m">10</span>
+<span class="nv">n_jobs</span><span class="o">=</span><span class="m">10</span><span class="w">                               </span><span class="c1"># If not specify, the number of jobs defaults to 1.</span>
 
 <span class="c1"># Activate the bioconda environment</span>
-conda<span class="w"> </span>activate<span class="w"> </span>ENV_NAME<span class="w">              </span><span class="c1"># replace BIOENV_NAME with your bioconda environment name</span>
+conda<span class="w"> </span>activate<span class="w"> </span>ENV_NAME<span class="w">                 </span><span class="c1"># replace BIOENV_NAME with your bioconda environment name</span>
 </code></pre></div></td></tr></table></div>
 <p>Define data ID and analysis parameters:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
@@ -1511,7 +1511,7 @@ conda<span class="w"> </span>activate<span class="w"> </span>ENV_NAME<span class
 </tbody>
 </table>
 <p><sub><sup>1</sup>: To define the scaling factor, <code>cartloader</code> requires either a JSON file (via <code>--scale-json</code>) or a direct scale value using <code>--units-per-um</code>. When using <code>--scale-json</code>, make sure the JSON file has <code>microns_per_pixel</code> information.</sub></p>
-<h2 id="ficture-analysis"><code>FICTURE</code> analysis<a class="headerlink" href="#ficture-analysis" title="Permanent link">&para;</a></h2>
+<h2 id="ficture-analysis"><code>FICTURE</code> Analysis<a class="headerlink" href="#ficture-analysis" title="Permanent link">&para;</a></h2>
 <!-- !! Visium HD uses --decode-scale this should be updated. -->
 <!-- 
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
@@ -1583,7 +1583,7 @@ conda<span class="w"> </span>activate<span class="w"> </span>ENV_NAME<span class
 <span class="w">  </span>--spatula<span class="w"> </span><span class="si">${</span><span class="nv">spatula</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--ficture2<span class="w"> </span><span class="si">${</span><span class="nv">punkst</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--n-jobs<span class="w"> </span><span class="m">10</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--threads<span class="w"> </span><span class="m">10</span>
+<span class="w">  </span>--threads<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span>
 <span class="sb">```</span><span class="w"> </span>--&gt;
 
 Compute<span class="w"> </span>spatial<span class="w"> </span>factors<span class="w"> </span>using<span class="w"> </span><span class="sb">`</span>punkst<span class="sb">`</span><span class="w"> </span><span class="o">(</span>FICTURE2<span class="w"> </span>mode<span class="o">)</span>.<span class="w"> </span>See<span class="w"> </span>more<span class="w"> </span>details<span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="o">[</span>Reference<span class="w"> </span>page<span class="o">](</span>../../reference/run_ficture2.md<span class="o">)</span>.
@@ -1622,7 +1622,7 @@ cartloader<span class="w"> </span>run_ficture2<span class="w"> </span><span clas
 <span class="w">  </span>--spatula<span class="w"> </span><span class="si">${</span><span class="nv">spatula</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--ficture2<span class="w"> </span><span class="si">${</span><span class="nv">punkst</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--n-jobs<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--threads<span class="w"> </span><span class="m">10</span>
+<span class="w">  </span>--threads<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span>
 </code></pre></div></td></tr></table></div>
 
 <!--parameter-start-->
@@ -1758,7 +1758,7 @@ cartloader run_cartload2 \
 <span class="w">  </span>--pmtiles<span class="w"> </span><span class="si">${</span><span class="nv">pmtiles</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--tippecanoe<span class="w"> </span><span class="si">${</span><span class="nv">tippecanoe</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--n-jobs<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--threads<span class="w"> </span><span class="m">10</span>
+<span class="w">  </span>--threads<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span>
 </code></pre></div></td></tr></table></div>
 <!--parameter-start-->
 <table>

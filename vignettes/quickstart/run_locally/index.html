@@ -606,7 +606,7 @@
         <li class="md-nav__item">
   <a href="#ficture-analysis" class="md-nav__link">
     <span class="md-ellipsis">
-      FICTURE analysis
+      FICTURE Analysis
     </span>
   </a>
   
@@ -1170,7 +1170,7 @@
         <li class="md-nav__item">
   <a href="#ficture-analysis" class="md-nav__link">
     <span class="md-ellipsis">
-      FICTURE analysis
+      FICTURE Analysis
     </span>
   </a>
   
@@ -1223,19 +1223,23 @@
 
 
 <h1 id="quick-start-run-locally">🔧 Quick Start: Run Locally<a class="headerlink" href="#quick-start-run-locally" title="Permanent link">&para;</a></h1>
-<p>This tutorial walks you through running the <code>cartloader</code> workflow on your own machine using a minimal example dataset from the mouse hippocampus.</p>
+<p>This tutorial walks you through running the <code>cartloader</code> workflow using a minimal example dataset from the mouse hippocampus.</p>
 <div class="admonition info">
 <p class="admonition-title">Use Cases</p>
 <p>This tutorial is ideal for users who want to:</p>
 <ul>
 <li>Take full control over the environment</li>
-<li>Use their own data</li>
+<li>Customize workflow</li>
 <li>Stay up-to-date with the latest development versions </li>
 </ul>
 </div>
 <div class="admonition warning">
-<p class="admonition-title">Requirement</p>
-<p>Before getting started, please ensure that cartloader and all prerequisites are installed (see <a href="../../../installation/">Installation</a> guide).</p>
+<p class="admonition-title">Requirements</p>
+<p>Users will need to:</p>
+<ul>
+<li>Set up <code>cartloader</code> and its dependencies locally (see <a href="../../../installation/">Installation</a> guide).</li>
+<li>Download the example input data (see <a href="#input-data">Input Data</a>)</li>
+</ul>
 </div>
 <h2 id="input-data">Input Data<a class="headerlink" href="#input-data" title="Permanent link">&para;</a></h2>
 <p>The input is an mouse hippocampus <abbr title="Spatial Digital Gene Expression">SGE</abbr>, which is already converted to a format compatible with <code>FICTURE</code> using <a href="../../../reference/sge_convert/"><code>sge_convert</code></a> in <code>cartloader</code> .</p>
@@ -1351,10 +1355,10 @@ tar<span class="w"> </span>-zxvf<span class="w"> </span>seqscope_starter.std.tar
 <span class="nv">cmap</span><span class="o">=</span>/path/to/color/map<span class="w">                 </span><span class="c1"># Path to the fixed color map for rendering. cartloader provides a fixed color map at cartloader/assets/fixed_color_map_256.tsv.</span>
 
 <span class="c1"># Number of jobs</span>
-<span class="nv">n_jobs</span><span class="o">=</span><span class="m">10</span>
+<span class="nv">n_jobs</span><span class="o">=</span><span class="m">10</span><span class="w">                               </span><span class="c1"># If not specify, the number of jobs defaults to 1.</span>
 
 <span class="c1"># Activate the bioconda environment</span>
-conda<span class="w"> </span>activate<span class="w"> </span>ENV_NAME<span class="w">              </span><span class="c1"># replace BIOENV_NAME with your bioconda environment name</span>
+conda<span class="w"> </span>activate<span class="w"> </span>ENV_NAME<span class="w">                 </span><span class="c1"># replace BIOENV_NAME with your bioconda environment name</span>
 </code></pre></div></td></tr></table></div>
 <p>Define data ID and analysis parameters:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
@@ -1371,7 +1375,7 @@ conda<span class="w"> </span>activate<span class="w"> </span>ENV_NAME<span class
 <span class="nv">train_width</span><span class="o">=</span><span class="m">18</span><span class="w">                           </span><span class="c1"># define LDA training hexagon width (comma-separated if multiple widths are applied)</span>
 <span class="nv">n_factor</span><span class="o">=</span><span class="m">6</span>,12<span class="w">                            </span><span class="c1"># define number of factors in LDA training (comma-separated if multiple n-factor are applied)</span>
 </code></pre></div></td></tr></table></div>
-<h2 id="ficture-analysis"><code>FICTURE</code> analysis<a class="headerlink" href="#ficture-analysis" title="Permanent link">&para;</a></h2>
+<h2 id="ficture-analysis"><code>FICTURE</code> Analysis<a class="headerlink" href="#ficture-analysis" title="Permanent link">&para;</a></h2>
 <p>Compute spatial factors using <code>punkst</code> (FICTURE2 mode). See more details in <a href="../../../reference/run_ficture2/">Reference page</a>.</p>
 <!-- ```bash
 cartloader run_ficture2 \
@@ -1419,7 +1423,7 @@ cartloader run_ficture2 \
 <span class="w">  </span>--spatula<span class="w"> </span><span class="si">${</span><span class="nv">spatula</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--ficture2<span class="w"> </span><span class="si">${</span><span class="nv">punkst</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--n-jobs<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--threads<span class="w"> </span><span class="m">10</span>
+<span class="w">  </span>--threads<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span>
 </code></pre></div></td></tr></table></div>
 <!--parameter-start-->
 <table>
@@ -1554,7 +1558,7 @@ cartloader run_cartload2 \
 <span class="w">  </span>--pmtiles<span class="w"> </span><span class="si">${</span><span class="nv">pmtiles</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--tippecanoe<span class="w"> </span><span class="si">${</span><span class="nv">tippecanoe</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--n-jobs<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--threads<span class="w"> </span><span class="m">10</span>
+<span class="w">  </span>--threads<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span>
 </code></pre></div></td></tr></table></div>
 <!--parameter-start-->
 <table>
