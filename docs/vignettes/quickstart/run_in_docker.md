@@ -63,7 +63,8 @@ The input is an mouse hippocampus SGE in a `FICTURE`-compatible format compatibl
 work_dir=/path/to/work/directory        # path to work directory that contains the downloaded input data
 cd $work_dir
 
-## Define data ID and analysis parameters:
+# Number of jobs
+n_jobs=10                               # If not specify, the number of jobs defaults to 1.
 
 # Unique identifier for your dataset
 DATA_ID="seqscope_hippo"                # change this to reflect your dataset name
