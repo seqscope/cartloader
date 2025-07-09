@@ -1317,25 +1317,35 @@ ymax    1439.95
 </div>
 <hr />
 <h2 id="set-up-the-environment">Set Up the Environment<a class="headerlink" href="#set-up-the-environment" title="Permanent link">&para;</a></h2>
-<p>Skip defining paths to all required binaries and resources, and target AWS S3 bucket, as they are fixe in the docker image.</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span>
-<span class="normal">5</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># ====</span>
+<div class="admonition info">
+<p class="admonition-title">Fixed paths in the Docker Image</p>
+<p>Tools and dependencies have fixed paths in the Docker image (e.g., <code>/usr/local/bin/pmtiles</code>), which are used directly in the commands below. Skip specifying them manually.</p>
+</div>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># ====</span>
 <span class="c1"># Replace each placeholder with the actual path on your system.  </span>
 <span class="c1"># ====</span>
+
 <span class="nv">work_dir</span><span class="o">=</span>/path/to/work/directory<span class="w">        </span><span class="c1"># path to work directory that contains the downloaded input data</span>
 <span class="nb">cd</span><span class="w"> </span><span class="nv">$work_dir</span>
-</code></pre></div></td></tr></table></div>
-<p>Define data ID and analysis parameters:</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span>
-<span class="normal">5</span>
-<span class="normal">6</span>
-<span class="normal">7</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># Unique identifier for your dataset</span>
+
+<span class="c1">## Define data ID and analysis parameters:</span>
+
+<span class="c1"># Unique identifier for your dataset</span>
 <span class="nv">DATA_ID</span><span class="o">=</span><span class="s2">&quot;seqscope_hippo&quot;</span><span class="w">                </span><span class="c1"># change this to reflect your dataset name</span>
 <span class="nv">PLATFORM</span><span class="o">=</span><span class="s2">&quot;seqscope&quot;</span><span class="w">                     </span><span class="c1"># platform information</span>
 
@@ -1580,14 +1590,20 @@ ymax    1439.95
 </div>
 <h3 id="aws-uploads">AWS Uploads<a class="headerlink" href="#aws-uploads" title="Permanent link">&para;</a></h3>
 <p>Upload the generated cartloader outputs to your designated AWS S3 directory:</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span>
-<span class="normal">5</span>
-<span class="normal">6</span>
-<span class="normal">7</span>
-<span class="normal">8</span></pre></div></td><td class="code"><div><pre><span></span><code>docker<span class="w"> </span>run<span class="w"> </span>-it<span class="w"> </span>--rm<span class="w"> </span><span class="se">\</span>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># AWS S3 target location for cartostore</span>
+<span class="nv">AWS_BUCKET</span><span class="o">=</span><span class="s2">&quot;EXAMPLE_AWS_BUCKET&quot;</span><span class="w">         </span><span class="c1"># replace EXAMPLE_AWS_BUCKET with your actual S3 bucket name</span>
+
+docker<span class="w"> </span>run<span class="w"> </span>-it<span class="w"> </span>--rm<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-v<span class="w"> </span><span class="k">$(</span><span class="nb">pwd</span><span class="k">)</span>:/data<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>weiqiuc/cartloader:20250708b<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>upload_aws<span class="w"> </span><span class="se">\</span>

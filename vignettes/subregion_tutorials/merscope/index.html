@@ -1282,7 +1282,7 @@ wget<span class="w">  </span>https://zenodo.org/records/15786632/files/merscope_
 tar<span class="w"> </span>--strip-components<span class="o">=</span><span class="m">1</span><span class="w"> </span>-zxvf<span class="w"> </span>merscope_starter.raw.tar.gz
 </code></pre></div></td></tr></table></div>
 <h2 id="set-up-the-environment">Set Up the Environment<a class="headerlink" href="#set-up-the-environment" title="Permanent link">&para;</a></h2>
-<p>Define paths to all required binaries and resources, and target AWS S3 bucket. Optionally, specify a fixed color map for consistent rendering.</p>
+<p>Define paths to all required binaries and resources. Optionally, specify a fixed color map for consistent rendering.</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -1304,11 +1304,10 @@ tar<span class="w"> </span>--strip-components<span class="o">=</span><span class
 <span class="normal">19</span>
 <span class="normal">20</span>
 <span class="normal">21</span>
-<span class="normal">22</span>
-<span class="normal">23</span>
-<span class="normal">24</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># ====</span>
+<span class="normal">22</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># ====</span>
 <span class="c1"># Replace each placeholder with the actual path on your system.  </span>
 <span class="c1"># ====</span>
+
 <span class="nv">work_dir</span><span class="o">=</span>/path/to/work/directory<span class="w">        </span><span class="c1"># path to work directory that contains the downloaded input data</span>
 <span class="nb">cd</span><span class="w"> </span><span class="nv">$work_dir</span>
 
@@ -1321,9 +1320,6 @@ tar<span class="w"> </span>--strip-components<span class="o">=</span><span class
 
 <span class="c1"># (Optional) Define path to color map. </span>
 <span class="nv">cmap</span><span class="o">=</span>/path/to/color/map<span class="w">                 </span><span class="c1"># Path to the fixed color map for rendering. cartloader provides a fixed color map at cartloader/assets/fixed_color_map_256.tsv.</span>
-
-<span class="c1"># AWS S3 target location for cartostore</span>
-<span class="nv">AWS_BUCKET</span><span class="o">=</span><span class="s2">&quot;EXAMPLE_AWS_BUCKET&quot;</span><span class="w">         </span><span class="c1"># replace EXAMPLE_AWS_BUCKET with your actual S3 bucket name</span>
 
 <span class="c1"># Number of jobs</span>
 <span class="nv">n_jobs</span><span class="o">=</span><span class="m">10</span>
@@ -1709,7 +1705,13 @@ cartloader run_cartload2 \
 <span class="normal">2</span>
 <span class="normal">3</span>
 <span class="normal">4</span>
-<span class="normal">5</span></pre></div></td><td class="code"><div><pre><span></span><code>cartloader<span class="w"> </span>upload_aws<span class="w"> </span><span class="se">\</span>
+<span class="normal">5</span>
+<span class="normal">6</span>
+<span class="normal">7</span>
+<span class="normal">8</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># AWS S3 target location for cartostore</span>
+<span class="nv">AWS_BUCKET</span><span class="o">=</span><span class="s2">&quot;EXAMPLE_AWS_BUCKET&quot;</span><span class="w">         </span><span class="c1"># replace EXAMPLE_AWS_BUCKET with your actual S3 bucket name</span>
+
+cartloader<span class="w"> </span>upload_aws<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--in-dir<span class="w"> </span>./cartload2<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--s3-dir<span class="w"> </span><span class="s2">&quot;s3://</span><span class="si">${</span><span class="nv">AWS_BUCKET</span><span class="si">}</span><span class="s2">/</span><span class="si">${</span><span class="nv">DATA_ID</span><span class="si">}</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--aws<span class="w"> </span><span class="si">${</span><span class="nv">aws</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
