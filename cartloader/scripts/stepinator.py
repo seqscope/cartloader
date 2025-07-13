@@ -288,9 +288,13 @@ def cmd_run_ficture(run_i, fic_v, args, env):
         ])
     else:
         # cmap (TODO: currently ficture2 requires a fixed cmap file)
-        if not args.lenient:
-            scheck_file(run_i["cmap"])
-        cmap_arg = f"--cmap-file {run_i['cmap']}" 
+        print(run_i["cmap"])
+        if run_i["cmap"] is None:
+            cmap_arg = ""
+        else:
+            if not args.lenient:
+                scheck_file(run_i["cmap"])
+            cmap_arg = f"--cmap-file {run_i['cmap']}" 
         ficture_cmd = " ".join([
             "cartloader", "run_ficture2",
             f"--makefn {mkbn}.mk",
@@ -313,7 +317,6 @@ def cmd_run_ficture(run_i, fic_v, args, env):
     # add aux parameters
     ficture_aug = merge_config(run_i, args, aux_params_args[f"run_ficture{fic_v}"], prefix=None)  # merge auxiliary parameters
     ficture_cmd = add_param_to_cmd(ficture_cmd, ficture_aug, aux_params_args[f"run_ficture{fic_v}"])
-    print(fic_v)
     print(ficture_cmd)
     ficture_cmds.append(ficture_cmd)
     return ficture_cmds
@@ -405,6 +408,10 @@ def generate_in_tiles_str(in_tiles, param_keys):
         values = []
         for key in param_keys:
             val = tile.get(key, "")
+            if key == "georef_bounds":
+                val=val.replace("(","")
+                val=val.replace(")","")
+                val=val.replace(",","_")
             #print(key+":"+str(val))
             if val in [None, "null", "Null"]:
                 val = ""
@@ -444,10 +451,11 @@ def cmd_hist_stitch(histinfo_by_tiles, args, env):
         hist_stitch_cmds.append(hist_stitch_cmd)
     return hist_stitch_cmds
   
-def cmd_run_fig2pmtiles(run_i, args, env):    
+def cmd_run_fig2pmtiles(run_i, cartl_v, args, env):    
     assert len(run_i.get("histology", [])) > 0, "Error: --histology is Required when running fig2pmtiles"
     hist_cmds=[]
-    cartload_dir=os.path.join(run_i["run_dir"], "cartload")
+    #cartload_dir=os.path.join(run_i["run_dir"], "cartload")
+    cartload_dir = os.path.join(run_i["run_dir"], ("cartload" if cartl_v == "1" else "cartload2"))
     catalog_yaml=os.path.join(cartload_dir, "catalog.yaml")
     for histology in run_i.get("histology", []):
         # 1. histology tif to pmtiles
@@ -495,7 +503,7 @@ def cmd_run_fig2pmtiles(run_i, args, env):
     return hist_cmds
     #return hist_cmds + update_catalog_cmds
 
-def cmd_upload_aws(run_i, cartl_v,  args, env):
+def cmd_upload_aws(run_i, cartl_v,  args, env, additional_args=None):
     cartload_dir=os.path.join(run_i["run_dir"], "cartload") if cartl_v == "1" else os.path.join(run_i["run_dir"], "cartload2")
     # Option 1: use "." to locate the file and handle by perl -lane
     # aws_cmd="\n".join([
@@ -510,8 +518,10 @@ def cmd_upload_aws(run_i, cartl_v,  args, env):
         "cartloader", "upload_aws",
         f"--in-dir {cartload_dir}",
         f"--s3-dir \"s3://{args.aws_bucket}/{run_i['run_id']}\"",
+        additional_args if additional_args is not None else "",
         f"--n-jobs {args.n_jobs}" if args.n_jobs else "",
         f"--restart" if args.restart else ""
+        
     ])
     aws_cmd=add_param_to_cmd(aws_cmd, env, aux_env_args["upload_aws"])
 
@@ -519,7 +529,7 @@ def cmd_upload_aws(run_i, cartl_v,  args, env):
 
 def stepinator(_args):
     parser = argparse.ArgumentParser(description="""
-    Stepinator: A tool to run steps in cartloader to do SGE format conversion (--sge-convert) or downstream process (--run-ficture, --run-cartload-join, --run-fig2pmtiles, --upload-aws) in cartloader.
+    Stepinator: A tool to run steps in cartloader to do SGE format conversion (--sge-convert) or downstream process (--run-ficture*, --run-cartload*, --run-fig2pmtiles, --upload-aws) in cartloader.
     The input, actions, parameters, and tools can be provided in two ways: 1) using a YAML file or 2) using individual command-line arguments in IN/OUT Configuration, Environment Configuration, and Auxiliary Parameters for FICTURE.
     It also allows the job execution in two modes: local and slurm.
     """)
@@ -543,10 +553,10 @@ def stepinator(_args):
     cmd_params.add_argument("--sge-convert", action="store_true", help="Run sge-convert in cartloader")
     cmd_params.add_argument('--sge-visual', action='store_true', help='Plot the SGE from sge-convert or sge-stitch in a PNG file')
     cmd_params.add_argument("--north-up", action="store_true", help="(Optional if --sge-visual) Set the north direction to up in the SGE visual")
-    cmd_params.add_argument("--run-ficture1", action="store_true", help="Run run-ficture in cartloader. Only the main function is executed.")
-    cmd_params.add_argument("--run-cartload1", action="store_true", help="Run run-cartload-join in cartloader")
-    cmd_params.add_argument("--run-ficture2", action="store_true", help="Run run-ficture2 in cartloader.")
-    cmd_params.add_argument("--run-cartload2", action="store_true", help="Run run-cartload-join2 in cartloader.")
+    # cmd_params.add_argument("--run-ficture1", action="store_true", help="Run run-ficture in cartloader. Only the main function is executed.")
+    # cmd_params.add_argument("--run-cartload1", action="store_true", help="Run run-cartload-join in cartloader")
+    cmd_params.add_argument("--run-ficture", action="store_true", help="Run run-ficture in cartloader.")
+    cmd_params.add_argument("--run-cartload", action="store_true", help="Run run-cartload in cartloader.")
     cmd_params.add_argument("--hist-stitch", action="store_true", help="Run histology stitch in cartloader. This is for stitching histology images.")
     cmd_params.add_argument("--run-fig2pmtiles", action="store_true", help="Run run-fig2pmtiles in cartloader. This s provide histology using --in-yaml or --histology.")
     cmd_params.add_argument("--upload-aws", action="store_true", help="Upload files to AWS S3 bucket. This s provide AWS bucket name using --in-yaml or --aws-bucket.")
@@ -554,6 +564,7 @@ def stepinator(_args):
     cmd_params.add_argument("--init-ext", action="store_true", help="(Optional if --run-ficture1) Auxiliary action parameters for run-ficture. Only Initialize external model without run main-ext")
     cmd_params.add_argument("--skip-coarse-report", action="store_true", help="(Optional if --run-ficture1)Auxiliary action parameters for run-ficture. Skip coarse report")
     cmd_params.add_argument('--segment-10x', action='store_true', help='(Optional if --run-ficture1) Perform hexagon segmentation into 10x Genomics format')
+    cmd_params.add_argument("--ficture-version", type=str, default=None, help="Define which ficture version you want to use.", choices=["1","2"])
 
     # * Key
     key_params = parser.add_argument_group(
@@ -751,7 +762,7 @@ def stepinator(_args):
     # =========
     #  actions
     # =========
-    assert args.sge_stitch or args.sge_convert or args.run_ficture1 or args.run_cartload1 or args.run_ficture2 or args.run_cartload2 or args.run_fig2pmtiles or args.upload_aws, "Error: At least one action is required"
+    assert args.sge_stitch or args.sge_convert or args.run_ficture or args.run_cartload or args.run_fig2pmtiles or args.upload_aws, "Error: At least one action is required"
 
     # sge
     assert not (args.sge_convert and args.sge_stitch), "Error: --sge-convert and --sge-stitch cannot be applied together"
@@ -759,16 +770,15 @@ def stepinator(_args):
     assert not (args.north_up and not args.sge_visual), "Error: --north-up can only be applied with --sge-visual"   
 
     # version check
-    assert not (args.run_ficture1 and args.run_ficture2), "Error: --run-ficture1 and --run-ficture2 cannot be applied together"
-    assert not (args.run_cartload1 and args.run_cartload2), "Error: --run-cartload1 and --run-cartload2 cannot be applied together"
-
-    fic_v = "1" if args.run_ficture1 else "2" if args.run_ficture2 else None
-    cartl_v = "1" if args.run_cartload1 else "2" if args.run_cartload2 else None
-    if fic_v is not None and cartl_v is not None:
-        assert fic_v == cartl_v, "Error: --run-ficture and --run-cartload-join should be applied together with the same version."
-    
-    if args.upload_aws:
-        assert cartl_v is not None, "Error: --upload-aws can only be applied with --run-cartload1 or --run-cartload2 to indicate the version of cartload."
+    if args.run_ficture or args.run_cartload or args.run_fig2pmtiles or args.upload_aws:
+        assert args.ficture_version is not None, "Error: --ficture-version must be specified if any of the following actions is enabled: --run-ficture, --run-cartload, --run-fig2pmtiles or --upload-aws"
+    # assert not (args.run_ficture1 and args.run_ficture2), "Error: --run-ficture1 and --run-ficture2 cannot be applied together"
+    # assert not (args.run_cartload1 and args.run_cartload2), "Error: --run-cartload1 and --run-cartload2 cannot be applied together"
+    # fic_v = "1" if args.run_ficture1 else "2" if args.run_ficture2 else None
+    # cartl_v = "1" if args.run_cartload1 else "2" if args.run_cartload2 else None
+    # if fic_v is not None and cartl_v is not None:
+    #     assert fic_v == cartl_v, "Error: --run-ficture and --run-cartload-join should be applied together with the same version."
+    fic_v = str(args.ficture_version)
 
     # =========
     #  Read YAML/args
@@ -863,7 +873,7 @@ def stepinator(_args):
     # =========
     env_cmds=[module_load_cmds] + conda_cmd
     # export path for imagemagick
-    if args.sge_stitch or cartl_v:
+    if args.sge_stitch or args.run_cartload:
         if getattr(env, "imagemagick", None) is not None:
             env_cmds.append("export PATH=$PATH:"+":".join([env.imagemagick]))
     env_cmds.append("\n")
@@ -941,7 +951,7 @@ def stepinator(_args):
     # =========
     #  Downstream
     # =========
-    if fic_v or cartl_v or args.run_fig2pmtiles or args.upload_aws:
+    if args.run_ficture or args.run_cartload or args.run_fig2pmtiles or args.upload_aws:
         runinfo=[]
         if args.in_yaml:
             avail_runs=[run_i.get("run_id") for run_i in yml.get("RUNS", [])]
@@ -1004,23 +1014,25 @@ def stepinator(_args):
         for run_i in runinfo:
             os.makedirs(run_i["run_dir"], exist_ok=True)
 
-            if fic_v:
+            if args.run_ficture:
                 fic_dir = os.path.join(run_i["run_dir"], f"ficture{'' if fic_v == '1' else '2'}")
                 os.makedirs(fic_dir, exist_ok=True)
                 cmds.extend(cmd_run_ficture(run_i, fic_v, args, env))
 
-            if cartl_v:
-                cartl_dir = os.path.join(run_i["run_dir"], f"cartload{'' if cartl_v == '1' else '2'}")
+            if args.run_cartload:
+                cartl_dir = os.path.join(run_i["run_dir"], f"cartload{'' if fic_v == '1' else '2'}")
                 os.makedirs(cartl_dir, exist_ok=True)
-                cmds.append(cmd_run_cartload(run_i, cartl_v, args, env))
-            
+                cmds.append(cmd_run_cartload(run_i, fic_v, args, env))
+                if args.upload_aws:
+                    cmds.append(cmd_upload_aws(run_i, fic_v, args, env, "--upload-cartload-only"))
+
             if args.run_fig2pmtiles:
                 run_i["histology"] = histinfo
                 #print(histinfo)
-                cmds.extend(cmd_run_fig2pmtiles(run_i, args, env))
+                cmds.extend(cmd_run_fig2pmtiles(run_i, fic_v, args, env))
             
-            if args.upload_aws:
-                cmds.append(cmd_upload_aws(run_i, cartl_v, args, env))
+                if args.upload_aws:
+                    cmds.append(cmd_upload_aws(run_i, fic_v, args, env, "--upload-histology-only"))
 
     #print(cmds)
 
@@ -1036,13 +1048,13 @@ def stepinator(_args):
         # Define shorthand encoding
         action_code = "".join([
             "A" if args.sge_convert else "a" if args.sge_stitch else "",
-            "B" if fic_v  else "",
-            "C" if cartl_v else "",
+            "B" if args.run_ficture  else "",
+            "C" if args.run_cartload else "",
             "D" if args.run_fig2pmtiles else "",
             "E" if args.upload_aws else ""
         ])
         # Construct job_id based on run_ids
-        if not any([fic_v, cartl_v, args.run_fig2pmtiles, args.upload_aws]):
+        if not any([args.run_ficture, args.run_cartload, args.run_fig2pmtiles, args.upload_aws]):
             args.job_id = f"sge_convert_{timestamp}" if args.sge_convert else f"sge_stitch_{timestamp}"
         elif len(args.run_ids) == 1:
             args.job_id = f"{args.run_ids[0]}_{action_code}_{timestamp}"

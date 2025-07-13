@@ -15,7 +15,7 @@ def parse_arguments(_args):
     run_params.add_argument('--makefn', type=str, default="run_ficture.mk", help='The name of the Makefile to generate (default: run_ficture.mk)')
 
     inout_params = parser.add_argument_group("Input/Output Parameters", "Input and output parameters for FICTURE")
-    inout_params.add_argument('--out-dir', required= True, type=str, help='Output directory')
+    inout_params.add_argument('--out-dir', required=True, type=str, help='Output directory')
     inout_params.add_argument('--out-json', type=str, default=None, help="Output JSON file for summarizing the ficture parameters (default: <out-dir>/ficture.params.json)")
     inout_params.add_argument('--in-list', type=str, default=None, help='Path to the input list file containing the sample name and input transcript file')
 
@@ -23,20 +23,20 @@ def parse_arguments(_args):
     key_params.add_argument('--width', type=str, required=True, help='Comma-separated hexagon flat-to-flat widths (in um) for LDA training (default: None)')
     key_params.add_argument('--n-factor', type=str, required=True, help='Comma-separated list of factor counts for LDA training.')
     key_params.add_argument('--anchor-res', type=int, default=6, help='Anchor resolution for decoding (default: 6)')
+    key_params.add_argument('--cmap-file', type=str, default=os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "assets", "fixed_color_map_256.tsv"), help='Define the path to the fixed color map (default: <cartloader_dir>/assets/fixed_color_map_256.tsv)')
 
     # env params
     env_params = parser.add_argument_group("ENV Parameters", "Environment parameters, e.g., tools.")
     env_params.add_argument('--gzip', type=str, default="gzip", help='Path to gzip binary. For faster processing, use "pigz -p 4"')
     env_params.add_argument('--sort', type=str, default="sort", help='Path to sort binary. For faster processing, you may add arguments like "sort -T /path/to/new/tmpdir --parallel=20 -S 10G"')
-    env_params.add_argument('--sort-mem', type=str, default="1G", help='Memory size for each process')
-    env_params.add_argument('--spatula', type=str, default=f"spatula",  help='Path to spatula binary') # default=f"{repo_dir}/submodules/spatula/bin/spatula",
-    env_params.add_argument('--ficture2', type=str, required=True,  help='Path to punkst(ficture2) repository')
+    env_params.add_argument('--sort-mem', type=str, default="1G", help='Memory size for each process (default: 1G)')
+    env_params.add_argument('--spatula', type=str, default=f"spatula",  help='Path to spatula binary (default: "spatula" in the system PATH)') # default=f"{repo_dir}/submodules/spatula/bin/spatula",
+    env_params.add_argument('--ficture2', type=str, default=os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "submodules", "punkst"),  help='Path to punkst(ficture2) repository (default: <cartloader_dir>/submodules/punkst)')
     env_params.add_argument('--python', type=str, default="python3",  help='Python3 binary')
 
     # AUX gene-filtering params
-    aux_ftrfilter_params = parser.add_argument_group( "Feature Customizing Auxiliary Parameters",
-                                                      "Auxiliary parameters for customizing features in FICTURE analysis without modifying the original input feature TSV file. This ensures the original feature TSV file is retained in the output JSON file for downstream processing .")
-    aux_ftrfilter_params.add_argument('--min-ct-per-ftr-tile', type=int, default=0, help='Apply a minimum count to filter overlapping feature. Filtering process will be applied if --min-ct-per-overlapftr > 0. (default: 0)')
+    aux_ftrfilter_params = parser.add_argument_group( "Feature Customizing Auxiliary Parameters", "Auxiliary parameters for customizing features in FICTURE analysis without modifying the original input feature TSV file. This ensures the original feature TSV file is retained in the output JSON file for downstream processing .")
+    # aux_ftrfilter_params.add_argument('--min-ct-per-ftr-tile', type=int, default=0, help='Apply a minimum count to filter overlapping feature. Filtering process will be applied if --min-ct-per-overlapftr > 0. (default: 0)')
     aux_ftrfilter_params.add_argument('--include-feature-regex', type=str, default=None, help='A regex pattern of feature/gene names to be included (default: None)')
     aux_ftrfilter_params.add_argument('--exclude-feature-regex', type=str, default=None, help='A regex pattern of feature/gene names to be excluded (default: None)')
 
@@ -60,8 +60,7 @@ def parse_arguments(_args):
     aux_params.add_argument('--train-epoch', type=int, default=2, help='Training epoch for LDA model (default: 2)')
     #aux_params.add_argument('--min-ct-per-unit-fit', type=int, default=50, help='Minimum count per hexagon unit during model fitting (default: 20)')
     #aux_params.add_argument('--fit-plot-um-per-pixel', type=float, default=1, help='Image resolution for fit coarse plot (default: 1)')  # in Scopeflow, this is set to 2
-    # color map
-    aux_params.add_argument('--cmap-file', type=str, required=True, help='Define the path to the fixed color map (default: <cartloader_dir>/assets/fixed_color_map_60.tsv)')
+    aux_params.add_argument('--decode-scale', type=int, default=1, help='scales input coordinates to pixels in the output image (default: 1)')
     # others parameters shared across steps
     aux_params.add_argument('--min-count-train', type=int, default=50, help='Minimum count for training (default: 50)')
     aux_params.add_argument('--de-min-ct-per-feature', type=int, default=20, help='Minimum count per feature for differential expression test (default: 20)')
@@ -146,6 +145,15 @@ def run_ficture2_multi(_args):
     # dirs
     os.makedirs(args.out_dir, exist_ok=True)
     
+    # defaults to use the 256-color cmap
+    if args.cmap_file is None:
+        script_path = os.path.abspath(__file__)
+        cartloader_root = os.path.abspath(os.path.join(script_path, "..", "..", ".."))
+        args.cmap_file=os.path.join(cartloader_root, "assets", "fixed_color_map_256.tsv")
+    
+    if not os.path.exists(args.cmap_file):
+        raise FileNotFoundError(f"Color map not found at: {args.cmap_file}")
+
     # start mm
     mm = minimake()
 
@@ -271,11 +279,10 @@ def run_ficture2_multi(_args):
         mm.add_target(f"{model_prefix}.done", [f"{args.out_dir}/multi.done"], cmds)
 
         # create color table
-        out_cmap = f"{model_prefix}.cmap.tsv"
-        with open(args.cmap_file, "r") as f:
-            with open(out_cmap, "w") as f2:
-                for i in range(n_factor+1):
-                    f2.write(f.readline())
+        cmds = cmd_separator([], f"Generate the color map ")
+        color_map=f"{model_prefix}.cmap.tsv"
+        cmds.append(f'head -n $(({n_factor} + 1)) "{args.cmap_file}" > "{color_map}"')
+        mm.add_target(color_map, [args.cmap_file], cmds)
 
         # 2) DE
         cmds = cmd_separator([], f" LDA DE/report for {train_width}um and {n_factor} factors...")
@@ -288,12 +295,12 @@ def run_ficture2_multi(_args):
             f"--de {lda_de}",
             f"--pseudobulk {lda_model_matrix}",
             f"--feature_label Feature",
-            f"--color_table {out_cmap}",
+            f"--color_table {color_map}",
             f"--output_pref {model_prefix}"
             ])
         cmds.append(cmd)
-        cmds.append(f"[ -f {lda_de} ] && [ -f {model_prefix}.cmap.tsv ] && [ -f {model_prefix}.factor.info.html ] && touch {model_prefix}_summary.done")
-        mm.add_target(f"{model_prefix}_summary.done", [f"{model_prefix}.done"], cmds)
+        cmds.append(f"[ -f {lda_de} ] && [ -f {model_prefix}.factor.info.html ] && touch {model_prefix}_summary.done")
+        mm.add_target(f"{model_prefix}_summary.done", [f"{model_prefix}.done", color_map], cmds)
 
         # Perform LDA projection for each sample
         lda_each_targets = []
@@ -324,7 +331,7 @@ def run_ficture2_multi(_args):
             cmds.append(f"[ -f {lda_fit_tsv}.gz ] && touch {lda_out_prefix}.done")
             mm.add_target(f"{lda_out_prefix}.done", [f"{model_prefix}.done", f"{args.out_dir}/multi.done"], cmds)
             lda_each_targets.append(f"{lda_out_prefix}.done")
-        cmds=cmd_separator([], f"Finishing LDA projection for each sample for model {model_id}...")
+        cmds = cmd_separator([], f"Finishing LDA projection for each sample for model {model_id}...")
         cmds.append(f"touch {model_prefix}_each.done")
         mm.add_target(f"{model_prefix}_each.done", lda_each_targets, cmds)
 
@@ -383,13 +390,15 @@ def run_ficture2_multi(_args):
                     f"--n-factors {n_factor}"
                 ])
                 cmds.append(cmd)
-            cmds.append(f"[ -f {decode_fit_tsv} ] && [ -f {decode_postcount} ] && touch {decode_prefix}.tsv.done")
+            
+            cmds.append(f"{args.gzip} -f {decode_fit_tsv}")
+            cmds.append(f"[ -f {decode_fit_tsv}.gz ] && [ -f {decode_postcount} ] && touch {decode_prefix}.tsv.done")
             mm.add_target(f"{decode_prefix}.tsv.done", [cmap_path, f"{args.out_dir}/multi.done", f"{model_prefix}.done"], cmds)  
 
             cmds=cmd_separator([], f"Performing post-decode tasks, ID {decode_id} for sample {sample}...")
             # - transform-DE
             cmds.append(f"{args.spatula} diffexp-model-matrix --tsv1 {decode_postcount} --out {decode_de} --min-count {args.de_min_ct_per_feature} --max-pval {args.de_max_pval} --min-fc {args.de_min_fold}")
-            cmds.append(f"({args.gzip} -cd {decode_de}.de.marginal.tsv.gz | head -1 | sed 's/^Feature/gene/'; {args.gzip} -cd {decode_de}.de.marginal.tsv.gz | tail -n +2 | sort -k 2,2n -k 3,3gr;) > {decode_de}")
+            cmds.append(f"({args.gzip} -cd {decode_de}.de.marginal.tsv.gz | head -1 | sed 's/^Feature/gene/'; {args.gzip} -cd {decode_de}.de.marginal.tsv.gz | tail -n +2 | {args.sort} -k 2,2n -k 3,3gr;) > {decode_de}")
             cmds.append(f"rm -f {decode_de}.de.marginal.tsv.gz")
 
             # - transform-report
@@ -403,14 +412,7 @@ def run_ficture2_multi(_args):
                 ])
             cmds.append(cmd)
 
-            # compress the decode tsv file
-            cmd = " ".join([
-                args.gzip, "-f", decode_fit_tsv
-            ])
-            cmds.append(cmd)
-            # - done & target
-
-            # 4) visualization
+            # - visualization
             #cmds=cmd_separator([], f"Decode visualization, ID: {decode_id}")
             cmd = " ".join([
                 f"{args.gzip} -dc {decode_fit_tsv}.gz |",
@@ -419,13 +421,12 @@ def run_ficture2_multi(_args):
                 f"--header-json {decode_prefix}.json",
                 f"--in-color {cmap_path}",
                 f"--out {decode_prefix}.png",
-                f"--scale 1",
+                f"--scale {args.decode_scale}",
                 f"--range {args.out_dir}/samples/{sample}/{sample}.tiled.coord_range.tsv"
                 ])
             cmds.append(cmd)
-            #mm.add_target(f"{decode_prefix}.png", [f"{decode_prefix}_summary.done", cmap_path], cmds)
 
-            cmds.append(f"[ -f {decode_fit_tsv}.gz ] && [ -f {decode_postcount} ] && [ -f {decode_de} ] && [ -f {decode_prefix}.factor.info.html ] && [ -f {decode_fit_tsv}.gz ] && [ -f {decode_prefix}.png ] && touch {decode_prefix}.done")
+            cmds.append(f"[ -f {decode_postcount} ] && [ -f {decode_de} ] && [ -f {decode_prefix}.factor.info.html ] && [ -f {decode_prefix}.png ] && touch {decode_prefix}.done")
             mm.add_target(f"{decode_prefix}.done", [cmap_path, f"{decode_prefix}.tsv.done", f"{args.out_dir}/multi.done", f"{model_prefix}.done"], cmds)
             decode_each_targets.append(f"{decode_prefix}.done")
         cmds=cmd_separator([], f"Finishing decode, ID: {decode_id}")
