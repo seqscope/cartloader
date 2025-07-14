@@ -99,6 +99,7 @@ def run_cartload2(_args):
     mm = minimake()
 
     scheck_app(args.spatula)
+    scheck_app(args.tippecanoe)
     if not args.skip_raster:
         scheck_app(args.pmtiles)
         scheck_app(args.gdal_translate)
@@ -175,6 +176,10 @@ def run_cartload2(_args):
 
     for train_param in in_fic_params:
         model_id = train_param["model_id"]
+        # model_path = train_param.get("model_path", None)
+        # fit_path = train_param.get("fit_path", None)
+        # de_path = train_param.get("de_path", None)
+        # info_path = train_param.get("info_path", None)
         factormap_path = train_param.get("factor_map", None)
         model_rgb = train_param["cmap"]
 
@@ -188,7 +193,7 @@ def run_cartload2(_args):
         train_inout ={
             "model":{
                 "required": True,
-                "in":  f"{in_prefix}.model.tsv",
+                "in": train_param.get("model_path", f"{in_prefix}.model.tsv"),
                 "out": f"{out_prefix}-model.tsv"
             },
             "rgb":{
@@ -198,12 +203,12 @@ def run_cartload2(_args):
             },
             "de":{
                 "required": False,
-                "in":  f"{in_prefix}.bulk_chisq.tsv",
+                "in": train_param.get("de_path",f"{in_prefix}.bulk_chisq.tsv"),
                 "out": f"{out_prefix}-bulk-de.tsv"
             },
             "info":{
                 "required": False,
-                "in":  f"{in_prefix}.factor.info.tsv",
+                "in": train_param.get("info_path", f"{in_prefix}.factor.info.tsv"),
                 "out": f"{out_prefix}-info.tsv"
             }
         }
@@ -219,8 +224,10 @@ def run_cartload2(_args):
 
         # fit_results
         #print(f"--tippecanoe '{args.tippecanoe}'")
-        in_fit_tsvf = f"{in_prefix}.results.tsv.gz"
+        #in_fit_tsvf = f"{in_prefix}.results.tsv.gz"
         #out_fit_tsvf = f"{out_prefix}.results.tsv.gz"
+        #in_fit_tsvf = train_inout["fit"]["in"]
+        in_fit_tsvf = train_param.get("fit_path", f"{in_prefix}.results.tsv.gz")
         if os.path.exists(in_fit_tsvf):
             # cmd = " ".join([
             #     args.spatula, "append-topk-tsv",
@@ -256,6 +263,12 @@ def run_cartload2(_args):
                     copy_rgb_tsv(val["in"], val["out"])
                 else:
                     cmds.append(f"cp {val['in']} {val['out']}")
+                    # check if val['out'] is absolute path or not
+                    # if os.path.isabs(val['out']):
+                    #     cmds.append(f"ln -s {val['in']} {val['out']}")
+                    # else:
+                    #     rel_in = os.path.relpath(val['in'], os.path.dirname(val['out']))
+                    #     cmds.append(f"ln -s {rel_in} {val['out']}")
         
         cmds.append(f"touch {out_prefix}.done")
         mm.add_target(f"{out_prefix}.done", prerequisites, cmds)
@@ -268,11 +281,11 @@ def run_cartload2(_args):
         for decode_param in train_param["decode_params"]:
             in_id = decode_param["decode_id"]
             in_prefix = f"{args.fic_dir}/{in_id}"
-            in_pixel_tsvf = f"{in_prefix}.tsv.gz"
-            in_pixel_png = f"{in_prefix}.png"
-            in_de_tsvf  = f"{in_prefix}.bulk_chisq.tsv"
-            in_post_tsvf = f"{in_prefix}.pseudobulk.tsv"
-            in_info_tsvf = f"{in_prefix}.factor.info.tsv"
+            in_pixel_tsvf = decode_param.get("pixel_tsv_path",f"{in_prefix}.tsv.gz")
+            in_pixel_png = decode_param.get("pixel_png_path",f"{in_prefix}.png")
+            in_de_tsvf  = decode_param.get("de_tsv_path",f"{in_prefix}.bulk_chisq.tsv")
+            in_post_tsvf = decode_param.get("pseudobulk_tsv_path",f"{in_prefix}.pseudobulk.tsv")
+            in_info_tsvf = decode_param.get("info_tsv_path",f"{in_prefix}.factor.info.tsv")
 
             out_id = in_id.replace("_", "-")
             out_prefix = os.path.join(args.out_dir, out_id)
