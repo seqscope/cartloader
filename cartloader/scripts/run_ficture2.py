@@ -23,11 +23,11 @@ def parse_arguments(_args):
     cmd_params.add_argument('--summary', action='store_true', default=False, help='(Main function) Generate a JSON file summarizing all fixture parameters for which outputs are available in the <out-dir>.')
 
     inout_params = parser.add_argument_group("Input/Output Parameters", "Input and output parameters for FICTURE")
-    inout_params.add_argument('--out-dir', required=True, type=str, help='Output directory')
-    inout_params.add_argument('--out-json', type=str, default=None, help="Output JSON file for summarizing the ficture parameters (default: <out-dir>/ficture.params.json)")
+    inout_params.add_argument('--out-dir', required=True, type=str, help='Path to output directory')
+    inout_params.add_argument('--out-json', type=str, default=None, help="Path to output JSON file summarizing the ficture parameters (default: <out-dir>/ficture.params.json)")
     inout_params.add_argument('--in-transcript', type=str, default=None, help='Path to the input unsorted transcript-indexed SGE file in TSV format (default: <out-dir>/transcripts.unsorted.tsv.gz)')
-    inout_params.add_argument('--in-minmax', type=str, default=None, help='Path to the input coordinate minmax TSV file. (default: <out-dir>/coordinate_minmax.tsv)')
-    inout_params.add_argument('--in-feature', type=str, default=None,  help='Path to the input UMI count per gene TSV file.(default: feature.clean.tsv.gz).')
+    inout_params.add_argument('--in-minmax', type=str, default=None, help='Path to the input coordinate minmax TSV file.')
+    inout_params.add_argument('--in-feature', type=str, default=None,  help='Path to the input UMI count per gene TSV file.')
     inout_params.add_argument('--in-feature-ficture', type=str, default=None, help='(Optional) Use --in-feature-ficture to provide a feature file for FICTURE analysis if such feature file exists. Alternatively, see "Feature Customizing Auxiliary Parameters" to customize the features in FICTURE analysis.')
 
     key_params = parser.add_argument_group("Key Parameters", "Key parameters that requires user's attention")
@@ -49,9 +49,9 @@ def parse_arguments(_args):
     # AUX gene-filtering params
     aux_ftrfilter_params = parser.add_argument_group( "Feature Customizing Auxiliary Parameters",
                                                       "Auxiliary parameters for customizing features in FICTURE analysis without modifying the original input feature TSV file. This ensures the original feature TSV file is retained in the output JSON file for downstream processing .")
-    aux_ftrfilter_params.add_argument('--filter-by-overlapping-features', action='store_true', default=False, help='When the input SGE is stitched SGE, it is optional to filter the features in FICTURE analysis by only shared features')
-    aux_ftrfilter_params.add_argument('--in-feature-dist', type=str, default=None, help='Path to the input feature distribution file. This file is used to identify overlapping features for FICTURE analysis. (default: None)')
-    aux_ftrfilter_params.add_argument('--min-ct-per-ftr-tile', type=int, default=0, help='Apply a minimum count to filter overlapping feature. Filtering process will be applied if --min-ct-per-overlapftr > 0. (default: 0)')
+    # aux_ftrfilter_params.add_argument('--filter-by-overlapping-features', action='store_true', default=False, help='When the input SGE is stitched SGE, it is optional to filter the features in FICTURE analysis by only shared features')
+    # aux_ftrfilter_params.add_argument('--in-feature-dist', type=str, default=None, help='Path to the input feature distribution file. This file is used to identify overlapping features for FICTURE analysis. (default: None)')
+    # aux_ftrfilter_params.add_argument('--min-ct-per-ftr-tile', type=int, default=0, help='Apply a minimum count to filter overlapping feature. Filtering process will be applied if --min-ct-per-overlapftr > 0. (default: 0)')
     aux_ftrfilter_params.add_argument('--include-feature-regex', type=str, default=None, help='A regex pattern of feature/gene names to be included (default: None)')
     aux_ftrfilter_params.add_argument('--exclude-feature-regex', type=str, default=None, help='A regex pattern of feature/gene names to be excluded (default: None)')
 
@@ -181,39 +181,34 @@ def run_ficture2(_args):
     # input/output/other files
     # dirs
     os.makedirs(args.out_dir, exist_ok=True)
-    #os.makedirs(os.path.join(args.out_dir, "tmp"), exist_ok=True)
-    
-    # start mm
-    mm = minimake()
 
     # in files
     if args.in_transcript is None:
         args.in_transcript = os.path.join(args.out_dir, "transcripts.unsorted.tsv.gz")
-
-    # do not require to have the feature and minmax files        
-    # if args.in_minmax is None:
-    #     args.in_minmax = os.path.join(args.out_dir, "coordinate_minmax.tsv")
-    
-    # if args.in_feature is None:
-    #     args.in_feature = os.path.join(args.out_dir, "feature.clean.tsv.gz")
     
     assert os.path.exists(args.in_transcript), "Provide at least one valid input transcript-indexed SGE file by --in-transcript or --in-cstranscript"
+
     if args.in_minmax is not None:
         assert os.path.exists(args.in_minmax), "Provide a valid input coordinate minmax file by --in-minmax, or skip specifying it"
+    
     if args.in_feature is not None:
         assert os.path.exists(args.in_feature), "Provide a valid input feature file by --in-feature, or skip specifying it"
     
-    if not os.path.exists(args.cmap_file):
-        raise FileNotFoundError(f"Color map not found at: {args.cmap_file}")
+    assert os.path.exists(args.cmap_file), f"Color map not found at: {args.cmap_file}"
 
-    assert os.path.exists(args.ficture2), f"Provide a valid path to the FICTURE2 repository by --ficture2, or set it to the default path: {args.ficture2}"
+    # FICTURE installations
     ficture2bin = os.path.join(args.ficture2, "bin/punkst")
+    assert os.path.exists(ficture2bin), f"ficture2 binary not found at {ficture2bin}; specify a valid --ficture2 path or ensure it's installed in cartloader's submodules/punkst directory."
+    
     ficture2de = args.python + " " + os.path.join(args.ficture2, "ext/py/de_bulk.py")
     ficture2report = args.python + " " + os.path.join(args.ficture2, "ext/py/factor_report.py")
-    
+
     # out files
     if args.out_json is None:
         args.out_json = os.path.join(args.out_dir, f"ficture.params.json")
+
+    # start mm
+    mm = minimake()
 
     # 1. tiling :
     if args.tile:
@@ -239,65 +234,83 @@ def run_ficture2(_args):
             args.in_minmax = os.path.join(args.out_dir, "transcripts.tiled.coord_range.tsv")
         
         # feature file
-        if args.in_feature_ficture is None:
+        if args.in_feature_ficture is not None:
             in_feature_ficture = args.in_feature_ficture
         else:
             in_feature_ficture = args.in_feature
         
         ## Features step 1. write the feature file from the tiled SGE
         if in_feature_ficture is not None:
+            assert os.path.exists(in_feature_ficture), f"The current feature file for FICTURE analysis does not exist: {in_feature_ficture}"
             ## if a specific feature file is provided, use it as "selected features" for FICTURE analysis
             in_feature_ficture_flag = in_feature_ficture
             feature_plain = f"{args.out_dir}/transcripts.tiled.selected_features.hdr.tsv"
             feature_nohdr = f"{args.out_dir}/transcripts.tiled.selected_features.tsv"
-            with flexopen(in_feature_ficture, "rt") as f:
-                with open(feature_plain, "wt") as wf:
-                    with open(feature_nohdr, "wt") as wf2:
-                        wf.write(f.readline())
-                        for line in f:
-                            toks = line.strip().split("\t")
-                            count = int(toks[-1])
-                            if count >= args.min_ct_per_feature:
-                                wf.write(line)
-                                wf2.write(line)
+            ## update to use bash commands 
+            # with flexopen(in_feature_ficture, "rt") as f:
+            #     with open(feature_plain, "wt") as wf:
+            #         with open(feature_nohdr, "wt") as wf2:
+            #             wf.write(f.readline())
+            #             for line in f:
+            #                 toks = line.strip().split("\t")
+            #                 count = int(toks[-1])
+            #                 if count >= args.min_ct_per_feature:
+            #                     wf.write(line)
+            #                     wf2.write(line)            
+            if in_feature_ficture.lower().endswith(".gz"):
+                cmds.append(f"""gzip -dc {in_feature_ficture} | tail -n +2 | awk -v min_ct={args.min_ct_per_feature} -F'\\t' '{{count = $(NF); if (count >= min_ct) print $1"\\t"count;}}' > {feature_nohdr}""")
+            else:
+                cmds.append(f"""tail -n +2 {in_feature_ficture}| awk -v min_ct={args.min_ct_per_feature} -F'\\t' '{{count = $(NF); if (count >= min_ct) print $1"\\t"count;}}' > {feature_nohdr}""")
+        
+            # plain file 
+            feature_plain = f"{args.out_dir}/transcripts.tiled.selected_features.hdr.tsv"
+            cmds.append(f'echo -e "{args.colname_feature}\\t{args.colname_count}" > {feature_plain}')
+            cmds.append(f"cat {feature_nohdr} >> {feature_plain}")
+                
+            # flag
             feature_nohdr_flag = feature_nohdr
+
         else: 
             ## if feature file is not provided, create one from the input transcript file
-            in_feature_ficture_flag = f"{args.out_dir}/transcripts.tiled.done"
             feature_plain = f"{args.out_dir}/transcripts.tiled.features.hdr.tsv"
             feature_nohdr = f"{args.out_dir}/transcripts.tiled.features.tsv"
+            cmds.append(f"(echo {args.colname_feature} {args.colname_count} | tr ' ' '\\t'; cat {feature_nohdr};) > {feature_plain}")
+            
+            # flag
             feature_nohdr_flag = f"{args.out_dir}/transcripts.tiled.done"
+            
+            # update the args.in_feature and in_feature_ficture
             in_feature_ficture = feature_plain
             args.in_feature = feature_plain
-            cmds.append(f"(echo {args.colname_feature} {args.colname_count} | tr ' ' '\\t'; cat {feature_nohdr};) > {feature_plain}")
 
-        cmds.append(f"[ -f {args.out_dir}/transcripts.tiled.tsv ] && [ -f {args.out_dir}/transcripts.tiled.index ] && touch {args.out_dir}/transcripts.tiled.done" )
+
+        cmds.append(f"[ -f {args.out_dir}/transcripts.tiled.tsv ] && [ -f {args.out_dir}/transcripts.tiled.index ] && [ -f  {feature_plain} ] && [ -f {feature_nohdr} ] && touch {args.out_dir}/transcripts.tiled.done" )
         mm.add_target(f"{args.out_dir}/transcripts.tiled.done", [args.in_transcript], cmds)
-
-        #  Features step 2. generate overlapping features for FICTURE analysis (optional only if the input SGE is stitched SGE)
-        if args.filter_by_overlapping_features:
-            cmds = cmd_separator([], f"Customizing features for FICTURE analysis: limited to shared features and features with a minimal count in the stitched SGE...")
-            feature_overlapping_plain = os.path.join(args.out_dir, "transcripts.tiled.overlapping_features.hdr.tsv") if args.min_ct_per_ftr_tile == 0 else os.path.join(args.out_dir, f"transcripts.tiled.overlapping_features.min{args.min_ct_per_ftr_tile}.hdr.tsv")
-            cmd = " ".join(["cartloader feature_overlapping",
-                                        f"--in-dist {args.in_feature_dist}", 
-                                        f"--in-feature {in_feature_ficture}",
-                                        f"--output {feature_overlapping_plain}", 
-                                        f"--min-ct-per-ftr-tile {args.min_ct_per_ftr_tile}",
-                                        f"--colname-count {args.colname_count}",
-                                        f"--colname-feature-name {args.colname_feature}",
-                                        f"--log"
-                                        ])
-            cmds.append(cmd)
-            mm.add_target(feature_overlapping_plain, [args.in_feature_dist, in_feature_ficture_flag], cmds)
+        
+        # #  Features step 2. generate overlapping features for FICTURE analysis (optional only if the input SGE is stitched SGE)
+        # if args.filter_by_overlapping_features:
+        #     cmds = cmd_separator([], f"Customizing features for FICTURE analysis: limited to shared features and features with a minimal count in the stitched SGE...")
+        #     feature_overlapping_plain = os.path.join(args.out_dir, "transcripts.tiled.overlapping_features.hdr.tsv") if args.min_ct_per_ftr_tile == 0 else os.path.join(args.out_dir, f"transcripts.tiled.overlapping_features.min{args.min_ct_per_ftr_tile}.hdr.tsv")
+        #     cmd = " ".join(["cartloader feature_overlapping",
+        #                                 f"--in-dist {args.in_feature_dist}", 
+        #                                 f"--in-feature {in_feature_ficture}",
+        #                                 f"--output {feature_overlapping_plain}", 
+        #                                 f"--min-ct-per-ftr-tile {args.min_ct_per_ftr_tile}",
+        #                                 f"--colname-count {args.colname_count}",
+        #                                 f"--colname-feature-name {args.colname_feature}",
+        #                                 f"--log"
+        #                                 ])
+        #     cmds.append(cmd)
+        #     mm.add_target(feature_overlapping_plain, [args.in_feature_dist, in_feature_ficture_flag], cmds)
             
-            feature_overlapping_nohdr = os.path.join(args.out_dir, "transcripts.tiled.overlapping_features.tsv") if args.min_ct_per_ftr_tile == 0 else os.path.join(args.out_dir, f"transcripts.tiled.overlapping_features.min{args.min_ct_per_ftr_tile}.tsv")
-            cmds = cmd_separator([], f"Generating feature without header for overlapping features...")
-            cmds.append(f"cat {feature_overlapping_plain} | tail +2 > {feature_overlapping_nohdr}")
-            mm.add_target(feature_overlapping_nohdr, [feature_overlapping_plain], cmds)
+        #     feature_overlapping_nohdr = os.path.join(args.out_dir, "transcripts.tiled.overlapping_features.tsv") if args.min_ct_per_ftr_tile == 0 else os.path.join(args.out_dir, f"transcripts.tiled.overlapping_features.min{args.min_ct_per_ftr_tile}.tsv")
+        #     cmds = cmd_separator([], f"Generating feature without header for overlapping features...")
+        #     cmds.append(f"cat {feature_overlapping_plain} | tail +2 > {feature_overlapping_nohdr}")
+        #     mm.add_target(feature_overlapping_nohdr, [feature_overlapping_plain], cmds)
             
-            feature_plain = feature_overlapping_plain
-            feature_nohdr = feature_overlapping_nohdr
-            feature_nohdr_flag = feature_overlapping_nohdr
+        #     feature_plain = feature_overlapping_plain
+        #     feature_nohdr = feature_overlapping_nohdr
+        #     feature_nohdr_flag = feature_overlapping_nohdr
 
     # 2. segment
     if args.segment:

@@ -76,7 +76,7 @@ def import_xenium_output(_args):
     if args.all:
         args.cells = True
         args.boundaries = True
-        args.update_catalog = True
+        # args.update_catalog = True
 
     # create output directory if needed
     out_dir = os.path.dirname(args.outprefix)
