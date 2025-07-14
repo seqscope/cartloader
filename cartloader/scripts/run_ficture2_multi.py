@@ -319,7 +319,7 @@ def run_ficture2_multi(_args):
                 f"--in-meta {meta}",
                 f"--projection-only", # skip LDA training, only project the data
                 f"--model-prior {lda_model_matrix}",
-                f"--out-prefix {lda_out_prefix}",
+                f"--out-prefix {lda_out_prefix}.unsorted",
                 f"--transform",
                 f"--minibatch-size {args.minibatch_size}",
                 f"--seed {args.seed}",
@@ -327,7 +327,19 @@ def run_ficture2_multi(_args):
                 f"--threads {args.threads}",
                 ])
             cmds.append(cmd)
-            cmds.append(f"{args.gzip} -f {lda_fit_tsv}")
+            cmd = " ".join([
+                args.spatula, "append-topk-tsv",
+                f"--in-model {model_prefix}.model.tsv",
+                f"--out-model {lda_out_prefix}.model.tsv",
+                f"--in-tsv {lda_out_prefix}.unsorted.results.tsv",
+                f"--out-tsv {lda_out_prefix}.results.tsv.gz",
+                f"--offset-model 1",
+                f"--offset-data 3",
+                f"--icol-random-key 0"
+            ])
+            cmds.append(cmd)
+            cmds.append(f"rm -f {model_prefix}.unsorted.model.tsv {model_prefix}.unsorted.results.tsv")
+#            cmds.append(f"{args.gzip} -f {lda_fit_tsv}")
             cmds.append(f"[ -f {lda_fit_tsv}.gz ] && touch {lda_out_prefix}.done")
             mm.add_target(f"{lda_out_prefix}.done", [f"{model_prefix}.done", f"{args.out_dir}/multi.done"], cmds)
             lda_each_targets.append(f"{lda_out_prefix}.done")
