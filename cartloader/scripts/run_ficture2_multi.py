@@ -438,11 +438,21 @@ def run_ficture2_multi(_args):
     for i in range(len(in_samples)):
         sample = in_samples[i]
         cmds = cmd_separator([], f"Writing output JSON file for sample {sample}...")
-        sample_out_json = os.path.join(args.out_dir, "samples", sample, "ficture.params.json")
-        sample_transcript = in_tsvs[i]
-        sample_feature = os.path.join(args.out_dir, "samples", sample, f"{sample}.tiled.features.tsv")
-        sample_minmax = os.path.join(args.out_dir, "samples", sample, f"{sample}.tiled.coord_range.tsv")
         sample_out_dir = os.path.join(args.out_dir, "samples", sample)
+        sample_out_json = os.path.join(sample_out_dir, "ficture.params.json")
+        sample_transcript = in_tsvs[i]
+        sample_feature_nohdr = os.path.join(sample_out_dir, f"{sample}.tiled.features.tsv")
+        sample_feature_hdr = os.path.join(sample_out_dir, f"{sample}.tiled.features.hdr.tsv")
+        sample_minmax = os.path.join(sample_out_dir, f"{sample}.tiled.coord_range.tsv")
+
+        ## need to create sample feature file with header
+        with flexopen(sample_transcript, "rt") as f:
+            hdrs = f.readline().strip().split("\t")
+            colname_feature = hdrs[args.colidx_feature-1]
+            colname_count = hdrs[args.colidx_count-1]
+        
+        cmd = f"(printf '{colname_feature}\\t{colname_count}\\n'; cat {sample_feature_nohdr}) > {sample_feature_hdr}"
+        cmds.append(cmd)
         
         summary_aux_args = []
         prerequisities = [f"{args.out_dir}/multi.done"]
@@ -453,10 +463,14 @@ def run_ficture2_multi(_args):
             # params & prefix
             train_width = lda_params["train_width"]
             n_factor = lda_params["n_factor"]
+            model_id = lda_params["model_id"]
             model_prefix = os.path.join(args.out_dir, decode_params["model_id"])
             summary_cmap = f"{model_prefix}.cmap.tsv"
+            lda_sample_fit_tsv = f"{sample_out_dir}/{sample}.{model_id}.results.tsv.gz"
+            lda_de_tsv = f"{model_prefix}.bulk_chisq.tsv"
+            lda_info_tsv = f"{model_prefix}.factor.info.tsv"
             prerequisities.append(f"{model_prefix}.done")
-            summary_aux_args_models.append(f"lda,{model_prefix}.model.tsv,{lda_params['model_id']},{train_width},{n_factor},{summary_cmap}")
+            summary_aux_args_models.append(f"lda,{model_id},{train_width},{n_factor},{summary_cmap},{model_prefix}.model.tsv,{lda_sample_fit_tsv},{lda_de_tsv},{lda_info_tsv}")
         summary_aux_args.append(" ".join(summary_aux_args_models))
 
         summary_aux_args_decodes = ["--decode"]
@@ -467,20 +481,26 @@ def run_ficture2_multi(_args):
             fit_width = decode_params["fit_width"]
             decode_id = decode_params["decode_id"]
             decode_prefix = os.path.join(args.out_dir, "samples", sample, f"{sample}.{decode_id}")  ## decode_id contains the sample ID
+            decode_pixel_tsv = f"{decode_prefix}.tsv.gz"
+            decode_pixel_png = f"{decode_prefix}.png"
+            decode_pseudobulk_tsv = f"{decode_prefix}.pseudobulk.tsv"
+            decode_de_tsv = f"{decode_prefix}.bulk_chisq.tsv"
+            decode_info_tsv = f"{decode_prefix}.factor.info.tsv"
             prerequisities.append(f"{decode_prefix}.done")
-            summary_aux_args_decodes.append(f"{model_type},{model_id},{sample}.{decode_id},{fit_width},{args.anchor_res}")
-        summary_aux_args.append(" ".join(summary_aux_args_decodes))
+            summary_aux_args_decodes.append(f"{model_type},{model_id},{decode_id},{fit_width},{args.anchor_res},{decode_pixel_tsv},{decode_pixel_png},{decode_pseudobulk_tsv},{decode_de_tsv},{decode_info_tsv}")
+        summary_aux_args_decodes.append(" ".join(summary_aux_args_decodes))
 
         cmd = " ".join([
-            "cartloader", "write_json_for_ficture2",
+            "cartloader", "write_json_for_ficture2_multi",
                 "--merge",
                 f"--in-transcript {sample_transcript}",
-                f"--in-feature {sample_feature}", # use the original feature file for SGE
-                f"--in-feature-ficture {sample_feature}",
+                f"--in-feature {sample_feature_hdr}", # use the original feature file for SGE
+                f"--in-feature-ficture {sample_feature_hdr}",
                 f"--in-minmax {sample_minmax}",
                 f"--out-dir {sample_out_dir}",
                 f"--out-json {sample_out_json}",
-                " ".join(summary_aux_args)
+                " ".join(summary_aux_args),
+                " ".join(summary_aux_args_decodes)
             ])
         cmds.append(cmd)
         mm.add_target(sample_out_json, prerequisities, cmds)
