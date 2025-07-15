@@ -338,7 +338,7 @@ def run_ficture2_multi(_args):
                 f"--icol-random-key 0"
             ])
             cmds.append(cmd)
-            cmds.append(f"rm -f {model_prefix}.unsorted.model.tsv {model_prefix}.unsorted.results.tsv")
+            cmds.append(f"rm -f {model_prefix}.unsorted.results.tsv")
 #            cmds.append(f"{args.gzip} -f {lda_fit_tsv}")
             cmds.append(f"[ -f {lda_fit_tsv}.gz ] && touch {lda_out_prefix}.done")
             mm.add_target(f"{lda_out_prefix}.done", [f"{model_prefix}.done", f"{args.out_dir}/multi.done"], cmds)

@@ -211,19 +211,19 @@ def import_xenium_output(_args):
                     if cell_id != current_cell_id:
                         cluster = bcd2cluster.get(current_cell_id, "NA")
                         clusteridx = cluster2idx.get(cluster, "NA") if cluster != "NA" else "NA"
-                        wf.write(f'{{"type": "Feature", "geometry": {{"type": "Polygon", "coordinates": [[{",".join(current_vertices)}]]}}, "properties": {{"cell_id": "{current_cell_id}", "topK": "{clusteridx}"}}}}\n')
+                        wf.write(f'{{"type": "Feature", "geometry": {{"type": "Polygon", "coordinates": [[{",".join(current_vertices)}]]}}, "properties": {{"cell_id": "{current_cell_id}", "topK": {clusteridx}}}}}\n')
                         current_cell_id = cell_id
                         current_vertices = []
                     current_vertices.append(f'[{x},{y}]')
                 if current_cell_id is not None:
                     cluster = bcd2cluster.get(current_cell_id, "NA")
                     clusteridx = cluster2idx.get(cluster, "NA") if cluster != "NA" else "NA"
-                    wf.write(f'{{"type": "Feature", "geometry": {{"type": "Polygon", "coordinates": [[{",".join(current_vertices)}]]}}, "properties": {{"cell_id": "{current_cell_id}", "topK": "{clusteridx}"}}}}\n')
+                    wf.write(f'{{"type": "Feature", "geometry": {{"type": "Polygon", "coordinates": [[{",".join(current_vertices)}]]}}, "properties": {{"cell_id": "{current_cell_id}", "topK": {clusteridx}}}}}\n')
         logger.info(f"Successfully written cell boundaries")
 
         ## Run the tippecanoe command
         pmtiles_path = f"{args.outprefix}-boundaries.pmtiles"
-        tippecanoe_cmd = f"TIPPECANOE_MAX_THREADS={args.threads} '{args.tippecanoe}' -t {args.tmp_dir} -o {pmtiles_path} -Z {args.min_zoom} -z {args.max_zoom} --force -s EPSG:3857 -M {args.max_tile_bytes} -O {args.max_feature_counts} --drop-densest-as-needed --extend-zooms-if-still-dropping '--preserve-point-density-threshold={args.preserve_point_density_thres}' --no-duplication --no-clipping --buffer 0 {args.outprefix}-boundaries.geojson"
+        tippecanoe_cmd = f"TIPPECANOE_MAX_THREADS={args.threads} '{args.tippecanoe}' -t {args.tmp_dir} -o {pmtiles_path} -Z {args.min_zoom} -z {args.max_zoom} --force -s EPSG:3857 -M {args.max_tile_bytes} -O {args.max_feature_counts} --drop-densest-as-needed --extend-zooms-if-still-dropping '--preserve-point-density-threshold={args.preserve_point_density_thres}' --no-clipping --buffer 0 {args.outprefix}-boundaries.geojson"
         logger.info(f"Running tippecanoe command: {tippecanoe_cmd}")
         result = subprocess.run(tippecanoe_cmd, shell=True, capture_output=True)
         if result.returncode != 0:
