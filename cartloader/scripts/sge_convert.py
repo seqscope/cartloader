@@ -1,11 +1,9 @@
 import sys, os, argparse, logging,  inspect, json, subprocess
 import pandas as pd
 from cartloader.utils.minimake import minimake
-from cartloader.utils.utils import cmd_separator, scheck_app, add_param_to_cmd, read_minmax
+from cartloader.utils.utils import cmd_separator, scheck_app, add_param_to_cmd, read_minmax, write_dict_to_file, relativize_paths
 from cartloader.utils.sge_helper import aux_sge_args, input_by_platform, update_csvformat_by_platform
 from cartloader.scripts.feature_filtering import filter_feature_by_type
-
-# get the path of the cu
 
 def parse_arguments(_args):
     """Parse command-line arguments."""
@@ -45,6 +43,8 @@ def parse_arguments(_args):
     # - sge visualization
     inout_params.add_argument('--sge-visual', action='store_true', default=False, help='Visualize the output SGE. If --filter-by-density, both unfiltered and filtered SGE will be visualized (default: False)')
     inout_params.add_argument('--out-xy', type=str, default="xy.png", help='Output for SGE visualization image (default: xy.png)')
+    # - sge json
+    inout_params.add_argument('--out-json',  type=str, default="sge_assets.json", help='Output json summarizing SGE information. (default: sge_assets.json).')
 
     # AUX input MEX params
     aux_in_mex_params = parser.add_argument_group( "IN-MEX Auxiliary Parameters", "(10x_visium_hd and seqscope only) Auxiliary parameters for input MEX and parquet files. Required if --in-mex is used." )
@@ -362,6 +362,7 @@ def sge_visual_northup(mm, xy_f, xy_northup_f, minmax_f, prereq, srs="EPSG:3857"
     cmds.append(f"rm {temp_tif}")
     mm.add_target(xy_northup_f, [xy_f]+prereq, cmds)
     return mm
+
 #================================================================================================
 #
 # main functions
@@ -407,6 +408,13 @@ def sge_convert(_args):
     cmds.append(f"[ -f {out_transcript_f} ] && [ -f {out_feature_f} ] && [ -f {out_minmax_f} ] && touch {sge_convert_flag}")
     mm.add_target(sge_convert_flag, in_raw_filelist, cmds) 
 
+    sge_assets={
+        "transcript": out_transcript_f,
+        "feature": out_feature_f,
+        "minmax": out_minmax_f,
+        "density_filtering": False
+    }
+
     if args.sge_visual:
         mm = sge_visual(mm, 
                         out_transcript_f,
@@ -418,7 +426,11 @@ def sge_convert(_args):
             out_xyn_f= os.path.join(args.out_dir, args.out_northup_tif)
             mm = sge_visual_northup(mm, out_xy_f, out_xyn_f, out_minmax_f, [sge_convert_flag],
                                   srs=args.srs, resample=args.resample, gdalwarp=args.gdalwarp, gdal_translate=args.gdal_translate)
-    
+        sge_assets["visual"]={
+            "png": out_xyn_f if args.north_up else out_xy_f,
+            "northup": args.north_up
+        }
+
     # filtering
     if args.filter_by_density:
         sge_filtered_flag = os.path.join(args.out_dir, "sge_density_filtering.done")
@@ -443,6 +455,11 @@ def sge_convert(_args):
         }
         mm = sge_density_filtering(mm, sge_filtering_dict)
     
+        sge_assets["transcript"] = filtered_transcript_f
+        sge_assets["feature"] = filtered_feature_f
+        sge_assets["minmax"] = filtered_minmax_f
+        sge_assets["density_filtering"] = True
+
         if args.sge_visual:
             mm = sge_visual(mm, 
                             filtered_transcript_f,
@@ -455,6 +472,11 @@ def sge_convert(_args):
                 mm = sge_visual_northup(mm, filtered_xy_f, filtered_xyn_f, filtered_minmax_f, [sge_filtered_flag],
                                         srs=args.srs, resample=args.resample, gdalwarp=args.gdalwarp, gdal_translate=args.gdal_translate)
 
+            sge_assets["visual"]={
+                "png": filtered_xyn_f if args.north_up else filtered_xy_f,
+                "northup": args.north_up
+            } 
+
     # write makefile
     if len(mm.targets) == 0:
         logging.error("There is no target to run. Please make sure that at least one run option was turned on")
@@ -462,7 +484,11 @@ def sge_convert(_args):
     
     make_f = os.path.join(args.out_dir, args.makefn)
     mm.write_makefile(make_f)
-    
+
+    # write down a json file when execute
+    out_json=os.path.join(args.out_dir, args.out_json)
+    write_dict_to_file(sge_assets, out_json, check_equal=True)
+
     if args.dry_run:
         dry_cmd=f"make -f {make_f} -n {'-B' if args.restart else ''} "
         os.system(dry_cmd)
@@ -473,6 +499,7 @@ def sge_convert(_args):
         if result.returncode != 0:
             print(f"Error in executing: {exe_cmd}")
             sys.exit(1)
+
 
 if __name__ == "__main__":
     # get the cartloader path

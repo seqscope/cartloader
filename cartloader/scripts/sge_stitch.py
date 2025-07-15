@@ -2,7 +2,7 @@ import sys, os, gzip, argparse, logging, warnings, shutil, re, copy, time, pickl
 import pandas as pd
 import subprocess
 
-from cartloader.utils.utils import cmd_separator, scheck_app, add_param_to_cmd, log_dataframe
+from cartloader.utils.utils import cmd_separator, scheck_app, add_param_to_cmd, log_dataframe, write_dict_to_file
 from cartloader.utils.minimake import minimake
 from cartloader.scripts.sge_convert import sge_visual, sge_density_filtering, sge_visual_northup
 from cartloader.utils.image_helper import update_orient
@@ -23,13 +23,20 @@ def sge_stitch(_args):
     run_params.add_argument('--makefn', type=str, default="sge_stitch.mk", help='Makefile name (default: sge_stitch.mk)')
     run_params.add_argument('--threads', type=int, default=1, help='Maximum number of threads to use in each process (default: 1)')
     
+    inout_params = parser.add_argument_group("Input/Output Parameters", "Parameters to specify platform, input, output, and units per um, precision, and density-filtering for output.")
+    inout_params.add_argument("--in-tiles", type=str, nargs='*', default=[], help="List of the input tiles in a format of <transcript>,<feature>,<minmax>,<row>,<col>,<rotate>,<vertical_flip>,<horizontal_flip>. ")
+    inout_params.add_argument("--out-dir", type=str, help="Output directory.")
+    inout_params.add_argument('--out-transcript', type=str, default="transcripts.unsorted.tsv.gz", help='Output for SGE stitch. File name of the compressed transcript-indexed SGE file in TSV format (default: transcripts.unsorted.tsv.gz).')
+    inout_params.add_argument('--out-minmax', type=str, default="coordinate_minmax.tsv", help='Output for SGE stitch. File name of the coordinate minmax TSV file (default: coordinate_minmax.tsv).')
+    inout_params.add_argument('--out-feature', type=str, default="feature.clean.tsv.gz", help='Output for SGE stitch. File name of the compressed UMI count per feature TSV file (default: feature.clean.tsv.gz).')
+    inout_params.add_argument('--out-tile-minmax', type=str, default="coordinate_minmax_per_tile.tsv", help='Output for SGE stitch. File name of the coordinate minmax per tile TSV file (default: coordinate_minmax_per_tile.tsv).')
+    inout_params.add_argument('--out-json',  type=str, default="sge_assets.json", help='Output json summarizing SGE information. (default: sge_assets.json).')
+    inout_params.add_argument('--feature-distribution', action='store_true', default=False, help='Action. Create a file to summarize the feature distribution across the input tiles')
+    inout_params.add_argument('--out-feature-distribution', type=str, default="feature.distribution.tsv.gz", help='Output for --feature-distribution. File name of the output summarizing the feature distribution across the input tiles')
+    inout_params.add_argument('--filter-by-density', action='store_true', default=False, help='Action. Enable density-filtering for the output SGE(default: False). If enabled, check the density-filtering auxiliary parameters.')
+    inout_params.add_argument('--out-filtered-prefix', type=str, default="filtered", help='Output for --filter-by-density. If --filter-by-density, define the prefix for filtered SGE (default: filtered)')
+
     key_params = parser.add_argument_group("Key Parameters", "Key Parameters")
-    key_params.add_argument("--in-tiles", type=str, nargs='*', default=[], help="List of the input tiles in a format of <transcript>,<feature>,<minmax>,<row>,<col>,<rotate>,<vertical_flip>,<horizontal_flip>. ")
-    key_params.add_argument("--out-dir", type=str, help="Output directory.")
-    key_params.add_argument('--out-transcript', type=str, default="transcripts.unsorted.tsv.gz", help='Output for SGE stitch. The compressed transcript-indexed SGE file in TSV format (default: transcripts.unsorted.tsv.gz).')
-    key_params.add_argument('--out-minmax', type=str, default="coordinate_minmax.tsv", help='Output for SGE stitch. The coordinate minmax TSV file (default: coordinate_minmax.tsv).')
-    key_params.add_argument('--out-feature', type=str, default="feature.clean.tsv.gz", help='Output for SGE stitch. The compressed UMI count per feature TSV file (default: feature.clean.tsv.gz).')
-    key_params.add_argument('--out-tile-minmax', type=str, default="coordinate_minmax_per_tile.tsv", help='Output for SGE stitch. The coordinate minmax per tile TSV file (default: coordinate_minmax_per_tile.tsv).')
     key_params.add_argument("--colnames-count", type=str, default="count", help="Comma-separated column names for count (default: count)")
     key_params.add_argument('--colname-feature-name', type=str, default='gene', help='Feature name column (default: gene)')
     key_params.add_argument('--colname-feature-id', type=str, default=None, help='Feature ID column (default: None)')
@@ -38,12 +45,9 @@ def sge_stitch(_args):
     key_params.add_argument('--colnames-others', nargs='*', default=[], help='Columns names to keep (e.g., cell_id, overlaps_nucleus) (default: None)')
     key_params.add_argument('--units-per-um', type=float, default=1.0, help='Units per um in the input transcript tsv files (default: 1.0)')
     key_params.add_argument("--precision", type=int, default=2, help="Precision for the output minmax and transcript files (default: 2)")
-    #key_params.add_argument('--generate-tile-minmax-only', action='store_true', default=False, help='Only generate the tile minmax file without stitching the SGE. (default: False)')
 
     # polygon-filtering params
     polyfilter_params = parser.add_argument_group('Density/Polygon Filtering Parameters','Parameters for filtering polygons based on the number of vertices.')
-    polyfilter_params.add_argument('--filter-by-density', action='store_true', default=False, help='Filter SGE from format conversion by density (default: False). If enabled, check the density-filtering auxiliary parameters.')
-    polyfilter_params.add_argument('--out-filtered-prefix', type=str, default="filtered", help='Output for density-filtering. If --filter-by-density, define the prefix for filtered SGE (default: filtered)')
     polyfilter_params.add_argument('--genomic-feature', type=str, default=None, help='Column name of genomic feature for polygon-filtering (default to --colnames-count if --colnames-count only specifies one column)')
     polyfilter_params.add_argument('--mu-scale', type=int, default=1, help='Scale factor for the polygon area calculation (default: 1.0)')
     polyfilter_params.add_argument('--radius', type=int, default=15, help='Radius for the polygon area calculation (default: 15)')
@@ -193,7 +197,6 @@ def sge_stitch(_args):
     mm.add_target(tile_minmax, prerequisities, cmds)
 
     # sge stitch 
-    #if not args.generate_tile_minmax_only:
     out_transcript_f = os.path.join(args.out_dir, args.out_transcript)
     out_minmax_f = os.path.join(args.out_dir, args.out_minmax)
     out_feature_f = os.path.join(args.out_dir, args.out_feature)
@@ -204,7 +207,7 @@ def sge_stitch(_args):
     else:
         colnames_count = [args.colnames_count]
 
-        # combine sges
+    # combine sges
     cmds = cmd_separator([], f"Combining SGEs")
     combine_cmd=" ".join([f"cartloader", "sge_combine_tiles",
                             f"--in-tiles {' '.join(updated_tiles)}",
@@ -226,6 +229,13 @@ def sge_stitch(_args):
     sge_stitch_flag = os.path.join(args.out_dir, "sge_stitch.done")
     cmds.append(f'[ -f {out_transcript_f} ] && [ -f {out_feature_f} ] && [ -f {out_minmax_f} ] && touch {sge_stitch_flag}')
     mm.add_target(sge_stitch_flag, prerequisities+[tile_minmax], cmds)
+
+    sge_assets={
+            "transcript": out_transcript_f,
+            "feature": out_feature_f,
+            "minmax": out_minmax_f,
+            "density_filtering": False
+        }
 
     # filter by density
     if args.filter_by_density:
@@ -256,6 +266,12 @@ def sge_stitch(_args):
         }
         mm = sge_density_filtering(mm, sge_filtering_dict)
 
+        # update sge_assets
+        sge_assets["transcript"] = filtered_transcript_f
+        sge_assets["feature"] = filtered_feature_f
+        sge_assets["minmax"] = filtered_minmax_f
+        sge_assets["density_filtering"] = True
+
     # generate feature distribution file
     out_dist_f = os.path.join(args.out_dir, "feature.distribution.tsv.gz")    
     cmds = cmd_separator([], f"Creating feature distribution file: {out_dist_f}")
@@ -268,44 +284,6 @@ def sge_stitch(_args):
     cmds.append(overlap_cmd)
     mm.add_target(out_dist_f, prerequisities, cmds)
 
-    # # create overlapping genes
-    # if args.list_overlapping_features:
-    #     if "," in args.min_ct_per_ftr_tile:
-    #         min_ct_per_ftr_tile = args.min_ct_per_ftr_tile.split(",")
-    #     else:
-    #         min_ct_per_ftr_tile = [args.min_ct_per_ftr_tile]
-    #     for min_ct in min_ct_per_ftr_tile:
-    #         min_ct = int(min_ct)
-    #         out_overlap_f = os.path.join(args.out_dir, ("feature.overlapping.tsv.gz" if min_ct == 0 else f"feature.overlapping.min{min_ct}.tsv.gz"))
-    #         out_dist_f = os.path.join(args.out_dir, "feature.distribution.tsv.gz")    
-    #         cmds = cmd_separator([], f"Creating overlapping features: {out_overlap_f}") 
-    #         overlap_cmd=" ".join([f"cartloader", "feature_overlapping",
-    #                             f"--in-tiles {' '.join(updated_ftrs)}",
-    #                             f"--colname-feature-name {args.colname_feature_name}",
-    #                             f"--colnames-count {args.colnames_count}",
-    #                             f"--out-overlap {out_overlap_f}",
-    #                             f"--out-dist {out_dist_f}",
-    #                             f"--min-ct-per-ftr-tile {min_ct}" if min_ct > 0 else "",
-    #                             f"--colname-key-count {args.colname_key_count}" if min_ct > 0 and args.colname_key_count else "",
-    #                         ])
-    #         cmds.append(overlap_cmd)
-    #         mm.add_target(out_overlap_f, prerequisities, cmds)
-
-    #         if args.filter_by_density:
-    #             filtered_overlap_f = os.path.join(args.out_dir, f"{args.out_filtered_prefix}.feature.overlapping.tsv.gz" if min_ct == 0 else f"{args.out_filtered_prefix}.feature.overlapping.min{min_ct}.tsv.gz")
-    #             cmds = cmd_separator([], f"Creating filtered overlapping features: {filtered_overlap_f}")
-                
-    #             filtered_overlap_cmd=" ".join([f"cartloader", "feature_overlapping",
-    #                             f"--in-tiles {' '.join(updated_ftrs)}",
-    #                             f"--in-feature {filtered_feature_f}",
-    #                             f"--colname-feature-name {args.colname_feature_name}",
-    #                             f"--colnames-count {args.colnames_count}",
-    #                             f"--out-overlap {filtered_overlap_f}",
-    #                             f"--min-ct-per-ftr-tile {min_ct}" if min_ct > 0 else "",
-    #                             f"--colname-key-count {args.colname_key_count}" if min_ct > 0 and args.colname_key_count else "",
-    #                         ])
-    #             mm.add_target(filtered_overlap_f, prerequisities+[sge_filtered_flag], [filtered_overlap_cmd])
-
     # draw xy plot for visualization
     if args.sge_visual:
         mm = sge_visual(mm, out_transcript_f, out_minmax_f, out_xy_f, [sge_stitch_flag], args.spatula)
@@ -313,6 +291,10 @@ def sge_stitch(_args):
             out_xyn_f = os.path.join(args.out_dir, args.out_northup_tif)
             mm = sge_visual_northup(mm, out_xy_f, out_xyn_f, out_minmax_f, [sge_stitch_flag], 
                                     srs=args.srs, resample=args.resample, gdalwarp=args.gdalwarp, gdal_translate=args.gdal_translate)
+        sge_assets["visual"]={
+            "png": out_xyn_f if args.north_up else out_xy_f,
+            "northup": args.north_up
+        }
 
         if args.filter_by_density:
             mm = sge_visual(mm, filtered_transcript_f, filtered_minmax_f, filtered_xy_f, [sge_filtered_flag], args.spatula)
@@ -320,7 +302,12 @@ def sge_stitch(_args):
                 filtered_xyn_f= os.path.join(args.out_dir, f"{args.out_filtered_prefix}.{args.out_northup_tif}")
                 mm = sge_visual_northup(mm, filtered_xy_f, filtered_xyn_f, filtered_minmax_f, [sge_filtered_flag],
                                         srs=args.srs, resample=args.resample, gdalwarp=args.gdalwarp, gdal_translate=args.gdal_translate)
-        
+
+            sge_assets["visual"]={
+                "png": filtered_xyn_f if args.north_up else filtered_xy_f,
+                "northup": args.north_up
+            } 
+
     # write makefile
     if len(mm.targets) == 0:
         logging.error("There is no target to run. Please make sure that at least one run option was turned on")
@@ -338,6 +325,11 @@ def sge_stitch(_args):
         if result.returncode != 0:
             print(f"Error in executing: {exe_cmd}")
             sys.exit(1)
+
+    # write down a json file when execute
+    out_json=os.path.join(args.out_dir, args.out_json)
+    write_dict_to_file(sge_assets, out_json, check_equal=True)
+
 
 if __name__ == "__main__":
     func_name = os.path.splitext(os.path.basename(__file__))[0]

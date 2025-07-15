@@ -99,6 +99,7 @@ def run_xenium(_args):
     mm = minimake()
 
     scheck_app(args.spatula)
+    scheck_app(args.tippecanoe)
     if not args.skip_raster:
         scheck_app(args.pmtiles)
         scheck_app(args.gdal_translate)
@@ -116,20 +117,19 @@ def run_xenium(_args):
     
     # output files/prefix
     out_catalog_f = os.path.join(args.out_dir,args.out_catalog)
-
     out_assets_f = os.path.join(args.out_dir, args.out_fic_assets)
     out_molecules_prefix=os.path.join(args.out_dir,args.out_molecules_id)
 
     # 1. Load SGE metadata and FICTURE metadata
     if args.sge_dir is not None:
-        sge_jsonf = Path(f"{args.sge_dir}/{args.sge_json}").resolve()
+        sge_jsonf = f"{args.sge_dir}/{args.sge_json}"
         sge_dir = sge_jsonf.parent
 
         sge_data = {}
         sge_data = load_file_to_dict(sge_jsonf)
 
     if args.fic_dir is not None:
-        fic_jsonf = Path(f"{args.fic_dir}/{args.in_fic_params}").resolve()
+        fic_jsonf = f"{args.fic_dir}/{args.in_fic_params}"
         fic_dir = fic_jsonf.parent
         #print(fic_jsonf)
 
@@ -139,13 +139,13 @@ def run_xenium(_args):
 
     ## 2. define and deploy SGE
     if len([k for k in ["transcript", "feature", "minmax"] if k in sge_data]) == 3:
-        in_molecules = str(Path(sge_dir / sge_data.get("transcript", "")).resolve())
-        in_features = str(Path(sge_dir / sge_data.get("feature", "")).resolve())
-        in_minmax = str(Path(sge_dir / sge_data.get("minmax", "")).resolve())
+        in_molecules = sge_data.get("transcript", "")
+        in_features = sge_dir / sge_data.get("feature", "")
+        in_minmax = sge_dir / sge_data.get("minmax", "")
     elif len([k for k in ["in_transcript", "in_feature", "in_minmax"] if k in in_sge]) == 3:
-        in_molecules = str(Path(fic_dir / in_sge.get("in_transcript", "")).resolve())
-        in_features = str(Path(fic_dir / in_sge.get("in_feature", "")).resolve())
-        in_minmax = str(Path(fic_dir / in_sge.get("in_minmax", "")).resolve())
+        in_molecules = fic_dir / in_sge.get("in_transcript", "")
+        in_features = fic_dir / in_sge.get("in_feature", "")
+        in_minmax = fic_dir / in_sge.get("in_minmax", "")
     else:
         raise KeyError(f"Not all SGE paths (transcript, feature, minmax) are available either the {sge_jsonf} or {fic_jsonf}")
     
@@ -208,7 +208,7 @@ def run_xenium(_args):
             train_inout ={
                 "model":{
                     "required": True,
-                    "in":  f"{in_prefix}.model.tsv",
+                    "in": train_param.get("model_path", f"{in_prefix}.model.tsv"),
                     "out": f"{out_prefix}-model.tsv"
                 },
                 "rgb":{
@@ -218,12 +218,12 @@ def run_xenium(_args):
                 },
                 "de":{
                     "required": False,
-                    "in":  f"{in_prefix}.bulk_chisq.tsv",
+                    "in": train_param.get("de_path",f"{in_prefix}.bulk_chisq.tsv"),
                     "out": f"{out_prefix}-bulk-de.tsv"
                 },
                 "info":{
                     "required": False,
-                    "in":  f"{in_prefix}.factor.info.tsv",
+                    "in": train_param.get("info_path", f"{in_prefix}.factor.info.tsv"),
                     "out": f"{out_prefix}-info.tsv"
                 }
             }
@@ -238,8 +238,7 @@ def run_xenium(_args):
             cmds = cmd_separator([], f"Converting LDA-trained factors {model_id} into PMTiles and copying relevant files..")
 
             # fit_results
-            #print(f"--tippecanoe '{args.tippecanoe}'")
-            in_fit_tsvf = f"{in_prefix}.results.tsv.gz"
+            in_fit_tsvf = train_param.get("fit_path", f"{in_prefix}.results.tsv.gz")
             #out_fit_tsvf = f"{out_prefix}.results.tsv.gz"
             if os.path.exists(in_fit_tsvf):
                 # cmd = " ".join([
@@ -288,11 +287,11 @@ def run_xenium(_args):
             for decode_param in train_param["decode_params"]:
                 in_id = decode_param["decode_id"]
                 in_prefix = f"{args.fic_dir}/{in_id}"
-                in_pixel_tsvf = f"{in_prefix}.tsv.gz"
-                in_pixel_png = f"{in_prefix}.png"
-                in_de_tsvf  = f"{in_prefix}.bulk_chisq.tsv"
-                in_post_tsvf = f"{in_prefix}.pseudobulk.tsv"
-                in_info_tsvf = f"{in_prefix}.factor.info.tsv"
+                in_pixel_tsvf = decode_param.get("pixel_tsv_path",f"{in_prefix}.tsv.gz")
+                in_pixel_png = decode_param.get("pixel_png_path",f"{in_prefix}.png")
+                in_de_tsvf  = decode_param.get("de_tsv_path",f"{in_prefix}.bulk_chisq.tsv")
+                in_post_tsvf = decode_param.get("pseudobulk_tsv_path",f"{in_prefix}.pseudobulk.tsv")
+                in_info_tsvf = decode_param.get("info_tsv_path",f"{in_prefix}.factor.info.tsv")
 
                 out_id = in_id.replace("_", "-")
                 out_prefix = os.path.join(args.out_dir, out_id)
@@ -419,7 +418,7 @@ def run_xenium(_args):
         prerequisites_yaml.append(f"{args.out_dir}/sge-mono-dark.pmtiles.done")
     if args.background_assets:
         prerequisites_yaml.extend(args.background_assets)
-    if args.cell_
+    #TBC: if args.cell_
     cmds.append(cmd)
     mm.add_target(f"{out_catalog_f}", [], cmds)
 

@@ -4,7 +4,7 @@ import numpy as np
 from scipy.stats import chi2
 
 from cartloader.utils.minimake import minimake
-from cartloader.utils.utils import cmd_separator, scheck_app, create_custom_logger, flexopen, unquote_str, smartsort
+from cartloader.utils.utils import cmd_separator, scheck_app, create_custom_logger, flexopen, unquote_str, smartsort, write_dict_to_file
 
 def parse_arguments(_args):
     """
@@ -15,9 +15,10 @@ def parse_arguments(_args):
     parser = argparse.ArgumentParser(prog=f"cartloader import_xenium_output", description="Import cell segmentation results from Xenium Ranger output")
 
     cmd_params = parser.add_argument_group("Commands", "Commands to run together")
-    cmd_params.add_argument('--all', action='store_true', default=False, help='Run all commands (cells, boundaries, yaml)')
+    cmd_params.add_argument('--all', action='store_true', default=False, help='Run all commands (cells, boundaries, write-json)')
     cmd_params.add_argument('--cells', action='store_true', default=False, help='Add segmented cells to PMTiles output as factors')
     cmd_params.add_argument('--boundaries', action='store_true', default=False, help='Add segmented cell bounaries to PMTiles output')
+    cmd_params.add_argument('--summary', action='store_true', default=False, help='Generate a JSON file summarizing parameters and output paths.')
     cmd_params.add_argument('--update-catalog', action='store_true', default=False, help='Update the YAML files')
 
     inout_params = parser.add_argument_group("Input/Output Parameters", "Input/output directory/files.")
@@ -43,13 +44,13 @@ def parse_arguments(_args):
     run_params.add_argument('--threads', type=int, default=4, help='Maximum number of threads per job (for tippecanoe)')
 
     aux_params = parser.add_argument_group("Auxiliary Parameters", "Auxiliary parameters (using default is recommended)")
+    aux_params.add_argument('--catalog-yaml', type=str, help='YAML file to be updated when --yaml is specified')
     aux_params.add_argument('--col-rename', type=str, nargs='+', help='Columns to rename in the output file. Format: old_name1:new_name1 old_name2:new_name2 ...')
     aux_params.add_argument('--csv-cells', type=str, default="cells.csv.gz", help='Name of the CSV file containing the cell locations')
     aux_params.add_argument('--csv-boundaries', type=str, default="cell_boundaries.csv.gz", help='Name of the CSV file containing the cell boundary files')
     aux_params.add_argument('--csv-clust', type=str, default="analysis/clustering/gene_expression_graphclust/clusters.csv", help='Name of the CSV file containing the cell clusters')
     aux_params.add_argument('--csv-diffexp', type=str, default="analysis/diffexp/gene_expression_graphclust/differential_expression.csv", help='Name of the CSV file containing the differential expression results')
     aux_params.add_argument('--tsv-cmap', type=str, default=f"{repo_dir}/assets/fixed_color_map_60.tsv", help='Name of the TSV file containing the color map for the cell clusters')
-    aux_params.add_argument('--catalog-yaml', type=str, help='YAML file to be updated when --yaml is specified')
     aux_params.add_argument('--de-max-pval', type=float, default=0.01, help='Maximum p-value threshold for differential expression')
     aux_params.add_argument('--de-min-fc', type=float, default=1.2, help='Minimum fold change threshold for differential expression')
     aux_params.add_argument('--tippecanoe', type=str, default=f"{repo_dir}/submodules/tippecanoe/tippecanoe", help='Path to tippecanoe binary')
@@ -76,6 +77,7 @@ def import_xenium_output(_args):
     if args.all:
         args.cells = True
         args.boundaries = True
+        args.summary = True
         # args.update_catalog = True
 
     # create output directory if needed
@@ -232,7 +234,27 @@ def import_xenium_output(_args):
         else:
             logger.info("PMTiles creation command completed successfully")
 
-    # Update the YAML files
+    # JSON/YAML
+    if args.summary or args.update_catalog:
+        ## add the new factor to the catalog
+        factor_id = out_base if args.id is None else args.id
+        factor_name = out_base if args.name is None else args.name
+
+    if args.summary:
+        out_assets_f=f"{args.outprefix}.json"
+        new_factor = {
+            "id": factor_id,
+            "name": factor_name,
+            "cells_id": factor_id,
+            "rgb": f"{args.outprefix}-rgb.tsv",
+            "de": f"{args.outprefix}-cells-bulk-de.tsv",
+            "pmtiles": {
+                "cells": f"{args.outprefix}-cells.pmtiles",
+                "boundaries": f"{args.outprefix}-boundaries.pmtiles"
+            }
+        }
+        write_dict_to_file(new_factor, out_assets_f, check_equal=True)
+
     if args.update_catalog:
         logger.info(f"Updating the YAML files with the results")
 
@@ -244,21 +266,16 @@ def import_xenium_output(_args):
         with open(args.catalog_yaml, 'r') as f:
             catalog = yaml.load(f, Loader=yaml.FullLoader)  # Preserves order
 
-        ## add the new factor to the catalog
-        base_outprefix = os.path.basename(args.outprefix)
-        factor_id = base_outprefix if args.id is None else args.id
-        factor_name = base_outprefix if args.name is None else args.name
-        cells_id = factor_id
-
+        ## add files to the catalog
         new_factor = {
             "id": factor_id,
             "name": factor_name,
             "cells_id": factor_id,
-            "rgb": f"{base_outprefix}-rgb.tsv",
-            "de": f"{base_outprefix}-cells-bulk-de.tsv",
+            "rgb": f"{out_base}-rgb.tsv",
+            "de": f"{out_base}-cells-bulk-de.tsv",
             "pmtiles": {
-                "cells": f"{base_outprefix}-cells.pmtiles",
-                "boundaries": f"{base_outprefix}-boundaries.pmtiles"
+                "cells": f"{out_base}-cells.pmtiles",
+                "boundaries": f"{out_base}-boundaries.pmtiles"
             }
         }
 
@@ -271,6 +288,7 @@ def import_xenium_output(_args):
         with open(out_yaml, 'w') as f:
             yaml.dump(catalog, f, Dumper=yaml.SafeDumper, default_flow_style=False, sort_keys=False)
         logger.info(f"Successfully wrote the catalog.yaml file: {out_yaml}")
+
     logger.info("Analysis Finished")
 
 if __name__ == "__main__":
