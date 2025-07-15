@@ -34,8 +34,9 @@ def parse_arguments(_args):
     aux_params.add_argument('--pmtiles', type=str, default=f"pmtiles", help='Path to pmtiles binary from go-pmtiles')
     aux_params.add_argument('--gdal_translate', type=str, default=f"gdal_translate", help='Path to gdal_translate binary')
     aux_params.add_argument('--gdaladdo', type=str, default=f"gdaladdo", help='Path to gdaladdo binary')
-    # aux_params.add_argument('--magick', type=str, default=f"magick", help='Path to ImageMagick binary') # Disable this function. The user need to add the path to the ImageMagick binary directory to the PATH environment variable
     aux_params.add_argument('--keep-intermediate-files', action='store_true', default=False, help='Keep intermediate output files')
+    aux_params.add_argument('--transparent-below', type=int, default=1, help='Threshold for transparent pixels below this value for dark background image (default: 1)')
+    aux_params.add_argument('--transparent-above', type=int, default=254, help='Threshold for transparent pixels above this value for light background image (default: 254)')
     
     run_params = parser.add_argument_group("Run Options", "Run options for FICTURE commands")
     run_params.add_argument('--restart', action='store_true', default=False, help='Restart the run. Ignore all intermediate files and start from the beginning')
@@ -100,8 +101,23 @@ def run_tsv2mono(_args):
     cmds_light = cmd_separator([], f"Creating dark-background raster PMTiles: {args.out_prefix}-light.pmtiles")
 
     ## create PNG files
-    cmds_dark.append(f"{cmd_drawxy} --out {args.out_prefix}-dark.png")
-    cmds_light.append(f"{cmd_drawxy} --invert --out {args.out_prefix}-light.png")
+    cmds_dark.append(f"{cmd_drawxy} --out {args.out_prefix}-dark-opaque.png")
+    cmds_dark.append(" ".join([
+        f"'{args.spatula}'",
+        "png-mono2rgba",
+        "--in", f"{args.out_prefix}-dark-opaque.png",
+        "--out", f"{args.out_prefix}-dark.png",
+        "--transparent-below", str(args.transparent_below)
+    ]))
+
+    cmds_light.append(f"{cmd_drawxy} --invert --out {args.out_prefix}-light-opaque.png")
+    cmds_light.append(" ".join([
+        f"'{args.spatula}'",
+        "png-mono2rgba",
+        "--in", f"{args.out_prefix}-light-opaque.png",
+        "--out", f"{args.out_prefix}-light.png",
+        "--transparent-above", str(args.transparent_above)
+    ]))
 
     ## create TIF files
     cmd_tif = " ".join([
@@ -114,7 +130,7 @@ def run_tsv2mono(_args):
 
     ## create MBTiles files
     cmd_mbt = " ".join([
-        f"'{args.gdal_translate}'", "-b", "1", "-strict",
+        f"'{args.gdal_translate}'", "-b 1 -b 2 -b 3 -b 4", "-strict",
         "-co", "\"ZOOM_LEVEL_STRATEGY=UPPER\"",
         "-co", f"\"RESAMPLING={args.resample.upper()}\"",
         "-co", f"\"BLOCKSIZE={args.blocksize}\"",
@@ -131,8 +147,8 @@ def run_tsv2mono(_args):
     cmds_light.append(f"'{args.pmtiles}' convert --force {args.out_prefix}-light.pmtiles.mbtiles {args.out_prefix}-light.pmtiles")
 
     if not args.keep_intermediate_files:
-        cmds_dark.append(f"rm {args.out_prefix}-dark.pmtiles.mbtiles {args.out_prefix}-dark.pmtiles.tif {args.out_prefix}-dark.png")
-        cmds_light.append(f"rm {args.out_prefix}-light.pmtiles.mbtiles {args.out_prefix}-light.pmtiles.tif {args.out_prefix}-light.png")
+        cmds_dark.append(f"rm -f {args.out_prefix}-dark.pmtiles.mbtiles {args.out_prefix}-dark.pmtiles.tif {args.out_prefix}-dark.png {args.out_prefix}-dark-opaque.png")
+        cmds_light.append(f"rm -f {args.out_prefix}-light.pmtiles.mbtiles {args.out_prefix}-light.pmtiles.tif {args.out_prefix}-light.png {args.out_prefix}-light-opaque.png")
 
     #cmds_dark.append(f"rm {args.out_prefix}-dark.pmtiles.mbtiles {args.out_prefix}-dark.pmtiles.tif")
     #cmds_light.append(f"rm {args.out_prefix}-light.pmtiles.mbtiles {args.out_prefix}-light.pmtiles.tif")

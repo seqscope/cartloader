@@ -211,14 +211,14 @@ def import_xenium_output(_args):
                     if cell_id != current_cell_id:
                         cluster = bcd2cluster.get(current_cell_id, "NA")
                         clusteridx = cluster2idx.get(cluster, "NA") if cluster != "NA" else "NA"
-                        wf.write(f'{{"type": "Feature", "geometry": {{"type": "Polygon", "coordinates": [[{",".join(current_vertices)}]]}}, "properties": {{"cell_id": "{current_cell_id}", "topK": {clusteridx}}}}}\n')
+                        wf.write(f'{{"type": "Feature", "geometry": {{"type": "Polygon", "coordinates": [[{",".join(current_vertices)}]]}}, "properties": {{"cell_id": "{current_cell_id}", "topK": "{clusteridx}"}}}}\n')
                         current_cell_id = cell_id
                         current_vertices = []
                     current_vertices.append(f'[{x},{y}]')
                 if current_cell_id is not None:
                     cluster = bcd2cluster.get(current_cell_id, "NA")
                     clusteridx = cluster2idx.get(cluster, "NA") if cluster != "NA" else "NA"
-                    wf.write(f'{{"type": "Feature", "geometry": {{"type": "Polygon", "coordinates": [[{",".join(current_vertices)}]]}}, "properties": {{"cell_id": "{current_cell_id}", "topK": {clusteridx}}}}}\n')
+                    wf.write(f'{{"type": "Feature", "geometry": {{"type": "Polygon", "coordinates": [[{",".join(current_vertices)}]]}}, "properties": {{"cell_id": "{current_cell_id}", "topK": "{clusteridx}"}}}}\n')
         logger.info(f"Successfully written cell boundaries")
 
         ## Run the tippecanoe command

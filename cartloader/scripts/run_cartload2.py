@@ -35,7 +35,6 @@ def parse_arguments(_args):
     key_params.add_argument('--log-suffix', type=str, default=".log", help='The suffix for the log file (appended to the output directory). Default: .log')
 
     env_params = parser.add_argument_group("Env Parameters", "Environment parameters, e.g., tools.")
-    # aux_params.add_argument('--magick', type=str, default=f"magick", help='Path to ImageMagick binary') # Disable this function. The user need to add the path to the ImageMagick binary directory to the PATH environment variable
     env_params.add_argument('--gzip', type=str, default="gzip", help='Path to gzip binary. For faster processing, use "pigz -p4"')
     env_params.add_argument('--pmtiles', type=str, default=f"pmtiles", help='Path to pmtiles binary from go-pmtiles')
     env_params.add_argument('--gdal_translate', type=str, default=f"gdal_translate", help='Path to gdal_translate binary')
@@ -62,6 +61,8 @@ def parse_arguments(_args):
     aux_params.add_argument('--skip-raster', action='store_true', default=False, help='Skip processing raster files, removing dependency to gdal, go-pmtiles')
     aux_params.add_argument('--tmp-dir', type=str, help='Temporary directory to be used (default: {out-dir}/tmp')
     aux_params.add_argument('--bin-count', type=int, default=50, help='Number of bins for splitting the input molecules')
+    aux_params.add_argument('--transparent-below', type=int, default=1, help='Threshold for transparent pixels below this value for dark background image (default: 1)')
+    aux_params.add_argument('--transparent-above', type=int, default=254, help='Threshold for transparent pixels above this value for light background image (default: 254)')
     if len(_args) == 0:
         parser.print_help()
         sys.exit(1)
@@ -144,6 +145,8 @@ def run_cartload2(_args):
             "--in-minmax", in_minmax,
             "--out-prefix", f"{args.out_dir}/sge-mono",
             "--colname-count", args.colname_count,
+            "--transparent-below", str(args.transparent_below),
+            "--transparent-above", str(args.transparent_above),
             "--main",
             f"--pmtiles '{args.pmtiles}'",
             f"--gdal_translate '{args.gdal_translate}'",
@@ -309,7 +312,7 @@ def run_cartload2(_args):
                 cmds.append(cmd)
 
             cmds.append(f"cp {in_de_tsvf} {out_prefix}-bulk-de.tsv")
-            cmds.append(f"cp {in_post_tsvf} {out_prefix}-pseudobulk.tsv")
+            cmds.append(f"cat {in_post_tsvf} | gzip -c > {out_prefix}-pseudobulk.tsv.gz")
             cmds.append(f"cp {in_info_tsvf} {out_prefix}-info.tsv")
             cmds.append(f"touch {out_prefix}.done")
             mm.add_target(f"{out_prefix}.done", [in_pixel_tsvf, in_pixel_png, in_de_tsvf, in_post_tsvf, model_rgb, in_info_tsvf], cmds)
