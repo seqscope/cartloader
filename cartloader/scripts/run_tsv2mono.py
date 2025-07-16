@@ -107,6 +107,7 @@ def run_tsv2mono(_args):
         "png-mono2rgba",
         "--in", f"{args.out_prefix}-dark-opaque.png",
         "--out", f"{args.out_prefix}-dark.png",
+        "--quadratic-alpha",
         "--transparent-below", str(args.transparent_below)
     ]))
 
@@ -116,6 +117,8 @@ def run_tsv2mono(_args):
         "png-mono2rgba",
         "--in", f"{args.out_prefix}-light-opaque.png",
         "--out", f"{args.out_prefix}-light.png",
+        "--quadratic-alpha",
+        "--invert-transparency",
         "--transparent-above", str(args.transparent_above)
     ]))
 
