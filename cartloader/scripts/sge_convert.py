@@ -1,7 +1,7 @@
 import sys, os, argparse, logging,  inspect, json, subprocess
 import pandas as pd
 from cartloader.utils.minimake import minimake
-from cartloader.utils.utils import cmd_separator, scheck_app, add_param_to_cmd, read_minmax, write_dict_to_file, relativize_paths
+from cartloader.utils.utils import cmd_separator, scheck_app, add_param_to_cmd, read_minmax, write_dict_to_file
 from cartloader.utils.sge_helper import aux_sge_args, input_by_platform, update_csvformat_by_platform
 from cartloader.scripts.feature_filtering import filter_feature_by_type
 

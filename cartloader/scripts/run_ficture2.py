@@ -47,8 +47,7 @@ def parse_arguments(_args):
     env_params.add_argument('--python', type=str, default="python3",  help='Python3 binary')
 
     # AUX gene-filtering params
-    aux_ftrfilter_params = parser.add_argument_group( "Feature Customizing Auxiliary Parameters",
-                                                      "Auxiliary parameters for customizing features in FICTURE analysis without modifying the original input feature TSV file. This ensures the original feature TSV file is retained in the output JSON file for downstream processing .")
+    aux_ftrfilter_params = parser.add_argument_group( "Feature Customizing Auxiliary Parameters", "Auxiliary parameters for customizing features in FICTURE analysis without modifying the original input feature TSV file. This ensures the original feature TSV file is retained in the output JSON file for downstream processing .")
     # aux_ftrfilter_params.add_argument('--filter-by-overlapping-features', action='store_true', default=False, help='When the input SGE is stitched SGE, it is optional to filter the features in FICTURE analysis by only shared features')
     # aux_ftrfilter_params.add_argument('--in-feature-dist', type=str, default=None, help='Path to the input feature distribution file. This file is used to identify overlapping features for FICTURE analysis. (default: None)')
     # aux_ftrfilter_params.add_argument('--min-ct-per-ftr-tile', type=int, default=0, help='Apply a minimum count to filter overlapping feature. Filtering process will be applied if --min-ct-per-overlapftr > 0. (default: 0)')
@@ -179,22 +178,29 @@ def run_ficture2(_args):
     #assert not (args.init_lda and args.init_ext), "Cannot choose both --init-lda and --init-ext"
 
     # input/output/other files
-    # dirs
+    # out dirs
     os.makedirs(args.out_dir, exist_ok=True)
+
+    # out files
+    if args.out_json is None:
+        args.out_json = os.path.join(args.out_dir, f"ficture.params.json")
 
     # in files
     if args.in_transcript is None:
         args.in_transcript = os.path.join(args.out_dir, "transcripts.unsorted.tsv.gz")
     
-    assert os.path.exists(args.in_transcript), "Provide at least one valid input transcript-indexed SGE file by --in-transcript or --in-cstranscript"
+    assert os.path.exists(args.in_transcript), f"Input transcript-indexed SGE file not found ({args.in_transcript}). Specify it with --in-transcript."
 
     if args.in_minmax is not None:
-        assert os.path.exists(args.in_minmax), "Provide a valid input coordinate minmax file by --in-minmax, or skip specifying it"
+        assert os.path.exists(args.in_minmax), f"Input coordinate minmax file not found ({args.in_minmax}). Specify it with --in-minmax or omit this argument."
     
     if args.in_feature is not None:
-        assert os.path.exists(args.in_feature), "Provide a valid input feature file by --in-feature, or skip specifying it"
+        assert os.path.exists(args.in_feature), f"Input feature file not found ({args.in_feature}). Specify it with --in-feature or omit this argument."
+
+    if args.in_feature_ficture is not None: 
+        assert os.path.exists(args.in_feature), f"Input FICTURE feature file not found ({args.in_feature}). Specify it with --in-feature-ficture or omit this argument."
     
-    assert os.path.exists(args.cmap_file), f"Color map not found at: {args.cmap_file}"
+    assert os.path.exists(args.cmap_file), f"Color map not found ({args.cmap_file}). Specify it with --cmap-file."
 
     # FICTURE installations
     ficture2bin = os.path.join(args.ficture2, "bin/punkst")
@@ -203,14 +209,12 @@ def run_ficture2(_args):
     ficture2de = args.python + " " + os.path.join(args.ficture2, "ext/py/de_bulk.py")
     ficture2report = args.python + " " + os.path.join(args.ficture2, "ext/py/factor_report.py")
 
-    # out files
-    if args.out_json is None:
-        args.out_json = os.path.join(args.out_dir, f"ficture.params.json")
-
     # start mm
     mm = minimake()
 
     # 1. tiling :
+    tile_flag = f"{args.out_dir}/transcripts.tiled.done"
+    feature_nohdr_flag = tile_flag
     if args.tile:
         scheck_app(args.gzip)
         cmds = cmd_separator([], f"Creating tiled tsv from {os.path.basename(args.in_transcript)}...")
@@ -241,22 +245,11 @@ def run_ficture2(_args):
         
         ## Features step 1. write the feature file from the tiled SGE
         if in_feature_ficture is not None:
-            assert os.path.exists(in_feature_ficture), f"The current feature file for FICTURE analysis does not exist: {in_feature_ficture}"
             ## if a specific feature file is provided, use it as "selected features" for FICTURE analysis
-            in_feature_ficture_flag = in_feature_ficture
-            feature_plain = f"{args.out_dir}/transcripts.tiled.selected_features.hdr.tsv"
-            feature_nohdr = f"{args.out_dir}/transcripts.tiled.selected_features.tsv"
-            ## update to use bash commands 
-            # with flexopen(in_feature_ficture, "rt") as f:
-            #     with open(feature_plain, "wt") as wf:
-            #         with open(feature_nohdr, "wt") as wf2:
-            #             wf.write(f.readline())
-            #             for line in f:
-            #                 toks = line.strip().split("\t")
-            #                 count = int(toks[-1])
-            #                 if count >= args.min_ct_per_feature:
-            #                     wf.write(line)
-            #                     wf2.write(line)            
+            assert os.path.exists(in_feature_ficture), f"The current feature file for FICTURE analysis does not exist: {in_feature_ficture}"
+            
+            # create a feature without header
+            feature_nohdr = f"{args.out_dir}/transcripts.tiled.selected_features.tsv"       
             if in_feature_ficture.lower().endswith(".gz"):
                 cmds.append(f"""gzip -dc {in_feature_ficture} | tail -n +2 | awk -v min_ct={args.min_ct_per_feature} -F'\\t' '{{count = $(NF); if (count >= min_ct) print $1"\\t"count;}}' > {feature_nohdr}""")
             else:
@@ -266,23 +259,19 @@ def run_ficture2(_args):
             feature_plain = f"{args.out_dir}/transcripts.tiled.selected_features.hdr.tsv"
             cmds.append(f'echo -e "{args.colname_feature}\\t{args.colname_count}" > {feature_plain}')
             cmds.append(f"cat {feature_nohdr} >> {feature_plain}")
-                
-            # flag
-            feature_nohdr_flag = feature_nohdr
 
         else: 
             ## if feature file is not provided, create one from the input transcript file
-            feature_plain = f"{args.out_dir}/transcripts.tiled.features.hdr.tsv"
+
+            # use transcripts.tiled.features.tsv from pts2tiles
             feature_nohdr = f"{args.out_dir}/transcripts.tiled.features.tsv"
+
+            # plain
+            feature_plain = f"{args.out_dir}/transcripts.tiled.features.hdr.tsv"
             cmds.append(f"(echo {args.colname_feature} {args.colname_count} | tr ' ' '\\t'; cat {feature_nohdr};) > {feature_plain}")
             
-            # flag
-            feature_nohdr_flag = f"{args.out_dir}/transcripts.tiled.done"
-            
-            # update the args.in_feature and in_feature_ficture
-            in_feature_ficture = feature_plain
+            # update the args.in_feature
             args.in_feature = feature_plain
-
 
         cmds.append(f"[ -f {args.out_dir}/transcripts.tiled.tsv ] && [ -f {args.out_dir}/transcripts.tiled.index ] && [ -f  {feature_plain} ] && [ -f {feature_nohdr} ] && touch {args.out_dir}/transcripts.tiled.done" )
         mm.add_target(f"{args.out_dir}/transcripts.tiled.done", [args.in_transcript], cmds)
@@ -293,7 +282,7 @@ def run_ficture2(_args):
         #     feature_overlapping_plain = os.path.join(args.out_dir, "transcripts.tiled.overlapping_features.hdr.tsv") if args.min_ct_per_ftr_tile == 0 else os.path.join(args.out_dir, f"transcripts.tiled.overlapping_features.min{args.min_ct_per_ftr_tile}.hdr.tsv")
         #     cmd = " ".join(["cartloader feature_overlapping",
         #                                 f"--in-dist {args.in_feature_dist}", 
-        #                                 f"--in-feature {in_feature_ficture}",
+        #                                 f"--in-feature {feature_plain}",
         #                                 f"--output {feature_overlapping_plain}", 
         #                                 f"--min-ct-per-ftr-tile {args.min_ct_per_ftr_tile}",
         #                                 f"--colname-count {args.colname_count}",
@@ -301,7 +290,7 @@ def run_ficture2(_args):
         #                                 f"--log"
         #                                 ])
         #     cmds.append(cmd)
-        #     mm.add_target(feature_overlapping_plain, [args.in_feature_dist, in_feature_ficture_flag], cmds)
+        #     mm.add_target(feature_overlapping_plain, [args.in_feature_dist, feature_nohdr_flag], cmds)
             
         #     feature_overlapping_nohdr = os.path.join(args.out_dir, "transcripts.tiled.overlapping_features.tsv") if args.min_ct_per_ftr_tile == 0 else os.path.join(args.out_dir, f"transcripts.tiled.overlapping_features.min{args.min_ct_per_ftr_tile}.tsv")
         #     cmds = cmd_separator([], f"Generating feature without header for overlapping features...")
@@ -359,7 +348,7 @@ def run_ficture2(_args):
             meta = f"{args.out_dir}/hexagon.d_{train_width}.json"
             lda_model_matrix = f"{model_prefix}.model.tsv"
             lda_fit_tsv = f"{model_prefix}.results.tsv"
-#           lda_postcount_tsv = f"{model_prefix}.pseudobulk.tsv"
+            #lda_postcount_tsv = f"{model_prefix}.pseudobulk.tsv"
             lda_de = f"{model_prefix}.bulk_chisq.tsv"
 
             # 1) fit model

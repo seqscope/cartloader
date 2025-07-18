@@ -15,7 +15,7 @@ def parse_arguments(_args):
     parser = argparse.ArgumentParser(prog=f"cartloader import_xenium_output", description="Import cell segmentation results from Xenium Ranger output")
 
     cmd_params = parser.add_argument_group("Commands", "Commands to run together")
-    cmd_params.add_argument('--all', action='store_true', default=False, help='Run all commands (cells, boundaries, write-json)')
+    cmd_params.add_argument('--all', action='store_true', default=False, help='Run all commands (cells, boundaries, summary)')
     cmd_params.add_argument('--cells', action='store_true', default=False, help='Add segmented cells to PMTiles output as factors')
     cmd_params.add_argument('--boundaries', action='store_true', default=False, help='Add segmented cell bounaries to PMTiles output')
     cmd_params.add_argument('--summary', action='store_true', default=False, help='Generate a JSON file summarizing parameters and output paths.')

@@ -112,7 +112,7 @@ def compute_quantiles_from_histogram(histogram, total_count, quantile):
     # The corresponding integer value is:
     return sorted_keys[idx]
 
-def run_hist2pmtiles(_args):
+def image_ome2png(_args):
     args = parse_arguments(_args)
     logger = create_custom_logger(__name__, args.out_prefix + args.log_suffix if args.log else None)
     logger.info("Analysis Started")
@@ -172,7 +172,6 @@ def run_hist2pmtiles(_args):
             is_mono = False
         else:
             is_mono = True
-            
 
         if is_ome:
             meta = tifffile.xml2dict(tif.ome_metadata) ## extract metadata
@@ -315,28 +314,32 @@ def run_hist2pmtiles(_args):
         logger.info("Saving final image...")
         Image.fromarray(output).save(f"{args.out_prefix}.png")
         
+        # save the bounds
+        if ul[0] < 0:
+            ul0 = f"\\{ul[0]}"
+        else:
+            ul0 = f"{ul[0]}"
+        
+        with open(f"{args.out_prefix}.bounds.csv", 'w') as f:
+            f.write(f"{ul[0]},{ul[1]},{lr[0]},{lr[1]}\n")
+
         # Clean up temporary files
         os.remove(f"{args.out_prefix}_output.npy")
         if os.path.exists(f"{args.out_prefix}_transformed.npy"):
             os.remove(f"{args.out_prefix}_transformed.npy")
-        
-        # Handle PMTiles conversion
-        if not args.skip_pmtiles:
-            logger.info(f"Creating PMTiles with run_fig2pmtiles...")
-            if ul[0] < 0:
-                ul0 = f"\\{ul[0]}"
-            else:
-                ul0 = f"{ul[0]}"
-            cmd = f"cartloader run_fig2pmtiles --in-bounds '{ul0},{ul[1]},{lr[0]},{lr[1]}' --in-fig {args.out_prefix}.png --out-prefix {args.out_prefix} --geotif2mbtiles --mbtiles2pmtiles --georeference"
-            if args.transparent_below > 0:
-                cmd += " --rgba"
-            elif is_mono:
-                cmd += " --mono"
-            print(cmd)
-            result = subprocess.run(cmd, shell=True)
-            if result.returncode != 0:
-                print(f"Error in converting the PNG to pmtiles")
-                sys.exit(1)
+
+        # # Handle PMTiles conversion
+        # if not args.skip_pmtiles:
+        #     logger.info(f"Creating PMTiles with run_fig2pmtiles...")
+        #     if ul[0] < 0:
+        #         ul0 = f"\\{ul[0]}"
+        #     else:
+        #         ul0 = f"{ul[0]}"
+        #     cmd = f"cartloader run_fig2pmtiles --in-bounds '{ul0},{ul[1]},{lr[0]},{lr[1]}' --in-fig {args.out_prefix}.png --out-prefix {args.out_prefix} --geotif2mbtiles --mbtiles2pmtiles --georeference"
+        #     if args.transparent_below > 0:
+        #         cmd += " --rgba"
+        #     elif is_mono:
+        #         cmd += " --mono"
 
     logger.info("Analysis Completed")
 

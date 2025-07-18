@@ -7,7 +7,7 @@ def parse_arguments(_args):
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", 
                                      description="Write a JSON file to summarize the parameters.")
-    parser.add_argument('--out-dir', required=True, type=str, help='Output directory')
+    parser.add_argument('--out-dir', required=True, type=str, help='Path to the output directory')
     parser.add_argument('--out-json', type=str, default=None, help='Path to the output JSON file. Default: <out-dir>/ficture.params.json')
     parser.add_argument('--in-transcript', type=str, default=None, help='Path to the transcript file.')
     parser.add_argument('--in-feature', type=str, default=None, help='Path to the feature file.')

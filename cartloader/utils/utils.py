@@ -317,7 +317,6 @@ def write_dict_to_file(data, file_path, file_type=None, check_equal=True):
                 return sorted(a) == sorted(b)
         return a == b
 
-    
     # Skip writing if it has an equal file
     existing = load_existing() if check_equal else None
     if check_equal and are_equal(data, existing):
@@ -690,3 +689,42 @@ def smartsort(strings):
     order_mapping = {s: idx for idx, s in enumerate(sorted_strings)}
 
     return sorted_strings, order_mapping
+
+# check if a value is a path or a filename
+def is_path_like(value):
+    return (
+        isinstance(value, str) and (
+            os.path.sep in value or
+            value.startswith((".", "/", "~")) or
+            os.path.dirname(value) != ''
+        )
+    )
+
+def update_and_copy_paths(data, out_dir, skip_keys=[], exe_copy=False):
+    def process_dict(d):
+        for key, value in d.items():
+            if key in skip_keys:
+                continue
+
+            if isinstance(value, dict):
+                process_dict(value)
+            elif is_path_like(value):
+                file_dir = os.path.dirname(os.path.abspath(value))
+                file_name = os.path.basename(value)
+                dest_path = os.path.join(out_dir, file_name)
+
+                # Copy only if source and target directories are different
+                if os.path.abspath(file_dir) != os.path.abspath(out_dir):
+                    if exe_copy:
+                        if not os.path.exists(value):
+                            raise FileNotFoundError(f"File {value} does not exist.")
+                        os.makedirs(out_dir, exist_ok=True)
+                        shutil.copy2(value, dest_path)
+                    else:
+                        print(f"cp {value} {dest_path}")
+
+                # Update value to filename
+                d[key] = file_name
+
+    process_dict(data)
+    return data
