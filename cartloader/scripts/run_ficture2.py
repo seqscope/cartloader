@@ -547,7 +547,7 @@ def run_ficture2(_args):
         cmds = cmd_separator([], f"Summarizing output into to the <out_json> files...")
         cmd = " ".join([
             "cartloader", "write_json_for_ficture2",
-                "--merge",
+                "--merge --merge-override",
                 f"--in-transcript {args.in_transcript}",
                 f"--in-feature {args.in_feature}", # use the original feature file for SGE
                 f"--in-feature-ficture {feature_plain}",
