@@ -552,7 +552,6 @@ def run_ficture2(_args):
                 f"--in-feature {args.in_feature}", # use the original feature file for SGE
                 f"--in-feature-ficture {feature_plain}",
                 f"--in-minmax {args.in_minmax}",
-                f"--out-dir {args.out_dir}",
                 f"--out-json {args.out_json}",
                 " ".join(summary_aux_args)
             ])
