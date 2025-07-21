@@ -4,7 +4,7 @@ import numpy as np
 from scipy.stats import chi2
 
 from cartloader.utils.minimake import minimake
-from cartloader.utils.utils import cmd_separator, scheck_app, create_custom_logger, flexopen, unquote_str, smartsort, write_dict_to_file
+from cartloader.utils.utils import cmd_separator, scheck_app, create_custom_logger, flexopen, unquote_str, smartsort, write_dict_to_file, load_file_to_dict
 
 def parse_arguments(_args):
     """
@@ -21,15 +21,15 @@ def parse_arguments(_args):
     cmd_params.add_argument('--summary', action='store_true', default=False, help='Generate a JSON file summarizing parameters and output paths.')
     cmd_params.add_argument('--update-catalog', action='store_true', default=False, help='Update the YAML files')
 
-    inout_params = parser.add_argument_group("Input/Output Parameters", "Input/output directory/files.")
-    inout_params.add_argument('--indir', type=str, help='Input directory containing the Xenium Ranger output files')
+    inout_params = parser.add_argument_group("Input/Output Parameters", """
+                                             Input/output directory/files. There are two ways to specify the input files. 
+                                             One is to use --in-json to provide the paths. 
+                                             The other is to use --indir with auxiliary input parameters (--csv-cells, --csv-boundaries, --csv-clust, --csv-diffexp) to specify input paths """)
+    inout_params.add_argument('--in-json', type=str, help="Provide a json file specified the path for the cells, boundaries, cluster, diffexp")
+    inout_params.add_argument('--indir', type=str, help='Input directory containing the Xenium Ranger output files. If --in-json is specified, skip this argument')
     inout_params.add_argument('--outprefix', type=str, help='Prefix of output files')
     inout_params.add_argument('--id', type=str, help='Identifier of the factor')
     inout_params.add_argument('--name', type=str, help='Name of the factor')
-
-    key_params = parser.add_argument_group("Key Parameters", "Key parameters frequently used by users")
-    key_params.add_argument('--log', action='store_true', default=False, help='Write log to file')
-    key_params.add_argument('--log-suffix', type=str, default=".log", help='The suffix for the log file (appended to the output directory). Default: .log')
 
     conv_params = parser.add_argument_group("Parameters for pmtiles conversion")
     conv_params.add_argument('--min-zoom', type=int, default=10, help='Minimum zoom level')
@@ -39,9 +39,11 @@ def parse_arguments(_args):
     conv_params.add_argument('--preserve-point-density-thres', type=int, default=1024, help='Threshold for preserving point density in PMTiles')
 
     run_params = parser.add_argument_group("Run Options", "Run options for GNU Make")
-    run_params.add_argument('--restart', action='store_true', default=False, help='Restart the run. Ignore all intermediate files and start from the beginning')
-    run_params.add_argument('--n-jobs', type=int, default=1, help='Number of jobs (processes) to run in parallel')
+    # run_params.add_argument('--restart', action='store_true', default=False, help='Restart the run. Ignore all intermediate files and start from the beginning')
+    # run_params.add_argument('--n-jobs', type=int, default=1, help='Number of jobs (processes) to run in parallel')
     run_params.add_argument('--threads', type=int, default=4, help='Maximum number of threads per job (for tippecanoe)')
+    run_params.add_argument('--log', action='store_true', default=False, help='Write log to file')
+    run_params.add_argument('--log-suffix', type=str, default=".log", help='The suffix for the log file (appended to the output directory). Default: .log')
 
     aux_params = parser.add_argument_group("Auxiliary Parameters", "Auxiliary parameters (using default is recommended)")
     aux_params.add_argument('--catalog-yaml', type=str, help='YAML file to be updated when --yaml is specified')
@@ -91,11 +93,30 @@ def import_xenium_output(_args):
         if not os.path.exists(args.tmp_dir):
             os.makedirs(args.tmp_dir, exist_ok=True)
 
+    # read injson if provided 
+    if args.in_json is not None:
+        assert os.path.exists(args.in_json), f"The input json file doesn't exist: {args.in_json}"
+        cellbounds=load_file_to_dict(args.in_json)
+    else:
+        cellbounds={
+            "CELL": f"{args.indir}/{args.csv_cells}",
+            "BOUND": f"{args.indir}/{args.csv_boundaries}",
+            "CLUST": f"{args.indir}/{args.csv_clust}",
+            "DE": f"{args.indir}/{args.csv_diffexp}",
+            # "MEX": f"{args.indir}/{args.csv_clust}",
+        }
+
+    clust_f=cellbounds.get("CLUST", None)
+    assert os.path.exists(clust_f), f"The input cluster file doesn't exist {clust_f}"
+
+    # parquet-tools csv /net/1000g/hmkang/data/umst_all/10x_xenium/Xenium_V1_hKidney_nondiseased_section_outs/transcripts.parquet |  gzip -c > ./tissue_positions.csv.gz
+
+
     ## read cluster information 
-    logger.info(f"Reading the cell cluster information from {args.indir}/{args.csv_clust}")
+    logger.info(f"Reading the cell cluster information from {clust_f}")
     bcd2cluster = {}
     cluster2cnt = {}
-    with flexopen(f"{args.indir}/{args.csv_clust}", "rt") as f:
+    with flexopen(clust_f, "rt") as f:
         for line in f:
             if line.startswith("Barcode"):
                 continue
@@ -113,9 +134,12 @@ def import_xenium_output(_args):
     
     # Process segmented calls 
     if args.cells:
+        cells_f=cellbounds.get("CELL", None)
+        assert os.path.exists(cells_f), f"The input cells file doesn't exist {cells_f}"
+
         ## read the cell boundary CSV files
-        logger.info(f"Reading the cell CSV file {args.indir}/{args.csv_cells}")
-        with flexopen(f"{args.indir}/{args.csv_cells}", "rt") as f:
+        logger.info(f"Reading the cell CSV file {cells_f}")
+        with flexopen(cells_f, "rt") as f:
             with flexopen(f"{args.outprefix}-cells.csv", "wt") as wf:
                 wf.write(",".join(["lon","lat","cell_id","count","topK"]) + "\n")
                 reader = csv.DictReader(f)
@@ -140,9 +164,12 @@ def import_xenium_output(_args):
             logger.info("PMTiles creation command completed successfully")
 
         ## read DE results
-        logger.info(f"Reading the DE results from {args.indir}/{args.csv_diffexp}")
+        de_f=cellbounds.get("DE", None)
+        assert os.path.exists(de_f), f"The input differentially expressed profile file doesn't exist {de_f}"
+
+        logger.info(f"Reading the DE results from {de_f}")
         clust2genes = {}
-        with flexopen(f"{args.indir}/{args.csv_diffexp}", "rt") as f:
+        with flexopen(de_f, "rt") as f:
             hdrs = f.readline().strip().split(",")
             assert hdrs[1] == "Feature Name" ## make sure the header is correct
             for line in f:
@@ -193,9 +220,12 @@ def import_xenium_output(_args):
 
     # Process cell boundaries
     if args.boundaries:
+        bound_f=cellbounds.get("BOUND", None)
+        assert os.path.exists(bound_f), f"The input cell boundary files doesn't exist {bound_f}"
+
         ## read the cell CSV files
-        logger.info(f"Reading the cell CSV file {args.indir}/{args.csv_boundaries}")
-        with flexopen(f"{args.indir}/{args.csv_boundaries}", "rt") as f:
+        logger.info(f"Reading the cell CSV file {bound_f}")
+        with flexopen(bound_f, "rt") as f:
             with flexopen(f"{args.outprefix}-boundaries.geojson", "wt") as wf:
                 current_cell_id = None
                 current_vertices = []

@@ -28,8 +28,9 @@ def parse_arguments(_args):
     inout_params.add_argument('--platform', type=str, choices=["10x_visium_hd", "seqscope", "10x_xenium", "bgi_stereoseq", "cosmx_smi", "vizgen_merscope", "pixel_seq", "nova_st", "generic"], required=True, help='Platform of the raw input file to infer the format of the input file')
     # - input
     inout_params.add_argument('--in-mex', type=str, default=os.getcwd(), help='(10x_visium_hd and seqscope only) Directory path to input files in Market Exchange (MEX) format. Defaults to the current working directory.') # 10x_visium_hd, seqscope 
-    inout_params.add_argument('--in-parquet', type=str, default="tissue_positions.parquet", help='(10x_visium_hd only) Path to the input parquet file for spatial coordinates (default: tissue_positions.parquet)') # 10x_visium_hd
-    inout_params.add_argument('--in-csv', type=str, default=None, help='(10x_xenium, bgi_stereoseq, cosmx_smi, vizgen_merscope, pixel_seq, and nova_st only) Path to the input raw CSV/TSV file (default: None).') # 10x_xenium, bgi_stereoseq, cosmx_smi, vizgen_merscope, pixel_seq, and nova_st
+    inout_params.add_argument('--in-parquet', type=str, default="tissue_positions.parquet", help='(10x_visium_hd and 10x_xenium only) For 10X Visium HD platform, specify to path to the input parquet file for spatial coordinates (default: tissue_positions.parquet). For 10X Xenium, if the input transcript file is in parquet format, specify its path here and skip --in-csv (default: None)') # 10x_visium_hd
+    inout_params.add_argument('--in-csv', type=str, default=None, help='(10x_xenium, bgi_stereoseq, cosmx_smi, vizgen_merscope, pixel_seq, and nova_st only) Path to the input raw CSV/TSV file if raw CSV/TSV file exists(default: None).') # 10x_xenium, bgi_stereoseq, cosmx_smi, vizgen_merscope, pixel_seq, and nova_st
+    inout_params.add_argument('--in-json', type=str, default=None, help='(Under development) Use a JSON file to provide the input file. Currently only support 10x_xenium...')
     inout_params.add_argument('--units-per-um', type=float, default=1.00, help='Coordinate unit per um in the input files (default: 1.00). Alternatively, for 10x Visium HD, skip --units-per-um and use --scale-json to auto-compute.')  
     inout_params.add_argument('--scale-json', type=str, default=None, help="(10x_visium_hd only) Path to a scale json file for calculating --units-per-um (default: None; Typical naming convention: scalefactors_json.json)") # 10x_visium_hd
     # - output
@@ -177,6 +178,8 @@ def convert_visiumhd(cmds, args):
     ## output: out_transcript, out_minmax, out_feature
     tmp_parquet = f"{args.out_dir}/tissue_positions.csv.gz"
     # * --in_parquet: convert parquet to csv
+    if args.parquet is None:
+        args.parquet = "tissue_positions.parquet"
     cmds.append(f"{args.parquet_tools} csv {args.in_parquet} |  {args.gzip} -c > {tmp_parquet}")
     # * --scale_json: if applicable
     if args.scale_json is not None:
@@ -263,17 +266,13 @@ def convert_tsv(cmds, args):
     # output: out_transcript, out_minmax, out_feature
     #  * update csv_colname_*  and csv_delim based on the platform
     args = update_csvformat_by_platform(args)
-    #print(args)
     #  * 10x_xenium: update default value for the phred score filtering 
     if args.platform == "10x_xenium":
         if args.csv_colname_phredscore is None:
             args.csv_colname_phredscore = "qv"
         if args.min_phred_score is None:
             args.min_phred_score = 20
-    # * no need to check --csv-colnames-count has the same number as --colnames-count (for spme platform, no need to provide --csv-colnames-count)
-    # if len(args.csv_colnames_count.split(",")) != len(args.colnames_count.split(",")):
-    #     raise ValueError(f"The number of columns in --csv-colnames-count ({args.csv_colnames_count}) should be the same as the number of columns in --colnames-count ({args.colnames_count}).")
-    # main commands
+
     transcript_tsv = args.out_transcript.replace(".gz", "")
     format_cmd=f"cartloader format_generic --input {args.in_csv} --out-dir {args.out_dir} --out-transcript {transcript_tsv} --out-feature {args.out_feature} --out-minmax {args.out_minmax}"
     # aux args
@@ -395,6 +394,16 @@ def sge_convert(_args):
     # mm
     mm = minimake()
 
+    #  * 10x_xenium: convert parquet to csv
+    if args.platform == "10x_xenium":
+        if args.in_parquet is not None and args.in_csv is not None:
+            raise ValueError("For 10X Xenium, you can only provide input transcript file using --in-parquet or --in-csv")
+        if args.in_parquet is not None:
+            cmds = cmd_separator([], f"Converting input parquet into a csv file : (platform: {args.platform})...")
+            args.in_csv = f"{args.out_dir}/transcripts.parquet.csv.gz"
+            cmds.append(f"{args.parquet_tools} csv {args.in_parquet} |  {args.gzip} -c > {args.in_csv}")
+            mm.add_target(args.in_csv, [args.in_parquet], cmds) 
+
     # sge_convert
     sge_convert_flag = os.path.join(args.out_dir, "sge_convert.done")
 
@@ -406,7 +415,7 @@ def sge_convert(_args):
     elif args.platform in ["10x_xenium", "cosmx_smi", "bgi_stereoseq", "vizgen_merscope", "pixel_seq", "nova_st", "generic"]:
         cmds = convert_tsv(cmds, args)
     cmds.append(f"[ -f {out_transcript_f} ] && [ -f {out_feature_f} ] && [ -f {out_minmax_f} ] && touch {sge_convert_flag}")
-    mm.add_target(sge_convert_flag, in_raw_filelist, cmds) 
+    mm.add_target(sge_convert_flag, in_raw_filelist, cmds)
 
     sge_assets={
         "transcript": out_transcript_f,
