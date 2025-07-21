@@ -324,6 +324,7 @@ def run_cartload2(_args):
         train_targets.append(f"{out_train_prefix}.alldone")
 
     ## Join pixel-level TSVs
+    molecules_f = in_molecules
     if ( len(join_pixel_tsvs) > 0 ):
         cmds = cmd_separator([], f"Pasting pixel-level TSVs")
         out_join_pixel_prefix = f"{args.out_dir}/transcripts_pixel_joined"
@@ -347,13 +348,14 @@ def run_cartload2(_args):
         )
         cmds.append(cmd)
         cmds.append(f"{args.gzip} -f {out_join_pixel_prefix}.tsv")
-        mm.add_target(f"{out_join_pixel_prefix}.tsv.gz", [in_molecules], cmds)
+        mm.add_target(f"{out_join_pixel_prefix}.tsv.gz", [in_molecules] + join_pixel_tsvs, cmds)
+        molecules_f = f"{out_join_pixel_prefix}.tsv.gz"
 
     ## run tsv2pmtiles for the convert the joined pixel-level TSV to PMTiles
     cmds = cmd_separator([], f"Converting the joined pixel-level TSV to PMTiles")
     cmd = " ".join([
         "cartloader", "run_tsv2pmtiles",
-        "--in-molecules", f"{out_join_pixel_prefix}.tsv.gz",
+        "--in-molecules", molecules_f,
         "--in-features", in_features,
         "--out-prefix", f"{out_molecules_prefix}",
         "--threads", str(args.threads),
@@ -372,7 +374,7 @@ def run_cartload2(_args):
         "--keep-intermediate-files" if args.keep_intermediate_files else ""
     ])
     cmds.append(cmd)
-    mm.add_target(f"{out_molecules_prefix}_pmtiles_index.tsv", [f"{out_join_pixel_prefix}.tsv.gz"], cmds)
+    mm.add_target(f"{out_molecules_prefix}_pmtiles_index.tsv", [molecules_f], cmds)
 
     cmds = cmd_separator([], f"Finishing up for all conversions")
     cmds.append(f"touch {args.out_dir}/ficture.done")
