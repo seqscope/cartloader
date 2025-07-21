@@ -214,7 +214,6 @@ def run_ficture2(_args):
 
     # 1. tiling :
     tile_flag = f"{args.out_dir}/transcripts.tiled.done"
-    feature_nohdr_flag = tile_flag
     if args.tile:
         scheck_app(args.gzip)
         cmds = cmd_separator([], f"Creating tiled tsv from {os.path.basename(args.in_transcript)}...")
@@ -237,44 +236,48 @@ def run_ficture2(_args):
         if args.in_minmax is None: ## specify minmax file if not provided
             args.in_minmax = os.path.join(args.out_dir, "transcripts.tiled.coord_range.tsv")
         
-        # feature file
+        cmds.append(f"[ -f {args.out_dir}/transcripts.tiled.tsv ] && [ -f {args.out_dir}/transcripts.tiled.index ] && touch {args.out_dir}/transcripts.tiled.done" )
+        mm.add_target(f"{args.out_dir}/transcripts.tiled.done", [args.in_transcript], cmds)
+
+        # Prepare the feature file (Note: No filtering is applied here)
         if args.in_feature_ficture is not None:
             in_feature_ficture = args.in_feature_ficture
         else:
             in_feature_ficture = args.in_feature
         
-        ## Features step 1. write the feature file from the tiled SGE
         if in_feature_ficture is not None:
-            ## if a specific feature file is provided, use it as "selected features" for FICTURE analysis
+            ## if a specific feature file is provided, use it as "selected features" for FICTURE analysis            
             assert os.path.exists(in_feature_ficture), f"The current feature file for FICTURE analysis does not exist: {in_feature_ficture}"
-            
-            # create a feature without header
             feature_nohdr = f"{args.out_dir}/transcripts.tiled.selected_features.tsv"       
-            if in_feature_ficture.lower().endswith(".gz"):
-                cmds.append(f"""gzip -dc {in_feature_ficture} | tail -n +2 | awk -v min_ct={args.min_ct_per_feature} -F'\\t' '{{count = $(NF); if (count >= min_ct) print $1"\\t"count;}}' > {feature_nohdr}""")
-            else:
-                cmds.append(f"""tail -n +2 {in_feature_ficture}| awk -v min_ct={args.min_ct_per_feature} -F'\\t' '{{count = $(NF); if (count >= min_ct) print $1"\\t"count;}}' > {feature_nohdr}""")
-        
-            # plain file 
             feature_plain = f"{args.out_dir}/transcripts.tiled.selected_features.hdr.tsv"
+
+            cmds = cmd_separator([], f"Preparing a feature file for FICTURE from a specified feature file: {in_feature_ficture}")
+
+            # create a feature without header 
+            if in_feature_ficture.lower().endswith(".gz"):
+                cmds.append(f"""gzip -dc {in_feature_ficture} | tail -n +2 | awk -F'\\t' '{{print $1"\\t"$(NF);}}' > {feature_nohdr}""")
+            else:
+                cmds.append(f"""tail -n +2 {in_feature_ficture} | awk -F'\\t' '{{print $1"\\t"$(NF);}}' > {feature_nohdr}""")
+            
+            # plain file 
             cmds.append(f'echo -e "{args.colname_feature}\\t{args.colname_count}" > {feature_plain}')
             cmds.append(f"cat {feature_nohdr} >> {feature_plain}")
-
-        else: 
-            ## if feature file is not provided, create one from the input transcript file
-
-            # use transcripts.tiled.features.tsv from pts2tiles
-            feature_nohdr = f"{args.out_dir}/transcripts.tiled.features.tsv"
-
-            # plain
-            feature_plain = f"{args.out_dir}/transcripts.tiled.features.hdr.tsv"
-            cmds.append(f"(echo {args.colname_feature} {args.colname_count} | tr ' ' '\\t'; cat {feature_nohdr};) > {feature_plain}")
             
+            mm.add_target(feature_plain, [in_feature_ficture], cmds)
+        else: 
+            ## if feature file is not provided, create transcripts.tiled.features.tsv from pts2tiles
+            feature_nohdr = f"{args.out_dir}/transcripts.tiled.features.tsv"
+            feature_plain = f"{args.out_dir}/transcripts.tiled.features.hdr.tsv"
+
+            cmds = cmd_separator([], f"Preparing a feature file for FICTURE using the feature file from pts2tiles: {feature_nohdr}")
+            # plain file 
+            cmds.append(f"(echo {args.colname_feature} {args.colname_count} | tr ' ' '\\t'; cat {feature_nohdr};) > {feature_plain}")
+            mm.add_target(feature_plain, [tile_flag], cmds)
+
             # update the args.in_feature
             args.in_feature = feature_plain
 
-        cmds.append(f"[ -f {args.out_dir}/transcripts.tiled.tsv ] && [ -f {args.out_dir}/transcripts.tiled.index ] && [ -f  {feature_plain} ] && [ -f {feature_nohdr} ] && touch {args.out_dir}/transcripts.tiled.done" )
-        mm.add_target(f"{args.out_dir}/transcripts.tiled.done", [args.in_transcript], cmds)
+        
         
         # #  Features step 2. generate overlapping features for FICTURE analysis (optional only if the input SGE is stitched SGE)
         # if args.filter_by_overlapping_features:
@@ -290,7 +293,7 @@ def run_ficture2(_args):
         #                                 f"--log"
         #                                 ])
         #     cmds.append(cmd)
-        #     mm.add_target(feature_overlapping_plain, [args.in_feature_dist, feature_nohdr_flag], cmds)
+        #     mm.add_target(feature_overlapping_plain, [args.in_feature_dist, feature_plain], cmds)
             
         #     feature_overlapping_nohdr = os.path.join(args.out_dir, "transcripts.tiled.overlapping_features.tsv") if args.min_ct_per_ftr_tile == 0 else os.path.join(args.out_dir, f"transcripts.tiled.overlapping_features.min{args.min_ct_per_ftr_tile}.tsv")
         #     cmds = cmd_separator([], f"Generating feature without header for overlapping features...")
@@ -299,7 +302,7 @@ def run_ficture2(_args):
             
         #     feature_plain = feature_overlapping_plain
         #     feature_nohdr = feature_overlapping_nohdr
-        #     feature_nohdr_flag = feature_overlapping_nohdr
+        #     feature_plain = feature_overlapping_nohdr
 
     # 2. segment
     if args.segment:
@@ -329,7 +332,7 @@ def run_ficture2(_args):
             cmds.append(f"{args.sort} -S {args.sort_mem} -k 1,1 {hexagon_prefix}.tsv > {hexagon_prefix}.randomized.tsv")
             cmds.append(f"rm -f {hexagon_prefix}.tsv")
             cmds.append(f"[ -f {hexagon_prefix}.randomized.tsv ] && [ -f {hexagon_prefix}.json ] && touch {hexagon_prefix}.done" )
-            mm.add_target(f"{hexagon_prefix}.done", [f"{args.out_dir}/transcripts.tiled.done", feature_nohdr_flag], cmds)
+            mm.add_target(f"{hexagon_prefix}.done", [f"{args.out_dir}/transcripts.tiled.done", feature_plain], cmds)
 
     # 3. lda
     if args.init_lda:
@@ -387,7 +390,7 @@ def run_ficture2(_args):
             #cmds.append(f"rm -f {model_prefix}.unsorted.model.tsv {model_prefix}.unsorted.results.tsv {model_prefix}.unsorted.results.nohex.tsv")
             cmds.append(f"rm -f {model_prefix}.unsorted.model.tsv {model_prefix}.unsorted.results.tsv")
             cmds.append(f"[ -f {lda_fit_tsv}.gz ] && [ -f {lda_model_matrix} ] && touch {model_prefix}.done" )
-            mm.add_target(f"{model_prefix}.done", [f"{args.out_dir}/transcripts.tiled.done", f"{args.out_dir}/hexagon.d_{train_width}.done", feature_nohdr_flag], cmds)
+            mm.add_target(f"{model_prefix}.done", [f"{args.out_dir}/transcripts.tiled.done", f"{args.out_dir}/hexagon.d_{train_width}.done", feature_plain], cmds)
 
             # create color table
             cmds = cmd_separator([], f"Generate the color map ")
@@ -507,7 +510,7 @@ def run_ficture2(_args):
             mm.add_target(f"{decode_prefix}.png", [decode_summary_flag, color_map], cmds)
 
     if args.summary:
-        prerequisities=[feature_nohdr_flag] # since feature_nohdr and feature_plain are generated at the same step, use feature_nohdr_flag as the prerequisite for feature_plain
+        prerequisities=[feature_plain] 
         summary_aux_args=[]
         # lda or external model
         if args.init_lda:
