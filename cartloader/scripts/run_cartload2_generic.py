@@ -165,7 +165,9 @@ def run_cartload2_generic(_args):
             "--keep-intermediate-files" if args.keep_intermediate_files else ""
         ])
         cmds.append(cmd)
-        mm.add_target(f"{args.out_dir}/sge-mono-dark.pmtiles.done", [in_molecules, in_minmax], cmds)
+        tsv2mono_flag = f"{args.out_dir}/sge-mono.done" # Update: Use a flag to make sure both light and dark pmtiles are done 
+        cmds.append(f"[ -f {args.out_dir}/sge-mono-dark.pmtiles.done ] && [ -f {args.out_dir}/sge-mono-light.pmtiles.done ] && touch {tsv2mono_flag}")
+        mm.add_target(tsv2mono_flag, [in_molecules, in_minmax], cmds)
 
     ## 3. deploy FICTURE results
     join_pixel_tsvs = []
@@ -412,7 +414,7 @@ def run_cartload2_generic(_args):
     if args.fic_dir:
         prerequisites_yaml.append(out_assets_f)
     if not args.skip_raster:
-        prerequisites_yaml.append(f"{args.out_dir}/sge-mono-dark.pmtiles.done")
+        prerequisites_yaml.append(tsv2mono_flag)
     if args.background_assets:
         prerequisites_yaml.extend(args.background_assets)
     if args.cell_assets:

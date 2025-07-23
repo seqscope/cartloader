@@ -155,7 +155,10 @@ def run_cartload2(_args):
             "--keep-intermediate-files" if args.keep_intermediate_files else ""
         ])
         cmds.append(cmd)
-        mm.add_target(f"{args.out_dir}/sge-mono-dark.pmtiles.done", [in_molecules, in_minmax], cmds)
+        
+        tsv2mono_flag = f"{args.out_dir}/sge-mono.done" # Update: Use a flag to make sure both light and dark pmtiles are done 
+        cmds.append(f"[ -f {args.out_dir}/sge-mono-dark.pmtiles.done ] && [ -f {args.out_dir}/sge-mono-light.pmtiles.done ] && touch {tsv2mono_flag}")
+        mm.add_target(tsv2mono_flag, [in_molecules, in_minmax], cmds)
 
     ## fic
     in_fic_params = in_data.get("train_params", [])
@@ -409,8 +412,12 @@ def run_cartload2(_args):
     if ( args.desc is not None ):
         cmd += f" --desc {args.desc}"
 
+    prerequisites_yaml=[f"{out_molecules_prefix}_pmtiles_index.tsv", out_assets_f]
+    if not args.skip_raster:
+        prerequisites_yaml.append(tsv2mono_flag)
+    
     cmds.append(cmd)
-    mm.add_target(f"{out_catalog_f}", [f"{out_molecules_prefix}_pmtiles_index.tsv", out_assets_f], cmds)
+    mm.add_target(f"{out_catalog_f}", prerequisites_yaml, cmds)
 
     if len(mm.targets) == 0:
         logging.error("There is no target to run. Please make sure that at least one run option was turned on")
