@@ -12,16 +12,18 @@ from cartloader.scripts.run_fig2pmtiles import get_orientation_suffix, cmds_for_
 # get the current path
 current_path = os.path.realpath(__file__)
 cartloader_dir=os.path.dirname(os.path.dirname(os.path.dirname(current_path)))
-gdal_get_size_script = os.path.join(cartloader_dir, 'cartloader', "utils", "gdal_get_size.sh")
 
 def hist_stitch(_args):
     parser = argparse.ArgumentParser(
         prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}",
         description="""
-        Stitching multiple tif tiles into one tif. 
-        If georeferencing is required, there are two options: 1) set georef=True with ullr in local (per-tile) coordinates and provide --in-offsets; 2) set georef=True with ullr in global coordinates and set --in-offsets=None.
-        If the tiles are already georeferenced with local coordinates, use --in-offsets to adjust positions.
-        If the tiles are already georeferenced with global coordinates, set georef=False and --in-offsets=None.
+        Stitching multiple TIFF tiles into one TIFF file. 
+        If georeferencing is required (set georef=True), choose one of the following options to provide global coordinates:
+            1) Provide local (per-tile) coordinates as ullr using <georef_tsv> or <georef_bounds>, and use --in-offsets to convert them to global coordinates.
+            2) Provide global coordinates directly as ullr using <georef_tsv> or <georef_bounds>, and omit --in-offsets.
+        If the tiles are already georeferenced (georef is not needed; set georef=False):
+            1.	If georeferenced using local coordinates, use --in-offsets to adjust positions.
+            2.	If georeferenced using global coordinates, set georef=False and omit --in-offsets.
         """
     )
     run_params = parser.add_argument_group("Run Options", "Run options")
@@ -31,20 +33,22 @@ def hist_stitch(_args):
     run_params.add_argument('--makefn', type=str, default=None, help='Makefile name. By default, it will be named as hist_stitch_<filename>.mk based on the output file name.')
     
     inout_params = parser.add_argument_group("Input/Output Parameters", "Input/Output Parameters")
-    inout_params.add_argument("--in-tiles", type=str, nargs='*', default=[], help="List of input tiles in the format: <row>,<col>,<path>,<georef>,<georef_tsv>,<georef_bounds>,<rotate>,<vertical_flip>,<horizontal_flip>. "
-                                                                                "<georef> is a boolean indicating if georeferencing is needed. "
-                                                                                "<georef_tsv> is the path to the *.pixel.sorted.tsv.gz from run_ficture to provide georeferenced bounds."
-                                                                                "<georef_bounds> is '<ulx>_<uly>_<lrx>_<lry>' if georeferencing is required. "
-                                                                                "<rotate> is one of 0, 90, 180, 270. <vertical_flip> and <horizontal_flip> are booleans indicating if the image should be flipped vertically or horizontally.")
-    inout_params.add_argument("--output", type=str, help="Output path for the stitched tif file.")
-    inout_params.add_argument("--in-offsets", type=str, default=None, help="Path to the input offsets file, in which the following columns are required: row, col, x_offset, y_offset, units_per_um")
-    inout_params.add_argument("--crop-tile-by-minmax", action='store_true', default=False, help="Crop the tile by minmax.")
-    inout_params.add_argument("--in-minmax", type=str, default=None, help="Required if --crop-tile-by-minmax is enabled. Path to the input minmax file, in which the following columns are required: row, col, global_xmin_um, global_ymin_um, global_xmax_um, global_ymax_um")
-    inout_params.add_argument("--downsize", action='store_true', default=False, help="Downsize the image to a proportion of the original size. This is only for testing purposes.")
-    inout_params.add_argument("--downsize-prop", type=float, default=0.25, help="Downsize proportion (default: 0.25).")
+    inout_params.add_argument("--in-tiles", type=str, nargs='*', default=[], help="List of input tiles in the format: <row>,<col>,<path>,<georef>,<georef_tsv>,<georef_bounds>,<rotate>,<vertical_flip>,<horizontal_flip>."
+                                                                                "<georef>: Boolean flag indicating whether georeferencing is required."
+                                                                                "<georef_tsv>: Path to a *.pixel.sorted.tsv.gz file from run_ficture*, used to determine georeferenced bounds."
+                                                                                "<georef_bounds>: Manual bounding box (ullr) in the format <ulx>_<uly>_<lrx>_<lry> if georeferencing is needed."
+                                                                                "<rotate>: Rotation angle (0, 90, 180, or 270)."
+                                                                                "<vertical_flip> and <horizontal_flip> are booleans indicating if the image should be flipped vertically or horizontally.")
+    inout_params.add_argument("--output", type=str, help="Path to the output stitched TIFF file.")
+    inout_params.add_argument("--in-offsets", type=str, default=None, help="Path to the offsets file. Must contain columns: row, col, x_offset, y_offset, and units_per_um.")
+    inout_params.add_argument("--crop-tile-by-minmax", action='store_true', default=False, help="Enable cropping of tiles using min/max bounds (default: False).")
+    inout_params.add_argument("--in-minmax", type=str, default=None, help="Required if --crop-tile-by-minmax is set. Path to the input min/max file with columns: row, col, global_xmin_um, global_ymin_um, global_xmax_um, global_ymax_um.")
+    inout_params.add_argument("--downsize", action='store_true', default=False, help="Downsize the final image for testing purposes (default: False).")
+    inout_params.add_argument("--downsize-prop", type=float, default=0.25, help="Proportion to downsize the image by (default: 0.25).")
+    
     env_params = parser.add_argument_group("Env Parameters", "Environment parameters, e.g., tools.")
-    env_params.add_argument('--gdal_translate', type=str, default=f"gdal_translate", help='Path to gdal_translate binary')
-    env_params.add_argument('--gdalbuildvrt', type=str, default=f"gdalbuildvrt", help='Path to gdalbuildvrt binary')
+    env_params.add_argument('--gdal_translate', type=str, default=f"gdal_translate", help='Path to gdal_translate binary (default: gdal_translate)')
+    env_params.add_argument('--gdalbuildvrt', type=str, default=f"gdalbuildvrt", help='Path to gdalbuildvrt binary (default: gdalbuildvrt)')
     env_params.add_argument('--srs', type=str, default='EPSG:3857', help='Spatial reference system (default: EPSG:0)')
     args = parser.parse_args(_args)
 

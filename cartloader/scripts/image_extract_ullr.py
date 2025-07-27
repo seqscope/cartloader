@@ -7,7 +7,7 @@ def image_extract_ullr(_args):
     parser = argparse.ArgumentParser(
         prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}",
         description="""
-        Obetain the ullr coordinates of a tif file.
+        Obtain the ullr coordinates of a tif file.
         """
     )
     parser.add_argument("--input", type=str, help="Input tif file.", required=True)
