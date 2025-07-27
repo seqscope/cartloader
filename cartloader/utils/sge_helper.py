@@ -53,9 +53,16 @@ def input_by_platform(args):
             "mex_mtx": os.path.join(args.in_mex, args.mex_mtx),
         }
     elif args.platform in ["10x_xenium", "cosmx_smi", "bgi_stereoseq", "vizgen_merscope", "pixel_seq", "nova_st", "generic"]:
-        in_dict={
-            "in_csv": args.in_csv
-        }
+        if args.in_csv is not None:
+            in_dict={
+                "in_csv": args.in_csv
+            }
+        elif args.in_parquet is not None:
+            in_dict={
+                "in_parquet": args.in_parquet
+            }
+        else:
+            raise ValueError(f"Provide --in-csv or --in-parquet for {args.platform}")
     else:
         raise ValueError(f"Unsupported platform: {args.platform}")
 

@@ -1,4 +1,4 @@
-import sys, os, argparse, logging, subprocess
+import sys, os, argparse, logging, subprocess, inspect
 import pandas as pd
 
 from cartloader.utils.minimake import minimake
@@ -14,7 +14,7 @@ def parse_arguments(_args):
     """
     repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 
-    parser = argparse.ArgumentParser(prog=f"cartloader run_cartload_join", description="Build resources for CartoScope, joining the pixel-level results from FICTURE")
+    parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", description="Build resources for CartoScope, joining the pixel-level results from FICTURE")
 
     run_params = parser.add_argument_group("Run Options", "Run options for FICTURE commands")
     run_params.add_argument('--dry-run', action='store_true', default=False, help='Dry run. Generate only the Makefile without running it')

@@ -28,13 +28,12 @@ def traverse_dict(d, parent_key=''):
     return pairs
 
 def collect_files_from_yaml(catalog_f):
-
     print(f"Extracting input files from catalog file: {catalog_f}")
     with open(catalog_f, "r") as catalog_file:
         catalog = yaml.safe_load(catalog_file)
     catalog_pair=traverse_dict(catalog)
 
-    keys_id = {"id", "title", "name", "model_id", "proj_id", "decode_id"}
+    keys_id = {"id", "title", "name", "model_id", "proj_id", "decode_id", "cells_id"}
     cartload_files = []
     hist_files = []
 
@@ -87,7 +86,6 @@ def upload_aws(_args):
     mm = minimake()
         
     # step 1. Upload cartload files to AWS （all files, except the nonsge in basemaps 
-    cmds=cmd_separator([], f"Uploading cartload files to AWS...")
     # Option 1: use "." to locate the files
     # with open(catalog_f, "r") as catalog_file:
     #     for line in catalog_file:
@@ -102,19 +100,18 @@ def upload_aws(_args):
     # Note, if catalog.yaml file structure changes, this keys_id may need to be updated.
 
     if not args.upload_histology_only:
+        cmds=cmd_separator([], f"Uploading cartload files to AWS...")
         cartload_prerequisites=[os.path.join(args.in_dir, filename) for filename in cartload_files]
         cartload_prerequisites.append(catalog_f)
-
+        
         for filename in cartload_files:
             file_path=os.path.join(args.in_dir, filename)
             s3_file_path = os.path.join(args.s3_dir, filename) 
             cmds.append(f"{args.aws} s3 cp {file_path} {s3_file_path}")
         
-        cmds.append(f"{args.aws} s3 cp  {catalog_f} {s3_catalog_f}")
-
+        cmds.append(f"{args.aws} s3 cp {catalog_f} {s3_catalog_f}")
         cartload_flag=os.path.join(args.in_dir, "cartload.aws.done")
         cmds.append(f"touch {cartload_flag}")
-
         mm.add_target(cartload_flag, cartload_prerequisites, cmds)
 
     # step 2. Upload basemap files to AWS besides cartload

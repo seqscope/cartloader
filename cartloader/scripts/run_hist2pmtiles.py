@@ -1,4 +1,4 @@
-import sys, os, gzip, argparse, logging, warnings, shutil, subprocess, ast, re
+import sys, os, gzip, argparse, logging, warnings, shutil, subprocess, ast, re, inspect
 import pandas as pd
 import numpy as np
 import tifffile, json
@@ -13,8 +13,7 @@ from cartloader.utils.utils import cmd_separator, scheck_app, create_custom_logg
 
 def parse_arguments(_args):
     # [Previous argument parsing code remains the same]
-    parser = argparse.ArgumentParser(prog=f"cartloader transform_aligned_histology", 
-                                   description="Convert Aligned Histology from 10x Xenium or Vizgen MERSCOPE")
+    parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}",  description="Convert Aligned Histology from 10x Xenium or Vizgen MERSCOPE")
 
     # Add existing arguments
     inout_params = parser.add_argument_group("Input/Output Parameters")

@@ -88,6 +88,9 @@ def sge_stitch(_args):
     prerequisities = []
 
     os.makedirs(args.out_dir, exist_ok=True)
+    
+    if args.out_json is None:
+        args.out_json = os.path.join(args.out_dir, "sge_assets.json")
 
     # sge adds on
     tile_indices=[]
@@ -327,8 +330,7 @@ def sge_stitch(_args):
             sys.exit(1)
 
     # write down a json file when execute
-    out_json=os.path.join(args.out_dir, args.out_json)
-    write_dict_to_file(sge_assets, out_json, check_equal=True)
+    write_dict_to_file(sge_assets, args.out_json, check_equal=True)
 
 
 if __name__ == "__main__":

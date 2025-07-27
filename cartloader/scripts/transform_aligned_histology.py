@@ -1,4 +1,4 @@
-import sys, os, gzip, argparse, logging, warnings, shutil, subprocess, ast, re
+import sys, os, gzip, argparse, logging, warnings, shutil, subprocess, ast, re, inspect
 import pandas as pd
 import numpy as np
 import tifffile, json
@@ -11,7 +11,7 @@ def parse_arguments(_args):
     """
     Parse command-line arguments.
     """
-    parser = argparse.ArgumentParser(prog=f"cartloader transform_aligned_histology", description="Convert Aligned Histology from 10x Xenium or Vizgen MERSCOPE")
+    parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", description="Convert Aligned Histology from 10x Xenium or Vizgen MERSCOPE")
 
     inout_params = parser.add_argument_group("Input/Output Parameters", "Define the input file according to the user's needs.")
     inout_params.add_argument('--tif', type=str, required=True, help='Input OME-TIFF file')

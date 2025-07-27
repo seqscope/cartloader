@@ -1,4 +1,4 @@
-import sys, os, gzip, argparse, subprocess
+import sys, os, gzip, argparse, subprocess, inspect
 import pandas as pd
 import numpy as np
 import tifffile
@@ -119,7 +119,7 @@ def parse_arguments(_args):
     """
     Parse command-line arguments.
     """
-    parser = argparse.ArgumentParser(prog=f"cartloader run_fig2pmtiles", description="Convert a figure to pmtiles")
+    parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", description="Convert a figure to pmtiles")
 
     run_params = parser.add_argument_group("Run Options", "Run options for FICTURE commands")
     run_params.add_argument('--dry-run', action='store_true', default=False, help='Dry run. Generate only the Makefile without running it (default: False)')

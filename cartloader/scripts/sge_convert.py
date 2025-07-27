@@ -1,7 +1,7 @@
 import sys, os, argparse, logging,  inspect, json, subprocess
 import pandas as pd
 from cartloader.utils.minimake import minimake
-from cartloader.utils.utils import cmd_separator, scheck_app, add_param_to_cmd, read_minmax, write_dict_to_file
+from cartloader.utils.utils import cmd_separator, scheck_app, add_param_to_cmd, read_minmax, write_dict_to_file, load_file_to_dict
 from cartloader.utils.sge_helper import aux_sge_args, input_by_platform, update_csvformat_by_platform
 from cartloader.scripts.feature_filtering import filter_feature_by_type
 
@@ -45,7 +45,7 @@ def parse_arguments(_args):
     inout_params.add_argument('--sge-visual', action='store_true', default=False, help='Visualize the output SGE. If --filter-by-density, both unfiltered and filtered SGE will be visualized (default: False)')
     inout_params.add_argument('--out-xy', type=str, default="xy.png", help='Output for SGE visualization image (default: xy.png)')
     # - sge json
-    inout_params.add_argument('--out-json',  type=str, default="sge_assets.json", help='Output json summarizing SGE information. (default: sge_assets.json).')
+    inout_params.add_argument('--out-json',  type=str, default=None, help='Output json summarizing SGE information. (default: out_dir/sge_assets.json).')
 
     # AUX input MEX params
     aux_in_mex_params = parser.add_argument_group( "IN-MEX Auxiliary Parameters", "(10x_visium_hd and seqscope only) Auxiliary parameters for input MEX and parquet files. Required if --in-mex is used." )
@@ -94,7 +94,7 @@ def parse_arguments(_args):
     # aux_ftrfilter_params.add_argument('--include-feature-list', type=str, default=None, help='A file containing a list of input genes to be included (feature name of IDs) (default: None)')
     # aux_ftrfilter_params.add_argument('--exclude-feature-list', type=str, default=None, help='A file containing a list of input genes to be excluded (feature name of IDs) (default: None)')
     aux_ftrfilter_params.add_argument('--include-feature-regex', type=str, default=None, help='A regex pattern of feature/gene names to be included (default: None)')
-    aux_ftrfilter_params.add_argument('--exclude-feature-regex', type=str, default=None, help='A regex pattern of feature/gene names to be excluded (default: None)')
+    aux_ftrfilter_params.add_argument('--exclude-feature-regex', type=str, default=None, help='A regex pattern of feature/gene names to be excluded (default: "^(BLANK_|DeprecatedCodeword_|NegCon|UnassignedCodeword_)" for 10_xenium, None for the rest)')
     # aux_ftrfilter_params.add_argument('--include-feature-type-regex', type=str, default=None, help='A regex pattern of feature/gene type to be included (default: None).') # (e.g. protein_coding|lncRNA)
     # aux_ftrfilter_params.add_argument('--csv-colname-feature-type', type=str, default=None, help='The input column name in the input that corresponding to the gene type information, if your input file has gene type information(default: None)')
     # aux_ftrfilter_params.add_argument('--feature-type-ref', type=str, default=None, help='Specify the path to a tab-separated reference file to provide gene type information for each gene per row (default: None)')
@@ -376,6 +376,20 @@ def sge_convert(_args):
     scheck_app(args.gzip)
 
     # input
+    
+    if args.in_json is not None:
+        assert os.path.exists(args.in_json), f"The input json file doesn't exist: {args.in_json}"
+
+        print(f"Loading input files from input JSON {args.in_json}")        
+        raw_data = load_file_to_dict(args.in_json)
+        raw_tx = raw_data["TRANSCRIPT"]
+        if raw_tx.endswith("parquet"):
+            args.in_parquet = raw_tx
+            print(f" * --in-parquet {args.in_parquet}")
+        elif raw_tx.endswith("csv.gz") or raw_tx.endswith("tsv.gz") or raw_tx.endswith("tsv") or raw_tx.endswith("csv"):
+            args.in_csv = raw_tx
+            print(f" * --in-csv {args.in_csv}")
+    
     in_raw_filelist=input_by_platform(args)
 
     # output
@@ -391,6 +405,21 @@ def sge_convert(_args):
     filtered_minmax_f = os.path.join(args.out_dir, f"{args.out_filtered_prefix}.coordinate_minmax.tsv")
     filtered_xy_f = os.path.join(args.out_dir, f"{args.out_filtered_prefix}.{args.out_xy}")
 
+    if args.out_json is None:
+        args.out_json = os.path.join(args.out_dir, "sge_assets.json")
+
+    # params
+    if args.platform == "10x_xenium":
+        if args.exclude_feature_regex is None:
+            # Negative probe patterns:
+            #   BLANK_*
+            #   DeprecatedCodeword_*
+            #   NegControlCodeword_*
+            #   NegControlProbe_*
+            #   UnassignedCodeword_*
+            args.exclude_feature_regex = "^(BLANK_|DeprecatedCodeword_|NegCon|UnassignedCodeword_)"
+            print(f"Update --exclude-feature-regex: {args.exclude_feature_regex }")
+    
     # mm
     mm = minimake()
 
@@ -495,8 +524,7 @@ def sge_convert(_args):
     mm.write_makefile(make_f)
 
     # write down a json file when execute
-    out_json=os.path.join(args.out_dir, args.out_json)
-    write_dict_to_file(sge_assets, out_json, check_equal=True)
+    write_dict_to_file(sge_assets, args.out_json, check_equal=True)
 
     if args.dry_run:
         dry_cmd=f"make -f {make_f} -n {'-B' if args.restart else ''} "
