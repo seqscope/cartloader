@@ -1,4 +1,4 @@
-import sys, os, gzip, argparse, logging, warnings, shutil, subprocess, ast
+import sys, os, gzip, argparse, logging, warnings, shutil, subprocess, ast, inspect
 import pandas as pd
 
 from cartloader.utils.minimake import minimake
@@ -10,7 +10,7 @@ def parse_arguments(_args):
     """
     repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 
-    parser = argparse.ArgumentParser(prog=f"cartloader run_tsv2pmtiles", description="Split and convert transcripts TSV file into pmtiles")
+    parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", description="Split and convert transcripts TSV file into pmtiles")
 
     cmd_params = parser.add_argument_group("Commands", "Commands to run together")
     cmd_params.add_argument('--all', action='store_true', default=False, help='Run all commands (split, convert)')

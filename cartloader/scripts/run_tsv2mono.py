@@ -1,4 +1,4 @@
-import sys, os, gzip, argparse, logging, warnings, shutil, subprocess, ast, re
+import sys, os, gzip, argparse, logging, warnings, shutil, subprocess, ast, re, inspect
 import pandas as pd
 import numpy as np
 
@@ -11,7 +11,7 @@ def parse_arguments(_args):
     """
     repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 
-    parser = argparse.ArgumentParser(prog=f"cartloader run_fig2pmtiles", description="Convert a figure to pmtiles")
+    parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", description="Convert a figure to pmtiles")
 
     cmd_params = parser.add_argument_group("Commands", "Commands to run together")
     cmd_params.add_argument('--main', action='store_true', default=False, help='Run main commands (raster-dark, raster-light)')

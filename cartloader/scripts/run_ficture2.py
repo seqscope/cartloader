@@ -1,11 +1,11 @@
-import sys, os, gzip, argparse, logging, shutil, subprocess
+import sys, os, gzip, argparse, logging, shutil, subprocess, inspect
 import pandas as pd
 from cartloader.utils.minimake import minimake
-from cartloader.utils.utils import cmd_separator, scheck_app, add_param_to_cmd, read_minmax, flexopen
+from cartloader.utils.utils import cmd_separator, scheck_app, add_param_to_cmd, read_minmax, flexopen, write_dict_to_file, load_file_to_dict
 
 def parse_arguments(_args):
     """Parse command-line arguments."""
-    parser = argparse.ArgumentParser(prog=f"cartloader run_ficture2", description="Run FICTURE2")
+    parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", description="Run FICTURE2")
 
     run_params = parser.add_argument_group("Run Options", "Run options for FICTURE commands")
     run_params.add_argument('--dry-run', action='store_true', default=False, help='Dry run. Generate only the Makefile without running it')
@@ -24,7 +24,8 @@ def parse_arguments(_args):
 
     inout_params = parser.add_argument_group("Input/Output Parameters", "Input and output parameters for FICTURE")
     inout_params.add_argument('--out-dir', required=True, type=str, help='Path to output directory')
-    inout_params.add_argument('--out-json', type=str, default=None, help="Path to output JSON file summarizing the ficture parameters (default: <out-dir>/ficture.params.json)")
+    inout_params.add_argument('--out-json', type=str, default=None, help="Path to the output JSON file summarizing the ficture parameters (default: <out_dir>/ficture.params.json)")
+    inout_params.add_argument('--in-json', type=str, default=None, help='(Optional shortcut) Path to an input JSON file which will provide information for --in-transcript, --in-minmax, and --in-feature. If provided, skip --in-transcript, --in-minmax, and --in-feature arguments.')
     inout_params.add_argument('--in-transcript', type=str, default=None, help='Path to the input unsorted transcript-indexed SGE file in TSV format (default: <out-dir>/transcripts.unsorted.tsv.gz)')
     inout_params.add_argument('--in-minmax', type=str, default=None, help='Path to the input coordinate minmax TSV file.')
     inout_params.add_argument('--in-feature', type=str, default=None,  help='Path to the input UMI count per gene TSV file.')
@@ -186,6 +187,19 @@ def run_ficture2(_args):
         args.out_json = os.path.join(args.out_dir, f"ficture.params.json")
 
     # in files
+    ## read in_json if provided 
+    if args.in_json is not None:
+        assert os.path.exists(args.in_json), f"The input json file doesn't exist: {args.in_json}"
+
+        print(f"Loading input files from input JSON {args.in_json}")
+        sge_data=load_file_to_dict(args.in_json)
+        args.in_transcript = sge_data.get("transcript", None)
+        args.in_minmax = sge_data.get("minmax", None)
+        args.in_feature = sge_data.get("feature", None)
+        print(f" * --in-parquet {args.in_transcript}")
+        print(f" * --in-feature {args.in_feature}")
+        print(f" * --in-minmax {args.in_minmax}")
+    
     if args.in_transcript is None:
         args.in_transcript = os.path.join(args.out_dir, "transcripts.unsorted.tsv.gz")
     
@@ -464,7 +478,9 @@ def run_ficture2(_args):
             cmds.append(cmd)
             # compress the decode tsv file
             cmds.append(f"{args.gzip} -f {decode_fit_tsv}")
-            cmds.append(f"[ -f {decode_fit_tsv}.gz ] && [ -f {decode_postcount} ] && touch {decode_flag}" )
+            cmds.append(f"{args.gzip} -f {decode_postcount}")
+
+            cmds.append(f"[ -f {decode_fit_tsv}.gz ] && [ -f {decode_postcount}.gz ] && touch {decode_flag}" )
             mm.add_target(decode_flag, [f"{args.out_dir}/transcripts.tiled.done", f"{model_prefix}.done"], cmds)
 
             # 3) DE/report
@@ -472,7 +488,7 @@ def run_ficture2(_args):
             # - transform-DE
             cmd = " ".join([
                 ficture2de,
-                f"--input {decode_postcount}",
+                f"--input {decode_postcount}.gz", ## TBC can this use .gz file?
                 f"--output {decode_de}",
                 f"--min_ct_per_feature {args.min_ct_per_feature}",
                 f"--max_pval_output {args.de_max_pval}",
@@ -484,7 +500,7 @@ def run_ficture2(_args):
             cmd = " ".join([
                 ficture2report,
                 f"--de {decode_de}",
-                f"--pseudobulk {decode_postcount}",
+                f"--pseudobulk {decode_postcount}.gz",
                 f"--feature_label Feature",
                 f"--color_table {color_map}",
                 f"--output_pref {decode_prefix}"

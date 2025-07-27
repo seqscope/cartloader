@@ -1,4 +1,4 @@
-import sys, os, gzip, argparse, logging, shutil, subprocess
+import sys, os, gzip, argparse, logging, shutil, subprocess, inspect
 import pandas as pd
 from cartloader.utils.minimake import minimake
 from cartloader.utils.utils import cmd_separator, scheck_app, find_major_axis, add_param_to_cmd
@@ -6,7 +6,7 @@ from cartloader.utils.utils import cmd_separator, scheck_app, find_major_axis, a
 
 def parse_arguments(_args):
     """Parse command-line arguments."""
-    parser = argparse.ArgumentParser(prog=f"cartloader run_ficture", description="Run FICTURE")
+    parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", description="Run FICTURE")
 
     run_params = parser.add_argument_group("Run Options", "Run options for FICTURE commands")
     run_params.add_argument('--dry-run', action='store_true', default=False, help='Dry run. Generate only the Makefile without running it')

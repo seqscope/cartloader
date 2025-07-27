@@ -1,4 +1,4 @@
-import sys, os, gzip, argparse, logging, warnings, shutil, subprocess, ast, re
+import sys, os, gzip, argparse, logging, warnings, shutil, subprocess, ast, re, inspect
 import pandas as pd
 import numpy as np
 import tifffile, json
@@ -13,8 +13,7 @@ from cartloader.utils.utils import cmd_separator, scheck_app, create_custom_logg
 
 def parse_arguments(_args):
     # [Previous argument parsing code remains the same]
-    parser = argparse.ArgumentParser(prog=f"cartloader transform_aligned_histology", 
-                                   description="Convert Aligned Histology from 10x Xenium or Vizgen MERSCOPE")
+    parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}",  description="Convert Aligned Histology from 10x Xenium or Vizgen MERSCOPE to a flat image")
 
     # Add existing arguments
     inout_params = parser.add_argument_group("Input/Output Parameters")
@@ -35,6 +34,7 @@ def parse_arguments(_args):
     inout_params.add_argument('--rotate-clockwise', action='store_true', default=False)
     inout_params.add_argument('--rotate-counter', action='store_true', default=False)
     inout_params.add_argument('--high-memory', action='store_true', default=False)
+    inout_params.add_argument('--write-color-mode', action='store_true', default=False,  help='This argument is specifically designed to be used in "cartloader import_image"')
 
     # memory_params = parser.add_argument_group("Memory Management")
     # memory_params.add_argument('--max-memory-gb', type=float, default=4.0,
@@ -315,13 +315,18 @@ def image_ome2png(_args):
         Image.fromarray(output).save(f"{args.out_prefix}.png")
         
         # save the bounds
-        if ul[0] < 0:
-            ul0 = f"\\{ul[0]}"
-        else:
-            ul0 = f"{ul[0]}"
-        
         with open(f"{args.out_prefix}.bounds.csv", 'w') as f:
             f.write(f"{ul[0]},{ul[1]},{lr[0]},{lr[1]}\n")
+
+        # save the color mode 
+        if args.write_color_mode:
+            color_mode = "rgb"
+            if args.transparent_below > 0:
+                color_mode = "rgba"
+            elif is_mono:
+                color_mode = "mono"
+            with open(f"{args.out_prefix}.color.csv", 'w') as f:
+                f.write(f"{color_mode}\n")
 
         # Clean up temporary files
         os.remove(f"{args.out_prefix}_output.npy")

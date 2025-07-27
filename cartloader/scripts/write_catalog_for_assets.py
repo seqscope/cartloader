@@ -1,4 +1,4 @@
-import sys, os, gzip, argparse, logging, warnings, shutil, subprocess, ast, json
+import sys, os, gzip, argparse, logging, warnings, shutil, subprocess, ast, json, inspect
 import pandas as pd
 import yaml
 
@@ -10,7 +10,7 @@ def parse_arguments(_args):
     """
     repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 
-    parser = argparse.ArgumentParser(prog=f"cartloader write_yaml_for_assets", description="Write YAML for all output assets")
+    parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", description="Write YAML for all output assets")
 
     inout_params = parser.add_argument_group("Input/Output Parameters", "Input/output directories and files")
     inout_params.add_argument('--out-catalog', type=str, required=True, help='JSON/YAML file containing the output assets')
@@ -157,8 +157,8 @@ def write_catalog_for_assets(_args):
         if len(args.background_assets)>0:
             for background_assets_f in args.background_assets:
                 ## each backgroudn_assets file should contains only one key:value pair 
-                background_assets=load_file_to_dict(background_assets_f)
-                background_assets=update_and_copy_paths(background_assets, out_dir, skip_keys=[], exe_copy=True)
+                background_assets = load_file_to_dict(background_assets_f)
+                background_assets = update_and_copy_paths(background_assets, out_dir, skip_keys=[], exe_copy=True)
                 basemap_dict.update(background_assets)
                 flags.append(f"{background_assets_f}.done")
             

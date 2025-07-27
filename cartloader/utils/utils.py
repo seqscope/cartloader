@@ -74,6 +74,24 @@ def run_command(command, use_bash=False):
         print(f"Command failed with error:\n{e.stderr}")
         raise
 
+def run_command_w_preq(cmd, prerequisites=[], dry_run=False):
+    if not dry_run:
+        print(f"\n{cmd}\n")
+        # first check if the prerequisites exist
+        if prerequisites:
+            for prereq in prerequisites:
+                if not os.path.exists(prereq):
+                    print(f"Found missing prerequisite: {prereq}.")
+                    sys.exit(1)
+        # execute the command
+        result = subprocess.run(cmd, shell=True)
+        if result.returncode != 0:
+            print(f"Error in executing: {cmd}")
+            sys.exit(1)
+    else:
+        print(f"\n{cmd}\n")
+
+
 # ====
 # sanity check
 # ====
@@ -92,6 +110,11 @@ def scheck_file(file_path):
         sys.exit(1)
     else:
         print(f"Checked: {file_path}")
+
+def scheck_actions(args, arg_names, context=""):
+    if not any(getattr(args, name.lstrip('-').replace('-', '_')) for name in arg_names):
+        readable = ', '.join(arg_names)
+        raise ValueError(f"At least one of [{readable}] must be enabled{f' for {context}' if context else ''}.")
 
 # ====
 # logging
@@ -278,7 +301,63 @@ def load_file_to_dict(file_path, file_type=None):
         raise ValueError("Unsupported file type. Please provide 'json' or 'yaml'/'yml' as file_type.")
 
 ## code suggested by ChatGPT
-def write_dict_to_file(data, file_path, file_type=None, check_equal=True):
+# def write_dict_to_file(data, file_path, file_type=None, check_equal=True, key_order=[]):
+#     """
+#     Write a dictionary to a JSON or YAML file.
+
+#     Parameters:
+#     data (dict): The dictionary to write to the file.
+#     file_path (str): Path to the output file.
+#     file_type (str, optional): The type of the file ('json' or 'yaml'). If None, the type is inferred from the file extension.
+#     check_equal (bool): If True, compare with existing file and skip writing if content is equal.
+
+#     Raises:
+#     ValueError: If the file type is unsupported.
+#     """
+#     if file_type is None:
+#         _, file_extension = os.path.splitext(file_path)
+#         file_type = file_extension.lower()[1:]  # Strip the dot and use the extension
+
+#     def load_existing():
+#         if not os.path.exists(file_path):
+#             return None
+#         with open(file_path, 'r') as file:
+#             if file_type == 'json':
+#                 return json.load(file)
+#             elif file_type in ['yaml', 'yml']:
+#                 return yaml.safe_load(file)
+#         return None
+
+#     def are_equal(a, b):
+#         if isinstance(a, dict) and isinstance(b, dict):
+#             return a == b
+#         elif isinstance(a, list) and isinstance(b, list):
+#             try:
+#                 a_serialized = Counter(json.dumps(i, sort_keys=True) for i in a)
+#                 b_serialized = Counter(json.dumps(i, sort_keys=True) for i in b)
+#                 return a_serialized == b_serialized
+#             except TypeError:
+#                 return sorted(a) == sorted(b)
+#         return a == b
+
+#     # Skip writing if it has an equal file
+#     existing = load_existing() if check_equal else None
+#     if check_equal and are_equal(data, existing):
+#         return  
+
+#     if len(key_order)>0:
+#         data = {key: data[key] for key in key_order if key in data}
+
+#     if file_type == 'json':
+#         with open(file_path, 'w') as file:
+#             json.dump(data, file, indent=4)
+#     elif file_type in ['yaml', 'yml']:
+#         with open(file_path, 'w') as file:
+#             yaml.safe_dump(data, file, default_flow_style=False)
+#     else:
+#         raise ValueError("Unsupported file type. Please provide 'json' or 'yaml'/'yml' as file_type.")
+
+def write_dict_to_file(data, file_path, file_type=None, check_equal=True, default_flow_style=False, sort_keys=False):
     """
     Write a dictionary to a JSON or YAML file.
 
@@ -320,14 +399,14 @@ def write_dict_to_file(data, file_path, file_type=None, check_equal=True):
     # Skip writing if it has an equal file
     existing = load_existing() if check_equal else None
     if check_equal and are_equal(data, existing):
-        return  
+        return
 
     if file_type == 'json':
         with open(file_path, 'w') as file:
-            json.dump(data, file, indent=4)
+            json.dump(data, file, indent=4,)
     elif file_type in ['yaml', 'yml']:
         with open(file_path, 'w') as file:
-            yaml.safe_dump(data, file, default_flow_style=False)
+            yaml.safe_dump(data, file, default_flow_style=default_flow_style, sort_keys=sort_keys)
     else:
         raise ValueError("Unsupported file type. Please provide 'json' or 'yaml'/'yml' as file_type.")
 
@@ -725,6 +804,8 @@ def update_and_copy_paths(data, out_dir, skip_keys=[], exe_copy=False):
 
                 # Update value to filename
                 d[key] = file_name
+            else:
+                raise ValueError("Failed at update_and_copy_paths. The value in the dictionary should be either path or a dictionary.")
 
     process_dict(data)
     return data

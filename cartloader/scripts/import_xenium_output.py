@@ -1,4 +1,4 @@
-import sys, os, gzip, argparse, logging, warnings, shutil, subprocess, ast, csv, yaml
+import sys, os, gzip, argparse, logging, warnings, shutil, subprocess, ast, csv, yaml, inspect
 import pandas as pd
 import numpy as np
 from scipy.stats import chi2
@@ -12,19 +12,19 @@ def parse_arguments(_args):
     """
     repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 
-    parser = argparse.ArgumentParser(prog=f"cartloader import_xenium_output", description="Import cell segmentation results from Xenium Ranger output")
+    parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", description="Import cell segmentation results from Xenium Ranger output")
 
     cmd_params = parser.add_argument_group("Commands", "Commands to run together")
     cmd_params.add_argument('--all', action='store_true', default=False, help='Run all commands (cells, boundaries, summary)')
     cmd_params.add_argument('--cells', action='store_true', default=False, help='Add segmented cells to PMTiles output as factors')
     cmd_params.add_argument('--boundaries', action='store_true', default=False, help='Add segmented cell bounaries to PMTiles output')
     cmd_params.add_argument('--summary', action='store_true', default=False, help='Generate a JSON file summarizing parameters and output paths.')
-    cmd_params.add_argument('--update-catalog', action='store_true', default=False, help='Update the YAML files')
+    cmd_params.add_argument('--update-catalog', action='store_true', default=False, help='Update the YAML files (NOT included in --all)')
 
     inout_params = parser.add_argument_group("Input/Output Parameters", """
                                              Input/output directory/files. There are two ways to specify the input files. 
                                              One is to use --in-json to provide the paths. 
-                                             The other is to use --indir with auxiliary input parameters (--csv-cells, --csv-boundaries, --csv-clust, --csv-diffexp) to specify input paths """)
+                                             The other is to use --indir with auxiliary input parameters (--cells, --csv-boundaries, --csv-clust, --csv-diffexp) to specify input paths """)
     inout_params.add_argument('--in-json', type=str, help="Provide a json file specified the path for the cells, boundaries, cluster, diffexp")
     inout_params.add_argument('--indir', type=str, help='Input directory containing the Xenium Ranger output files. If --in-json is specified, skip this argument')
     inout_params.add_argument('--outprefix', type=str, help='Prefix of output files')
@@ -48,16 +48,19 @@ def parse_arguments(_args):
     aux_params = parser.add_argument_group("Auxiliary Parameters", "Auxiliary parameters (using default is recommended)")
     aux_params.add_argument('--catalog-yaml', type=str, help='YAML file to be updated when --yaml is specified')
     aux_params.add_argument('--col-rename', type=str, nargs='+', help='Columns to rename in the output file. Format: old_name1:new_name1 old_name2:new_name2 ...')
-    aux_params.add_argument('--csv-cells', type=str, default="cells.csv.gz", help='Name of the CSV file containing the cell locations')
+    aux_params.add_argument('--csv-cells', type=str, default="cells.csv.gz", help='Name of the CSV or parquet file containing the cell locations')
     aux_params.add_argument('--csv-boundaries', type=str, default="cell_boundaries.csv.gz", help='Name of the CSV file containing the cell boundary files')
     aux_params.add_argument('--csv-clust', type=str, default="analysis/clustering/gene_expression_graphclust/clusters.csv", help='Name of the CSV file containing the cell clusters')
     aux_params.add_argument('--csv-diffexp', type=str, default="analysis/diffexp/gene_expression_graphclust/differential_expression.csv", help='Name of the CSV file containing the differential expression results')
     aux_params.add_argument('--tsv-cmap', type=str, default=f"{repo_dir}/assets/fixed_color_map_60.tsv", help='Name of the TSV file containing the color map for the cell clusters')
     aux_params.add_argument('--de-max-pval', type=float, default=0.01, help='Maximum p-value threshold for differential expression')
     aux_params.add_argument('--de-min-fc', type=float, default=1.2, help='Minimum fold change threshold for differential expression')
-    aux_params.add_argument('--tippecanoe', type=str, default=f"{repo_dir}/submodules/tippecanoe/tippecanoe", help='Path to tippecanoe binary')
     aux_params.add_argument('--keep-intermediate-files', action='store_true', default=False, help='Keep intermediate output files')
     aux_params.add_argument('--tmp-dir', type=str, help='Temporary directory to be used (default: out-dir/tmp; specify /tmp if needed)')
+
+    env_params = parser.add_argument_group("ENV Parameters", "Environment parameters for the tools")
+    env_params.add_argument('--tippecanoe', type=str, default=f"{repo_dir}/submodules/tippecanoe/tippecanoe", help='Path to tippecanoe binary')
+    env_params.add_argument('--parquet-tools', type=str, default="parquet-tools", help='Path to parquet-tools binary. Required if a parquet file is provided to --csv-cells')
 
     if len(_args) == 0:
         parser.print_help()
@@ -93,24 +96,20 @@ def import_xenium_output(_args):
         if not os.path.exists(args.tmp_dir):
             os.makedirs(args.tmp_dir, exist_ok=True)
 
-    # read injson if provided 
+    # read in_json if provided 
     if args.in_json is not None:
         assert os.path.exists(args.in_json), f"The input json file doesn't exist: {args.in_json}"
         cellbounds=load_file_to_dict(args.in_json)
     else:
         cellbounds={
             "CELL": f"{args.indir}/{args.csv_cells}",
-            "BOUND": f"{args.indir}/{args.csv_boundaries}",
-            "CLUST": f"{args.indir}/{args.csv_clust}",
+            "BOUNDARY": f"{args.indir}/{args.csv_boundaries}",
+            "CLUSTER": f"{args.indir}/{args.csv_clust}",
             "DE": f"{args.indir}/{args.csv_diffexp}",
-            # "MEX": f"{args.indir}/{args.csv_clust}",
         }
 
-    clust_f=cellbounds.get("CLUST", None)
+    clust_f=cellbounds.get("CLUSTER", None)
     assert os.path.exists(clust_f), f"The input cluster file doesn't exist {clust_f}"
-
-    # parquet-tools csv /net/1000g/hmkang/data/umst_all/10x_xenium/Xenium_V1_hKidney_nondiseased_section_outs/transcripts.parquet |  gzip -c > ./tissue_positions.csv.gz
-
 
     ## read cluster information 
     logger.info(f"Reading the cell cluster information from {clust_f}")
@@ -137,9 +136,23 @@ def import_xenium_output(_args):
         cells_f=cellbounds.get("CELL", None)
         assert os.path.exists(cells_f), f"The input cells file doesn't exist {cells_f}"
 
+        if cells_f.endswith(".parquet"):
+            cells_parquet=cells_f
+            cells_csv = os.path.join(out_dir, "cells.csv.gz")
+            par2csv_cmd=f"{args.parquet_tools} csv {cells_parquet} |  gzip -c > {cells_csv}"
+            logger.info(f"Converting {cells_f} from parquet to CSV: {par2csv_cmd}")
+            result = subprocess.run(par2csv_cmd, shell=True, capture_output=True)
+            if result.returncode != 0:
+                logger.error(f"Command {par2csv_cmd}\nfailed with error: {result.stderr.decode()}")
+                sys.exit(1)
+            else:
+                logger.info("Cells format conversion command completed successfully")
+        else:
+            cells_csv = cells_f
+        
         ## read the cell boundary CSV files
-        logger.info(f"Reading the cell CSV file {cells_f}")
-        with flexopen(cells_f, "rt") as f:
+        logger.info(f"Reading the cell CSV file {cells_csv}")
+        with flexopen(cells_csv, "rt") as f:
             with flexopen(f"{args.outprefix}-cells.csv", "wt") as wf:
                 wf.write(",".join(["lon","lat","cell_id","count","topK"]) + "\n")
                 reader = csv.DictReader(f)
@@ -220,7 +233,7 @@ def import_xenium_output(_args):
 
     # Process cell boundaries
     if args.boundaries:
-        bound_f=cellbounds.get("BOUND", None)
+        bound_f=cellbounds.get("BOUNDARY", None)
         assert os.path.exists(bound_f), f"The input cell boundary files doesn't exist {bound_f}"
 
         ## read the cell CSV files
@@ -271,7 +284,7 @@ def import_xenium_output(_args):
         factor_name = out_base if args.name is None else args.name
 
     if args.summary:
-        out_assets_f=f"{args.outprefix}.json"
+        out_assets_f=f"{args.outprefix}_assets.json"
         new_factor = {
             "id": factor_id,
             "name": factor_name,
