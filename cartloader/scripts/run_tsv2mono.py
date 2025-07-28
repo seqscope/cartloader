@@ -35,8 +35,8 @@ def parse_arguments(_args):
     aux_params.add_argument('--gdal_translate', type=str, default=f"gdal_translate", help='Path to gdal_translate binary')
     aux_params.add_argument('--gdaladdo', type=str, default=f"gdaladdo", help='Path to gdaladdo binary')
     aux_params.add_argument('--keep-intermediate-files', action='store_true', default=False, help='Keep intermediate output files')
-    aux_params.add_argument('--transparent-below', type=int, default=1, help='Threshold for transparent pixels below this value for dark background image (default: 1)')
-    aux_params.add_argument('--transparent-above', type=int, default=254, help='Threshold for transparent pixels above this value for light background image (default: 254)')
+    aux_params.add_argument('--transparent-below', type=int, default=0, help='Threshold for transparent pixels below this value for dark background image (default: 0)')
+    aux_params.add_argument('--transparent-above', type=int, default=255, help='Threshold for transparent pixels above this value for light background image (default: 255)')
     
     run_params = parser.add_argument_group("Run Options", "Run options for FICTURE commands")
     run_params.add_argument('--restart', action='store_true', default=False, help='Restart the run. Ignore all intermediate files and start from the beginning')
@@ -140,8 +140,8 @@ def run_tsv2mono(_args):
     cmds_dark.append(f"{cmd_mbt} {args.out_prefix}-dark.pmtiles.tif {args.out_prefix}-dark.pmtiles.mbtiles")
     cmds_light.append(f"{cmd_mbt} {args.out_prefix}-light.pmtiles.tif {args.out_prefix}-light.pmtiles.mbtiles")
 
-    cmds_dark.append(f"'{args.gdaladdo}' {args.out_prefix}-dark.pmtiles.mbtiles -r {args.resample.lower()} 2 4 8 16 32 64 128 256 512 1024 2048")
-    cmds_light.append(f"'{args.gdaladdo}' {args.out_prefix}-light.pmtiles.mbtiles -r {args.resample.lower()} 2 4 8 16 32 64 128 256 512 1024 2048")
+    cmds_dark.append(f"'{args.gdaladdo}' {args.out_prefix}-dark.pmtiles.mbtiles -r {args.resample.lower()} 2 4 8 16 32 64 128 256 512 1024 2048 4096 8192")
+    cmds_light.append(f"'{args.gdaladdo}' {args.out_prefix}-light.pmtiles.mbtiles -r {args.resample.lower()} 2 4 8 16 32 64 128 256 512 1024 2048 4096 8192")
 
     cmds_dark.append(f"'{args.pmtiles}' convert --force {args.out_prefix}-dark.pmtiles.mbtiles {args.out_prefix}-dark.pmtiles")
     cmds_light.append(f"'{args.pmtiles}' convert --force {args.out_prefix}-light.pmtiles.mbtiles {args.out_prefix}-light.pmtiles")
