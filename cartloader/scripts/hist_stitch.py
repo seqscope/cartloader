@@ -42,6 +42,7 @@ def hist_stitch(_args):
     inout_params.add_argument("--in-minmax", type=str, default=None, help="Required if --crop-tile-by-minmax is enabled. Path to the input minmax file, in which the following columns are required: row, col, global_xmin_um, global_ymin_um, global_xmax_um, global_ymax_um")
     inout_params.add_argument("--downsize", action='store_true', default=False, help="Downsize the image to a proportion of the original size. This is only for testing purposes.")
     inout_params.add_argument("--downsize-prop", type=float, default=0.25, help="Downsize proportion (default: 0.25).")
+    
     env_params = parser.add_argument_group("Env Parameters", "Environment parameters, e.g., tools.")
     env_params.add_argument('--gdal_translate', type=str, default=f"gdal_translate", help='Path to gdal_translate binary')
     env_params.add_argument('--gdalbuildvrt', type=str, default=f"gdalbuildvrt", help='Path to gdalbuildvrt binary')

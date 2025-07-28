@@ -18,7 +18,7 @@ def sge_tile_coord_transform(_args):
         description="Calculate the offsets and global minmax for each tile SGE"    
     )
     parser.add_argument("--in-tiles", type=str, nargs='*', default=[], help="List of input information in a specific format: <minmax_path>,<row>,<col>.")
-    parser.add_argument('--output', type=str, help='Output subset file name for the coordinate minmax and offset TSV file .') #"coordinate_minmax_per_tile.tsv"
+    parser.add_argument('--output', type=str, help='Output subset file name for the coordinate minmax and offset TSV file .') 
     parser.add_argument("--units-per-um", type=float, default=1.0, help="If --convert-to-um, define the scaling factor for unit conversion from coordinate to um(default: 1.0)")
     parser.add_argument('--log', action='store_true', default=False, help='Write log to file')
     args = parser.parse_args(_args)

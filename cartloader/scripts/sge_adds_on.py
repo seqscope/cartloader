@@ -18,17 +18,17 @@ cartloader sge_adds_on \
 def parse_arguments(_args):
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", 
-                                    description=""" Generate a feature or a minmax file for the SGE in FICTURE-compatible format. """)
+                                    description="""Generate a feature or a minmax file for the SGE in FICTURE-compatible format. """)
     parser.add_argument("--in-transcript", type=str, help="Input file.", required=True)
     parser.add_argument("--chunk-size", type=int, default=10**6, help="Chunk size for processing (default: 10^6).")
     # feature args
-    parser.add_argument("--add-feature", action='store_true', help="Add feature to the input file.")
+    parser.add_argument("--add-feature", action='store_true', help="Create a feature file based on the input file.")
     parser.add_argument("--out-feature", type=str, default=None, help="Output file for feature.")
     parser.add_argument('--colname-feature-name', type=str, default='gene', help='Feature name column (default: gene)')
     parser.add_argument('--colname-feature-id', type=str, default=None, help='Feature ID column (default: None)')
     parser.add_argument("--colnames-count", type=str, default="gn,gt,spl,unspl,ambig", help="Comma-separated column names for count (default: gn,gt,spl,unspl,ambig)")
     # minmax args
-    parser.add_argument("--add-minmax", action='store_true', help="Add minmax to the input file.")
+    parser.add_argument("--add-minmax", action='store_true', help="Create a minmax file based on the input file.")
     parser.add_argument("--out-minmax", type=str, default=None, help="Output file for minmax.")
     parser.add_argument("--mu-scale", type=float, default=1, help="Scale factor for X and Y coordinates (default: 1).")
     parser.add_argument("--colname-x", type=str, default="X", help="X coordinate column name (default: X).")

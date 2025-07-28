@@ -4,13 +4,7 @@ from collections import defaultdict
 import math
 from cartloader.utils.image_helper import update_orient, orient2axisorder
 
-"""
-cartloader sge_orientate --in-transcript /net/1000g/hmkang/weiqiuc/cart/visiumhd-mouse-brain-filtered/sge/transcripts.unsorted.tsv.gz \
-        --out-transcript /net/1000g/hmkang/weiqiuc/sandbox/cartloader_sge_ori/transcripts.test.tsv.gz \
-        --in-minmax /net/1000g/hmkang/weiqiuc/cart/visiumhd-mouse-brain-filtered/sge/coordinate_minmax.tsv \
-        --out-minmax /net/1000g/hmkang/weiqiuc/sandbox/cartloader_sge_ori/coordinate_minmax.test.tsv \
-        --rotate 270
-"""
+
 
 def parse_arguments(_args):
     """Parse command-line arguments."""
