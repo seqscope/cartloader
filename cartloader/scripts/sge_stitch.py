@@ -13,7 +13,6 @@ def sge_stitch(_args):
         description=""""
         Stitching multiple tile SGEs into one SGE.
         Outputs: A transcript-indexed SGE file, a coordinate minmax TSV file, and a feature file counting UMIs per feature. All output are in micro-meter precision.
-
         """
     )
     run_params = parser.add_argument_group("Run Options", "Run options")
@@ -24,7 +23,7 @@ def sge_stitch(_args):
     run_params.add_argument('--threads', type=int, default=1, help='Maximum number of threads to use in each process (default: 1)')
     
     inout_params = parser.add_argument_group("Input/Output Parameters", "Parameters to specify platform, input, output, and units per um, precision, and density-filtering for output.")
-    inout_params.add_argument("--in-tiles", type=str, nargs='*', default=[], help="List of the input tiles in a format of <transcript>,<feature>,<minmax>,<row>,<col>,<rotate>,<vertical_flip>,<horizontal_flip>. ")
+    inout_params.add_argument("--in-tiles", type=str, nargs='*', default=[], help="List of the input SGEs tiles in a format of <transcript>,<feature>,<minmax>,<row>,<col>,<rotate>,<vertical_flip>,<horizontal_flip>. These are referred to as SGE tiles to distinguish them from the combined output SGE. ")
     inout_params.add_argument("--out-dir", type=str, help="Output directory.")
     inout_params.add_argument('--out-transcript', type=str, default="transcripts.unsorted.tsv.gz", help='Output for SGE stitch. File name of the compressed transcript-indexed SGE file in TSV format (default: transcripts.unsorted.tsv.gz).')
     inout_params.add_argument('--out-minmax', type=str, default="coordinate_minmax.tsv", help='Output for SGE stitch. File name of the coordinate minmax TSV file (default: coordinate_minmax.tsv).')
@@ -32,7 +31,7 @@ def sge_stitch(_args):
     inout_params.add_argument('--out-tile-minmax', type=str, default="coordinate_minmax_per_tile.tsv", help='Output for SGE stitch. File name of the coordinate minmax per tile TSV file (default: coordinate_minmax_per_tile.tsv).')
     inout_params.add_argument('--out-json',  type=str, default="sge_assets.json", help='Output json summarizing SGE information. (default: sge_assets.json).')
     inout_params.add_argument('--feature-distribution', action='store_true', default=False, help='Action. Create a file to summarize the feature distribution across the input tiles')
-    inout_params.add_argument('--out-feature-distribution', type=str, default="feature.distribution.tsv.gz", help='Output for --feature-distribution. File name of the output summarizing the feature distribution across the input tiles')
+    inout_params.add_argument('--out-feature-distribution', type=str, default="feature.distribution.tsv.gz", help='Output for --feature-distribution. File name of the output summarizing the feature distribution across the input tiles (default: feature.distribution.tsv.gz)')
     inout_params.add_argument('--filter-by-density', action='store_true', default=False, help='Action. Enable density-filtering for the output SGE(default: False). If enabled, check the density-filtering auxiliary parameters.')
     inout_params.add_argument('--out-filtered-prefix', type=str, default="filtered", help='Output for --filter-by-density. If --filter-by-density, define the prefix for filtered SGE (default: filtered)')
 
@@ -65,12 +64,6 @@ def sge_stitch(_args):
     visual_params.add_argument('--srs', type=str, default='EPSG:3857', help='If --north-up, define the spatial reference system (default: EPSG:3857)')
     visual_params.add_argument('--resample', type=str, default='cubic', help='Define the resampling method (default: cubic). Options: near, bilinear, cubic, etc.')
 
-    # # Overlapping features
-    # overlapftr_params = parser.add_argument_group("Overlapping Features", "Parameters for creating overlapping features across tiles.")
-    # overlapftr_params.add_argument('--list-overlapping-features', action='store_true', default=False, help='List overlapping features across tiles (default: False)')
-    # # overlapftr_params.add_argument('--min-ct-per-ftr-tile', type=int, default=0, help='Apply a minimum count to filter overlapping feature. Filtering process will be applied if --min-ct-per-overlapftr > 0. (default: 0)')
-    # # overlapftr_params.add_argument('--colname-key-count', type=str, default=None, help='When applying --min-ct-per-ftr-tile, specify the count column name for filtering the minimum count. Defaults to --colnames-count if --colnames-count only specifies one column.')
-   
     # env params
     env_params = parser.add_argument_group("ENV Parameters", "Environment parameters for the tools")
     env_params.add_argument('--gzip', type=str, default="gzip", help='Path to gzip binary. For faster processing, use "pigz -p 4".')

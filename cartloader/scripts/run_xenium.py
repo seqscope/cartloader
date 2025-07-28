@@ -13,10 +13,10 @@ def parse_arguments(_args):
     """
     repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 
-    parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", description="Build resources for CartoScope, joining the pixel-level results from FICTURE")
+    parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", description="Process 10X xenium output from Xenium Ranger, and return rastered and tiled sources for CartoScope")
 
     run_params = parser.add_argument_group("Run Options")
-    run_params.add_argument('--dry-run', action='store_true', default=False, help='Dry run. Generate only the Makefile without running it')
+    run_params.add_argument('--dry-run', action='store_true', default=False, help='Dry run mode. If enabled, prints all commands instead of only those that would be executed. Not triggered via the Makefile.')
     run_params.add_argument('--restart', action='store_true', default=False, help='Restart the run. Ignore all intermediate files and start from the beginning')
     run_params.add_argument('--n-jobs', type=int, default=1, help='Number of jobs (processes) to run in parallel')
     run_params.add_argument('--threads', type=int, default=4, help='Maximum number of threads per job (for tippecanoe)')
@@ -33,7 +33,7 @@ def parse_arguments(_args):
     cmd_params.add_argument('--upload-zenodo', action='store_true', default=False, help='Upload output assets into Zenodo')
 
     inout_params = parser.add_argument_group("Input/Output Parameters", "")
-    inout_params.add_argument('--xenium-ranger-dir', type=str, help='(Required if --load-xenium-ranger or --csv-* or --ome-tif) Path to the Xenium Ranger output directory containing transcript, cell, boundary, cluster, and image files.')
+    inout_params.add_argument('--xenium-ranger-dir', type=str, help='(Required if --load-xenium-ranger is enabled or input files are manually provided via --csv-* or --ome-tif) Path to the Xenium Ranger output directory containing transcript, cell, boundary, cluster, and image files.')
     inout_params.add_argument('--root-dir', type=str, help='(Shortcut) Path to a root directory. If set, the paths for --sge-dir, --fic-dir, and --cart-dir default to <root_dir>/sge, <root_dir>/ficture2, and <root_dir>/cartload2.')
     inout_params.add_argument('--xenium-ranger-assets', type=str, default=None, help='Path to a YAML/JSON file to write or read Xenium Ranger asset paths. If --load-xenium-ranger is enabled and this is not provided, defaults to <root_dir>/xenium_ranger_assets.json. Otherwise, specify its path to enable us')
     inout_params.add_argument('--sge-dir', type=str, help='Path to input/output SGE directory to store or to provide SGE and a YAML/JSON file summarizing the path of transcript, feature, and minmax. The file name of this YAML/JSON file is provided via --sge-assets (defaults to <root_dir>/sge).')
@@ -72,24 +72,24 @@ def parse_arguments(_args):
     key_params.add_argument('--zenodo-title', type=str, default=None, help='(Parameters for --upload-zenodo) Title of the deposition. Required if creating a new deposition or the existing deposition does not have a title (defaults to --id)')
     key_params.add_argument('--creators', type=str, nargs='+', default=[], help='(Parameters for --upload-zenodo) List of creators in "Lastname, Firstname" format. Required if creating a new deposition or the existing deposition do not have creator information.')
 
-    aux_xenium_params = parser.add_argument_group("Auxiliary Input File Name Parameters", "Used only if not using --load-xenium-ranger or --xenium-ranger-assets.")
-    aux_xenium_params.add_argument('--csv-transcript', type=str, default="transcripts.csv.gz", help='Name of the CSV or parquet file in the --xenium-ranger-dir, containing coordinates, feature, and expression counts of the transcripts')
-    aux_xenium_params.add_argument('--csv-cells', type=str, default="cells.csv.gz", help='Name of the CSV or parquet file in the --xenium-ranger-dir containing the cell locations')
-    aux_xenium_params.add_argument('--csv-boundaries', type=str, default="cell_boundaries.csv.gz", help='Name of the CSV file in the --xenium-ranger-dir containing the cell boundary files')
-    aux_xenium_params.add_argument('--csv-clust', type=str, default="analysis/clustering/gene_expression_graphclust/clusters.csv", help='Name of the CSV file in the --xenium-ranger-dir containing the cell clusters')
-    aux_xenium_params.add_argument('--csv-diffexp', type=str, default="analysis/diffexp/gene_expression_graphclust/differential_expression.csv", help='Name of the CSV file in the --xenium-ranger-dir containing the differential expression results')
-    aux_xenium_params.add_argument('--ome-tifs', type=str, nargs="+", default=[], help="One or more input ome tiffs in the --xenium-ranger-dir.")
+    aux_xenium_params = parser.add_argument_group("Auxiliary Input File Name Parameters", "Used only if neither --load-xenium-ranger is enabled nor an existing assets file is provided via --xenium-ranger-assets.")
+    aux_xenium_params.add_argument('--csv-transcript', type=str, default="transcripts.csv.gz", help='(Parameters for --sge-convert) Location of the CSV or parquet file in the --xenium-ranger-dir. This transcript file should contain at least coordinates, feature names, and expression counts of the transcripts')
+    aux_xenium_params.add_argument('--csv-cells', type=str, default="cells.csv.gz", help='(Parameters for --import-cells) Location of the CSV or Parquet file containing cell locations in the --xenium-ranger-dir (default: cells.csv.gz)')
+    aux_xenium_params.add_argument('--csv-boundaries', type=str, default="cell_boundaries.csv.gz", help='(Parameters for --import-cells) Location of the CSV file containing cell boundary coordinates in the --xenium-ranger-dir (default: cell_boundaries.csv.gz)')
+    aux_xenium_params.add_argument('--csv-clust', type=str, default="analysis/clustering/gene_expression_graphclust/clusters.csv", help='(Parameters for --import-cells) Location of the CSV file containing cell cluster assignments in the --xenium-ranger-dir (default: analysis/clustering/gene_expression_graphclust/clusters.csv)')
+    aux_xenium_params.add_argument('--csv-diffexp', type=str, default="analysis/diffexp/gene_expression_graphclust/differential_expression.csv", help='(Parameters for --import-cells) Location of the CSV file with differential expression results in the --xenium-ranger-dir (default: analysis/diffexp/gene_expression_graphclust/differential_expression.csv)')
+    aux_xenium_params.add_argument('--ome-tifs', type=str, nargs="+", default=[], help="(Parameters for --import-images) List of locations of input ome tiff(s) in the --xenium-ranger-dir.")
 
     env_params = parser.add_argument_group("Env Parameters", "Environment parameters, e.g., tools.")
     # Default settings:
     # * tools will use the PATH: sort, gzip, python3
     env_params.add_argument('--pmtiles', type=str, help='Path to pmtiles binary from go-pmtiles')
-    env_params.add_argument('--gdal_translate', type=str, help='Path to gdal_translate binary')
-    env_params.add_argument('--gdaladdo', type=str, help='Path to gdaladdo binary')
-    env_params.add_argument('--tippecanoe', type=str, help='Path to tippecanoe binary') # default=f"{repo_dir}/submodules/tippecanoe/tippecanoe", 
-    env_params.add_argument('--spatula', type=str, help='Path to spatula binary') # default=f"{repo_dir}/submodules/spatula/bin/spatula",
-    env_params.add_argument('--ficture2', type=str, help='Path to spatula binary') # default=f"{repo_dir}/submodules/spatula/bin/spatula",
-    key_params.add_argument('--aws', type=str, default="aws", help='The path to aws (default: aws)')
+    env_params.add_argument('--gdal_translate', type=str, help='Path to gdal_translate binary (default: gdal_translate)')
+    env_params.add_argument('--gdaladdo', type=str, help='Path to gdaladdo binary (default: gdaladdo)')
+    env_params.add_argument('--tippecanoe', type=str, help='Path to tippecanoe binary (default: <cartloader_dir>/submodules/tippecanoe/tippecanoe)')
+    env_params.add_argument('--spatula', type=str, help='Path to spatula binary (default: spatula)')
+    env_params.add_argument('--ficture2', type=str, default=os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "submodules", "punkst"),  help='Path to punkst(ficture2) repository (default: <cartloader_dir>/submodules/punkst)')
+    env_params.add_argument('--aws', type=str, default="aws", help='The path to aws (default: aws)')
 
 
     if len(_args) == 0:
@@ -420,7 +420,6 @@ def run_xenium(_args):
             f"--upload-type dataset" if not args.zenodo_deposition_id else "", # add type for new deposition
             f"--overwrite" if args.restart else ""
         ])
-        run_command_w_preq(zenodo_cmd, prerequisites=prereq, dry_run=args.dry_run)
         if os.path.exists(zenodo_cartload_flag) and all(os.path.exists(f) for f in zenodo_basemap_flag) and not args.restart:
             print(f" * Skip --upload-zenodo since all flags exists. You can use --restart to force execute this step.")
             print(import_cell_cmd)

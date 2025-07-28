@@ -10,8 +10,9 @@ def sge_combine_tiles(_args):
         prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}",
         description="Combine SGE data by layout. Note the transcript/feature/minmax files should be in the same resolution.",
     )
-    parser.add_argument("--in-tiles", type=str, nargs='*', default=[], help="List of input information in a specific format: <transcript_path>,<feature_path>,<minmax_path>,<row>,<col>.")
-    parser.add_argument('--in-tile-minmax', type=str, default=None, help="Path to the input offsets file, in which the following columns are required: row, col, x_offset_unit, y_offset_unit, global_xmin_um, global_xmax_um, global_ymin_um, global_ymax_um")
+    parser.add_argument("--in-tiles", type=str, nargs='*', default=[], required=True, help="List of input SGE tiles, each in the format: <transcript_path>,<feature_path>,<minmax_path>,<row>,<col>. "
+                                                                            "These are referred to as SGE tiles to distinguish them from the combined output SGE. ")
+    parser.add_argument('--in-tile-minmax', type=str, default=None, help="Path to an input offsets file, in which the following columns are required: row, col, x_offset_unit, y_offset_unit, global_xmin_um, global_xmax_um, global_ymin_um, global_ymax_um")
     parser.add_argument("--out-dir", type=str, help="Output directory.")
     parser.add_argument('--out-transcript', type=str, default="transcripts.unsorted.tsv.gz", help='Output file name for the compressed transcript-indexed SGE file in TSV format (default: transcripts.unsorted.tsv.gz).')
     parser.add_argument('--out-minmax', type=str, default="coordinate_minmax.tsv", help='Output minmax file name for the coordinate minmax TSV file (default: coordinate_minmax.tsv).')
@@ -22,8 +23,8 @@ def sge_combine_tiles(_args):
     parser.add_argument('--colname-feature-id', type=str, default=None, help='Feature ID column (default: None)')
     parser.add_argument('--colname-x', type=str, default="X", help='X column name (default: X)')
     parser.add_argument('--colname-y', type=str, default="Y", help='Y column name (default: Y)')
-    parser.add_argument('--colnames-others', nargs='*', default=[], help='Columns names to keep (e.g., cell_id, overlaps_nucleus) (default: None)')
-    parser.add_argument("--units-per-um", type=float, default=1.0, help="Define the scaling factor for unit conversion from coordinate to um (default: 1.0)")
+    parser.add_argument('--colnames-others', nargs='*', default=[], help='Optional list of column names to retain (e.g., --colnames-others "cell_id" "overlaps_nucleus") (defaults to an empty list)')
+    parser.add_argument("--units-per-um", type=float, default=1.0, help="Scaling factor for unit conversion from coordinate to um (default: 1.0)")
     parser.add_argument("--precision", type=int, default=2, help="Precision for the output minmax and transcript files (default: 2)")
     parser.add_argument('--debug', action='store_true', help='Test mode.')
     parser.add_argument('--log', action='store_true', default=False, help='Write log to file')

@@ -10,7 +10,7 @@ from cartloader.scripts.feature_filtering import map_filter_per_feature
 def format_generic(_args):
     parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", 
                                      description="""
-                                     Standardize Spatial Transcriptomics (ST) datasets from various platforms, including 10X Xenium, BGI Stereoseq, Cosmx SMI, Vizgen Merscope, Pixel-Seq. 
+                                     Standardize Spatial Transcriptomics (ST) datasets in CSV/TSV format.
                                      It will generate output in micrometer precision, including a transcript-indexed SGE file in TSV format, a feature file couning UMIs per gene, and a minmax file for X Y coordinates.
                                      """)
     inout_params = parser.add_argument_group("Input/Output Parameters", "Input/output directory/files.")
