@@ -17,8 +17,8 @@ def parse_arguments(_args):
 
     # Add existing arguments
     inout_params = parser.add_argument_group("Input/Output Parameters")
-    inout_params.add_argument('--tif', type=str, required=True, help='Input OME-TIFF file')
-    inout_params.add_argument('--csv', type=str, help='(Vizgen only) CSV file containing conversion parameters')
+    inout_params.add_argument('--tif', type=str, required=True, help='Path to the input OME-TIFF file')
+    inout_params.add_argument('--csv', type=str, help='(Vizgen only) Path to the input CSV file containing conversion parameters')
     inout_params.add_argument('--out-prefix', type=str, required=True, help='Output file prefix')
     inout_params.add_argument("--page", type=int, help='For 3D (X/Y/Z) OME file, specify the z-value')
     inout_params.add_argument("--level", type=int, default=0, help='Specify the level to extract (default: 0)')
@@ -27,7 +27,7 @@ def parse_arguments(_args):
     inout_params.add_argument("--upper-thres-intensity", type=float, default=255, help='Intensity-based capped value (default: 255)')
     inout_params.add_argument("--lower-thres-quantile", type=float, help='Quantile-based floored value')
     inout_params.add_argument("--lower-thres-intensity", type=float, default=0, help='Intensity-based floored value (default: 0)')
-    inout_params.add_argument("--transparent-below", type=int, default=0, help='Set pixels below this value to transparent (0-255) (default: 0)')
+    inout_params.add_argument("--transparent-below", type=int, default=0, help='Set pixels below this value to transparent (0-255; default:0)')
     inout_params.add_argument("--colorize", type=str, help='Colorize using RGB code as max value')
     inout_params.add_argument('--flip-horizontal', action='store_true', default=False)
     inout_params.add_argument('--flip-vertical', action='store_true', default=False)

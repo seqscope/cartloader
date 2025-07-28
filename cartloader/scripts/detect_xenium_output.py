@@ -161,7 +161,7 @@ def find_valid_path_from_zip(pattern, key, in_dir, unzip_dir, cellbounds, overwr
 
 def detect_xenium_output(_args):
     # Categorized argument groups
-    parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", description="Detect the 10X Xenium files and summarize their location into a json file.")
+    parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", description="Detect the 10X Xenium Ranger output files and summarize their locations into a json file.")
     inout_params = parser.add_argument_group("Input/Output Parameters", "Input/output directory/files. --cell-dir is optional. --fic-dir ")
     inout_params.add_argument('--in-dir', type=str, required=True, help='Path to input directory where Xenium files are located.')
     inout_params.add_argument('--out-json', type=str, required=True, help='Path to the output JSON file that will list all detected files.')

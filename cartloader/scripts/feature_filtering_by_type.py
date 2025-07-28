@@ -37,7 +37,6 @@ def feature_filtering_by_type(_args):
     parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", 
                                         description="""Filter features by gene type using a reference file.
                                         The reference file should contain gene name and gene type information.
-                                        This 
                                         """)
     ftr_params = parser.add_argument_group("Feature Filtering Parameters", "Filtering criteria for features.")
     ftr_params.add_argument('--include-feature-type-regex', type=str, default=None, help='A regex pattern of feature/gene type to be included (default: None). When --include-feature-type-regex, provide --feature-type-ref with either colidx or colname for name and type') # (e.g. protein_coding|lncRNA) # (e.g. protein_coding|lncRNA)
