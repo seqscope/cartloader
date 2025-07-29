@@ -135,12 +135,12 @@ def run_xenium(_args):
     # * Steps that will executed via make file: sge_convert, run_ficture2, import-images, run_cartload2, upload_aws, 
 
     if args.load_xenium_ranger:
-        print("="*10)
-        print("Executing --load-xenium-ranger (execute directly)")
-        print("="*10)
+        print("="*10, flush=True)
+        print("Executing --load-xenium-ranger (execute directly)", flush=True)
+        print("="*10, flush=True)
 
         assert args.xenium_ranger_assets, "Missing --xenium-ranger-assets. Specify the --xenium-ranger-dir or --root-dir to provide its path."
-        print(f" * Xenium Ranger Directory: {args.xenium_ranger_dir}")
+        print(f" * Xenium Ranger Directory: {args.xenium_ranger_dir}", flush=True)
         load_xenium_cmd=" ".join([
                 "cartloader", "detect_xenium_output",
                 f"--in-dir {args.xenium_ranger_dir}",
@@ -148,16 +148,16 @@ def run_xenium(_args):
                 f"--unzip-dir {args.root_dir}/unzip",
             ])
         if os.path.exists(args.xenium_ranger_assets) and not args.restart:
-            print(f" * Skip --load-xenium-ranger since the Xenium Ranger raw input assets file {args.xenium_ranger_assets} already exists. You can use --restart to force execute this step.")
-            print(load_xenium_cmd)
+            print(f" * Skip --load-xenium-ranger since the Xenium Ranger raw input assets file {args.xenium_ranger_assets} already exists. You can use --restart to force execute this step.", flush=True)
+            print(load_xenium_cmd, flush=True)
         else:
-            run_command_w_preq(load_xenium_cmd, prerequisites=[], dry_run=args.dry_run)
+            run_command_w_preq(load_xenium_cmd, prerequisites=[], dry_run=args.dry_run, flush=True)
     
     sge_assets = os.path.join(sge_dir, "sge_assets.json")
     if args.sge_convert:
-        print("="*10)
-        print("Executing --sge-convert (execute via make)")
-        print("="*10)
+        print("="*10, flush=True)
+        print("Executing --sge-convert (execute via make)", flush=True)
+        print("="*10, flush=True)
 
         sge_flag = f"{sge_dir}/sge_convert.done" if not args.filter_by_density else f"{sge_dir}/sge_density_filtering.done"
 
@@ -166,8 +166,8 @@ def run_xenium(_args):
         else:
             prereq = [os.path.join(args.xenium_ranger_dir, args.csv_transcript)]
         
-        print(f" * SGE directory: {sge_dir}")
-        print(f" * Input JSON: {args.xenium_ranger_assets}" if use_json else f"Input CSV: {args.csv_transcript}")
+        print(f" * SGE directory: {sge_dir}", flush=True)
+        print(f" * Input JSON: {args.xenium_ranger_assets}" if use_json else f"Input CSV: {args.csv_transcript}", flush=True)
         sge_convert_cmd = " ".join([
             "cartloader", "sge_convert",
             f"--platform 10x_xenium",
@@ -183,13 +183,13 @@ def run_xenium(_args):
         sge_convert_cmd = add_param_to_cmd(sge_convert_cmd, args, ["spatula", "parquet_tools", "gdalwarp"])
         sge_convert_cmd = add_param_to_cmd(sge_convert_cmd, args, ["restart","n_jobs","threads"])
         
-        run_command_w_preq(sge_convert_cmd, prerequisites=prereq, dry_run=args.dry_run)
+        run_command_w_preq(sge_convert_cmd, prerequisites=prereq, dry_run=args.dry_run, flush=True)
         
     cell_assets = os.path.join(cart_dir, f"{args.cell_id}_assets.json")
     if args.import_cells:
-        print("="*10)
-        print("Executing --import-cells (execute directly)")
-        print("="*10)
+        print("="*10, flush=True)
+        print("Executing --import-cells (execute directly)", flush=True)
+        print("="*10, flush=True)
         
         # Use cell_assets as the target and flag. import_xenium_output is executed directly instead of via Makefile
         assert args.cell_id, "Please specify the --cell-id parameter for importing cells and boundaries"
@@ -224,17 +224,17 @@ def run_xenium(_args):
         ])
 
         if os.path.exists(cell_assets) and not args.restart:
-            print(f" * Skip --import-xenium-output since the Xenium Ranger cell assets file ({cell_assets}) already exists. You can use --restart to force execute this step.")
-            print(import_cell_cmd)
+            print(f" * Skip --import-xenium-output since the Xenium Ranger cell assets file ({cell_assets}) already exists. You can use --restart to force execute this step.", flush=True)
+            print(import_cell_cmd, flush=True)
         else:
-            run_command_w_preq(import_cell_cmd, prerequisites=[], dry_run=args.dry_run)
+            run_command_w_preq(import_cell_cmd, prerequisites=[], dry_run=args.dry_run, flush=True)
     
     background_assets = []
     background_pmtiles = []
     if args.import_images:  ## TBC: currently, only support OME tifs
-        print("="*10)
-        print("Executing --import-images (execute via make)")
-        print("="*10)
+        print("="*10, flush=True)
+        print("Executing --import-images (execute via make)", flush=True)
+        print("="*10, flush=True)
         
         colors = [     ## A list of colors that work both for dark and light backgrounds
             "#1f77b4",  # Blue
@@ -267,8 +267,8 @@ def run_xenium(_args):
                 prereq = [args.ome_tifs[i]]
                 assert os.path.exists(args.ome_tifs[i]), f"Input OME TIFF file {args.ome_tifs[i]} does not exist. Please check the path."
             
-            print(f" * Image ID: {image_id}")
-            print(f" * Image color: {image_color}")
+            print(f" * Image ID: {image_id}", flush=True)
+            print(f" * Image color: {image_color}", flush=True)
 
             import_image_cmd = " ".join([
                 "cartloader", "import_image",
@@ -293,16 +293,16 @@ def run_xenium(_args):
             import_image_cmd = add_param_to_cmd(import_image_cmd, args, ["pmtiles", "gdaladdo"])
             import_image_cmd = add_param_to_cmd(import_image_cmd, args, ["restart","n_jobs"])
             
-            run_command_w_preq(import_image_cmd, prerequisites=prereq, dry_run=args.dry_run)
+            run_command_w_preq(import_image_cmd, prerequisites=prereq, dry_run=args.dry_run, flush=True)
 
             background_assets.append(os.path.join(cart_dir, f"{image_id}_assets.json"))
             background_pmtiles.append(os.path.join(cart_dir, f"{image_id}.pmtiles"))
 
     ficture_flags = []
     if args.run_ficture2:
-        print("="*10)
-        print("Executing --run-ficture2 (execute via make)")
-        print("="*10)
+        print("="*10, flush=True)
+        print("Executing --run-ficture2 (execute via make)", flush=True)
+        print("="*10, flush=True)
         # Note: new runs may be added to existing runs
         # In make, a rule runs only if the target is missing or older than its prerequisites — changing the commands alone doesn’t trigger re-execution.
         # So, should be a flag file relevant to all requested runs
@@ -324,8 +324,8 @@ def run_xenium(_args):
         else:
             prereq = [sge_assets]
         
-        print(f" * train width {args.width}")
-        print(f" * n factors {args.n_factor}")
+        print(f" * train width {args.width}", flush=True)
+        print(f" * n factors {args.n_factor}", flush=True)
         ficture2_cmd = " ".join([
             "cartloader", "run_ficture2",
             # actions
@@ -339,21 +339,21 @@ def run_xenium(_args):
         ])
         ficture2_cmd = add_param_to_cmd(ficture2_cmd, args, ["spatula", "ficture2"])
         ficture2_cmd = add_param_to_cmd(ficture2_cmd, args, ["restart","n_jobs","threads"])
-        run_command_w_preq(ficture2_cmd, prerequisites=prereq, dry_run=args.dry_run)
+        run_command_w_preq(ficture2_cmd, prerequisites=prereq, dry_run=args.dry_run, flush=True)
 
     if args.run_cartload2:   
-        print("="*10)
-        print("Executing --run-cartload2 (execute via make; function: run_cartload2_generic)")
-        print("="*10)
+        print("="*10, flush=True)
+        print("Executing --run-cartload2 (execute via make; function: run_cartload2_generic)", flush=True)
+        print("="*10, flush=True)
         assert args.id is not None, "When --run-cartload2 is enabled, define the dataset ID by --id."
 
         # prerequisites
         prereq = [sge_flag]            
         if args.run_ficture2:
-            print(f" * Importing FICTURE results: {fic_dir}")
+            print(f" * Importing FICTURE results: {fic_dir}", flush=True)
             prereq.extend(ficture_flags)
         elif args.import_ext_ficture2:
-            print(f" * Importing external FICTURE results from {args.ext_fic_dir}")
+            print(f" * Importing external FICTURE results from {args.ext_fic_dir}", flush=True)
             assert args.ext_fic_dir and os.path.exists(args.ext_fic_dir), "Please specify the --ext-fic-dir parameter to import external FICTURE2 assets when --import-ext-ficture2 is enabled"
             ext_fic_params = os.path.join(args.ext_fic_dir, "ficture.params.json")
             prereq.append(ext_fic_params) 
@@ -378,12 +378,12 @@ def run_xenium(_args):
         ])
         cartload_cmd = add_param_to_cmd(cartload_cmd, args, ["pmtiles", "gdaladdo", "spatula", "tippecanoe"])
         cartload_cmd = add_param_to_cmd(cartload_cmd, args, ["restart", "n_jobs", "threads"])
-        run_command_w_preq(cartload_cmd, prerequisites=prereq, dry_run=args.dry_run)
+        run_command_w_preq(cartload_cmd, prerequisites=prereq, dry_run=args.dry_run, flush=True)
 
     if args.upload_aws:
-        print("="*10)
-        print("Executing --upload-aws (execute via make)")
-        print("="*10)
+        print("="*10, flush=True)
+        print("Executing --upload-aws (execute via make)", flush=True)
+        print("="*10, flush=True)
         assert args.s3_bucket, "Specify a valid AWS S3 Bucket Name via --s3-bucket"
 
         prereq = [catalog_yml]
@@ -395,14 +395,14 @@ def run_xenium(_args):
         ])
         aws_cmd = add_param_to_cmd(aws_cmd, args, ["aws"])
         aws_cmd = add_param_to_cmd(aws_cmd, args, ["restart", "n_jobs"])
-        run_command_w_preq(aws_cmd, prerequisites=prereq, dry_run=args.dry_run)
+        run_command_w_preq(aws_cmd, prerequisites=prereq, dry_run=args.dry_run, flush=True)
 
     zenodo_cartload_flag = f"cart_dir/cartload.zenodo.done"
     zenodo_basemap_flag = [f"{bg_pmtiles}.zenodo.done" for bg_pmtiles in background_pmtiles]
     if args.upload_zenodo:
-        print("="*10)
-        print("Executing --upload-zenodo (execute directly)")
-        print("="*10)
+        print("="*10, flush=True)
+        print("Executing --upload-zenodo (execute directly)", flush=True)
+        print("="*10, flush=True)
         assert args.zenodo_token and os.path.exists(args.zenodo_token), "Specify a valid file containing Zenodo token using --zenodo-token"
         if args.zenodo_title is None:
             args.zenodo_title = args.id
@@ -421,10 +421,10 @@ def run_xenium(_args):
             f"--overwrite" if args.restart else ""
         ])
         if os.path.exists(zenodo_cartload_flag) and all(os.path.exists(f) for f in zenodo_basemap_flag) and not args.restart:
-            print(f" * Skip --upload-zenodo since all flags exists. You can use --restart to force execute this step.")
-            print(import_cell_cmd)
+            print(f" * Skip --upload-zenodo since all flags exists. You can use --restart to force execute this step.", flush=True)
+            print(import_cell_cmd, flush=True)
         else:
-            run_command_w_preq(zenodo_cmd, prerequisites=[], dry_run=args.dry_run)
+            run_command_w_preq(zenodo_cmd, prerequisites=[], dry_run=args.dry_run, flush=True)
     
 
 if __name__ == "__main__":

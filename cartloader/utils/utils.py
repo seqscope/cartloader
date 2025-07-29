@@ -74,22 +74,21 @@ def run_command(command, use_bash=False):
         print(f"Command failed with error:\n{e.stderr}")
         raise
 
-def run_command_w_preq(cmd, prerequisites=[], dry_run=False):
+def run_command_w_preq(cmd, prerequisites=[], dry_run=False, flush=False):
+    print(f"\n{cmd}\n", flush=flush)
     if not dry_run:
-        print(f"\n{cmd}\n")
         # first check if the prerequisites exist
         if prerequisites:
             for prereq in prerequisites:
                 if not os.path.exists(prereq):
-                    print(f"Found missing prerequisite: {prereq}.")
+                    print(f"Found missing prerequisite: {prereq}.", flush=flush)
                     sys.exit(1)
         # execute the command
         result = subprocess.run(cmd, shell=True)
         if result.returncode != 0:
-            print(f"Error in executing: {cmd}")
+            print(f"Error in executing: {cmd}", flush=flush)
             sys.exit(1)
-    else:
-        print(f"\n{cmd}\n")
+
 
 
 # ====

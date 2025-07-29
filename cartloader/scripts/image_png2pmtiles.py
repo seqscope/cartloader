@@ -253,7 +253,7 @@ def image_png2pmtiles(_args):
             "-co", f"\"RESAMPLING={args.resample}\"",       # Use cubic interpolation when scaling tiles
             "-co", f"\"BLOCKSIZE={args.blocksize}\"",       # Use 512x512 pixel tile blocks (standard for MBTiles)
             "-ot", "Byte",                                  # Convert pixel values to 8-bit integers (0-255)
-            "-scale",                                       # Automatically scale pixel values to 0-255
+            "-scale" if args.mono else "",                  # Automatically scale pixel values to 0-255
             "-of", "mbtiles",
             "-a_srs", args.srs,                             # default to EPSG:3857. Assign the target projection: Web Mercator (used by web maps)
             ort_f, 

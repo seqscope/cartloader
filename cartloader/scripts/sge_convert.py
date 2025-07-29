@@ -422,16 +422,6 @@ def sge_convert(_args):
     # mm
     mm = minimake()
 
-    #  * 10x_xenium: convert parquet to csv
-    if args.platform == "10x_xenium":
-        if args.in_parquet is not None and args.in_csv is not None:
-            raise ValueError("For 10X Xenium, you can only provide input transcript file using --in-parquet or --in-csv")
-        if args.in_parquet is not None:
-            cmds = cmd_separator([], f"Converting input parquet into a csv file : (platform: {args.platform})...")
-            args.in_csv = f"{args.out_dir}/transcripts.parquet.csv.gz"
-            cmds.append(f"{args.parquet_tools} csv {args.in_parquet} |  {args.gzip} -c > {args.in_csv}")
-            mm.add_target(args.in_csv, [args.in_parquet], cmds) 
-
     # sge_convert
     sge_convert_flag = os.path.join(args.out_dir, "sge_convert.done")
 
@@ -440,7 +430,19 @@ def sge_convert(_args):
         cmds = convert_visiumhd(cmds, args)
     elif args.platform == "seqscope":
         cmds = convert_seqscope(cmds, args)
-    elif args.platform in ["10x_xenium", "cosmx_smi", "bgi_stereoseq", "vizgen_merscope", "pixel_seq", "nova_st", "generic"]:
+    elif args.platform == "10x_xenium":
+        #  * 10x_xenium: convert parquet to csv
+        if args.in_parquet is not None and args.in_csv is not None:
+            raise ValueError("For 10X Xenium, you can only provide input transcript file using --in-parquet or --in-csv")
+        if args.in_parquet is not None:
+            cmds = cmd_separator([], f"Converting input parquet into a csv file : (platform: {args.platform})...")
+            args.in_csv = f"{args.out_dir}/transcripts.parquet.csv.gz"
+            cmds.append(f"{args.parquet_tools} csv {args.in_parquet} |  {args.gzip} -c > {args.in_csv}")
+            mm.add_target(args.in_csv, [args.in_parquet], cmds) 
+            # update the prereq for convert
+            in_raw_filelist=[args.in_csv] 
+        cmds = convert_tsv(cmds, args)
+    elif args.platform in ["cosmx_smi", "bgi_stereoseq", "vizgen_merscope", "pixel_seq", "nova_st", "generic"]:
         cmds = convert_tsv(cmds, args)
     cmds.append(f"[ -f {out_transcript_f} ] && [ -f {out_feature_f} ] && [ -f {out_minmax_f} ] && touch {sge_convert_flag}")
     mm.add_target(sge_convert_flag, in_raw_filelist, cmds)
