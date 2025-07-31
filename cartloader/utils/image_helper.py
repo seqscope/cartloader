@@ -79,7 +79,7 @@ def update_orient(rotation, flip_vertical, flip_horizontal, image_f=None):
         if isinstance(rotation, int):
             rotation = str(rotation)
             if rotation not in ["90", "180", "270"]:
-                raise ValueError(f"Error: Invalid rotate value ({rotation}){" for"+image_f if image_f else ""}. Rotation must be None, 90, 180, or 270.")
+                raise ValueError(f"Error: Invalid rotate value ({rotation}){'for'+image_f if image_f else ''}. Rotation must be None, 90, 180, or 270.")
 
     new_rot, new_vflip, new_hflip = orient_map.get(
         (rotation, flip_vertical, flip_horizontal)
