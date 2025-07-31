@@ -104,27 +104,27 @@ xenium_key2patterns={
         "zips": ["analysis.tar.gz"]
         },
     # IMGs: NOT required
-    "DAPI": {
+    "DAPI_OME": {
         "required": False,
         "filename":["morphology_focus.ome.tif", "morphology_focus/morphology_focus_0000.ome.tif" ]
         },
-    "BOUNDARY_IMG": {
+    "BOUNDARY_OME": {
         "required": False,
         "filename":["morphology_focus/morphology_focus_0001.ome.tif" ]
         },
-    "INTERIOR_RNA_IMG": {
+    "INTERIOR_RNA_OME": {
         "required": False,
         "filename":["morphology_focus/morphology_focus_0002.ome.tif" ]
         },
-    "INTERIOR_PROTEIN_IMG": {
+    "INTERIOR_PROTEIN_OME": {
         "required": False,
         "filename":["morphology_focus/morphology_focus_0003.ome.tif" ]
         },
-    "DAPI_3D": {
+    "DAPI_3D_OME": {
         "required": False,
         "filename":["morphology.ome.tif"]
         },
-    "DAPI_MIP": {
+    "DAPI_MIP_OME": {
         "required": False,
         "filename":["morphology_mip.ome.tif"]
     }

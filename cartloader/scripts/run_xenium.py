@@ -4,7 +4,7 @@ from pathlib import Path
 import hashlib
 
 from cartloader.utils.minimake import minimake
-from cartloader.utils.utils import add_param_to_cmd, cmd_separator, run_command_w_preq
+from cartloader.utils.utils import add_param_to_cmd, cmd_separator, run_command_w_preq, load_file_to_dict
 
 
 def parse_arguments(_args):
@@ -60,8 +60,14 @@ def parse_arguments(_args):
     key_params.add_argument('--cell-name', type=str, help='(Parameters for --import-cells) Name of the cell factor. This will be used in the cell assets (defaults to --cell-id)')
     key_params.add_argument('--tsv-cmap', type=str, default=None, help='(Parameters for --import-cells) Path to the TSV file containing the color map for the cell clusters')
     # images
-    key_params.add_argument('--image-ids', type=str, default=["DAPI"], nargs="+", help='(Parameters for --import-images) One or more image IDs to be used in the output PMTiles (default: "DAPI").')
-    key_params.add_argument('--image-colors', type=str, default=[], help='(Parameters for --import-images) One or more colors to be used for OME TIFFs. The order of the colors should match the order of the image IDs in --image-ids. If not set, a default list of colors will be used. ')
+    key_params.add_argument('--image-ids', type=str, default=["DAPI_OME", "BOUNDARY_OME", "INTERIOR_RNA_OME", "INTERIOR_PROTEIN_OME", "DAPI_3D_OME", "DAPI_MIP_OME"], nargs="+", help='(Parameters for --import-images) One or more image IDs to be used in the output PMTiles. (default: "DAPI_OME", "BOUNDARY_OME", "INTERIOR_RNA_OME", "INTERIOR_PROTEIN_OME", "DAPI_3D_OME", "DAPI_MIP_OME").')
+    key_params.add_argument('--image-colors', type=str, default=[], help='(Parameters for --import-images) One or more colors to be used for OME TIFFs.' 
+                            'The order of the colors should match the order of the image IDs in --image-ids.'
+                            'If not set, a default list of colors will be used.')
+    key_params.add_argument('--image-colors', type=str, default=[], help='(Parameters for --import-images) One or more colors to be used for OME TIFFs.' 
+                            'The order of the colors should match the order of the image IDs in --image-ids.'
+                            'If not set, a default list of colors will be used.')
+    key_params.add_argument('--skip-missing-images', action='store_true', help='If set, skip image IDs that do not exist, showing a warning instead of raising an error.')
     # aws 
     key_params.add_argument("--s3-bucket", help="(Parameters for --upload-aws) AWS S3 bucket (e.g., cartostore).")
     # zenodo
@@ -72,13 +78,13 @@ def parse_arguments(_args):
     key_params.add_argument('--zenodo-title', type=str, default=None, help='(Parameters for --upload-zenodo) Title of the deposition. Required if creating a new deposition or the existing deposition does not have a title (defaults to --id)')
     key_params.add_argument('--creators', type=str, nargs='+', default=[], help='(Parameters for --upload-zenodo) List of creators in "Lastname, Firstname" format. Required if creating a new deposition or the existing deposition do not have creator information.')
 
-    aux_xenium_params = parser.add_argument_group("Auxiliary Input File Name Parameters", "Used only if neither --load-xenium-ranger is enabled nor an existing assets file is provided via --xenium-ranger-assets.")
+    aux_xenium_params = parser.add_argument_group("Auxiliary Input File Name Parameters", "Used only to manually provide the input instead of neither automatically detection or providing an existing xenium ranger json file, i.e., used only if neither --load-xenium-ranger is enabled nor an existing assets file is provided via --xenium-ranger-assets.")
     aux_xenium_params.add_argument('--csv-transcript', type=str, default="transcripts.csv.gz", help='(Parameters for --sge-convert) Location of the CSV or parquet file in the --xenium-ranger-dir. This transcript file should contain at least coordinates, feature names, and expression counts of the transcripts')
     aux_xenium_params.add_argument('--csv-cells', type=str, default="cells.csv.gz", help='(Parameters for --import-cells) Location of the CSV or Parquet file containing cell locations in the --xenium-ranger-dir (default: cells.csv.gz)')
     aux_xenium_params.add_argument('--csv-boundaries', type=str, default="cell_boundaries.csv.gz", help='(Parameters for --import-cells) Location of the CSV file containing cell boundary coordinates in the --xenium-ranger-dir (default: cell_boundaries.csv.gz)')
     aux_xenium_params.add_argument('--csv-clust', type=str, default="analysis/clustering/gene_expression_graphclust/clusters.csv", help='(Parameters for --import-cells) Location of the CSV file containing cell cluster assignments in the --xenium-ranger-dir (default: analysis/clustering/gene_expression_graphclust/clusters.csv)')
     aux_xenium_params.add_argument('--csv-diffexp', type=str, default="analysis/diffexp/gene_expression_graphclust/differential_expression.csv", help='(Parameters for --import-cells) Location of the CSV file with differential expression results in the --xenium-ranger-dir (default: analysis/diffexp/gene_expression_graphclust/differential_expression.csv)')
-    aux_xenium_params.add_argument('--ome-tifs', type=str, nargs="+", default=[], help="(Parameters for --import-images) List of locations of input ome tiff(s) in the --xenium-ranger-dir.")
+    aux_xenium_params.add_argument('--ome-tifs', type=str, nargs="+", default=[], help="(Parameters for --import-images) List of locations of one or more input ome tiff(s) in the --xenium-ranger-dir. The order of the locations should match the oder of the image IDs in --image-id")
 
     env_params = parser.add_argument_group("Env Parameters", "Environment parameters, e.g., tools.")
     # Default settings:
@@ -250,9 +256,24 @@ def run_xenium(_args):
         ]
 
         if not use_json:
-            assert args.ome_tifs, "Please specify the --ome-tifs parameter to import images or set --detect-auto to automatically detect the images"
+            assert args.ome_tifs, "Please specify the --ome-tifs parameter to import images or set --load-xenium-ranger to automatically detect the images"
 
-        assert args.image_ids, "Please specify at least of image ID --image-ids parameter to import images"
+        assert args.image_ids, "Please specify at least one image ID via --image-ids parameter to import images"
+
+        if args.skip_missing_images:
+            if args.dry_run:
+                print("* Skip removing unavailable image IDs for --dry-run")
+            else:
+                # load the assets file
+                print("* Filtering image IDs to only remain available ones")
+                xenium_ranger_data=load_file_to_dict(args.in_json)
+                avail_keys=list(xenium_ranger_data.keys())
+                raw_image_ids=args.image_ids
+                args.image_ids = [img_id for img_id in raw_image_ids if img_id in avail_keys]
+
+                print(f"    - Raw image IDs (N={len(raw_image_ids)}): {raw_image_ids}")
+                print(f"    - Available image IDs (N={len(args.image_ids)}): {args.image_ids}")
+        
         if not args.image_colors:
             args.image_colors = colors[:len(args.image_ids)]
         assert len(args.image_ids) == len(args.image_colors), "Please specify the same number of image IDs and image colors in --image-ids and --image-colors parameters"
