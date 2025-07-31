@@ -709,9 +709,6 @@ def stepinator(_args):
     ficture_aux_params.add_argument('--fic-include-feature-regex', type=str, default=None, help='A regex pattern of feature/gene names to be included (default: None)')
     ficture_aux_params.add_argument('--fic-exclude-feature-regex', type=str, default=None, help='A regex pattern of feature/gene names to be excluded (default: None)')
     ficture_aux_params.add_argument('--fic-include-feature-type-regex', type=str, default=None, help='A regex pattern of feature/gene type to be included (default: None). Requires --csv-colname-feature-type or --feature-type-ref for gene type info') # (e.g. protein_coding|lncRNA)
-    # input column indexes
-    # ficture_aux_params.add_argument('--colidx-x', type=int, default=1, help='Column index for X-axis in the --in-transcript (default: 1)')
-    # ficture_aux_params.add_argument('--colidx-y', type=int, default=2, help='Column index for Y-axis in the --in-transcript (default: 2)')
     # segmentation - ficture
     ficture_aux_params.add_argument('--hexagon-n-move', type=int, default=None, help='Level of hexagonal sliding when creating hexagon-indexed SGE in FICTURE compatible format (default: 1)')
     ficture_aux_params.add_argument('--hexagon-precision', type=float, default=None, help='Output precision of hexagon coordinates for FICTURE compatible format (default: 2)')

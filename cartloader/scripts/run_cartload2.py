@@ -290,7 +290,7 @@ def run_cartload2(_args):
             in_pixel_tsvf = decode_param.get("pixel_tsv_path",f"{in_prefix}.tsv.gz")
             in_pixel_png = decode_param.get("pixel_png_path",f"{in_prefix}.png")
             in_de_tsvf  = decode_param.get("de_tsv_path",f"{in_prefix}.bulk_chisq.tsv")
-            in_post_tsvf = decode_param.get("pseudobulk_tsv_path",f"{in_prefix}.pseudobulk.tsv")
+            in_post_tsvf = decode_param.get("pseudobulk_tsv_path",f"{in_prefix}.pseudobulk.tsv.gz")
             in_info_tsvf = decode_param.get("info_tsv_path",f"{in_prefix}.factor.info.tsv")
 
             out_id = in_id.replace("_", "-")
@@ -315,7 +315,7 @@ def run_cartload2(_args):
                 cmds.append(cmd)
 
             cmds.append(f"cp {in_de_tsvf} {out_prefix}-bulk-de.tsv")
-            cmds.append(f"cat {in_post_tsvf} | gzip -c > {out_prefix}-pseudobulk.tsv.gz")
+            cmds.append(f"cp {in_post_tsvf} {out_prefix}-pseudobulk.tsv.gz")
             cmds.append(f"cp {in_info_tsvf} {out_prefix}-info.tsv")
             cmds.append(f"touch {out_prefix}.done")
             mm.add_target(f"{out_prefix}.done", [in_pixel_tsvf, in_pixel_png, in_de_tsvf, in_post_tsvf, model_rgb, in_info_tsvf], cmds)
