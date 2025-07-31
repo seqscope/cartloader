@@ -1,7 +1,7 @@
 import sys, os, argparse, logging,  inspect, json, subprocess
 import pandas as pd
 from cartloader.utils.minimake import minimake
-from cartloader.utils.utils import cmd_separator, scheck_app, add_param_to_cmd, read_minmax, write_dict_to_file, load_file_to_dict
+from cartloader.utils.utils import cmd_separator, scheck_app, add_param_to_cmd, read_minmax, write_dict_to_file, load_file_to_dict, execute_makefile
 from cartloader.utils.sge_helper import aux_sge_args, input_by_platform, update_csvformat_by_platform
 from cartloader.scripts.feature_filtering import filter_feature_by_type
 
@@ -527,16 +527,8 @@ def sge_convert(_args):
     # write down a json file when execute
     write_dict_to_file(sge_assets, args.out_json, check_equal=True)
 
-    if args.dry_run:
-        dry_cmd=f"make -f {make_f} -n {'-B' if args.restart else ''} "
-        os.system(dry_cmd)
-        print(f"To execute the pipeline, run the following command:\nmake -f {make_f} -j {args.n_jobs} {'-B' if args.restart else ''}")
-    else:
-        exe_cmd=f"make -f {make_f} -j {args.n_jobs} {'-B' if args.restart else ''}"
-        result = subprocess.run(exe_cmd, shell=True)
-        if result.returncode != 0:
-            print(f"Error in executing: {exe_cmd}")
-            sys.exit(1)
+    execute_makefile(make_f, dry_run=args.dry_run, restart=args.restart, n_jobs=args.n_jobs)
+
 
 
 if __name__ == "__main__":

@@ -2,7 +2,7 @@ import sys, os, gzip, argparse, logging, warnings, shutil, re, copy, time, pickl
 import pandas as pd
 import subprocess
 
-from cartloader.utils.utils import cmd_separator, scheck_app, add_param_to_cmd, log_dataframe, write_dict_to_file
+from cartloader.utils.utils import cmd_separator, scheck_app, add_param_to_cmd, log_dataframe, write_dict_to_file, execute_makefile
 from cartloader.utils.minimake import minimake
 from cartloader.scripts.sge_convert import sge_visual, sge_density_filtering, sge_visual_northup
 from cartloader.utils.image_helper import update_orient
@@ -311,16 +311,8 @@ def sge_stitch(_args):
     
     make_f = os.path.join(args.out_dir, args.makefn)
     mm.write_makefile(make_f)
-    if args.dry_run:
-        dry_cmd=f"make -f {make_f} -n {'-B' if args.restart else ''} "
-        os.system(dry_cmd)
-        print(f"To execute the pipeline, run the following command:\nmake -f {make_f} -j {args.n_jobs} {'-B' if args.restart else ''}")
-    else:
-        exe_cmd=f"make -f {make_f} -j {args.n_jobs} {'-B' if args.restart else ''}"
-        result = subprocess.run(exe_cmd, shell=True)
-        if result.returncode != 0:
-            print(f"Error in executing: {exe_cmd}")
-            sys.exit(1)
+    
+    execute_makefile(make_f, dry_run=args.dry_run, restart=args.restart, n_jobs=args.n_jobs)
 
     # write down a json file when execute
     write_dict_to_file(sge_assets, args.out_json, check_equal=True)

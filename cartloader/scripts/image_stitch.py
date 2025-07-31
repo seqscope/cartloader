@@ -3,7 +3,7 @@ import pandas as pd
 import subprocess
 import rasterio # for extracting bounds
 
-from cartloader.utils.utils import cmd_separator
+from cartloader.utils.utils import cmd_separator, execute_makefile
 from cartloader.utils.minimake import minimake
 from cartloader.utils.image_helper import update_orient
 
@@ -13,7 +13,7 @@ from cartloader.scripts.run_fig2pmtiles import get_orientation_suffix, cmds_for_
 current_path = os.path.realpath(__file__)
 cartloader_dir=os.path.dirname(os.path.dirname(os.path.dirname(current_path)))
 
-def hist_stitch(_args):
+def image_stitch(_args):
     parser = argparse.ArgumentParser(
         prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}",
         description="""
@@ -30,7 +30,7 @@ def hist_stitch(_args):
     run_params.add_argument('--dry-run', action='store_true', default=False, help='Simulate the process without executing commands (default: False)')
     run_params.add_argument('--restart', action='store_true', default=False, help='Ignore all intermediate files and start from the beginning (default: False)')
     run_params.add_argument('--n-jobs', '-j', type=int, default=1, help='Number of jobs (processes) to run in parallel (default: 1)')
-    run_params.add_argument('--makefn', type=str, default=None, help='Makefile name. By default, it will be named as hist_stitch_<filename>.mk based on the output file name.')
+    run_params.add_argument('--makefn', type=str, default=None, help='Makefile name. By default, it will be named as image_stitch_<filename>.mk based on the output file name.')
     
     inout_params = parser.add_argument_group("Input/Output Parameters", "Input/Output Parameters")
     inout_params.add_argument("--in-tiles", type=str, nargs='*', default=[], help="List of input tiles in the format: <row>,<col>,<path>,<georef>,<georef_tsv>,<georef_bounds>,<rotate>,<vertical_flip>,<horizontal_flip>."
@@ -59,7 +59,7 @@ def hist_stitch(_args):
 
     out_bn = os.path.basename(args.output).replace(".tif", "")
     if args.makefn is None:
-        args.makefn = f"hist_stitch_{out_bn}.mk"
+        args.makefn = f"image_stitch_{out_bn}.mk"
 
     # read in_offsets
     idx2offsets = {}
@@ -73,7 +73,7 @@ def hist_stitch(_args):
         offsets["x_offset_unit"] = offsets["x_offset_unit"].astype(float)
         offsets["units_per_um"] = offsets["units_per_um"].astype(float)
 
-        # assuming the coordinates in hist in um
+        # assuming the coordinates in the image in um
         offsets["x_offset_um"] = offsets["x_offset_unit"] / offsets["units_per_um"]
         offsets["y_offset_um"] = offsets["y_offset_unit"] / offsets["units_per_um"]
    
@@ -102,7 +102,7 @@ def hist_stitch(_args):
         # input params
         row, col, tif, georef, georef_tsv, georef_bound, rotate, vflip, hflip = in_tile.split(",")
 
-        assert os.path.exists(tif), f"Input histology file {tif} (index: {row}, {col}) does not exist."
+        assert os.path.exists(tif), f"Input image file {tif} (index: {row}, {col}) does not exist."
         tile_prefix = os.path.join(out_dir, os.path.basename(tif).replace(".tif", "")) # tile_prefix for intermediate files
 
         row, col = str(int(row)), str(int(col))
@@ -226,16 +226,7 @@ def hist_stitch(_args):
     
     make_f = os.path.join(out_dir, args.makefn)
     mm.write_makefile(make_f)
-    if args.dry_run:
-        dry_cmd=f"make -f {make_f} -n {'-B' if args.restart else ''} "
-        os.system(dry_cmd)
-        print(f"To execute the pipeline, run the following command:\nmake -f {make_f} -j {args.n_jobs} {'-B' if args.restart else ''}")
-    else:
-        exe_cmd=f"make -f {make_f} -j {args.n_jobs} {'-B' if args.restart else ''}"
-        result = subprocess.run(exe_cmd, shell=True)
-        if result.returncode != 0:
-            print(f"Error in executing: {exe_cmd}")
-            sys.exit(1)
+    execute_makefile(make_f, dry_run=args.dry_run, restart=args.restart, n_jobs=args.n_jobs)
 
 if __name__ == "__main__":
     func_name = os.path.splitext(os.path.basename(__file__))[0]

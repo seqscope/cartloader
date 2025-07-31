@@ -333,19 +333,6 @@ def image_ome2png(_args):
         if os.path.exists(f"{args.out_prefix}_transformed.npy"):
             os.remove(f"{args.out_prefix}_transformed.npy")
 
-        # # Handle PMTiles conversion
-        # if not args.skip_pmtiles:
-        #     logger.info(f"Creating PMTiles with run_fig2pmtiles...")
-        #     if ul[0] < 0:
-        #         ul0 = f"\\{ul[0]}"
-        #     else:
-        #         ul0 = f"{ul[0]}"
-        #     cmd = f"cartloader run_fig2pmtiles --in-bounds '{ul0},{ul[1]},{lr[0]},{lr[1]}' --in-fig {args.out_prefix}.png --out-prefix {args.out_prefix} --geotif2mbtiles --mbtiles2pmtiles --georeference"
-        #     if args.transparent_below > 0:
-        #         cmd += " --rgba"
-        #     elif is_mono:
-        #         cmd += " --mono"
-
     logger.info("Analysis Completed")
 
 if __name__ == "__main__":

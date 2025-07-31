@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 
 from cartloader.utils.minimake import minimake
-from cartloader.utils.utils import cmd_separator, scheck_app, create_custom_logger, read_minmax
+from cartloader.utils.utils import cmd_separator, scheck_app, create_custom_logger, read_minmax, execute_makefile
 
 def parse_arguments(_args):
     """
@@ -183,14 +183,8 @@ def run_tsv2mono(_args):
     make_f=os.path.join(out_dir, args.makefn) if args.makefn is not None else f"{args.out_prefix}.mk"
     mm.write_makefile(make_f)
 
-    if args.dry_run:
-        os.system(f"make -f {make_f} -n")
-        print(f"To execute the pipeline, run the following command:\nmake -f {make_f} -j {args.n_jobs}")
-    else:
-        result = subprocess.run(f"make -f {make_f} -j {args.n_jobs} {'-B' if args.restart else ''}", shell=True)
-        if result.returncode != 0:
-            print(f"Error in tsv2mono pipeline. Please check the log files.")
-            sys.exit(1)
+    execute_makefile(make_f, dry_run=args.dry_run, restart=args.restart, n_jobs=args.n_jobs)
+
 
 if __name__ == "__main__":
     # Get the base file name without extension

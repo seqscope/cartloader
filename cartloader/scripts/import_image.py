@@ -4,7 +4,7 @@ import numpy as np
 import tifffile
 
 from cartloader.utils.minimake import minimake
-from cartloader.utils.utils import cmd_separator, scheck_app, create_custom_logger, add_param_to_cmd, write_dict_to_file, load_file_to_dict, scheck_actions
+from cartloader.utils.utils import cmd_separator, scheck_app, create_custom_logger, add_param_to_cmd, write_dict_to_file, load_file_to_dict, scheck_actions, execute_makefile
 from cartloader.utils.image_helper import orient2axisorder, update_orient
 from cartloader.scripts.image_png2pmtiles import get_orientation_suffix
 
@@ -275,16 +275,8 @@ def import_image(_args):
     make_f=os.path.join(args.out_dir, args.makefn) if args.makefn is not None else f"{img_prefix}.mk"
     mm.write_makefile(make_f)
 
-    if args.dry_run:
-        dry_cmd=f"make -f {make_f} -n {'-B' if args.restart else ''} "
-        os.system(dry_cmd)
-        print(f"To execute the pipeline, run the following command:\nmake -f {make_f} -j {args.n_jobs}")
-    else:
-        exe_cmd=f"make -f {make_f} -j {args.n_jobs} {'-B' if args.restart else ''}"
-        result = subprocess.run(exe_cmd, shell=True)
-        if result.returncode != 0:
-            print(f"Error in executing: {exe_cmd}")
-            sys.exit(1)
+    execute_makefile(make_f, dry_run=args.dry_run, restart=args.restart, n_jobs=args.n_jobs)
+
 
 if __name__ == "__main__":
     # Get the base file name without extension

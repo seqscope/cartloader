@@ -44,18 +44,6 @@ def add_param_to_cmd(cmd, args, aux_argset, underscore2dash=True):
                     cmd += f" --{arg_name} {value}"
     return cmd
 
-# def run_bash_command(command):
-#     try:
-#         result = subprocess.run(command, 
-#                   shell=True, 
-#                   stdout=subprocess.PIPE, 
-#                   stderr=subprocess.PIPE, 
-#                   text=True, 
-#                   check=True)
-#         return result.stdout
-#     except subprocess.CalledProcessError as e:
-#         print(f"Command failed with error:\n\t{command}\n\t{e.stderr}\n")
-#         raise
 
 def run_command(command, use_bash=False):
     executable_shell = "/bin/bash" if use_bash else "/bin/sh"
@@ -71,7 +59,7 @@ def run_command(command, use_bash=False):
         )
         return result.stdout
     except subprocess.CalledProcessError as e:
-        print(f"Command failed with error:\n{e.stderr}")
+        print(f"Error in executing:\n{e.stderr}")
         raise
 
 def run_command_w_preq(cmd, prerequisites=[], dry_run=False, flush=False):
@@ -90,6 +78,26 @@ def run_command_w_preq(cmd, prerequisites=[], dry_run=False, flush=False):
             sys.exit(1)
 
 
+def execute_makefile(make_f, dry_run, restart, n_jobs):
+    exe_cmd=f"make -f {make_f} {'-B' if restart else ''}"
+    if dry_run:
+        os.system(f"{exe_cmd} -n")
+        print(f"To execute the pipeline, run the following command:\n{exe_cmd}")
+    else:
+        exe_cmd = f"{exe_cmd} -j {n_jobs}"
+        result = subprocess.run(exe_cmd, shell=True)
+        if result.returncode != 0:
+            print(f"Error in executing: {exe_cmd}")
+            print(f"Error message:")
+            print(result.stderr.decode())
+            sys.exit(1)
+
+def valid_and_touch_cmd(input_files, output_file):
+    if not input_files:
+        raise ValueError("Input file list cannot be empty.")
+    checks = " && ".join([f'[ -f "{inp}" ]' for inp in input_files])
+    touch_cmd = f'{checks} && touch {output_file}'
+    return touch_cmd
 
 # ====
 # sanity check

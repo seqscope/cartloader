@@ -2,7 +2,7 @@ import sys, os, argparse, logging, subprocess, inspect
 import pandas as pd
 
 from cartloader.utils.minimake import minimake
-from cartloader.utils.utils import cmd_separator, scheck_app, create_custom_logger, load_file_to_dict, write_dict_to_file, ficture2_params_to_factor_assets, read_minmax, flexopen
+from cartloader.utils.utils import cmd_separator, scheck_app, create_custom_logger, load_file_to_dict, write_dict_to_file, ficture2_params_to_factor_assets, read_minmax, flexopen, execute_makefile, valid_and_touch_cmd
 
 def parse_arguments(_args):
     """
@@ -61,8 +61,8 @@ def parse_arguments(_args):
     aux_params.add_argument('--skip-raster', action='store_true', default=False, help='Skip processing raster files, removing dependency to gdal, go-pmtiles')
     aux_params.add_argument('--tmp-dir', type=str, help='Temporary directory to be used (default: {out-dir}/tmp')
     aux_params.add_argument('--bin-count', type=int, default=50, help='Number of bins for splitting the input molecules')
-    aux_params.add_argument('--transparent-below', type=int, default=1, help='Threshold for transparent pixels below this value for dark background image (default: 1)')
-    aux_params.add_argument('--transparent-above', type=int, default=254, help='Threshold for transparent pixels above this value for light background image (default: 254)')
+    aux_params.add_argument('--transparent-below', type=int,  help='Threshold for transparent pixels below this value for dark background image (default: 0)')
+    aux_params.add_argument('--transparent-above', type=int,  help='Threshold for transparent pixels above this value for light background image (default: 255)')
     if len(_args) == 0:
         parser.print_help()
         sys.exit(1)
@@ -145,8 +145,8 @@ def run_cartload2(_args):
             "--in-minmax", in_minmax,
             "--out-prefix", f"{args.out_dir}/sge-mono",
             "--colname-count", args.colname_count,
-            "--transparent-below", str(args.transparent_below),
-            "--transparent-above", str(args.transparent_above),
+            f"--transparent-below {args.transparent_below}" if args.transparent_below else "",
+            f"--transparent-above {args.transparent_above}" if args.transparent_above else "",
             "--main",
             f"--pmtiles '{args.pmtiles}'",
             f"--gdal_translate '{args.gdal_translate}'",
@@ -225,23 +225,13 @@ def run_cartload2(_args):
                 "out": f"{out_prefix}-factor-map.tsv"
             }
 
-        prerequisites = []
         cmds = cmd_separator([], f"Converting LDA-trained factors {model_id} into PMTiles and copying relevant files..")
+        
+        prerequisites = []
+        outfiles=[]
 
-        # fit_results
-        #print(f"--tippecanoe '{args.tippecanoe}'")
-        #in_fit_tsvf = f"{in_prefix}.results.tsv.gz"
-        #out_fit_tsvf = f"{out_prefix}.results.tsv.gz"
-        #in_fit_tsvf = train_inout["fit"]["in"]
         in_fit_tsvf = train_param.get("fit_path", f"{in_prefix}.results.tsv.gz")
         if os.path.exists(in_fit_tsvf):
-            # cmd = " ".join([
-            #     args.spatula, "append-topk-tsv",
-            #     "--in-tsv", in_fit_tsvf,
-            #     "--out-tsv", out_fit_tsvf,
-            #     "--icol-beg", "2"
-            # ])
-            # cmds.append(cmd)
             cmd = " ".join([
                 "cartloader", "convert_generic_tsv_to_pmtiles",
                 #"--in-tsv", out_fit_tsvf, 
@@ -258,25 +248,22 @@ def run_cartload2(_args):
                 "--keep-intermediate-files" if args.keep_intermediate_files else ""
             ])
             cmds.append(cmd)
-            #cmds.append(f"rm -f {out_fit_tsvf}")
             prerequisites.append(in_fit_tsvf)
+            outfiles.append(f"{out_prefix}.pmtiles")
 
         # mode/rgb/de/posterior/info
         for key, val in train_inout.items():
             if val["required"] or os.path.exists(val["in"]):
                 prerequisites.append(val["in"])
+                outfiles.append(val["out"])
                 if key == "rgb":
                     copy_rgb_tsv(val["in"], val["out"])
                 else:
                     cmds.append(f"cp {val['in']} {val['out']}")
-                    # check if val['out'] is absolute path or not
-                    # if os.path.isabs(val['out']):
-                    #     cmds.append(f"ln -s {val['in']} {val['out']}")
-                    # else:
-                    #     rel_in = os.path.relpath(val['in'], os.path.dirname(val['out']))
-                    #     cmds.append(f"ln -s {rel_in} {val['out']}")
         
-        cmds.append(f"touch {out_prefix}.done")
+        touch_flag_cmd=valid_and_touch_cmd(outfiles, f"{out_prefix}.done") # this only touch the flag file when all output files exist
+        cmds.append(touch_flag_cmd)
+        
         mm.add_target(f"{out_prefix}.done", prerequisites, cmds)
 
         ## add to the output asset json
@@ -300,12 +287,13 @@ def run_cartload2(_args):
             join_pixel_ids.append(out_id)
 
             cmds = cmd_separator([], f"Converting decoded factors {in_id} into PMTiles and copying relevant files..")
+            outfiles=[]
             if not args.skip_raster:
                 cmd = " ".join([
-                    "cartloader", "run_fig2pmtiles",
+                    "cartloader", "image_png2pmtiles",
                     "--georeference", "--geotif2mbtiles", "--mbtiles2pmtiles",
-                    "--in-fig", in_pixel_png,
-                    f"--in-bounds={xmin},{ymin},{xmax},{ymax}",
+                    "--in-img", in_pixel_png,
+                    f'--georef-bounds="{xmin},{ymin},{xmax},{ymax}"',
                     "--out-prefix", f"{out_prefix}-pixel-raster",
                     f"--pmtiles '{args.pmtiles}'",
                     f"--gdal_translate '{args.gdal_translate}'",
@@ -313,11 +301,16 @@ def run_cartload2(_args):
                     "--keep-intermediate-files" if args.keep_intermediate_files else ""
                 ])
                 cmds.append(cmd)
+                outfiles.append(f"{out_prefix}-pixel-raster.pmtiles")
 
             cmds.append(f"cp {in_de_tsvf} {out_prefix}-bulk-de.tsv")
             cmds.append(f"cp {in_post_tsvf} {out_prefix}-pseudobulk.tsv.gz")
             cmds.append(f"cp {in_info_tsvf} {out_prefix}-info.tsv")
-            cmds.append(f"touch {out_prefix}.done")
+            outfiles.extend([f"{out_prefix}-bulk-de.tsv", f"{out_prefix}-pseudobulk.tsv.gz", f"{out_prefix}-info.tsv"])
+
+            touch_flag_cmd=valid_and_touch_cmd(outfiles, f"{out_prefix}.done") # this only touch the flag file when all output files exist
+            cmds.append(touch_flag_cmd)
+
             mm.add_target(f"{out_prefix}.done", [in_pixel_tsvf, in_pixel_png, in_de_tsvf, in_post_tsvf, model_rgb, in_info_tsvf], cmds)
             sources.append(f"{out_prefix}.done")
 
@@ -427,15 +420,7 @@ def run_cartload2(_args):
     make_f = os.path.join(args.out_dir, args.makefn)
     mm.write_makefile(make_f)
 
-    if args.dry_run:
-        os.system(f"make -f {make_f} -n")
-        print(f"To execute the pipeline, run the following command:\nmake -f {make_f} -j {args.n_jobs}")
-    else:
-        exe_cmd=f"make -f {make_f} -j {args.n_jobs} {'-B' if args.restart else ''}"
-        result = subprocess.run(exe_cmd, shell=True)
-        if result.returncode != 0:
-            print(f"Error in executing: {exe_cmd}")
-            sys.exit(1)
+    execute_makefile(make_f, dry_run=args.dry_run, restart=args.restart, n_jobs=args.n_jobs)
 
     logger.info("Analysis Finished")
 

@@ -2,7 +2,7 @@ import sys, os, gzip, argparse, logging, warnings, shutil, subprocess, ast, insp
 import pandas as pd
 
 from cartloader.utils.minimake import minimake
-from cartloader.utils.utils import cmd_separator, scheck_app, create_custom_logger
+from cartloader.utils.utils import cmd_separator, scheck_app, create_custom_logger, execute_makefile
 
 def parse_arguments(_args):
     """
@@ -153,14 +153,13 @@ def run_tsv2pmtiles(_args):
             sys.exit(1)
 
         ## write makefile
-        mm.write_makefile(f"{args.out_prefix}.Makefile")
+        make_f = f"{args.out_prefix}.mk"
+        mm.write_makefile(make_f)
 
         logger.info("Running makefile to convert the CSV files to pmtiles")
 
-        result = subprocess.run(f"make -f {args.out_prefix}.Makefile -j {args.n_jobs} {'-B' if args.restart else ''}", shell=True)
-        if result.returncode != 0:
-            logger.error("Error in converting the CSV files to pmtiles")
-            sys.exit(1)
+        execute_makefile(make_f, dry_run=False, restart=args.restart, n_jobs=args.n_jobs)
+
 
     # 3. clean the intermediate files and write new output files
     if not args.keep_intermediate_files:
