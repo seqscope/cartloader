@@ -476,7 +476,7 @@ def run_ficture2_multi(_args):
             train_width = lda_params["train_width"]
             n_factor = lda_params["n_factor"]
             model_id = lda_params["model_id"]
-            model_prefix = os.path.join(args.out_dir, decode_params["model_id"])
+            model_prefix = os.path.join(args.out_dir, model_id)
             summary_cmap = f"{model_prefix}.cmap.tsv"
             lda_sample_fit_tsv = f"{sample_out_dir}/{sample}.{model_id}.results.tsv.gz"
             lda_de_tsv = f"{model_prefix}.bulk_chisq.tsv"
@@ -500,7 +500,7 @@ def run_ficture2_multi(_args):
             decode_info_tsv = f"{decode_prefix}.factor.info.tsv"
             prerequisities.append(f"{decode_prefix}.done")
             summary_aux_args_decodes.append(f"{model_type},{model_id},{decode_id},{fit_width},{args.anchor_res},{decode_pixel_tsv},{decode_pixel_png},{decode_pseudobulk_tsv},{decode_de_tsv},{decode_info_tsv}")
-        summary_aux_args_decodes.append(" ".join(summary_aux_args_decodes))
+        summary_aux_args.append(" ".join(summary_aux_args_decodes))
 
         cmd = " ".join([
             "cartloader", "write_json_for_ficture2_multi",
@@ -511,8 +511,7 @@ def run_ficture2_multi(_args):
                 f"--in-minmax {sample_minmax}",
                 f"--out-dir {sample_out_dir}",
                 f"--out-json {sample_out_json}",
-                " ".join(summary_aux_args),
-                " ".join(summary_aux_args_decodes)
+                " ".join(summary_aux_args)            
             ])
         cmds.append(cmd)
         mm.add_target(sample_out_json, prerequisities, cmds)
