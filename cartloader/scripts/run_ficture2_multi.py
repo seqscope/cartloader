@@ -400,12 +400,13 @@ def run_ficture2_multi(_args):
                 cmds.append(cmd)
             
             cmds.append(f"{args.gzip} -f {decode_fit_tsv}")
-            cmds.append(f"[ -f {decode_fit_tsv}.gz ] && [ -f {decode_postcount} ] && touch {decode_prefix}.tsv.done")
+            cmds.append(f"{args.gzip} -f {decode_postcount}") # note: Confirmed that diffexp-model-matrix supports gzipped files based on tsv_reader.cpp in qgenlib before this revision.
+            cmds.append(f"[ -f {decode_fit_tsv}.gz ] && [ -f {decode_postcount}.gz ] && touch {decode_prefix}.tsv.done")
             mm.add_target(f"{decode_prefix}.tsv.done", [cmap_path, f"{args.out_dir}/multi.done", f"{model_prefix}.done"], cmds)  
 
             cmds=cmd_separator([], f"Performing post-decode tasks, ID {decode_id} for sample {sample}...")
             # - transform-DE
-            cmds.append(f"{args.spatula} diffexp-model-matrix --tsv1 {decode_postcount} --out {decode_de} --min-count {args.de_min_ct_per_feature} --max-pval {args.de_max_pval} --min-fc {args.de_min_fold}")
+            cmds.append(f"{args.spatula} diffexp-model-matrix --tsv1 {decode_postcount}.gz --out {decode_de} --min-count {args.de_min_ct_per_feature} --max-pval {args.de_max_pval} --min-fc {args.de_min_fold}")
             cmds.append(f"({args.gzip} -cd {decode_de}.de.marginal.tsv.gz | head -1 | sed 's/^Feature/gene/'; {args.gzip} -cd {decode_de}.de.marginal.tsv.gz | tail -n +2 | {args.sort} -k 2,2n -k 3,3gr;) > {decode_de}")
             cmds.append(f"rm -f {decode_de}.de.marginal.tsv.gz")
 
@@ -413,7 +414,7 @@ def run_ficture2_multi(_args):
             cmd = " ".join([
                 ficture2report,
                 f"--de {decode_de}",
-                f"--pseudobulk {decode_postcount}",
+                f"--pseudobulk {decode_postcount}.gz",
                 f"--feature_label Feature",
                 f"--color_table {cmap_path}",
                 f"--output_pref {decode_prefix}"
@@ -434,7 +435,7 @@ def run_ficture2_multi(_args):
                 ])
             cmds.append(cmd)
 
-            cmds.append(f"[ -f {decode_postcount} ] && [ -f {decode_de} ] && [ -f {decode_prefix}.factor.info.html ] && [ -f {decode_prefix}.png ] && touch {decode_prefix}.done")
+            cmds.append(f"[ -f {decode_de} ] && [ -f {decode_prefix}.factor.info.html ] && [ -f {decode_prefix}.png ] && touch {decode_prefix}.done")
             mm.add_target(f"{decode_prefix}.done", [cmap_path, f"{decode_prefix}.tsv.done", f"{args.out_dir}/multi.done", f"{model_prefix}.done"], cmds)
             decode_each_targets.append(f"{decode_prefix}.done")
         cmds=cmd_separator([], f"Finishing decode, ID: {decode_id}")
