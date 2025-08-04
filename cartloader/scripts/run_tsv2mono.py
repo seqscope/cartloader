@@ -158,8 +158,8 @@ def run_tsv2mono(_args):
     ])
     cmds_light.append(f"{cmd_mbt} {args.out_prefix}-light.pmtiles.tif {args.out_prefix}-light.pmtiles.mbtiles")
 
-    cmds_dark.append(f"'{args.gdaladdo}' {args.out_prefix}-dark.pmtiles.mbtiles -r {args.resample.lower()} 2 4 8 16 32 64 128 256 512 1024 2048 4096 8192")
-    cmds_light.append(f"'{args.gdaladdo}' {args.out_prefix}-light.pmtiles.mbtiles -r {args.resample.lower()} 2 4 8 16 32 64 128 256 512 1024 2048 4096 8192")
+    cmds_dark.append(f"'{args.gdaladdo}' {args.out_prefix}-dark.pmtiles.mbtiles -r {args.resample.lower()} 2 4 8 16 32 64 128 256 512 1024 2048 4096 8192 16384 32768 65536")
+    cmds_light.append(f"'{args.gdaladdo}' {args.out_prefix}-light.pmtiles.mbtiles -r {args.resample.lower()} 2 4 8 16 32 64 128 256 512 1024 2048 4096 8192 163284 32768 65536")
 
     cmds_dark.append(f"'{args.pmtiles}' convert --force {args.out_prefix}-dark.pmtiles.mbtiles {args.out_prefix}-dark.pmtiles")
     cmds_light.append(f"'{args.pmtiles}' convert --force {args.out_prefix}-light.pmtiles.mbtiles {args.out_prefix}-light.pmtiles")
