@@ -7,16 +7,15 @@ def parse_arguments(_args):
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", 
                                      description="Write a JSON file to summarize the parameters.")
-    parser.add_argument('--out-dir', required=True, type=str, help='Output directory')
-    parser.add_argument('--out-json', type=str, default=None, help='Path to the output JSON file. Default: <out-dir>/ficture.params.json')
+    parser.add_argument('--out-json', type=str, default=None, required=True, help='Path to the output JSON file (recommended naming scheme and directory: "ficture.params.json" in the directory hosting FICTURE results)')
     parser.add_argument('--in-transcript', type=str, default=None, help='Path to the transcript file.')
     parser.add_argument('--in-feature', type=str, default=None, help='Path to the feature file.')
     parser.add_argument('--in-minmax', type=str, default=None, help='Path to the minmax file.')
     parser.add_argument('--in-feature-ficture', type=str, default=None, help='(Optional) If FICTURE used a different feature file than the in-feature file, specify the path to the feature file used for FICTURE analysis.')
     parser.add_argument('--lda-model', nargs='*', type=str, default=None, help='LDA Model information: <model_type>,<model_path>,<model_id>,<train_width>,<n_factor>,<cmap>')
     parser.add_argument('--decode', nargs='*', type=str, default=None, help='Projection information: <model_type>,<model_id>,<projection_id>,<fit_width>,<anchor_res>')
-    parser.add_argument('--merge', action='store_true', default=False, help='Merge with to the existing JSON file.')
-    parser.add_argument('--overwrite', action='store_true', default=False, help='Overwrite the existing JSON file.')
+    parser.add_argument('--merge', action='store_true', default=False, help='If enabled and the output JSON already exists, integrates new input into the existing file. If not set, the script will write a new JSON file or overwrite the existing JSON file.')
+    parser.add_argument('--merge-override', action='store_true', default=False, help='When used with --merge, allows new input arguments (--in-transcript, --in-feature, --in-minmax, --in-feature-ficture) to override conflicting values in the existing profile. If not set and a conflict occurs, the script will raise an error.')
 
     if len(_args) == 0:
         parser.print_help()
@@ -47,6 +46,7 @@ def merge_params(params1, params2, keynames, nodenames):
             value2idx[p[cur_key_name]][1] = i
         else:
             value2idx[p[cur_key_name]] = [None, i]
+    
     ## merge the parameters
     for (key, [idx1, idx2]) in value2idx.items():
         if idx1 is not None and idx2 is not None: ## merge the contents
@@ -71,17 +71,18 @@ def merge_params(params1, params2, keynames, nodenames):
 
 def write_json_for_ficture2(_args):
     args = parse_arguments(_args)
-    if args.overwrite and args.merge:
-        raise ValueError("Cannot use both --overwrite and --merge options.")
-    if args.out_json is None:
-      args.out_json = os.path.join(args.out_dir, "ficture.params.json")
-    
+
+    # Existing files:
+    if args.merge_override and not args.merge:
+        raise ValueError("--merge-override requires --merge")
+
     # Input SGE data
-    sge_data={
+    new_sge={
         "in_transcript": args.in_transcript,
         "in_feature": args.in_feature,
         "in_minmax": args.in_minmax
     }
+
     # Model data structure
     train_params = []
     model_dict = {}
@@ -112,9 +113,72 @@ def write_json_for_ficture2(_args):
             }
             if (model_type, model_id) in model_dict:
                 model_dict[(model_type, model_id)]["decode_params"].append(decode_entry)
-    
+            else:
+                warnings.warn(f"No matching model for decode entry: {dec}")  # Warning if model not found
+
+
+    def update_single_value(old_val, new_val, error_msg, override):
+        """Update a single scalar value with merge override logic."""
+        if old_val == new_val:
+            return old_val  # No change
+
+        if override:
+            return new_val
+
+        # Only reach here if values differ and override is False
+        if (old_val is None) != (new_val is None):
+            # One is None and the other is not
+            raise ValueError(error_msg)
+
+        raise ValueError(error_msg)
+
+    def finalize_sge(existing_sge, new_sge, override):
+        """Resolve and update the in_sge dictionary."""
+        final_sge = {}
+        for key in ["in_transcript", "in_feature", "in_minmax"]:
+            old_val = existing_sge.get(key)
+            new_val = new_sge.get(key)
+            error_msg = (
+                f"The '{key}' in 'in_sge' data in the existing JSON file is different from your input arguments. "
+                f"Disable --merge or enable --merge-override to proceed."
+            )
+            final_sge[key] = update_single_value(old_val, new_val, error_msg, override)
+        return final_sge
+
+    # Loading and merging existing JSON data if exists and --merge
+    if os.path.exists(args.out_json) and args.merge:
+        print(f"Merging with existing JSON: {args.out_json}")
+        with open(args.out_json, 'r') as f:
+            existing_data = json.load(f)
+
+        # Merge 'in_sge'
+        sge_data = finalize_sge( existing_data.get("in_sge", {}), new_sge, args.merge_override)
+
+        # Merge 'in_feature_ficture'
+        existing_ftr_ficture = existing_data.get("in_feature_ficture")
+        new_ftr_ficture = args.in_feature_ficture
+        error_msg = (
+            "The 'in_feature_ficture' in the existing JSON file is different from your input arguments. "
+            "Disable --merge or enable --merge-override to proceed."
+        )
+        ftr_ficture_data = update_single_value(existing_ftr_ficture, new_ftr_ficture, error_msg, args.merge_override)
+
+        # Merge model params
+        train_params = merge_params(
+            existing_data["train_params"],
+            train_params,
+            ["model_id", "decode_id"],
+            ["decode_params", ""]
+        )
+    else:
+        if os.path.exists(args.out_json):
+            print(f"Overwriting the existing {args.out_json}.")
+        sge_data = new_sge
+        ftr_ficture_data = args.in_feature_ficture
+
+
     # Construct final JSON data
-    if args.in_feature_ficture is None:
+    if ftr_ficture_data is None:
         json_data = {
             "in_sge": sge_data,
             "train_params": train_params
@@ -122,28 +186,10 @@ def write_json_for_ficture2(_args):
     else:
         json_data = {
             "in_sge": sge_data,
-            "in_feature_ficture": args.in_feature_ficture,
+            "in_feature_ficture": ftr_ficture_data,
             "train_params": train_params
         }
-    if os.path.exists(args.out_json):
-        if args.overwrite:
-            print(f'Overwriting the existing JSON file: {args.out_json}')
-        elif args.merge:
-            print(f'Merging with the existing JSON file: {args.out_json}')
-            with open(args.out_json, 'r') as file:
-                existing_data = json.load(file)
-            if "in_sge" not in existing_data:
-                raise ValueError("Existing JSON file does not have the 'in_sge' key.")
-            if "train_params" not in existing_data:
-                raise ValueError("Existing JSON file does not have the 'train_params' key.")
-            ## The in_sge data must be identical
-            if existing_data["in_sge"] != sge_data:
-                raise ValueError("The 'in_sge' data in the existing JSON file is different from the new data. NOT compartible and --merge option failed")
-            ## Merge the existing data with the new data
-            json_data["train_params"] = merge_params(existing_data["train_params"], json_data["train_params"], ["model_id", "decode_id"], ["decode_params", ""])
-        else:
-            raise FileExistsError(f"Output JSON file already exists: {args.out_json}. Please use --overwrite to overwrite the file, and --merge to merge with existing JSON file")
-
+ 
     write_json(json_data, args.out_json)
     print(f'Data has been written to {args.out_json}')
 

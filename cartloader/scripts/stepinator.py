@@ -1,6 +1,7 @@
 # TODO: Currently stepinator can only allow dry-run for one step. For example, if requested --run-ficture and --run-cartload-join with --dry-run, it can only process --run-ficture while 
 # the dry-run for --run-cartload-join will failed given its input is from run-ficture and run-ficture is not executed.
 
+## 250731: Need to update the cmds related to images.
 import os
 import sys
 import subprocess
@@ -16,17 +17,17 @@ from cartloader.utils.execution import write_jobfile, submit_job
 
 timestamp = datetime.datetime.now().strftime("%y%m%d")
 
-histology_suffixes=[".tif", ".tiff", ".png"]
-histology_suffixes.extend([suffix.upper() for suffix in histology_suffixes])
+img_suffix=[".tif", ".tiff", ".png"]
+img_suffix.extend([suffix.upper() for suffix in img_suffix])
 
 aux_env_args = {
         "sge_stitch": ["spatula"],
         "sge_convert": ["spatula", "gzip", "parquet_tools"],
         "north_up": ["gdal_translate", "gdalwarp"],
-        "hist_stitch": ["gdal_translate", "gdalbuildvrt"],
+        "image_stitch": ["gdal_translate", "gdalbuildvrt"],
         "run_ficture": ['bgzip', "tabix", "gzip", "sort", "sort_mem"],
         "run_cartload": ['gzip', 'pmtiles', 'gdal_translate', 'gdaladdo', 'tippecanoe', 'spatula'],
-        "run_fig2pmtiles": ['pmtiles', 'gdal_translate', 'gdaladdo'],
+        "image_png2pmtiles": ['pmtiles', 'gdal_translate', 'gdaladdo', "gdalinfo"],
         "upload_aws": ['aws']
 }
 
@@ -57,12 +58,12 @@ aux_params_args["run_ficture1"] = aux_params_args["run_ficture"] + ['hexagon_n_m
                                                                    ]
 aux_params_args["run_ficture2"] = aux_params_args["run_ficture"]
 
-hist_keys = [ "path",
-            "transform", "lower_thres_quantile", "upper_thres_quantile", "level", "colorize",
+img_keys = [ "path",
+            "ome", "lower_thres_quantile", "upper_thres_quantile", "level", "colorize",
             "georeference", "georef_tsv", "georef_bounds", 
             "rotate", "flip"
     ]
-hist_keys_tiles =  ["row", "col"] + [x for x in hist_keys if x not in ["transform", "lower_thres_quantile", "upper_thres_quantile", "level", "colorize"]]
+img_keys_tiles =  ["row", "col"] + [x for x in img_keys if x not in ["ome", "lower_thres_quantile", "upper_thres_quantile", "level", "colorize"]]
 
 def merge_config(base_config, args, keys, prefix=None):
     """
@@ -114,7 +115,6 @@ def cmd_sge_stitch(sgeinfo, args, env, generate_tile_minmax_only=False):
     
     # add aux env
     stitch_cmd = add_param_to_cmd(stitch_cmd, env, aux_env_args["sge_stitch"]+aux_env_args["north_up"]) if args.north_up else add_param_to_cmd(stitch_cmd, env, aux_env_args["sge_stitch"])
-    # add aux env
     return stitch_cmd
 
 def cmd_sge_convert(sgeinfo, args, env):
@@ -287,8 +287,6 @@ def cmd_run_ficture(run_i, fic_v, args, env):
             f"--threads {args.threads}"
         ])
     else:
-        # cmap (TODO: currently ficture2 requires a fixed cmap file)
-        print(run_i["cmap"])
         if run_i["cmap"] is None:
             cmap_arg = ""
         else:
@@ -358,25 +356,25 @@ def cmd_run_cartload(run_i, cartl_v, args, env):
     cartload_cmd = add_param_to_cmd(cartload_cmd, env, aux_env_args[f"run_cartload"], underscore2dash=False)
     return cartload_cmd
 
-# hist_keys and hist_keys_tiles are global variables
-def parse_histology_args(histology_args, by_tiles=False):
-    # <hist_id>;<path>;<transform>;....;<georeference>;<georef_tsv>;<georef_bounds>;<rotate_degree>;<flip_direction>
-    # <hist_id>;<tile_info1>;<tile_info2>... where each tile_info is <row>,<col>,<path>,<georeference>,<georef_tsv>,<georef_bounds>,<rotate_degree>,<flip_direction>. 
-    hist_input = []
+# img_keys and img_keys_tiles are global variables
+def parse_image_args(histology_args, by_tiles=False):
+    # <image_id>;<path>;<transform>;....;<georeference>;<georef_tsv>;<georef_bounds>;<rotate_degree>;<flip_direction>
+    # <image_id>;<tile_info1>;<tile_info2>... where each tile_info is <row>,<col>,<path>,<georeference>,<georef_tsv>,<georef_bounds>,<rotate_degree>,<flip_direction>. 
+    img_input = []
     for histology in histology_args:
-        hist_info = histology.strip().split(";")
-        assert len(hist_info) >= 2, ("Error: --histology should at least have <hist_id> and <histology_path>." if not by_tiles else "Error: --histology-tiles should have <hist_id>, and at least one <tile_info>")
-        hist_dict = {"hist_id": hist_info[0]}
+        img_info = histology.strip().split(";")
+        assert len(img_info) >= 2, ("Error: --histology should at least have <image_id> and <histology_path>." if not by_tiles else "Error: --histology-tiles should have <image_id>, and at least one <tile_info>")
+        img_dict = {"image_id": img_info[0]}
         if not by_tiles:
-            values = hist_info[1:]
-            for i, key in enumerate(hist_keys):
+            values = img_info[1:]
+            for i, key in enumerate(img_keys):
                 val = values[i] if i < len(values) else None
                 if val in ["", "null", "Null"]:
                     val = None
-                hist_dict[key] = val          
+                img_dict[key] = val          
         else:
-            hist_dict["in_tiles"] = []
-            for tile in hist_info[1:]:
+            img_dict["in_tiles"] = []
+            for tile in img_info[1:]:
                 tile_fields = tile.strip().split(",")
                 assert len(tile_fields) >= 3, "Error: each <tile_info> must have at least <row>,<col>,<path>"
                 tile_dict = {
@@ -384,14 +382,14 @@ def parse_histology_args(histology_args, by_tiles=False):
                     "col": tile_fields[1]
                 }
                 tile_values = tile_fields[2:]
-                for i, key in enumerate(hist_keys_tiles):
+                for i, key in enumerate(img_keys_tiles):
                     val = tile_values[i] if i < len(tile_values) else None
                     if val in ["", "null", "Null"]:
                         val = None
                     tile_dict[key] = val
-                hist_dict["in_tiles"].append(tile_dict)
-        hist_input.append(hist_dict)
-    return hist_input
+                img_dict["in_tiles"].append(tile_dict)
+        img_input.append(img_dict)
+    return img_input
 
 def update_flip_to_vhflip(val):
     vertical = "True" if str(val).lower() == "vertical" else "False"
@@ -429,79 +427,79 @@ def generate_in_tiles_str(in_tiles, param_keys):
     #print(in_tiles_str)
     return in_tiles_str
 
-def cmd_hist_stitch(histinfo_by_tiles, args, env):
-    hist_stitch_cmds = []        
-    for histinfo_i in histinfo_by_tiles:
-        hist_id= histinfo_i["hist_id"]
-        mkbn = f"hist_stitch_{hist_id}" if args.mk_id is None else f"hist_stitch_{hist_id}_{args.mk_id}"
-        in_tiles_str = generate_in_tiles_str(histinfo_i.get("in_tiles",[]), hist_keys_tiles)
-        hist_stitch_cmd=" ".join([
-                "cartloader", "hist_stitch",
-                f"--output {histinfo_i['path']}", 
+def cmd_image_stitch(imginfo_by_tiles, args, env):
+    image_stitch_cmds = []        
+    for imginfo_i in imginfo_by_tiles:
+        image_id= imginfo_i["image_id"]
+        mkbn = f"image_stitch_{image_id}" if args.mk_id is None else f"image_stitch_{image_id}_{args.mk_id}"
+        in_tiles_str = generate_in_tiles_str(imginfo_i.get("in_tiles",[]), img_keys_tiles)
+        image_stitch_cmd=" ".join([
+                "cartloader", "image_stitch",
+                f"--output {imginfo_i['path']}", 
                 f"--makefn {mkbn}.mk",
-                f"--in-offsets {histinfo_i['in_offsets']}",
+                f"--in-offsets {imginfo_i['in_offsets']}",
                 f"--in-tiles {in_tiles_str}",
                 f"--crop-tile-by-minmax",
-                f"--in-minmax {histinfo_i['in_offsets']}",
+                f"--in-minmax {imginfo_i['in_offsets']}",
                 f"--restart" if args.restart else "",
                 f"--n-jobs {args.n_jobs}" if args.n_jobs else "",
         ])
         # add aux tools
-        hist_stitch_cmd = add_param_to_cmd(hist_stitch_cmd, env, aux_env_args["hist_stitch"], underscore2dash=False)
-        hist_stitch_cmds.append(hist_stitch_cmd)
-    return hist_stitch_cmds
+        image_stitch_cmd = add_param_to_cmd(image_stitch_cmd, env, aux_env_args["image_stitch"], underscore2dash=False)
+        image_stitch_cmds.append(image_stitch_cmd)
+    return image_stitch_cmds
   
-def cmd_run_fig2pmtiles(run_i, cartl_v, args, env):    
+def cmd_image_png2pmtiles(run_i, cartl_v, args, env):    
     assert len(run_i.get("histology", [])) > 0, "Error: --histology is Required when running fig2pmtiles"
-    hist_cmds=[]
+    img_cmds=[]
     #cartload_dir=os.path.join(run_i["run_dir"], "cartload")
     cartload_dir = os.path.join(run_i["run_dir"], ("cartload" if cartl_v == "1" else "cartload2"))
     catalog_yaml=os.path.join(cartload_dir, "catalog.yaml")
     for histology in run_i.get("histology", []):
         # 1. histology tif to pmtiles
-        hist_path = histology["path"]
+        img_path = histology["path"]
         # prefix
-        hist_inname = os.path.basename(hist_path).replace("_", "-")
-        for suffix in histology_suffixes:
-            if hist_inname.endswith(suffix):
-                hist_inname = hist_inname[:-len(suffix)]
+        img_inname = os.path.basename(img_path).replace("_", "-")
+        for suffix in img_suffix:
+            if img_inname.endswith(suffix):
+                img_inname = img_inname[:-len(suffix)]
                 break
-        hist_prefix = os.path.join(cartload_dir, hist_inname)
+        img_prefix = os.path.join(cartload_dir, img_inname)
+        
         # update the orientation
         histology = update_orient_in_histology(histology)
-        # mkbn
-        mkbn = f"run_fig2pmtiles_{hist_inname}"
-        mkbn = mkbn if args.mk_id is None else f"{mkbn}_{args.mk_id}"
-        # cmds
-        hist_cmd= " ".join([
-            "cartloader", "run_fig2pmtiles", 
-            '--makefn', f"{mkbn}.mk",
-            "--transform" if histology.get("transform", False) else "",
-            f"--transform-csv {histology.get('transform_csv', None)}" if histology.get("transform", False) and histology.get("transform_csv", None) is not None else "",
-            f"--upper-thres-quantile {histology.get('upper_thres_quantile', None)}" if histology.get("transform", False) and histology.get("upper_thres_quantile", None) is not None else "",
-            f"--lower-thres-quantile {histology.get('lower_thres_quantile', None)}" if histology.get("transform", False) and histology.get("lower_thres_quantile", None) is not None else "",
-            f"--upper-thres-intensity {histology.get('upper_thres_intensity', None)}" if histology.get("transform", False) and histology.get("upper_thres_intensity", None) is not None else "",
-            f"--lower-thres-intensity {histology.get('lower_thres_intensity', None)}" if histology.get("transform", False) and histology.get("lower_thres_intensity", None) is not None else "",
-            f"--colorize {histology.get('colorize', None)}" if histology.get("transform", False) and histology.get("colorize", None) is not None else "",
+
+        import_image_cmd = " ".join([
+            "cartloader", "import_image",
+            # actions
+            "--ome2png" if histology.get("ome", False) else "",
+            "--png2pmtiles",
             "--georeference" if histology.get("georeference", False) else "",
-            "--geotif2mbtiles", 
-            "--mbtiles2pmtiles", 
-            f"--update-catalog --basemap-key {histology['hist_id']}" if os.path.exists(catalog_yaml) or args.run_cartload1 or args.run_cartload2 else "",
-            f"--in-fig {hist_path}",
-            f"--out-prefix {hist_prefix}",
             "--flip-vertical" if histology["flip"] in ["vertical", "both"] else "",
             "--flip-horizontal" if histology["flip"] in ["horizontal", "both"] else "",
             f"--rotate {histology['rotate']}" if histology.get("rotate", None) is not None else "",
-            f"--in-tsv {histology.get('georef_tsv', None)}" if histology.get("georef_tsv", None) is not None else "",
-            f"--in-bounds {histology.get('georef_bounds', None)}" if histology.get("georef_bounds", None) is not None else "",
+            f"--update-catalog",
+            # in/out
+            f"--in-img {img_path}",
+            f"--out-dir {cartload_dir}",
+            # id and color
+            f"--img-id {histology['image_id']}",
+            f"--colorize {histology.get('colorize', None)}" if histology.get("ome", False) and histology.get("colorize", None) is not None else "",
+            # aux params
+            f"--upper-thres-quantile {histology.get('upper_thres_quantile', None)}" if histology.get("ome", False) and histology.get("upper_thres_quantile", None) is not None else "",
+            f"--lower-thres-quantile {histology.get('lower_thres_quantile', None)}" if histology.get("ome", False) and histology.get("lower_thres_quantile", None) is not None else "",
+            f"--upper-thres-intensity {histology.get('upper_thres_intensity', None)}" if histology.get("ome", False) and histology.get("upper_thres_intensity", None) is not None else "",
+            f"--lower-thres-intensity {histology.get('lower_thres_intensity', None)}" if histology.get("ome", False) and histology.get("lower_thres_intensity", None) is not None else "",
+            f"--gdal_translate {args.gdal_translate}" if args.gdal_translate else "",
+            f"--georef-pixel-tsv {histology.get('georef_tsv', None)}" if histology.get("georeference", False) and histology.get("georef_tsv", None) is not None else "",
+            f"--georef-bounds {histology.get('georef_bounds', None)}" if histology.get("georeference", False) and histology.get("georef_bounds", None) is not None else "",
             f"--n-jobs {args.n_jobs}" if args.n_jobs else "",
-            f"--restart" if args.restart else ""
+            f"--restart" if args.restart else "",
         ])
-        hist_cmd = add_param_to_cmd(hist_cmd, env, aux_env_args["run_fig2pmtiles"], underscore2dash=False)
-        hist_cmds.append(hist_cmd)
+        img_cmd = add_param_to_cmd(img_cmd, env, aux_env_args["image_png2pmtiles"], underscore2dash=False)
+        img_cmds.append(img_cmd)
 
-    return hist_cmds
-    #return hist_cmds + update_catalog_cmds
+    return img_cmds
 
 def cmd_upload_aws(run_i, cartl_v,  args, env, additional_args=None):
     cartload_dir=os.path.join(run_i["run_dir"], "cartload") if cartl_v == "1" else os.path.join(run_i["run_dir"], "cartload2")
@@ -529,7 +527,7 @@ def cmd_upload_aws(run_i, cartl_v,  args, env, additional_args=None):
 
 def stepinator(_args):
     parser = argparse.ArgumentParser(description="""
-    Stepinator: A tool to run steps in cartloader to do SGE format conversion (--sge-convert) or downstream process (--run-ficture*, --run-cartload*, --run-fig2pmtiles, --upload-aws) in cartloader.
+    Stepinator: A tool to run steps in cartloader to do SGE format conversion (--sge-convert) or downstream process (--run-ficture*, --run-cartload*, --image-png2pmtiles, --upload-aws) in cartloader.
     The input, actions, parameters, and tools can be provided in two ways: 1) using a YAML file or 2) using individual command-line arguments in IN/OUT Configuration, Environment Configuration, and Auxiliary Parameters for FICTURE.
     It also allows the job execution in two modes: local and slurm.
     """)
@@ -557,8 +555,8 @@ def stepinator(_args):
     # cmd_params.add_argument("--run-cartload1", action="store_true", help="Run run-cartload-join in cartloader")
     cmd_params.add_argument("--run-ficture", action="store_true", help="Run run-ficture in cartloader.")
     cmd_params.add_argument("--run-cartload", action="store_true", help="Run run-cartload in cartloader.")
-    cmd_params.add_argument("--hist-stitch", action="store_true", help="Run histology stitch in cartloader. This is for stitching histology images.")
-    cmd_params.add_argument("--run-fig2pmtiles", action="store_true", help="Run run-fig2pmtiles in cartloader. This s provide histology using --in-yaml or --histology.")
+    cmd_params.add_argument("--image-stitch", action="store_true", help="Run image stitch in cartloader. This is for stitching images.")
+    cmd_params.add_argument("--image-png2pmtiles", action="store_true", help="Run image-png2pmtiles in cartloader. This s provide image using --in-yaml or --histology.")
     cmd_params.add_argument("--upload-aws", action="store_true", help="Upload files to AWS S3 bucket. This s provide AWS bucket name using --in-yaml or --aws-bucket.")
     cmd_params.add_argument("--copy-ext-model", action="store_true", help="(Optional if --run-ficture1) Auxiliary action parameters for run-ficture. Copy external model when running FICTURE with an external model")
     cmd_params.add_argument("--init-ext", action="store_true", help="(Optional if --run-ficture1) Auxiliary action parameters for run-ficture. Only Initialize external model without run main-ext")
@@ -574,9 +572,9 @@ def stepinator(_args):
     "2. Use individual command-line arguments to specify input files and settings, allowing processing of a single run at a time."
     )
     key_params.add_argument("--in-yaml", '-i', type=str, default=None, help="Input yaml file")
-    key_params.add_argument("--run-ids", nargs="*", default=[], help="Run IDs. Required if --run-ficture, --run-cartload-join, --run-fig2pmtiles, or --upload-aws is applied. ")
-    key_params.add_argument("--hist-ids", nargs="*", default=[], help="Histology IDs. Specifies the histology IDs in the --in-yaml for the --run-fig2pmtiles command. If omitted, all histologies in the input YAML are processed.")
-    key_params.add_argument("--out-dir", type=str, default=None, help="Output directory. It will have 3 subdirectories: sge (output from --sge-convert), ficture (output from --run-ficture), and cartload (output from --run-cartload-join and --run-fig2pmtiles)")
+    key_params.add_argument("--run-ids", nargs="*", default=[], help="Run IDs. Required if --run-ficture, --run-cartload-join, --image-png2pmtiles, or --upload-aws is applied. ")
+    key_params.add_argument("--image-ids", nargs="*", default=[], help="Image IDs. Specifies the image IDs in the --in-yaml for the --image-png2pmtiles command. If omitted, all images in the input YAML are processed.")
+    key_params.add_argument("--out-dir", type=str, default=None, help="Output directory. It will have 3 subdirectories: sge (output from --sge-convert), ficture (output from --run-ficture), and cartload (output from --run-cartload-join and --image-png2pmtiles)")
     # for sge_convert
     key_params.add_argument('--platform', type=str, choices=["10x_visium_hd", "seqscope", "10x_xenium", "bgi_stereoseq", "cosmx_smi", "vizgen_merscope", "pixel_seq", "nova_st"], help='Required if --sge-convert. Platform of the raw input file to infer the format of the input file. ')
     # - input for 10x_visium_hd, seqscope 
@@ -598,20 +596,16 @@ def stepinator(_args):
     key_params.add_argument("--ext-id", type=str, default=None, help="Required when --run-ficture1 with an external model. The ID for the external model.")
     key_params.add_argument("--train-width", '-w', type=str, default=None, help="Required if --run-ficture. Train width.")
     key_params.add_argument("--n-factor", '-n', type=str, default=None, help="Required if --run-ficture1 with LDA. Number of factors. ")
-    key_params.add_argument("--histology", type=str, nargs="?", default=[], help="""
-                              (Optional) Provide histology info as <hist_id>;<path>;<transform>;<lower_thres_quantile>;<upper_thres_quantile>;<level>;<colorize>;<georeference>;<georef_tsv>;<georef_bounds>;<rotate_degree>;<flip_direction>. 
-                              Only <hist_id> and <path> are required. Supports multiple files; use <hist_id> to distinguish them. (Default: [])
-                              Define <transform> and <georeference> by True or False. If georeference=True, specify <georef_tsv> or <georef_bounds>. 
+    key_params.add_argument("--image", type=str, nargs="?", default=[], help="""
+                              (Optional) Provide image info as <image_id>;<path>;<ome>;<lower_thres_quantile>;<upper_thres_quantile>;<level>;<colorize>;<georeference>;<georef_tsv>;<georef_bounds>;<rotate_degree>;<flip_direction>. 
+                              Only <image_id> and <path> are required. Supports multiple files; use <image_id> to distinguish them. (Default: [])
+                              Define <ome> and <georeference> by True or False. If the image is OME TIFF, define <ome> as True. If georeference=True, specify <georef_tsv> or <georef_bounds>. 
                               Orientation allows rotation (90, 180, 270) and flipping (vertical, horizontal, both). 
                             """)
-    key_params.add_argument("--histology-tiles", type=str, default=[], nargs="*", help="""
-                            (Optional) Provide the histology tiles infor for histology stitch. The format should be <hist_id>;<tile_info1>;<tile_info2>... where each tile_info is <row>,<col>,<path>,<georeference>,<georef_tsv>,<georef_bounds>,<rotate_degree>,<flip_direction>.
-                            Note use ";" to separate the hist_id and tile_info, and use "," to separate the information in the tile_info. Currently, our histology stitch doesn't support transform tiles given it's not finalized 
-                            """) # <transform>,<lower_thres_quantile>,<upper_thres_quantile>,<level>,<colorize>,
-    # key_params.add_argument("--minmax-tiles", type=str, default=None, help="""
-    #                         (Optional) Provide an existing minmax tsv file for each tile with columns of "row","col","x_offset_unit","y_offset_unit","units_per_um","global_xmin_um","global_xmax_um","global_ymin_um","global_ymax_um".
-    #                         This file usually comes from the output of sge_stitch. 
-    #                         """)
+    key_params.add_argument("--image-tiles", type=str, default=[], nargs="*", help="""
+                            (Optional) Provide the image tiles infor for image stitch. The format should be <image_id>;<tile_info1>;<tile_info2>... where each tile_info is <row>,<col>,<path>,<georeference>,<georef_tsv>,<georef_bounds>,<rotate_degree>,<flip_direction>.
+                            Note use ";" to separate the image_id and tile_info, and use "," to separate the information in the tile_info. Currently, our image stitch doesn't support transform ome tiles given it's not finalized 
+                            """) 
     key_params.add_argument('--aws-bucket', type=str, default=None, help='Required if --upload-aws. AWS bucket name')
 
     # * tools
@@ -709,9 +703,6 @@ def stepinator(_args):
     ficture_aux_params.add_argument('--fic-include-feature-regex', type=str, default=None, help='A regex pattern of feature/gene names to be included (default: None)')
     ficture_aux_params.add_argument('--fic-exclude-feature-regex', type=str, default=None, help='A regex pattern of feature/gene names to be excluded (default: None)')
     ficture_aux_params.add_argument('--fic-include-feature-type-regex', type=str, default=None, help='A regex pattern of feature/gene type to be included (default: None). Requires --csv-colname-feature-type or --feature-type-ref for gene type info') # (e.g. protein_coding|lncRNA)
-    # input column indexes
-    # ficture_aux_params.add_argument('--colidx-x', type=int, default=1, help='Column index for X-axis in the --in-transcript (default: 1)')
-    # ficture_aux_params.add_argument('--colidx-y', type=int, default=2, help='Column index for Y-axis in the --in-transcript (default: 2)')
     # segmentation - ficture
     ficture_aux_params.add_argument('--hexagon-n-move', type=int, default=None, help='Level of hexagonal sliding when creating hexagon-indexed SGE in FICTURE compatible format (default: 1)')
     ficture_aux_params.add_argument('--hexagon-precision', type=float, default=None, help='Output precision of hexagon coordinates for FICTURE compatible format (default: 2)')
@@ -746,7 +737,7 @@ def stepinator(_args):
     ficture_aux_params.add_argument('--merge-max-k', type=int, default=None, help='Maximum number of K columns to output in merged pixel-level decoding results (default: 1)')
     ficture_aux_params.add_argument('--merge-max-p', type=int, default=None, help='Maximum number of P columns to output in merged pixel-level decoding results (default: 1)')
     # others parameters shared across steps
-    ficture_aux_params.add_argument('--min-ct-per-feature', type=int, default=None, help='Minimum count per feature during LDA training, transform and decoding (default: 20)')
+    ficture_aux_params.add_argument('--min-ct-per-feature', type=int, default=None, help='Minimum count per feature during LDA training, projection and decoding (default: 20)')
     ficture_aux_params.add_argument('--de-max-pval', type=float, default=None, help='p-value cutoff for differential expression (default: 1e-3)')
     ficture_aux_params.add_argument('--de-min-fold', type=float, default=None, help='Fold-change cutoff for differential expression (default: 1.5)')
 
@@ -762,7 +753,7 @@ def stepinator(_args):
     # =========
     #  actions
     # =========
-    assert args.sge_stitch or args.sge_convert or args.run_ficture or args.run_cartload or args.run_fig2pmtiles or args.upload_aws, "Error: At least one action is required"
+    assert args.sge_stitch or args.sge_convert or args.run_ficture or args.run_cartload or args.image_png2pmtiles or args.upload_aws, "Error: At least one action is required"
 
     # sge
     assert not (args.sge_convert and args.sge_stitch), "Error: --sge-convert and --sge-stitch cannot be applied together"
@@ -770,14 +761,9 @@ def stepinator(_args):
     assert not (args.north_up and not args.sge_visual), "Error: --north-up can only be applied with --sge-visual"   
 
     # version check
-    if args.run_ficture or args.run_cartload or args.run_fig2pmtiles or args.upload_aws:
-        assert args.ficture_version is not None, "Error: --ficture-version must be specified if any of the following actions is enabled: --run-ficture, --run-cartload, --run-fig2pmtiles or --upload-aws"
-    # assert not (args.run_ficture1 and args.run_ficture2), "Error: --run-ficture1 and --run-ficture2 cannot be applied together"
-    # assert not (args.run_cartload1 and args.run_cartload2), "Error: --run-cartload1 and --run-cartload2 cannot be applied together"
-    # fic_v = "1" if args.run_ficture1 else "2" if args.run_ficture2 else None
-    # cartl_v = "1" if args.run_cartload1 else "2" if args.run_cartload2 else None
-    # if fic_v is not None and cartl_v is not None:
-    #     assert fic_v == cartl_v, "Error: --run-ficture and --run-cartload-join should be applied together with the same version."
+    if args.run_ficture or args.run_cartload or args.image_png2pmtiles or args.upload_aws:
+        assert args.ficture_version is not None, "Error: --ficture-version must be specified if any of the following actions is enabled: --run-ficture, --run-cartload, --image-png2pmtiles or --upload-aws"
+    
     fic_v = str(args.ficture_version)
 
     # =========
@@ -785,7 +771,6 @@ def stepinator(_args):
     # =========
     if args.in_yaml is not None:
         with open(args.in_yaml, "r") as f:
-             #yml.update(yaml.safe_load(f))
             yml = yaml.safe_load(f)
 
     # output dir
@@ -834,12 +819,6 @@ def stepinator(_args):
     env = merge_config(yml, args, 
                        [item for sublist in aux_env_args.values() for item in sublist] + ["imagemagick"],
                         prefix="env")  
-
-    # * Disable the use of submodule binaries, making them default to the binaries available in the system PATH.
-    # if env.spatula is None:
-    #     env.spatula  = os.path.join(cartloader_repo, "submodules", "spatula", "bin", "spatula")
-    # if env.tippecanoe is None:
-    #     env.tippecanoe = os.path.join(cartloader_repo, "submodules", "tippecanoe", "bin", "tippecanoe")
 
     # * slurm (collect from yaml and args)
     slurm = merge_config(yml, args, ["account", "partition", "mail_user", "cpus_per_task", "mem_per_cpu", "hours"], prefix="slurm")
@@ -891,10 +870,6 @@ def stepinator(_args):
             in_tiles=sgeinfo.get("in_tiles", [])
             assert len(in_tiles) > 1, 'When --sge-stitch is enabled, at least two tiles are required.'
             sge_keys_tile = ["in_csv", "in_feature", "in_minmax", "row", "col", "rotate", "flip"]
-            # sgeinfo["in_tiles_str"] = [
-            #     ",".join(str(intile.get(key, "")) for key in ["in_csv", "in_feature", "in_minmax", "row", "col", "rotate", "flip"])
-            #     for intile in in_tiles
-            # ]
             sgeinfo["in_tiles_str"] = generate_in_tiles_str(in_tiles, sge_keys_tile)
         else:
             assert len(args.in_tiles) > 1, "When --sge-stitch is enabled, at least two tiles are required"
@@ -913,51 +888,51 @@ def stepinator(_args):
         cmds.append(cmd_sge_stitch(sgeinfo, args, env))
 
     # =========
-    #  HIST Stitch
+    #  IMAGE Stitch
     # =========
-    # the stitched histology tif should be shared across run_id in the sge
-    if args.run_fig2pmtiles or args.hist_stitch:
+    # the stitched tif should be shared across run_id in the sge
+    if args.image_png2pmtiles or args.image_stitch:
         if args.in_yaml:
-            histinfo = yml.get("HISTOLOGY", [])
-            if len(args.hist_ids) > 0:
-                histinfo = [hist_i for hist_i in histinfo if hist_i.get("hist_id") in args.hist_ids]
+            imginfo = yml.get("HISTOLOGY", [])
+            if len(args.image_ids) > 0:
+                imginfo = [img_i for img_i in imginfo if img_i.get("image_id") in args.image_ids]
         else:
-            histinfo_by_tif = parse_histology_args(args.histology) if len(args.histology) > 0 else []
-            histinfo_by_tiles = parse_histology_args(args.histology_tiles, by_tiles=True) if len(args.histology_tiles) > 0 else []
-            histinfo = histinfo_by_tif + histinfo_by_tiles
-        # sanity check: no duplicate hist_id in histinfo
-        hist_ids = [hist_i.get("hist_id") for hist_i in histinfo]
-        assert len(hist_ids) == len(set(hist_ids)), "Error: Duplicate histology IDs found in the input YAML file or command line arguments. Please ensure that each histology ID is unique."
+            imginfo_by_tif = parse_image_args(args.image) if len(args.image) > 0 else []
+            imginfo_by_tiles = parse_image_args(args.image_tiles, by_tiles=True) if len(args.image_tiles) > 0 else []
+            imginfo = imginfo_by_tif + imginfo_by_tiles
+        # sanity check: no duplicate image_id in imginfo
+        image_ids = [img_i.get("image_id") for img_i in imginfo]
+        assert len(image_ids) == len(set(image_ids)), "Error: Duplicate Image IDs found in the input YAML file or command line arguments. Please ensure that each image ID is unique."
 
-    # histology stitch
-    if args.hist_stitch:
-        # hist_dir to host the output tif from histology stitch
-        hist_dir = os.path.join(out_dir, "hist")
-        os.makedirs(hist_dir, exist_ok=True)
+    # image stitch
+    if args.image_stitch:
+        # img_dir to host the output tif from img stitch
+        img_dir = os.path.join(out_dir, "hist")
+        os.makedirs(img_dir, exist_ok=True)
         # add a cmd to make sure tile_offsets file exists - it was not generated for the early jobs
         tile_offsets_f = os.path.join(sgeinfo["sge_dir"], "coordinate_minmax_per_tile.tsv")
         if not os.path.exists(tile_offsets_f) and not args.sge_stitch:
             cmd.append(cmd_sge_stitch(sgeinfo, args, env, generate_tile_minmax_only=True))
-        # extract the histology info for histology stitch, and add the path
-        histinfo_by_tiles = []
-        for hist_i in histinfo:
-            if len(hist_i.get("in_tiles", [])) > 0:     # use in_tiles to distinguish the single-tif and tile-tifs
-                hist_i["path"] = os.path.join(hist_dir, hist_i["hist_id"]+".tif") 
-                hist_i["in_offsets"] = tile_offsets_f
-                histinfo_by_tiles.append(hist_i)
-        assert len(histinfo_by_tiles) > 0, "Error: --hist_stitch is enabled, but no histology tile information is provided. Please provide the histology tile information in the input YAML file or using the --histology-tiles argument."
-        cmds.extend(cmd_hist_stitch(histinfo_by_tiles, args, env))
+        # extract the img info for img stitch, and add the path
+        imginfo_by_tiles = []
+        for img_i in imginfo:
+            if len(img_i.get("in_tiles", [])) > 0:     # use in_tiles to distinguish the single-tif and tile-tifs
+                img_i["path"] = os.path.join(img_dir, img_i["image_id"]+".tif") 
+                img_i["in_offsets"] = tile_offsets_f
+                imginfo_by_tiles.append(img_i)
+        assert len(imginfo_by_tiles) > 0, "Error: --image_stitch is enabled, but no image tile information is provided. Please provide the image tile information in the input YAML file"
+        cmds.extend(cmd_image_stitch(imginfo_by_tiles, args, env))
 
     # =========
     #  Downstream
     # =========
-    if args.run_ficture or args.run_cartload or args.run_fig2pmtiles or args.upload_aws:
+    if args.run_ficture or args.run_cartload or args.image_png2pmtiles or args.upload_aws:
         runinfo=[]
         if args.in_yaml:
             avail_runs=[run_i.get("run_id") for run_i in yml.get("RUNS", [])]
             if len(args.run_ids) == 0 and len(avail_runs) == 1:
                 args.run_ids = avail_runs
-            assert len(args.run_ids) > 0, "When --run-ficture, --run-cartload-join, --run-fig2pmtiles, or --upload-aws is enabled, --run-ids is required"
+            assert len(args.run_ids) > 0, "When --run-ficture, --run-cartload-join, --image-png2pmtiles, or --upload-aws is enabled, --run-ids is required"
             
             for run_i in yml.get("RUNS", []):
                 if run_i.get("run_id") in args.run_ids:
@@ -1026,13 +1001,13 @@ def stepinator(_args):
                 if args.upload_aws:
                     cmds.append(cmd_upload_aws(run_i, fic_v, args, env, "--upload-cartload-only"))
 
-            if args.run_fig2pmtiles:
-                run_i["histology"] = histinfo
-                #print(histinfo)
-                cmds.extend(cmd_run_fig2pmtiles(run_i, fic_v, args, env))
+            if args.image_png2pmtiles:
+                run_i["histology"] = imginfo
+                #print(imginfo)
+                cmds.extend(cmd_image_png2pmtiles(run_i, fic_v, args, env))
             
                 if args.upload_aws:
-                    cmds.append(cmd_upload_aws(run_i, fic_v, args, env, "--upload-histology-only"))
+                    cmds.append(cmd_upload_aws(run_i, fic_v, args, env, "--upload-basemap-only"))
 
     #print(cmds)
 
@@ -1050,11 +1025,11 @@ def stepinator(_args):
             "A" if args.sge_convert else "a" if args.sge_stitch else "",
             "B" if args.run_ficture  else "",
             "C" if args.run_cartload else "",
-            "D" if args.run_fig2pmtiles else "",
+            "D" if args.image_png2pmtiles else "",
             "E" if args.upload_aws else ""
         ])
         # Construct job_id based on run_ids
-        if not any([args.run_ficture, args.run_cartload, args.run_fig2pmtiles, args.upload_aws]):
+        if not any([args.run_ficture, args.run_cartload, args.image_png2pmtiles, args.upload_aws]):
             args.job_id = f"sge_convert_{timestamp}" if args.sge_convert else f"sge_stitch_{timestamp}"
         elif len(args.run_ids) == 1:
             args.job_id = f"{args.run_ids[0]}_{action_code}_{timestamp}"

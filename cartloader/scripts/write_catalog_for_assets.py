@@ -1,32 +1,29 @@
-import sys, os, gzip, argparse, logging, warnings, shutil, subprocess, ast, json
+import sys, os, gzip, argparse, logging, warnings, shutil, subprocess, ast, json, inspect
 import pandas as pd
 import yaml
 
-from cartloader.utils.utils import cmd_separator, scheck_app, create_custom_logger, load_file_to_dict, write_dict_to_file
+from cartloader.utils.utils import cmd_separator, scheck_app, create_custom_logger, load_file_to_dict, write_dict_to_file, update_and_copy_paths
 
 def parse_arguments(_args):
     """
     Write a new YAML file or update an existing YAML file for all output assets
-    Key Parameters:
-    - sge-index: TSV file containing the index of the SGE output converted to PMTiles
-    - fic-assets: JSON/YAML file containing the FICTURE output assets
-    - background-assets: JSON/YAML file containing the background assets
-    - out: Output YAML file
     """
     repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 
-    parser = argparse.ArgumentParser(prog=f"cartloader write_yaml_for_assets", description="Write YAML for all output assets")
+    parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", description="Write YAML for all output assets")
 
-    inout_params = parser.add_argument_group("Input/Output Parameters", "Input/output directory/files.")
+    inout_params = parser.add_argument_group("Input/Output Parameters", "Input/output directories and files")
     inout_params.add_argument('--out-catalog', type=str, required=True, help='JSON/YAML file containing the output assets')
     inout_params.add_argument('--write-mode', type=str, default="append", choices=["append", "write"], help='Write mode for the output catalog. Default: append. If write, a new file will be created based on the arguments provided. If append, the new assets will be added or updated in the existing catalog file.')
-    inout_params.add_argument('--sge-index', type=str, help='Index TSV file containing the SGE output converted to PMTiles.')
-    inout_params.add_argument('--sge-counts', type=str, help='JSON file containing SGE counts per gene')
-    inout_params.add_argument('--fic-assets', type=str,  help='JSON/YAML file containing FICTURE output assets')
-#    inout_params.add_argument('--background-assets', type=str, help='JSON/YAML file containing background assets, if exists')
-    inout_params.add_argument('--overview', type=str, help='File containing the overview assets')
-    inout_params.add_argument('--basemap', type=str, nargs="+", default=[], help='[type:filename] or [type:id:filename] containing the basemap assets, where the id is the identifier of the basemap, for example hist_id in the yaml file.')    
-    inout_params.add_argument('--basemap-dir', type=str, default=None, help='Directory containing the basemap files. By default, use the directory of the out-catalog file')
+    inout_params.add_argument('--sge-index', type=str, help='Path to an index TSV file containing the SGE output converted to PMTiles.')
+    inout_params.add_argument('--sge-counts', type=str, help='Path to a JSON file containing SGE counts per gene')
+    inout_params.add_argument('--fic-assets', type=str,  help='Path to a JSON/YAML file containing FICTURE output assets')
+    inout_params.add_argument('--background-assets', type=str, nargs="+", default=[], help='Path(s) of one or more JSON/YAML file(s) containing background assets, if exist')
+    inout_params.add_argument('--cell-assets', type=str, nargs="+", default=[], help='Path(s) to one or more JSON/YAML file(s) containing cell segmentation assets, if exist')
+    inout_params.add_argument('--basemap', type=str, nargs="+", default=[], help='One or more basemap assets. Each must be in the format "id:filename" or "id1:id2:filename", where each ID represents a basemap identifier.')    
+    inout_params.add_argument('--basemap-dir', type=str, default=None, help='Directory containing the basemap files. By default, the directory of the out-catalog file is used as the basemap directory')
+    inout_params.add_argument('--overview', type=str, help='Specify one of those basemaps as the overview asset, using its file name')
+    inout_params.add_argument('--check-equal', action="store_true", default=False, help="If enabled, the script checks for an existing file with matching content and skips writing the JSON/YAML unless differences are found.")
 
     key_params = parser.add_argument_group("Key Parameters", "Key parameters frequently used by users")
     key_params.add_argument('--id', type=str, help='The identifier of the output assets')
@@ -53,6 +50,8 @@ def write_catalog_for_assets(_args):
 
     logger = create_custom_logger(__name__, args.out_catalog + args.log_suffix if args.log else None)
     logger.info("Analysis Started")
+
+    flags = []
 
     ## if the output catalog file exists, check the write mode
     if os.path.exists(args.out_catalog) and args.write_mode == "append":
@@ -98,60 +97,79 @@ def write_catalog_for_assets(_args):
         catalog_dict["assets"]["overview"]=args.overview
 
     # - factors
-    if args.fic_assets is not None:
+    if args.fic_assets is not None or len(args.cell_assets)>0:
         logger.info(f"Reading the FICTURE assets params {args.fic_assets}")
         if "factors" not in catalog_dict["assets"]:
             factors_list=[]
         else:
             factors_list = catalog_dict["assets"]["factors"]
-        ## load json of FICTURE assets
-        fic_assets = load_file_to_dict(args.fic_assets)
-        # updat factors_list by fic_assets 
-        factors_combined = factors_list + fic_assets
-        unique_factors = {item['id']: item for item in factors_combined}         # Use a dictionary to keep the latest entry by 'id'
-        factors_combined = list(unique_factors.values())                                # Get the deduplicated list
-        catalog_dict["assets"]["factors"]=factors_combined
-        #print(f"Factors list: {factors_combined}")
+        
+        if args.fic_assets is not None: 
+            fic_assets = load_file_to_dict(args.fic_assets)
+            factors_list.extend(fic_assets)
+
+        if len(args.cell_assets)>0:
+            for cell_assets_f in args.cell_assets:
+                cell_assets=load_file_to_dict(cell_assets_f)
+                # update_and_copy_paths will update the path to be only filename, which fits the needs of catalog.yaml
+                cell_assets=update_and_copy_paths(cell_assets, out_dir, skip_keys=["id", "name", "cells_id"], exe_copy=True)
+                factors_list.append(cell_assets)
+                flags.append(f"{cell_assets_f}.done")
+
+        ## add files to the catalog
+        unique_factors = {item['id']: item for item in factors_list}         # Use a dictionary to keep the latest entry by 'id'
+        factors_list = list(unique_factors.values())                         # Get the deduplicated list
+        catalog_dict["assets"]["factors"]=factors_list
 
     # - basemap
-    if ( args.basemap is not [] ):
-        logger.info(f"Updating the basemap parameters {args.basemap}")
-        # update directory
-        if args.basemap_dir is None:
-            args.basemap_dir = os.path.dirname(args.out_catalog)
-
-        # update basemap
+    #   * load basemap dict
+    if len(args.background_assets)>0 or len(args.basemap)>0 :
+        # define basemap_dict
         if "basemap" not in catalog_dict["assets"]:
             basemap_dict = {}
         else:
             basemap_dict = catalog_dict["assets"]["basemap"]
         
-        basemap_flags =[]
-        for basemap in args.basemap:
-            logger.info(f"  - Adding the basemap {basemap}")
-            toks = basemap.split(":")
-            if ( len(toks) == 2 ):
-                (basemap_type, basemap_fn) = toks
-                basemap_dict[basemap_type] = basemap_fn
-            elif ( len(toks) == 3 ):
-                (basemap_type, basemap_id, basemap_fn) = toks
-                if ( basemap_type not in basemap_dict):
-                    basemap_dict[basemap_type] = {}
-                    basemap_dict[basemap_type]["default"] = basemap_id
-                basemap_dict[basemap_type][basemap_id] = basemap_fn
-            else:
-                logger.error(f"Invalid basemap format {basemap}")
-                sys.exit(1)
-            if basemap_type != "sge":
-                basemap_flags.append(os.path.join(args.basemap_dir, f"{basemap_fn}.yaml.done"))
+        if ( len(args.basemap)>0 ):
+            logger.info(f"Updating the basemap parameters {args.basemap}")
+
+            if args.basemap_dir is None:
+                args.basemap_dir = os.path.dirname(args.out_catalog)
+
+            for basemap in args.basemap:
+                logger.info(f"  - Adding the basemap {basemap}")
+                toks = basemap.split(":")
+                if ( len(toks) == 2 ):
+                    (basemap_type, basemap_fn) = toks
+                    basemap_dict[basemap_type] = basemap_fn
+                elif ( len(toks) == 3 ):
+                    (basemap_type, basemap_id, basemap_fn) = toks
+                    if ( basemap_type not in basemap_dict):
+                        basemap_dict[basemap_type] = {}
+                        basemap_dict[basemap_type]["default"] = basemap_id
+                    basemap_dict[basemap_type][basemap_id] = basemap_fn
+                else:
+                    logger.error(f"Invalid basemap format {basemap}")
+                    sys.exit(1)
+                if basemap_type != "sge":
+                    flags.append(os.path.join(args.basemap_dir, f"{basemap_fn}.yaml.done"))
+    
+        if len(args.background_assets)>0:
+            for background_assets_f in args.background_assets:
+                ## each backgroudn_assets file should contains only one key:value pair 
+                background_assets = load_file_to_dict(background_assets_f)
+                background_assets = update_and_copy_paths(background_assets, out_dir, skip_keys=[], exe_copy=True)
+                basemap_dict.update(background_assets)
+                flags.append(f"{background_assets_f}.done")
+            
         catalog_dict["assets"]["basemap"] = basemap_dict
 
     ## write the output catalog
     logger.info(f"Writing the output catalog file {args.out_catalog}")
-    write_dict_to_file(catalog_dict, args.out_catalog)
+    write_dict_to_file(catalog_dict, args.out_catalog, check_equal=args.check_equal)
 
-    if ( len(basemap_flags) > 0 ):
-        for flag_file in basemap_flags:
+    if ( len(flags) > 0 ):
+        for flag_file in flags:
             subprocess.run(["touch", flag_file])
 
     logger.info("Analysis Finished")

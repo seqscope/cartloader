@@ -1,18 +1,16 @@
 import sys, os, argparse, logging,  inspect, json, subprocess
 import pandas as pd
 from cartloader.utils.minimake import minimake
-from cartloader.utils.utils import cmd_separator, scheck_app, add_param_to_cmd, read_minmax
+from cartloader.utils.utils import cmd_separator, scheck_app, add_param_to_cmd, read_minmax, write_dict_to_file, load_file_to_dict, execute_makefile
 from cartloader.utils.sge_helper import aux_sge_args, input_by_platform, update_csvformat_by_platform
 from cartloader.scripts.feature_filtering import filter_feature_by_type
-
-# get the path of the cu
 
 def parse_arguments(_args):
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", 
                                     description="""
-                                     Standardize Spatial Transcriptomics (ST) datasets into a transcript-indexed SGE in TSV format.  
-                                     Platform Supports: 10X Visium HD, SeqScope, 10X Xenium, BGI Stereoseq, Cosmx SMI, Vizgen Merscope, Pixel-Seq, and Nova-ST.
+                                     Standardize Format of Spatial Transcriptomics (ST) datasets. Each returns a transcript-indexed SGE in TSV format.  
+                                     Platform Supports: 10X Visium HD, SeqScope, 10X Xenium, BGI Stereoseq, Cosmx SMI, Vizgen Merscope, Pixel-Seq, and Nova-ST. For SGE from others platforms or from custom/preprocessed sources, sge_convert provides a generic option that accepts CSV/TSV files with basic required fields
                                      Outputs: A transcript-indexed SGE file, a coordinate minmax TSV file, and a feature file counting UMIs per gene. All output are in micro-meter precision.
                                      Options: filtering SGE by quality, gene, or density; coordinate conversion.
                                      """)
@@ -27,13 +25,14 @@ def parse_arguments(_args):
     
     # Input/output/key params
     inout_params = parser.add_argument_group("Input/Output Parameters", "Parameters to specify platform, input, output, and units per um, precision, and density-filtering for output.")
-    inout_params.add_argument('--platform', type=str, choices=["10x_visium_hd", "seqscope", "10x_xenium", "bgi_stereoseq", "cosmx_smi", "vizgen_merscope", "pixel_seq", "nova_st", "generic"], required=True, help='Platform of the raw input file to infer the format of the input file')
+    inout_params.add_argument('--platform', type=str, choices=["10x_visium_hd", "seqscope", "10x_xenium", "bgi_stereoseq", "cosmx_smi", "vizgen_merscope", "pixel_seq", "nova_st", "generic"], required=True, help='Platform of the raw input file to infer the format of the input file. "generic" refers to SGE from platforms not yet explicitly supported by cartloader, or from custom/preprocessed sources')
     # - input
     inout_params.add_argument('--in-mex', type=str, default=os.getcwd(), help='(10x_visium_hd and seqscope only) Directory path to input files in Market Exchange (MEX) format. Defaults to the current working directory.') # 10x_visium_hd, seqscope 
-    inout_params.add_argument('--in-parquet', type=str, default="tissue_positions.parquet", help='(10x_visium_hd only) Path to the input parquet file for spatial coordinates (default: tissue_positions.parquet)') # 10x_visium_hd
-    inout_params.add_argument('--in-csv', type=str, default=None, help='(10x_xenium, bgi_stereoseq, cosmx_smi, vizgen_merscope, pixel_seq, and nova_st only) Path to the input raw CSV/TSV file (default: None).') # 10x_xenium, bgi_stereoseq, cosmx_smi, vizgen_merscope, pixel_seq, and nova_st
+    inout_params.add_argument('--in-parquet', type=str, default="tissue_positions.parquet", help='(10x_visium_hd and 10x_xenium only) For 10X Visium HD platform, specify to path to the input parquet file for spatial coordinates (default: tissue_positions.parquet). For 10X Xenium, if the input transcript file is in parquet format, specify its path here and skip --in-csv (default: None)') # 10x_visium_hd
+    inout_params.add_argument('--in-csv', type=str, default=None, help='(10x_xenium, bgi_stereoseq, cosmx_smi, vizgen_merscope, pixel_seq, and nova_st only) Path to the input raw CSV/TSV file if raw CSV/TSV file exists(default: None).') 
+    inout_params.add_argument('--in-json', type=str, default=None, help='(Shortcut; currenly only support 10x_xenium) Path to a JSON file to provide paths to the input file. If provided, omit --in-parquet and --in-csv.')
     inout_params.add_argument('--units-per-um', type=float, default=1.00, help='Coordinate unit per um in the input files (default: 1.00). Alternatively, for 10x Visium HD, skip --units-per-um and use --scale-json to auto-compute.')  
-    inout_params.add_argument('--scale-json', type=str, default=None, help="(10x_visium_hd only) Path to a scale json file for calculating --units-per-um (default: None; Typical naming convention: scalefactors_json.json)") # 10x_visium_hd
+    inout_params.add_argument('--scale-json', type=str, default=None, help="(Shortcut; 10x_visium_hd only) Path to a scale json file for calculating --units-per-um (default: None; Typical naming convention: scalefactors_json.json)") 
     # - output
     inout_params.add_argument('--out-dir', type=str, required=True, help='The output directory to host files from SGE format conversion, files from density-filtering, and the make file.')
     inout_params.add_argument('--out-transcript', type=str, default="transcripts.unsorted.tsv.gz", help='Output for SGE format conversion. The compressed transcript-indexed SGE file in TSV format (default: transcripts.unsorted.tsv.gz).')
@@ -45,6 +44,8 @@ def parse_arguments(_args):
     # - sge visualization
     inout_params.add_argument('--sge-visual', action='store_true', default=False, help='Visualize the output SGE. If --filter-by-density, both unfiltered and filtered SGE will be visualized (default: False)')
     inout_params.add_argument('--out-xy', type=str, default="xy.png", help='Output for SGE visualization image (default: xy.png)')
+    # - sge json
+    inout_params.add_argument('--out-json',  type=str, default=None, help='Output json summarizing SGE information. (default: out_dir/sge_assets.json).')
 
     # AUX input MEX params
     aux_in_mex_params = parser.add_argument_group( "IN-MEX Auxiliary Parameters", "(10x_visium_hd and seqscope only) Auxiliary parameters for input MEX and parquet files. Required if --in-mex is used." )
@@ -93,7 +94,7 @@ def parse_arguments(_args):
     # aux_ftrfilter_params.add_argument('--include-feature-list', type=str, default=None, help='A file containing a list of input genes to be included (feature name of IDs) (default: None)')
     # aux_ftrfilter_params.add_argument('--exclude-feature-list', type=str, default=None, help='A file containing a list of input genes to be excluded (feature name of IDs) (default: None)')
     aux_ftrfilter_params.add_argument('--include-feature-regex', type=str, default=None, help='A regex pattern of feature/gene names to be included (default: None)')
-    aux_ftrfilter_params.add_argument('--exclude-feature-regex', type=str, default=None, help='A regex pattern of feature/gene names to be excluded (default: None)')
+    aux_ftrfilter_params.add_argument('--exclude-feature-regex', type=str, default=None, help='A regex pattern of feature/gene names to be excluded (default: "^(BLANK_|DeprecatedCodeword_|NegCon|UnassignedCodeword_)" for 10_xenium, None for the rest)')
     # aux_ftrfilter_params.add_argument('--include-feature-type-regex', type=str, default=None, help='A regex pattern of feature/gene type to be included (default: None).') # (e.g. protein_coding|lncRNA)
     # aux_ftrfilter_params.add_argument('--csv-colname-feature-type', type=str, default=None, help='The input column name in the input that corresponding to the gene type information, if your input file has gene type information(default: None)')
     # aux_ftrfilter_params.add_argument('--feature-type-ref', type=str, default=None, help='Specify the path to a tab-separated reference file to provide gene type information for each gene per row (default: None)')
@@ -105,7 +106,6 @@ def parse_arguments(_args):
     # AUX polygon-filtering params
     aux_polyfilter_params = parser.add_argument_group('Density/Polygon Filtering Auxiliary Parameters','Auxiliary parameters for filtering polygons based on the number of vertices. Required when --filter-by-density is enabled.')
     aux_polyfilter_params.add_argument('--genomic-feature', type=str, default=None, help='Column name of genomic feature for polygon-filtering (default to --colnames-count if --colnames-count only specifies one column)')
-    #aux_polyfilter_params.add_argument('--mu-scale', type=int, default=1, help='Scale factor for the polygon area calculation (default: 1.0)')
     aux_polyfilter_params.add_argument('--radius', type=int, default=15, help='Advanced parameter. Radius for the polygon area calculation (default: 15)')
     aux_polyfilter_params.add_argument('--quartile', type=int, default=2, help='Quartile for the polygon area calculation (default: 2)')
     aux_polyfilter_params.add_argument('--hex-n-move', type=int, default=1, help='Sliding step (default: 1)')
@@ -121,11 +121,11 @@ def parse_arguments(_args):
 
     # env params
     env_params = parser.add_argument_group("ENV Parameters", "Environment parameters for the tools")
-    env_params.add_argument('--gzip', type=str, default="gzip", help='Path to gzip binary. For faster processing, use "pigz -p 4".')
-    env_params.add_argument('--spatula', type=str, default="spatula", help='Path to spatula binary.')
-    env_params.add_argument('--parquet-tools', type=str, default="parquet-tools", help='If --in-parquet is enabled, path to parquet-tools binary')
-    env_params.add_argument('--gdal_translate', type=str, default=f"gdal_translate", help='If --north-up, provide path to gdal_translate binary')
-    env_params.add_argument('--gdalwarp', type=str, default=f"gdalwarp", help='If --north-up, provide path to gdalwarp binary')
+    env_params.add_argument('--gzip', type=str, default="gzip", help='Path to gzip binary. For faster processing, use "pigz -p 4" (default: gzip)')
+    env_params.add_argument('--spatula', type=str, default="spatula", help='Path to spatula binary (default: spatula).')
+    env_params.add_argument('--parquet-tools', type=str, default="parquet-tools", help='If --in-parquet is enabled, path to parquet-tools binary (default: parquet-tools)')
+    env_params.add_argument('--gdal_translate', type=str, default=f"gdal_translate", help='If --north-up, provide path to gdal_translate binary (default: gdal_translate)')
+    env_params.add_argument('--gdalwarp', type=str, default=f"gdalwarp", help='If --north-up, provide path to gdalwarp binary (default: gdalwarp)')
 
     # not in use 
     #aux_ftrfilter_params.add_argument('--unique', action='store_true', default=False, help='Merge pixels with (almost?) identical coordinates. Applies to cosmx_smi only.')
@@ -177,6 +177,8 @@ def convert_visiumhd(cmds, args):
     ## output: out_transcript, out_minmax, out_feature
     tmp_parquet = f"{args.out_dir}/tissue_positions.csv.gz"
     # * --in_parquet: convert parquet to csv
+    if args.parquet is None:
+        args.parquet = "tissue_positions.parquet"
     cmds.append(f"{args.parquet_tools} csv {args.in_parquet} |  {args.gzip} -c > {tmp_parquet}")
     # * --scale_json: if applicable
     if args.scale_json is not None:
@@ -263,17 +265,13 @@ def convert_tsv(cmds, args):
     # output: out_transcript, out_minmax, out_feature
     #  * update csv_colname_*  and csv_delim based on the platform
     args = update_csvformat_by_platform(args)
-    #print(args)
     #  * 10x_xenium: update default value for the phred score filtering 
     if args.platform == "10x_xenium":
         if args.csv_colname_phredscore is None:
             args.csv_colname_phredscore = "qv"
         if args.min_phred_score is None:
             args.min_phred_score = 20
-    # * no need to check --csv-colnames-count has the same number as --colnames-count (for spme platform, no need to provide --csv-colnames-count)
-    # if len(args.csv_colnames_count.split(",")) != len(args.colnames_count.split(",")):
-    #     raise ValueError(f"The number of columns in --csv-colnames-count ({args.csv_colnames_count}) should be the same as the number of columns in --colnames-count ({args.colnames_count}).")
-    # main commands
+
     transcript_tsv = args.out_transcript.replace(".gz", "")
     format_cmd=f"cartloader format_generic --input {args.in_csv} --out-dir {args.out_dir} --out-transcript {transcript_tsv} --out-feature {args.out_feature} --out-minmax {args.out_minmax}"
     # aux args
@@ -362,6 +360,7 @@ def sge_visual_northup(mm, xy_f, xy_northup_f, minmax_f, prereq, srs="EPSG:3857"
     cmds.append(f"rm {temp_tif}")
     mm.add_target(xy_northup_f, [xy_f]+prereq, cmds)
     return mm
+
 #================================================================================================
 #
 # main functions
@@ -376,6 +375,20 @@ def sge_convert(_args):
     scheck_app(args.gzip)
 
     # input
+    
+    if args.in_json is not None:
+        assert os.path.exists(args.in_json), f"The input json file doesn't exist: {args.in_json}"
+
+        print(f"Loading input files from input JSON {args.in_json}")        
+        raw_data = load_file_to_dict(args.in_json)
+        raw_tx = raw_data["TRANSCRIPT"]
+        if raw_tx.endswith("parquet"):
+            args.in_parquet = raw_tx
+            print(f" * --in-parquet {args.in_parquet}")
+        elif raw_tx.endswith("csv.gz") or raw_tx.endswith("tsv.gz") or raw_tx.endswith("tsv") or raw_tx.endswith("csv"):
+            args.in_csv = raw_tx
+            print(f" * --in-csv {args.in_csv}")
+    
     in_raw_filelist=input_by_platform(args)
 
     # output
@@ -391,6 +404,21 @@ def sge_convert(_args):
     filtered_minmax_f = os.path.join(args.out_dir, f"{args.out_filtered_prefix}.coordinate_minmax.tsv")
     filtered_xy_f = os.path.join(args.out_dir, f"{args.out_filtered_prefix}.{args.out_xy}")
 
+    if args.out_json is None:
+        args.out_json = os.path.join(args.out_dir, "sge_assets.json")
+
+    # params
+    if args.platform == "10x_xenium":
+        if args.exclude_feature_regex is None:
+            # Negative probe patterns:
+            #   BLANK_*
+            #   DeprecatedCodeword_*
+            #   NegControlCodeword_*
+            #   NegControlProbe_*
+            #   UnassignedCodeword_*
+            args.exclude_feature_regex = "^(BLANK_|DeprecatedCodeword_|NegCon|UnassignedCodeword_)"
+            print(f"Update --exclude-feature-regex: {args.exclude_feature_regex }")
+    
     # mm
     mm = minimake()
 
@@ -402,10 +430,29 @@ def sge_convert(_args):
         cmds = convert_visiumhd(cmds, args)
     elif args.platform == "seqscope":
         cmds = convert_seqscope(cmds, args)
-    elif args.platform in ["10x_xenium", "cosmx_smi", "bgi_stereoseq", "vizgen_merscope", "pixel_seq", "nova_st", "generic"]:
+    elif args.platform == "10x_xenium":
+        #  * 10x_xenium: convert parquet to csv
+        if args.in_parquet is not None and args.in_csv is not None:
+            raise ValueError("For 10X Xenium, you can only provide input transcript file using --in-parquet or --in-csv")
+        if args.in_parquet is not None:
+            cmds = cmd_separator([], f"Converting input parquet into a csv file : (platform: {args.platform})...")
+            args.in_csv = f"{args.out_dir}/transcripts.parquet.csv.gz"
+            cmds.append(f"{args.parquet_tools} csv {args.in_parquet} |  {args.gzip} -c > {args.in_csv}")
+            mm.add_target(args.in_csv, [args.in_parquet], cmds) 
+            # update the prereq for convert
+            in_raw_filelist=[args.in_csv] 
+        cmds = convert_tsv(cmds, args)
+    elif args.platform in ["cosmx_smi", "bgi_stereoseq", "vizgen_merscope", "pixel_seq", "nova_st", "generic"]:
         cmds = convert_tsv(cmds, args)
     cmds.append(f"[ -f {out_transcript_f} ] && [ -f {out_feature_f} ] && [ -f {out_minmax_f} ] && touch {sge_convert_flag}")
-    mm.add_target(sge_convert_flag, in_raw_filelist, cmds) 
+    mm.add_target(sge_convert_flag, in_raw_filelist, cmds)
+
+    sge_assets={
+        "transcript": out_transcript_f,
+        "feature": out_feature_f,
+        "minmax": out_minmax_f,
+        "density_filtering": False
+    }
 
     if args.sge_visual:
         mm = sge_visual(mm, 
@@ -418,7 +465,11 @@ def sge_convert(_args):
             out_xyn_f= os.path.join(args.out_dir, args.out_northup_tif)
             mm = sge_visual_northup(mm, out_xy_f, out_xyn_f, out_minmax_f, [sge_convert_flag],
                                   srs=args.srs, resample=args.resample, gdalwarp=args.gdalwarp, gdal_translate=args.gdal_translate)
-    
+        sge_assets["visual"]={
+            "png": out_xyn_f if args.north_up else out_xy_f,
+            "northup": args.north_up
+        }
+
     # filtering
     if args.filter_by_density:
         sge_filtered_flag = os.path.join(args.out_dir, "sge_density_filtering.done")
@@ -443,6 +494,11 @@ def sge_convert(_args):
         }
         mm = sge_density_filtering(mm, sge_filtering_dict)
     
+        sge_assets["transcript"] = filtered_transcript_f
+        sge_assets["feature"] = filtered_feature_f
+        sge_assets["minmax"] = filtered_minmax_f
+        sge_assets["density_filtering"] = True
+
         if args.sge_visual:
             mm = sge_visual(mm, 
                             filtered_transcript_f,
@@ -455,6 +511,11 @@ def sge_convert(_args):
                 mm = sge_visual_northup(mm, filtered_xy_f, filtered_xyn_f, filtered_minmax_f, [sge_filtered_flag],
                                         srs=args.srs, resample=args.resample, gdalwarp=args.gdalwarp, gdal_translate=args.gdal_translate)
 
+            sge_assets["visual"]={
+                "png": filtered_xyn_f if args.north_up else filtered_xy_f,
+                "northup": args.north_up
+            } 
+
     # write makefile
     if len(mm.targets) == 0:
         logging.error("There is no target to run. Please make sure that at least one run option was turned on")
@@ -462,17 +523,13 @@ def sge_convert(_args):
     
     make_f = os.path.join(args.out_dir, args.makefn)
     mm.write_makefile(make_f)
-    
-    if args.dry_run:
-        dry_cmd=f"make -f {make_f} -n {'-B' if args.restart else ''} "
-        os.system(dry_cmd)
-        print(f"To execute the pipeline, run the following command:\nmake -f {make_f} -j {args.n_jobs} {'-B' if args.restart else ''}")
-    else:
-        exe_cmd=f"make -f {make_f} -j {args.n_jobs} {'-B' if args.restart else ''}"
-        result = subprocess.run(exe_cmd, shell=True)
-        if result.returncode != 0:
-            print(f"Error in executing: {exe_cmd}")
-            sys.exit(1)
+
+    # write down a json file when execute
+    write_dict_to_file(sge_assets, args.out_json, check_equal=True)
+
+    execute_makefile(make_f, dry_run=args.dry_run, restart=args.restart, n_jobs=args.n_jobs)
+
+
 
 if __name__ == "__main__":
     # get the cartloader path

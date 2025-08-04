@@ -1,8 +1,8 @@
-import sys, os, argparse, logging, subprocess
+import sys, os, argparse, logging, subprocess, inspect
 import pandas as pd
 
 from cartloader.utils.minimake import minimake
-from cartloader.utils.utils import cmd_separator, scheck_app, create_custom_logger, load_file_to_dict, write_dict_to_file, find_major_axis, ficture_params_to_factor_assets
+from cartloader.utils.utils import cmd_separator, scheck_app, create_custom_logger, load_file_to_dict, write_dict_to_file, find_major_axis, ficture_params_to_factor_assets, execute_makefile
 
 def parse_arguments(_args):
     """
@@ -14,7 +14,7 @@ def parse_arguments(_args):
     """
     repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 
-    parser = argparse.ArgumentParser(prog=f"cartloader run_cartload_join", description="Build resources for CartoScope, joining the pixel-level results from FICTURE")
+    parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", description="Build resources for CartoScope, joining the pixel-level results from FICTURE")
 
     run_params = parser.add_argument_group("Run Options", "Run options for FICTURE commands")
     run_params.add_argument('--dry-run', action='store_true', default=False, help='Dry run. Generate only the Makefile without running it')
@@ -432,27 +432,8 @@ def run_cartload_join(_args):
     make_f = os.path.join(args.out_dir, args.makefn)
     mm.write_makefile(make_f)
 
-    ## run makefile
-    # if args.dry_run:
-    #     ## run makefile
-    #     os.system(f"make -f {make_f} -n")
-    #     print(f"To execute the pipeline, run the following command:\nmake -f {make_f} -j {args.n_jobs}")
-    # else:
-    #     exit_code = os.system(f"make -f {make_f} -j {args.n_jobs}")
-    #     if exit_code != 0:
-    #         logging.error(f"Error in running make -f {make_f} -j {args.n_jobs}")
-    #         sys.exit(1)
-
-    if args.dry_run:
-        os.system(f"make -f {make_f} -n {'-B' if args.restart else ''} ")
-        print(f"To execute the pipeline, run the following command:\nmake -f {make_f} -j {args.n_jobs}")
-    else:
-        exe_cmd=f"make -f {make_f} -j {args.n_jobs} {'-B' if args.restart else ''}"
-        result = subprocess.run(exe_cmd, shell=True)
-        if result.returncode != 0:
-            print(f"Error in executing: {exe_cmd}")
-            sys.exit(1)
-
+    execute_makefile(make_f, dry_run=args.dry_run, restart=args.restart, n_jobs=args.n_jobs)
+    
     logger.info("Analysis Finished")
 
 if __name__ == "__main__":

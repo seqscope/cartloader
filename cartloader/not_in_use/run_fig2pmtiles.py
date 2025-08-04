@@ -1,4 +1,4 @@
-import sys, os, gzip, argparse, subprocess
+import sys, os, gzip, argparse, subprocess, inspect
 import pandas as pd
 import numpy as np
 import tifffile
@@ -119,7 +119,7 @@ def parse_arguments(_args):
     """
     Parse command-line arguments.
     """
-    parser = argparse.ArgumentParser(prog=f"cartloader run_fig2pmtiles", description="Convert a figure to pmtiles")
+    parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", description="Convert a figure to pmtiles")
 
     run_params = parser.add_argument_group("Run Options", "Run options for FICTURE commands")
     run_params.add_argument('--dry-run', action='store_true', default=False, help='Dry run. Generate only the Makefile without running it (default: False)')
@@ -156,7 +156,6 @@ def parse_arguments(_args):
     env_params.add_argument('--pmtiles', type=str, default=f"pmtiles", help='Path to pmtiles binary from go-pmtiles')
     env_params.add_argument('--gdal_translate', type=str, default=f"gdal_translate", help='Path to gdal_translate binary')
     env_params.add_argument('--gdaladdo', type=str, default=f"gdaladdo", help='Path to gdaladdo binary')
-    env_params.add_argument('--keep-intermediate-files', action='store_true', default=False, help='Keep intermediate files')
 
     aux_params = parser.add_argument_group("Auxiliary Parameters", "Auxiliary parameters for steps, and tools")
     aux_params.add_argument('--catalog-yaml', type=str, default=None, help='For --update-catalog, define the catalog yaml file to update (default: catalog.yaml in the output directory specified by --out-prefix)')
@@ -170,6 +169,7 @@ def parse_arguments(_args):
     aux_params.add_argument("--lower-thres-quantile", type=float, default=None, help='For --transform, quantile-based floored value for rescaling the image. Cannot be used with --lower-thres-intensity')
     aux_params.add_argument("--lower-thres-intensity", type=float, default=None, help='For --transform, intensity-based floored value for rescaling the image. Cannot be used with --lower-thres-quantile')
     aux_params.add_argument("--colorize", type=str, help='For --transform, colorize the black-and-white image using a specific RGB code as a max value (does not work with RGB images)')
+    env_params.add_argument('--keep-intermediate-files', action='store_true', default=False, help='Keep intermediate files')
 
     if len(_args) == 0:
         parser.print_help()

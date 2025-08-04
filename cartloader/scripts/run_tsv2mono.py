@@ -1,9 +1,9 @@
-import sys, os, gzip, argparse, logging, warnings, shutil, subprocess, ast, re
+import sys, os, gzip, argparse, logging, warnings, shutil, subprocess, ast, re, inspect
 import pandas as pd
 import numpy as np
 
 from cartloader.utils.minimake import minimake
-from cartloader.utils.utils import cmd_separator, scheck_app, create_custom_logger, read_minmax
+from cartloader.utils.utils import cmd_separator, scheck_app, create_custom_logger, read_minmax, execute_makefile
 
 def parse_arguments(_args):
     """
@@ -11,7 +11,7 @@ def parse_arguments(_args):
     """
     repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 
-    parser = argparse.ArgumentParser(prog=f"cartloader run_fig2pmtiles", description="Convert a figure to pmtiles")
+    parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", description="Convert a figure to pmtiles")
 
     cmd_params = parser.add_argument_group("Commands", "Commands to run together")
     cmd_params.add_argument('--main', action='store_true', default=False, help='Run main commands (raster-dark, raster-light)')
@@ -98,26 +98,32 @@ def run_tsv2mono(_args):
     ])
 
     cmds_dark  = cmd_separator([], f"Creating dark-background raster PMTiles: {args.out_prefix}-dark.pmtiles")
-    cmds_light = cmd_separator([], f"Creating dark-background raster PMTiles: {args.out_prefix}-light.pmtiles")
+    cmds_light = cmd_separator([], f"Creating light-background raster PMTiles: {args.out_prefix}-light.pmtiles")
 
     ## create PNG files
-    cmds_dark.append(f"{cmd_drawxy} --out {args.out_prefix}-dark-opaque.png")
-    cmds_dark.append(" ".join([
-        f"'{args.spatula}'",
-        "png-mono2rgba",
-        "--in", f"{args.out_prefix}-dark-opaque.png",
-        "--out", f"{args.out_prefix}-dark.png",
-        "--transparent-below", str(args.transparent_below)
-    ]))
+    if args.transparent_below > 0:
+        cmds_dark.append(f"{cmd_drawxy} --out {args.out_prefix}-dark-opaque.png")
+        cmds_dark.append(" ".join([
+            f"'{args.spatula}'",
+            "png-mono2rgba",
+            "--in", f"{args.out_prefix}-dark-opaque.png",
+            "--out", f"{args.out_prefix}-dark.png",
+            f"--transparent-below {args.transparent_below}" if args.transparent_below > 0 else ""
+        ]))
+    else:
+        cmds_dark.append(f"{cmd_drawxy} --out {args.out_prefix}-dark.png")
 
-    cmds_light.append(f"{cmd_drawxy} --invert --out {args.out_prefix}-light-opaque.png")
-    cmds_light.append(" ".join([
-        f"'{args.spatula}'",
-        "png-mono2rgba",
-        "--in", f"{args.out_prefix}-light-opaque.png",
-        "--out", f"{args.out_prefix}-light.png",
-        "--transparent-above", str(args.transparent_above)
-    ]))
+    if args.transparent_above < 255:
+        cmds_light.append(f"{cmd_drawxy} --invert --out {args.out_prefix}-light-opaque.png")
+        cmds_light.append(" ".join([
+            f"'{args.spatula}'",
+            "png-mono2rgba",
+            "--in", f"{args.out_prefix}-light-opaque.png",
+            "--out", f"{args.out_prefix}-light.png",
+            f"--transparent-above {args.transparent_above}" if args.transparent_above < 255 else ""
+        ]))
+    else:
+        cmds_light.append(f"{cmd_drawxy} --invert --out {args.out_prefix}-light.png")
 
     ## create TIF files
     cmd_tif = " ".join([
@@ -130,7 +136,9 @@ def run_tsv2mono(_args):
 
     ## create MBTiles files
     cmd_mbt = " ".join([
-        f"'{args.gdal_translate}'", "-b 1 -b 2 -b 3 -b 4", "-strict",
+        f"'{args.gdal_translate}'", 
+        "-b 1 -b 2 -b 3 -b 4" if args.transparent_below > 0 else "-b 1"
+        "-strict",
         "-co", "\"ZOOM_LEVEL_STRATEGY=UPPER\"",
         "-co", f"\"RESAMPLING={args.resample.upper()}\"",
         "-co", f"\"BLOCKSIZE={args.blocksize}\"",
@@ -138,6 +146,16 @@ def run_tsv2mono(_args):
         "-a_srs", args.srs
     ])
     cmds_dark.append(f"{cmd_mbt} {args.out_prefix}-dark.pmtiles.tif {args.out_prefix}-dark.pmtiles.mbtiles")
+    cmd_mbt = " ".join([
+        f"'{args.gdal_translate}'", 
+        "-b 1 -b 2 -b 3 -b 4" if args.transparent_above < 255 else "-b 1"
+        "-strict",
+        "-co", "\"ZOOM_LEVEL_STRATEGY=UPPER\"",
+        "-co", f"\"RESAMPLING={args.resample.upper()}\"",
+        "-co", f"\"BLOCKSIZE={args.blocksize}\"",
+        "-ot", "Byte", "-scale", "-of", "mbtiles",
+        "-a_srs", args.srs
+    ])
     cmds_light.append(f"{cmd_mbt} {args.out_prefix}-light.pmtiles.tif {args.out_prefix}-light.pmtiles.mbtiles")
 
     cmds_dark.append(f"'{args.gdaladdo}' {args.out_prefix}-dark.pmtiles.mbtiles -r {args.resample.lower()} 2 4 8 16 32 64 128 256 512 1024 2048 4096 8192")
@@ -165,14 +183,8 @@ def run_tsv2mono(_args):
     make_f=os.path.join(out_dir, args.makefn) if args.makefn is not None else f"{args.out_prefix}.mk"
     mm.write_makefile(make_f)
 
-    if args.dry_run:
-        os.system(f"make -f {make_f} -n")
-        print(f"To execute the pipeline, run the following command:\nmake -f {make_f} -j {args.n_jobs}")
-    else:
-        result = subprocess.run(f"make -f {make_f} -j {args.n_jobs} {'-B' if args.restart else ''}", shell=True)
-        if result.returncode != 0:
-            print(f"Error in tsv2mono pipeline. Please check the log files.")
-            sys.exit(1)
+    execute_makefile(make_f, dry_run=args.dry_run, restart=args.restart, n_jobs=args.n_jobs)
+
 
 if __name__ == "__main__":
     # Get the base file name without extension

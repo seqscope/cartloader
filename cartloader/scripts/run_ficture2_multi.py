@@ -1,18 +1,18 @@
-import sys, os, gzip, argparse, logging, shutil, subprocess
+import sys, os, gzip, argparse, logging, shutil, subprocess, inspect
 import pandas as pd
 from cartloader.utils.minimake import minimake
-from cartloader.utils.utils import cmd_separator, scheck_app, add_param_to_cmd, read_minmax, flexopen
+from cartloader.utils.utils import cmd_separator, scheck_app, add_param_to_cmd, read_minmax, flexopen, execute_makefile
 
 def parse_arguments(_args):
     """Parse command-line arguments."""
-    parser = argparse.ArgumentParser(prog=f"cartloader run_ficture2", description="Run FICTURE2")
+    parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", description="Run FICTURE2")
 
     run_params = parser.add_argument_group("Run Options", "Run options for FICTURE commands")
     run_params.add_argument('--dry-run', action='store_true', default=False, help='Dry run. Generate only the Makefile without running it')
     run_params.add_argument('--restart', action='store_true', default=False, help='Restart the run. Ignore all intermediate files and start from the beginning')
     run_params.add_argument('--threads', type=int, default=8, help='Maximum number of threads to use in each process')
     run_params.add_argument('--n-jobs', type=int, default=2, help='Number of jobs (processes) to run in parallel')
-    run_params.add_argument('--makefn', type=str, default="run_ficture.mk", help='The name of the Makefile to generate (default: run_ficture.mk)')
+    run_params.add_argument('--makefn', type=str, default="run_ficture2_multi.mk", help='The name of the Makefile to generate (default: run_ficture.mk)')
 
     inout_params = parser.add_argument_group("Input/Output Parameters", "Input and output parameters for FICTURE")
     inout_params.add_argument('--out-dir', required=True, type=str, help='Output directory')
@@ -36,7 +36,6 @@ def parse_arguments(_args):
 
     # AUX gene-filtering params
     aux_ftrfilter_params = parser.add_argument_group( "Feature Customizing Auxiliary Parameters", "Auxiliary parameters for customizing features in FICTURE analysis without modifying the original input feature TSV file. This ensures the original feature TSV file is retained in the output JSON file for downstream processing .")
-    # aux_ftrfilter_params.add_argument('--min-ct-per-ftr-tile', type=int, default=0, help='Apply a minimum count to filter overlapping feature. Filtering process will be applied if --min-ct-per-overlapftr > 0. (default: 0)')
     aux_ftrfilter_params.add_argument('--include-feature-regex', type=str, default=None, help='A regex pattern of feature/gene names to be included (default: None)')
     aux_ftrfilter_params.add_argument('--exclude-feature-regex', type=str, default=None, help='A regex pattern of feature/gene names to be excluded (default: None)')
 
@@ -144,20 +143,11 @@ def run_ficture2_multi(_args):
     # input/output/other files
     # dirs
     os.makedirs(args.out_dir, exist_ok=True)
-    
-    # defaults to use the 256-color cmap
-    if args.cmap_file is None:
-        script_path = os.path.abspath(__file__)
-        cartloader_root = os.path.abspath(os.path.join(script_path, "..", "..", ".."))
-        args.cmap_file=os.path.join(cartloader_root, "assets", "fixed_color_map_256.tsv")
-    
-    if not os.path.exists(args.cmap_file):
-        raise FileNotFoundError(f"Color map not found at: {args.cmap_file}")
 
-    # start mm
-    mm = minimake()
-
+    # ficture2
     ficture2bin = os.path.join(args.ficture2, "bin/punkst")
+    assert os.path.exists(ficture2bin), f"ficture2 binary not found at {ficture2bin}; specify a valid --ficture2 path or ensure it's installed in cartloader's submodules/punkst directory."
+    
     ficture2report = args.python + " " + os.path.join(args.ficture2, "ext/py/factor_report.py")
     
     # out files
@@ -175,6 +165,12 @@ def run_ficture2_multi(_args):
             toks = line.strip().split("\t")
             in_samples.append(toks[0])
             in_tsvs.append(toks[1])
+    
+    # cmap
+    assert os.path.exists(args.cmap_file), f"Color map not found at: {args.cmap_file}"
+    
+    # start mm
+    mm = minimake()
 
     # step 1. multi-sample tiling and hexagon:
     scheck_app(args.gzip)
@@ -523,22 +519,14 @@ def run_ficture2_multi(_args):
 
     ## write makefile
     if len(mm.targets) == 0:
-        logging.error("There is no target to run. Please make sure that ast least one run option was turned on")
+        logging.error("There is no target to run. Please make sure that at least one run option was turned on")
         sys.exit(1)
     
     make_f = os.path.join(args.out_dir, args.makefn)
     mm.write_makefile(make_f)
 
-    if args.dry_run:
-        dry_cmd=f"make -f {make_f} -n {'-B' if args.restart else ''} "
-        os.system(dry_cmd)
-        print(f"To execute the pipeline, run the following command:\nmake -f {make_f} -j {args.n_jobs} {'-B' if args.restart else ''}")
-    else:
-        exe_cmd=f"make -f {make_f} -j {args.n_jobs} {'-B' if args.restart else ''}"
-        result = subprocess.run(exe_cmd, shell=True)
-        if result.returncode != 0:
-            print(f"Error in executing: {exe_cmd}")
-            sys.exit(1)
+    execute_makefile(make_f, dry_run=args.dry_run, restart=args.restart, n_jobs=args.n_jobs)
+
 
 if __name__ == "__main__":
     # Get the path to the cartloader repository
