@@ -137,7 +137,7 @@ def run_tsv2mono(_args):
     ## create MBTiles files
     cmd_mbt = " ".join([
         f"'{args.gdal_translate}'", 
-        "-b 1 -b 2 -b 3 -b 4" if args.transparent_below > 0 else "-b 1"
+        "-b 1 -b 2 -b 3 -b 4" if args.transparent_below > 0 else "-b 1",
         "-strict",
         "-co", "\"ZOOM_LEVEL_STRATEGY=UPPER\"",
         "-co", f"\"RESAMPLING={args.resample.upper()}\"",
@@ -148,7 +148,7 @@ def run_tsv2mono(_args):
     cmds_dark.append(f"{cmd_mbt} {args.out_prefix}-dark.pmtiles.tif {args.out_prefix}-dark.pmtiles.mbtiles")
     cmd_mbt = " ".join([
         f"'{args.gdal_translate}'", 
-        "-b 1 -b 2 -b 3 -b 4" if args.transparent_above < 255 else "-b 1"
+        "-b 1 -b 2 -b 3 -b 4" if args.transparent_above < 255 else "-b 1",
         "-strict",
         "-co", "\"ZOOM_LEVEL_STRATEGY=UPPER\"",
         "-co", f"\"RESAMPLING={args.resample.upper()}\"",
