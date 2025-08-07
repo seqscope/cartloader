@@ -41,7 +41,6 @@ def parse_arguments(_args):
     #                          help='Maximum memory usage in gigabytes')
 
     aux_params = parser.add_argument_group("Auxiliary Parameters")    
-    aux_params.add_argument('--skip-pmtiles', action='store_true', default=False)
     aux_params.add_argument('--log', action='store_true', default=False)
     aux_params.add_argument('--log-suffix', type=str, default=".log")
 
@@ -148,7 +147,7 @@ def image_ome2png(_args):
         n_levels = len(tif.series[0].levels)
         
         if n_pages > 1 and args.page is None:
-            logger.error("Multiple pages detected. Please specify the page number to extract the image from")
+            logger.error(f"Multiple pages detected (n={n_pages}). Please specify the page number to extract the image from")
             sys.exit(1)
 
         # Get page and validate
