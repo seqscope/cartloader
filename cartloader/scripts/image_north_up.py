@@ -24,9 +24,6 @@ def parse_arguments(_args):
     parser.add_argument('--gdalwarp', type=str, default=f"gdalwarp", help='Path to gdalwarp binary')
     parser.add_argument('--overwrite', action='store_true', default=False, help='Overwrite the output file if it exists')
 
-    # not in use 
-    #aux_ftrfilter_params.add_argument('--unique', action='store_true', default=False, help='Merge pixels with (almost?) identical coordinates. Applies to cosmx_smi only.')
- 
     if len(_args) == 0:
         parser.print_help()
         sys.exit(1)

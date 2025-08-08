@@ -167,7 +167,7 @@ def image_stitch(_args):
             #ullr_f = current_f.replace(".tif", f".bounds.offsets_x{x_offset}_y{y_offset}.txt")
             ullr_f =f"{tile_prefix}.globalcoord.ullr.txt"
             cmds = cmd_separator([], f"Tile (row {row}, col {col}): Extracting bounds from {current_f} and adding offsets ({x_offset}, {y_offset}).")
-            cmds.append(f"cartloader image_extract_ullr --input {current_f} --output {ullr_f} --x_offset {x_offset} --y_offset {y_offset}")
+            cmds.append(f"cartloader image_extract_ullr --input {current_f} --output {ullr_f} --x-offset {x_offset} --y-offset {y_offset}")
             mm.add_target(ullr_f, [current_f], cmds)
             # read the bounds
             gcoord_f = f"{tile_prefix}.globalcoord.tif"

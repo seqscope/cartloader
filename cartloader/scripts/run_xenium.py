@@ -57,7 +57,7 @@ def parse_arguments(_args):
     key_params.add_argument('--cell-name', type=str, help='(Parameters for --import-cells) Name of the cell factor. This will be used in the cell assets (defaults to --cell-id)')
     key_params.add_argument('--tsv-cmap', type=str, default=None, help='(Parameters for --import-cells) Path to the TSV file containing the color map for the cell clusters')
     # images
-    key_params.add_argument('--image-ids', type=str, default=["DAPI_OME", "BOUNDARY_OME", "INTERIOR_RNA_OME", "INTERIOR_PROTEIN_OME", "DAPI_3D_OME", "DAPI_MIP_OME"], nargs="+", help='(Parameters for --import-images) One or more image IDs to be used in the output PMTiles. (default: "DAPI_OME", "BOUNDARY_OME", "INTERIOR_RNA_OME", "INTERIOR_PROTEIN_OME", "DAPI_3D_OME", "DAPI_MIP_OME").')
+    key_params.add_argument('--image-ids', type=str, default=["DAPI_OME", "BOUNDARY_OME", "INTERIOR_RNA_OME", "INTERIOR_PROTEIN_OME", "DAPI_MIP_OME"], nargs="+", help='(Parameters for --import-images) One or more image IDs to be used in the output PMTiles. (default: "DAPI_OME", "BOUNDARY_OME", "INTERIOR_RNA_OME", "INTERIOR_PROTEIN_OME", "DAPI_MIP_OME").')
     key_params.add_argument('--image-colors', type=str, default=[], help='(Parameters for --import-images) One or more colors to be used for OME TIFFs. The order of the colors should match the order of the image IDs in --image-ids. If not set, a default list of colors will be used.')
     key_params.add_argument('--skip-missing-images', action='store_true', help='If set, skip image IDs that do not exist, showing a warning instead of raising an error.')
     # aws 
