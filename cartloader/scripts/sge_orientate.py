@@ -4,8 +4,6 @@ from collections import defaultdict
 import math
 from cartloader.utils.image_helper import update_orient, orient2axisorder
 
-
-
 def parse_arguments(_args):
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", 

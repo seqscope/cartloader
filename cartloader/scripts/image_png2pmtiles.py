@@ -111,12 +111,13 @@ def parse_arguments(_args):
     key_params.add_argument('--georef-bounds-tsv', type=str, default=None, help='If --georeference is required, provide the bounds via a tsv file. This TSV should include 1 line with <ulx>,<uly>,<lrx>,<lry> ')
     key_params.add_argument('--georef-bounds', type=str, default=None, help='If --georeference is required, provide the bounds in the format of "<ulx>,<uly>,<lrx>,<lry>", which represents upper-left X, upper-left Y, lower-right X, lower-right Y.')
     key_params.add_argument('--srs', type=str, default='EPSG:3857', help='For --georeference and --geotif2mbtiles, define the spatial reference system (default: EPSG:3857)')
-    key_params.add_argument('--mono', action='store_true', default=False, help='Define if the input image is black-and-white and single-banded. (default: False)')
-    key_params.add_argument('--rgba', action='store_true', default=False, help='RGBA, 4-banded image (default: False)')
+    key_params.add_argument('--mono', action='store_true', default=False, help='Define if the input image is black-and-white and single-banded. Omit this if using --color-mode-record (default: False)')
+    key_params.add_argument('--rgba', action='store_true', default=False, help='RGBA, 4-banded image. Omit this if using --color-mode-record (default: False)')
     key_params.add_argument('--resample', type=str, default='cubic', help='Resampling method (default: cubic). Options: near, bilinear, cubic, etc.')
     key_params.add_argument('--blocksize', type=int, default='512', help='Blocksize when creating mbtiles (default: 512)')
     key_params.add_argument('--color-mode-record', type=str, default=None, help='This argument is specifically designed to be used in "cartloader import_image"')
-
+    #key_params.add_argument('--remove-intermediate-files', action='store_true', default=False, help='If set, remove intermediate files (e.g., .mbtiles) after generating the final output.')
+    
     env_params = parser.add_argument_group("Env Parameters", "Environment parameters, e.g., tools.")
     env_params.add_argument('--pmtiles', type=str, default=f"pmtiles", help='Path to pmtiles binary from go-pmtiles (default: pmtiles)')
     env_params.add_argument('--gdal_translate', type=str, default=f"gdal_translate", help='Path to gdal_translate binary (default: gdal_translate)')
@@ -158,6 +159,7 @@ def image_png2pmtiles(_args):
     # - color arg (based on args.color_mode_record)
     if (args.flip_vertical or args.flip_horizontal or args.rotate is not None) or args.geotif2mbtiles:
         if args.color_mode_record:
+            assert not args.rgba and not args.mono, "--color-mode-record cannot be used together with --mono or --rgba."
             assert os.path.exists(args.color_mode_record), f"Provide a valid --color-mode-record or omit it."
             with open(args.color_mode_record, 'r') as f:
                 line = f.readline()
@@ -276,7 +278,6 @@ def image_png2pmtiles(_args):
         cmds.append(f"'{args.gdaladdo}' {mbtile_f_ann} -r {args.resample} 2 4 8 16 32 64 128 256") # Build internal overviews. 
         cmds.append(f"'{args.pmtiles}' convert --force {mbtile_f_ann} {pmtiles_f}")
         cmds.append(f" [ -f {pmtiles_f} ] && rm {mbtile_f_ann}") # clean temp files
-        cmds.append(validation_cmd)
         mm.add_target(pmtiles_f, [mbtile_flag], cmds)
 
     ## write makefile

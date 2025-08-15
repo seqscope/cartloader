@@ -34,14 +34,13 @@ def parse_arguments(_args):
     inout_params.add_argument('--rotate-clockwise', action='store_true', default=False)
     inout_params.add_argument('--rotate-counter', action='store_true', default=False)
     inout_params.add_argument('--high-memory', action='store_true', default=False)
-    inout_params.add_argument('--write-color-mode', action='store_true', default=False,  help='Save the color mode into a file. This argument is specifically designed for "cartloader import_image" (default: False)')
+    inout_params.add_argument('--write-color-mode', action='store_true', default=False,  help='Save the color mode into a file (<out_prefix>.color.csv). This argument is specifically designed for "cartloader import_image" (default: False)')
 
     # memory_params = parser.add_argument_group("Memory Management")
     # memory_params.add_argument('--max-memory-gb', type=float, default=4.0,
     #                          help='Maximum memory usage in gigabytes')
 
     aux_params = parser.add_argument_group("Auxiliary Parameters")    
-    aux_params.add_argument('--skip-pmtiles', action='store_true', default=False)
     aux_params.add_argument('--log', action='store_true', default=False)
     aux_params.add_argument('--log-suffix', type=str, default=".log")
 
@@ -148,7 +147,7 @@ def image_ome2png(_args):
         n_levels = len(tif.series[0].levels)
         
         if n_pages > 1 and args.page is None:
-            logger.error("Multiple pages detected. Please specify the page number to extract the image from")
+            logger.error(f"Multiple pages detected (n={n_pages}). Please specify the page number to extract the image from")
             sys.exit(1)
 
         # Get page and validate

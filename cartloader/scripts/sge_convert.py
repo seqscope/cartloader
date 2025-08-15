@@ -28,7 +28,7 @@ def parse_arguments(_args):
     inout_params.add_argument('--platform', type=str, choices=["10x_visium_hd", "seqscope", "10x_xenium", "bgi_stereoseq", "cosmx_smi", "vizgen_merscope", "pixel_seq", "nova_st", "generic"], required=True, help='Platform of the raw input file to infer the format of the input file. "generic" refers to SGE from platforms not yet explicitly supported by cartloader, or from custom/preprocessed sources')
     # - input
     inout_params.add_argument('--in-mex', type=str, default=os.getcwd(), help='(10x_visium_hd and seqscope only) Directory path to input files in Market Exchange (MEX) format. Defaults to the current working directory.') # 10x_visium_hd, seqscope 
-    inout_params.add_argument('--in-parquet', type=str, default="tissue_positions.parquet", help='(10x_visium_hd and 10x_xenium only) For 10X Visium HD platform, specify to path to the input parquet file for spatial coordinates (default: tissue_positions.parquet). For 10X Xenium, if the input transcript file is in parquet format, specify its path here and skip --in-csv (default: None)') # 10x_visium_hd
+    inout_params.add_argument('--in-parquet', type=str, default=None, help='(10x_visium_hd and 10x_xenium only) For 10X Visium HD platform, specify to path to the input parquet file for spatial coordinates (default: tissue_positions.parquet). For 10X Xenium, if the input transcript file is in parquet format, specify its path here and skip --in-csv (default: None)') # 10x_visium_hd
     inout_params.add_argument('--in-csv', type=str, default=None, help='(10x_xenium, bgi_stereoseq, cosmx_smi, vizgen_merscope, pixel_seq, and nova_st only) Path to the input raw CSV/TSV file if raw CSV/TSV file exists(default: None).') 
     inout_params.add_argument('--in-json', type=str, default=None, help='(Shortcut; currenly only support 10x_xenium) Path to a JSON file to provide paths to the input file. If provided, omit --in-parquet and --in-csv.')
     inout_params.add_argument('--units-per-um', type=float, default=1.00, help='Coordinate unit per um in the input files (default: 1.00). Alternatively, for 10x Visium HD, skip --units-per-um and use --scale-json to auto-compute.')  
@@ -375,7 +375,6 @@ def sge_convert(_args):
     scheck_app(args.gzip)
 
     # input
-    
     if args.in_json is not None:
         assert os.path.exists(args.in_json), f"The input json file doesn't exist: {args.in_json}"
 
@@ -433,7 +432,7 @@ def sge_convert(_args):
     elif args.platform == "10x_xenium":
         #  * 10x_xenium: convert parquet to csv
         if args.in_parquet is not None and args.in_csv is not None:
-            raise ValueError("For 10X Xenium, you can only provide input transcript file using --in-parquet or --in-csv")
+            raise ValueError("For 10X Xenium, only one of the two input options (--in-parquet or --in-csv) can be specified for transcript data. Providing both will result in an error.")
         if args.in_parquet is not None:
             cmds = cmd_separator([], f"Converting input parquet into a csv file : (platform: {args.platform})...")
             args.in_csv = f"{args.out_dir}/transcripts.parquet.csv.gz"
