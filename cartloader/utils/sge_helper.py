@@ -6,7 +6,7 @@ import numpy as np
 aux_sge_args = {
     "out": [
         'units_per_um', 'precision_um',
-        'colname_x', 'colname_y', 'colnames_count',
+        'colname_x', 'colname_y', 'colname_count',
         'colname_feature_name' #, 'colname_feature_id'
     ],
     "inbcd": [
@@ -23,7 +23,7 @@ aux_sge_args = {
     ],
     "incsv": [
         'csv_comment', 'csv_delim', 'csv_colname_x', 'csv_colname_y', 'csv_colname_feature_name',
-        'csv_colnames_count',  'csv_colnames_others', # 'csv_colname_feature_id',
+        'csv_colname_count',  'csv_colnames_others', # 'csv_colname_feature_id',
         'csv_colname_phredscore', 'min_phred_score' #, 'add_molecule_id'
     ],
     "spatula": [
@@ -147,8 +147,8 @@ def update_csvformat_by_platform(args):
         args.csv_colname_y = platform_settings["y"]
     if args.csv_colname_feature_name is None:
         args.csv_colname_feature_name = platform_settings["feature_name"]
-    if args.csv_colnames_count is None:
-        args.csv_colnames_count = platform_settings["count"]
+    if args.csv_colname_count is None:
+        args.csv_colname_count = platform_settings["count"]
     if args.csv_delim is None:
         args.csv_delim = platform_settings["delim"]
     if args.csv_comment is False:

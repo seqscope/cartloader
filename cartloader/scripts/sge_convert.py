@@ -52,7 +52,7 @@ def parse_arguments(_args):
     aux_in_mex_params.add_argument('--mex-bcd', type=str, default="barcodes.tsv.gz", help='Barcode file name (default: barcodes.tsv.gz)')
     aux_in_mex_params.add_argument('--mex-ftr', type=str, default="features.tsv.gz", help='Feature file name (default: features.tsv.gz)')
     aux_in_mex_params.add_argument('--mex-mtx', type=str, default="matrix.mtx.gz", help='Matrix file name (default: matrix.mtx.gz)')
-    aux_in_mex_params.add_argument('--icols-mtx', type=str, default=1, help='Comma-separated 1-based indices for the target genomic features among the count columns in the input matrix file (default: 1). For example, with SeqScope, "--icols-mtx 1,2,3,4,5" would include the first five count columns.')
+    aux_in_mex_params.add_argument('--icols-mtx', type=str, default=1, help='1-based indices for the target genomic feature among the count columns in the input matrix file (default: 1). For example, when focusing on "gn" of SeqScope datasets, use --icols-mtx 1.')
     aux_in_mex_params.add_argument('--icol-ftr-id', type=int, default=1, help='1-based column index of feature ID in the input feature file (default: 1)')
     aux_in_mex_params.add_argument('--icol-ftr-name', type=int, default=2, help='1-based column index of feature name in the input feature file (default: 2)')
     aux_in_mex_params.add_argument('--icol-bcd-barcode', type=int, default=1, help='(seqscope only) 1-based column index of barcode in the input barcode file (default: 1)')
@@ -72,7 +72,7 @@ def parse_arguments(_args):
     aux_in_csv_params.add_argument('--csv-delim', type=str, default=None, help='Delimiter for the input TSV/CSV file (default: "," for 10x_xenium, cosmx_smi, and vizgen_merscope; "\\t" for bgi_stereoseq, pixel_seq, and nova_st) ')
     aux_in_csv_params.add_argument('--csv-colname-x',  type=str, default=None, help='Column name for X-axis (default: x_location for 10x_xenium; x for bgi_stereoseq; x_local_px for cosmx_smi; global_x for vizgen_merscope; xcoord for pixel_seq; x for nova_st)')
     aux_in_csv_params.add_argument('--csv-colname-y',  type=str, default=None, help='Column name for Y-axis (default: y_location for 10x_xenium; y for bgi_stereoseq; y_local_px for cosmx_smi; global_y for vizgen_merscope; ycoord for pixel_seq; y for nova_st)')
-    aux_in_csv_params.add_argument('--csv-colnames-count', type=str, default=None, help='Comma-separated Column name for expression count. If not provided, a count of 1 will be added for a feature in a pixel (default: MIDCounts for bgi_stereoseq; MIDCount for nova_st; None for the rest platforms).')
+    aux_in_csv_params.add_argument('--csv-colname-count', type=str, default=None, help='Comma-separated Column name for expression count. If not provided, a count of 1 will be added for a feature in a pixel (default: MIDCounts for bgi_stereoseq; MIDCount for nova_st; None for the rest platforms).')
     aux_in_csv_params.add_argument('--csv-colname-feature-name', type=str, default=None, help='Column name for gene name (default: feature_name for 10x_xenium; geneID for bgi_stereoseq; target for cosmx_smi; gene for vizgen_merscope; geneName for pixel_seq; geneID for nova_st)')
     # aux_in_csv_params.add_argument('--csv-colname-feature-id', type=str, default=None, help='Column name for gene id (default: None)')
     aux_in_csv_params.add_argument('--csv-colnames-others', nargs='*', default=[], help='Columns names to keep (e.g., cell_id, overlaps_nucleus) (default: None)')
@@ -85,7 +85,7 @@ def parse_arguments(_args):
     aux_out_params.add_argument('--precision-um', type=int, default=2, help='Precision for transcript coordinates. Set it to 0 to round to integer (default: 2)')
     aux_out_params.add_argument('--colname-x', type=str, default='X', help='Column name for X (default: X)')
     aux_out_params.add_argument('--colname-y', type=str, default='Y', help='Column name for Y (default: Y)')
-    aux_out_params.add_argument('--colnames-count', type=str, default='count', help='Comma-separated column names for count (default: count)')
+    aux_out_params.add_argument('--colname-count', type=str, default='count', help='Comma-separated column names for count (default: count)')
     aux_out_params.add_argument('--colname-feature-name', type=str, default='gene', help='Column name for gene name (default: gene)')
     # aux_out_params.add_argument('--colname-feature-id', type=str, default=None, help='Column name for gene ID. Required only when --csv-colname-feature-id or --print-feature-id is applied (default: None)') 
 
@@ -105,7 +105,7 @@ def parse_arguments(_args):
 
     # AUX polygon-filtering params
     aux_polyfilter_params = parser.add_argument_group('Density/Polygon Filtering Auxiliary Parameters','Auxiliary parameters for filtering polygons based on the number of vertices. Required when --filter-by-density is enabled.')
-    aux_polyfilter_params.add_argument('--genomic-feature', type=str, default=None, help='Column name of genomic feature for polygon-filtering (default to --colnames-count if --colnames-count only specifies one column)')
+    # aux_polyfilter_params.add_argument('--genomic-feature', type=str, default=None, help='Column name of genomic feature for polygon-filtering (default to --colname-count)')
     aux_polyfilter_params.add_argument('--radius', type=int, default=15, help='Advanced parameter. Radius for the polygon area calculation (default: 15)')
     aux_polyfilter_params.add_argument('--quartile', type=int, default=2, help='Quartile for the polygon area calculation (default: 2)')
     aux_polyfilter_params.add_argument('--hex-n-move', type=int, default=1, help='Sliding step (default: 1)')
@@ -203,9 +203,9 @@ def convert_visiumhd(cmds, args):
     #     args.exclude_feature_list = None
     #     cmds.append(cmd)
     # * check --icols-mtx has the same number as --colnames-count
-    args.icols_mtx=str(args.icols_mtx)
-    if len(args.icols_mtx.split(",")) != len(args.colnames_count.split(",")):
-        raise ValueError(f"The number of columns in --icols-mtx ({args.icols_mtx}) should be the same as the number of columns in --colnames-count ({args.colnames_count}).")
+    # args.icols_mtx=str(args.icols_mtx)
+    # if len(args.icols_mtx.split(",")) != len(args.colnames_count.split(",")):
+    #     raise ValueError(f"The number of columns in --icols-mtx ({args.icols_mtx}) should be the same as the number of columns in --colnames-count ({args.colnames_count}).")
     # * convert sge to tsv (output: out_transcript, out_minmax, out_feature, (optional) out_sge)
     format_cmd=f"{args.spatula} convert-sge --in-sge {args.in_mex} --out-tsv {args.out_dir} --pos {tmp_parquet} --tsv-mtx {args.out_transcript} --tsv-ftr {args.out_feature} --tsv-minmax {args.out_minmax}"
     aux_argset = set(item for lst in [aux_sge_args["out"], aux_sge_args["inftr"], aux_sge_args["inmtx"], aux_sge_args["inpos"], aux_sge_args["spatula"], aux_sge_args["ftrname"]] for item in lst)
@@ -240,9 +240,9 @@ def convert_seqscope(cmds, args):
     #     args.exclude_feature_list = None
     #     cmds.append(cmd)
     # * check --icols-mtx has the same number as --colnames-count
-    args.icols_mtx=str(args.icols_mtx)
-    if len(args.icols_mtx.split(",")) != len(args.colnames_count.split(",")):
-        raise ValueError(f"The number of columns in --icols-mtx ({args.icols_mtx}) should be the same as the number of columns in --colnames-count ({args.colnames_count}).")
+    # args.icols_mtx=str(args.icols_mtx)
+    # if len(args.icols_mtx.split(",")) != len(args.colnames_count.split(",")):
+    #     raise ValueError(f"The number of columns in --icols-mtx ({args.icols_mtx}) should be the same as the number of columns in --colnames-count ({args.colnames_count}).")
     # * convert sge to tsv (output: out_transcript, out_minmax, out_feature
     format_cmd=f"{args.spatula} convert-sge --in-sge {args.in_mex} --out-tsv {args.out_dir} --tsv-mtx {args.out_transcript} --tsv-ftr {args.out_feature} --tsv-minmax {args.out_minmax}"
     aux_argset = set(item for lst in [aux_sge_args["out"], aux_sge_args["inftr"], aux_sge_args["inbcd"], aux_sge_args["inmtx"], aux_sge_args["ftrname"]] for item in lst)
@@ -295,11 +295,11 @@ def convert_tsv(cmds, args):
 def sge_density_filtering(mm, sge_filtering_dict):
     genomic_feature=sge_filtering_dict["genomic_feature"]
     count_header=sge_filtering_dict["count_header"]
-    if genomic_feature is None:
-        if len(count_header) > 1:
-            logging.error("Missing --genomic-feature. Cannot use --colnames-count with multiple columns as --genomic-feature. Please provide one column name for density-filtering.")
-            sys.exit(1)
-        genomic_feature = count_header[0]
+    # if genomic_feature is None:
+    #     if len(count_header) > 1:
+    #         logging.error("Missing --genomic-feature. Cannot use ---count with multiple columns as --genomic-feature. Please provide one column name for density-filtering.")
+    #         sys.exit(1)
+    #     genomic_feature = count_header[0]
     cmds=cmd_separator([], "Filtering the converted data by density...")
     cmd = " ".join([
             "ficture", "filter_by_density",
@@ -483,8 +483,8 @@ def sge_convert(_args):
             "filtered_prefix": os.path.join(args.out_dir, args.out_filtered_prefix),
             "flag": sge_filtered_flag,
             "gene_header": [args.colname_feature_name],
-            "count_header": args.colnames_count.split(","), #list
-            "genomic_feature": args.genomic_feature,
+            "count_header": [args.colname_count], #args.colnames_count.split(","), #list
+            "genomic_feature": args.colname_count, #args.genomic_feature,
             "mu_scale": 1,
             "radius": args.radius,
             "quartile": args.quartile,

@@ -29,7 +29,7 @@ def feature_overlapping(_args):
     parser.add_argument('--out-overlap', type=str, required=True, help='Output file for only the features that are present in all tiles. The output columns includes <feature_name>, <sum of count across all tiles> per count.')
     parser.add_argument('--out-dist', type=str, help='(Optional) Output distribution file for all features. The output columns includes <feature_name>, <number of tiles with the feature>, and <count> per tile per count.')
     parser.add_argument('--colname-feature-name', type=str, default='gene', help='Feature name column (default: gene)')
-    parser.add_argument("--colnames-count", type=str, nargs='*', help="Columns (default: count).", default=['count'])
+    parser.add_argument("--colname-count", type=str, nargs='*', help="Columns (default: count).", default=['count'])
     parser.add_argument('--min-ct-per-ftr-tile', type=int, default=0, help='Minimum count to keep a shared feature (default: 0).')
     parser.add_argument('--colname-key-count', type=str, default=None, help='Column to use for count filtering. Defaults to first --colnames-count if only one')
     parser.add_argument('--log', action='store_true', default=False, help='Write log to file')

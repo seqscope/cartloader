@@ -31,14 +31,14 @@ def format_generic(_args):
     incol_params.add_argument('--csv-colname-x',  type=str, default=None, required=True, help='Specify the input column name for X-axis')
     incol_params.add_argument('--csv-colname-y',  type=str, default=None, required=True, help='Specify the input column name for Y-axis')
     incol_params.add_argument('--csv-colname-feature-name', type=str, default=None, required=True, help='Specify the input column name for gene name')
-    incol_params.add_argument('--csv-colnames-count', type=str, default=None, help='Specify column name(s) for UMI count. For multiple columns, separate names with commas. Please make sure the count column that will be used for downstream analysis to be the first item. If not provided, each feature will be assigned a default count of 1 per pixel.')
+    incol_params.add_argument('--csv-colname-count', type=str, default=None, help='Specify the input column name for UMI count. If not provided, each feature will be assigned a default count of 1 per pixel.')
     incol_params.add_argument('--csv-colnames-others', nargs='+', default=[], help='Specify the input column names to keep (e.g. cell_id, overlaps_nucleus). Please note this will affect how the count is aggregated (default: [])')
 
     outcol_params = parser.add_argument_group("Output Columns Parameters", "Output column parameters .")
     outcol_params.add_argument('--colname-x', type=str, default='X', help='Specify the output column name for X (default: X)')
     outcol_params.add_argument('--colname-y', type=str, default='Y', help='Specify the output column name for Y (default: Y)')
     outcol_params.add_argument('--colname-feature-name', type=str, default='gene', help='Specify the output column name for feature(gene) name')
-    outcol_params.add_argument('--colnames-count', type=str, default='count', help='Specify comma-separated output column name(s) for UMI count. If multiple columns are specified, the first should be the one to be used for downstream analysis. If not set, each feature is assigned a default count of 1 per pixel.')
+    outcol_params.add_argument('--colname-count', type=str, default='count', help='Specify the output column name for UMI count.')
     
     aux_params = parser.add_argument_group("Auxiliary Parameters", 
                                            """
@@ -94,13 +94,13 @@ def format_generic(_args):
     csv_comment="#" if args.csv_comment else None
     print(f"csv_comment: {csv_comment}")
     
-    icols_count = args.csv_colnames_count.split(",") if args.csv_colnames_count is not None else []
+    icols_count = [args.csv_colname_count] if args.csv_colname_count is not None else []
     icols = [args.csv_colname_x, args.csv_colname_y, args.csv_colname_feature_name, *args.csv_colnames_others, *icols_count] + [c for c in [args.csv_colname_feature_id, args.csv_colname_feature_type, args.csv_colname_phredscore] if c]
     
     iheader = pd.read_csv(args.input, nrows=1, sep=args.csv_delim, comment=csv_comment).columns.tolist()
     
     # * output header and output columns
-    ocols_count = args.colnames_count.split(",")
+    ocols_count = [args.colname_count]
     ocols_ftrs = [args.colname_feature_name] if args.csv_colname_feature_id is None else [args.colname_feature_name, args.colname_feature_id]
     ocols_others = args.csv_colnames_others + ([args.csv_colname_feature_id] if args.csv_colname_feature_id is not None else []) + (["molecule_id"] if args.add_molecule_id else [])
     
@@ -112,7 +112,7 @@ def format_generic(_args):
         _ = wf.write('\t'.join(oheader)+'\n')
     
     # * input output dict:
-    countcols_in2out={icols_count[i]:ocols_count[i] for i in range(len(icols_count))} if args.csv_colnames_count is not None else {}
+    countcols_in2out={icols_count[i]:ocols_count[i] for i in range(len(icols_count))} if args.csv_colname_count is not None else {}
 
     col_dict = {
         args.csv_colname_x: args.colname_x,
@@ -126,7 +126,7 @@ def format_generic(_args):
     for icol in icols:
         assert icol in iheader, f"Missing input column(s) ({icol}) in the header of the input file: {iheader}."
     #   - len of column should be consistent between input and output
-    if args.csv_colnames_count is not None:
+    if args.csv_colname_count is not None:
         assert len(icols_count) == len(ocols_count), f"Mismatch in the number of UMI count columns in input(N={len(icols_count)}) and output (N={len(ocols_count)})"
 
     # * float_format
@@ -178,7 +178,7 @@ def format_generic(_args):
 
         Rraw=chunk.shape[0]
         if len(icols_count) > 0:
-            Craw="s;".join([col+":"+str(chunk[col].sum()) for col in icols_count])
+            Craw=";".join([col+":"+str(chunk[col].sum()) for col in icols_count])
         else:
             Craw=Rraw
         
@@ -221,20 +221,19 @@ def format_generic(_args):
         if len(icols_count) > 0:
             for k,v in countcols_in2out.items():
                 chunk.rename(columns = {k:v}, inplace=True)
+            # filter by counts: if the sum of icols_count is 0, drop the row
+            chunk = chunk[chunk[ocols_count].sum(axis=1) > 0]
         else:
-            chunk[args.colnames_count] = 1
+            chunk[args.colname_count] = 1
         # 2) drop unnecessary columns
         chunk=chunk[unit_info + ocols_count]
         # 3) replace NaN with a placeholder
         for col in chunk.columns:
-            #chunk[col].fillna('NA', inplace=True) # avoiding chained assignments due to FutureWarning
             chunk[col] = chunk[col].fillna('NA')
         # 4) Group by unit_info and Aggregate each count. Allows >=1 count column(s).
         chunk = chunk.groupby(by=unit_info).agg({col: 'sum' for col in ocols_count}).reset_index()
-
         # 5) replace back
         for col in chunk.columns:
-            #chunk[col].replace('NA', np.nan, inplace=True) # avoiding chained assignments due to FutureWarning
             chunk[col] = chunk[col].replace('NA', np.nan)
         
         # write down

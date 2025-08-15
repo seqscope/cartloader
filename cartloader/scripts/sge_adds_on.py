@@ -26,7 +26,7 @@ def parse_arguments(_args):
     parser.add_argument("--out-feature", type=str, default=None, help="Output file for feature.")
     parser.add_argument('--colname-feature-name', type=str, default='gene', help='Feature name column (default: gene)')
     parser.add_argument('--colname-feature-id', type=str, default=None, help='Feature ID column (default: None)')
-    parser.add_argument("--colnames-count", type=str, default="gn,gt,spl,unspl,ambig", help="Comma-separated column names for count (default: gn,gt,spl,unspl,ambig)")
+    parser.add_argument("--colname-count", type=str, default="gn", help="Comma-separated column names for count (default: gn)")
     # minmax args
     parser.add_argument("--add-minmax", action='store_true', help="Create a minmax file based on the input file.")
     parser.add_argument("--out-minmax", type=str, default=None, help="Output file for minmax.")
@@ -45,7 +45,7 @@ def sge_add_feature_by_chunk(args):
     assert args.out_feature is not None, "When --add-feature, --out-feature must be provided."
     
     ftr_cols = [args.colname_feature_name, args.colname_feature_id] if args.colname_feature_id else [args.colname_feature_name]
-    count_cols = args.colnames_count.split(",")
+    count_cols = [args.colname_count]
 
     aggregation = defaultdict(lambda: [0] * len(count_cols))  
 
@@ -69,8 +69,7 @@ def sge_add_feature_by_chunk(args):
 
     # Create the final DataFrame
     agg_data = [list(key) + vals for key, vals in aggregation.items()]
-    colnames = ftr_cols + count_cols
-    feature_summary = pd.DataFrame(agg_data, columns=colnames)
+    feature_summary = pd.DataFrame(agg_data, columns=ftr_cols + count_cols)
 
     # Save the summarized DataFrame to a compressed TSV file
     with gzip.open(args.out_feature, 'wt') as f:
@@ -78,28 +77,6 @@ def sge_add_feature_by_chunk(args):
 
     print(f"Feature saved to {args.out_feature}")
 
-# def sge_add_feature(args):
-#     """Generate a summarized feature file."""
-#     assert args.out_feature is not None, "When --add-feature, --out-feature must be provided."
-
-#     with gzip.open(args.in_transcript, 'rt') as f:
-#         transcripts = pd.read_csv(f, sep='\t')
-
-#     ftr_cols=[args.colname_feature_name, args.colname_feature_id] if args.colname_feature_id else [args.colname_feature_name]
-#     count_cols = args.colnames_count.split(",")
-
-#     missing_cols = set(ftr_cols + count_cols) - set(transcripts.columns)
-#     if missing_cols:
-#         raise ValueError(f"The following required columns are missing in the input: {', '.join(missing_cols)}")
-
-#     # Aggregate all feature columns in a single groupby operation
-#     feature_summary = transcripts.groupby(ftr_cols, as_index=False)[count_cols].sum()
-
-#     # Save the summarized DataFrame to a compressed TSV file
-#     with gzip.open(args.out_feature, 'wt') as f:
-#         feature_summary.to_csv(f, sep='\t', index=False)
-
-#     print(f"Feature saved to {args.out_feature}")
 
 def sge_add_minmax_by_chunk(args):
     """Extract, scale, and compute min/max for X and Y coordinates using chunked processing."""
@@ -116,6 +93,9 @@ def sge_add_minmax_by_chunk(args):
                 # Check for X and Y columns
                 assert args.colname_x in chunk.columns, f"Input file does not contain the required X column: {args.colname_x}."
                 assert args.colname_y in chunk.columns, f"Input file does not contain the required Y column: {args.colname_y}."
+
+            # drop the transcript with 0 count
+            chunk = chunk[chunk[args.colname_count] != 0]
 
             x_scaled = chunk[args.colname_x] / args.mu_scale
             y_scaled = chunk[args.colname_y] / args.mu_scale
@@ -137,36 +117,6 @@ def sge_add_minmax_by_chunk(args):
                 f.write(f"{key}\t{value}\n")
 
     print(f"Minmax saved to {args.out_minmax}")
-
-# def sge_add_minmax(args):
-#     """Extract, scale, and compute min/max for X and Y coordinates."""
-#     assert args.out_minmax is not None, "When --add-minmax, --out-minmax must be provided."
-
-#     with gzip.open(args.in_transcript, 'rt') as f:
-#         transcripts = pd.read_csv(f, sep="\t")
-
-#     if "X" not in transcripts.columns or "Y" not in transcripts.columns:
-#         raise ValueError("Input file must contain 'X' and 'Y' columns.")
-
-#     transcripts["X_scaled"] = transcripts["X"] / args.mu_scale
-#     transcripts["Y_scaled"] = transcripts["Y"] / args.mu_scale
-
-#     xmin = transcripts["X_scaled"].min()
-#     xmax = transcripts["X_scaled"].max()
-#     ymin = transcripts["Y_scaled"].min()
-#     ymax = transcripts["Y_scaled"].max()
-
-#     # Return results as a dictionary
-#     minmax_dict={"xmin": xmin, "xmax": xmax, "ymin": ymin, "ymax": ymax}
-#     if args.minmax_format == "row":
-#         minmax_dict = pd.DataFrame(minmax_dict, index=[0])
-#         with gzip.open(args.out_minmax, "wt") as f:
-#             minmax_dict.to_csv(f, sep="\t", index=False)
-#     elif args.minmax_format == "col":
-#         with open(args.out_minmax, "w") as f:
-#             for key, value in minmax_dict.items():
-#                 f.write(f"{key}\t{value}\n")
-#     print(f"Minmax saved to {args.out_minmax}")
 
 def sge_adds_on(_args):
     """Generate a feature file for the SGE."""

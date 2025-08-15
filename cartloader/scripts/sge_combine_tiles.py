@@ -18,7 +18,7 @@ def sge_combine_tiles(_args):
     parser.add_argument('--out-minmax', type=str, default="coordinate_minmax.tsv", help='Output minmax file name for the coordinate minmax TSV file (default: coordinate_minmax.tsv).')
     parser.add_argument('--out-feature', type=str, default="feature.clean.tsv.gz", help='Output feature file name for the compressed UMI count per gene TSV file (default: feature.clean.tsv.gz).')
     parser.add_argument('--out-subset', type=str, default="subset_minmax.tsv", help='Output subset file name for the coordinate minmax and offset TSV file (default: subset_minmax.tsv).')
-    parser.add_argument("--colnames-count", type=str, nargs='*', help="Columns to sum (default: count).", default=['count'])
+    parser.add_argument("--colname-count", type=str, default='count', help="Columns to sum (default: count).")
     parser.add_argument('--colname-feature-name', type=str, default='gene', help='Feature name column (default: gene)')
     parser.add_argument('--colname-feature-id', type=str, default=None, help='Feature ID column (default: None)')
     parser.add_argument('--colname-x', type=str, default="X", help='X column name (default: X)')
@@ -45,7 +45,7 @@ def sge_combine_tiles(_args):
     # 1. output cols
     out_cols=[args.colname_x, args.colname_y]
     out_cols.extend([args.colname_feature_name]) if args.colname_feature_id is None else out_cols.extend([args.colname_feature_name, args.colname_feature_id])
-    out_cols.extend(args.colnames_count)
+    out_cols.append(args.colname_count)
     out_cols.extend(args.colnames_others)
     logger.info(f"  - Output columns: {out_cols}")
 
@@ -112,7 +112,7 @@ def sge_combine_tiles(_args):
 
     out_ftr = os.path.join(args.out_dir, args.out_feature)
     in_ftrs = df["feature_path"].tolist()
-    df_ftr_combined = combine_ftr_across_sge(in_ftrs, args.colnames_count, args.colname_feature_name, args.colname_feature_id, debug=args.debug)
+    df_ftr_combined = combine_ftr_across_sge(in_ftrs, [args.colname_count], args.colname_feature_name, args.colname_feature_id, debug=args.debug)
     df_ftr_combined.to_csv(out_ftr, sep="\t", index=False, compression="gzip")
     logger.info(f"  - Feature file written to {out_ftr}")
 
@@ -139,8 +139,10 @@ def sge_combine_tiles(_args):
                             chunk[col_x] += float(x_offset)
                             chunk[col_y] += float(y_offset)
                             chunk[[col_x, col_y]] = (chunk[[col_x, col_y]] / units_per_um).round(precision)
-                            chunk = chunk[chunk[count_cols].sum(axis=1) > 0]  # Drop zero-count rows
-                            assert all(col in chunk.columns for col in out_cols), f"Output columns not found in the chunk(cols: {chunk.columns}) "
+                            # Drop zero-count transcript
+                            chunk = chunk[chunk[count_cols].sum(axis=1) > 0]  
+                            if chunk_gidx ==0:
+                                assert all(col in chunk.columns for col in out_cols), f"Output columns not found in the chunk(cols: {chunk.columns}) "
                             chunk[out_cols].to_csv(out_file, sep="\t", index=False, header=(chunk_gidx == 0))
                             chunk_gidx += 1
                     if debug:
@@ -151,7 +153,7 @@ def sge_combine_tiles(_args):
 
     out_transcript = os.path.join(args.out_dir, args.out_transcript)
     combine_transcript_across_sge(df, out_transcript, 
-                                args.colname_x, args.colname_y, args.colnames_count, out_cols=out_cols, 
+                                args.colname_x, args.colname_y, [args.colname_count], out_cols=out_cols, 
                                 units_per_um=args.units_per_um,  precision=args.precision,
                                 debug=args.debug)
     logger.info(f"Transcript file written to {out_transcript}")

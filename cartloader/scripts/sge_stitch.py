@@ -127,7 +127,7 @@ def sge_stitch(_args):
                                     "--add-feature",
                                     f"--colname-feature-name {args.colname_feature_name}",
                                     f"--colname-feature-id {args.colname_feature_id}" if args.colname_feature_id else "",
-                                    f"--colnames-count {args.colnames_count}",
+                                    f"--colname-count {args.colname_count}",
                                     f"--out-feature {out_ftr}"
                                 ])
             cmds.append(add_ftr_cmd)
@@ -198,11 +198,6 @@ def sge_stitch(_args):
     out_feature_f = os.path.join(args.out_dir, args.out_feature)
     out_xy_f = os.path.join(args.out_dir, args.out_xy)
 
-    if "," in args.colnames_count:
-        colnames_count = args.colnames_count.split(",")
-    else:
-        colnames_count = [args.colnames_count]
-
     # combine sges
     cmds = cmd_separator([], f"Combining SGEs")
     combine_cmd=" ".join([f"cartloader", "sge_combine_tiles",
@@ -212,7 +207,7 @@ def sge_stitch(_args):
                             f"--out-transcript {args.out_transcript}",
                             f"--out-minmax {args.out_minmax}",
                             f"--out-feature {args.out_feature}",
-                            f"--colnames-count {' '.join(colnames_count)}",
+                            f"--colname-count {args.colname_count}",
                             f"--colname-feature-name {args.colname_feature_name}",
                             f"--colname-feature-id {args.colname_feature_id}" if args.colname_feature_id else "",
                             f"--colname-x {args.colname_x}",
@@ -252,8 +247,8 @@ def sge_stitch(_args):
             "filtered_prefix": os.path.join(args.out_dir, args.out_filtered_prefix),
             "flag": sge_filtered_flag,
             "gene_header": [args.colname_feature_name] if args.colname_feature_id is None else [args.colname_feature_name, args.colname_feature_id], # list
-            "count_header": args.colnames_count.split(","), #list
-            "genomic_feature": args.genomic_feature,
+            "count_header": [args.colname_count],
+            "genomic_feature": args.colname_count,
             "mu_scale": args.mu_scale,
             "radius": args.radius,
             "quartile": args.quartile,
@@ -274,7 +269,7 @@ def sge_stitch(_args):
     overlap_cmd=" ".join([f"cartloader", "feature_distribution",
                         f"--in-tiles {' '.join(updated_ftrs)}",
                         f"--colname-feature-name {args.colname_feature_name}",
-                        f"--colnames-count {args.colnames_count}",
+                        f"--colname-count {args.colname_count}",
                         f"--output {out_dist_f}"
                     ])
     cmds.append(overlap_cmd)
