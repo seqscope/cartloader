@@ -32,18 +32,18 @@ def parse_arguments(_args):
     cmd_params.add_argument('--rotate', type=str, default=None, choices=["90", "180", "270"],  help='Plus function. Rotate the image by 90, 180, or 270 degrees clockwise. Rotate precedes flip.')
     cmd_params.add_argument('--flip-vertical', action='store_true', default=False, help='Plus function. Flip the image vertically (flipped along Y-axis). Rotate precedes flip.')
     cmd_params.add_argument('--flip-horizontal', action='store_true', default=False, help='Plus function. Flip the image horizontally (flipped along X-axis). Rotate precedes flip.')
-    cmd_params.add_argument('--update-catalog', action='store_true', default=False, help='Plus function. Flip the image horizontally (flipped along X-axis). Rotate precedes flip.')
+    cmd_params.add_argument('--update-catalog', action='store_true', default=False, help='Plus function. Update the catalog YAML file with the generated output (default: False)')
 
     inout_params = parser.add_argument_group("Input/Output Parameters", """
                                              Two ways to define the input and output: 
                                              1) use the --in-json and --fig-id to locate input image in the JSON file.
                                              2) use --in-img to provide the path to input image.
                                              """)
-    inout_params.add_argument('--out-dir', type=str, default=None, required=True, help='The output directory.')
-    inout_params.add_argument('--in-json', type=str, default=None, help='Input JSON. It should map figure IDs to image paths. Each key is a figure ID, and each value is the corresponding file path. If this is provided, --in-img will be ignored.')
-    inout_params.add_argument('--in-img', type=str, help='The input image file (PNG or TIF) to be converted to pmTiles')
-    inout_params.add_argument('--img-id', type=str, default=None, required=True, help='Image ID. This will be used as the output file name prefix. Also, if --in-json is provided, this will be used to locate the image in the JSON file.')
-    inout_params.add_argument('--catalog-yaml', type=str, default=None, help='For --update-catalog, define the catalog yaml file to update (default: <out_dir>/catalog.yaml)')
+    inout_params.add_argument('--out-dir', type=str, required=True, help='The output directory.')
+    inout_params.add_argument('--in-json', type=str, default=None, help='Path to input JSON, which maps figure IDs to image paths. Each key is a figure ID, and each value is the corresponding file path. If this is provided, --in-img will be ignored.')
+    inout_params.add_argument('--in-img', type=str, help='Path to input image file (PNG or TIF) to be converted to pmTiles')
+    inout_params.add_argument('--img-id', type=str, required=True, help='Image ID. This will be used as the output file name prefix. Also, if --in-json is provided, this will be used to locate the image in the JSON file.')
+    inout_params.add_argument('--catalog-yaml', type=str, default=None, help='Path to catalog YAML file for --update-catalog (default: <out-dir>/catalog.yaml)')
 
     env_params = parser.add_argument_group("Env Parameters", "Environment parameters, e.g., tools.")
     env_params.add_argument('--pmtiles', type=str, default=f"pmtiles", help='Path to pmtiles binary from go-pmtiles')

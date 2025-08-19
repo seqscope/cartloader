@@ -21,7 +21,7 @@ def feature_distribution(_args):
         """
     )
     parser.add_argument("--in-tiles", type=str, nargs='*', required=True, default=[], help="List of input entries, with each in the format <feature_path>,<row>,<col>.")
-    parser.add_argument('--output', type=str, required=True, help='Path to save the distribution file containing: feature_name, number of tiles containing the feature, and per-tile counts. ')
+    parser.add_argument('--output', type=str, required=True, help='Path to the feature distribution file containing: feature_name, number of tiles containing the feature, and per-tile counts. ')
     parser.add_argument('--colname-feature-name', type=str, default='gene', help='Column name of feature (default: gene)')
     parser.add_argument("--min-ct-per-ftr-tile-list", type=int, nargs='*', default=[10,20,50,100,150,200,250,300], help="A list of minimal count thresholds. Each will return the number of features that pass the threshold(default: 10 20 50 100 150 200 250 300).")
     parser.add_argument("--colname-count", type=str, help="Column name of count (default: count).", default='count')

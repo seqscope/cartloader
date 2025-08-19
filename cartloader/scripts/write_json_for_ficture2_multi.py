@@ -74,7 +74,7 @@ def write_json_for_ficture2_multi(_args):
     if args.overwrite and args.merge:
         raise ValueError("Cannot use both --overwrite and --merge options.")
     if args.out_json is None:
-      args.out_json = os.path.join(args.out_dir, "ficture.params.json")
+        args.out_json = os.path.join(args.out_dir, "ficture.params.json")
     
     # Input SGE data
     sge_data={

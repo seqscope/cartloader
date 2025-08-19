@@ -7,7 +7,7 @@ import hashlib
 from cartloader.utils.utils import cmd_separator, scheck_app, create_custom_logger, log_info
 from cartloader.scripts.feature_filtering import map_filter_per_feature
 
-def format_generic(_args):
+def sge_format_generic(_args):
     parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", 
                                      description="""
                                      Standardize Spatial Transcriptomics (ST) datasets in CSV/TSV format.
@@ -16,9 +16,9 @@ def format_generic(_args):
     inout_params = parser.add_argument_group("Input/Output Parameters", "Input/output directory/files.")
     inout_params.add_argument('--input', type=str, help='Specify the input transcript-indexed SGE file in TSV or CSV format')
     inout_params.add_argument('--out-dir', required= True, type=str, help='The output directory')
-    inout_params.add_argument('--out-transcript', type=str, default="transcripts.unsorted.tsv", help='The output transcript-indexed SGE file in TSV format. Default: transcripts.unsorted.tsv')
-    inout_params.add_argument('--out-minmax', type=str, default="coordinate_minmax.tsv", help='The output TSV file for min and max X and Y coordinates. Default: coordinate_minmax.tsv')
-    inout_params.add_argument('--out-feature', type=str, default="features.clean.tsv.gz", help='The output file collects UMI counts on a per-gene basis. Default: features.clean.tsv.gz')
+    inout_params.add_argument('--outname-transcript', type=str, default="transcripts.unsorted.tsv", help='File name of output transcript-indexed SGE file in TSV format. Default: transcripts.unsorted.tsv')
+    inout_params.add_argument('--outname-minmax', type=str, default="coordinate_minmax.tsv", help='File name of output TSV file for min and max X and Y coordinates. Default: coordinate_minmax.tsv')
+    inout_params.add_argument('--outname-feature', type=str, default="features.clean.tsv.gz", help='File name of output file collects UMI counts on a per-gene basis. Default: features.clean.tsv.gz')
     
     key_params = parser.add_argument_group("Key Parameters", "Key parameters, such as filtering cutoff.")
     key_params.add_argument('--precision-um', type=int, default=2, help='Number of digits to store the transcript coordinates in micrometer')
@@ -69,9 +69,9 @@ def format_generic(_args):
 
     # output
     os.makedirs(args.out_dir, exist_ok=True)
-    out_transcript_path=os.path.join(args.out_dir, args.out_transcript)
-    out_feature_path=os.path.join(args.out_dir, args.out_feature)
-    out_minmax_path=os.path.join(args.out_dir, args.out_minmax)    
+    out_transcript_path=os.path.join(args.out_dir, args.outname_transcript)
+    out_feature_path=os.path.join(args.out_dir, args.outname_feature)
+    out_minmax_path=os.path.join(args.out_dir, args.outname_minmax)    
 
     # initial output
     # 1) feature

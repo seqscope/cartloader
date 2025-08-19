@@ -10,8 +10,8 @@ def parse_arguments(_args):
     parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", 
                                     description="""
                                      Standardize Format of Spatial Transcriptomics (ST) datasets. Each returns a transcript-indexed SGE in TSV format.  
-                                     Platform Supports: 10X Visium HD, SeqScope, 10X Xenium, BGI Stereoseq, Cosmx SMI, Vizgen Merscope, Pixel-Seq, and Nova-ST. For SGE from others platforms or from custom/preprocessed sources, sge_convert provides a generic option that accepts CSV/TSV files with basic required fields
-                                     Outputs: A transcript-indexed SGE file, a coordinate minmax TSV file, and a feature file counting UMIs per gene. All output are in micro-meter precision.
+                                     Platform Supports: 10X Visium HD, SeqScope, 10X Xenium, BGI Stereoseq, Cosmx SMI, Vizgen Merscope, Pixel-Seq, and Nova-ST. For SGE from other platforms or from custom/preprocessed sources, sge_convert provides a generic option that accepts CSV/TSV files with basic required fields
+                                     Outputs: A transcript-indexed SGE file, a coordinate minmax TSV file, and a feature file counting UMIs per gene. All output are in micrometer precision.
                                      Options: filtering SGE by quality, gene, or density; coordinate conversion.
                                      """)
     #parser = argparse.ArgumentParser()
@@ -27,40 +27,43 @@ def parse_arguments(_args):
     inout_params = parser.add_argument_group("Input/Output Parameters", "Parameters to specify platform, input, output, and units per um, precision, and density-filtering for output.")
     inout_params.add_argument('--platform', type=str, choices=["10x_visium_hd", "seqscope", "10x_xenium", "bgi_stereoseq", "cosmx_smi", "vizgen_merscope", "pixel_seq", "nova_st", "generic"], required=True, help='Platform of the raw input file to infer the format of the input file. "generic" refers to SGE from platforms not yet explicitly supported by cartloader, or from custom/preprocessed sources')
     # - input
-    inout_params.add_argument('--in-json', type=str, default=None, help='(Shortcut; currenly only support 10x_xenium, 10x_visium_hd) Path to a JSON file to provide paths to the input file. If provided, omit --in-parquet/--in-csv/--scale-json.')
+    inout_params.add_argument('--in-json', type=str, default=None, help='(Shortcut; currently only support 10x_xenium, 10x_visium_hd) Path to a JSON file to provide paths to the input file. If provided, omit --in-parquet/--in-csv/--pos-parquet/--scale-json.')
     inout_params.add_argument('--in-mex', type=str, default=os.getcwd(), help='(10x_visium_hd and seqscope only) Directory path to input files in Market Exchange (MEX) format. Defaults to the current working directory.') # 10x_visium_hd, seqscope 
-    inout_params.add_argument('--in-parquet', type=str, default=None, help='(10x_visium_hd and 10x_xenium only) For 10X Visium HD platform, specify to path to the input parquet file for spatial coordinates (default: tissue_positions.parquet). For 10X Xenium, if the input transcript file is in parquet format, specify its path here and skip --in-csv (default: None)') # 10x_visium_hd
-    inout_params.add_argument('--in-csv', type=str, default=None, help='(10x_xenium, bgi_stereoseq, cosmx_smi, vizgen_merscope, pixel_seq, and nova_st only) Path to the input raw CSV/TSV file if raw CSV/TSV file exists(default: None).') 
+    inout_params.add_argument('--in-csv', type=str, default=None, help='(10x_xenium, bgi_stereoseq, cosmx_smi, vizgen_merscope, pixel_seq, and nova_st only) Path to the input raw CSV/TSV file (default: None).') 
+    inout_params.add_argument('--in-parquet', type=str, default=None, help='(10x_xenium only) Path to the input transcript parquet file. If provided, skip --in-csv (default: None)') 
+    # - additional pos
+    inout_params.add_argument('--pos-parquet', type=str, default=None, help='(10x_visium_hd only) Path to the input position parquet file for spatial coordinates (default: None; Typical naming convention: tissue_positions.parquet).') # 10x_visium_hd
+    # - scaling
+    inout_params.add_argument('--scale-json', type=str, default=None, help="(Shortcut; 10x_visium_hd only) Path to a scale json file. If provided, skip --units-per-um (default: None; Typical naming convention: scalefactors_json.json)") 
     inout_params.add_argument('--units-per-um', type=float, default=1.00, help='Coordinate unit per um in the input files (default: 1.00). Alternatively, for 10x Visium HD, skip --units-per-um and use --scale-json to auto-compute.')  
-    inout_params.add_argument('--scale-json', type=str, default=None, help="(Shortcut; 10x_visium_hd only) Path to a scale json file for calculating --units-per-um (default: None; Typical naming convention: scalefactors_json.json)") 
     # - output
-    inout_params.add_argument('--out-dir', type=str, required=True, help='The output directory to host files from SGE format conversion, files from density-filtering, and the make file.')
-    inout_params.add_argument('--out-transcript', type=str, default="transcripts.unsorted.tsv.gz", help='Output for SGE format conversion. The compressed transcript-indexed SGE file in TSV format (default: transcripts.unsorted.tsv.gz).')
-    inout_params.add_argument('--out-minmax', type=str, default="coordinate_minmax.tsv", help='Output for SGE format conversion. The coordinate minmax TSV file (default: coordinate_minmax.tsv).')
-    inout_params.add_argument('--out-feature', type=str, default="feature.clean.tsv.gz", help='Output for SGE format conversion. The compressed UMI count per gene TSV file (default: feature.clean.tsv.gz).')
+    inout_params.add_argument('--out-dir', type=str, required=True, help='Output directory for SGE format conversion results, density-filtered files, visualizations, and the Makefile.')
+    inout_params.add_argument('--out-transcript', type=str, default="transcripts.unsorted.tsv.gz", help='File name of the output transcript-indexed SGE file in TSV format to be written in --out-dir (default: transcripts.unsorted.tsv.gz).')
+    inout_params.add_argument('--out-feature', type=str, default="feature.clean.tsv.gz", help='File name of the output compressed UMI count per gene TSV file to be written in --out-dir (default: feature.clean.tsv.gz).')
+    inout_params.add_argument('--out-minmax', type=str, default="coordinate_minmax.tsv", help='File name of the output coordinate min/max TSV file to be written in --out-dir (default: coordinate_minmax.tsv).')
     # - density filtering
-    inout_params.add_argument('--filter-by-density', action='store_true', default=False, help='Filter SGE from format conversion by density (default: False). If enabled, check the density-filtering auxiliary parameters.')
-    inout_params.add_argument('--out-filtered-prefix', type=str, default="filtered", help='Output for density-filtering. If --filter-by-density, define the prefix for filtered SGE and its visualization (default: filtered)')
+    inout_params.add_argument('--filter-by-density', action='store_true', default=False, help='Enable density-based filtering of the converted SGE (default: False). If enabled, check the "Density/Polygon Filtering Auxiliary Parameters".')
+    inout_params.add_argument('--out-filtered-prefix', type=str, default="filtered", help='Name prefix for filtered SGE and its visualization (default: filtered)')
     # - sge visualization
-    inout_params.add_argument('--sge-visual', action='store_true', default=False, help='Visualize the output SGE. If --filter-by-density, both unfiltered and filtered SGE will be visualized (default: False)')
-    inout_params.add_argument('--out-xy', type=str, default="xy.png", help='Output for SGE visualization image (default: xy.png)')
+    inout_params.add_argument('--sge-visual', action='store_true', default=False, help='Enable visualization of the SGE; if density filtering is enabled, both unfiltered and filtered SGEs will be visualized (default: False).')
+    inout_params.add_argument('--out-xy', type=str, default="xy.png", help='File name of the output SGE visualization image(s) to be written in --out-dir (default: xy.png). For filtered SGE, output visualization image is prefixed with --out-filtered-prefix')
     # - sge json
-    inout_params.add_argument('--out-json',  type=str, default=None, help='Output json summarizing SGE information. (default: out_dir/sge_assets.json).')
+    inout_params.add_argument('--out-json',  type=str, default=None, help='Path to output json summarizing SGE information. (default: out_dir/sge_assets.json).')
 
     # AUX input MEX params
     aux_in_mex_params = parser.add_argument_group( "IN-MEX Auxiliary Parameters", "(10x_visium_hd and seqscope only) Auxiliary parameters for input MEX and parquet files. Required if --in-mex is used." )
     aux_in_mex_params.add_argument('--mex-bcd', type=str, default="barcodes.tsv.gz", help='Barcode file name (default: barcodes.tsv.gz)')
     aux_in_mex_params.add_argument('--mex-ftr', type=str, default="features.tsv.gz", help='Feature file name (default: features.tsv.gz)')
     aux_in_mex_params.add_argument('--mex-mtx', type=str, default="matrix.mtx.gz", help='Matrix file name (default: matrix.mtx.gz)')
-    aux_in_mex_params.add_argument('--icols-mtx', type=str, default=1, help='1-based indices for the target genomic feature among the count columns in the input matrix file (default: 1). For example, when focusing on "gn" of SeqScope datasets, use --icols-mtx 1.')
+    aux_in_mex_params.add_argument('--icols-mtx', type=int, default=1, help='1-based indices for the target genomic feature among the count columns in the input matrix file (default: 1). For example, when focusing on "gn" of SeqScope datasets, use --icols-mtx 1.')
     aux_in_mex_params.add_argument('--icol-ftr-id', type=int, default=1, help='1-based column index of feature ID in the input feature file (default: 1)')
     aux_in_mex_params.add_argument('--icol-ftr-name', type=int, default=2, help='1-based column index of feature name in the input feature file (default: 2)')
     aux_in_mex_params.add_argument('--icol-bcd-barcode', type=int, default=1, help='(seqscope only) 1-based column index of barcode in the input barcode file (default: 1)')
     aux_in_mex_params.add_argument('--icol-bcd-x', type=int, default=6, help='(seqscope only) 1-based column index of x coordinate in the input barcode file (default: 6)')
     aux_in_mex_params.add_argument('--icol-bcd-y', type=int, default=7, help='(seqscope only) 1-based column index of y coordinate in the input barcode file (default: 7)')
     aux_in_mex_params.add_argument('--pos-colname-barcode', type=str, default='barcode', help='(10x_visium_hd only) Column name for barcode in the input parquet file (default: barcode)')
-    aux_in_mex_params.add_argument('--pos-colname-x', type=str, default='pxl_row_in_fullres', help='(10x_visium_hd only) Column name for X-axis in the input parquet file (default: pxl_row_in_fullres)')
-    aux_in_mex_params.add_argument('--pos-colname-y', type=str, default='pxl_col_in_fullres', help='(10x_visium_hd only) Column name for Y-axis in the input parquet file (default: pxl_col_in_fullres)')
+    aux_in_mex_params.add_argument('--pos-colname-x', type=str, default='pxl_row_in_fullres', help='(10x_visium_hd only) Column name for X coordinates in the input parquet file (default: pxl_row_in_fullres)')
+    aux_in_mex_params.add_argument('--pos-colname-y', type=str, default='pxl_col_in_fullres', help='(10x_visium_hd only) Column name for Y coordinates in the input parquet file (default: pxl_col_in_fullres)')
     aux_in_mex_params.add_argument('--pos-delim', type=str, default=',', help='(10x_visium_hd only) Delimiter for the input parquet file (default: ",")')
     #aux_in_mex_params.add_argument('--print-feature-id', action='store_true', help='Print feature ID in the output (default: False)')
     aux_in_mex_params.add_argument('--allow-duplicate-gene-names', action='store_true', help='Allow duplicate gene names in the output (default: False)')
@@ -70,8 +73,8 @@ def parse_arguments(_args):
     aux_in_csv_params = parser.add_argument_group( "IN-CSV Auxiliary Parameters", "(10x_xenium, bgi_stereoseq, cosmx_smi, vizgen_merscope, pixel_seq, and nova_st only) Auxiliary parameters for input TSV/CSV files")
     aux_in_csv_params.add_argument('--csv-comment', action='store_true', help="If enabled, lines starts with # in the CSV file will be skipped (default: False for 10x_xenium, bgi_stereoseq, cosmx_smi, vizgen_merscope, and pixel_seq; True for nova_st)")
     aux_in_csv_params.add_argument('--csv-delim', type=str, default=None, help='Delimiter for the input TSV/CSV file (default: "," for 10x_xenium, cosmx_smi, and vizgen_merscope; "\\t" for bgi_stereoseq, pixel_seq, and nova_st) ')
-    aux_in_csv_params.add_argument('--csv-colname-x',  type=str, default=None, help='Column name for X-axis (default: x_location for 10x_xenium; x for bgi_stereoseq; x_local_px for cosmx_smi; global_x for vizgen_merscope; xcoord for pixel_seq; x for nova_st)')
-    aux_in_csv_params.add_argument('--csv-colname-y',  type=str, default=None, help='Column name for Y-axis (default: y_location for 10x_xenium; y for bgi_stereoseq; y_local_px for cosmx_smi; global_y for vizgen_merscope; ycoord for pixel_seq; y for nova_st)')
+    aux_in_csv_params.add_argument('--csv-colname-x', type=str, default=None, help='Column name for X coordinates (default: x_location for 10x_xenium; x for bgi_stereoseq; x_local_px for cosmx_smi; global_x for vizgen_merscope; xcoord for pixel_seq; x for nova_st)')
+    aux_in_csv_params.add_argument('--csv-colname-y', type=str, default=None, help='Column name for Y coordinates (default: y_location for 10x_xenium; y for bgi_stereoseq; y_local_px for cosmx_smi; global_y for vizgen_merscope; ycoord for pixel_seq; y for nova_st)')
     aux_in_csv_params.add_argument('--csv-colname-count', type=str, default=None, help='Comma-separated Column name for expression count. If not provided, a count of 1 will be added for a feature in a pixel (default: MIDCounts for bgi_stereoseq; MIDCount for nova_st; None for the rest platforms).')
     aux_in_csv_params.add_argument('--csv-colname-feature-name', type=str, default=None, help='Column name for gene name (default: feature_name for 10x_xenium; geneID for bgi_stereoseq; target for cosmx_smi; gene for vizgen_merscope; geneName for pixel_seq; geneID for nova_st)')
     # aux_in_csv_params.add_argument('--csv-colname-feature-id', type=str, default=None, help='Column name for gene id (default: None)')
@@ -81,7 +84,7 @@ def parse_arguments(_args):
     #aux_in_csv_params.add_argument('--add-molecule-id', action='store_true', default=False, help='If enabled, a column of "molecule_id" will be added to the output file to track the index of the original input will be stored in (default: False).')
     
     # AUX output params
-    aux_out_params = parser.add_argument_group("Output Auxiliary Parameters", "Auxiliary parameters for the output files (Recommand to use the default values)")
+    aux_out_params = parser.add_argument_group("Output Auxiliary Parameters", "Auxiliary parameters for the output files (Recommend to use the default values)")
     aux_out_params.add_argument('--precision-um', type=int, default=2, help='Precision for transcript coordinates. Set it to 0 to round to integer (default: 2)')
     aux_out_params.add_argument('--colname-x', type=str, default='X', help='Column name for X (default: X)')
     aux_out_params.add_argument('--colname-y', type=str, default='Y', help='Column name for Y (default: Y)')
@@ -90,32 +93,22 @@ def parse_arguments(_args):
     # aux_out_params.add_argument('--colname-feature-id', type=str, default=None, help='Column name for gene ID. Required only when --csv-colname-feature-id or --print-feature-id is applied (default: None)') 
 
     # AUX gene-filtering params
-    aux_ftrfilter_params = parser.add_argument_group( "Feature Filtering Auxiliary Parameters", "Auxiliary parameters for filtering features by their name or type using an additional file, or regex pattern")
-    # aux_ftrfilter_params.add_argument('--include-feature-list', type=str, default=None, help='A file containing a list of input genes to be included (feature name of IDs) (default: None)')
-    # aux_ftrfilter_params.add_argument('--exclude-feature-list', type=str, default=None, help='A file containing a list of input genes to be excluded (feature name of IDs) (default: None)')
+    aux_ftrfilter_params = parser.add_argument_group( "Feature Filtering Auxiliary Parameters", "Auxiliary parameters for filtering features by their name using a regex pattern")
     aux_ftrfilter_params.add_argument('--include-feature-regex', type=str, default=None, help='A regex pattern of feature/gene names to be included (default: None)')
     aux_ftrfilter_params.add_argument('--exclude-feature-regex', type=str, default=None, help='A regex pattern of feature/gene names to be excluded (default: "^(BLANK_|DeprecatedCodeword_|NegCon|UnassignedCodeword_)" for 10_xenium, None for the rest)')
-    # aux_ftrfilter_params.add_argument('--include-feature-type-regex', type=str, default=None, help='A regex pattern of feature/gene type to be included (default: None).') # (e.g. protein_coding|lncRNA)
-    # aux_ftrfilter_params.add_argument('--csv-colname-feature-type', type=str, default=None, help='The input column name in the input that corresponding to the gene type information, if your input file has gene type information(default: None)')
-    # aux_ftrfilter_params.add_argument('--feature-type-ref', type=str, default=None, help='Specify the path to a tab-separated reference file to provide gene type information for each gene per row (default: None)')
-    # aux_ftrfilter_params.add_argument('--feature-type-ref-delim', type=str, default=None, help='Delimiter used in the reference file (default: tab).')
-    # aux_ftrfilter_params.add_argument('--feature-type-ref-colidx-name', type=str, default=None, help='Column index for gene name in the reference file (default: None).')
-    # aux_ftrfilter_params.add_argument('--feature-type-ref-colidx-type', type=str, default=None, help='Column index for gene type in the reference file (default: None).')
-    # aux_ftrfilter_params.add_argument('--print-removed-transcripts', action='store_true', default=False, help='Print the list of removed transcript with corresponding filtering criteria (default: False)')
 
     # AUX polygon-filtering params
     aux_polyfilter_params = parser.add_argument_group('Density/Polygon Filtering Auxiliary Parameters','Auxiliary parameters for filtering polygons based on the number of vertices. Required when --filter-by-density is enabled.')
-    # aux_polyfilter_params.add_argument('--genomic-feature', type=str, default=None, help='Column name of genomic feature for polygon-filtering (default to --colname-count)')
+    # genomic feature, gene_header and count_header will be automatically based on the --colname-feature-name, --colname-feature-id and --colnames-count
     aux_polyfilter_params.add_argument('--radius', type=int, default=15, help='Advanced parameter. Radius for the polygon area calculation (default: 15)')
     aux_polyfilter_params.add_argument('--quartile', type=int, default=2, help='Quartile for the polygon area calculation (default: 2)')
     aux_polyfilter_params.add_argument('--hex-n-move', type=int, default=1, help='Sliding step (default: 1)')
     aux_polyfilter_params.add_argument('--polygon-min-size', type=int, default=500, help='The minimum polygon size (default: 500)')
-    # gene_header and count_header will be automatically based on the --colname-feature-name, --colname-feature-id and --colnames-count
 
     # AUX visualization params
     aux_visual_params = parser.add_argument_group("North-up Auxiliary Parameters", "Auxiliary parameters for visualizing the output SGE in a north-up orientation. It is optional if --sge-visual is enabled.")
     aux_visual_params.add_argument('--north-up', action='store_true', default=False, help='If enabled, the SGE will be visualized in a tif image north-up (default: False).')
-    aux_visual_params.add_argument('--out-northup-tif', type=str, default="xy_northup.tif", help='Output for SGE visualization after north-up orientation (default: xy_northup.tif).')
+    aux_visual_params.add_argument('--out-northup-tif', type=str, default="xy_northup.tif", help='File name of the output SGE visualization after north-up orientation (default: xy_northup.tif).')
     aux_visual_params.add_argument('--srs', type=str, default='EPSG:3857', help='If --north-up, define the spatial reference system (default: EPSG:3857)')
     aux_visual_params.add_argument('--resample', type=str, default='cubic', help='If --north-up, define the resampling method (default: cubic). Options: near, bilinear, cubic, etc.')
 
@@ -172,37 +165,12 @@ def convert_visiumhd(cmds, args):
     scheck_app(args.spatula)
     ## input: in_mex, in_parquet, scale_json
     ## output: out_transcript, out_minmax, out_feature
-    tmp_parquet = f"{args.out_dir}/tissue_positions.csv.gz"
     # * --in_parquet: convert parquet to csv
-    if args.parquet is None:
-        args.parquet = "tissue_positions.parquet"
-    cmds.append(f"{args.parquet_tools} csv {args.in_parquet} |  {args.gzip} -c > {tmp_parquet}")
+    tmp_parquet = f"{args.out_dir}/tissue_positions.csv.gz"
+    cmds.append(f"{args.parquet_tools} csv {args.pos_parquet} |  {args.gzip} -c > {tmp_parquet}")
     # * --scale_json: if applicable
     if args.scale_json is not None:
         args.units_per_um = extract_unit2px_from_json(args.scale_json)
-    # * --included_feature_type_regex
-    # if args.include_feature_type_regex is not None:
-    #     # purpose: Given the spatula doesn't support filtering based on gene type, this function prepares a feature list based on the gene type reference file.
-    #     #           Note, when the --include-feature-type-regex is enabled, the --include-feature-list argument will be updated with the path to the prepared feature list.
-    #     # since MEX will not be able to provide ftr type column.
-    #     ftrlist_tsv = f"{args.out_dir}/feature_list.tsv"
-    #     cmd = " ".join(["cartloader", "feature_filtering_by_type",
-    #                     f"--include-feature-type-regex {args.include_feature_type_regex}", 
-    #                     f"--feature-type-ref {args.feature_type_ref}",
-    #                     f"--feature-type-ref-colidx-name {args.feature_type_ref_colidx_name}",
-    #                     f"--feature-type-ref-colidx-type {args.feature_type_ref_colidx_type}",
-    #                     f"--feature-type-ref-delim {args.feature_type_ref_delim}" if args.feature_type_ref_delim is not None else "",
-    #                     f"--include-feature-list {args.include_feature_list}"  if args.include_feature_list is not None else "",
-    #                     f"--exclude-feature-list {args.exclude_feature_list}"  if args.include_feature_list is not None else "",
-    #                     f"--out-feature {ftrlist_tsv}",
-    #                     "--log"])
-    #     args.include_feature_list = ftrlist_tsv
-    #     args.exclude_feature_list = None
-    #     cmds.append(cmd)
-    # * check --icols-mtx has the same number as --colnames-count
-    # args.icols_mtx=str(args.icols_mtx)
-    # if len(args.icols_mtx.split(",")) != len(args.colnames_count.split(",")):
-    #     raise ValueError(f"The number of columns in --icols-mtx ({args.icols_mtx}) should be the same as the number of columns in --colnames-count ({args.colnames_count}).")
     # * convert sge to tsv (output: out_transcript, out_minmax, out_feature, (optional) out_sge)
     cmd = " ".join([f"{args.spatula} convert-sge",
                     f"--in-sge {args.in_mex}",
@@ -224,29 +192,6 @@ def convert_seqscope(cmds, args):
     scheck_app(args.spatula)
     ## input: in_mex
     ## output: out_transcript, out_minmax, out_feature
-    # * --included_feature_type_regex
-    # if args.include_feature_type_regex is not None:
-    #     # purpose: Given the spatula doesn't support filtering based on gene type, this function prepares a feature list based on the gene type reference file.
-    #     #           Note, when the --include-feature-type-regex is enabled, the --include-feature-list argument will be updated with the path to the prepared feature list.
-    #     # since MEX will not be able to provide ftr type column.
-    #     ftrlist_tsv = f"{args.out_dir}/feature_list.tsv"
-    #     cmd = " ".join(["cartloader", "feature_filtering_by_type",
-    #                     f"--include-feature-type-regex {args.include_feature_type_regex}", 
-    #                     f"--feature-type-ref {args.feature_type_ref}",
-    #                     f"--feature-type-ref-colidx-name {args.feature_type_ref_colidx_name}",
-    #                     f"--feature-type-ref-colidx-type {args.feature_type_ref_colidx_type}",
-    #                     f"--feature-type-ref-delim {args.feature_type_ref_delim}" if args.feature_type_ref_delim is not None else "",
-    #                     f"--include-feature-list {args.include_feature_list}"  if args.include_feature_list is not None else "",
-    #                     f"--exclude-feature-list {args.exclude_feature_list}"  if args.include_feature_list is not None else "",
-    #                     f"--out-feature {ftrlist_tsv}",
-    #                     "--log"])
-    #     args.include_feature_list = ftrlist_tsv
-    #     args.exclude_feature_list = None
-    #     cmds.append(cmd)
-    # * check --icols-mtx has the same number as --colnames-count
-    # args.icols_mtx=str(args.icols_mtx)
-    # if len(args.icols_mtx.split(",")) != len(args.colnames_count.split(",")):
-    #     raise ValueError(f"The number of columns in --icols-mtx ({args.icols_mtx}) should be the same as the number of columns in --colnames-count ({args.colnames_count}).")
     # * convert sge to tsv (output: out_transcript, out_minmax, out_feature
     cmd = " ".join([f"{args.spatula} convert-sge",
                 f"--in-sge {args.in_mex}",
@@ -283,7 +228,7 @@ def convert_tsv(cmds, args):
             args.min_phred_score = 20
 
     transcript_tsv = args.out_transcript.replace(".gz", "")
-    cmd =  " ".join([f"cartloader format_generic",
+    cmd =  " ".join([f"cartloader sge_format_generic",
                      f"--input {args.in_csv}",
                      f"--out-dir {args.out_dir}",
                      f"--out-transcript {transcript_tsv}",
@@ -398,7 +343,10 @@ def sge_convert(_args):
         elif raw_tx.endswith("csv.gz") or raw_tx.endswith("tsv.gz") or raw_tx.endswith("tsv") or raw_tx.endswith("csv"):
             args.in_csv = raw_tx
             print(f" * --in-csv {args.in_csv}")
+        args.pos_parquet = raw_data.get("POSITION", None)
+        print(f" * --pos-parquet {args.pos_parquet}")
         args.scale_json = raw_data.get("SCALE", None)
+        print(f" * --scale-json {args.scale_json}")
     
     in_raw_filelist=input_by_platform(args)
 
@@ -433,16 +381,9 @@ def sge_convert(_args):
     # mm
     mm = minimake()
 
-    # sge_convert
-    sge_convert_flag = os.path.join(args.out_dir, "sge_convert.done")
-
-    cmds = cmd_separator([], f"Converting input for raw data from: {args.platform}...")
-    if args.platform == "10x_visium_hd":
-        cmds = convert_visiumhd(cmds, args)
-    elif args.platform == "seqscope":
-        cmds = convert_seqscope(cmds, args)
-    elif args.platform == "10x_xenium":
-        #  * 10x_xenium: convert parquet to csv
+    #  * 10x_xenium: convert parquet to csv
+    
+    if args.platform == "10x_xenium":
         if args.in_parquet is not None and args.in_csv is not None:
             raise ValueError("For 10X Xenium, only one of the two input options (--in-parquet or --in-csv) can be specified for transcript data. Providing both will result in an error.")
         if args.in_parquet is not None:
@@ -452,8 +393,16 @@ def sge_convert(_args):
             mm.add_target(args.in_csv, [args.in_parquet], cmds) 
             # update the prereq for convert
             in_raw_filelist=[args.in_csv] 
-        cmds = convert_tsv(cmds, args)
-    elif args.platform in ["cosmx_smi", "bgi_stereoseq", "vizgen_merscope", "pixel_seq", "nova_st", "generic"]:
+
+    # sge_convert (from csv/mex)
+    sge_convert_flag = os.path.join(args.out_dir, "sge_convert.done")
+
+    cmds = cmd_separator([], f"Converting input for raw data from: {args.platform}...")
+    if args.platform == "10x_visium_hd":
+        cmds = convert_visiumhd(cmds, args)
+    elif args.platform == "seqscope":
+        cmds = convert_seqscope(cmds, args)
+    elif args.platform in ["cosmx_smi", "bgi_stereoseq", "vizgen_merscope", "pixel_seq", "nova_st", "generic", "10x_xenium"]:
         cmds = convert_tsv(cmds, args)
     cmds.append(f"[ -f {out_transcript_f} ] && [ -f {out_feature_f} ] && [ -f {out_minmax_f} ] && touch {sge_convert_flag}")
     mm.add_target(sge_convert_flag, in_raw_filelist, cmds)

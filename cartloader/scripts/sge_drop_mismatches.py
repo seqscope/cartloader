@@ -26,9 +26,9 @@ def sge_drop_mismatches(_args):
                                      """)
     inout_params = parser.add_argument_group("Input/Output Parameters", "Input/output directory/files.")
     inout_params.add_argument('--in-dir', required= True, type=str, help='The input directory')
-    inout_params.add_argument('--transcript', type=str, default="transcripts.unsorted.tsv.gz", help='The compressed transcript-indexed SGE file in TSV format from spatula. Default: transcripts.unsorted.tsv.gz')
-    inout_params.add_argument('--minmax', type=str, default="coordinate_minmax.tsv", help='The TSV file for min and max X and Y coordinates from spatula. Default: coordinate_minmax.tsv')
-    inout_params.add_argument('--feature', type=str, default="features.clean.tsv.gz", help='The compressed TSV file collects UMI counts on a per-gene basis from spatula. Default: features.clean.tsv.gz')
+    inout_params.add_argument('--transcript', type=str, default="transcripts.unsorted.tsv.gz", help='File name of input compressed transcript-indexed SGE file in TSV format from spatula. Default: transcripts.unsorted.tsv.gz')
+    inout_params.add_argument('--minmax', type=str, default="coordinate_minmax.tsv", help='File name of input TSV file for min and max X and Y coordinates from spatula. Default: coordinate_minmax.tsv')
+    inout_params.add_argument('--feature', type=str, default="features.clean.tsv.gz", help='File name of input compressed TSV file collects UMI counts on a per-gene basis from spatula. Default: features.clean.tsv.gz')
 
     temp_params = parser.add_argument_group("TEMP Parameters", "Temporary files for processing.")
     temp_params.add_argument('--temp-mismatches', type=str, default="feature.mismatches.tsv.gz", help='Temporary file to store mismatches. Default: feature.mismatches.tsv.gz')

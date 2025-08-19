@@ -23,13 +23,13 @@ def parse_arguments(_args):
     parser.add_argument("--chunk-size", type=int, default=10**6, help="Chunk size for processing (default: 10^6).")
     # feature args
     parser.add_argument("--add-feature", action='store_true', help="Create a feature file based on the input file.")
-    parser.add_argument("--out-feature", type=str, default=None, help="Output file for feature.")
+    parser.add_argument("--out-feature", type=str, default=None, help="Path to output feature file.")
     parser.add_argument('--colname-feature-name', type=str, default='gene', help='Feature name column (default: gene)')
     parser.add_argument('--colname-feature-id', type=str, default=None, help='Feature ID column (default: None)')
     parser.add_argument("--colname-count", type=str, default="gn", help="Comma-separated column names for count (default: gn)")
     # minmax args
     parser.add_argument("--add-minmax", action='store_true', help="Create a minmax file based on the input file.")
-    parser.add_argument("--out-minmax", type=str, default=None, help="Output file for minmax.")
+    parser.add_argument("--out-minmax", type=str, default=None, help="Path to output minmax file.")
     parser.add_argument("--mu-scale", type=float, default=1, help="Scale factor for X and Y coordinates (default: 1).")
     parser.add_argument("--colname-x", type=str, default="X", help="X coordinate column name (default: X).")
     parser.add_argument("--colname-y", type=str, default="Y", help="Y coordinate column name (default: Y).")

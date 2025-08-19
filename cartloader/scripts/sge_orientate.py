@@ -8,12 +8,12 @@ def parse_arguments(_args):
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", 
                                     description="""Orientate SGE""")
-    parser.add_argument("--in-transcript", type=str, help="Input file.", required=True)
-    parser.add_argument("--out-transcript", type=str, help="Output file.", required=True)
-    parser.add_argument("--in-feature", type=str, help="Input feature file.", required=True)
-    parser.add_argument("--out-feature", type=str, help="Output feature file.", required=True)
-    parser.add_argument("--in-minmax", type=str, help="Input minmax file.", required=True)
-    parser.add_argument("--out-minmax", type=str, help="Output minmax file.", required=True)
+    parser.add_argument("--in-transcript", type=str, help="Path to input file.", required=True)
+    parser.add_argument("--out-transcript", type=str, help="Path to output file.", required=True)
+    parser.add_argument("--in-feature", type=str, help="Path to input feature file.", required=True)
+    parser.add_argument("--out-feature", type=str, help="Path to output feature file.", required=True)
+    parser.add_argument("--in-minmax", type=str, help="Path to input minmax file.", required=True)
+    parser.add_argument("--out-minmax", type=str, help="Path to output minmax file.", required=True)
     parser.add_argument("--chunk-size", type=int, default=10**6, help="Chunk size for processing (default: 10^6).")
     parser.add_argument('--rotate', type=str, default=None, choices=["90", "180", "270"],  help='Rotate by 90, 180, or 270 degrees clockwise. Rotate precedes flip.')
     parser.add_argument('--flip-vertical', action='store_true', default=False, help='Flip vertically (flipped along Y-axis). Rotate precedes flip.')
