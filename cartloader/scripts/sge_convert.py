@@ -207,11 +207,18 @@ def convert_visiumhd(cmds, args):
     # if len(args.icols_mtx.split(",")) != len(args.colnames_count.split(",")):
     #     raise ValueError(f"The number of columns in --icols-mtx ({args.icols_mtx}) should be the same as the number of columns in --colnames-count ({args.colnames_count}).")
     # * convert sge to tsv (output: out_transcript, out_minmax, out_feature, (optional) out_sge)
-    format_cmd=f"{args.spatula} convert-sge --in-sge {args.in_mex} --out-tsv {args.out_dir} --pos {tmp_parquet} --tsv-mtx {args.out_transcript} --tsv-ftr {args.out_feature} --tsv-minmax {args.out_minmax}"
+    cmd = " ".join([f"{args.spatula} convert-sge",
+                    f"--in-sge {args.in_mex}",
+                    f"--out-tsv {args.out_dir}",
+                    f"--pos {tmp_parquet}",
+                    f"--tsv-mtx {args.out_transcript}",
+                    f"--tsv-ftr {args.out_feature}",
+                    f"--tsv-minmax {args.out_minmax}",
+                    f"--colnames-count {args.colname_count}" if args.colname_count else ""])
     aux_argset = set(item for lst in [aux_sge_args["out"], aux_sge_args["inftr"], aux_sge_args["inmtx"], aux_sge_args["inpos"], aux_sge_args["spatula"], aux_sge_args["ftrname"]] for item in lst)
-    format_cmd = add_param_to_cmd(format_cmd, args, aux_argset)
-    format_cmd = add_mexparam_to_cmd(format_cmd, args, mexarg_mapping)
-    cmds.append(format_cmd)
+    cmd = add_param_to_cmd(cmd, args, aux_argset)
+    cmd = add_mexparam_to_cmd(cmd, args, mexarg_mapping)
+    cmds.append(cmd)
     cmds.append(f"rm {tmp_parquet}")
     return cmds
 
@@ -244,11 +251,17 @@ def convert_seqscope(cmds, args):
     # if len(args.icols_mtx.split(",")) != len(args.colnames_count.split(",")):
     #     raise ValueError(f"The number of columns in --icols-mtx ({args.icols_mtx}) should be the same as the number of columns in --colnames-count ({args.colnames_count}).")
     # * convert sge to tsv (output: out_transcript, out_minmax, out_feature
-    format_cmd=f"{args.spatula} convert-sge --in-sge {args.in_mex} --out-tsv {args.out_dir} --tsv-mtx {args.out_transcript} --tsv-ftr {args.out_feature} --tsv-minmax {args.out_minmax}"
+    cmd = " ".join([f"{args.spatula} convert-sge",
+                f"--in-sge {args.in_mex}",
+                f"--out-tsv {args.out_dir}",
+                f"--tsv-mtx {args.out_transcript}",
+                f"--tsv-ftr {args.out_feature}",
+                f"--tsv-minmax {args.out_minmax}",
+                f"--colnames-count {args.colname_count}" if args.colname_count else ""])
     aux_argset = set(item for lst in [aux_sge_args["out"], aux_sge_args["inftr"], aux_sge_args["inbcd"], aux_sge_args["inmtx"], aux_sge_args["ftrname"]] for item in lst)
-    format_cmd = add_param_to_cmd(format_cmd, args, aux_argset)
-    format_cmd = add_mexparam_to_cmd(format_cmd, args, mexarg_mapping)
-    cmds.append(format_cmd)
+    cmd = add_param_to_cmd(cmd, args, aux_argset)
+    cmd = add_mexparam_to_cmd(cmd, args, mexarg_mapping)
+    cmds.append(cmd)
     # * drop mismatches if --keep-mismatches is not enabled
     if not args.keep_mismatches:   
         drop_cmd = f"cartloader sge_drop_mismatches --in-dir {args.out_dir} --transcript {args.out_transcript} --feature {args.out_feature} --minmax {args.out_minmax} --gzip {args.gzip}"    
@@ -273,16 +286,22 @@ def convert_tsv(cmds, args):
             args.min_phred_score = 20
 
     transcript_tsv = args.out_transcript.replace(".gz", "")
-    format_cmd=f"cartloader format_generic --input {args.in_csv} --out-dir {args.out_dir} --out-transcript {transcript_tsv} --out-feature {args.out_feature} --out-minmax {args.out_minmax}"
+    cmd =  " ".join([f"cartloader format_generic",
+                     f"--input {args.in_csv}",
+                     f"--out-dir {args.out_dir}",
+                     f"--out-transcript {transcript_tsv}",
+                     f"--out-feature {args.out_feature}",
+                     f"--out-minmax {args.out_minmax}",
+                     f"--colname-count {args.colname_count}" if args.colname_count else ""])      
     # aux args
     aux_argset = set(item for lst in [aux_sge_args["out"], 
                                       aux_sge_args["incsv"], 
                                       aux_sge_args["ftrname"] #, aux_sge_args["ftrtype"]
                                       ] for item in lst)
     #aux_argset.add('print_removed_transcripts')
-    format_cmd = add_param_to_cmd(format_cmd, args, aux_argset)
+    cmd = add_param_to_cmd(cmd, args, aux_argset)
     # append to cmds
-    cmds.append(format_cmd)
+    cmds.append(cmd)
     cmds.append(f"{args.gzip} -c {args.out_dir}/{transcript_tsv} > {args.out_dir}/{args.out_transcript}")
     cmds.append(f"rm {args.out_dir}/{transcript_tsv}")
     return cmds

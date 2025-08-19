@@ -36,7 +36,7 @@ def sge_stitch(_args):
     inout_params.add_argument('--out-filtered-prefix', type=str, default="filtered", help='Output for --filter-by-density. If --filter-by-density, define the prefix for filtered SGE (default: filtered)')
 
     key_params = parser.add_argument_group("Key Parameters", "Key Parameters")
-    key_params.add_argument("--colnames-count", type=str, default="count", help="Comma-separated column names for count (default: count)")
+    key_params.add_argument("--colname-count", type=str, default="count", help="Comma-separated column names for count (default: count)")
     key_params.add_argument('--colname-feature-name', type=str, default='gene', help='Feature name column (default: gene)')
     key_params.add_argument('--colname-feature-id', type=str, default=None, help='Feature ID column (default: None)')
     key_params.add_argument('--colname-x', type=str, default="X", help='X column name (default: X)')
@@ -47,7 +47,7 @@ def sge_stitch(_args):
 
     # polygon-filtering params
     polyfilter_params = parser.add_argument_group('Density/Polygon Filtering Parameters','Parameters for filtering polygons based on the number of vertices.')
-    polyfilter_params.add_argument('--genomic-feature', type=str, default=None, help='Column name of genomic feature for polygon-filtering (default to --colnames-count if --colnames-count only specifies one column)')
+    # polyfilter_params.add_argument('--genomic-feature', type=str, default=None, help='Column name of genomic feature for polygon-filtering (default to --colname-count)')
     polyfilter_params.add_argument('--mu-scale', type=int, default=1, help='Scale factor for the polygon area calculation (default: 1.0)')
     polyfilter_params.add_argument('--radius', type=int, default=15, help='Radius for the polygon area calculation (default: 15)')
     polyfilter_params.add_argument('--quartile', type=int, default=2, help='Quartile for the polygon area calculation (default: 2)')

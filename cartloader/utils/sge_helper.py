@@ -6,7 +6,7 @@ import numpy as np
 aux_sge_args = {
     "out": [
         'units_per_um', 'precision_um',
-        'colname_x', 'colname_y', 'colname_count',
+        'colname_x', 'colname_y', #'colname_count',
         'colname_feature_name' #, 'colname_feature_id'
     ],
     "inbcd": [

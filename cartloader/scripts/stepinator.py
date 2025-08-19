@@ -95,7 +95,7 @@ def cmd_sge_stitch(sgeinfo, args, env, generate_tile_minmax_only=False):
         f"--in-tiles {sgeinfo['in_tiles_str']}",
         f"--out-dir {sgeinfo['sge_dir']}",
         f"--units-per-um {sgeinfo.get('units_per_um', None)}" if sgeinfo.get("units_per_um", None) else "",
-        f"--colnames-count {sgeinfo.get('colnames_all_count', None)}" if sgeinfo.get('colnames_all_count', None) else "",
+        f"--colname-count {sgeinfo.get('colname_count', None)}" if sgeinfo.get('colname_count', None) else "",
         f"--sge-visual" if args.sge_visual else "",
         f"--n-jobs {args.n_jobs}" if args.n_jobs else "",
         f"--restart" if args.restart else "",
@@ -149,7 +149,7 @@ def cmd_sge_convert(sgeinfo, args, env):
         f"--platform {sgeinfo['platform']}",
         in_arg,
         f"--out-dir {sgeinfo['sge_dir']}",
-        f"--colnames-count {sgeinfo['colnames_all_count']}",
+        f"--colname-count {sgeinfo['colname_count']}",
         f"--filter-by-density --out-filtered-prefix {sgeinfo['filtered_prefix']} --genomic-feature {sgeinfo['colname_count']}" if sgeinfo['filter_by_density'] else "",
         f"--sge-visual" if args.sge_visual else "",
         f"--n-jobs {args.n_jobs}" if args.n_jobs else ""
@@ -589,7 +589,7 @@ def stepinator(_args):
     key_params.add_argument('--filter-by-density', action='store_true', default=False, help='Required if --sge-convert or --run-ficture. If --sge-convert, it enables density-filtering. If --run-ficture, it defines the density-filtered SGE as input. (default: False)')
     key_params.add_argument('--filtered-prefix', type=str, default=None, help='Required if --filtered-by-density. The prefix for density-filtered SGE (default: filtered)')
     key_params.add_argument("--colname-count", type=str, default="count", help="Required if --sge-convert, --sge-stitch, --run-ficture, or --run-cartload-join. Column name that showing the expression count of the genomic feature of interest. (default: gene)")
-    key_params.add_argument("--colnames-other-count", nargs="*", default=[], help="Optional if --sge-convert, --sge-stitch is enabled. It allows to keep other genomic features in the formatted SGE besides the genomic feature of interest. (default: [])")
+    # key_params.add_argument("--colnames-other-count", nargs="*", default=[], help="Optional if --sge-convert, --sge-stitch is enabled. It allows to keep other genomic features in the formatted SGE besides the genomic feature of interest. (default: [])")
     # for run_ficture
     key_params.add_argument("--major-axis", type=str, default="X", choices=["X","Y"], help="Major axis (default: X)")
     key_params.add_argument("--ext-path", type=str, default=None, help="Required when --run-ficture1 with an external model. The path for the external model.")
@@ -660,7 +660,7 @@ def stepinator(_args):
     format_aux_parameter.add_argument('--csv-colname-x', type=str, default=None, help='Column name for X-axis (default: x_location for 10x_xenium; x for bgi_stereoseq; x_local_px for cosmx_smi; global_x for vizgen_merscope; xcoord for pixel_seq; x for nova_st)')
     format_aux_parameter.add_argument('--csv-colname-y', type=str, default=None, help='Column name for Y-axis (default: y_location for 10x_xenium; y for bgi_stereoseq; y_local_px for cosmx_smi; global_y for vizgen_merscope; ycoord for pixel_seq; y for nova_st)')
     format_aux_parameter.add_argument('--csv-colname-feature-name', type=str, default=None, help='Column name for gene name (default: feature_name for 10x_xenium; geneID for bgi_stereoseq; target for cosmx_smi; gene for vizgen_merscope; geneName for pixel_seq; geneID for nova_st)')
-    format_aux_parameter.add_argument('--csv-colnames-count', type=str, default=None, help='Column name for expression count. If not provided, a count of 1 will be added for a feature in a pixel (default: MIDCounts for bgi_stereoseq; MIDCount for nova_st; None for the rest platforms).')
+    format_aux_parameter.add_argument('--csv-colname-count', type=str, default=None, help='Column name for expression count. If not provided, a count of 1 will be added for a feature in a pixel (default: MIDCounts for bgi_stereoseq; MIDCount for nova_st; None for the rest platforms).')
     format_aux_parameter.add_argument('--csv-colname-feature-id', type=str, default=None, help='Column name for gene id (default: None)')
     format_aux_parameter.add_argument('--csv-colnames-others', nargs='+', default=[], help='Columns names to keep (e.g., cell_id, overlaps_nucleus) (default: None)')
     format_aux_parameter.add_argument('--csv-colname-phredscore', type=str, default=None, help='Column name for Phred-scaled quality value (Q-Score) estimating the probability of incorrect call (default: qv for 10x_xenium and None for the rest platforms).') # qv
@@ -802,7 +802,7 @@ def stepinator(_args):
     sgeinfo["filtered_prefix"] = sgeinfo.get("filtered_prefix", "filtered")
     # colnames for output
     sgeinfo["colname_count"] = sgeinfo.get("colname_count", "count")
-    sgeinfo["colnames_all_count"] = ",".join([sgeinfo["colname_count"]] + sgeinfo["colnames_other_count"].split(",")) if sgeinfo.get("colnames_other_count", None) is not None else sgeinfo["colname_count"]
+    #sgeinfo["colnames_all_count"] = ",".join([sgeinfo["colname_count"]] + sgeinfo["colnames_other_count"].split(",")) if sgeinfo.get("colnames_other_count", None) is not None else sgeinfo["colname_count"]
     # sge_dir    
     sgeinfo["sge_dir"] = os.path.join(out_dir, "sge")
     os.makedirs(sgeinfo['sge_dir'], exist_ok=True)
