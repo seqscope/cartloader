@@ -55,8 +55,8 @@ def find_valid_path(pattern, in_dir):
     """
     Search for the *first* existing file in 'in_dir' matching the filename pattern
     """
-    for filename in pattern["filename"]:
-        f=os.path.join(in_dir,filename)
+    for filename in pattern["filenames"]:
+        f=os.path.join(in_dir, filename)
         if os.path.exists(f):
             return f
     return None

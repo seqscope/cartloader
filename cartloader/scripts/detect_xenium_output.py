@@ -25,57 +25,68 @@ xenium_key2patterns={
     # SGE:
     "TRANSCRIPT": {
         "required": True,
-        "filename":["transcripts.csv.gz", "transcripts.parquet"]
+        "filenames":["transcripts.csv.gz", "transcripts.parquet"]
     },
-    # CELL:
+    # CELL-BASED ANALYSIS:
+    # * Cell format:
+    # "cell_id","x_centroid","y_centroid","transcript_counts","control_probe_counts","genomic_control_counts","control_codeword_counts","unassigned_codeword_counts","deprecated_codeword_counts","total_counts","cell_area","nucleus_area","nucleus_count","segmentation_method"
+    # "aaaagkdm-1",170.85508728027344,2017.2412109375,1,0,0,0,0,0,1,46.285157930105925,NaN,0,"Segmented by boundary stain (ATP1A1+CD45+E-Cadherin)"
     "CELL": {
         "required": True,
-            "filename": ["cells.csv.gz", "cells.parquet"],
+            "filenames": ["cells.csv.gz", "cells.parquet"],
         },
+    # * Cell boundaries:
+    # "cell_id","vertex_x","vertex_y","label_id"
+    # "aaaagkdm-1",169.3625,2013.0126,1
     "BOUNDARY":  {
         "required": True,
-        "filename": ["cell_boundaries.csv.gz"],
+        "filenames": ["cell_boundaries.csv.gz"],
         },
     "CELL_FEATURE_MEX": {
-        "required": True,
-        "filename":["cell_feature_matrix"],
+        "required": False,
+        "filenames":["cell_feature_matrix"],
         "zips": ["cell_feature_matrix.tar.gz"]
         },
-    # CLUSTER and DE
+    # * Cluster:
+    # Barcode,Cluster
+    # aaaagkdm-1,1
     "CLUSTER": {
         "required": True,
-        "filename":["analysis/clustering/gene_expression_graphclust/clusters.csv"],
+        "filenames":["analysis/clustering/gene_expression_graphclust/clusters.csv"],
         "zips": ["analysis.tar.gz"]
         },
+    # * DE:
+    # Feature ID,Feature Name,Cluster 1 Mean Counts,Cluster 1 Log2 fold change,Cluster 1 Adjusted p value,Cluster 2 Mean Counts,Cluster 2 Log2 fold change,Cluster 2 Adjusted p value,Cluster 3 Mean Counts,Cluster 3 Log2 fold change,Cluster 3 Adjusted p value,Cluster 4 Mean Counts,Cluster 4 Log2 fold change,Cluster 4 Adjusted p value,Cluster 5 Mean Counts,Cluster 5 Log2 fold change,Cluster 5 Adjusted p value,Cluster 6 Mean Counts,Cluster 6 Log2 fold change,Cluster 6 Adjusted p value,Cluster 7 Mean Counts,Cluster 7 Log2 fold change,Cluster 7 Adjusted p value,Cluster 8 Mean Counts,Cluster 8 Log2 fold change,Cluster 8 Adjusted p value,Cluster 9 Mean Counts,Cluster 9 Log2 fold change,Cluster 9 Adjusted p value,Cluster 10 Mean Counts,Cluster 10 Log2 fold change,Cluster 10 Adjusted p value,Cluster 11 Mean Counts,Cluster 11 Log2 fold change,Cluster 11 Adjusted p value,Cluster 12 Mean Counts,Cluster 12 Log2 fold change,Cluster 12 Adjusted p value,Cluster 13 Mean Counts,Cluster 13 Log2 fold change,Cluster 13 Adjusted p value,Cluster 14 Mean Counts,Cluster 14 Log2 fold change,Cluster 14 Adjusted p value,Cluster 15 Mean Counts,Cluster 15 Log2 fold change,Cluster 15 Adjusted p value,Cluster 16 Mean Counts,Cluster 16 Log2 fold change,Cluster 16 Adjusted p value,Cluster 17 Mean Counts,Cluster 17 Log2 fold change,Cluster 17 Adjusted p value,Cluster 18 Mean Counts,Cluster 18 Log2 fold change,Cluster 18 Adjusted p value,Cluster 19 Mean Counts,Cluster 19 Log2 fold change,Cluster 19 Adjusted p value,Cluster 20 Mean Counts,Cluster 20 Log2 fold change,Cluster 20 Adjusted p value,Cluster 21 Mean Counts,Cluster 21 Log2 fold change,Cluster 21 Adjusted p value
+    # ENSG00000166535,A2ML1,0.008082077992052654,2.292429464470433,0.000013831178435443352,0.0015317620832224837,-0.2717658073791789,0.16427980780868393,0.001226843332106492,-0.42095084864144816,0.46975425102829566,0.0037832334823669654,1.1762824711906763,0.00626099448573822,0.0009370316994608665,-0.9931426193918895,0.00012420457106652693,0.00035171591775058056,-1.9689174885349274,0.002636099946030819,0.0018219664759913663,0.0766263739653219,0.8995675333094153,0.0009475336160580633,-0.8343888826514707,0.06727367639920934,0.004361559793501598,1.5130532082572863,0.0000000000007537933872968394,0.000846294895303063,-0.992227102994244,0.028453359285143767,0.0018146574418219585,0.051194655215844875,0.9304123002179088,0.00045951336258476185,-1.7421234527453535,0.0013628094548944181,0.0023563153416359694,0.4774816523131893,0.2965413340700354,0.0021212060341883753,0.30481838952695206,0.4926601159653632,0.0014237107155417482,-0.14271909128282623,0.8500806231615298,0.0012562334587749313,-0.3507612852540696,0.6384951496662045,0.002355140186915884,0.5936824059089432,0.6436592400308225,0,-1.0564604491458525,0.697077988750366,0.0037541549892459126,1.6545227197901715,0.5114958184195594,0.0016831868337385438,0.9092558204592383,0.9557130750504969,0.004746991923520686,1.8259931272624748,0.4816191969175982
     "DE":{
         "required": True,
-        "filename":["analysis/diffexp/gene_expression_graphclust/differential_expression.csv"],
+        "filenames":["analysis/diffexp/gene_expression_graphclust/differential_expression.csv"],
         "zips": ["analysis.tar.gz"]
         },
     # IMGs: NOT required
     "DAPI_OME": {
         "required": False,
-        "filename":["morphology_focus.ome.tif", "morphology_focus/morphology_focus_0000.ome.tif" ]
+        "filenames":["morphology_focus.ome.tif", "morphology_focus/morphology_focus_0000.ome.tif" ]
         },
     "BOUNDARY_OME": {
         "required": False,
-        "filename":["morphology_focus/morphology_focus_0001.ome.tif" ]
+        "filenames":["morphology_focus/morphology_focus_0001.ome.tif" ]
         },
     "INTERIOR_RNA_OME": {
         "required": False,
-        "filename":["morphology_focus/morphology_focus_0002.ome.tif" ]
+        "filenames":["morphology_focus/morphology_focus_0002.ome.tif" ]
         },
     "INTERIOR_PROTEIN_OME": {
         "required": False,
-        "filename":["morphology_focus/morphology_focus_0003.ome.tif" ]
+        "filenames":["morphology_focus/morphology_focus_0003.ome.tif" ]
         },
     "DAPI_3D_OME": {
         "required": False,
-        "filename":["morphology.ome.tif"]
+        "filenames":["morphology.ome.tif"]
         },
     "DAPI_MIP_OME": {
         "required": False,
-        "filename":["morphology_mip.ome.tif"]
+        "filenames":["morphology_mip.ome.tif"]
     }
         
 }
@@ -113,7 +124,7 @@ def detect_xenium_output(_args):
                 datdict[key] = find_valid_path_from_zip(pattern, args.in_dir, args.unzip_dir, args.overwrite)
         # Validate required file
         if pattern.get("required", False) and datdict[key] is None:
-            filenames = ",".join(pattern.get("filename", []))
+            filenames = ",".join(pattern.get("filenames", []))
             raise ValueError(f"Cannot find the required file for '{key}' using filename pattern(s): {filenames}")
     
     # drop the pairs with None values

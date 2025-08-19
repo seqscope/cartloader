@@ -27,10 +27,10 @@ def parse_arguments(_args):
     inout_params = parser.add_argument_group("Input/Output Parameters", "Parameters to specify platform, input, output, and units per um, precision, and density-filtering for output.")
     inout_params.add_argument('--platform', type=str, choices=["10x_visium_hd", "seqscope", "10x_xenium", "bgi_stereoseq", "cosmx_smi", "vizgen_merscope", "pixel_seq", "nova_st", "generic"], required=True, help='Platform of the raw input file to infer the format of the input file. "generic" refers to SGE from platforms not yet explicitly supported by cartloader, or from custom/preprocessed sources')
     # - input
+    inout_params.add_argument('--in-json', type=str, default=None, help='(Shortcut; currenly only support 10x_xenium, 10x_visium_hd) Path to a JSON file to provide paths to the input file. If provided, omit --in-parquet/--in-csv/--scale-json.')
     inout_params.add_argument('--in-mex', type=str, default=os.getcwd(), help='(10x_visium_hd and seqscope only) Directory path to input files in Market Exchange (MEX) format. Defaults to the current working directory.') # 10x_visium_hd, seqscope 
     inout_params.add_argument('--in-parquet', type=str, default=None, help='(10x_visium_hd and 10x_xenium only) For 10X Visium HD platform, specify to path to the input parquet file for spatial coordinates (default: tissue_positions.parquet). For 10X Xenium, if the input transcript file is in parquet format, specify its path here and skip --in-csv (default: None)') # 10x_visium_hd
     inout_params.add_argument('--in-csv', type=str, default=None, help='(10x_xenium, bgi_stereoseq, cosmx_smi, vizgen_merscope, pixel_seq, and nova_st only) Path to the input raw CSV/TSV file if raw CSV/TSV file exists(default: None).') 
-    inout_params.add_argument('--in-json', type=str, default=None, help='(Shortcut; currenly only support 10x_xenium) Path to a JSON file to provide paths to the input file. If provided, omit --in-parquet and --in-csv.')
     inout_params.add_argument('--units-per-um', type=float, default=1.00, help='Coordinate unit per um in the input files (default: 1.00). Alternatively, for 10x Visium HD, skip --units-per-um and use --scale-json to auto-compute.')  
     inout_params.add_argument('--scale-json', type=str, default=None, help="(Shortcut; 10x_visium_hd only) Path to a scale json file for calculating --units-per-um (default: None; Typical naming convention: scalefactors_json.json)") 
     # - output
@@ -387,6 +387,7 @@ def sge_convert(_args):
         elif raw_tx.endswith("csv.gz") or raw_tx.endswith("tsv.gz") or raw_tx.endswith("tsv") or raw_tx.endswith("csv"):
             args.in_csv = raw_tx
             print(f" * --in-csv {args.in_csv}")
+        args.scale_json = raw_data.get("SCALE", None)
     
     in_raw_filelist=input_by_platform(args)
 

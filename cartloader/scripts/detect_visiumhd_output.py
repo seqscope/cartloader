@@ -1,6 +1,8 @@
 import sys, os, gzip, argparse, logging, warnings, shutil, re, inspect, warnings, glob, json
 from collections import defaultdict, OrderedDict
 import tarfile
+from pathlib import Path
+
 from cartloader.utils.utils import write_dict_to_file, load_file_to_dict
 from cartloader.utils.file_helper import find_valid_path, find_valid_path_from_zip
 
@@ -19,31 +21,92 @@ from cartloader.utils.file_helper import find_valid_path, find_valid_path_from_z
 # web_summary.html	        Run summary metrics and plots in HTML format
 ## ==============
 
+def populate_from_suffixes(pattern: dict, in_dir: str, dest_key: str, suffix_key: str) -> None:
+    """
+    If pattern[dest_key] is missing and pattern[suffix_key] exists,
+    glob for *<suffix> files in in_dir and set pattern[dest_key] to a
+    list of basenames (order-preserving, de-duplicated).
+    """
+    # Already populated or no suffixes to search for
+    if pattern.get(dest_key) or not pattern.get(suffix_key):
+        return
+
+    suffixes = pattern[suffix_key]
+    if isinstance(suffixes, str):
+        suffixes = [suffixes]
+
+    matches = []
+    in_path = Path(in_dir)
+    for sfx in suffixes:
+        for p in in_path.glob(f"*{sfx}"):
+            if p.is_file():
+                matches.append(p.name)
+
+    # De-duplicate while preserving order
+    deduped = list(dict.fromkeys(matches))
+    pattern[dest_key] = deduped
+
 # ? square_008um and 16 contains diffexp and clustering, pca, umap
 visiumhd_key2patterns={
     # SGE: 
     # use filtered_feature_bc_matrix, which contains only tissue-associated barcodes,
-    "FILTERED_TRANSCRIPT_MTX": {
+    "TRANSCRIPT_MEX": {
         "required": True,
-        "filename":["square_002um/filtered_feature_bc_matrix", "binned_outputs/square_002um/filtered_feature_bc_matrix"],
+        "filenames":["square_002um/filtered_feature_bc_matrix", "binned_outputs/square_002um/filtered_feature_bc_matrix"],
         "zip_suffixes": ["_square_002um_binned_outputs.tar.gz", "_binned_outputs.tar.gz"]
     },
     "SCALE": {
         "required": True,
-        "filename":["square_002um/spatial/scalefactors_json.json", "binned_outputs/spatial/scalefactors_json.json"],
+        "filenames":["square_002um/spatial/scalefactors_json.json", "binned_outputs/square_002um/spatial/scalefactors_json.json"],
         "zip_suffixes": ["_square_002um_binned_outputs.tar.gz", "_binned_outputs.tar.gz"]
     },
     "POSITION":{
         "required": True,
-        "filename":["square_002um/spatial/tissue_positions.parquet", "binned_outputs/square_002um/spatial/tissue_positions.parquet"],
+        "filenames":["square_002um/spatial/tissue_positions.parquet", "binned_outputs/square_002um/spatial/tissue_positions.parquet"],
         "zip_suffixes": ["_square_002um_binned_outputs.tar.gz", "_binned_outputs.tar.gz"]
     },
-    # IMGs: NOT required
-    "HIGH_RESOLUTION_PNG": {
+    # CELL: 
+    "CELL_FEATURE_MEX": {
         "required": False,
-        "filename":["square_002um/filtered_feature_bc_matrix/tissue_hires_image.png", "binned_outputs/square_002um/filtered_feature_bc_matrix/tissue_hires_image.png"],
+        "filenames":["segmented_outputs/filtered_feature_cell_matrix"],
+        "zip_suffixes": ["_segmented_outputs.tar.gz"]
+        },
+    "CELL_GEOJSON":{
+        "required": False,
+        "filenames":["segmented_outputs/cell_segmentations.geojson"],
+        "zip_suffixes": ["_segmented_outputs.tar.gz"]
+    },
+    # "CELL_GEOJSON_ANNOTATED":{
+    #     "required": False,
+    #     "filenames":["segmented_outputs/graphclust_annotated_cell_segmentations.geojson"],
+    #     "zip_suffixes": ["_segmented_outputs.tar.gz"]
+    # },
+    # * Cluster
+    # Barcode,Cluster
+    # cellid_000000001-1,22
+    "CLUSTER": {
+        "required": False,
+        "filenames":["segmented_outputs/analysis/clustering/gene_expression_graphclust/clusters.csv"],
+        "zip_suffixes": ["_segmented_outputs.tar.gz"]
+        },
+    "DE":{
+        "required": False,
+        "filenames":["segmented_outputs/analysis/diffexp/gene_expression_graphclust/differential_expression.csv"],
+        "zip_suffixes": ["_segmented_outputs.tar.gz"]            
+        },
+    # 
+    # IMGs: NOT required
+    # "HIGH_RESOLUTION_PNG": {
+    #     "required": False,
+    #     "filenames":["square_002um/filtered_feature_bc_matrix/tissue_hires_image.png", "binned_outputs/square_002um/filtered_feature_bc_matrix/tissue_hires_image.png"],
+    #     "zip_suffixes": ["_square_002um_binned_outputs.tar.gz", "_binned_outputs.tar.gz"]
+    #     }
+    "HnE_BTF": {
+        "required": False,
+        "filename_suffixes":["_tissue_image.btf"],
         "zip_suffixes": ["_square_002um_binned_outputs.tar.gz", "_binned_outputs.tar.gz"]
         }
+
 }
 
 def detect_visiumhd_output(_args):
@@ -70,24 +133,20 @@ def detect_visiumhd_output(_args):
     else:
         datdict={}
 
-    # Update the pattern if "zips" is empty but "zip_suffixes" are defined
+    # Update the pattern if "zips" is empty but "zip_suffixes" are defined; as well as filenames
     for key, pattern in visiumhd_key2patterns.items():
-        if not pattern.get("zips") and pattern.get("zip_suffixes"):
-            matched_zips = []
-            for zip_suffix in pattern["zip_suffixes"]:
-                zip_pattern = os.path.join(args.in_dir, f"*{zip_suffix}")
-                matched = glob.glob(zip_pattern)
-                matched_zips.extend(matched)
-            pattern["zips"] = [os.path.basename(f) for f in matched_zips]  # Store only filenames
+        populate_from_suffixes(pattern, args.in_dir, dest_key="zips",     suffix_key="zip_suffixes")
+        populate_from_suffixes(pattern, args.in_dir, dest_key="filenames", suffix_key="filename_suffixes")
 
     for key, pattern in visiumhd_key2patterns.items():
         if datdict.get(key, None) is None:
             datdict[key] = find_valid_path(pattern, args.in_dir)
             if datdict[key] is None and len(pattern.get("zips", []))>0:
                 datdict[key] = find_valid_path_from_zip(pattern, args.in_dir, args.unzip_dir, args.overwrite)
+                
         # Validate required file
         if pattern.get("required", False) and datdict[key] is None:
-            filenames = ",".join(pattern.get("filename", []))
+            filenames = ",".join(pattern.get("filenames", []))
             raise ValueError(f"Cannot find the required file for '{key}' using filename pattern(s): {filenames}")
     
     # drop the pairs with None values
