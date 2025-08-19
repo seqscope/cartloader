@@ -306,10 +306,10 @@ def run_cartload_join(_args):
                 if not args.skip_raster:
                     cmds = cmd_separator([], f"Creating raster pixel-level factor {in_prefix} into PMTiles...")
                     cmd = " ".join([
-                        "cartloader", "run_fig2pmtiles",
+                        "cartloader", "image_png2pmtiles",
                         "--georeference", "--geotif2mbtiles", "--mbtiles2pmtiles",
-                        "--in-fig", in_pixel_png,
-                        "--in-tsv", in_pixel_tsvf,
+                        "--in-img", in_pixel_png,
+                        "--georef-pixel-tsv", in_pixel_tsvf,
                         "--out-prefix", f"{out_prefix}-pixel-raster",
                         f"--pmtiles '{args.pmtiles}'",
                         f"--gdal_translate '{args.gdal_translate}'",
