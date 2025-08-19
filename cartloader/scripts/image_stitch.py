@@ -7,7 +7,7 @@ from cartloader.utils.utils import cmd_separator, execute_makefile
 from cartloader.utils.minimake import minimake
 from cartloader.utils.image_helper import update_orient
 
-from cartloader.scripts.run_fig2pmtiles import get_orientation_suffix, cmds_for_dimensions, cmds_for_orientation
+from cartloader.scripts.image_png2pmtiles import get_orientation_suffix, cmds_for_dimensions, cmds_for_orientation
 
 # get the current path
 current_path = os.path.realpath(__file__)

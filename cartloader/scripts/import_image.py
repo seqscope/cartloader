@@ -228,7 +228,7 @@ def import_image(_args):
             ort_suffix=get_orientation_suffix(args.rotate, args.flip_vertical, args.flip_horizontal)
             cond_out = f"{img_prefix}.{ort_suffix}.tif"
         
-        cmds = cmd_separator([], f"Processing PNG ({flat_img}): {", ".join(png2pmtiles_actions)}")
+        cmds = cmd_separator([], f"Processing PNG ({flat_img}): {',' .join(png2pmtiles_actions)}")
         cmd = " ".join([
             "cartloader image_png2pmtiles",
             "--georeference" if args.georeference else "",

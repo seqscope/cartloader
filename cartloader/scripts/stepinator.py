@@ -450,7 +450,7 @@ def cmd_image_stitch(imginfo_by_tiles, args, env):
     return image_stitch_cmds
   
 def cmd_image_png2pmtiles(run_i, cartl_v, args, env):    
-    assert len(run_i.get("histology", [])) > 0, "Error: --histology is Required when running fig2pmtiles"
+    assert len(run_i.get("histology", [])) > 0, "Error: --histology is Required when running --image-png2pmtiles"
     img_cmds=[]
     #cartload_dir=os.path.join(run_i["run_dir"], "cartload")
     cartload_dir = os.path.join(run_i["run_dir"], ("cartload" if cartl_v == "1" else "cartload2"))
@@ -469,7 +469,7 @@ def cmd_image_png2pmtiles(run_i, cartl_v, args, env):
         # update the orientation
         histology = update_orient_in_histology(histology)
 
-        import_image_cmd = " ".join([
+        img_cmd = " ".join([
             "cartloader", "import_image",
             # actions
             "--ome2png" if histology.get("ome", False) else "",

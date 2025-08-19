@@ -126,9 +126,6 @@ def parse_arguments(_args):
     env_params.add_argument('--parquet-tools', type=str, default="parquet-tools", help='If --in-parquet is enabled, path to parquet-tools binary (default: parquet-tools)')
     env_params.add_argument('--gdal_translate', type=str, default=f"gdal_translate", help='If --north-up, provide path to gdal_translate binary (default: gdal_translate)')
     env_params.add_argument('--gdalwarp', type=str, default=f"gdalwarp", help='If --north-up, provide path to gdalwarp binary (default: gdalwarp)')
-
-    # not in use 
-    #aux_ftrfilter_params.add_argument('--unique', action='store_true', default=False, help='Merge pixels with (almost?) identical coordinates. Applies to cosmx_smi only.')
  
     if len(_args) == 0:
         parser.print_help()
@@ -314,11 +311,6 @@ def convert_tsv(cmds, args):
 def sge_density_filtering(mm, sge_filtering_dict):
     genomic_feature=sge_filtering_dict["genomic_feature"]
     count_header=sge_filtering_dict["count_header"]
-    # if genomic_feature is None:
-    #     if len(count_header) > 1:
-    #         logging.error("Missing --genomic-feature. Cannot use ---count with multiple columns as --genomic-feature. Please provide one column name for density-filtering.")
-    #         sys.exit(1)
-    #     genomic_feature = count_header[0]
     cmds=cmd_separator([], "Filtering the converted data by density...")
     cmd = " ".join([
             "ficture", "filter_by_density",
@@ -503,8 +495,8 @@ def sge_convert(_args):
             "filtered_prefix": os.path.join(args.out_dir, args.out_filtered_prefix),
             "flag": sge_filtered_flag,
             "gene_header": [args.colname_feature_name],
-            "count_header": [args.colname_count], #args.colnames_count.split(","), #list
-            "genomic_feature": args.colname_count, #args.genomic_feature,
+            "count_header": [args.colname_count],
+            "genomic_feature": args.colname_count,
             "mu_scale": 1,
             "radius": args.radius,
             "quartile": args.quartile,
@@ -545,10 +537,8 @@ def sge_convert(_args):
 
     # write down a json file when execute
     write_dict_to_file(sge_assets, args.out_json, check_equal=True)
-
+    
     execute_makefile(make_f, dry_run=args.dry_run, restart=args.restart, n_jobs=args.n_jobs)
-
-
 
 if __name__ == "__main__":
     # get the cartloader path

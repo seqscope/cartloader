@@ -11,7 +11,7 @@ current_path = os.path.realpath(__file__)
 cartloader_dir=os.path.dirname(os.path.dirname(os.path.dirname(current_path)))
 gdal_get_size_script = os.path.join(cartloader_dir, 'cartloader', "utils", "gdal_get_size.sh")
 
-def cmds_for_dimensions(geotif_f, dim_f, gdalinfo):
+def cmds_for_dimensions(geotif_f, dim_f, gdalinfo="gdalinfo"):
     cmds = cmd_separator([], f"Extract dimensions from: {geotif_f}")
     dim_f = os.path.splitext(geotif_f)[0] + ".dim.tsv"
     cmds.append(f"{gdal_get_size_script} {geotif_f} {dim_f} {gdalinfo}")
