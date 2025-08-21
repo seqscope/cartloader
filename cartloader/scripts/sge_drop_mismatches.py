@@ -127,19 +127,15 @@ def sge_drop_mismatches(_args):
     print(f"\t- xmin: {xmin}")
     print(f"\t- ymin: {ymin}")
 
-    drop_mismatch = False
-    update_minmax = False
-
-
     # update: NovaScope & Scopeflow combined outputs may set xmin/ymin to 0 even without true (0,0) rows.
     # Use a stricter check: actually look for any (x==0 && y==0) records in the transcript file.
     has_mismatch = False
-    update_minmax = False
+    # update_minmax = False 
     if xmin == 0 and ymin == 0:
         if find_mismatch_transcripts(transcript_path):
             has_mismatch = True
-        else:
-            update_minmax = True
+        # else:
+        #     update_minmax = True
         
     if has_mismatch == True:
         print("Mismatches found, dropping mismatches ...")
@@ -164,12 +160,12 @@ def sge_drop_mismatches(_args):
         # Recalculate min and max
         minmax_cmd = f"{args.gzip} -cd {transcript_path} | awk 'NR==2 {{xmin=$1; xmax=$1; ymin=$2; ymax=$2}} {{if($1<xmin) xmin=$1; if($1>xmax) xmax=$1; if($2<ymin) ymin=$2; if($2>ymax) ymax=$2}} END {{print \"xmin\", xmin; print \"xmax\", xmax; print \"ymin\", ymin; print \"ymax\", ymax}}' OFS=\"\\t\" > {minmax_path}"
         run_command(minmax_cmd)
-    elif update_minmax == True:
-        print("No mismatches found, but xmin/ymin are 0. Recomputing min/max …")
-        run_command(f"mv {minmax_path} {temp_minmax_path}")
-        # Recalculate min and max
-        minmax_cmd = f"{args.gzip} -cd {transcript_path} | awk 'NR==2 {{xmin=$1; xmax=$1; ymin=$2; ymax=$2}} {{if($1<xmin) xmin=$1; if($1>xmax) xmax=$1; if($2<ymin) ymin=$2; if($2>ymax) ymax=$2}} END {{print \"xmin\", xmin; print \"xmax\", xmax; print \"ymin\", ymin; print \"ymax\", ymax}}' OFS=\"\\t\" > {minmax_path}"
-        run_command(minmax_cmd)
+    # elif update_minmax == True:
+    #     print("No mismatches found, but xmin/ymin are 0. Recomputing min/max …")
+    #     run_command(f"mv {minmax_path} {temp_minmax_path}")
+    #     # Recalculate min and max
+    #     minmax_cmd = f"{args.gzip} -cd {transcript_path} | awk 'NR==2 {{xmin=$1; xmax=$1; ymin=$2; ymax=$2}} {{if($1<xmin) xmin=$1; if($1>xmax) xmax=$1; if($2<ymin) ymin=$2; if($2>ymax) ymax=$2}} END {{print \"xmin\", xmin; print \"xmax\", xmax; print \"ymin\", ymin; print \"ymax\", ymax}}' OFS=\"\\t\" > {minmax_path}"
+    #     run_command(minmax_cmd)
     else:
         print(f"No mismatch found, skipping the mismatch removal step.")
 
