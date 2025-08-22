@@ -85,13 +85,19 @@ def execute_makefile(make_f, dry_run, restart, n_jobs):
         print(f"To execute the pipeline, run the following command:\n{exe_cmd}")
     else:
         exe_cmd = f"{exe_cmd} -j {n_jobs}"
-        result = subprocess.run(exe_cmd, shell=True)
+        # result = subprocess.run(exe_cmd, shell=True)
+        # if result.returncode != 0:
+        #     print(f"Error in executing: {exe_cmd}")
+        #     print(f"Error message:")
+        #     print(result.stderr.decode())
+        #     sys.exit(1)
+        result = subprocess.run(exe_cmd, shell=True, capture_output=True, text=True)
         if result.returncode != 0:
             print(f"Error in executing: {exe_cmd}")
-            print(f"Error message:")
-            print(result.stderr.decode())
+            print("Error message:")
+            print(result.stderr)
             sys.exit(1)
-
+    
 def valid_and_touch_cmd(input_files, output_file):
     if not input_files:
         raise ValueError("Input file list cannot be empty.")
