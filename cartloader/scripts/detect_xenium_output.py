@@ -63,6 +63,21 @@ xenium_key2patterns={
         "filenames":["analysis/diffexp/gene_expression_graphclust/differential_expression.csv"],
         "zips": ["analysis.tar.gz"]
         },
+    "PCA_PROJ":{
+        "required": False,
+        "filenames":["analysis/pca/gene_expression_10_components/projection.csv"],
+        "zips": ["analysis.tar.gz"]
+        },
+    "PCA_VAR":{
+        "required": False,
+        "filenames":["analysis/pca/gene_expression_10_components/variance.csv"],
+        "zips": ["analysis.tar.gz"]
+        },
+    "UMAP_PROJ":{
+        "required": False,
+        "filenames":["analysis/umap/gene_expression_2_components/projection.csv"],
+        "zips": ["analysis.tar.gz"]
+        },
     # IMGs: NOT required
     "DAPI_OME": {
         "required": False,
@@ -80,6 +95,7 @@ xenium_key2patterns={
         "required": False,
         "filenames":["morphology_focus/morphology_focus_0003.ome.tif" ]
         },
+    # Detect it but will not process it
     "DAPI_3D_OME": {
         "required": False,
         "filenames":["morphology.ome.tif"]

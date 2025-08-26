@@ -148,7 +148,7 @@ def run_visiumhd(_args):
         print(f" * VisiumHD Space Ranger Directory: {args.space_ranger_dir}", flush=True)
         
         load_xenium_cmd=" ".join([
-                "cartloader", "detect_xenium_output",
+                "cartloader", "detect_visiumhd_output",
                 f"--in-dir {args.space_ranger_dir}",
                 f"--out-json {args.space_ranger_assets}",
                 f"--unzip-dir {args.out_dir}/unzip",

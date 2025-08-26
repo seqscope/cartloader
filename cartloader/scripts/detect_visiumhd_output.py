@@ -46,7 +46,17 @@ def populate_from_suffixes(pattern: dict, in_dir: str, dest_key: str, suffix_key
     deduped = list(dict.fromkeys(matches))
     pattern[dest_key] = deduped
 
-# ? square_008um and 16 contains diffexp and clustering, pca, umap
+
+# ========== Build visiumhd_key2patterns ========
+
+analysis_key2file={
+    "CLUSTER": "analysis/clustering/gene_expression_graphclust/clusters.csv",
+    "DE": "analysis/diffexp/gene_expression_graphclust/differential_expression.csv",
+    "PCA_PROJ": "analysis/pca/gene_expression_10_components/projection.csv",
+    "PCA_VAR": "analysis/pca/gene_expression_10_components/variance.csv",
+    "UMAP_PROJ": "analysis/umap/gene_expression_2_components/projection.csv"
+}
+
 visiumhd_key2patterns={
     # SGE: 
     # use filtered_feature_bc_matrix, which contains only tissue-associated barcodes,
@@ -76,38 +86,50 @@ visiumhd_key2patterns={
         "filenames":["segmented_outputs/cell_segmentations.geojson"],
         "zip_suffixes": ["_segmented_outputs.tar.gz"]
     },
-    # "CELL_GEOJSON_ANNOTATED":{
-    #     "required": False,
-    #     "filenames":["segmented_outputs/graphclust_annotated_cell_segmentations.geojson"],
-    #     "zip_suffixes": ["_segmented_outputs.tar.gz"]
-    # },
-    # * Cluster
-    # Barcode,Cluster
-    # cellid_000000001-1,22
-    "CLUSTER": {
-        "required": False,
-        "filenames":["segmented_outputs/analysis/clustering/gene_expression_graphclust/clusters.csv"],
-        "zip_suffixes": ["_segmented_outputs.tar.gz"]
-        },
-    "DE":{
-        "required": False,
-        "filenames":["segmented_outputs/analysis/diffexp/gene_expression_graphclust/differential_expression.csv"],
-        "zip_suffixes": ["_segmented_outputs.tar.gz"]            
-        },
-    # 
-    # IMGs: NOT required
-    # "HIGH_RESOLUTION_PNG": {
-    #     "required": False,
-    #     "filenames":["square_002um/filtered_feature_bc_matrix/tissue_hires_image.png", "binned_outputs/square_002um/filtered_feature_bc_matrix/tissue_hires_image.png"],
-    #     "zip_suffixes": ["_square_002um_binned_outputs.tar.gz", "_binned_outputs.tar.gz"]
-    #     }
-    "HnE_BTF": {
-        "required": False,
-        "filename_suffixes":["_tissue_image.btf"],
-        "zip_suffixes": ["_square_002um_binned_outputs.tar.gz", "_binned_outputs.tar.gz"]
+}
+
+def add_cell_analysis_patterns(target_dict, analysis_map):
+    for key, relpath in analysis_map.items():
+        target_dict[key] = {
+            "required": True if key in ["CLUSTER", "DE"] else False,
+            "filenames": [f"segmented_outputs/{relpath}"],
+            "zip_suffixes": ["_segmented_outputs.tar.gz"],
         }
 
-}
+add_cell_analysis_patterns(visiumhd_key2patterns, analysis_key2file)
+
+# Add hex-binned files for 8 µm and 16 µm
+for hex_r in (8, 16):
+    sq_str = f"square_00{hex_r}um" if hex_r < 10 else f"square_0{hex_r}um"
+
+    hex_pattern = {
+        "HEX_FEATURE_MEX":  "filtered_feature_bc_matrix",
+        "HEX_POSITION":     "spatial/tissue_positions.parquet",
+        "HEX_SCALE":        "spatial/scalefactors_json.json",
+    }
+    for key, relpath in analysis_key2file.items():
+        hex_pattern[f"HEX_{key}"] = relpath
+
+    for key, val in hex_pattern.items():
+        hex_k = f"{key}_{hex_r}um"
+        visiumhd_key2patterns[hex_k] = {
+            "required": False,
+            "filenames": [f"{sq_str}/{val}", f"binned_outputs/{sq_str}/{val}"],
+            "zip_suffixes": [f"_{sq_str}_binned_outputs.tar.gz", "_binned_outputs.tar.gz"],
+        }
+
+# Add image assets 
+visiumhd_key2patterns.update(
+    {
+    "HnE_BTF": {
+        "required": False,
+        "filename_suffixes": ["_tissue_image.btf"],
+        "zip_suffixes": ["_square_002um_binned_outputs.tar.gz", "_binned_outputs.tar.gz"],
+    }
+    }
+)
+
+#==================
 
 def detect_visiumhd_output(_args):
     # Categorized argument groups
