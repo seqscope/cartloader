@@ -220,7 +220,9 @@ def parse_arguments(_args):
     # images
     key_params.add_argument('--image-ids', type=str, default=["DAPI_OME", "BOUNDARY_OME", "INTERIOR_RNA_OME", "INTERIOR_PROTEIN_OME", "DAPI_MIP_OME"], nargs="+", help='(Parameters for --import-images) One or more image IDs to be used in the output PMTiles. (default: "DAPI_OME", "BOUNDARY_OME", "INTERIOR_RNA_OME", "INTERIOR_PROTEIN_OME", "DAPI_MIP_OME").')
     key_params.add_argument('--image-colors', type=str, default=[], help='(Parameters for --import-images) One or more colors to be used for OME TIFFs. The order of the colors should match the order of the image IDs in --image-ids. If not set, a default list of colors will be used.')
-    key_params.add_argument('--skip-missing-images', action='store_true', help='If set, skip image IDs that do not exist, showing a warning instead of raising an error.')
+    # key_params.add_argument('--skip-missing-images', action='store_true', help='If set, skip image IDs that do not exist, showing a warning instead of raising an error.')
+    key_params.add_argument('--all-images', action='store_true', help='If set, deploy all detected images based on the xeniums-ranger-assets file. If set, ingore the --images-id.')
+
     key_params.add_argument("--transparent-below", type=int, default=1, help='Set pixels below this value to transparent. The threshold should be between 0 and 255 (default: 1).')
 
     # aws 
@@ -421,28 +423,26 @@ def run_xenium(_args):
 
         if not use_json:
             assert args.ome_tifs, "Please specify the --ome-tifs parameter to import images or set --load-xenium-ranger to automatically detect the images"
-            assert not args.skip_missing_images, "Cannot use (TBC)"
+            assert not args.image_all, "Cannot use (TBC)"
 
-        assert args.image_ids, "Please specify at least one image ID via --image-ids parameter to import images"
-
-        if args.skip_missing_images: # skip_missing_images can only be used with use_json
+        if args.image_all: # skip_missing_images can only be used with use_json
             if args.dry_run:
-                print("* Skip removing unavailable image IDs for --dry-run")
+                print("* ")
             else:
                 # load the assets file
                 assert args.xenium_ranger_assets, "Missing path to the Xenium Ranger Asset JSON file. Specify it using either --out-dir or --xenium-ranger-assets"
-                print("* Filtering image IDs to only remain available ones (--skip-missing-images)")
+                print(f"* --image-all is enabled. Detecting all existing images from {args.xenium_ranger_assets}")
                 xenium_ranger_data=load_file_to_dict(args.xenium_ranger_assets)
                 # drop the pairs with None values
-                xenium_ranger_data={k: v for k, v in xenium_ranger_data.items() if v is not None}
-                avail_keys=list(xenium_ranger_data.keys())
-                raw_image_ids=args.image_ids
-                args.image_ids = [img_id for img_id in raw_image_ids if img_id in avail_keys]
+                images_data = xenium_ranger_data.get("IMAGES", xenium_ranger_data) # the default is defined to support the previous flat dict
+                images_data={k: v for k, v in xenium_ranger_data.items() if v is not None}
+                args.image_ids=list(images_data.keys())
 
-                print(f"    - Raw image IDs (N={len(raw_image_ids)}): {raw_image_ids}")
-                print(f"    - Available image IDs (N={len(args.image_ids)}): {args.image_ids}")
-        
-        if not args.image_colors:
+                print(f"    - image IDs (N={len(args.image_ids)}): {args.image_ids}")
+        else:
+            assert args.image_ids, "Please specify at least one image ID via --image-ids parameter to import images"
+
+        if not args.image_colors or args.image_all:
             args.image_colors = colors[:len(args.image_ids)]
         assert len(args.image_ids) <= len(args.image_colors), "Please specify image colors more or equal to the number of color image IDs"
         

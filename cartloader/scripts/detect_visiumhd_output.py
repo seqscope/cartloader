@@ -1,10 +1,7 @@
 import sys, os, gzip, argparse, logging, warnings, shutil, re, inspect, warnings, glob, json
-from collections import defaultdict, OrderedDict
-import tarfile
-from pathlib import Path
 
 from cartloader.utils.utils import write_dict_to_file, load_file_to_dict
-from cartloader.utils.file_helper import find_valid_path, find_valid_path_from_zip
+from cartloader.utils.file_helper import resolve_paths_by_pattern, populate_from_suffixes
 
 ## =====INFO=========
 # (source: https://www.10xgenomics.com/support/software/space-ranger/latest/analysis/outputs/output-overview)
@@ -19,37 +16,27 @@ from cartloader.utils.file_helper import find_valid_path, find_valid_path_from_z
 # segmented_outputs	        Folder containing segmented outputs. Contains analysis, cell_segmentations.geojson, cloupe.cloupe, filtered_feature_cell_matrix, filtered_feature_cell_matrix.h5, graphclust_annotated_cell_segmentations.geojson, graphclust_annotated_nucleus_segmentations.geojson, nucleus_segmentations.geojson, raw_feature_cell_matrix, raw_feature_cell_matrix.h5, and spatial. See the Segmented Outputs page for more details.
 # spatial	                Folder containing outputs that capture the spatiality of the data. See the Spatial Outputs page for more details.
 # web_summary.html	        Run summary metrics and plots in HTML format
+
+
+## PCA & UMAP
+# │   ├── pca
+# │   │   └── gene_expression_10_components
+# │   │       ├── components.csv    # PC * gene matrix of weights
+# │   │       ├── dispersion.csv    # normalized dispersion (variance / mean) --- used in highly variable gene (HVG) selection 
+# │   │       ├── features_selected.csv 
+# │   │       ├── projection.csv    # cell/barcode coordinates in PCA space
+# │   │       └── variance.csv
+# │   └── umap
+# │       └── gene_expression_2_components
+# │           └── projection.csv
+
 ## ==============
 
-def populate_from_suffixes(pattern: dict, in_dir: str, dest_key: str, suffix_key: str) -> None:
-    """
-    If pattern[dest_key] is missing and pattern[suffix_key] exists,
-    glob for *<suffix> files in in_dir and set pattern[dest_key] to a
-    list of basenames (order-preserving, de-duplicated).
-    """
-    # Already populated or no suffixes to search for
-    if pattern.get(dest_key) or not pattern.get(suffix_key):
-        return
-
-    suffixes = pattern[suffix_key]
-    if isinstance(suffixes, str):
-        suffixes = [suffixes]
-
-    matches = []
-    in_path = Path(in_dir)
-    for sfx in suffixes:
-        for p in in_path.glob(f"*{sfx}"):
-            if p.is_file():
-                matches.append(p.name)
-
-    # De-duplicate while preserving order
-    deduped = list(dict.fromkeys(matches))
-    pattern[dest_key] = deduped
 
 
 # ========== Build visiumhd_key2patterns ========
 
-analysis_key2file={
+analysis_map={
     "CLUSTER": "analysis/clustering/gene_expression_graphclust/clusters.csv",
     "DE": "analysis/diffexp/gene_expression_graphclust/differential_expression.csv",
     "PCA_PROJ": "analysis/pca/gene_expression_10_components/projection.csv",
@@ -57,77 +44,52 @@ analysis_key2file={
     "UMAP_PROJ": "analysis/umap/gene_expression_2_components/projection.csv"
 }
 
-visiumhd_key2patterns={
-    # SGE: 
-    # use filtered_feature_bc_matrix, which contains only tissue-associated barcodes,
-    "TRANSCRIPT_MEX": {
-        "required": True,
-        "filenames":["square_002um/filtered_feature_bc_matrix", "binned_outputs/square_002um/filtered_feature_bc_matrix"],
-        "zip_suffixes": ["_square_002um_binned_outputs.tar.gz", "_binned_outputs.tar.gz"]
-    },
-    "SCALE": {
-        "required": True,
-        "filenames":["square_002um/spatial/scalefactors_json.json", "binned_outputs/square_002um/spatial/scalefactors_json.json"],
-        "zip_suffixes": ["_square_002um_binned_outputs.tar.gz", "_binned_outputs.tar.gz"]
-    },
-    "POSITION":{
-        "required": True,
-        "filenames":["square_002um/spatial/tissue_positions.parquet", "binned_outputs/square_002um/spatial/tissue_positions.parquet"],
-        "zip_suffixes": ["_square_002um_binned_outputs.tar.gz", "_binned_outputs.tar.gz"]
-    },
-    # CELL: 
+
+cell_map= {
     "CELL_FEATURE_MEX": {
         "required": False,
         "filenames":["segmented_outputs/filtered_feature_cell_matrix"],
         "zip_suffixes": ["_segmented_outputs.tar.gz"]
         },
     "CELL_GEOJSON":{
-        "required": False,
-        "filenames":["segmented_outputs/cell_segmentations.geojson"],
-        "zip_suffixes": ["_segmented_outputs.tar.gz"]
-    },
-}
+            "required": False,
+            "filenames":["segmented_outputs/cell_segmentations.geojson"],
+            "zip_suffixes": ["_segmented_outputs.tar.gz"]
+        },
+    "NUCLEUS_GEOJSON":{
+            "required": False,
+            "filenames":["segmented_outputs/nucleus_segmentations.geojson"],
+            "zip_suffixes": ["_segmented_outputs.tar.gz"]
+        },
+    }
 
-def add_cell_analysis_patterns(target_dict, analysis_map):
-    for key, relpath in analysis_map.items():
-        target_dict[key] = {
-            "required": True if key in ["CLUSTER", "DE"] else False,
-            "filenames": [f"segmented_outputs/{relpath}"],
-            "zip_suffixes": ["_segmented_outputs.tar.gz"],
-        }
+for key, relpath in analysis_map.items():
+    cell_map[key] = {
+        "required": True if key in ["CLUSTER", "DE"] else False,
+        "filenames": [f"segmented_outputs/{relpath}"],
+        "zip_suffixes": ["_segmented_outputs.tar.gz"],
+    }
 
-add_cell_analysis_patterns(visiumhd_key2patterns, analysis_key2file)
 
-# Add hex-binned files for 8 µm and 16 µm
-for hex_r in (8, 16):
-    sq_str = f"square_00{hex_r}um" if hex_r < 10 else f"square_0{hex_r}um"
-
+def define_hexmap(r):
     hex_pattern = {
         "HEX_FEATURE_MEX":  "filtered_feature_bc_matrix",
-        "HEX_POSITION":     "spatial/tissue_positions.parquet",
-        "HEX_SCALE":        "spatial/scalefactors_json.json",
+        "SCALE":        "spatial/scalefactors_json.json",
+        "POSITION":     "spatial/tissue_positions.parquet",
     }
-    for key, relpath in analysis_key2file.items():
-        hex_pattern[f"HEX_{key}"] = relpath
 
+    hex_pattern.update(analysis_map)
+
+    sq_str = f"square_00{r}um" if r < 10 else f"square_0{r}um"
+    hex_map = {}
     for key, val in hex_pattern.items():
-        hex_k = f"{key}_{hex_r}um"
-        visiumhd_key2patterns[hex_k] = {
+        hex_map[key] = {
             "required": False,
             "filenames": [f"{sq_str}/{val}", f"binned_outputs/{sq_str}/{val}"],
             "zip_suffixes": [f"_{sq_str}_binned_outputs.tar.gz", "_binned_outputs.tar.gz"],
         }
+    return hex_map
 
-# Add image assets 
-visiumhd_key2patterns.update(
-    {
-    "HnE_BTF": {
-        "required": False,
-        "filename_suffixes": ["_tissue_image.btf"],
-        "zip_suffixes": ["_square_002um_binned_outputs.tar.gz", "_binned_outputs.tar.gz"],
-    }
-    }
-)
 
 #==================
 
@@ -150,30 +112,60 @@ def detect_visiumhd_output(_args):
         args.unzip_dir=args.in_dir
     os.makedirs(args.unzip_dir, exist_ok=True)
 
+    # Build visiumhd_key2patterns 
+    visiumhd_key2patterns={
+        # SGE: 
+        # use filtered_feature_bc_matrix, which contains only tissue-associated barcodes,
+        "SGE":{
+            "TRANSCRIPT_MEX": {
+                "required": True,
+                "filenames":["square_002um/filtered_feature_bc_matrix", "binned_outputs/square_002um/filtered_feature_bc_matrix"],
+                "zip_suffixes": ["_square_002um_binned_outputs.tar.gz", "_binned_outputs.tar.gz"]
+            },
+            "SCALE": {
+                "required": True,
+                "filenames":["square_002um/spatial/scalefactors_json.json", "binned_outputs/square_002um/spatial/scalefactors_json.json"],
+                "zip_suffixes": ["_square_002um_binned_outputs.tar.gz", "_binned_outputs.tar.gz"]
+            },
+            "POSITION":{
+                "required": True,
+                "filenames":["square_002um/spatial/tissue_positions.parquet", "binned_outputs/square_002um/spatial/tissue_positions.parquet"],
+                "zip_suffixes": ["_square_002um_binned_outputs.tar.gz", "_binned_outputs.tar.gz"]
+            },
+        },
+        "CELLS": cell_map,
+        "HEX_8um": define_hexmap(8),
+        "HEX_16um": define_hexmap(16),
+        "IMAGES":  {
+            "HnE_BTF": {
+                "required": False,
+                "filename_suffixes": ["_tissue_image.btf"],
+                "zip_suffixes": ["_square_002um_binned_outputs.tar.gz", "_binned_outputs.tar.gz"],
+            }
+        }
+
+    }
+
+    # - Update the pattern if "zips" is empty but "zip_suffixes" are defined; as well as filenames
+    for group, patterns in visiumhd_key2patterns.items():
+        for key, spec in patterns.items():
+            populate_from_suffixes(spec, args.in_dir, dest_key="zips",     suffix_key="zip_suffixes")
+            populate_from_suffixes(spec, args.in_dir, dest_key="filenames", suffix_key="filename_suffixes")
+
+    # Build datdict, return a nested dict
     if os.path.exists(args.out_json) and not args.overwrite:
         datdict=load_file_to_dict(args.out_json)
     else:
         datdict={}
 
-    # Update the pattern if "zips" is empty but "zip_suffixes" are defined; as well as filenames
-    for key, pattern in visiumhd_key2patterns.items():
-        populate_from_suffixes(pattern, args.in_dir, dest_key="zips",     suffix_key="zip_suffixes")
-        populate_from_suffixes(pattern, args.in_dir, dest_key="filenames", suffix_key="filename_suffixes")
-
-    for key, pattern in visiumhd_key2patterns.items():
-        if datdict.get(key, None) is None:
-            datdict[key] = find_valid_path(pattern, args.in_dir)
-            if datdict[key] is None and len(pattern.get("zips", []))>0:
-                datdict[key] = find_valid_path_from_zip(pattern, args.in_dir, args.unzip_dir, args.overwrite)
+    datdict = resolve_paths_by_pattern(datdict,
+                                        visiumhd_key2patterns,
+                                        args.in_dir,
+                                        args.unzip_dir,
+                                        args.overwrite)
                 
-        # Validate required file
-        if pattern.get("required", False) and datdict[key] is None:
-            filenames = ",".join(pattern.get("filenames", []))
-            raise ValueError(f"Cannot find the required file for '{key}' using filename pattern(s): {filenames}")
-    
-    # drop the pairs with None values
-    datdict={k: v for k, v in datdict.items() if v is not None}
     write_dict_to_file(datdict, args.out_json, check_equal=True, sort_keys=False)
+    print(f"Created a JSON file at: {args.out_json}")
 
 if __name__ == "__main__":
     # Get the base file name without extension

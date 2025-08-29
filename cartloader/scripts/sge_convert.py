@@ -336,17 +336,22 @@ def sge_convert(_args):
 
         print(f"Loading input files from input JSON {args.in_json}")        
         raw_data = load_file_to_dict(args.in_json)
-        raw_tx = raw_data["TRANSCRIPT"]
-        if raw_tx.endswith("parquet"):
-            args.in_parquet = raw_tx
-            print(f" * --in-parquet {args.in_parquet}")
-        elif raw_tx.endswith("csv.gz") or raw_tx.endswith("tsv.gz") or raw_tx.endswith("tsv") or raw_tx.endswith("csv"):
-            args.in_csv = raw_tx
-            print(f" * --in-csv {args.in_csv}")
-        args.pos_parquet = raw_data.get("POSITION", None)
-        print(f" * --pos-parquet {args.pos_parquet}")
-        args.scale_json = raw_data.get("SCALE", None)
-        print(f" * --scale-json {args.scale_json}")
+        raw_sge = raw_data.get("SGE", raw_data) # use raw_data as default to support the flat dict build in the old scripts
+        if args.platform == "10x_xenium":
+            raw_tx = raw_sge["TRANSCRIPT"]
+            if raw_tx.endswith("parquet"):
+                args.in_parquet = raw_tx
+                print(f" * --in-parquet {args.in_parquet}")
+            elif raw_tx.endswith("csv.gz") or raw_tx.endswith("tsv.gz") or raw_tx.endswith("tsv") or raw_tx.endswith("csv"):
+                args.in_csv = raw_tx
+                print(f" * --in-csv {args.in_csv}")
+        elif args.platform == "10x_visium_hd":
+            args.in_mex = raw_sge.get("TRANSCRIPT_MEX", None)
+            print(f" * --in-mex {args.in_mex}")
+            args.pos_parquet = raw_sge.get("POSITION", None)
+            print(f" * --pos-parquet {args.pos_parquet}")
+            args.scale_json = raw_sge.get("SCALE", None)
+            print(f" * --scale-json {args.scale_json}")
     
     in_raw_filelist=input_by_platform(args)
 
@@ -407,6 +412,7 @@ def sge_convert(_args):
     cmds.append(f"[ -f {out_transcript_f} ] && [ -f {out_feature_f} ] && [ -f {out_minmax_f} ] && touch {sge_convert_flag}")
     mm.add_target(sge_convert_flag, in_raw_filelist, cmds)
 
+    # original assets (will be updated if density filtering is enabled)
     sge_assets={
         "transcript": out_transcript_f,
         "feature": out_feature_f,

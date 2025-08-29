@@ -115,7 +115,7 @@ def parse_arguments(_args):
     aux_params.add_argument('--catalog-yaml', type=str, help='Path to YAML file to update when --update-catalog is enabled.') #If the file is outside the output directory, output files will be copied to its directory.')
     aux_params.add_argument('--col-rename', type=str, nargs='+', help='Columns to rename in the output file. Format: old_name1:new_name1 old_name2:new_name2 ...')
     aux_params.add_argument('--geojson-cells', type=str, default="segmented_outputs/cell_segmentations.geojson", help='Location of the GEOJSON file containing cell locations in the --indir (default: segmented_outputs/cell_segmentations.geojson)')
-    aux_params.add_argument('--mtx-cell-ftr', type=str, default="segmented_outputs/filtered_feature_cell_matrix", help='Location of the cell feature matrix in MTX format (default: segmented_outputs/filtered_feature_cell_matrix)')
+    aux_params.add_argument('--mtx-cell', type=str, default="segmented_outputs/filtered_feature_cell_matrix", help='Location of the cell feature matrix in MTX format (default: segmented_outputs/filtered_feature_cell_matrix)')
     aux_params.add_argument('--csv-clust', type=str, default="analysis/clustering/gene_expression_graphclust/clusters.csv", help='Location of the CSV file containing cell cluster assignments in the --indir (default: analysis/clustering/gene_expression_graphclust/clusters.csv)')
     aux_params.add_argument('--csv-diffexp', type=str, default="analysis/diffexp/gene_expression_graphclust/differential_expression.csv", help='Location of the CSV file with differential expression results in the --indir (default: analysis/diffexp/gene_expression_graphclust/differential_expression.csv)')
     aux_params.add_argument('--tsv-cmap', type=str, default=f"{repo_dir}/assets/fixed_color_map_60.tsv", help=f'Location of the TSV file with color mappings for clusters in the --indir (default: {repo_dir}/assets/fixed_color_map_60.tsv)')
@@ -170,19 +170,19 @@ def import_visiumhd_cell(_args):
     # read in_json if provided 
     if args.in_json is not None:
         assert os.path.exists(args.in_json), f"The input json file doesn't exist: {args.in_json}"
-        cellbounds=load_file_to_dict(args.in_json)
+        raw_data=load_file_to_dict(args.in_json)
+        cell_data=raw_data.get("CELLS", raw_data) # # use raw_data as default to support the flat dict build in the old scripts
     else:
-        cellbounds={
-            "CELL_GEOJSON": f"{args.indir}/{args.geojson_cells}",
-            "CELL_FEATURE_MEX":  f"{args.indir}/{args.mtx_cell_ftr}",
-            "BOUNDARY": f"{args.indir}/{args.csv_boundaries}",
+        cell_data={
+            "CELL_FEATURE_MEX": f"{args.indir}/{args.mex_cell}",
+            "CELL_GEOSJON": f"{args.indir}/{args.csv_boundaries}",
             "CLUSTER": f"{args.indir}/{args.csv_clust}",
             "DE": f"{args.indir}/{args.csv_diffexp}",
         }
 
     # Cluster/DE
     if args.cells or args.boundaries:
-        clust_in=cellbounds.get("CLUSTER", None)
+        clust_in=cell_data.get("CLUSTER", None)
         assert os.path.exists(clust_in), f"The input cluster file doesn't exist {clust_in}"
 
         logger.info(f"Loading cell cluster data from {clust_in}")
@@ -190,7 +190,7 @@ def import_visiumhd_cell(_args):
         logger.info(f"  * Loaded {len(bcd2cluster)} cells\n")
         
         ## read/write DE results
-        de_in=cellbounds.get("DE", None)
+        de_in=cell_data.get("DE", None)
         assert os.path.exists(de_in), f"The input differentially expressed profile file doesn't exist {de_in}"        
 
         logger.info(f"  * Reading DE results from {de_in}")
@@ -210,18 +210,18 @@ def import_visiumhd_cell(_args):
 
     # Process segmented calls 
     if args.cells:
-        cells_in=cellbounds.get("CELL_GEOJSON", None)
-        assert os.path.exists(cells_in), f"The input cells GEOJSON file doesn't exist: {cells_in}"
+        cells_json=cell_data.get("CELL_GEOJSON", None)
+        assert cells_json and os.path.exists(cells_json), f"The input cells GEOJSON file doesn't exist: {cells_json}"
 
-        cell_ftr_mex = cellbounds.get("CELL_FEATURE_MEX", None)        
+        cell_ftr_mex = cell_data.get("CELL_FEATURE_MEX", None)        
         assert cell_ftr_mex and os.path.exists(cell_ftr_mex), "Cell GEOJSON file must be used along with CELL_FEATURE_MEX"
         
-        logger.info(f"Processing cell information from {cells_in}; {cell_ftr_mex}")
+        logger.info(f"Processing cell information from {cells_json}; {cell_ftr_mex}")
 
         # convert cell geojson into csv format with cell_id, x, y, count
         cells_out=f"{args.outprefix}-cells.csv"
-        logger.info(f"  * Reading cell data from {cells_in}; {cell_ftr_mex} and extracting geometry to {cells_out}")
-        process_cell_geojson_w_mtx(cells_in, cell_ftr_mex, cells_out, bcd2clusteridx)
+        logger.info(f"  * Reading cell data from {cells_json}; {cell_ftr_mex} and extracting geometry to {cells_out}")
+        process_cell_geojson_w_mtx(cells_json, cell_ftr_mex, cells_out, bcd2clusteridx)
 
         cells_pmtiles = f"{args.outprefix}-cells.pmtiles"
         logger.info(f"  * Generating PMTiles from cell geometry data into cell pmtiles: {cells_pmtiles}")
@@ -230,14 +230,14 @@ def import_visiumhd_cell(_args):
 
     # Process cell boundaries
     if args.boundaries:
-        bound_in=cellbounds.get("BOUNDARY", None)
-        assert os.path.exists(bound_in), f"The input cell boundary files doesn't exist {bound_in}"
+        cells_json=cell_data.get("CELL_GEOJSON", None)
+        assert os.path.exists(cells_json), f"The input cell GEOJSON file doesn't exist {bound_in}"
 
-        logger.info(f"Processing cell boundary information from {bound_in}")
+        logger.info(f"Processing cell boundary information from {cells_json}")
         ## read the cell CSV files
         bound_out=f"{args.outprefix}-boundaries.geojson"
-        logger.info(f"  * Reading cell boundary data from {bound_in} and extracting geometry to {bound_out}")
-        process_boundaries_geojson(bound_in, bound_out, bcd2clusteridx)
+        logger.info(f"  * Reading cell boundary data from {cells_json} and extracting geometry to {bound_out}")
+        process_boundaries_geojson(cells_json, bound_out, bcd2clusteridx)
 
         ## Run the tippecanoe command
         bound_pmtiles = f"{args.outprefix}-boundaries.pmtiles"

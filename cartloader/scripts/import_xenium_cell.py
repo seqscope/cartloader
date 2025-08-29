@@ -124,6 +124,7 @@ def make_factor_dict(factor_id, factor_name, outprefix, pmtiles_keys=[]):
         "cells_id": factor_id,
         "rgb": f"{outprefix}-rgb.tsv",
         "de": f"{outprefix}-cells-bulk-de.tsv",
+        "raw_pixel_col": None,
         "pmtiles": pmtiles
     }
 
@@ -224,9 +225,10 @@ def import_xenium_cell(_args):
     # read in_json if provided 
     if args.in_json is not None:
         assert os.path.exists(args.in_json), f"The input json file doesn't exist: {args.in_json}"
-        cellbounds=load_file_to_dict(args.in_json)
+        raw_data=load_file_to_dict(args.in_json)
+        cell_data=raw_data.get("CELLS", raw_data) # # use raw_data as default to support the flat dict build in the old scripts
     else:
-        cellbounds={
+        cell_data={
             "CELL": f"{args.indir}/{args.csv_cells}",
             "BOUNDARY": f"{args.indir}/{args.csv_boundaries}",
             "CLUSTER": f"{args.indir}/{args.csv_clust}",
@@ -235,7 +237,7 @@ def import_xenium_cell(_args):
 
     # Cluster/DE
     if args.cells or args.boundaries:
-        clust_in=cellbounds.get("CLUSTER", None)
+        clust_in=cell_data.get("CLUSTER", None)
         assert os.path.exists(clust_in), f"The input cluster file doesn't exist {clust_in}"
 
         logger.info(f"Loading cell cluster data from {clust_in}")
@@ -243,7 +245,7 @@ def import_xenium_cell(_args):
         logger.info(f"  * Loaded {len(bcd2cluster)} cells")
         
         ## read/write DE results
-        de_in=cellbounds.get("DE", None)
+        de_in=cell_data.get("DE", None)
         assert os.path.exists(de_in), f"The input differentially expressed profile file doesn't exist {de_in}"        
 
         logger.info(f"  * Reading DE results from {de_in}")
@@ -263,7 +265,7 @@ def import_xenium_cell(_args):
 
     # Process segmented calls 
     if args.cells:
-        cells_in=cellbounds.get("CELL", None)
+        cells_in=cell_data.get("CELL", None)
         assert os.path.exists(cells_in), f"The input cells file doesn't exist {cells_in}"
         
         logger.info(f"Processing cell information from {cells_in}")
@@ -297,7 +299,7 @@ def import_xenium_cell(_args):
 
     # Process cell boundaries
     if args.boundaries:
-        bound_in=cellbounds.get("BOUNDARY", None)
+        bound_in=cell_data.get("BOUNDARY", None)
         assert os.path.exists(bound_in), f"The input cell boundary files doesn't exist {bound_in}"
 
         logger.info(f"Processing cell boundary information from {bound_in}")
