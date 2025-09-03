@@ -5,61 +5,65 @@ from cartloader.utils.utils import cmd_separator, scheck_app, add_param_to_cmd, 
 
 def parse_arguments(_args):
     """Parse command-line arguments."""
-    parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", description="Run FICTURE2")
+    parser = argparse.ArgumentParser(
+        prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}",
+        description="Run FICTURE2 tiling, segmentation, LDA training, decoding, and summary; writes a Makefile and executes steps."
+    )
+    repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-    run_params = parser.add_argument_group("Run Options", "Run options for FICTURE commands")
-    run_params.add_argument('--dry-run', action='store_true', default=False, help='Dry run. Generate only the Makefile without running it')
-    run_params.add_argument('--restart', action='store_true', default=False, help='Restart the run. Ignore all intermediate files and start from the beginning')
-    run_params.add_argument('--threads', type=int, default=8, help='Maximum number of threads to use in each process')
-    run_params.add_argument('--n-jobs', type=int, default=2, help='Number of jobs (processes) to run in parallel')
-    run_params.add_argument('--makefn', type=str, default="run_ficture2.mk", help='The name of the Makefile to generate (default: run_ficture2.mk)')
+    run_params = parser.add_argument_group("Run Options", "Run options.")
+    run_params.add_argument('--dry-run', action='store_true', default=False, help='Generate only the Makefile without running it (default: False)')
+    run_params.add_argument('--restart', action='store_true', default=False, help='Ignore existing outputs and start from the beginning (default: False)')
+    run_params.add_argument('--threads', type=int, default=8, help='Maximum number of threads per job (default: 8)')
+    run_params.add_argument('--n-jobs', type=int, default=2, help='Number of parallel jobs to run (default: 2)')
+    run_params.add_argument('--makefn', type=str, default="run_ficture2.mk", help='File name of Makefile to write (default: run_ficture2.mk)')
 
-    cmd_params = parser.add_argument_group("Commands", "FICTURE commands to run together")
-    cmd_params.add_argument('--main', action='store_true', default=False, help='Run the main functions (tile, segment, init-lda, decode, summary)')
-    cmd_params.add_argument('--tile', action='store_true', default=False, help='(Main function) Perform tiling step')
-    cmd_params.add_argument('--segment', action='store_true', default=False, help='(Main function) Perform hexagon segmentation into FICTURE-compatible format')
-    cmd_params.add_argument('--init-lda', action='store_true', default=False, help='(Main function) Initialize model with LDA model training')
-    cmd_params.add_argument('--decode', action='store_true', default=False, help='(Main function) Perform pixel-level decoding')
-    cmd_params.add_argument('--summary', action='store_true', default=False, help='(Main function) Generate a JSON file summarizing all FICTURE parameters with outputs available in <out-dir>.')
-    cmd_params.add_argument('--segment-10x', action='store_true', default=False, help='(Plus function) Perform hexagon segmentation into 10X MEX format')
+    cmd_params = parser.add_argument_group("Commands", "FICTURE steps to run")
+    cmd_params.add_argument('--main', action='store_true', default=False, help='Run all main functions, including tile, segment, init-lda, decode, and summary (default: False)')
+    cmd_params.add_argument('--tile', action='store_true', default=False, help='(Main function) Perform tiling step (default: False)')
+    cmd_params.add_argument('--segment', action='store_true', default=False, help='(Main function) Hexagon segmentation into FICTURE-compatible format (default: False)')
+    cmd_params.add_argument('--init-lda', action='store_true', default=False, help='(Main function) Train LDA model(s) (default: False)')
+    cmd_params.add_argument('--decode', action='store_true', default=False, help='(Main function) Pixel-level decoding (default: False)')
+    cmd_params.add_argument('--summary', action='store_true', default=False, help='(Main function) Write JSON summarizing FICTURE parameters and outputs (default: False)')
+    cmd_params.add_argument('--segment-10x', action='store_true', default=False, help='Hexagon segmentation into 10x MEX format (default: False)')
 
-    inout_params = parser.add_argument_group("Input/Output Parameters", "Input and output parameters for FICTURE")
+    inout_params = parser.add_argument_group("Input/Output Parameters", "Input/output paths")
     inout_params.add_argument('--out-dir', required=True, type=str, help='Path to output directory')
-    inout_params.add_argument('--out-json', type=str, default=None, help="Path to the output JSON file summarizing the FICTURE parameters (default: <out_dir>/ficture.params.json)")
-    inout_params.add_argument('--in-json', type=str, default=None, help='(Shortcut) Path to an input JSON file containing input for --in-transcript, --in-minmax, and --in-feature. If provided, skip --in-transcript, --in-minmax, and --in-feature arguments. Typically named "sge_assets.json" and generated by "cartloader sge_convert".')
-    inout_params.add_argument('--in-transcript', type=str, default=None, help='Path to the input unsorted transcript-indexed SGE file in TSV format (default: <out-dir>/transcripts.unsorted.tsv.gz)')
-    inout_params.add_argument('--in-minmax', type=str, default=None, help='Path to the input coordinate minmax TSV file.')
-    inout_params.add_argument('--in-feature', type=str, default=None,  help='Path to the input UMI count per gene TSV file.')
-    inout_params.add_argument('--in-feature-ficture', type=str, default=None, help='(Optional) Path to a custom feature file for FICTURE analysis. If provided, only features in this file will be used instead of all features in the input SGE. Alternatively, see "Feature Customizing Auxiliary Parameters" for customization options.')
+    inout_params.add_argument('--out-json', type=str, default=None, help='Path to output JSON manifest summarizing FICTURE parameters (default: <out-dir>/ficture.params.json)')
+    inout_params.add_argument('--in-json', type=str, default=None, help='Path to input manifest JSON with --in-transcript/--in-minmax/--in-feature; if set, omit --in-transcript/--in-minmax/--in-feature (typical: sge_assets.json from cartloader sge_convert) (default: None)')
+    inout_params.add_argument('--in-transcript', type=str, default=None, help='Path to input unsorted transcript-indexed SGE TSV (default: <out-dir>/transcripts.unsorted.tsv.gz)')
+    inout_params.add_argument('--in-minmax', type=str, default=None, help='Path to input coordinate min/max TSV (defaults to --out-dir/transcripts.tiled.coord_range.tsv after tiling)')
+    inout_params.add_argument('--in-feature', type=str, default=None,  help='Path to input per-feature UMI count TSV (default: None)')
+    inout_params.add_argument('--in-feature-ficture', type=str, default=None, help='(Optional) Path to custom feature list for FICTURE; restricts analysis to listed features (default: None)')
 
     key_params = parser.add_argument_group("Key Parameters", "Key parameters that requires users' attention")
-    key_params.add_argument('--width', type=str, default=None, help='Comma-separated hexagon flat-to-flat widths (in um) for LDA training (default: None)')
-    key_params.add_argument('--n-factor', type=str, default=None, help='Comma-separated list of factor counts for LDA training (default: None)')
+    key_params.add_argument('--width', type=str, default=None, help='Comma-separated hexagon flat-to-flat widths (µm) for LDA training (default: None)')
+    key_params.add_argument('--n-factor', type=str, default=None, help='Comma-separated factor counts for LDA training (default: None)')
     key_params.add_argument('--anchor-res', type=int, default=6, help='Anchor resolution for decoding (default: 6)')
     # key_params.add_argument('--radius-buffer', type=int, default=1, help='Buffer to radius(=anchor_res + radius_buffer) for pixel-level decoding (default: 1)')
-    key_params.add_argument('--cmap-file', type=str, default=os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "assets", "fixed_color_map_256.tsv"), help='Define the path to the fixed color map (default: <cartloader_dir>/assets/fixed_color_map_256.tsv)')
+    key_params.add_argument('--cmap-file', type=str, default=os.path.join(repo_dir, "assets", "fixed_color_map_256.tsv"), help='Path to fixed color map TSV (default: <cartloader_dir>/assets/fixed_color_map_256.tsv)')
 
     # env params
-    env_params = parser.add_argument_group("ENV Parameters", "Environment parameters, e.g., tools.")
-    env_params.add_argument('--gzip', type=str, default="gzip", help='Path to gzip binary. For faster processing, use "pigz -p 4"')
-    env_params.add_argument('--sort', type=str, default="sort", help='Path to sort binary. For faster processing, you may add arguments like "sort -T /path/to/new/tmpdir --parallel=20 -S 10G"')
-    env_params.add_argument('--sort-mem', type=str, default="1G", help='Memory size for each sort process (default: 1G)')
-    env_params.add_argument('--spatula', type=str, default=f"spatula",  help='Path to spatula binary (default: "spatula" in the system PATH)')
-    env_params.add_argument('--ficture2', type=str, default=os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "submodules", "punkst"),  help='Path to punkst(ficture2) repository (default: <cartloader_dir>/submodules/punkst)')
-    env_params.add_argument('--python', type=str, default="python3",  help='Python3 binary (default: python3)')
+    env_params = parser.add_argument_group("ENV Parameters", "Paths to external tools")
+    env_params.add_argument('--gzip', type=str, default="gzip", help='Path to gzip binary (default: gzip). For speed, consider "pigz -p 4"')
+    env_params.add_argument('--sort', type=str, default="sort", help='Path to sort binary (default: sort). For faster processing, you may include flags like "sort -T /tmp --parallel=20 -S 10G"')
+    env_params.add_argument('--sort-mem', type=str, default="1G", help='Sort memory limit per process (default: 1G)')
+    env_params.add_argument('--spatula', type=str, default=f"spatula",  help='Path to spatula binary (default: spatula)')
+    env_params.add_argument('--ficture2', type=str, default=os.path.join(repo_dir, "submodules", "punkst"),  help='Path to FICTURE2 (punkst) repository (default: <cartloader_dir>/submodules/punkst)')
+    env_params.add_argument('--python', type=str, default="python3",  help='Path to Python (default: python3)')
 
-    # AUX gene-filtering params
-    aux_ftrfilter_params = parser.add_argument_group( "Feature Customizing Auxiliary Parameters", "Auxiliary parameters for customizing features in FICTURE analysis without modifying the original input feature TSV file. This ensures the original feature TSV file is retained in the output JSON file for downstream processing .")
-    aux_ftrfilter_params.add_argument('--include-feature-regex', type=str, default=None, help='A regex pattern of feature/gene names to be included (default: None)')
-    aux_ftrfilter_params.add_argument('--exclude-feature-regex', type=str, default=None, help='A regex pattern of feature/gene names to be excluded (default: None)')
+    # AUX feacture-filtering params
+    aux_ftrfilter_params = parser.add_argument_group("Feature Customizing Auxiliary Parameters", "Customize features (typically genes) used by FICTURE without altering the original feature TSV")
+    aux_ftrfilter_params.add_argument('--include-feature-regex', type=str, default=None, help='Regex of feature names to include (default: None)')
+    aux_ftrfilter_params.add_argument('--exclude-feature-regex', type=str, default=None, help='Regex of feature names to exclude (default: None)')
 
     # aux params
-    aux_params = parser.add_argument_group("Auxiliary Parameters", "Auxiliary parameters (using default is recommended)")
+    aux_params = parser.add_argument_group("Auxiliary Parameters", "Additional parameters (defaults recommended)")
     # input column indexes
-    aux_params.add_argument('--colidx-x',  type=int, default=1, help='Column index for X-axis in the --in-transcript (default: 1)')
-    aux_params.add_argument('--colidx-y',  type=int, default=2, help='Column index for Y-axis in the --in-transcript (default: 2)')
-    aux_params.add_argument('--colname-count', type=str, default="count", help='Columns from the input transcript file to be used as key for count (default: count)')
-    aux_params.add_argument('--colname-feature', type=str, default="gene", help='Columns from the input transcript file to be used as key for feature name (default: gene)')
+    aux_params.add_argument('--colidx-x',  type=int, default=1, help='1-based column index of X in --in-transcript (default: 1)')
+    aux_params.add_argument('--colidx-y',  type=int, default=2, help='1-based column index of Y in --in-transcript (default: 2)')
+    aux_params.add_argument('--colname-count', type=str, default="count", help='Column name for count in inputs (default: count)')
+    aux_params.add_argument('--colname-feature', type=str, default="gene", help='Column name for feature in inputs (default: gene)')
     aux_params.add_argument('--tile-size', type=int, default=500, help='Tile size for tiling (default: 500)')
     aux_params.add_argument('--tile-buffer', type=int, default=1000, help='Tile buffer for tiling (default: 1000)')
     aux_params.add_argument('--seed', type=int, default=1, help='Random seed for random number generation (default: 1)')
@@ -71,13 +75,13 @@ def parse_arguments(_args):
     aux_params.add_argument('--min-ct-per-unit-train', type=int, default=50, help='Minimum count for training (default: 50)')
     aux_params.add_argument('--train-epoch', type=int, default=2, help='Training epoch for LDA model (default: 2)')
     # fit
-    aux_params.add_argument('--fit-width',  type=str, default=None, help='Hexagon flat-to-flat width (in um) during model fitting (default: same to width)')
+    aux_params.add_argument('--fit-width',  type=str, default=None, help='Hexagon flat-to-flat width (µm) during model fitting (defaults to --width)')
     # aux_params.add_argument('--min-ct-per-unit-fit', type=int, default=20, help='Minimum count per hexagon unit during model fitting (default: 20)')
     # aux_params.add_argument('--fit-plot-um-per-pixel', type=float, default=1, help='Image resolution for fit coarse plot (default: 1)')   # in Scopeflow, this is set to 2
     # 10x segment:
-    key_params.add_argument('--segment-width-10x', type=str, default=None, help='Comma-separated hexagon flat-to-flat widths (in um) in 10x format (default: None)')
+    key_params.add_argument('--segment-width-10x', type=str, default=None, help='Comma-separated hexagon flat-to-flat widths (µm) in 10x format (default: None)')
     # decode
-    aux_params.add_argument('--decode-scale', type=int, default=1, help='scales input coordinates to pixels in the output image (default: 1)')
+    aux_params.add_argument('--decode-scale', type=int, default=1, help='Scale factor from input coordinates to output image pixels (default: 1)')
     # others parameters shared across steps
     aux_params.add_argument('--min-ct-per-feature', type=int, default=20, help='Minimum count per feature during LDA training, transform and decoding (default: 20)')
     aux_params.add_argument('--de-max-pval', type=float, default=1e-3, help='p-value cutoff for differential expression (default: 1e-3)')
@@ -174,35 +178,35 @@ def run_ficture2(_args):
     # in files
     ## read in_json if provided 
     if args.in_json is not None:
-        assert os.path.exists(args.in_json), f"The input json file doesn't exist: {args.in_json}"
+        assert os.path.exists(args.in_json), f"File not found: {args.in_json} (--in-json)"
 
-        print(f"Loading input files from input JSON {args.in_json}")
+        print(f"Reading inputs from manifest: {args.in_json}")
         sge_data=load_file_to_dict(args.in_json)
         args.in_transcript = sge_data.get("transcript", None)
         args.in_minmax = sge_data.get("minmax", None)
         args.in_feature = sge_data.get("feature", None)
-        print(f" * --in-transcript {args.in_transcript}")
-        print(f" * --in-feature {args.in_feature}")
-        print(f" * --in-minmax {args.in_minmax}")
+        print(f"Resolved input: --in-transcript {args.in_transcript}")
+        print(f"Resolved input: --in-feature {args.in_feature}")
+        print(f"Resolved input: --in-minmax {args.in_minmax}")
     
     if args.in_transcript is None:
         args.in_transcript = os.path.join(args.out_dir, "transcripts.unsorted.tsv.gz")
-    assert os.path.exists(args.in_transcript), f"Input transcript-indexed SGE file not found ({args.in_transcript}). Specify it with --in-transcript."
+    assert os.path.exists(args.in_transcript), f"File not found: {args.in_transcript} (--in-transcript)"
 
     if args.in_minmax is not None:
-        assert os.path.exists(args.in_minmax), f"Input coordinate minmax file not found ({args.in_minmax}). Specify it with --in-minmax or omit this argument."
+        assert os.path.exists(args.in_minmax), f"File not found: {args.in_minmax} (--in-minmax)"
     
     if args.in_feature is not None:
-        assert os.path.exists(args.in_feature), f"Input feature file not found ({args.in_feature}). Specify it with --in-feature or omit this argument."
+        assert os.path.exists(args.in_feature), f"File not found: {args.in_feature} (--in-feature)"
 
     if args.in_feature_ficture is not None: 
-        assert os.path.exists(args.in_feature_ficture), f"Input FICTURE feature file not found ({args.in_feature_ficture}). Specify it with --in-feature-ficture or omit this argument."
+        assert os.path.exists(args.in_feature_ficture), f"File not found: {args.in_feature_ficture} (--in-feature-ficture)"
     
-    assert os.path.exists(args.cmap_file), f"Color map not found ({args.cmap_file}). Specify it with --cmap-file."
+    assert os.path.exists(args.cmap_file), f"File not found: {args.cmap_file} (--cmap-file)"
 
     # FICTURE installations
     ficture2bin = os.path.join(args.ficture2, "bin/punkst")
-    assert os.path.exists(ficture2bin), f"ficture2 binary not found at {ficture2bin}; specify a valid --ficture2 path or ensure it's installed in cartloader's submodules/punkst directory."
+    assert os.path.exists(ficture2bin), f"File not found: {ficture2bin}. FICTURE2 Directory should include bin/punkst (--ficture2)"
     
     ficture2de = args.python + " " + os.path.join(args.ficture2, "ext/py/de_bulk.py")
     ficture2report = args.python + " " + os.path.join(args.ficture2, "ext/py/factor_report.py")
@@ -253,7 +257,7 @@ def run_ficture2(_args):
     
     if in_feature_ficture is not None:
         ## if a specific feature file is provided, use it as "selected features" for FICTURE analysis            
-        assert os.path.exists(in_feature_ficture), f"The current feature file for FICTURE analysis does not exist: {in_feature_ficture}"
+        assert os.path.exists(in_feature_ficture), f"File not found: {in_feature_ficture}" + (f"(--in-feature-ficture)" if args.in_feature_ficture is not None else "--in-feature")
         feature_nohdr = f"{args.out_dir}/transcripts.tiled.selected_features.tsv"       
         feature_plain = f"{args.out_dir}/transcripts.tiled.selected_features.hdr.tsv"
 
@@ -599,9 +603,6 @@ def run_ficture2(_args):
 
 
 if __name__ == "__main__":
-    # Get the path to the cartloader repository
-    cartloader_repo=os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-
     # Get the base file name without extension
     script_name = os.path.splitext(os.path.basename(__file__))[0]
 

@@ -829,3 +829,23 @@ def update_and_copy_paths(data, out_dir, skip_keys=[], exe_copy=False):
 
     process_dict(data)
     return data
+
+#== 
+def assert_unique(seq, label, normalize=None):
+    """Assert all elements in seq are unique.
+    - label: used in error messages (e.g., "--image-ids")
+    - normalize: optional callable to normalize values before uniqueness check
+    """
+    if seq is None:
+        return
+    vals = list(seq)
+    norm = [normalize(v) for v in vals] if normalize else vals
+    seen = set()
+    dups = []
+    for v in norm:
+        if v in seen:
+            dups.append(v)
+        else:
+            seen.add(v)
+    assert not dups, f"Duplicate values detected for {label}; please ensure each value is unique. Duplicates: {sorted(set(dups))}"
+

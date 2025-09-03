@@ -9,7 +9,7 @@ def parse_arguments(_args):
     """
     Build resources for CartoScope, joining the pixel-level results from FICTURE
     """
-    repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+    repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
     parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", description="Build resources for CartoScope, joining the pixel-level results from FICTURE")
 
@@ -22,10 +22,10 @@ def parse_arguments(_args):
     run_params.add_argument('--log', action='store_true', default=False, help='Write log to file')
     run_params.add_argument('--log-suffix', type=str, default=".log", help='The suffix for the log file (appended to the output directory). Default: .log')
 
-    inout_params = parser.add_argument_group("Input/Output Parameters", "Input/output directory/files. --cell-dir is optional. --fic-dir ")
+    inout_params = parser.add_argument_group("Input/Output Parameters", "Input/output directory/files.")
     inout_params.add_argument('--out-dir', type=str, required=True, help='Output directory')
     inout_params.add_argument('--sge-dir', type=str, help='Input SGE directory from sge_convert. It should contains SGE and a YAML/JSON file summarizing the path of transcript, feature, and minmax. The file name of this YAML/JSON file is provided via --in-sge-assets. If --fic-dir is provided, --sge-dir can be skipped')
-    inout_params.add_argument('--fic-dir', type=str, help='Input FICTURE directory containing FICTURE output. It should contains a YAML/JSON file file provding the SGE and the FICTURE parameters.The file name of this YAML/JSON file is specified by --in-fic-params.')
+    inout_params.add_argument('--fic-dir', type=str, help='(Optional) Input FICTURE directory containing FICTURE output. It should contains a YAML/JSON file file provding the SGE and the FICTURE parameters.The file name of this YAML/JSON file is specified by --in-fic-params.')
     inout_params.add_argument('--cell-assets',type=str, nargs="+", default=[], help='(Optional) Input one or more YAML/JSON file for cell segment assets. Each summarizes the output from import_xenium_output')
     inout_params.add_argument('--background-assets', type=str, nargs="+", default=[], help='(Optional) Input one or more JSON/YAML file containing background assets in the form of "id:file" or "id1:id2:file"')
 
@@ -67,8 +67,42 @@ def parse_arguments(_args):
     if len(_args) == 0:
         parser.print_help()
         sys.exit(1)
+    
+    args=parser.parse_args(_args)
 
-    return parser.parse_args(_args)
+    # dir
+    if args.tmp_dir is None:
+        args.tmp_dir = os.path.join(args.out_dir, "tmp")
+    
+    # env
+    scheck_app(args.spatula)
+    scheck_app(args.tippecanoe)
+    if not args.skip_raster:
+        scheck_app(args.pmtiles)
+        scheck_app(args.gdal_translate)
+        scheck_app(args.gdaladdo)
+
+    return args
+
+def pick_sge_inputs(args):
+    # Try SGE JSON
+    if args.sge_dir:
+        sge_json = os.path.join(args.sge_dir, args.in_sge_assets)
+        sge = load_file_to_dict(sge_json)
+        if all(k in sge for k in ("transcript", "feature", "minmax")):
+            return (sge["transcript"], sge["feature"], sge["minmax"], f"{sge_json} (provided by --sge-dir and --in-sge-assets)")
+    # fallthrough, try FICTURE
+    if args.fic_dir:
+        fic_json = os.path.join(args.fic_dir, args.in_fic_params)
+        fic = load_file_to_dict(fic_json).get("in_sge", {})
+        need = ("in_transcript", "in_feature", "in_minmax")
+        if all(k in fic for k in need):
+            return (fic["in_transcript"], fic["in_feature"], fic["in_minmax"], f"{fic_json} (provided by --fic-dir and --in-fic-params)")
+        # has fic_dir but missing keys, concise error
+        missing = ",".join(k for k in need if k not in fic)
+        raise KeyError(f"Path not provided for SGE. Missing keys {missing} in FICTURE JSON {fic_json} (provided by --fic-dir and --in-fic-params)")
+    # neither source provided, actionable error
+    raise KeyError("Path not provided for SGE. Provide using --sge-dir with --in-sge-assets or --fic-dir with --in-fic-params")
 
 def copy_rgb_tsv(in_rgb, out_rgb):
     with open(in_rgb, 'r') as f:
@@ -100,58 +134,23 @@ def run_cartload2_generic(_args):
     # start mm
     mm = minimake()
 
-    scheck_app(args.spatula)
-    scheck_app(args.tippecanoe)
-    if not args.skip_raster:
-        scheck_app(args.pmtiles)
-        scheck_app(args.gdal_translate)
-        scheck_app(args.gdaladdo)
-        #scheck_app(args.magick)
-
     # create output directory if needed
-    if not os.path.exists(args.out_dir):
-        os.makedirs(args.out_dir, exist_ok=True)
-
-    if args.tmp_dir is None:
-        args.tmp_dir = os.path.join(args.out_dir, "tmp")
-        if not os.path.exists(args.tmp_dir):
-            os.makedirs(args.tmp_dir, exist_ok=True)
+    os.makedirs(args.out_dir, exist_ok=True)
+    os.makedirs(args.tmp_dir, exist_ok=True)
     
     # output files/prefix
     out_catalog_f = os.path.join(args.out_dir,args.out_catalog)
     out_assets_f = os.path.join(args.out_dir, args.out_fic_assets)
     out_molecules_prefix=os.path.join(args.out_dir,args.out_molecules_id)
 
-    # 1. Load SGE metadata or FICTURE metadata
-    sge_data = {}
-    in_sge = {}
+    # 1. Load SGE metadata or FICTURE metadata to define and 
     
-    if args.sge_dir is not None:
-        sge_jsonf = f"{args.sge_dir}/{args.in_sge_assets}"
-        sge_data = load_file_to_dict(sge_jsonf)
-
-    if args.fic_dir is not None:
-        fic_jsonf = f"{args.fic_dir}/{args.in_fic_params}"
-        fic_data = {}
-        fic_data = load_file_to_dict(fic_jsonf)
-        in_sge = fic_data.get("in_sge", {})
-
-    ## 2. define and deploy SGE
-    if len([k for k in ["transcript", "feature", "minmax"] if k in sge_data]) == 3:
-        in_molecules = sge_data.get("transcript", "")
-        in_features = sge_data.get("feature", "")
-        in_minmax = sge_data.get("minmax", "")
-    elif len([k for k in ["in_transcript", "in_feature", "in_minmax"] if k in in_sge]) == 3:
-        in_molecules = in_sge.get("in_transcript", "")
-        in_features = in_sge.get("in_feature", "")
-        in_minmax = in_sge.get("in_minmax", "")
-    else:
-        raise KeyError(f"Not all SGE paths (transcript, feature, minmax) are available from {sge_jsonf} or {fic_jsonf}")
+    in_molecules, in_features, in_minmax, src_hint = pick_sge_inputs(args)
+    assert os.path.exists(in_molecules), f"File not found: {in_molecules} (transcript) {src_hint}"
+    assert os.path.exists(in_features), f"File not found: {in_features} (feature) {src_hint}"
+    assert os.path.exists(in_minmax), f"File not found: {in_minmax} (minmax) {src_hint}"
     
-    assert os.path.exists(in_molecules), f"Transcript file not found: {in_molecules}"
-    assert os.path.exists(in_features), f"Feature file not found: {in_features}"
-    assert os.path.exists(in_minmax), f"Minmax file not found: {in_minmax}"
-
+    # 2. deploy SGE
     if not args.skip_raster:
         ## create raster mono pmtiles for SGE
         cmds = cmd_separator([], f"Converting SGE counts into PMTiles")
@@ -169,7 +168,8 @@ def run_cartload2_generic(_args):
             "--keep-intermediate-files" if args.keep_intermediate_files else ""
         ])
         cmds.append(cmd)
-        tsv2mono_flag = f"{args.out_dir}/sge-mono.done" # Update: Use a flag to make sure both light and dark pmtiles are done 
+        # Use a flag to make sure both light and dark pmtiles are done 
+        tsv2mono_flag = f"{args.out_dir}/sge-mono.done" 
         cmds.append(f"[ -f {args.out_dir}/sge-mono-dark.pmtiles.done ] && [ -f {args.out_dir}/sge-mono-light.pmtiles.done ] && touch {tsv2mono_flag}")
         mm.add_target(tsv2mono_flag, [in_molecules, in_minmax], cmds)
 
@@ -177,10 +177,11 @@ def run_cartload2_generic(_args):
     join_pixel_tsvs = []
     join_pixel_ids = []
     if args.fic_dir is not None:
+        fic_jsonf = os.path.join(args.fic_dir, args.in_fic_params)
+        fic_data = load_file_to_dict(fic_jsonf)
         in_fic_params = fic_data.get("train_params", [])
-        #print(in_fic_params)
-        if len(in_fic_params) == 0: ## parameters are empty
-            print(f"The parameters are empty after loading {fic_jsonf}")
+        if len(in_fic_params) == 0:  # parameters are empty
+            logger.error(f"FICTURE 'train_params' is empty after loading {fic_jsonf} (provided by --fic-dir and --in-fic-params)")
 
         # create the output assets json
         out_fic_assets = ficture2_params_to_factor_assets(in_fic_params, args.skip_raster)

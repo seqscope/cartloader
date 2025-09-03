@@ -6,10 +6,8 @@ from cartloader.utils.minimake import minimake
 from cartloader.utils.utils import cmd_separator, scheck_app, create_custom_logger, add_param_to_cmd, scheck_actions, write_dict_to_file, execute_makefile
 from cartloader.utils.image_helper import orient2axisorder, update_orient
 
-# get the current path
-current_path = os.path.realpath(__file__)
-cartloader_dir=os.path.dirname(os.path.dirname(os.path.dirname(current_path)))
-gdal_get_size_script = os.path.join(cartloader_dir, 'cartloader', "utils", "gdal_get_size.sh")
+repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+gdal_get_size_script = os.path.join(repo_dir, 'cartloader', "utils", "gdal_get_size.sh")
 
 def cmds_for_dimensions(geotif_f, dim_f, gdalinfo="gdalinfo"):
     cmds = cmd_separator([], f"Extract dimensions from: {geotif_f}")
@@ -113,9 +111,9 @@ def parse_arguments(_args):
     key_params.add_argument('--srs', type=str, default='EPSG:3857', help='For --georeference and --geotif2mbtiles, define the spatial reference system (default: EPSG:3857)')
     key_params.add_argument('--mono', action='store_true', default=False, help='Define if the input image is black-and-white and single-banded. Omit this if using --color-mode-record (default: False)')
     key_params.add_argument('--rgba', action='store_true', default=False, help='RGBA, 4-banded image. Omit this if using --color-mode-record (default: False)')
+    key_params.add_argument('--color-mode-record', type=str, default=None, help='This argument is specifically designed to be used in "cartloader import_image"')
     key_params.add_argument('--resample', type=str, default='cubic', help='Resampling method (default: cubic). Options: near, bilinear, cubic, etc.')
     key_params.add_argument('--blocksize', type=int, default='512', help='Blocksize when creating mbtiles (default: 512)')
-    key_params.add_argument('--color-mode-record', type=str, default=None, help='This argument is specifically designed to be used in "cartloader import_image"')
     #key_params.add_argument('--remove-intermediate-files', action='store_true', default=False, help='If set, remove intermediate files (e.g., .mbtiles) after generating the final output.')
     
     env_params = parser.add_argument_group("Env Parameters", "Environment parameters, e.g., tools.")
@@ -144,8 +142,8 @@ def image_png2pmtiles(_args):
         os.makedirs(out_dir, exist_ok=True)
     
     # - input image
-    assert args.in_img is not None and os.path.exists(args.in_img), "Please provide a valid input image file using --in-img"
-
+    assert args.in_img is not None, f"Path not provided: --in-img"
+    assert os.path.exists(args.in_img), f"File not found: {args.in_img} (--in-img)"
     # - mbtiles
     mbtile_f = f"{args.out_prefix}.pmtiles.mbtiles"
     mbtile_flag = f"{mbtile_f}.done"
@@ -159,8 +157,9 @@ def image_png2pmtiles(_args):
     # - color arg (based on args.color_mode_record)
     if (args.flip_vertical or args.flip_horizontal or args.rotate is not None) or args.geotif2mbtiles:
         if args.color_mode_record:
+            print(f"--color-mode-record is provided. Read color mode from {args.color_mode_record}")
             assert not args.rgba and not args.mono, "--color-mode-record cannot be used together with --mono or --rgba."
-            assert os.path.exists(args.color_mode_record), f"Provide a valid --color-mode-record or omit it."
+            assert os.path.exists(args.color_mode_record), f"File not found: {args.color_mode_record} (--color-mode-record)"
             with open(args.color_mode_record, 'r') as f:
                 line = f.readline()
                 color_mode = line.strip().lower()

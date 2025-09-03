@@ -97,7 +97,7 @@ def sge_stitch(_args):
             raise ValueError(f"Found duplicate layout index (row {row}, col {col}).")
         
         if not os.path.exists(transcript):
-            raise FileNotFoundError(f"Transcript file {transcript} does not exist.")
+            raise FileNotFoundError(f"File not found: {transcript} (--in-tiles)")
         
         # missing feature or minmax
         missing_ftr = feature is None or feature == "None" or feature == ""

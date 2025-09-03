@@ -79,7 +79,7 @@ def update_deposition_metadata(deposition_id, access_token, metadata):
     if response.status_code == 200:
         print(f" * Successfully updated metadata for deposition {deposition_id}")
     else:
-        raise RuntimeError(f"Failed to update deposition metadata. Please manually add those metadata: {response.status_code} - {response.text}")
+        raise RuntimeError(f"Failed to update deposition metadata. Please manually add that metadata: {response.status_code} - {response.text}")
 
 # === DEPOSITION ==
 def create_deposition(access_token, metadata=None):
@@ -102,9 +102,9 @@ def publish_deposition(deposition_id, access_token):
     url = f"https://zenodo.org/api/deposit/depositions/{deposition_id}/actions/publish"
     response = requests.post(url, params={'access_token': access_token})
     if response.status_code == 202:
-        print("Deposition published successfully!")
+        print("Deposition published successfully.")
     else:
-        print(f"Failed to publish. Please manually publish it : {response.status_code} - {response.text}")
+        print(f"Failed to publish. Please publish it manually: {response.status_code} - {response.text}")
 
 # == NEW VERSION ==
 def create_new_version(old_id, token):
@@ -138,9 +138,9 @@ def upload_zenodo(_args):
 
     # Metadata fields
     group_meta = parser.add_argument_group("Deposition Metadata")
-    group_meta.add_argument('--title', type=str, default=None, help='Title of the deposition. Required if creating a new deposition or the existing deposition do not have a title')
+    group_meta.add_argument('--title', type=str, default=None, help='Title of the deposition. Required if creating a new deposition or if the existing deposition does not have a title.')
     group_meta.add_argument('--upload-type', type=str, default='dataset', choices=['dataset', 'software', 'publication', 'poster', 'presentation', 'image', 'video', 'lesson', 'other'], help='Type of upload for the Zenodo deposition (default: dataset). Required if creating a new deposition.')
-    group_meta.add_argument('--creators', type=str, nargs='+', default=[], help='List of creators in "Lastname, Firstname" format. Each name should be quoted. Required if creating a new deposition or the existing deposition do not have creator information.')
+    group_meta.add_argument('--creators', type=str, nargs='+', default=[], help='List of creators in "Lastname, Firstname" format. Each name should be quoted. Required if creating a new deposition or if the existing deposition does not have creator information.')
     group_meta.add_argument('--description', type=str, default=None, help='(Optional) Description of the deposition.')
 
     # Behavior flags
@@ -148,8 +148,8 @@ def upload_zenodo(_args):
     group_flags.add_argument('--publish', action='store_true', default=False, help='If set, publish the deposition automatically after upload. '
                                                                                     'Recommended to leave this DISABLED and publish manually after verifying the deposition via the Zenodo web interface.'
                                                                                     )
-    group_flags.add_argument('--overwrite', action='store_true', default=False, help='Overwrite overlapped existing files.')
-    group_flags.add_argument('--dry-run', action='store_true', default=False, help='Simulate the upload proccess without making changes.')
+    group_flags.add_argument('--overwrite', action='store_true', default=False, help='Overwrite existing files with the same name.')
+    group_flags.add_argument('--dry-run', action='store_true', default=False, help='Simulate the upload process without making changes.')
 
     args = parser.parse_args(_args)
 
@@ -246,7 +246,7 @@ def upload_zenodo(_args):
         in_files_raw = glob.glob(os.path.join(args.in_dir, "*"))
     elif args.upload_method == "catalog":
         catalog_f = args.catalog_yaml or os.path.join(args.in_dir, "catalog.yaml")
-        assert os.path.exists(catalog_f), f" * Missing catalog file: {catalog_f}"
+        assert os.path.exists(catalog_f), f"File not found: {catalog_f} (--catalog-yaml)"
         cartload_files, basemap_files = collect_files_from_yaml(catalog_f)
         fn_list = list(cartload_files) + basemap_files
         cartload_files_raw = [os.path.join(args.in_dir, fn) for fn in list(cartload_files)]

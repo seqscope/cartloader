@@ -131,10 +131,6 @@ def sge_adds_on(_args):
 
 
 if __name__ == "__main__":
-    # get the cartloader path
-    global cartloader_repo
-    cartloader_repo=os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-    
     # Get the base file name without extension
     script_name = os.path.splitext(os.path.basename(__file__))[0]
 

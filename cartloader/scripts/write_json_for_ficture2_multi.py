@@ -15,7 +15,7 @@ def parse_arguments(_args):
     parser.add_argument('--in-feature-ficture', type=str, default=None, help='(Optional) If FICTURE used a different feature file than the in-feature file, specify the path to the feature file used for FICTURE analysis.')
     parser.add_argument('--lda-model', nargs='*', type=str, default=None, help='LDA Model information: <model_type>,<model_path>,<model_id>,<train_width>,<n_factor>,<cmap>')
     parser.add_argument('--decode', nargs='*', type=str, default=None, help='Projection information: <model_type>,<model_id>,<projection_id>,<fit_width>,<anchor_res>')
-    parser.add_argument('--merge', action='store_true', default=False, help='Merge with to the existing JSON file.')
+    parser.add_argument('--merge', action='store_true', default=False, help='Merge into the existing JSON file.')
     parser.add_argument('--overwrite', action='store_true', default=False, help='Overwrite the existing JSON file.')
 
     if len(_args) == 0:
@@ -156,10 +156,6 @@ def write_json_for_ficture2_multi(_args):
     print(f'Data has been written to {args.out_json}')
 
 if __name__ == "__main__":
-    # get the cartloader path
-    global cartloader_repo
-    cartloader_repo=os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-    
     # Get the base file name without extension
     script_name = os.path.splitext(os.path.basename(__file__))[0]
 

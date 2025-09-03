@@ -8,10 +8,6 @@ from cartloader.utils.utils import cmd_separator, scheck_app, create_custom_logg
 from cartloader.utils.image_helper import orient2axisorder, update_orient
 from cartloader.scripts.image_png2pmtiles import get_orientation_suffix
 
-# get the current path
-current_path = os.path.realpath(__file__)
-cartloader_dir=os.path.dirname(os.path.dirname(os.path.dirname(current_path)))
-gdal_get_size_script = os.path.join(cartloader_dir, 'cartloader', "utils", "gdal_get_size.sh")
 
 def parse_arguments(_args):
     """
@@ -36,10 +32,10 @@ def parse_arguments(_args):
 
     inout_params = parser.add_argument_group("Input/Output Parameters", """
                                              Two ways to define the input and output: 
-                                             1) use the --in-json and --fig-id to locate input image in the JSON file.
+                                             1) use the --in-json and --img-id to locate input image in the JSON file.
                                              2) use --in-img to provide the path to input image.
                                              """)
-    inout_params.add_argument('--out-dir', type=str, required=True, help='The output directory.')
+    inout_params.add_argument('--out-dir', type=str, required=True, help='Output directory.')
     inout_params.add_argument('--in-json', type=str, default=None, help='Path to input JSON, which maps figure IDs to image paths. Each key is a figure ID, and each value is the corresponding file path. If this is provided, --in-img will be ignored.')
     inout_params.add_argument('--in-img', type=str, help='Path to input image file (PNG or TIF) to be converted to pmTiles')
     inout_params.add_argument('--img-id', type=str, required=True, help='Image ID. This will be used as the output file name prefix. Also, if --in-json is provided, this will be used to locate the image in the JSON file.')
@@ -89,28 +85,28 @@ aux_image_arg={
 }
 
 
-def get_mono(args):
-    # get the mono information
-    with tifffile.TiffFile(args.in_img) as tif:
-        n_pages = len(tif.pages)
-        if args.page is None:
-            if n_pages > 1:
-                raise ValueError("In --ome2png, multiple pages detected. Please specify the page number to extract the image from")
-            elif n_pages == 1:
-                args.page = 0
-            else:
-                raise ValueError("In --ome2png, no pages detected in the OME-TIFF file")
-        page = tif.series[args.series].levels[args.level].pages[args.page]
-        if len(page.shape) == 3:
-            if page.shape[2] != 3:
-                raise ValueError("In --ome2png, the colored image is not in RGB format")
-            args.mono = False
-        else:
-            args.mono = True
-    if args.colorize is not None:
-        assert args.mono is True, "In --ome2png, the colorize option is only available for black-and-white images"
-        args.mono = False
-    return args.mono
+# def get_mono(args):
+#     # get the mono information
+#     with tifffile.TiffFile(args.in_img) as tif:
+#         n_pages = len(tif.pages)
+#         if args.page is None:
+#             if n_pages > 1:
+#                 raise ValueError("In --ome2png, multiple pages detected. Please specify the page number to extract the image from")
+#             elif n_pages == 1:
+#                 args.page = 0
+#             else:
+#                 raise ValueError("In --ome2png, no pages detected in the OME-TIFF file")
+#         page = tif.series[args.series].levels[args.level].pages[args.page]
+#         if len(page.shape) == 3:
+#             if page.shape[2] != 3:
+#                 raise ValueError("In --ome2png, the colored image is not in RGB format")
+#             args.mono = False
+#         else:
+#             args.mono = True
+#     if args.colorize is not None:
+#         assert args.mono is True, "In --ome2png, the colorize option is only available for black-and-white images"
+#         args.mono = False
+#     return args.mono
 
 
 def import_image(_args):
@@ -127,7 +123,7 @@ def import_image(_args):
     # read in_json if provided
     assert args.img_id, f"Provide an ID for the image using --img-id"
     if args.in_json is not None:
-        assert os.path.exists(args.in_json), f"The input json file doesn't exist: {args.in_json}"
+        assert os.path.exists(args.in_json), f"File not found: {args.in_json} (--in-json)"
         xenium_ranger_data=load_file_to_dict(args.in_json)
         # only keep the key:value pairs that have a key in ["DAPI", "BOUNDARY_IMG", "INTERIOR_RNA_IMG", "INTERIOR_PROTEIN_IMG", "DAPI_3D", "DAPI_MIP"]
         args.in_img = xenium_ranger_data[args.img_id]

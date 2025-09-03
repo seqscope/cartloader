@@ -100,11 +100,11 @@ xenium_key2patterns={
             "required": False,
             "filenames":["morphology_focus/morphology_focus_0003.ome.tif" ]
             },
-        # Detect it but will not process it
-        "DAPI_3D_OME": {
-            "required": False,
-            "filenames":["morphology.ome.tif"]
-            },
+        # # Detect it but will not process it
+        # "DAPI_3D_OME": {
+        #     "required": False,
+        #     "filenames":["morphology.ome.tif"]
+        #     },
         "DAPI_MIP_OME": {
             "required": False,
             "filenames":["morphology_mip.ome.tif"]
@@ -113,17 +113,21 @@ xenium_key2patterns={
 }
 
 
-def detect_xenium_output(_args):
+def load_xenium_ranger(_args):
     # Categorized argument groups
-    parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", description="Detect the 10X Xenium Ranger output files and summarize their locations into a json file.")
-    inout_params = parser.add_argument_group("Input/Output Parameters", "Input/output directory/files.")
-    inout_params.add_argument('--in-dir', type=str, required=True, help='Path to input directory where Xenium files are located.')
-    inout_params.add_argument('--out-json', type=str, required=True, help='Path to the output JSON file that will list all detected files.')
-    inout_params.add_argument('--unzip-dir', type=str, help='Optional directory where compressed files from --in-dir will be decompressed (defaults to --in-dir if not specified; ensure write access)')
-    inout_params.add_argument('--overwrite',  action='store_true', default=False, help=' If set, existing JSON and decompressed files will be overwritten; otherwise, existing entries and decompressed directories will be reused or skipped.')
+    parser = argparse.ArgumentParser(
+        prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}",
+        description="Detect 10x Xenium Ranger files from Xenium Ranger and write a JSON manifest of file locations."
+    )
+    inout_params = parser.add_argument_group("Input/Output Parameters", "Input/output paths.")
+    inout_params.add_argument('--in-dir', type=str, required=True, help='Path to input directory containing Xenium Ranger outputs')
+    inout_params.add_argument('--out-json', type=str, required=True, help='Path to output JSON manifest to write')
+    inout_params.add_argument('--unzip-dir', type=str, help='Path to directory for decompressing archives found under --in-dir (defaults to --in-dir)')
+    inout_params.add_argument('--overwrite',  action='store_true', default=False, help='Overwrite existing outputs if present (default: False)')
     args = parser.parse_args(_args)
 
-    assert os.path.isdir(args.in_dir), f"The --in-dir should be a directory: {args.in_dir}"
+    assert os.path.exists(args.in_dir), f"Directory not found: {args.in_dir} (--in-dir)"
+    assert os.path.isdir(args.in_dir), f"--in-dir should be a directory: {args.in_dir}"
 
     out_dir=os.path.dirname(args.out_json)
     os.makedirs(out_dir, exist_ok=True)
@@ -137,7 +141,6 @@ def detect_xenium_output(_args):
     else:
         datdict={}
     
-
     datdict = resolve_paths_by_pattern(datdict,
                                         xenium_key2patterns,
                                         args.in_dir,

@@ -3,8 +3,11 @@ import pandas as pd
 from cartloader.utils.minimake import minimake
 from cartloader.utils.utils import cmd_separator, scheck_app, add_param_to_cmd, read_minmax, flexopen, execute_makefile
 
+
 def parse_arguments(_args):
     """Parse command-line arguments."""
+    repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
     parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", description="Run FICTURE2")
 
     run_params = parser.add_argument_group("Run Options", "Run options for FICTURE commands")
@@ -23,7 +26,7 @@ def parse_arguments(_args):
     key_params.add_argument('--width', type=str, required=True, help='Comma-separated hexagon flat-to-flat widths (in um) for LDA training (default: None)')
     key_params.add_argument('--n-factor', type=str, required=True, help='Comma-separated list of factor counts for LDA training.')
     key_params.add_argument('--anchor-res', type=int, default=6, help='Anchor resolution for decoding (default: 6)')
-    key_params.add_argument('--cmap-file', type=str, default=os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "assets", "fixed_color_map_256.tsv"), help='Define the path to the fixed color map (default: <cartloader_dir>/assets/fixed_color_map_256.tsv)')
+    key_params.add_argument('--cmap-file', type=str, default=os.path.join(repo_dir, "assets", "fixed_color_map_256.tsv"), help='Define the path to the fixed color map (default: <cartloader_dir>/assets/fixed_color_map_256.tsv)')
 
     # env params
     env_params = parser.add_argument_group("ENV Parameters", "Environment parameters, e.g., tools.")
@@ -31,7 +34,7 @@ def parse_arguments(_args):
     env_params.add_argument('--sort', type=str, default="sort", help='Path to sort binary. For faster processing, you may add arguments like "sort -T /path/to/new/tmpdir --parallel=20 -S 10G"')
     env_params.add_argument('--sort-mem', type=str, default="1G", help='Memory size for each process (default: 1G)')
     env_params.add_argument('--spatula', type=str, default=f"spatula",  help='Path to spatula binary (default: "spatula" in the system PATH)') # default=f"{repo_dir}/submodules/spatula/bin/spatula",
-    env_params.add_argument('--ficture2', type=str, default=os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "submodules", "punkst"),  help='Path to punkst(ficture2) repository (default: <cartloader_dir>/submodules/punkst)')
+    env_params.add_argument('--ficture2', type=str, default=os.path.join(repo_dir, "submodules", "punkst"), help='Path to punkst(ficture2) repository (default: <cartloader_dir>/submodules/punkst)')
     env_params.add_argument('--python', type=str, default="python3",  help='Python3 binary')
 
     # AUX gene-filtering params
@@ -146,7 +149,7 @@ def run_ficture2_multi(_args):
 
     # ficture2
     ficture2bin = os.path.join(args.ficture2, "bin/punkst")
-    assert os.path.exists(ficture2bin), f"ficture2 binary not found at {ficture2bin}; specify a valid --ficture2 path or ensure it's installed in cartloader's submodules/punkst directory."
+    assert os.path.exists(ficture2bin), f"File not found: {ficture2bin}. FICTURE2 Directory should include bin/punkst (--ficture2)"
     
     ficture2report = args.python + " " + os.path.join(args.ficture2, "ext/py/factor_report.py")
     
@@ -167,7 +170,7 @@ def run_ficture2_multi(_args):
             in_tsvs.append(toks[1])
     
     # cmap
-    assert os.path.exists(args.cmap_file), f"Color map not found at: {args.cmap_file}"
+    assert os.path.exists(args.cmap_file), f"File not found: {args.cmap_file} (--cmap-file)"
     
     # start mm
     mm = minimake()
@@ -530,9 +533,6 @@ def run_ficture2_multi(_args):
 
 
 if __name__ == "__main__":
-    # Get the path to the cartloader repository
-    cartloader_repo=os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-
     # Get the base file name without extension
     script_name = os.path.splitext(os.path.basename(__file__))[0]
 

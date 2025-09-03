@@ -31,7 +31,7 @@ def image_extract_ullr(_args):
         lrx = bounds.right + args.x_offset
         lry = bounds.bottom + args.y_offset
     else:
-        assert args.minmax, "If --crop-by-minmax is set, --minmax must be provided."
+        assert args.minmax, "--minmax is required when --crop-by-minmax is set"
         xmin, xmax, ymin, ymax = map(float, args.minmax.split(","))
 
         # Determine orientation using transform
@@ -52,7 +52,7 @@ def image_extract_ullr(_args):
             ulx, uly = xmax, ymin
             lrx, lry = xmin, ymax
         else:
-            raise ValueError("Unrecognized image orientation from affine transform.")
+            raise ValueError("Unsupported image orientation (affine): only axis-aligned (no rotation/shear) with non-zero scales are supported; reproject to north-up first")
 
         ulx += args.x_offset
         uly += args.y_offset

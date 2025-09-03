@@ -365,9 +365,8 @@ def run_ficture(_args):
     # check static cmap file
     if args.cmap_static:
         if args.static_cmap_file is None:
-            scriptdir = os.path.dirname(os.path.realpath(__file__))
-            progdir = os.path.dirname(os.path.dirname(scriptdir))
-            args.static_cmap_file = os.path.join(progdir, "assets", "fixed_color_map_60.tsv")
+            repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            args.static_cmap_file = os.path.join(repo_dir, "assets", "fixed_color_map_60.tsv")
         assert os.path.exists(args.static_cmap_file), f"Static color map file {args.static_cmap_file} does not exist"
 
     # 1. sort 
@@ -991,9 +990,6 @@ ${tabix} -f -s1 -b"${sortidx}" -e"${sortidx}" ${output}
 
 
 if __name__ == "__main__":
-    # Get the path to the cartloader repository
-    cartloader_repo=os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-
     # Get the base file name without extension
     script_name = os.path.splitext(os.path.basename(__file__))[0]
 

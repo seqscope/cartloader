@@ -1050,9 +1050,6 @@ def stepinator(_args):
 
 
 if __name__ == "__main__":
-    # Get the path to the cartloader repository
-    cartloader_repo=os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-
     # Get the base file name without extension
     script_name = os.path.splitext(os.path.basename(__file__))[0]
 

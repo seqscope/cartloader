@@ -48,7 +48,14 @@ def parse_arguments(_args):
         parser.print_help()
         sys.exit(1)
 
-    return parser.parse_args(_args)
+    args = parser.parse_args(_args)
+
+    # Validate transparent range
+    if args.transparent_below is not None:
+        if not (0 <= args.transparent_below <= 255):
+            parser.error("--transparent-below must be between 0 and 255 inclusive")
+
+    return args
 
 def get_memory_usage():
     """Get current memory usage in GB"""

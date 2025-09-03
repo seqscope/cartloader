@@ -12,7 +12,7 @@ def parse_arguments(_args):
     - fic-dir: Directory containing the FICTURE output
     - out-dir: Output directory
     """
-    repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+    repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
     parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", description="Build resources for CartoScope, joining the pixel-level results from FICTURE")
 

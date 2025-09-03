@@ -61,7 +61,7 @@ def upload_aws(_args):
     run_params.add_argument('--n-jobs', type=int, default=1, help='Number of jobs (processes) to run in parallel')
     run_params.add_argument('--makefn', type=str, default="upload_aws.mk", help='The name of the Makefile to generate (default: upload_aws.mk)')
 
-    key_params = parser.add_argument_group("Key Parameters", "Key parameters that requires user's attention")
+    key_params = parser.add_argument_group("Key Parameters", "Key parameters that require the user's attention")
     key_params.add_argument("--in-dir", required=True, help="Path to the input directory (e.g., /<main_dir>/cartload/).")
     key_params.add_argument("--s3-dir", required=True, help="S3 directory path (e.g., s3://<bucket_name>/<ID>).")
     key_params.add_argument("--catalog-yaml", default=None, help="Path to the catalog.yaml file (default: /<in_dir>/catalog.yaml).")
@@ -75,9 +75,9 @@ def upload_aws(_args):
         catalog_f= os.path.join(args.in_dir, "catalog.yaml")
     else:
         catalog_f = args.catalog_yaml
-    
+    assert os.path.exists(catalog_f), f"File not found: {catalog_f}" + ("(--catalog-yaml)" if args.catalog_yaml is not None else "(defined using --in-dir)")
+
     s3_catalog_f = f"{args.s3_dir}/catalog.yaml"
-    assert os.path.exists(catalog_f), "Provide an invalid catalog yaml file"
 
     # get the cartload output and basemaps files from catalog
     cartload_files, hist_files = collect_files_from_yaml(catalog_f)
@@ -85,7 +85,7 @@ def upload_aws(_args):
     # start mm
     mm = minimake()
         
-    # step 1. Upload cartload files to AWS （all files, except the nonsge in basemaps 
+    # step 1. Upload cartload files to AWS (all files, except the non-SGE in basemaps)
     # Option 1: use "." to locate the files
     # with open(catalog_f, "r") as catalog_file:
     #     for line in catalog_file:
@@ -131,10 +131,6 @@ def upload_aws(_args):
 
 
 if __name__ == "__main__":
-    # get the cartloader path
-    global cartloader_repo
-    cartloader_repo=os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-    
     # Get the base file name without extension
     script_name = os.path.splitext(os.path.basename(__file__))[0]
 
