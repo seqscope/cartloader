@@ -18,13 +18,13 @@ def feature_overlapping(_args):
         prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}",
         description=""
     )
-    parser.add_argument("--in-dist", type=str, required=True, help="Input feature distribution file")
-    parser.add_argument('--in-feature', type=str, default=None, required=True, help='Input feature file')
+    parser.add_argument("--in-dist", type=str, required=True, help="Path to input feature distribution file")
+    parser.add_argument('--in-feature', type=str, default=None, required=True, help='Path to input feature file')
     parser.add_argument('--output', type=str, required=True, help='Path to the output file, which summarize features shown in all tiles. The output columns includes <feature_name>, <sum of count across all tiles> per count.')
     parser.add_argument('--colname-feature-name', type=str, default='gene', help='Column name for feature name (default: gene)')
-    parser.add_argument("--colname-count", type=str,  default="count", help="Column name for the count (default: count).")
-    parser.add_argument("--colname-n", type=str, default='N', help="Column name for the number of tiles (default: N).")
-    parser.add_argument('--min-ct-per-ftr-tile', type=int, default=0, help='Minimum count to keep a shared feature (default: 0).')
+    parser.add_argument("--colname-count", type=str,  default="count", help="Column name for UMI count (default: count)")
+    parser.add_argument("--colname-n", type=str, default='N', help="Column name for the number of tiles (default: N)")
+    parser.add_argument('--min-ct-per-ftr-tile', type=int, default=0, help='Minimum count to keep a shared feature (default: 0)')
     parser.add_argument('--log', action='store_true', default=False, help='Write log to file')
     args = parser.parse_args(_args)
 

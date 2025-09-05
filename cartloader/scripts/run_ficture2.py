@@ -12,33 +12,33 @@ def parse_arguments(_args):
     repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
     run_params = parser.add_argument_group("Run Options", "Run options.")
-    run_params.add_argument('--dry-run', action='store_true', default=False, help='Generate only the Makefile without running it (default: False)')
-    run_params.add_argument('--restart', action='store_true', default=False, help='Ignore existing outputs and start from the beginning (default: False)')
-    run_params.add_argument('--threads', type=int, default=8, help='Maximum number of threads per job (default: 8)')
+    run_params.add_argument('--dry-run', action='store_true', default=False, help='Generate the Makefile and print commands without executing them')
+    run_params.add_argument('--restart', action='store_true', default=False, help='Ignore existing outputs and start from the beginning')
     run_params.add_argument('--n-jobs', type=int, default=2, help='Number of parallel jobs to run (default: 2)')
+    run_params.add_argument('--threads', type=int, default=8, help='Maximum number of threads per job (default: 8)')
     run_params.add_argument('--makefn', type=str, default="run_ficture2.mk", help='File name of Makefile to write (default: run_ficture2.mk)')
 
     cmd_params = parser.add_argument_group("Commands", "FICTURE steps to run")
-    cmd_params.add_argument('--main', action='store_true', default=False, help='Run all main functions, including tile, segment, init-lda, decode, and summary (default: False)')
-    cmd_params.add_argument('--tile', action='store_true', default=False, help='(Main function) Perform tiling step (default: False)')
-    cmd_params.add_argument('--segment', action='store_true', default=False, help='(Main function) Hexagon segmentation into FICTURE-compatible format (default: False)')
-    cmd_params.add_argument('--init-lda', action='store_true', default=False, help='(Main function) Train LDA model(s) (default: False)')
-    cmd_params.add_argument('--decode', action='store_true', default=False, help='(Main function) Pixel-level decoding (default: False)')
-    cmd_params.add_argument('--summary', action='store_true', default=False, help='(Main function) Write JSON summarizing FICTURE parameters and outputs (default: False)')
-    cmd_params.add_argument('--segment-10x', action='store_true', default=False, help='Hexagon segmentation into 10x MEX format (default: False)')
+    cmd_params.add_argument('--main', action='store_true', default=False, help='Run all main functions, including tile, segment, init-lda, decode, and summary')
+    cmd_params.add_argument('--tile', action='store_true', default=False, help='(Main function) Perform tiling step')
+    cmd_params.add_argument('--segment', action='store_true', default=False, help='(Main function) Hexagon segmentation into FICTURE-compatible format')
+    cmd_params.add_argument('--init-lda', action='store_true', default=False, help='(Main function) Train LDA model(s)')
+    cmd_params.add_argument('--decode', action='store_true', default=False, help='(Main function) Pixel-level decoding')
+    cmd_params.add_argument('--summary', action='store_true', default=False, help='(Main function) Write JSON summarizing FICTURE parameters and outputs')
+    cmd_params.add_argument('--segment-10x', action='store_true', default=False, help='Hexagon segmentation into 10x MEX format')
 
     inout_params = parser.add_argument_group("Input/Output Parameters", "Input/output paths")
-    inout_params.add_argument('--out-dir', required=True, type=str, help='Path to output directory')
+    inout_params.add_argument('--out-dir', required=True, type=str, help='Output directory')
     inout_params.add_argument('--out-json', type=str, default=None, help='Path to output JSON manifest summarizing FICTURE parameters (default: <out-dir>/ficture.params.json)')
-    inout_params.add_argument('--in-json', type=str, default=None, help='Path to input manifest JSON with --in-transcript/--in-minmax/--in-feature; if set, omit --in-transcript/--in-minmax/--in-feature (typical: sge_assets.json from cartloader sge_convert) (default: None)')
+    inout_params.add_argument('--in-json', type=str, default=None, help='Path to input manifest JSON with --in-transcript/--in-minmax/--in-feature; if set, omit --in-transcript/--in-minmax/--in-feature (typical: sge_assets.json from cartloader sge_convert)')
     inout_params.add_argument('--in-transcript', type=str, default=None, help='Path to input unsorted transcript-indexed SGE TSV (default: <out-dir>/transcripts.unsorted.tsv.gz)')
     inout_params.add_argument('--in-minmax', type=str, default=None, help='Path to input coordinate min/max TSV (defaults to --out-dir/transcripts.tiled.coord_range.tsv after tiling)')
-    inout_params.add_argument('--in-feature', type=str, default=None,  help='Path to input per-feature UMI count TSV (default: None)')
-    inout_params.add_argument('--in-feature-ficture', type=str, default=None, help='(Optional) Path to custom feature list for FICTURE; restricts analysis to listed features (default: None)')
+    inout_params.add_argument('--in-feature', type=str, default=None,  help='Path to input per-feature UMI count TSV')
+    inout_params.add_argument('--in-feature-ficture', type=str, default=None, help='(Optional) Path to custom feature list for FICTURE; restricts analysis to listed features')
 
     key_params = parser.add_argument_group("Key Parameters", "Key parameters that requires users' attention")
-    key_params.add_argument('--width', type=str, default=None, help='Comma-separated hexagon flat-to-flat widths (µm) for LDA training (default: None)')
-    key_params.add_argument('--n-factor', type=str, default=None, help='Comma-separated factor counts for LDA training (default: None)')
+    key_params.add_argument('--width', type=str, default=None, help='Comma-separated hexagon flat-to-flat widths (µm) for LDA training')
+    key_params.add_argument('--n-factor', type=str, default=None, help='Comma-separated factor counts for LDA training')
     key_params.add_argument('--anchor-res', type=int, default=6, help='Anchor resolution for decoding (default: 6)')
     # key_params.add_argument('--radius-buffer', type=int, default=1, help='Buffer to radius(=anchor_res + radius_buffer) for pixel-level decoding (default: 1)')
     key_params.add_argument('--cmap-file', type=str, default=os.path.join(repo_dir, "assets", "fixed_color_map_256.tsv"), help='Path to fixed color map TSV (default: <cartloader_dir>/assets/fixed_color_map_256.tsv)')
@@ -49,13 +49,13 @@ def parse_arguments(_args):
     env_params.add_argument('--sort', type=str, default="sort", help='Path to sort binary (default: sort). For faster processing, you may include flags like "sort -T /tmp --parallel=20 -S 10G"')
     env_params.add_argument('--sort-mem', type=str, default="1G", help='Sort memory limit per process (default: 1G)')
     env_params.add_argument('--spatula', type=str, default=f"spatula",  help='Path to spatula binary (default: spatula)')
-    env_params.add_argument('--ficture2', type=str, default=os.path.join(repo_dir, "submodules", "punkst"),  help='Path to FICTURE2 (punkst) repository (default: <cartloader_dir>/submodules/punkst)')
+    env_params.add_argument('--ficture2', type=str, default=os.path.join(repo_dir, "submodules", "punkst"),  help='Path to punkst (ficture2) repository (default: <cartloader_dir>/submodules/punkst)')
     env_params.add_argument('--python', type=str, default="python3",  help='Path to Python (default: python3)')
 
     # AUX feacture-filtering params
     aux_ftrfilter_params = parser.add_argument_group("Feature Customizing Auxiliary Parameters", "Customize features (typically genes) used by FICTURE without altering the original feature TSV")
-    aux_ftrfilter_params.add_argument('--include-feature-regex', type=str, default=None, help='Regex of feature names to include (default: None)')
-    aux_ftrfilter_params.add_argument('--exclude-feature-regex', type=str, default=None, help='Regex of feature names to exclude (default: None)')
+    aux_ftrfilter_params.add_argument('--include-feature-regex', type=str, default=None, help='Regex of feature names to include')
+    aux_ftrfilter_params.add_argument('--exclude-feature-regex', type=str, default=None, help='Regex of feature names to exclude')
 
     # aux params
     aux_params = parser.add_argument_group("Auxiliary Parameters", "Additional parameters (defaults recommended)")
@@ -79,12 +79,12 @@ def parse_arguments(_args):
     # aux_params.add_argument('--min-ct-per-unit-fit', type=int, default=20, help='Minimum count per hexagon unit during model fitting (default: 20)')
     # aux_params.add_argument('--fit-plot-um-per-pixel', type=float, default=1, help='Image resolution for fit coarse plot (default: 1)')   # in Scopeflow, this is set to 2
     # 10x segment:
-    key_params.add_argument('--segment-width-10x', type=str, default=None, help='Comma-separated hexagon flat-to-flat widths (µm) in 10x format (default: None)')
+    key_params.add_argument('--segment-width-10x', type=str, default=None, help='Comma-separated hexagon flat-to-flat widths (µm) in 10x format (required if --segment-10x)')
     # decode
     aux_params.add_argument('--decode-scale', type=int, default=1, help='Scale factor from input coordinates to output image pixels (default: 1)')
     # others parameters shared across steps
     aux_params.add_argument('--min-ct-per-feature', type=int, default=20, help='Minimum count per feature during LDA training, transform and decoding (default: 20)')
-    aux_params.add_argument('--de-max-pval', type=float, default=1e-3, help='p-value cutoff for differential expression (default: 1e-3)')
+    aux_params.add_argument('--de-max-pval', type=float, default=1e-3, help='P-value cutoff for differential expression (default: 1e-3)')
     aux_params.add_argument('--de-min-fold', type=float, default=1.5, help='Fold-change cutoff for differential expression (default: 1.5)')
 
     if len(_args) == 0:

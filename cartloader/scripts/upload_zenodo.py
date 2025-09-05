@@ -122,10 +122,10 @@ def upload_zenodo(_args):
 
     # I/O arguments
     group_io = parser.add_argument_group("Input/Output")
-    group_io.add_argument('--in-dir', type=str, required=True, help='(Required) Path to the input directory containing files to upload.')
+    group_io.add_argument('--in-dir', type=str, required=True, help='Path to the input directory containing files to upload.')
     group_io.add_argument('--upload-method', type=str, default="all", choices=["all", "catalog", "user_list"], help='Method to determine which files to upload: "all" uploads every file in --in-dir; "catalog" uses filenames listed in a catalog YAML file; "user_list" uploads only files specified via --in-list.')
-    group_io.add_argument('--in-list', type=str, nargs='+', default=[], help='(Required if --upload-method is "user_list") One or more filenames to upload, e.g., "--in-list fileA.tif fileB.tif".')
-    group_io.add_argument('--catalog-yaml', type=str, default=None, help='(Required if --upload-method is "catalog") Path to the catalog YAML file listing files to upload (defaults to <in_dir>/catalog.yaml)')
+    group_io.add_argument('--in-list', type=str, nargs='+', default=[], help='List of filenames to upload, e.g., "--in-list fileA.tif fileB.tif" (required if --upload-method is "user_list")')
+    group_io.add_argument('--catalog-yaml', type=str, default=None, help='Path to the catalog YAML file listing files to upload (required if --upload-method is "catalog"; defaults: <in_dir>/catalog.yaml)')
 
     # Zenodo credentials and config
     group_zenodo = parser.add_argument_group("Zenodo Configuration")
@@ -139,9 +139,9 @@ def upload_zenodo(_args):
     # Metadata fields
     group_meta = parser.add_argument_group("Deposition Metadata")
     group_meta.add_argument('--title', type=str, default=None, help='Title of the deposition. Required if creating a new deposition or if the existing deposition does not have a title.')
-    group_meta.add_argument('--upload-type', type=str, default='dataset', choices=['dataset', 'software', 'publication', 'poster', 'presentation', 'image', 'video', 'lesson', 'other'], help='Type of upload for the Zenodo deposition (default: dataset). Required if creating a new deposition.')
+    group_meta.add_argument('--upload-type', type=str, default='dataset', choices=['dataset', 'software', 'publication', 'poster', 'presentation', 'image', 'video', 'lesson', 'other'], help='Type of upload for the Zenodo deposition (default: dataset). Required when creating a new deposition.')
     group_meta.add_argument('--creators', type=str, nargs='+', default=[], help='List of creators in "Lastname, Firstname" format. Each name should be quoted. Required if creating a new deposition or if the existing deposition does not have creator information.')
-    group_meta.add_argument('--description', type=str, default=None, help='(Optional) Description of the deposition.')
+    group_meta.add_argument('--description', type=str, default=None, help='Description of the deposition.')
 
     # Behavior flags
     group_flags = parser.add_argument_group("Options")

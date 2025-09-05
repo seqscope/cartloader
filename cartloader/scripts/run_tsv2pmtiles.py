@@ -13,7 +13,7 @@ def parse_arguments(_args):
     parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", description="Split and convert transcripts TSV file into pmtiles")
 
     cmd_params = parser.add_argument_group("Commands", "Commands to run together")
-    cmd_params.add_argument('--all', action='store_true', default=False, help='Run all commands (split, convert)')
+    cmd_params.add_argument('--all', action='store_true', default=False, help='Run all commands (split, convert, clean)')
     cmd_params.add_argument('--split', action='store_true', default=False, help='Split molecules TSV file into group-wise CSVs')
     cmd_params.add_argument('--convert', action='store_true', default=False, help='Convert the CSV files into pmtiles')
     cmd_params.add_argument('--clean', action='store_true', default=False, help='Clean intermediate files')

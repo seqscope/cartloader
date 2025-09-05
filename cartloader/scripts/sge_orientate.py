@@ -14,10 +14,10 @@ def parse_arguments(_args):
     parser.add_argument("--out-feature", type=str, help="Path to output feature file.", required=True)
     parser.add_argument("--in-minmax", type=str, help="Path to input minmax file.", required=True)
     parser.add_argument("--out-minmax", type=str, help="Path to output minmax file.", required=True)
-    parser.add_argument("--chunk-size", type=int, default=10**6, help="Chunk size for processing (default: 10^6).")
     parser.add_argument('--rotate', type=str, default=None, choices=["90", "180", "270"],  help='Rotate by 90, 180, or 270 degrees clockwise. Rotate precedes flip.')
     parser.add_argument('--flip-vertical', action='store_true', default=False, help='Flip vertically (flipped along Y-axis). Rotate precedes flip.')
     parser.add_argument('--flip-horizontal', action='store_true', default=False, help='Flip horizontally (flipped along X-axis). Rotate precedes flip.')
+    parser.add_argument("--chunk-size", type=int, default=10**6, help="Chunk size for processing (default: 10^6).")
 
     if len(_args) == 0:
         parser.print_help()

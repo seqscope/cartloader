@@ -14,70 +14,73 @@ def parse_arguments(_args):
     """
     repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-    parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", description="Process 10X Xenium output from Xenium Ranger, and return rastered and tiled sources for CartoScope (detect → sge_convert → ficture2 → images/cells → cartload2 → uploads")
+    parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", description="Process 10X Xenium output from Xenium Ranger, and return rastered and tiled sources for CartoScope (load → sge_convert → ficture2 → images/cells → cartload2 → uploads")
 
     run_params = parser.add_argument_group("Run Options")
-    run_params.add_argument('--dry-run', action='store_true', default=False, help='Dry run mode. Print all commands without executing them.')
-    run_params.add_argument('--restart', action='store_true', default=False, help='Restart the run. Ignore all intermediate files and start from the beginning')
-    run_params.add_argument('--n-jobs', type=int, default=1, help='Number of jobs (processes) to run in parallel')
+    run_params.add_argument('--dry-run', action='store_true', default=False, help='Print commands without executing')
+    run_params.add_argument('--restart', action='store_true', default=False, help='Ignore existing outputs and re-run all steps')
+    run_params.add_argument('--n-jobs', '-j', type=int, default=1, help='Number of parallel jobs to run (default: 1)')
     run_params.add_argument('--threads', type=int, default=4, help='Maximum number of threads per job (for tippecanoe)')
-
+    
     cmd_params = parser.add_argument_group("Commands")
-    cmd_params.add_argument('--load-xenium-ranger', action='store_true', default=False, help='Automatically detect Xenium Ranger output files in --xenium-ranger-dir and save their paths to --xenium-ranger-assets (JSON).')
-    cmd_params.add_argument('--sge-convert', action='store_true', default=False, help='Convert SGE files from Xenium format into the cartloader-compatible format.')
-    cmd_params.add_argument('--run-ficture2', action='store_true', default=False, help='Run FICTURE analysis on the converted SGE, using the latest punkst version.')
-    cmd_params.add_argument('--import-ext-ficture2', action='store_true', default=False, help='Import a set of existing FICTURE results.')
-    cmd_params.add_argument('--import-cells', action='store_true', default=False, help='Import cell-based analysis results from Xenium Ranger, and add the asset information to catalog.yaml if exists.')
-    cmd_params.add_argument('--import-images', action='store_true', default=False, help='Import images as background, such as DAPI, and add the asset information to catalog.yaml if exists.')
-    cmd_params.add_argument('--run-cartload2', action='store_true', default=False, help='Package SGE into raster tiles (and import FICTURE results if --run-ficture2 is enabled). A catalog.yaml file will be created to summarize all assets.')
+    cmd_params.add_argument('--load-xenium-ranger', action='store_true', default=False, help='Detect Xenium Ranger outputs in --xenium-ranger-dir and write --xenium-ranger-assets (JSON)')
+    cmd_params.add_argument('--sge-convert', action='store_true', default=False, help='Convert SGE from Xenium format to cartloader-compatible format')
+    cmd_params.add_argument('--run-ficture2', action='store_true', default=False, help='Run FICTURE (punkst) analysis on the converted SGE')
+    cmd_params.add_argument('--import-ext-ficture2', action='store_true', default=False, help='Import a set of existing FICTURE results')
+    cmd_params.add_argument('--import-cells', action='store_true', default=False, help='Import Xenium Ranger cell analysis into tiles and update catalog.yaml (if present)')
+    cmd_params.add_argument('--import-images', action='store_true', default=False, help='Import background images (e.g., DAPI) into raster tiles and update catalog.yaml (if present)')
+    cmd_params.add_argument('--run-cartload2', action='store_true', default=False, help='Package SGE into raster tiles (import FICTURE results if --run-ficture2). Write catalog.yaml summarizing assets')
     cmd_params.add_argument('--upload-aws', action='store_true', default=False, help='Upload output assets into AWS')
     cmd_params.add_argument('--upload-zenodo', action='store_true', default=False, help='Upload output assets into Zenodo')
 
-    inout_params = parser.add_argument_group("Input/Output Parameters", 'cartloader determines input files in two ways:	1. Manual input mode (explicit) — If any argument in "Auxiliary Input/Output File/Directories" are specified with --xenium-ranger-dir; 2. Auto-detection mode (implicit) — If no manual input is given, cartloader reads input file paths from --xenium-ranger-assets, which is created by --load-xenium-ranger.')
-    inout_params.add_argument('--xenium-ranger-dir', type=str, help='(Required if manual input mode is enabled or running --load-xenium-ranger) Path to the Xenium Ranger output directory containing transcript, cell, boundary, cluster, and image files.')
-    inout_params.add_argument('--out-dir', type=str, help='Path to output root directory. If set, --sge-dir, --fic-dir, --cart-dir, --xenium-ranger-assets default to <out_dir>/sge, <out_dir>/ficture2, <out_dir>/cartload2, and <out_dir>/xenium_ranger_assets.json. To use a custom directory layout, skip --out-dir and define those paths manually.')
-    inout_params.add_argument('--ext-fic-dir', type=str, help='(Required if --import-ext-ficture2 is enabled) Path to an external FICTURE directory for loading external FICTURE assets.')
+    inout_params = parser.add_argument_group("Input/Output Parameters", 'Two input modes: 1) Manual — set --xenium-ranger-dir and any "Manual Input Parameters" args. 2) Auto-detect — leave them unset; read from --xenium-ranger-assets (created by --load-xenium-ranger)')
+    inout_params.add_argument('--xenium-ranger-dir', type=str, help='Path to the Xenium Ranger output directory containing transcript, cell, boundary, cluster, and image files (required if manual input mode is enabled or if --load-xenium-ranger)')
+    inout_params.add_argument('--out-dir', type=str, required=True, help='Path to output directory. Stores converted SGE, FICTURE results, raster tiles in <out_dir>/sge, <out_dir>/ficture2, and <out_dir>/cartload2')
+    inout_params.add_argument('--xenium-ranger-assets', type=str, default=None, help='PPath to a JSON file containing Xenium Ranger outputs paths. Written by --load-space-ranger; read when auto-detection mode is on (default: <out_dir>/space_ranger_assets.json)')
+    inout_params.add_argument('--ext-fic-dir', type=str, help='Path to an external FICTURE directory for loading external FICTURE assets (required if --import-ext-ficture2)')
 
-    key_params = parser.add_argument_group("Key Parameters")
-    # sge convert
-    key_params.add_argument('--units-per-um', type=float, default=None, help='(Parameters for --sge-convert) Coordinate unit per um in the input files (default: 1.00).')  
-    key_params.add_argument('--filter-by-density', action='store_true', default=False, help='(Parameters for --sge-convert) Filter SGE from format conversion by density (default: False).')
-    key_params.add_argument('--exclude-feature-regex', type=str, default=None, help='(Parameters for --sge-convert) A regex pattern of feature/gene names to be excluded (default: "^(BLANK_|DeprecatedCodeword_|NegCon|UnassignedCodeword_)")')
-    # ficture2 parameters
-    key_params.add_argument('--width', type=str, default=None, help='(Parameters for --run-ficture2; required) Comma-separated hexagon flat-to-flat widths (in um) for LDA training and projection (default: None)') ## Same width will be used for both train width and projection width
-    key_params.add_argument('--n-factor', type=str, default=None, help='(Parameters for --run-ficture2; required) Comma-separated list of factor counts for LDA training.')
-    key_params.add_argument('--colname-feature', type=str, default='gene', help='(Parameters for --run-ficture2 or --run-cartload2) Input/output column name for gene name (default: gene)')
-    key_params.add_argument('--colname-count', type=str, default='count', help='(Parameters for --run-ficture2 or --run-cartload2) Column name for feature counts (default: count)')
-    # run_cartload2 parameters
-    key_params.add_argument('--id', type=str, help='(Parameters for --run-cartload2; required) Identifier for the output assets. Must not contain whitespace. Recommended: use "-" instead of "_" if needed.')
-    key_params.add_argument('--title', type=str, help='(Parameters for --run-cartload2) The title of the output assets. If it contains spaces, quote it, e.g., "Example Title"')
-    key_params.add_argument('--desc', type=str, help='(Parameters for --run-cartload2) The description of output assets. If it contains spaces, quote it, e.g., "Example short description"')
-    # cell and boundary assets
-    key_params.add_argument('--cell-id', type=str, default="xeniumranger", help='(Parameters for --import-cells) Identifier of the cell factor. This will be used as the ID and filename prefix for cell and boundary assets. Must not contain whitespace. (default: xeniumranger).')
-    key_params.add_argument('--cell-name', type=str, help='(Parameters for --import-cells) Name of the cell factor. This will be used in the cell assets (defaults to --cell-id)')
-    key_params.add_argument('--tsv-cmap', type=str, default=None, help='(Parameters for --import-cells) Path to the TSV file containing the color map for the cell clusters')
-    # images
-    key_params.add_argument('--image-ids', type=str, default=["DAPI_OME", "BOUNDARY_OME", "INTERIOR_RNA_OME", "INTERIOR_PROTEIN_OME", "DAPI_MIP_OME"], nargs="+", help='(Parameters for --import-images) One or more image IDs to be used in the output PMTiles. (default: "DAPI_OME", "BOUNDARY_OME", "INTERIOR_RNA_OME", "INTERIOR_PROTEIN_OME", "DAPI_MIP_OME").')
-    key_params.add_argument('--image-colors', type=str, nargs='*', default=[], help='(Parameters for --import-images) One or more colors to be used for OME TIFFs. The order of the colors should match the order of the image IDs in --image-ids. If not set, a default list of colors will be used (palette covers up to 10 images). For more than 10 images, please provide --image-colors explicitly.')
-    key_params.add_argument('--all-images', action='store_true', help='If set, deploy all detected images based on the --xenium-ranger-assets file. If set, ignore the --image-ids.')
-    key_params.add_argument("--transparent-below", type=int, default=1, help='Set pixels below this value to transparent. The threshold should be between 0 and 255 (default: 1).')
-    # aws 
-    key_params.add_argument("--s3-bucket", help="(Parameters for --upload-aws; required) AWS S3 bucket (e.g., cartostore).")
-    # zenodo
-    key_params.add_argument('--zenodo-token', type=str,  help='(Parameters for --upload-zenodo; required) Path to a file containing your Zenodo access token.')
-    key_params.add_argument('--zenodo-deposition-id', type=str, default=None,  help='(Parameters for --upload-zenodo; optional) ID of an existing Zenodo deposition to upload files into. If not provided, a new deposition will be created. If the deposition is published, a new version will be automatically created.')
-    key_params.add_argument('--zenodo-title', type=str, default=None, help='(Parameters for --upload-zenodo) Title of the deposition. If it contains spaces, quote it, e.g., "Example Zenodo Title". Recommended: provide when creating a new deposition (defaults to --title)') 
-    key_params.add_argument('--creators', type=str, nargs='+', default=[], help='(Parameters for --upload-zenodo) List of creators, each enclosed in double quotes, in "Lastname, Firstname" format. Recommended: provide when creating a new deposition')  
+    # Key Parameters (split by command)
+    sge_params = parser.add_argument_group("Parameters for --sge-convert")
+    sge_params.add_argument('--units-per-um', type=float, default=None, help='Coordinate unit per um in raw SGE (default: 1.00)')  
+    sge_params.add_argument('--filter-by-density', action='store_true', default=False, help='Enable to filter SGE by density')
+    sge_params.add_argument('--exclude-feature-regex', type=str, default=None, help='Regex for feature names to exclude (default: "^(BLANK_|DeprecatedCodeword_|NegCon|UnassignedCodeword_)")')
 
-    aux_inout_params = parser.add_argument_group("Auxiliary Input/Output File/Directories Parameters", "Manually specify input file names and output directories. If the input file locations (--csv-* and --ome-tifs) are not provided, load from --xenium-ranger-assets. Similarly, if output directories (--sge-dir, --fic-dir, --cart-dir) are not specified, defaults under --out-dir will be used.")
-    aux_inout_params.add_argument('--xenium-ranger-assets', type=str, default=None, help='Path to a JSON file containing Xenium Ranger asset paths. This file is written when --load-xenium-ranger is enabled, and is read when no manual input files (--csv-*, --ome-tifs) are specified. Default: <out_dir>/xenium_ranger_assets.json if --out-dir is set.')
-    aux_inout_params.add_argument('--csv-transcript', type=str, default=None, help='(Parameters for --sge-convert) Location of the CSV or parquet file in the --xenium-ranger-dir. This transcript file should contain at least coordinates, feature names, and expression counts of the transcripts')
-    aux_inout_params.add_argument('--csv-cells', type=str, default=None, help='(Parameters for --import-cells) Location of the CSV or Parquet file containing cell locations in the --xenium-ranger-dir') 
-    aux_inout_params.add_argument('--csv-boundaries', type=str, default=None, help='(Parameters for --import-cells) Location of the CSV file containing cell boundary coordinates in the --xenium-ranger-dir')
-    aux_inout_params.add_argument('--csv-clust', type=str, default=None, help='(Parameters for --import-cells) Location of the CSV file containing cell cluster assignments in the --xenium-ranger-dir') 
-    aux_inout_params.add_argument('--csv-diffexp', type=str, default=None, help='(Parameters for --import-cells) Location of the CSV file with differential expression results in the --xenium-ranger-dir') 
-    aux_inout_params.add_argument('--ome-tifs', type=str, nargs="+", default=[], help="(Parameters for --import-images) List of locations of one or more input OME-TIFF(s) in the --xenium-ranger-dir. The order must match the order of the image IDs in --image-ids")
-    aux_inout_params.add_argument('--catalog-yaml', type=str, nargs="+", default=[], help="(Parameters for --import-images) List of locations of one or more input OME-TIFF(s) in the --xenium-ranger-dir. The order must match the order of the image IDs in --image-ids")
+    fic_params = parser.add_argument_group("Parameters for --run-ficture2")
+    fic_params.add_argument('--width', type=str, default=None, help='Comma-separated hexagon flat-to-flat widths (in um) for LDA training and projection (required if --run-ficture2)') ## Same width will be used for both train width and projection width
+    fic_params.add_argument('--n-factor', type=str, default=None, help='Comma-separated list of factor counts for LDA training (required if --run-ficture2)')
+    fic_params.add_argument('--colname-feature', type=str, default='gene', help='Column name for feature name (used with --run-ficture2 and --run-cartload2; default: gene)')
+    fic_params.add_argument('--colname-count', type=str, default='count', help='Column name for UMI counts (used with --run-ficture2 and --run-cartload2; default: count)')
+
+    cart_params = parser.add_argument_group("Parameters for --run-cartload2")
+    cart_params.add_argument('--id', type=str, help='Identifier for output assets; no whitespace; prefer "-" over "_" (required if --run-cartload2)')
+    cart_params.add_argument('--title', type=str, help='Asset human-readable title. Quote if contains spaces, e.g., "Example Title"')
+    cart_params.add_argument('--desc', type=str, help='Asset description. Quote if contains spaces, e.g., "Example short description"')
+
+    cells_params = parser.add_argument_group("Parameters for --import-cells")
+    cells_params.add_argument('--cell-id', type=str, default="xeniumranger", help='Identifier of Xenium Ranger cell results; no whitespace (default: xeniumranger)') # This will be used as the ID and filename prefix for cell and boundary assets. 
+    cells_params.add_argument('--cell-name', type=str, help='Name of Xenium Ranger cell results (defaults to --cell-id)')
+    cells_params.add_argument('--tsv-cmap', type=str, default=None, help='Path to a color map TSV file for cell clusters')
+
+    images_params = parser.add_argument_group("Parameters for --import-images", "Two input modes: 1) use --image-ids select images; 2) use --all-images to deploy all images from --xenium-ranger-assets")
+    images_params.add_argument('--image-ids', type=str, default=["DAPI_OME", "BOUNDARY_OME", "INTERIOR_RNA_OME", "INTERIOR_PROTEIN_OME", "DAPI_MIP_OME"], nargs="+", help='One or more image IDs to import (default: "DAPI_OME", "BOUNDARY_OME", "INTERIOR_RNA_OME", "INTERIOR_PROTEIN_OME", "DAPI_MIP_OME").')
+    images_params.add_argument('--image-colors', type=str, nargs='*', default=[], help='List of 6-digits HEX RGB codes (e.g., #1f77b4 or 1f77b4). Order matches --image-ids. Defaults cover up to 10 images; provide more if needed.')
+    images_params.add_argument('--all-images', action='store_true', help='Enable to deploy all images from --xenium-ranger-assets regardless --image-ids')
+    images_params.add_argument("--transparent-below", type=int, default=1, help='Set pixels below this value to transparent (range: 0~255; default: 1)')
+
+    upload_params = parser.add_argument_group("Parameters for --upload-aws and --upload-zenodo")
+    upload_params.add_argument("--s3-bucket", help="AWS S3 bucket, e.g., cartostore (required if --upload-aws)")
+    upload_params.add_argument('--zenodo-token', type=str,  help='Path to a file containing your Zenodo access token (required if --upload-zenodo)')
+    upload_params.add_argument('--zenodo-deposition-id', type=str, default=None, help='Existing deposition ID. If published, creates a new version; omit to create a new deposition.')
+    upload_params.add_argument('--zenodo-title', type=str, default=None, help='Deposition title; always quote the value, e.g., "Example Zenodo Title" (defaults to --title)') 
+    upload_params.add_argument('--creators', type=str, nargs='+', default=[], help='List of creators as "Lastname, Firstname" (each quoted)')  
+
+    aux_inout_params = parser.add_argument_group("Manual Input Parameters", "Manually specify input file locations under --xenium-ranger-dir; providing any of the following arguments enables manual mode.")
+    aux_inout_params.add_argument('--csv-transcript', type=str, default=None, help='Location of the CSV or parquet file under --xenium-ranger-dir. This transcript file should contain at least coordinates, feature names, and expression counts (used with --sge-convert)')
+    aux_inout_params.add_argument('--csv-cells', type=str, default=None, help='Location of the CSV or Parquet file containing cell locations under --xenium-ranger-dir (used with --import-cells)') 
+    aux_inout_params.add_argument('--csv-boundaries', type=str, default=None, help='Location of the CSV file containing cell boundary coordinates under --xenium-ranger-dir (used with --import-cells)')
+    aux_inout_params.add_argument('--csv-clust', type=str, default=None, help='Location of the CSV file containing cell cluster assignments under --xenium-ranger-dir (used with --import-cells)') 
+    aux_inout_params.add_argument('--csv-diffexp', type=str, default=None, help='Location of the CSV file with differential expression results under --xenium-ranger-dir (used with --import-cells)') 
+    aux_inout_params.add_argument('--ome-tifs', type=str, nargs="+", default=[], help="List of locations of one or more input OME-TIFF(s) under --xenium-ranger-dir. The order must match the order of the image IDs in --image-ids (used with --import-images)")
 
     # Default settings: * tools will use the PATH: sort, gzip, python3
     env_params = parser.add_argument_group("Env Parameters", "Environment parameters, e.g., tools.")
@@ -89,7 +92,7 @@ def parse_arguments(_args):
     env_params.add_argument('--spatula', type=str, help='Path to spatula binary (default: spatula)')
     env_params.add_argument('--parquet-tools', type=str, dest='parquet_tools', help='Path to parquet-tools binary (default: parquet-tools)')
     env_params.add_argument('--ficture2', type=str, default=os.path.join(repo_dir, "submodules", "punkst"),  help='Path to punkst(ficture2) repository (default: <cartloader_dir>/submodules/punkst)')
-    env_params.add_argument('--aws', type=str, default="aws", help='The path to aws (default: aws)')
+    env_params.add_argument('--aws', type=str, default="aws", help='Path to aws CLI (default: aws)')
 
     if len(_args) == 0:
         parser.print_help()
@@ -99,27 +102,23 @@ def parse_arguments(_args):
 
     # Required-when validations with helpful CLI errors
     # * Directory/layout requirement
-    if not args.out_dir and not (args.sge_dir and args.fic_dir and args.cart_dir):
-        parser.error("Either --out-dir must be specified, or all of --sge-dir, --fic-dir, and --cart-dir must be specified.")
-
     if (not args.xenium_ranger_assets) and args.out_dir:
         args.xenium_ranger_assets = os.path.join(args.out_dir, "xenium_ranger_assets.json")
 
-    # * Manual inputs vs asset JSON are mutually exclusive when --load-xenium-ranger
+    # * Manual inputs vs auto-detect
     manual_mode = any([ args.csv_transcript, args.csv_cells, args.csv_boundaries, args.csv_clust, args.csv_diffexp ] + (args.ome_tifs or []))
-    if manual_mode:
-        if args.load_xenium_ranger:
-            parser.error("Cannot enable both auto-detection model (--load-xenium-ranger) and manual input model (--csv-*, --ome-tifs). Choose one mode")
+    
+    if manual_mode and args.load_xenium_ranger:
+        parser.error("Cannot enable both auto-detection model (--load-xenium-ranger) and manual input model (--csv-*, --ome-tifs). Choose one mode")
+    
+    if manual_mode:            
         if args.all_images:
             parser.error("--all-images cannot be used in manual input model (specifying --ome-tifs)")
         if not args.xenium_ranger_dir:
             parser.error("--xenium-ranger-dir is required in manual input model (specifying --csv-*, --ome-tifs)")
         if not os.path.exists(args.xenium_ranger_dir):
             parser.error(f"Directory not found: {args.xenium_ranger_dir} (--xenium-ranger-dir)")
-    else:
-        assert args.xenium_ranger_assets, "Provide --xenium-ranger-assets (or --out-dir) when using auto-detection mode"
-
-    # * load xenium_ranger/manual input
+    
     if args.load_xenium_ranger:
         if not args.xenium_ranger_dir:
             parser.error("--xenium-ranger-dir is required when --load-xenium-ranger is set")
@@ -301,7 +300,7 @@ def run_xenium(_args):
             prereq = [sge_assets] 
         
         # cmd and execution
-        stage_run_cartload2(cart_dir, fic_dir, cell_assets, background_assets, args, prereq)
+        stage_run_cartload2(cart_dir, fic_dir, sge_dir, cell_assets, background_assets, args, prereq)
         
     if args.upload_aws:
         # prerequisites

@@ -3,18 +3,6 @@ import pandas as pd
 from collections import defaultdict
 import math
 
-"""
-cartloader sge_adds_on \
-    --in-transcript /nfs/turbo/umms-leeju/nova/v2/analysis/n14-hm2tk-t07a-mouse-1bbd0/n14-hm2tk-t07a-mouse-1bbd0-mask-a3207/preprocess/n14-hm2tk-t07a-mouse-1bbd0-mask-a3207.transcripts.tsv.gz \
-    --out-feature /nfs/turbo/umms-leeju/nova/v2/analysis/n14-hm2tk-t07a-mouse-1bbd0/n14-hm2tk-t07a-mouse-1bbd0-mask-a3207/preprocess/n14-hm2tk-t07a-mouse-1bbd0-mask-a3207.feature2.tsv.gz \
-    --colname-feature-id gene_id --add-feature
-
-cartloader sge_adds_on \
-    --in-transcript /nfs/turbo/umms-leeju/nova/v2/analysis/n14-hm2tk-t07a-mouse-1bbd0/n14-hm2tk-t07a-mouse-1bbd0-mask-a3207/preprocess/n14-hm2tk-t07a-mouse-1bbd0-mask-a3207.transcripts.tsv.gz \
-    --out-minmax /nfs/turbo/umms-leeju/nova/v2/analysis/n14-hm2tk-t07a-mouse-1bbd0/n14-hm2tk-t07a-mouse-1bbd0-mask-a3207/preprocess/n14-hm2tk-t07a-mouse-1bbd0-mask-a3207.gn.raw.coordinate_minmax2.tsv\
-    --add-minmax --mu-scale 1000
-"""
-
 def parse_arguments(_args):
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", 
@@ -24,8 +12,8 @@ def parse_arguments(_args):
     # feature args
     parser.add_argument("--add-feature", action='store_true', help="Create a feature file based on the input file.")
     parser.add_argument("--out-feature", type=str, default=None, help="Path to output feature file.")
-    parser.add_argument('--colname-feature-name', type=str, default='gene', help='Feature name column (default: gene)')
-    parser.add_argument('--colname-feature-id', type=str, default=None, help='Feature ID column (default: None)')
+    parser.add_argument('--colname-feature-name', type=str, default='gene', help='Column name of feature name (default: gene)')
+    parser.add_argument('--colname-feature-id', type=str, default=None, help='Column name of feature ID')
     parser.add_argument("--colname-count", type=str, default="gn", help="Comma-separated column names for count (default: gn)")
     # minmax args
     parser.add_argument("--add-minmax", action='store_true', help="Create a minmax file based on the input file.")

@@ -14,10 +14,10 @@ def image_extract_ullr(_args):
     )
     parser.add_argument("--input", type=str, help="Input tif file.", required=True)
     parser.add_argument("--output", type=str, help="Output file.", required=True)
-    parser.add_argument("--x-offset", type=float, default=0, help="Value to add to the X coordinates (default: 0).")
-    parser.add_argument("--y-offset", type=float, default=0, help="Value to add to the Y coordinates (default: 0).")
+    parser.add_argument("--x-offset", type=float, default=0, help="Value to add to the X coordinates (default: 0)")
+    parser.add_argument("--y-offset", type=float, default=0, help="Value to add to the Y coordinates (default: 0)")
     parser.add_argument("--crop-by-minmax", action="store_true", help="Enable cropping using --minmax bounds.")
-    parser.add_argument("--minmax", type=str, help="Comma-separated list defining the cropping bounds as xmin,xmax,ymin,ymax.")
+    parser.add_argument("--minmax", type=str, help="Comma-separated list defining the cropping bounds as xmin,xmax,ymin,ymax")
     args= parser.parse_args(_args)
     
     with rasterio.open(args.input) as src:

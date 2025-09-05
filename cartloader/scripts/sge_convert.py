@@ -20,8 +20,8 @@ def parse_arguments(_args):
     #parser = argparse.ArgumentParser()
     # run params
     run_params = parser.add_argument_group("Run Options", "Run options.")
-    run_params.add_argument('--dry-run', action='store_true', default=False, help='Generate Makefile and print commands without executing (default: False)')
-    run_params.add_argument('--restart', action='store_true', default=False, help='Ignore existing outputs and re-run all steps (default: False)')
+    run_params.add_argument('--dry-run', action='store_true', default=False, help='Generate Makefile and print commands without executing')
+    run_params.add_argument('--restart', action='store_true', default=False, help='Ignore existing outputs and re-run all steps')
     run_params.add_argument('--n-jobs', '-j', type=int, default=1, help='Number of parallel jobs to run (default: 1)')
     run_params.add_argument('--makefn', type=str, default="sge_convert.mk", help='File name of Makefile to write (default: sge_convert.mk)')
     run_params.add_argument('--threads', type=int, default=1, help='Maximum number of threads per job (default: 1)')
@@ -30,78 +30,73 @@ def parse_arguments(_args):
     inout_params = parser.add_argument_group("Input/Output Parameters", "Input/output paths and core settings.")
     inout_params.add_argument('--platform', type=str, choices=["10x_visium_hd", "seqscope", "10x_xenium", "bgi_stereoseq", "cosmx_smi", "vizgen_merscope", "pixel_seq", "nova_st", "generic"], required=True, help='Input platform. Use "generic" for CSV/TSV from unsupported or custom sources')
     # - input
-    inout_params.add_argument('--in-json', type=str, default=None, help='Path to input manifest JSON (10x_xenium, 10x_visium_hd). If set, omits --in-parquet/--in-csv/--pos-parquet/--scale-json (default: None)')
-    inout_params.add_argument('--in-mex', type=str, default=os.getcwd(), help='Path to input MEX directory (10x Visium HD, SeqScope) (default: current working directory)') # 10x_visium_hd, seqscope 
-    inout_params.add_argument('--in-csv', type=str, default=None, help='Path to input CSV/TSV (10x Xenium, BGI Stereo-seq, CosMx SMI, Vizgen MERSCOPE, Pixel-seq, Nova-ST) (default: None)') 
-    inout_params.add_argument('--in-parquet', type=str, default=None, help='Path to input transcript parquet (10x Xenium) (default: None)') 
+    inout_params.add_argument('--in-json', type=str, default=None, help='Path to input manifest JSON. If set, omits --in-parquet/--in-csv/--pos-parquet/--scale-json (platform: 10x_xenium, 10x_visium_hd)')
+    inout_params.add_argument('--in-mex', type=str, default=os.getcwd(), help='Path to input MEX directory (platform: 10x Visium HD, SeqScope; default: current working directory)') # 10x_visium_hd, seqscope 
+    inout_params.add_argument('--in-csv', type=str, default=None, help='Path to input CSV/TSV (platform: 10x Xenium, BGI Stereo-seq, CosMx SMI, Vizgen MERSCOPE, Pixel-seq, Nova-ST)') 
+    inout_params.add_argument('--in-parquet', type=str, default=None, help='Path to input transcript parquet (platform: 10x Xenium)') 
     # - additional pos
-    inout_params.add_argument('--pos-parquet', type=str, default=None, help='Path to position parquet for spatial coordinates (10x Visium HD) (default: None; typical: tissue_positions.parquet)') # 10x_visium_hd
+    inout_params.add_argument('--pos-parquet', type=str, default=None, help='Path to input position parquet providing spatial coordinates (platform: 10x Visium HD; typical: tissue_positions.parquet)') # 10x_visium_hd
     # - scaling
-    inout_params.add_argument('--scale-json', type=str, default=None, help='Path to scale JSON (10x Visium HD). If set, defaults --units-per-um from microns_per_pixel in this JSON file (default: None; typical: scalefactors_json.json)') 
+    inout_params.add_argument('--scale-json', type=str, default=None, help='Path to input scale JSON. If set, defaults --units-per-um from microns_per_pixel in this JSON file (platform: 10x Visium HD; typical: scalefactors_json.json)') 
     inout_params.add_argument('--units-per-um', type=float, default=1.00, help='Coordinate units per µm in inputs (default: 1.00). For 10x Visium HD, prefer --scale-json')  
     # - output
     inout_params.add_argument('--out-dir', type=str, required=True, help='Path to output directory for converted SGE, filtered SGE, visualizations, and Makefile')
     inout_params.add_argument('--out-transcript', type=str, default="transcripts.unsorted.tsv.gz", help='File name of output transcript-indexed SGE TSV under --out-dir (default: transcripts.unsorted.tsv.gz)')
     inout_params.add_argument('--out-feature', type=str, default="feature.clean.tsv.gz", help='File name of output compressed per-gene UMI count TSV under --out-dir (default: feature.clean.tsv.gz)')
     inout_params.add_argument('--out-minmax', type=str, default="coordinate_minmax.tsv", help='File name of output coordinate min/max TSV under --out-dir (default: coordinate_minmax.tsv)')
-    # - density filtering
-    inout_params.add_argument('--filter-by-density', action='store_true', default=False, help='Enable density-based filtering (default: False). See "Density/Polygon Filtering Auxiliary Parameters"')
-    inout_params.add_argument('--out-filtered-prefix', type=str, default="filtered", help='Prefix for filtered outputs and images under --out-dir (default: filtered)')
-    # - sge visualization
-    inout_params.add_argument('--sge-visual', action='store_true', default=False, help='Generate SGE visualization; if filtering is enabled, visualize both (default: False)')
-    inout_params.add_argument('--out-xy', type=str, default="xy.png", help='File name of visualization image under --out-dir (default: xy.png). Filtered image is prefixed by --out-filtered-prefix')
-    # - sge json
     inout_params.add_argument('--out-json',  type=str, default=None, help='Path to output JSON manifest of SGE paths (default: <out-dir>/sge_assets.json)')
 
     # AUX input MEX params
     aux_in_mex_params = parser.add_argument_group("IN-MEX Auxiliary Parameters", "10x Visium HD and SeqScope: auxiliary inputs")
-    aux_in_mex_params.add_argument('--mex-bcd', type=str, default="barcodes.tsv.gz", help='File name of barcode (default: barcodes.tsv.gz)')
-    aux_in_mex_params.add_argument('--mex-ftr', type=str, default="features.tsv.gz", help='File name of feature (default: features.tsv.gz)')
-    aux_in_mex_params.add_argument('--mex-mtx', type=str, default="matrix.mtx.gz", help='File name of the matrix (default: matrix.mtx.gz)')
-    aux_in_mex_params.add_argument('--icols-mtx', type=int, default=1, help='1-based indices for the target genomic feature among count columns in --mex-mtx(default: 1). For example, when focusing on "gn" of SeqScope datasets, use --icols-mtx 1.')
-    aux_in_mex_params.add_argument('--icol-ftr-id', type=int, default=1, help='1-based column index of feature ID in --mex-ftr  (default: 1)')
+    aux_in_mex_params.add_argument('--mex-bcd', type=str, default="barcodes.tsv.gz", help='File name of barcode in --in-mex (default: barcodes.tsv.gz)')
+    aux_in_mex_params.add_argument('--mex-ftr', type=str, default="features.tsv.gz", help='File name of feature in --in-mex (default: features.tsv.gz)')
+    aux_in_mex_params.add_argument('--mex-mtx', type=str, default="matrix.mtx.gz", help='File name of matrix in --in-mex (default: matrix.mtx.gz)')
+    aux_in_mex_params.add_argument('--icols-mtx', type=int, default=1, help='1-based indices for the target genomic feature among count columns in --mex-mtx (default: 1). For example, when focusing on "gn" of SeqScope datasets, use --icols-mtx 1.')
+    aux_in_mex_params.add_argument('--icol-ftr-id', type=int, default=1, help='1-based column index of feature ID in --mex-ftr (default: 1)')
     aux_in_mex_params.add_argument('--icol-ftr-name', type=int, default=2, help='1-based column index of feature name in --mex-ftr (default: 2)')
-    aux_in_mex_params.add_argument('--icol-bcd-barcode', type=int, default=1, help='(seqscope only) 1-based column index of barcode in --mex-bcd (default: 1)')
-    aux_in_mex_params.add_argument('--icol-bcd-x', type=int, default=6, help='(seqscope only) 1-based column index of x coordinate in --mex-bcd (default: 6)')
-    aux_in_mex_params.add_argument('--icol-bcd-y', type=int, default=7, help='(seqscope only) 1-based column index of y coordinate in --mex-bcd (default: 7)')
-    aux_in_mex_params.add_argument('--pos-colname-barcode', type=str, default='barcode', help='(10x_visium_hd only) Column name for barcode in --pos-parquet (default: barcode)')
-    aux_in_mex_params.add_argument('--pos-colname-x', type=str, default='pxl_row_in_fullres', help='(10x_visium_hd only) Column name for X coordinates in --pos-parquet (default: pxl_row_in_fullres)')
-    aux_in_mex_params.add_argument('--pos-colname-y', type=str, default='pxl_col_in_fullres', help='(10x_visium_hd only) Column name for Y coordinates in --pos-parquet (default: pxl_col_in_fullres)')
-    aux_in_mex_params.add_argument('--pos-delim', type=str, default=',', help='(10x_visium_hd only) Delimiter in --pos-parquet (default: ",")')
-    #aux_in_mex_params.add_argument('--print-feature-id', action='store_true', help='Print feature ID in the output (default: False)')
-    aux_in_mex_params.add_argument('--allow-duplicate-gene-names', action='store_true', help='Allow duplicate gene names in the output (default: False)')
-    aux_in_mex_params.add_argument('--keep-mismatches', action='store_true', help='(seqscope only) For debugging purposes, keep mismatches in the output (default: False)')
+    aux_in_mex_params.add_argument('--icol-bcd-barcode', type=int, default=1, help='1-based column index of barcode in --mex-bcd (platform: SeqScope; default: 1)')
+    aux_in_mex_params.add_argument('--icol-bcd-x', type=int, default=6, help='1-based column index of x coordinate in --mex-bcd (platform: SeqScope; default: 6)')
+    aux_in_mex_params.add_argument('--icol-bcd-y', type=int, default=7, help='1-based column index of y coordinate in --mex-bcd (platform: SeqScope; default: 7)')
+    aux_in_mex_params.add_argument('--pos-colname-barcode', type=str, default='barcode', help='Column name for barcode in --pos-parquet (platform: 10x Visium HD; default: barcode)')
+    aux_in_mex_params.add_argument('--pos-colname-x', type=str, default='pxl_row_in_fullres', help='Column name for X coordinates in --pos-parquet (platform: 10x Visium HD; default: pxl_row_in_fullres)')
+    aux_in_mex_params.add_argument('--pos-colname-y', type=str, default='pxl_col_in_fullres', help='Column name for Y coordinates in --pos-parquet (platform: 10x Visium HD; default: pxl_col_in_fullres)')
+    aux_in_mex_params.add_argument('--pos-delim', type=str, default=',', help='Delimiter in --pos-parquet (platform: 10x Visium HD; default: ",")')
+    #aux_in_mex_params.add_argument('--print-feature-id', action='store_true', help='Print feature ID in the output')
+    aux_in_mex_params.add_argument('--allow-duplicate-gene-names', action='store_true', help='Allow duplicate gene names in the output')
+    aux_in_mex_params.add_argument('--keep-mismatches', action='store_true', help='For debugging purposes, keep mismatches in the output (platform: SeqScope)')
 
     # AUX input csv params
     aux_in_csv_params = parser.add_argument_group("IN-CSV Auxiliary Parameters", "CSV/TSV inputs for Xenium/Stereo-seq/CosMx/MERSCOPE/Pixel-seq/Nova-ST")
-    aux_in_csv_params.add_argument('--csv-comment', action='store_true', help="Enable to skip lines starts with # in the CSV file (default: False for 10x_xenium, bgi_stereoseq, cosmx_smi, vizgen_merscope, and pixel_seq; True for nova_st)")
-    aux_in_csv_params.add_argument('--csv-delim', type=str, default=None, help='Delimiter in --in-csv (default: "," for 10x_xenium, cosmx_smi, and vizgen_merscope; "\\t" for bgi_stereoseq, pixel_seq, and nova_st) ')
-    aux_in_csv_params.add_argument('--csv-colname-x', type=str, default=None, help='Column name for X coordinates in --in-csv (default: x_location for 10x_xenium; x for bgi_stereoseq; x_local_px for cosmx_smi; global_x for vizgen_merscope; xcoord for pixel_seq; x for nova_st)')
-    aux_in_csv_params.add_argument('--csv-colname-y', type=str, default=None, help='Column name for Y coordinates in --in-csv (default: y_location for 10x_xenium; y for bgi_stereoseq; y_local_px for cosmx_smi; global_y for vizgen_merscope; ycoord for pixel_seq; y for nova_st)')
-    aux_in_csv_params.add_argument('--csv-colname-count', type=str, default=None, help='Column name for expression count in --in-csv. If not provided, a count of 1 will be added for a feature in a pixel (default: MIDCounts for bgi_stereoseq; MIDCount for nova_st; None for the rest platforms).')
-    aux_in_csv_params.add_argument('--csv-colname-feature-name', type=str, default=None, help='Column name for gene name in --in-csv (default: feature_name for 10x_xenium; geneID for bgi_stereoseq; target for cosmx_smi; gene for vizgen_merscope; geneName for pixel_seq; geneID for nova_st)')
-    # aux_in_csv_params.add_argument('--csv-colname-feature-id', type=str, default=None, help='Column name for gene id (default: None)')
-    aux_in_csv_params.add_argument('--csv-colnames-others', nargs='*', default=[], help='Columns names to keep in --in-csv (e.g., cell_id, overlaps_nucleus) (default: None)')
-    aux_in_csv_params.add_argument('--csv-colname-phredscore', type=str, default=None, help='Column name for Phred-scaled quality value (Q-Score) estimating the probability of incorrect call (default: qv for 10x_xenium and None for the rest platforms)') # qv
+    aux_in_csv_params.add_argument('--csv-comment', action='store_true', help="Enable to skip lines starts with # in the CSV file (default: False for 10x_xenium, bgi_stereoseq, cosmx_smi, vizgen_merscope, and pixel_seq, True for nova_st)")
+    aux_in_csv_params.add_argument('--csv-delim', type=str, default=None, help='Delimiter in --in-csv (default: "," for 10x_xenium, cosmx_smi, and vizgen_merscope, "\\t" for bgi_stereoseq, pixel_seq, and nova_st) ')
+    aux_in_csv_params.add_argument('--csv-colname-x', type=str, default=None, help='Column name for X coordinates in --in-csv (default: x_location for 10x_xenium, x for bgi_stereoseq, x_local_px for cosmx_smi, global_x for vizgen_merscope, xcoord for pixel_seq, x for nova_st)')
+    aux_in_csv_params.add_argument('--csv-colname-y', type=str, default=None, help='Column name for Y coordinates in --in-csv (default: y_location for 10x_xenium, y for bgi_stereoseq, y_local_px for cosmx_smi, global_y for vizgen_merscope, ycoord for pixel_seq, y for nova_st)')
+    aux_in_csv_params.add_argument('--csv-colname-count', type=str, default=None, help='Column name for expression count in --in-csv. If not provided, a count of 1 will be added for a feature in a pixel (default: MIDCounts for bgi_stereoseq, MIDCount for nova_st, None for the rest platforms).')
+    aux_in_csv_params.add_argument('--csv-colname-feature-name', type=str, default=None, help='Column name for gene name in --in-csv (default: feature_name for 10x_xenium, geneID for bgi_stereoseq, target for cosmx_smi, gene for vizgen_merscope, geneName for pixel_seq, geneID for nova_st)')
+    # aux_in_csv_params.add_argument('--csv-colname-feature-id', type=str, default=None, help='Column name for gene id')
+    aux_in_csv_params.add_argument('--csv-colnames-others', nargs='*', default=[], help='Columns names to keep in --in-csv (e.g., cell_id, overlaps_nucleus)')
+    aux_in_csv_params.add_argument('--csv-colname-phredscore', type=str, default=None, help='Column name for Phred-scaled quality value in --in-csv. This is also named as Q-Score, which estimates the probability of incorrect call (default: qv for 10x_xenium and None for the rest platforms)') # qv
     aux_in_csv_params.add_argument('--min-phred-score', type=float, default=None, help='Phred-scaled quality score cutoff (default: 20 for 10x_xenium and None for the rest platforms).')
-    #aux_in_csv_params.add_argument('--add-molecule-id', action='store_true', default=False, help='If enabled, a column of "molecule_id" will be added to the output file to track the index of the original input will be stored in (default: False).')
+    #aux_in_csv_params.add_argument('--add-molecule-id', action='store_true', default=False, help='If enabled, a column of "molecule_id" will be added to the output file to track the index of the original input will be stored in.')
     
     # AUX output params
-    aux_out_params = parser.add_argument_group("Output Auxiliary Parameters", "Output formatting options")
-    aux_out_params.add_argument('--precision-um', type=int, default=2, help='Precision for transcript coordinates. Set it to 0 to round to integer (default: 2)')
-    aux_out_params.add_argument('--colname-x', type=str, default='X', help='Column name for X (default: X)')
-    aux_out_params.add_argument('--colname-y', type=str, default='Y', help='Column name for Y (default: Y)')
-    aux_out_params.add_argument('--colname-count', type=str, default='count', help='Comma-separated column names for count (default: count)')
-    aux_out_params.add_argument('--colname-feature-name', type=str, default='gene', help='Column name for gene name (default: gene)')
-    # aux_out_params.add_argument('--colname-feature-id', type=str, default=None, help='Column name for gene ID. Required only when --csv-colname-feature-id or --print-feature-id is applied (default: None)') 
+    aux_out_params = parser.add_argument_group("Output Auxiliary Parameters")
+    aux_out_params.add_argument('--precision-um', type=int, default=2, help='Precision for transcript coordinates in the output. Set it to 0 to round to integer (default: 2)')
+    aux_out_params.add_argument('--colname-x', type=str, default='X', help='Column name for X in the output (default: X)')
+    aux_out_params.add_argument('--colname-y', type=str, default='Y', help='Column name for Y in the output(default: Y)')
+    aux_out_params.add_argument('--colname-count', type=str, default='count', help='Comma-separated column names for count in the output (default: count)')
+    aux_out_params.add_argument('--colname-feature-name', type=str, default='gene', help='Column name for gene name in the output (default: gene)')
+    # aux_out_params.add_argument('--colname-feature-id', type=str, default=None, help='Column name for gene ID. Required only when --csv-colname-feature-id or --print-feature-id is applied') 
 
     # AUX gene-filtering params
-    aux_ftrfilter_params = parser.add_argument_group("Feature Filtering Auxiliary Parameters", "Regex-based gene/feature filters")
-    aux_ftrfilter_params.add_argument('--include-feature-regex', type=str, default=None, help='A regex pattern of feature/gene names to be included (default: None)')
-    aux_ftrfilter_params.add_argument('--exclude-feature-regex', type=str, default=None, help='A regex pattern of feature/gene names to be excluded (default: "^(BLANK_|DeprecatedCodeword_|NegCon|UnassignedCodeword_)" for 10_xenium, None for the rest)')
+    aux_ftrfilter_params = parser.add_argument_group("Feature Filtering Parameters")
+    aux_ftrfilter_params.add_argument('--include-feature-regex', type=str, default=None, help='A regex pattern of feature/gene names to be included')
+    aux_ftrfilter_params.add_argument('--exclude-feature-regex', type=str, default=None, help='A regex pattern of feature/gene names to be excluded (default: "^(BLANK_|Blank-|DeprecatedCodeword_|NegCon|UnassignedCodeword_)" for 10_xenium, None for the rest)')
 
     # AUX polygon-filtering params
-    aux_polyfilter_params = parser.add_argument_group('Density/Polygon Filtering Auxiliary Parameters', 'Options for density-based polygon filters')
+    aux_polyfilter_params = parser.add_argument_group('Density/Polygon Filtering Parameters')
+    aux_polyfilter_params.add_argument('--filter-by-density', action='store_true', default=False, help='Enable density-based filtering')
+    aux_polyfilter_params.add_argument('--out-filtered-prefix', type=str, default="filtered", help='Prefix for filtered outputs and images under --out-dir (default: filtered)')
     # genomic feature, gene_header and count_header will be automatically based on the --colname-feature-name, --colname-feature-id and --colnames-count
     aux_polyfilter_params.add_argument('--radius', type=int, default=15, help='Radius for the polygon area calculation (default: 15)')
     aux_polyfilter_params.add_argument('--quartile', type=int, default=2, help='Quartile for the polygon area calculation (default: 2)')
@@ -109,19 +104,21 @@ def parse_arguments(_args):
     aux_polyfilter_params.add_argument('--polygon-min-size', type=int, default=500, help='Minimum polygon size (default: 500)')
 
     # AUX visualization params
-    aux_visual_params = parser.add_argument_group("North-up Auxiliary Parameters", "Options for north-up visualization (optional; requires --sge-visual)")
-    aux_visual_params.add_argument('--north-up', action='store_true', default=False, help='Enable to visualize SGE in a tif image north-up (default: False).')
-    aux_visual_params.add_argument('--out-northup-tif', type=str, default="xy_northup.tif", help='File name of the output SGE visualization after north-up orientation (default: xy_northup.tif).')
-    aux_visual_params.add_argument('--srs', type=str, default='EPSG:3857', help='Spatial reference system (default: EPSG:3857)')
-    aux_visual_params.add_argument('--resample', type=str, default='cubic', help='Resampling method (default: cubic). Options: near, bilinear, cubic, etc.')
+    aux_visual_params = parser.add_argument_group("Visualization Parameters")
+    aux_visual_params.add_argument('--sge-visual', action='store_true', default=False, help='Generate SGE visualization; if filtering is enabled, visualize both. See "North-up Auxiliary Parameters"')
+    aux_visual_params.add_argument('--north-up', action='store_true', default=False, help='Enable to visualize SGE in a tif image north-up.')
+    aux_visual_params.add_argument('--out-xy', type=str, default="xy.png", help='File name of output visualization image under --out-dir (default: xy.png). Filtered image is prefixed by --out-filtered-prefix')
+    aux_visual_params.add_argument('--out-northup-tif', type=str, default="xy_northup.tif", help='File name of output SGE visualization after north-up orientation under --out-dir (default: xy_northup.tif).')
+    aux_visual_params.add_argument('--srs', type=str, default='EPSG:3857', help='Spatial reference system (used with --north-up; default: EPSG:3857)')
+    aux_visual_params.add_argument('--resample', type=str, default='cubic', help='Resampling method (used with --north-up; options: near, bilinear, cubic, etc; default: cubic).')
 
     # env params
     env_params = parser.add_argument_group("ENV Parameters", "Paths to external tools")
     env_params.add_argument('--gzip', type=str, default="gzip", help='Path to gzip binary (default: gzip). For speed, consider "pigz -p 4"')
     env_params.add_argument('--spatula', type=str, default="spatula", help='Path to spatula binary (default: spatula)')
-    env_params.add_argument('--parquet-tools', type=str, default="parquet-tools", help='Path to parquet-tools (used with --in-parquet) (default: parquet-tools)')
-    env_params.add_argument('--gdal_translate', type=str, default=f"gdal_translate", help='Path to gdal_translate (used with --north-up) (default: gdal_translate)')
-    env_params.add_argument('--gdalwarp', type=str, default=f"gdalwarp", help='Path to gdalwarp (used with --north-up) (default: gdalwarp)')
+    env_params.add_argument('--parquet-tools', type=str, default="parquet-tools", help='Path to parquet-tools (used with --in-parquet; default: parquet-tools)')
+    env_params.add_argument('--gdal_translate', type=str, default=f"gdal_translate", help='Path to gdal_translate (used with --north-up; default: gdal_translate)')
+    env_params.add_argument('--gdalwarp', type=str, default=f"gdalwarp", help='Path to gdalwarp (used with --north-up; default: gdalwarp)')
  
     if len(_args) == 0:
         parser.print_help()
@@ -383,7 +380,7 @@ def sge_convert(_args):
             #   NegControlCodeword_*
             #   NegControlProbe_*
             #   UnassignedCodeword_*
-            args.exclude_feature_regex = "^(BLANK_|DeprecatedCodeword_|NegCon|UnassignedCodeword_)"
+            args.exclude_feature_regex = "^(BLANK_|Blank-|DeprecatedCodeword_|NegCon|UnassignedCodeword_)"
             print(f"Using --exclude-feature-regex: {args.exclude_feature_regex }")
     
     # mm

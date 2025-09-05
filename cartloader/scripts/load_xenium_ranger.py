@@ -123,7 +123,7 @@ def load_xenium_ranger(_args):
     inout_params.add_argument('--in-dir', type=str, required=True, help='Path to input directory containing Xenium Ranger outputs')
     inout_params.add_argument('--out-json', type=str, required=True, help='Path to output JSON manifest to write')
     inout_params.add_argument('--unzip-dir', type=str, help='Path to directory for decompressing archives found under --in-dir (defaults to --in-dir)')
-    inout_params.add_argument('--overwrite',  action='store_true', default=False, help='Overwrite existing outputs if present (default: False)')
+    inout_params.add_argument('--overwrite',  action='store_true', default=False, help='Overwrite existing outputs if present')
     args = parser.parse_args(_args)
 
     assert os.path.exists(args.in_dir), f"Directory not found: {args.in_dir} (--in-dir)"

@@ -27,8 +27,8 @@ def image_stitch(_args):
         """
     )
     run_params = parser.add_argument_group("Run Options", "Run options")
-    run_params.add_argument('--dry-run', action='store_true', default=False, help='Simulate the process without executing commands (default: False)')
-    run_params.add_argument('--restart', action='store_true', default=False, help='Ignore all intermediate files and start from the beginning (default: False)')
+    run_params.add_argument('--dry-run', action='store_true', default=False, help='Simulate the process without executing commands')
+    run_params.add_argument('--restart', action='store_true', default=False, help='Ignore all intermediate files and start from the beginning')
     run_params.add_argument('--n-jobs', '-j', type=int, default=1, help='Number of jobs (processes) to run in parallel (default: 1)')
     run_params.add_argument('--makefn', type=str, default=None, help='Makefile name. By default, it will be named as image_stitch_<filename>.mk based on the output file name.')
     
@@ -41,7 +41,7 @@ def image_stitch(_args):
                                                                                 "<vertical_flip> and <horizontal_flip> are booleans indicating if the image should be flipped vertically or horizontally.")
     inout_params.add_argument("--output", type=str, help="Path to the output stitched TIFF file.")
     inout_params.add_argument("--in-offsets", type=str, default=None, help="Path to the offsets file. Must contain columns: row, col, x_offset, y_offset, and units_per_um.")
-    inout_params.add_argument("--crop-tile-by-minmax", action='store_true', default=False, help="Enable cropping of tiles using min/max bounds (default: False).")
+    inout_params.add_argument("--crop-tile-by-minmax", action='store_true', default=False, help="Enable cropping tiles using min/max bounds (default: False).")
     inout_params.add_argument("--in-minmax", type=str, default=None, help="Required if --crop-tile-by-minmax is set. Path to the input min/max file with columns: row, col, global_xmin_um, global_ymin_um, global_xmax_um, global_ymax_um.")
     inout_params.add_argument("--downsize", action='store_true', default=False, help="Enable Downsizing the stitched image for testing purposes (default: False).")
     inout_params.add_argument("--downsize-prop", type=float, default=0.25, help="Proportion to downsize the image by (default: 0.25).")

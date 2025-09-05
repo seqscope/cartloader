@@ -1,4 +1,4 @@
-import sys, os, argparse, logging, subprocess, inspect, re
+import sys, os, argparse, logging, subprocess, inspect, re, shlex
 from pathlib import Path
 import hashlib
 from typing import Iterable, List, Optional
@@ -146,7 +146,7 @@ def stage_import_images(cart_dir, args, ranger_assets, use_json, tif_paths, cata
             f"--colorize \"{image_color}\"",
             f"--upper-thres-quantile 0.95",
             f"--lower-thres-quantile 0.5",
-            f"--transparent-below {args.transparent_below}" if args.transparent_below else "",
+            f"--transparent-below {args.transparent_below}" if args.transparent_below is not None else "",
             f"--gdal_translate {args.gdal_translate}" if args.gdal_translate else "",
         ])
         import_image_cmd = add_param_to_cmd(import_image_cmd, args, ["pmtiles", "gdaladdo"])
@@ -207,7 +207,7 @@ def stage_run_ficture2(fic_dir, sge_assets, args, prereq):
 #  =============
 #   cartload2
 #  =============
-def stage_run_cartload2(cart_dir, fic_dir, cell_assets, background_assets, args, prereq):
+def stage_run_cartload2(cart_dir, fic_dir, sge_dir, cell_assets, background_assets, args, prereq):
 
     # Banner
     print("=" * 10, flush=True)
@@ -240,12 +240,12 @@ def stage_run_cartload2(cart_dir, fic_dir, cell_assets, background_assets, args,
         f"--out-dir {cart_dir}",
         f"--fic-dir {fic_dir}" if args.run_ficture2 else "",
         f"--ext-fic-dir {args.ext_fic_dir}" if args.import_ext_ficture2 else "",
-        f"--sge-dir {args.sge_dir}" if not (args.run_ficture2 or args.import_ext_ficture2) else "",
+        f"--sge-dir {sge_dir}" if not (args.run_ficture2 or args.import_ext_ficture2) else "",
         f"--cell-assets {cell_assets}" if args.import_cells else "",
         f"--background-assets {' '.join(background_assets)}" if background_assets else "",
         f"--id {args.id}",
-        f"--title {args.title}" if args.title else "",
-        f"--desc {args.desc}" if args.desc else "",
+        f"--title {shlex.quote(args.title)}" if args.title else "",
+        f"--desc {shlex.quote(args.desc)}" if args.desc else "",
         f"--gdal_translate {args.gdal_translate}" if args.gdal_translate else "",
     ])
 
@@ -311,8 +311,8 @@ def stage_upload_zenodo(cart_dir, args, prereq, flag):
         f"--upload-method catalog",
         f"--zenodo-token {args.zenodo_token}",
         f"--zenodo-deposition-id {args.zenodo_deposition_id}" if args.zenodo_deposition_id else "",
-        f"--title {args.zenodo_title}" if args.zenodo_title else "",
-        f"--creators {args.creators}" if args.creators else "",
+        f"--title {shlex.quote(args.zenodo_title)}" if args.zenodo_title else "",
+        ("--creators " + " ".join(shlex.quote(c) for c in args.creators)) if args.creators else "",
         f"--upload-type dataset" if not args.zenodo_deposition_id else "", # add type for new deposition
         f"--overwrite" if args.restart else ""
     ])

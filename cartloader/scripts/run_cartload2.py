@@ -14,25 +14,29 @@ def parse_arguments(_args):
     """
     repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-    parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", description="Build resources for CartoScope, joining the pixel-level results from FICTURE")
+    parser = argparse.ArgumentParser(
+        prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}",
+        description="Package SGE and FICTURE outputs into PMTiles and a catalog for CartoScope (ficture2 → joins → pmtiles → catalog)"
+    )
 
-    run_params = parser.add_argument_group("Run Options", "Run options for FICTURE commands")
-    run_params.add_argument('--dry-run', action='store_true', default=False, help='Dry run. Generate only the Makefile without running it')
-    run_params.add_argument('--restart', action='store_true', default=False, help='Restart the run. Ignore all intermediate files and start from the beginning')
-    run_params.add_argument('--n-jobs', type=int, default=1, help='Number of jobs (processes) to run in parallel')
-    run_params.add_argument('--makefn', type=str, default="run_cartload2.mk", help='The name of the Makefile to generate')
-    run_params.add_argument('--threads', type=int, default=4, help='Maximum number of threads per job (for tippecanoe)')
+    run_params = parser.add_argument_group("Run Options", "Execution controls for generating and running the Makefile")
+    run_params.add_argument('--dry-run', action='store_true', default=False, help='Generate Makefile and print commands without executing')
+    run_params.add_argument('--restart', action='store_true', default=False, help='Ignore existing outputs and re-run all steps')
+    run_params.add_argument('--n-jobs', type=int, default=1, help='Number of parallel jobs to run (default: 1)')
+    run_params.add_argument('--makefn', type=str, default="sge_convert.mk", help='File name of Makefile to write (default: sge_convert.mk)')
+    run_params.add_argument('--threads', type=int, default=4, help='Maximum number of threads per job for tippecanoe')
 
-    inout_params = parser.add_argument_group("Input/Output Parameters", "Input/output directory/files.")
-    inout_params.add_argument('--fic-dir', type=str, required=True, help='Input directory containing FICTURE output')
-    inout_params.add_argument('--out-dir', type=str, required=True, help='Output directory')
+    inout_params = parser.add_argument_group("Input/Output Parameters", "Input and output paths")
+    inout_params.add_argument('--fic-dir', type=str, required=True, help='Directory containing FICTURE outputs (models, decodes, metadata)')
+    inout_params.add_argument('--out-dir', type=str, required=True, help='Output root directory (PMTiles, assets JSON, and catalog YAML)')
+    inout_params.add_argument('--background-assets', type=str, nargs="+", help='One of more background asset in the formal of id:path or id1:id2:path')
 
-    key_params = parser.add_argument_group("Key Parameters", "Key parameters frequently used by users")
-    key_params.add_argument('--id', type=str, required=True, help='The identifier of the output assets')
-    key_params.add_argument('--title', type=str, help='The title of the output assets')
-    key_params.add_argument('--desc', type=str, help='The description of output assets')
-    key_params.add_argument('--log', action='store_true', default=False, help='Write log to file')
-    key_params.add_argument('--log-suffix', type=str, default=".log", help='The suffix for the log file (appended to the output directory). Default: .log')
+    key_params = parser.add_argument_group("Key Parameters", "Metadata and logging")
+    key_params.add_argument('--id', type=str, required=True, help='Identifier for the output assets; no whitespace; prefer "-" over "_"')
+    key_params.add_argument('--title', type=str, help='Human-readable title for the output assets. Quote if contains spaces, e.g., "Example Title"')
+    key_params.add_argument('--desc', type=str, help='Description of the output assets. Quote if contains spaces, e.g., "Example short description"')
+    key_params.add_argument('--log', action='store_true', default=False, help='Write logs to a file under the output directory')
+    key_params.add_argument('--log-suffix', type=str, default=".log", help='Suffix for the log filename; final path is <out_dir>_cartload<suffix> (default: .log)')
 
     env_params = parser.add_argument_group("Env Parameters", "Environment parameters, e.g., tools.")
     env_params.add_argument('--gzip', type=str, default="gzip", help='Path to gzip binary. For faster processing, use "pigz -p4"')
@@ -42,27 +46,26 @@ def parse_arguments(_args):
     env_params.add_argument('--tippecanoe', type=str, default=f"tippecanoe", help='Path to tippecanoe binary') # default=f"{repo_dir}/submodules/tippecanoe/tippecanoe", 
     env_params.add_argument('--spatula', type=str, default=f"spatula",  help='Path to spatula binary') # default=f"{repo_dir}/submodules/spatula/bin/spatula",
 
-    aux_params = parser.add_argument_group("Auxiliary Parameters", "Auxiliary parameters (using default is recommended)")
-    aux_params.add_argument('--in-fic-params', type=str, default="ficture.params.json", help='File name of input YAML/JSON file containing both the SGE files and FICTURE parameters')
-    aux_params.add_argument('--out-fic-assets', type=str, default="ficture_assets.json", help='File name of output YAML/JSON file containing FICTURE output assets')
-    aux_params.add_argument('--out-catalog', type=str, default="catalog.yaml", help='File name of output catalog YAML file')
-    aux_params.add_argument('--background-assets', type=str, nargs="+", help='One or more JSON/YAML files containing background assets in the form of [id:path] or [id1:id2:path]')
-    aux_params.add_argument('--rename-x', type=str, default='x:lon', help='tippecanoe parameters to rename X axis')  
-    aux_params.add_argument('--rename-y', type=str, default='y:lat', help='tippecanoe parameters to rename Y axis')  
-    aux_params.add_argument('--colname-feature', type=str, default='gene', help='Input/output Column name for gene name (default: gene)')
-    aux_params.add_argument('--colname-count', type=str, default='count', help='Column name for feature counts')
-    aux_params.add_argument('--out-molecules-id', type=str, default='genes', help='Name prefix of output molecules PMTiles files. No directory path should be included')
-    aux_params.add_argument('--max-join-dist-um', type=float, default=0.1, help='Maximum distance allowed to join molecules and pixel in micrometers')
-    aux_params.add_argument('--join-tile-size', type=float, default=500, help='Tile size for joining molecules and pixel in micrometers')
-    aux_params.add_argument('--max-tile-bytes', type=int, default=5000000, help='Maximum bytes for each tile in PMTiles')
-    aux_params.add_argument('--max-feature-counts', type=int, default=500000, help='Max feature limits per tile in PMTiles')
-    aux_params.add_argument('--preserve-point-density-thres', type=int, default=1024, help='Threshold for preserving point density in PMTiles')
-    aux_params.add_argument('--keep-intermediate-files', action='store_true', default=False, help='Keep intermediate output files')
-    aux_params.add_argument('--skip-raster', action='store_true', default=False, help='Skip processing raster files, removing dependency to gdal, go-pmtiles')
-    aux_params.add_argument('--tmp-dir', type=str, help='Temporary directory to be used (default: {out-dir}/tmp')
-    aux_params.add_argument('--bin-count', type=int, default=50, help='Number of bins for splitting the input molecules')
-    aux_params.add_argument('--transparent-below', type=int,  help='Threshold for transparent pixels below this value for dark background image (default: 0)')
-    aux_params.add_argument('--transparent-above', type=int,  help='Threshold for transparent pixels above this value for light background image (default: 255)')
+    aux_params = parser.add_argument_group("Auxiliary Parameters", "Advanced settings; defaults work for most cases")
+    aux_params.add_argument('--in-fic-params', type=str, default="ficture.params.json", help='File name of YAML/JSON file with SGE paths and FICTURE parameters under --fic-dir (default: ficture.params.json)')
+    aux_params.add_argument('--out-fic-assets', type=str, default="ficture_assets.json", help='File name of output JSON/YAML for FICTURE asset metadata under --out-dir (default: ficture_assets.json)')
+    aux_params.add_argument('--out-catalog', type=str, default="catalog.yaml", help='File name of output catalog YAML under --out-dir (default: catalog.yaml)')
+    aux_params.add_argument('--rename-x', type=str, default='x:lon', help='Column rename mapping for X axis in tippecanoe, format old:new (default: x:lon)')  
+    aux_params.add_argument('--rename-y', type=str, default='y:lat', help='Column rename mapping for Y axis in tippecanoe, format old:new (default: y:lat)')  
+    aux_params.add_argument('--colname-feature', type=str, default='gene', help='Column name for feature (default: gene)')
+    aux_params.add_argument('--colname-count', type=str, default='count', help='Column name for UMI counts (default: count)')
+    aux_params.add_argument('--out-molecules-id', type=str, default='genes', help='Base name for output molecules PMTiles files (no directory)')
+    aux_params.add_argument('--max-join-dist-um', type=float, default=0.1, help='Max distance (in µm) to associate molecules with decoded pixels (default: 0.1)')
+    aux_params.add_argument('--bin-count', type=int, default=50, help='Number of bins when splitting input molecules (default: 50)')
+    aux_params.add_argument('--join-tile-size', type=float, default=500, help='Tile size (in µm) when joining molecules with decoded pixels (default: 500)')
+    aux_params.add_argument('--max-tile-bytes', type=int, default=5000000, help='Maximum tile size in bytes for tippecanoe/PMTiles (default: 5000000)')
+    aux_params.add_argument('--max-feature-counts', type=int, default=500000, help='Maximum features per tile for tippecanoe/PMTiles (default: 500000)')
+    aux_params.add_argument('--preserve-point-density-thres', type=int, default=1024, help='Tippecanoe point-density preservation threshold (default: 1024)')
+    aux_params.add_argument('--keep-intermediate-files', action='store_true', default=False, help='Keep intermediate files instead of cleaning up')
+    aux_params.add_argument('--skip-raster', action='store_true', default=False, help='Skip raster image generation (no GDAL/go-pmtiles required)')
+    aux_params.add_argument('--tmp-dir', type=str, help='Temporary directory (default: <out_dir>/tmp)')
+    aux_params.add_argument('--transparent-below', type=int,  help='Set pixels below this value to transparent for dark background (optional)')
+    aux_params.add_argument('--transparent-above', type=int,  help='Set pixels above this value to transparent for light background (optional)')
     if len(_args) == 0:
         parser.print_help()
         sys.exit(1)
@@ -124,7 +127,7 @@ def run_cartload2(_args):
     # 2. Load FICTURE output metadata
     in_data = {}
     in_jsonf=f"{args.fic_dir}/{args.in_fic_params}"
-    print(in_jsonf)
+    logger.info(f"Loading FICTURE metadata: {in_jsonf}")
     in_data = load_file_to_dict(in_jsonf)
 
     ## sge 
@@ -164,7 +167,7 @@ def run_cartload2(_args):
     in_fic_params = in_data.get("train_params", [])
     #print(in_fic_params)
     if len(in_fic_params) == 0: ## parameters are empty
-        logging.error(f"The parameters are empty after loading {args.fic_dir}/{args.in_fic_params}")
+        logger.error(f"No training parameters found in {args.fic_dir}/{args.in_fic_params}")
 
     # create the output assets json
     out_fic_assets = ficture2_params_to_factor_assets(in_fic_params, args.skip_raster)
@@ -225,7 +228,7 @@ def run_cartload2(_args):
                 "out": f"{out_prefix}-factor-map.tsv"
             }
 
-        cmds = cmd_separator([], f"Converting LDA-trained factors {model_id} into PMTiles and copying relevant files..")
+        cmds = cmd_separator([], f"Converting LDA-trained factors {model_id} into PMTiles and copying relevant files.")
         
         prerequisites = []
         outfiles=[]
@@ -286,7 +289,7 @@ def run_cartload2(_args):
             join_pixel_tsvs.append(in_pixel_tsvf)
             join_pixel_ids.append(out_id)
 
-            cmds = cmd_separator([], f"Converting decoded factors {in_id} into PMTiles and copying relevant files..")
+            cmds = cmd_separator([], f"Converting decoded factors {in_id} into PMTiles and copying relevant files.")
             outfiles=[]
             if not args.skip_raster:
                 cmd = " ".join([
@@ -322,7 +325,7 @@ def run_cartload2(_args):
     ## Join pixel-level TSVs
     molecules_f = in_molecules
     if ( len(join_pixel_tsvs) > 0 ):
-        cmds = cmd_separator([], f"Pasting pixel-level TSVs")
+        cmds = cmd_separator([], f"Joining pixel-level TSVs")
         out_join_pixel_prefix = f"{args.out_dir}/transcripts_pixel_joined"
         # cmd = " ".join([
         #         f"'{args.spatula}'", "paste-pixel-tsv",
@@ -372,16 +375,16 @@ def run_cartload2(_args):
     cmds.append(cmd)
     mm.add_target(f"{out_molecules_prefix}_pmtiles_index.tsv", [molecules_f], cmds)
 
-    cmds = cmd_separator([], f"Finishing up for all conversions")
+    cmds = cmd_separator([], f"Finalizing all conversions")
     cmds.append(f"touch {args.out_dir}/ficture.done")
     mm.add_target(f"{args.out_dir}/ficture.done", train_targets, cmds)
 
     ## Write the output asset json for FICTURE output
-    logger.info("Writing a json file for expected FICTURE output assets")
+    logger.info("Writing FICTURE asset metadata JSON")
     write_dict_to_file(out_fic_assets, out_assets_f, check_equal=True)
 
     # 3. Create a yaml for all output assets
-    cmds = cmd_separator([], f"Writing a YAML file for all output assets")
+    cmds = cmd_separator([], f"Writing catalog YAML for all output assets")
     cmd = " ".join([
         "cartloader", "write_catalog_for_assets",
         "--sge-index", f"{out_molecules_prefix}_pmtiles_index.tsv", 
@@ -413,7 +416,7 @@ def run_cartload2(_args):
     mm.add_target(f"{out_catalog_f}", prerequisites_yaml, cmds)
 
     if len(mm.targets) == 0:
-        logging.error("There is no target to run. Please make sure that at least one run option was turned on")
+        logger.error("No tasks were generated. Check inputs and parameters.")
         sys.exit(1)
 
     ## write makefile
