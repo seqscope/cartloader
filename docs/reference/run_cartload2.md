@@ -6,18 +6,21 @@ Following spatial factor inference via FICTURE analysis, `cartloader` offers the
 
 ## Requirements
 
-- A completed FICTURE run (pixel-level decoding outputs) (from `run_ficture2`)
-- A metadata file describing the input-output structure (`ficture.params.json`)
+- A completed FICTURE run from [`run_ficture2`](./run_ficture2.md), including
+    - pixel-level decoding outputs 
+    - a metadata file describing the input-output structure (`ficture.params.json`)
 - Pre-installed CLI tools: `tippecanoe`, `gdal_translate`, `gdaladdo`, `pmtiles`, `spatula`, `gzip`
 
 ## Example Usage
 
 ```bash
+DATA_ID="dataset_id"               ## replace dataset_id with the id for your dataset
+
 cartloader run_cartload2 \
     --makefn run_cartload2.mk \
     --fic-dir /path/to/run_ficture2/results \
     --out-dir /path/to/output/directory \
-    --id dataset_id \                            ## replace dataset_id with the id for this dataset
+    --id ${DATA_ID} \
     --colname-count count \
     --n-jobs 20  \
     --threads 20 \
@@ -28,7 +31,7 @@ cartloader run_cartload2 \
 
 ## Actions
 
-Specifically, it will perform all the following steps:
+Specifically, `run_cartload2` performs all of the following steps:
 
 - Converts transcript-level SGE to raster-format PMTiles.
 - Converts topic proportions (.results.tsv.gz) into vector PMTiles for spatial factors.
@@ -39,7 +42,7 @@ Specifically, it will perform all the following steps:
 
 ## Parameters
 
-The following outlines the **minimum required parameters** for running spatial asset packaging. 
+The following outlines the **minimum required parameters**. 
 
 For auxiliary parameters, we recommend using the default values unless you possess a thorough understanding of `run_cartload2`. For further details, refer to the collapsible sections below or run:
 
@@ -104,8 +107,8 @@ Copied FICTURE output from `<fic_dir>`. See formats in [FICTURE analysis](./run_
 
 ### Joined molecule-factor PMTiles
 * Joined molecule-factor TSV (`transcripts_pixel_joined.tsv.gz`): Merged file linking transcript-level SGE with decoded pixel factors.
-* Final molecule PMTiles (*_pmtiles_index.tsv, `*_bin_counts.json`): Indexed, multi-feature PMTiles built from joined pixel-factor data for CartoScope.
+* Final molecule PMTiles (`genes_bin*.pmtiles`, `genes_index.tsv`, `genes_pmtiles_index.tsv`, `genes_bin_counts.json`): Indexed, multi-feature PMTiles built from joined pixel-factor data for CartoScope.
 
 ### Summary Files
-* FICTURE assets file (ficture_assets.json): JSON catalog listing all output files and their roles for each trained model.
-* Catalog file (catalog.yaml): Final YAML file summarizing all visual assets and layers for further deployment and visualization.
+* FICTURE assets file (`ficture_assets.json`): JSON catalog listing all output files and their roles for each trained model.
+* Catalog file (`catalog.yaml`): Final YAML file summarizing all visual assets and layers for further deployment and visualization.

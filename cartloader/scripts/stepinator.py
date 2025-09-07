@@ -511,7 +511,7 @@ def cmd_upload_aws(run_i, cartl_v,  args, env, additional_args=None):
     #     "aws s3 cp ${out}/catalog.yaml s3://${aws_bucket}/${id}/catalog.yaml",
     #     "grep -E '\.' ${out}/catalog.yaml | perl -lane 'print $F[$#F]' | xargs -I {} aws s3 cp ${out}/{} s3://${aws_bucket}/${id}/{}"
     # ])
-    # Option 2: use cartloader upload_aws_by_catalog.py
+    # Option 2: use cartloader upload_aws.py
     aws_cmd=" ".join([
         "cartloader", "upload_aws",
         f"--in-dir {cartload_dir}",

@@ -1,26 +1,27 @@
 # A scalable, harmonized, and cloud-friendly ecosystem for spatial transcriptomics data
 
 ## Overview
-Spatial transcriptomics (ST) technologies have revolutionized our ability to map molecular features with remarkable resolution—down to cellular and subcellular levels. 
 
-While the rapid development of sequencing-based platforms (e.g., [Seq-Scope](https://www.nature.com/articles/s41596-024-01065-0), [Stereo-seq](https://www.bgi.com/global/service/spatial-transcriptome-stereo-seq), [Pixel-seq](https://www.cell.com/cell/fulltext/S0092-8674(22)01367-8), [10x Visium HD](https://www.10xgenomics.com/platforms/visium)) and imaging-based platforms (e.g., [10x Xenium](https://www.10xgenomics.com/platforms/xenium), [Vizgen MERSCOPE](https://vizgen.com/merscope-ultra/), [CosMx SMI](https://nanostring.com/products/cosmx-spatial-molecular-imager)) has led to an explosion in the production of ST datasets across diverse tissues and species, this platform diversity has also introduced heterogeneous data formats and metadata schemas, which further obstruct efforts toward standardized data ingestion, cross-platform harmonization, and reproducible analytical workflows.
+Spatial transcriptomics (ST) technologies have revolutionized our ability to map molecular features with remarkable resolution—down to cellular and subcellular levels.
+
+While the rapid development of sequencing-based platforms (e.g., [Seq-Scope](https://www.nature.com/articles/s41596-024-01065-0), [Stereo-seq](https://www.bgi.com/global/service/spatial-transcriptome-stereo-seq), [Pixel-seq](https://www.cell.com/cell/fulltext/S0092-8674(22)01367-8), [10x Visium HD](https://www.10xgenomics.com/platforms/visium)) and imaging-based platforms (e.g., [10x Xenium](https://www.10xgenomics.com/platforms/xenium), [Vizgen MERSCOPE](https://vizgen.com/merscope-ultra/), [CosMx SMI](https://nanostring.com/products/cosmx-spatial-molecular-imager)) has led to an explosion in the production of ST datasets across diverse tissues and species, this platform diversity has also introduced heterogeneous data formats and metadata schemas, which further obstruct efforts toward standardized data ingestion, cross-platform format conversion, and reproducible analytical workflows.
 
 To address this challenge, we introduce a scalable, harmonized, and cloud-friendly ecosystem for spatial transcriptomics data across platforms, composed of two components:
 
 - **cartloader** – a harmonized, scalable pipeline for high-resolution spatial omics data processing and analysis with retaining the original resolution.
-- **cartostore** – an open-access, cloud-hosted repository for dataset sharing and visualization.
+- [**cartostore**](https://github.com/seqscope/cartostore) – an open-access, cloud-hosted repository for dataset sharing and visualization.
 
 Together, this system should provide a unified solution for working with raw pixel-level spatial omics data—without sacrificing resolution or reproducibility.
 
 ---
 
-## Cartloader: A Scalable Spatial Transcriptomics Pipeline
+## `cartloader`: A Scalable Spatial Transcriptomics Pipeline
 
-This document introduces `cartloader`, which is the core engine of our ecosystem. It provides a modular, reproducible tool to harmonize, integrate, analyze, and visualize raw high-resolution ST data across platforms. The detailed descriptions of its workflow, required inputs, generated outputs, and illustrative examples are provided in the sections of [Step-by-Step](./step_by_step/intro.md) and [Examples]().
+This document introduces `cartloader`, which is the core engine of our ecosystem. It provides a modular, reproducible tool to harmonize, integrate, analyze, and visualize raw high-resolution ST data across platforms. Usage examples are provided in the [Vignettes](./vignettes/intro.md). Detailed descriptions of its workflow, inputs, outputs, and parameters are provided in the [Reference Pages](./reference/sge_convert.md).
 
-### Key Features
+**Key Features**
 
-- **Cross-Platform Harmonization**: Converts raw spatial gene expression (SGE) data from diverse ST platforms into a unified format, enabling consistent downstream processing.
+- **Cross-Platform Format Conversion**: Converts raw spatial gene expression (SGE) data from diverse ST platforms into a unified format, enabling consistent downstream processing.
 - **Spatial Factor Inference**: Applies [FICTURE](https://www.nature.com/articles/s41592-024-02415-2) to infer spatial factors directly from pixel-level data, capturing biological patterns without requiring cell segmentation.
 - **Multi-Modal Alignment**: Aligns and overlays histology images to SGE data so all layers (histology, SGE, and histological images) share a common coordinate system for pixel-accurate comparisons.
 - **Cloud-Friendly Outputs**: Produces compact, geospatially-indexed data formats suitable for web visualization and cloud storage.
@@ -29,11 +30,13 @@ This document introduces `cartloader`, which is the core engine of our ecosystem
 
 ---
 
-## Cartostore: Cloud Access and Visualization
+## [cartostore](https://github.com/seqscope/cartostore): Cloud Access and Visualization
 
-As a natural companion to `cartloader`, **cartostore** hosts the output of processed datasets for public access and exploration. Designed for scalability and interoperability, cartostore uses spatially indexed formats like **PMTiles** to support interactive visualization and seamless integration.
+As a natural companion to `cartloader`, [`cartostore`](https://github.com/seqscope/cartostore) hosts the dataset and the output from `cartloader` for public access and exploration.
 
-Explore the [Cartostore documentation](git@github.com:seqscope/cartostore.git) to learn more about dataset access and how to contribute.
+Designed for scalability and interoperability, [`cartostore`](https://github.com/seqscope/cartostore) uses spatially indexed formats like **PMTiles** to support interactive visualization and seamless integration.
+
+Explore the [`cartostore` documentation](https://github.com/seqscope/cartostore) to learn more about dataset access and how to contribute.
 
 ---
 
