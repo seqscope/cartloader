@@ -43,20 +43,6 @@ def parse_arguments(_args):
     # key_params.add_argument('--radius-buffer', type=int, default=1, help='Buffer to radius(=anchor_res + radius_buffer) for pixel-level decoding (default: 1)')
     key_params.add_argument('--cmap-file', type=str, default=os.path.join(repo_dir, "assets", "fixed_color_map_256.tsv"), help='Path to fixed color map TSV (default: <cartloader_dir>/assets/fixed_color_map_256.tsv)')
 
-    # env params
-    env_params = parser.add_argument_group("ENV Parameters", "Paths to external tools")
-    env_params.add_argument('--gzip', type=str, default="gzip", help='Path to gzip binary (default: gzip). For speed, consider "pigz -p 4"')
-    env_params.add_argument('--sort', type=str, default="sort", help='Path to sort binary (default: sort). For faster processing, you may include flags like "sort -T /tmp --parallel=20 -S 10G"')
-    env_params.add_argument('--sort-mem', type=str, default="1G", help='Sort memory limit per process (default: 1G)')
-    env_params.add_argument('--spatula', type=str, default=f"spatula",  help='Path to spatula binary (default: spatula)')
-    env_params.add_argument('--ficture2', type=str, default=os.path.join(repo_dir, "submodules", "punkst"),  help='Path to punkst (ficture2) repository (default: <cartloader_dir>/submodules/punkst)')
-    env_params.add_argument('--python', type=str, default="python3",  help='Path to Python (default: python3)')
-
-    # AUX feacture-filtering params
-    aux_ftrfilter_params = parser.add_argument_group("Feature Customizing Auxiliary Parameters", "Customize features (typically genes) used by FICTURE without altering the original feature TSV")
-    aux_ftrfilter_params.add_argument('--include-feature-regex', type=str, default=None, help='Regex of feature names to include')
-    aux_ftrfilter_params.add_argument('--exclude-feature-regex', type=str, default=None, help='Regex of feature names to exclude')
-
     # aux params
     aux_params = parser.add_argument_group("Auxiliary Parameters", "Additional parameters (defaults recommended)")
     # input column indexes
@@ -86,6 +72,20 @@ def parse_arguments(_args):
     aux_params.add_argument('--min-ct-per-feature', type=int, default=20, help='Minimum count per feature during LDA training, transform and decoding (default: 20)')
     aux_params.add_argument('--de-max-pval', type=float, default=1e-3, help='P-value cutoff for differential expression (default: 1e-3)')
     aux_params.add_argument('--de-min-fold', type=float, default=1.5, help='Fold-change cutoff for differential expression (default: 1.5)')
+
+    # AUX feacture-filtering params
+    aux_ftrfilter_params = parser.add_argument_group("Feature Customizing Auxiliary Parameters", "Customize features (typically genes) used by FICTURE without altering the original feature TSV")
+    aux_ftrfilter_params.add_argument('--include-feature-regex', type=str, default=None, help='Regex of feature names to include')
+    aux_ftrfilter_params.add_argument('--exclude-feature-regex', type=str, default=None, help='Regex of feature names to exclude')
+    
+    # env params
+    env_params = parser.add_argument_group("ENV Parameters", "Paths to external tools")
+    env_params.add_argument('--gzip', type=str, default="gzip", help='Path to gzip binary (default: gzip). For speed, consider "pigz -p 4"')
+    env_params.add_argument('--sort', type=str, default="sort", help='Path to sort binary (default: sort). For faster processing, you may include flags like "sort -T /tmp --parallel=20 -S 10G"')
+    env_params.add_argument('--sort-mem', type=str, default="1G", help='Sort memory limit per process (default: 1G)')
+    env_params.add_argument('--spatula', type=str, default=f"spatula",  help='Path to spatula binary (default: spatula)')
+    env_params.add_argument('--ficture2', type=str, default=os.path.join(repo_dir, "submodules", "punkst"),  help='Path to punkst (ficture2) repository (default: <cartloader_dir>/submodules/punkst)')
+    env_params.add_argument('--python', type=str, default="python3",  help='Path to Python (default: python3)')
 
     if len(_args) == 0:
         parser.print_help()

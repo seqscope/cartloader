@@ -22,6 +22,8 @@ def parse_arguments(_args):
     run_params.add_argument('--n-jobs', type=int, default=1, help='Number of parallel jobs to run (default: 1)')
     run_params.add_argument('--makefn', type=str, default="run_cartload2.mk", help='Name of the generated Makefile (default: run_cartload2.mk)')
     run_params.add_argument('--threads', type=int, default=4, help='Maximum number of threads per job for tippecanoe')
+    run_params.add_argument('--log', action='store_true', default=False, help='Write logs to a file under the output directory')
+    run_params.add_argument('--log-suffix', type=str, default=".log", help='Suffix for the log filename; final path is <out_dir>_cartload<suffix> (default: .log)')
 
     inout_params = parser.add_argument_group("Input/Output Parameters", "Primary input and output locations")
     inout_params.add_argument('--out-dir', type=str, required=True, help='Output directory (PMTiles, assets JSON, and catalog YAML)')
@@ -30,21 +32,10 @@ def parse_arguments(_args):
     inout_params.add_argument('--cell-assets', type=str, nargs="+", default=[], help='Optional list of cell asset JSON/YAML files produced by import_xenium_cell/import_*_cell')
     inout_params.add_argument('--background-assets', type=str, nargs="+", default=[], help='Optional list of background asset specs (JSON/YAML or inline id:path or id1:id2:path)')
 
-    key_params = parser.add_argument_group("Key Parameters", "Metadata and logging")
+    key_params = parser.add_argument_group("Key Parameters", "Metadata")
     key_params.add_argument('--id', type=str, required=True, help='Identifier for the output assets; avoid whitespace (use "-" instead of "_")')
     key_params.add_argument('--title', type=str, help='Human-readable title for the output assets')
     key_params.add_argument('--desc', type=str, help='Short description of the output assets')
-    key_params.add_argument('--log', action='store_true', default=False, help='Write logs to a file under the output directory')
-    key_params.add_argument('--log-suffix', type=str, default=".log", help='Suffix for the log filename; final path is <out_dir>_cartload<suffix> (default: .log)')
-
-    env_params = parser.add_argument_group("Env Parameters", "Tool paths (override defaults if needed)")
-    # aux_params.add_argument('--magick', type=str, default=f"magick", help='Path to ImageMagick binary') # Disable this function. The user need to add the path to the ImageMagick binary directory to the PATH environment variable
-    env_params.add_argument('--gzip', type=str, default="gzip", help='Path to gzip-compatible binary (tip: use "pigz -p4" for speed)')
-    env_params.add_argument('--pmtiles', type=str, default=f"pmtiles", help='Path to pmtiles binary from go-pmtiles')
-    env_params.add_argument('--gdal_translate', type=str, default=f"gdal_translate", help='Path to gdal_translate binary')
-    env_params.add_argument('--gdaladdo', type=str, default=f"gdaladdo", help='Path to gdaladdo binary')
-    env_params.add_argument('--tippecanoe', type=str, default=f"tippecanoe", help='Path to tippecanoe binary') # default=f"{repo_dir}/submodules/tippecanoe/tippecanoe", 
-    env_params.add_argument('--spatula', type=str, default=f"spatula",  help='Path to spatula binary') # default=f"{repo_dir}/submodules/spatula/bin/spatula",
 
     aux_params = parser.add_argument_group("Auxiliary Parameters", "Advanced settings; defaults work for most cases")
     aux_params.add_argument('--in-sge-assets', type=str, default="sge_assets.json", help='File name of a SGE assets JSON/YAML under --sge-dir, providing paths to transcript, feature, minmax files (default: sge_assets.json)')
@@ -71,6 +62,16 @@ def parse_arguments(_args):
     # img
     aux_params.add_argument('--transparent-below', type=int, help='Set pixels below this value to transparent for dark background (range: 0~255)')
     aux_params.add_argument('--transparent-above', type=int, help='Set pixels above this value to transparent for light background (range: 0~255)')
+
+    env_params = parser.add_argument_group("Env Parameters", "Tool paths (override defaults if needed)")
+    # aux_params.add_argument('--magick', type=str, default=f"magick", help='Path to ImageMagick binary') # Disable this function. The user need to add the path to the ImageMagick binary directory to the PATH environment variable
+    env_params.add_argument('--gzip', type=str, default="gzip", help='Path to gzip-compatible binary (tip: use "pigz -p4" for speed)')
+    env_params.add_argument('--pmtiles', type=str, default=f"pmtiles", help='Path to pmtiles binary from go-pmtiles')
+    env_params.add_argument('--gdal_translate', type=str, default=f"gdal_translate", help='Path to gdal_translate binary')
+    env_params.add_argument('--gdaladdo', type=str, default=f"gdaladdo", help='Path to gdaladdo binary')
+    env_params.add_argument('--tippecanoe', type=str, default=f"tippecanoe", help='Path to tippecanoe binary') # default=f"{repo_dir}/submodules/tippecanoe/tippecanoe", 
+    env_params.add_argument('--spatula', type=str, default=f"spatula",  help='Path to spatula binary') # default=f"{repo_dir}/submodules/spatula/bin/spatula",
+
     if len(_args) == 0:
         parser.print_help()
         sys.exit(1)
@@ -136,7 +137,7 @@ def run_cartload2_generic(_args):
     args=parse_arguments(_args)
 
     logger = create_custom_logger(__name__, args.out_dir + "_cartload" + args.log_suffix if args.log else None)
-    logger.info("Cartload2-generic started")
+    logger.info("Analysis started")
 
     # start mm
     mm = minimake()
