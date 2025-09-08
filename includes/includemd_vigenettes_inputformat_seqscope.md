@@ -43,6 +43,6 @@ SeqScope provides SGE with three files:
     
     * `Header`: Initial lines form the header, declaring the matrix's adherence to the [Market Matrix (MTX) format](https://math.nist.gov/MatrixMarket/formats.html), outlining its traits. This may include comments (lines beginning with `%`) for extra metadata, all marked by a “%”.
     * `Dimensions`: Following the header, the first line details the matrix dimensions: the count of rows (features), columns (barcodes), and non-zero entries.
-    * `Data Entries`: Post-dimensions, subsequent lines enumerate non-zero entries in seven columns: row index (feature index), column index (barcode index), and five values (expression levels) corresponds to "Gene", "GeneFull", "Spliced", "Unspliced", and "Ambiguous".       
+    * `Data Entries`: After the dimensions, subsequent lines enumerate non‑zero entries in seven columns: row index (feature index), column index (barcode index), and five values (expression levels) corresponding to "Gene", "GeneFull", "Spliced", "Unspliced", and "Ambiguous".
         * "Gene": represents unique, confidently mapped transcript count ("gene name"-based);
         * "GeneFull": denotes total transcript count assigned to gene (includes ambiguities).

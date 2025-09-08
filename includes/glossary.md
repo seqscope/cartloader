@@ -2,6 +2,6 @@
 *[SGE]: Spatial Digital Gene Expression
 *[µm]: micrometer
 *[UMI]: Unique Molecular Identifier
-*[MEX]: Market Exchange
+*[MEX]: Matrix Exchange (10x sparse matrix format)
 *[ST]: Spatial transcriptomics
 *[DNB]: DNA Nanoball (DNB)

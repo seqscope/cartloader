@@ -8,8 +8,7 @@ docker run -it --rm \
     --in-dir /data/cartload2 \
     --upload-method catalog \
     --zenodo-token ${zenodo_token} \
-    --create-new-deposition \
-    --title  "Yur Title" \
+    --title  "Your Title" \
     --creators "Your Name" \
     --description "This is an example description"
 ```

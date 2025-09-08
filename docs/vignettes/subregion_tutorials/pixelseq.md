@@ -12,7 +12,7 @@ Since the Pixel-Seq publication provides SGE data only from the mouse olfactory 
 
 **Data Access**
 
-The example data is hosted on Zenedo ().
+The example data is hosted on Zenodo.
 
 Follow the commands below to download the example data.
 
@@ -62,7 +62,7 @@ n_factor=6,12                            # define number of factors in LDA train
   include-markdown "../../../includes/includemd_vigenettes_run_ficture2.md"
 %}
 
-## `cartloader` Compilation
+## `CartLoader` Asset Packaging
 
 {%
   include-markdown "../../../includes/includemd_vigenettes_run_cartload2.md"
@@ -70,7 +70,7 @@ n_factor=6,12                            # define number of factors in LDA train
 
 ## Upload to Data Repository
 {%
-  include-markdown "../../../includes/includemd_vigenettes_upload.md"
+  include-markdown "../../../includes/includemd_vigenettes_upload.md" preserve-includer-indent=false
 %}
 
 

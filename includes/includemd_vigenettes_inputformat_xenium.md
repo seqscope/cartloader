@@ -1,4 +1,4 @@
-10X Genomics Xenium platform outputs Spatial Gene Expression (SGE) data in a comma-separated values (CSV) format. 
+The 10x Genomics Xenium platform outputs Spatial Gene Expression (SGE) data in a comma‑separated values (CSV) format.
 
 !!! info "CSV File Format"
 
@@ -12,8 +12,8 @@
     * "`transcript_id`": Unique identifier for each detected transcript molecule.  
     * "`cell_id`": ID of the segmented cell associated with the transcript.
     * "`overlaps_nucleus`": 1 if the transcript overlaps the nucleus mask, 0 otherwise.  
-    * "`feature_name`": Gene or other features name corresponding to the transcript.  
-    * "`x_location`": X-coordinate of the transcript.  
-    * "`y_location`": Y-coordinate of the transcript.  
-    * "`z_location`": Z-coordinate (depth) of the transcript.  
+    * "`feature_name`": Feature name corresponding to the transcript (typically a gene).
+    * "`x_location`": X coordinate of the transcript.  
+    * "`y_location`": Y coordinate of the transcript.  
+    * "`z_location`": Z coordinate (depth) of the transcript.  
     * "`qv`": Quality value indicating confidence in transcript detection.

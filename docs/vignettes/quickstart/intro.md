@@ -1,7 +1,7 @@
 
 # Quick Start
 
-This page introduces **two options** to help you get started with `cartloader` using a small example dataset from the mouse hippocampus. 
+This page introduces two ways to get started with `CartLoader` using a small mouse hippocampus dataset.
 
 ## Options
 
@@ -21,15 +21,14 @@ This page introduces **two options** to help you get started with `cartloader` u
 
   <li style="width: 360px;">
     <h3>🔧 Run Locally</h3>
-    <p>Install <code>cartloader</code> and dependencies on your system.</p>
+    <p>Install <code>cartloader</code> and its dependencies on your system.</p>
     <ul>
-      <li>💻 Use latest `cartloader`</li>
+      <li>💻 Use the latest <code>cartloader</code></li>
       <li>⚙️ Full flexibility</li>
-      <li>📂 Customize workflow</li>
+      <li>📂 Customizable workflow</li>
     </ul>
     <p><a href="../run_locally/">Get Started →</a></p>
   </li>
 </ul>
 
 </div>
-

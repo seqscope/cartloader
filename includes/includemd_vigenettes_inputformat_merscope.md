@@ -1,5 +1,5 @@
 
-The MERSCOPE input SGE includes one comma delimited text file with the following format:
+The MERSCOPE input SGE includes one comma‑delimited text file in the following format:
 
 !!! info "CSV file format"
 
@@ -14,7 +14,7 @@ The MERSCOPE input SGE includes one comma delimited text file with the following
     * `barcode_id`: Zero-based index of the transcript barcode in the codebook; forms a composite key with `fov`.
     * `global_x`: Transcript x coordinates (µm) in the experimental region; may be negative due to alignment.  
     * `global_y`: Transcript y coordinates (µm) in the experimental region; may be negative due to alignment.  
-    * `global_z`: The index of the z-position. The position is a zero-indexed integer.
+    * `global_z`: Zero‑based z‑position index.
     * `x`: The x-coordinate of the transcript (µm), within the coordinate space of the field of view.
     * `y`: The y-coordinate of the transcript (µm), within the coordinate space of the field of view.
     * `fov`: Zero-based field of view index; forms a composite key with `barcode_id`.  

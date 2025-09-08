@@ -1,7 +1,7 @@
 # Spatial Factor Inference Analysis using FICTURE
 
 ## Overview
-Following format conversion, cartloader provides `run_ficture2` module to run spatial factor inference using [**`FICTURE`**](https://www.nature.com/articles/s41592-024-02415-2) (Si et al., *Nature Methods*, 2024). This method infers spatial factors directly at the pixel level with submicron resolution, eliminating the need for segmentation.
+Following format conversion, CartLoader provides the **`run_ficture2`** module to run spatial factor inference using [**`FICTURE`**](https://www.nature.com/articles/s41592-024-02415-2) (Si et al., *Nature Methods*, 2024). This method infers spatial factors directly at the pixel level with submicron resolution, eliminating the need for segmentation.
 
 !!! info "**What is `FICTURE`?**"
 
@@ -9,17 +9,16 @@ Following format conversion, cartloader provides `run_ficture2` module to run sp
 
     By default, [`FICTURE`](https://www.nature.com/articles/s41592-024-02415-2) learns the spatial factors by implementing a standard latent Dirichlet allocation (LDA) model on a hexagonal grid overlay of the spatial coordinates. Optionally, spatial factors can also be derived from external sources, such as single-cell or single-nucleus RNA-seq reference datasets, or from spatially agnostic factor learning methods (e.g., Seurat, Scanpy).
 
-    ----
 
 !!! info "**The `punkst` version of `FICTURE`**"
 
-    To efficiently run FICTURE-based inference, cartloader integrates [`punkst`](https://github.com/Yichen-Si/punkst), an optimized implementation of FICTURE that maintains output equivalence while enhancing computational scalability and performance. 
+    To efficiently run FICTURE-based inference, CartLoader integrates [`punkst`](https://github.com/Yichen-Si/punkst), an optimized implementation of FICTURE that maintains output equivalence while enhancing computational scalability and performance. 
     
-    Currently, `run_ficture2` is using `punkst` version of `FICTURE`.
+    Currently, `run_ficture2` uses the `punkst` version of `FICTURE`.
 
 ## Requirements
 
-- An SGE in [the unified format]()
+- An SGE in the unified format (from [SGE format conversion](./sge_convert.md))
 - Pre-installed tools: `spatula`, `punkst`, `gzip`, `sort`, `python`
 
 ## Example Usage
@@ -27,9 +26,9 @@ Following format conversion, cartloader provides `run_ficture2` module to run sp
 ```bash
 cartloader run_ficture2 \
     --main \
-    --in-transcript /path/to/input/harmonized/transcripts/tsv/file \
-    --in-feature /path/to/input/harmonized/feature/tsv/file \
-    --in-minmax /path/to/input/harmonized/coordinates/minmax/tsv/file \
+    --in-transcript /path/to/converted/transcripts/tsv/file \
+    --in-feature /path/to/converted/feature/tsv/file \
+    --in-minmax /path/to/converted/coordinates/minmax/tsv/file \
     --cmap-file /path/to/cartloader/assets/fixed_color_map_256.tsv \
     --colname-count count \
     --out-dir /path/to/output/directory \
@@ -44,30 +43,24 @@ cartloader run_ficture2 \
 
 ## Actions
 
-### Tiling step
-The tiling step takes the standarized SGE (from [SGE format conversion step](./sge_convert.md)) as input. It aims to reorganizes input coordinate data into non-overlapping square tiles in a plain TSV format and generates an index file with tile offsets to enable efficient random access.
+### Tiling step (`--tile`)
+The tiling step takes the standardized SGE (from [SGE format conversion](./sge_convert.md)) as input. It reorganizes input coordinate data into non‑overlapping square tiles in a plain TSV format and generates an index file with tile offsets to enable efficient random access.
 
-### Segmentation Step
-The segmentation step starts from the tiled SGE, using the plain TSV file from [tiling step](#tiling-step) as input. It aggregates tiled pixel data into non-overlapping hexagons in a TSV file for spot-level analysis, outputting a tab-delimited file of hexagon records and associated metadata in JSON format.
+### Segmentation Step (`--segment`)
+The segmentation step starts from the tiled SGE, using the plain TSV file from [tiling step](#tiling-step---tile) as input. It aggregates tiled pixel data into non-overlapping hexagons in a TSV file for spot-level analysis, outputting a tab-delimited file of hexagon records and associated metadata in JSON format.
 
-### LDA Training Step
-The LDA training step uses the hexagon TSV and JSON file from [segmentation step](#segmentation-step) as input, trains a Latent Dirichlet Allocation (LDA) model on sparse gene count data from hexagon units, using metadata to interpret input structure and optionally filter or weight features, producing a factorized topic model in TSV.
+### LDA Training Step (`--init-lda`)
+The LDA training step uses the hexagon TSV and JSON file from [segmentation step](#segmentation-step---segment) as input, trains a Latent Dirichlet Allocation (LDA) model on sparse gene count data from hexagon units, using metadata to interpret input structure and optionally filter or weight features, producing a factorized topic model in TSV.
 
-### Decoding Step
-The decoding step applies a trained LDA model from [LDA training step](#lda-training-step) to tiled pixel-level transcript data from [tiling step](#tiling-step) to infer the top spatial factors and their posterior probabilities for each pixel, enabling fine-grained spatial mapping of gene expression. It outputs a pixel-level annotation file in TSV format with coordinates and factor assignments, along with a pseudobulk gene-by-factor matrix in TSV format.
+### Decoding Step (`--decode`)
+The decoding step applies a trained LDA model from [LDA training step](#lda-training-step---init-lda) to tiled pixel-level transcript data from [tiling step](#tiling-step---tile) to infer the top spatial factors and their posterior probabilities for each pixel, enabling fine-grained spatial mapping of gene expression. It outputs a pixel-level annotation file in TSV format with coordinates and factor assignments, along with a pseudobulk gene-by-factor matrix in TSV format.
 
-### Summarization Step
-The summarization step generate a JSON file to include all details of the FICTURE analysis, including the input files, output files, and parameters.
+### Summarization Step (`--summary`)
+The summarization step generate a JSON file to include all details of the `FICTURE` analysis, including input files, output files, and parameters.
 
 ## Parameters
 
-The following outlines the **minimum required parameters**. 
-
-For auxiliary parameters, we recommend using the default values unless you possess a thorough understanding of FICTURE. For further details, refer to the collapsible sections below or run:
-
-```bash
-cartloader run_ficture2 --help
-```
+Below are the core parameters. See more details in the collapsible section ("Auxiliary Paramaters") below.
 
 #### Action Parameters
 
@@ -75,11 +68,11 @@ cartloader run_ficture2 --help
     At least one of the actions (`--main`, `--tile`, `--segment`, `--init-lda`, `--decode`, `--summary`) should be enabled.
 
 * `--main`: Run all of the following five actions.
-* `--tile`: Run [tiling step](#tiling-step).
-* `--segment`: Run [segmentation step](#segmentation-step).
+* `--tile`: Run [tiling step](#tiling-step---tile).
+* `--segment`: Run [segmentation step](#segmentation-step---segment).
 * `--init-lda`: Run [LDA training step](#lda-training-step).
-* `--decode`: Run [decoding step](#decoding-step).
-* `--summary`: Run [summarization step](#summarization-step).
+* `--decode`: Run [decoding step](#decoding-step---decode).
+* `--summary`: Run [summarization step](#summarization-step---summary).
 
 #### Input/Output Parameters
 
@@ -97,7 +90,7 @@ cartloader run_ficture2 --help
 * `--exclude-feature-regex` (str): (Optional) Regex pattern for excluding features/genes.
 * `--cmap-file` (str): (Optional) Path to fixed color map TSV file. If not provided, FICTURE will generate a color map.
 
-??? note "Auxiliary `run_ficture2` Paramaters"
+??? note "Auxiliary Paramaters"
 
     **Auxiliary Input Parameters**
 
@@ -125,14 +118,13 @@ cartloader run_ficture2 --help
         * `--radius-buffer` (int): Buffer added to anchor resolution for decoding (Default: 1).
         * `--fit-plot-um-per-pixel` (int): Image resolution for fit coarse plots (Default: 1).
         * `--decode-scale` (int): Scales input coordinates to pixels in the output image (Default: 1)')
-
     * Shared paramaters across steps:
         * `--seed` (int): Random seed for reproducibility (Default: 1).
         * `--min-ct-per-feature` (int): Minimum count per feature for LDA and decoding (Default: 20).
         * `--de-max-pval` (float): p-value cutoff for differential expression (Default: 1e-3).
         * `--de-min-fold` (float): Fold-change threshold for differential expression (Default: 1.5).
 
-    **Auxiliary Environment Parameters**:
+    ** Environment Parameters**:
     For tools that require specifying the path to their executable binaries, you may omit the path if the binary is already included in your system's `PATH`.
 
     * `--gzip` (str): Path to `gzip` binary; consider `pigz -p 4` for speed (Default: `gzip`).
@@ -141,6 +133,16 @@ cartloader run_ficture2 --help
     * `--spatula` (str): Path to `spatula` binary (Default: `spatula`).
     * `--ficture2` (str): Path to the `punkst` repository (Default to `punkst` directory in `submodules`)
     * `--python` (str): Path to Python 3 binary (Default: `python3`).
+
+    ** Run Parameters**:
+
+    * `--dry-run` (flag): Generate the Makefile but do not execute it.
+    * `--restart` (flag): Ignore existing outputs and re-run all steps.
+    * `--makefn` (str): Output Makefile name (default: `run_ficture2.mk`)
+    * `--n-jobs` (int): Parallel jobs when executing the Makefile (default: 1).
+    * `--threads` (int): Max threads per job (tippecanoe, etc.) (default: 4).
+
+
 
 ## Output
 

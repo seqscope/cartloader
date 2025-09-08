@@ -1,10 +1,10 @@
 # 🚀 Quick Start: Run with Docker
 
-This tutorial walks through the `cartloader` workflow — all packaged inside a prebuilt Docker image with dependencies and input data included.
+This tutorial walks through the `CartLoader` workflow — all packaged inside a prebuilt Docker image with dependencies and input data included.
 
 !!! info "Use Cases"
 
-    This is the fastest and simplest way to try `cartloader` — no setup, installation, or data download required.
+    This is the fastest and simplest way to try `CartLoader` — no setup, installation, or data download required.
 
 !!! warning "Requirements"
     Users will need to:
@@ -30,7 +30,7 @@ If these commands fail, [install Docker](https://docs.docker.com/get-docker/) in
 
 ## Input Data
 
-The input is an mouse hippocampus SGE in a `FICTURE`-compatible format compatible, prepared by [`sge_convert`](../../reference/sge_convert.md) in `cartloader` .
+The input is an mouse hippocampus SGE in a `FICTURE`-compatible format compatible, prepared by [`sge_convert`](../../reference/sge_convert.md) in `CartLoader` .
 
 **File Format**
 
@@ -86,7 +86,7 @@ n_factor=6,12                            # define number of factors in LDA train
   start="<!--parameter-start-->" end="<!--parameter-end-->"
 %}
 
-## `cartloader` Compilation
+## `CartLoader` Asset Packaging
 
 {%
   include-markdown "../../../includes/includemd_vigenettes_run_cartload2_docker.md"
@@ -100,8 +100,7 @@ n_factor=6,12                            # define number of factors in LDA train
 ## Upload to Data Repository
 
 {%
-  include-markdown "../../../includes/includemd_vigenettes_upload.md"
-  start="<!--section1-start-->" end="<!--section1-end-->"
+  include-markdown "../../../includes/includemd_vigenettes_upload.md" start="<!--section1-start-->" end="<!--section1-end-->" preserve-includer-indent=false
 %}
 
 {%
@@ -109,8 +108,7 @@ n_factor=6,12                            # define number of factors in LDA train
 %}
 
 {%
-  include-markdown "../../../includes/includemd_vigenettes_upload.md"
-  start="<!--section2-start-->" end="<!--section2-end-->"
+  include-markdown "../../../includes/includemd_vigenettes_upload.md" start="<!--section2-start-->" end="<!--section2-end-->" preserve-includer-indent=false
 %}
 
 {%
@@ -118,8 +116,7 @@ n_factor=6,12                            # define number of factors in LDA train
 %}
 
 {%
-  include-markdown "../../../includes/includemd_vigenettes_upload.md"
-  start="<!--section3-start-->" end="<!--section3-end-->"
+  include-markdown "../../../includes/includemd_vigenettes_upload.md" start="<!--section3-start-->" end="<!--section3-end-->" preserve-includer-indent=false
 %}
 
 ---------------
@@ -129,4 +126,3 @@ n_factor=6,12                            # define number of factors in LDA train
 {%
   include-markdown "../../../includes/includemd_vigenettes_output_seqscope.md"
 %}
-

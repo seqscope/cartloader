@@ -12,7 +12,7 @@
 }
 
 .grid.cards.single-left > ul > li {
-  width: 300px;         /* Set desired width */
+  width: 360px;         /* Set desired width */
   height: auto;         /* Or: auto for more flexible height */
   padding: 0.5rem;
   box-sizing: border-box;
@@ -43,7 +43,7 @@
 }
 
 .grid.cards.generic > ul > li {
-  width: 300px;                      /* Fixed card width */
+  width: 360px;                      /* Fixed card width */
   height: auto;                      /* Let height expand with content */
   flex: 0 0 auto;                    /* Prevent growing/shrinking */
   padding: 0.5rem 0.5rem 0.2rem 0.5rem;  /* smaller bottom padding */
@@ -100,6 +100,34 @@ figure {
   padding: 0;
   margin: 0, 0, 0, 0 !important;
 }
+
+.grid.cards.forref > ul {
+  display: flex;                     /* Use Flexbox to layout list items */
+  flex-wrap: wrap;                   /* Allow items to wrap to the next line */
+  gap: 0.5rem;                       /* Add space between cards */
+  justify-content: flex-start;       /* Align cards to the left */
+  padding: 0.5rem;                   /* Remove default padding on the list */
+  margin: 0;                         /* Remove default margin */
+}
+
+.grid.cards.forref > ul > li {
+  width: 360px;                      /* Card width */
+  min-height: 270px;                 /* Baseline height; grows with content */
+  flex: 0 0 auto;                    /* Prevent growing/shrinking */
+  padding: 0.5rem 0.5rem 0.2rem 0.5rem;  /* smaller bottom padding */
+  gap: 0;                            /* Spacing inside card's flex layout */
+  box-sizing: border-box;            /* Include padding in the total width/height */
+  display: flex;                     /* Layout internal card content with Flexbox */
+  flex-direction: column;            /* Stack elements vertically */
+  justify-content: flex-start;       /* Align card content to the top */
+  overflow: visible;                 /* Ensure CTA remains visible */
+}
+
+/* Pin the bottom call-to-action in generic and forref cards */
+.grid.cards.generic > ul > li > p:last-child,
+.grid.cards.forref > ul > li > p:last-child { margin-top: auto; }
+.grid.cards.generic > ul > li > a.md-button,
+.grid.cards.forref > ul > li > a.md-button { margin-top: auto; align-self: flex-start; display: inline-block; }
 
 /* ==================TABLE=================== */
 

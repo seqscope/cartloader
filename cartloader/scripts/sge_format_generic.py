@@ -11,7 +11,7 @@ def sge_format_generic(_args):
     parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", 
                                      description="""
                                      Standardize Spatial Transcriptomics (ST) datasets in CSV/TSV format.
-                                     It will generate output in micrometer precision, including a transcript-indexed SGE file in TSV format, a feature file couning UMIs per gene, and a minmax file for X Y coordinates.
+                                     Output: a transcript-indexed SGE file in TSV format, a feature file couning UMIs per gene, and a minmax file for X Y coordinates.
                                      """)
     inout_params = parser.add_argument_group("Input/Output Parameters")
     inout_params.add_argument('--input', type=str, help='Path to input transcript-indexed SGE TSV/CSV')
@@ -27,7 +27,6 @@ def sge_format_generic(_args):
     key_params.add_argument('--min-phred-score', type=float, default=None, help='Minimum Phred-scaled quality score cutoff (used with --csv-colname-phredscore)') 
     key_params.add_argument('--print-removed-transcripts', action='store_true', default=False, help='Print list of removed transcripts with reasons')
     key_params.add_argument('--add-molecule-id', action='store_true', default=False, help='Enable to create a "molecule_id" column in the output to track the index of the original input. If the input file already has a column of molecule ID, use --csv-colnames-others instead of --add-molecule-id.')
-    key_params.add_argument('--log', type=str, default=None, help='Path to log file')
 
     incol_params = parser.add_argument_group("Input Columns Parameters")
     incol_params.add_argument('--csv-comment',  action='store_true', default=False, help='Treat lines starting with # as comments in --input')

@@ -30,12 +30,12 @@ cartloader sge_convert \
 
 | Parameter                 | Required | Type   | Description                                                                                                                                       |
 |---------------------------|----------|--------|---------------------------------------------------------------------------------------------------------------------------------------------------|
-| `--platform`              | required | string | Platform (options: "`10x_visium_hd`", "`seqscope`", "`10x_xenium`", "`bgi_stereoseq`", "`cosmx_smi`", "`vizgen_merscope`", "`pixel_seq`", "`generic`") |
+| `--platform`              | required | string | Platform (options: `10x_visium_hd`, `seqscope`, `10x_xenium`, `bgi_stereoseq`, `cosmx_smi`, `vizgen_merscope`, `pixel_seq`, `generic`) |
 | `--in-mex`                | required | string | Path to the input MEX directory containing gene × barcode matrix                                                                                  |
 | `--units-per-um`          | required | float  | Scale to convert coordinates to microns (default: `1.0`)                                                                                          |
 | `--out-dir`               | required | string | Output directory for the converted SGE files                                                                                                      |
 | `--makefn`                |          | string | File name for the generated Makefile (default: `sge_convert.mk`)                                                                                  |
 | `--exclude-feature-regex` |          | regex  | Pattern to exclude control features                                                                                                               |
-| `--sge-visual`            |          | flag   | Enable SGE visualization step (generates diagnostic image) (default: `FALSE`)                                                                     |
+| `--sge-visual`            |          | flag   | Enable SGE visualization step (generates a diagnostic image) (default: false)                                                                     |
 | `--spatula`               |          | string | Path to the spatula binary (default: `spatula`)                                                                                                   |
 | `--n-jobs`                |          | int    | Number of parallel jobs for processing (default: `1`)                                                                                             |

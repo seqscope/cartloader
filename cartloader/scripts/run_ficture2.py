@@ -14,9 +14,9 @@ def parse_arguments(_args):
     run_params = parser.add_argument_group("Run Options", "Run options.")
     run_params.add_argument('--dry-run', action='store_true', default=False, help='Generate the Makefile and print commands without executing them')
     run_params.add_argument('--restart', action='store_true', default=False, help='Ignore existing outputs and start from the beginning')
-    run_params.add_argument('--n-jobs', type=int, default=2, help='Number of parallel jobs to run (default: 2)')
-    run_params.add_argument('--threads', type=int, default=8, help='Maximum number of threads per job (default: 8)')
     run_params.add_argument('--makefn', type=str, default="run_ficture2.mk", help='File name of Makefile to write (default: run_ficture2.mk)')
+    run_params.add_argument('--n-jobs', type=int, default=1, help='Number of parallel jobs to run (default: 1)')
+    run_params.add_argument('--threads', type=int, default=4, help='Maximum number of threads per job (default: 4)')
 
     cmd_params = parser.add_argument_group("Commands", "FICTURE steps to run")
     cmd_params.add_argument('--main', action='store_true', default=False, help='Run all main functions, including tile, segment, init-lda, decode, and summary')

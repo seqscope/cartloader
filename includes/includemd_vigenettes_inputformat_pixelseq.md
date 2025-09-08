@@ -17,7 +17,7 @@ The Pixel-Seq SGE includes one tab-delimited text file, where each row represent
 	* `MapStrand`: Indicates the strand orientation of the mapped read.
 	* `Chrom`, `Start`: Chromosome number and start position of the mapped read on the genome.
 	* `STARmapping`: Alignment pattern (CIGAR string) from the STAR aligner indicating how the transcript maps to the genome.
-	* `Counts`: Number of times the UMI/gene combination was observed.
+    * `Counts`: Number of times the UMI/gene combination was observed.
 	* `geneID`, `geneName`: Ensembl gene ID and gene symbol.
 	* `bioType`: Gene biotype.
-	* `intronRatio`: Fraction of UMI counts assigned to intronic regions.
+    * `intronRatio`: Fraction of UMI counts assigned to intronic regions.

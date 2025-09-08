@@ -1,7 +1,7 @@
 
 # 🔧 Quick Start: Run Locally
 
-This tutorial walks you through running the `cartloader` workflow using a minimal example dataset from the mouse hippocampus.
+This tutorial walks you through running the `CartLoader` workflow using a minimal example dataset from the mouse hippocampus.
 
 !!! info "Use Cases"
     This tutorial is ideal for users who want to:
@@ -13,18 +13,18 @@ This tutorial walks you through running the `cartloader` workflow using a minima
 !!! warning "Requirements"
     Users will need to:
 
-    * Set up `cartloader` and its dependencies locally (see [Installation](../../installation.md) guide).
+    * Set up `CartLoader` and its dependencies locally (see [Installation](../../installation.md) guide).
     * Download the example input data (see [Input Data](#input-data))
 
 ## Input Data
 
-The input is an mouse hippocampus SGE, which is already converted to a format compatible with `FICTURE` using [`sge_convert`](../../reference/sge_convert.md) in `cartloader` .
+The input is a mouse hippocampus SGE, already converted to a format compatible with `FICTURE` using [`sge_convert`](../../reference/sge_convert.md) in `CartLoader`.
 <!-- 
 !!! warning "Prepare Input SGE for `FICTURE`"
 
     `FICTURE` requires input in the form of a transcript-indexed SGE file in TSV format with at least: X and Y spatial coordinates, gene identifiers, and expression counts. 
     
-    Because ST platforms vary widely in their data formats and metadata structures, `cartloader` provides the [`sge_convert`](../../reference/sge_convert.md) module to convert raw SGE data into the standardized format required by `FICTURE`.
+    Because ST platforms vary widely in their data formats and metadata structures, `CartLoader` provides the [`sge_convert`](../../reference/sge_convert.md) module to convert raw SGE data into the standardized format required by `FICTURE`.
     
     For detailed platform-specific instructions on preparing compatible SGE files, see the [Vignettes](../intro.md#getting-started-per-platform). -->
 
@@ -38,7 +38,7 @@ SGE in FICTURE-compatible format includes:
 
 **Data Access**
 
-The input example data is hosted on Zenedo [DOI: 10.5281/zenodo.15701393](https://doi.org/10.5281/zenodo.15701393).
+The input example data is hosted on Zenodo [DOI: 10.5281/zenodo.15701393](https://doi.org/10.5281/zenodo.15701393).
 
 Download the example data:
 
@@ -77,7 +77,7 @@ n_factor=6,12                            # define number of factors in LDA train
   include-markdown "../../../includes/includemd_vigenettes_run_ficture2.md"
 %}
 
-## `cartloader` Compilation
+## `CartLoader` Asset Packaging
 
 {%
   include-markdown "../../../includes/includemd_vigenettes_run_cartload2.md"
@@ -86,7 +86,7 @@ n_factor=6,12                            # define number of factors in LDA train
 ## Upload to Data Repository
 
 {%
-  include-markdown "../../../includes/includemd_vigenettes_upload.md"
+  include-markdown "../../../includes/includemd_vigenettes_upload.md" preserve-includer-indent=false
 %}
 
 ---------------
@@ -96,4 +96,3 @@ n_factor=6,12                            # define number of factors in LDA train
 {%
   include-markdown "../../../includes/includemd_vigenettes_output_seqscope.md"
 %}
-

@@ -2,14 +2,14 @@
 
 ## Overview
 
-Following spatial factor inference via FICTURE analysis, `cartloader` offers the `run_cartload2` module package SGE data and spatial factor output from [FICTURE analysis](./run_ficture2.md) into standardized, spatially indexed, and storage-efficient [PMTiles](https://github.com/protomaps/PMTiles), a web-native tiling format. These PMTiles outputs are optimized for downstream analysis, interactive web visualization (e.g., in CartoScope), and data sharing across platforms.
+Following spatial factor inference via FICTURE analysis, `CartLoader` provides the `run_cartload2` module to package SGE data and spatial factor output from [FICTURE analysis](./run_ficture2.md) into standardized, spatially indexed, and storage‑efficient [PMTiles](https://github.com/protomaps/PMTiles), a web‑native tiling format. These PMTiles outputs are optimized for downstream analysis, interactive web visualization (e.g., in CartoScope), and data sharing across platforms.
 
 ## Requirements
-
-- A completed FICTURE run from [`run_ficture2`](./run_ficture2.md), including
-    - pixel-level decoding outputs 
-    - a metadata file describing the input-output structure (`ficture.params.json`)
-- Pre-installed CLI tools: `tippecanoe`, `gdal_translate`, `gdaladdo`, `pmtiles`, `spatula`, `gzip`
+- An SGE in the unified format (from [SGE format conversion](./sge_convert.md)) with a metadata file describing paths of SGE (`sge_assets.json`)
+- (Optional) A completed FICTURE run from [`run_ficture2`](./run_ficture2.md), including pixel-level decoding outputs and a metadata file describing the input-output structure (`ficture.params.json`)
+- (Optional) One or more deployed images with corresponding metadata file(s)
+- (Optional) A set of deployed cell-based analysis results and its meta file
+- Pre-installed CLI tools: `tippecanoe`, `gdal_translate`, `gdaladdo`, `pmtiles`, `spatula`, `gzip`.
 
 ## Example Usage
 
@@ -31,66 +31,85 @@ cartloader run_cartload2 \
 
 ## Actions
 
-Specifically, `run_cartload2` performs all of the following steps:
+Depending on inputs provided, `run_cartload2` performs:
 
-- Converts transcript-level SGE to raster-format PMTiles.
-- Converts topic proportions (.results.tsv.gz) into vector PMTiles for spatial factors.
-- Processes each decoded pixel-level output to generate raster PMTiles for visual overlays.
-- Create a joined molecule-feature matrix by joining decoded pixel-level spatial factors from FICTURE with transcript-level molecules from the original SGE based on spatial proximity.
-- Converts the joined molecule-feature matrix into storage-efficient, multi-feature PMTiles.
-- Generates a JSON file listing all FICTURE assets and a YAML catalog describing the final visualization layers.
+### SGE Packaging
+Converts transcript‑level SGE to raster PMTiles, including light and dark modes.
+
+### FICTURE Integration (`--fic-dir`)
+If FICTURE results is provided via `--fic-dir`:
+  - Converts topic proportions (`*.results.tsv.gz`) into vector PMTiles for spatial factors.
+  - Generates raster overlays from decoded pixel‑level outputs.
+  - Builds a joined molecule–factor matrix by associating decoded pixels with molecules based on spatial proximity, then converts it into multi‑feature PMTiles.
+
+### Additional Assets Integration (`--cell-assets` or `--background-assets`)
+Includes provided cell assets and background/basemap PMTiles in `catalog.yaml`; copies asset files into the output directory when they reside elsewhere.
+
+### Prepare Catalog and metadata
+Writes a FICTURE assets JSON (when factors are present) and a final `catalog.yaml` listing all layers.
 
 ## Parameters
 
-The following outlines the **minimum required parameters**. 
-
-For auxiliary parameters, we recommend using the default values unless you possess a thorough understanding of `run_cartload2`. For further details, refer to the collapsible sections below or run:
-
-```bash
-cartloader run_cartload2 --help
-```
+Below are the core parameters. See more details in the collapsible "Auxiliary Paramaters" section.. 
 
 ### Input/Output Parameters
+Must use `--sge-dir` or `--fic-dir` to provide SGE data.
 
-* `--fic-dir` (str): Path to the input directory containing FICTURE output.
-* `--out-dir` (str): Path to the output directory for storing generated assets.
+* `--sge-dir` (str): Path to the input Directory from `sge_convert`; must include an SGE assets JSON (`--in-sge-assets`). 
+* `--fic-dir` (str): Path to the input Directory from `run_ficture2`; must include `--in-fic-params` JSON/YAML.
+* `--cell-assets` (list of str): Optional cell asset JSON/YAML files (e.g., from `import_*_cell`) to include.
+* `--background-assets` (list of str): Optional basemap assets (e.g., from cell `import_image`); JSON/YAML or inline specs `id:path` or `id1:id2:path`.
+* `--out-dir` (str): Path to the output directory for PMTiles, assets JSON, and catalog YAML.
 
 ### Dataset ID and Descriptions
 
-* `--id` (str): Unique identifier for the output asset set.
+* `--id` (str): Unique dataset identifier (avoid whitespace; use `-`).
 * `--title` (str): Optional title for the output assets.
-* `--desc` (str): Optional description for the output assets.
+* `--desc` (str): Optional short description for the output assets.
 
-??? note "Auxiliary `run_cartload2` Paramaters"
+??? note "Auxiliary Parameters"
+    Recommend to use the default values; override only if needed.
 
     **Auxiliary Conversion Parameters**:
-    
-    * `--in-fic-params` (str): Path to input JSON file with SGE files and FICTURE parameters (Default: `ficture.params.json`).
-    * `--out-fic-assets` (str): Path to output JSON file to write FICTURE assets (Default: `ficture_assets.json`).
-    * `--out-catalog` (str): Path to output YAML file for assets (Default: catalog.yaml).
-    * `--background-assets` (str list): List of background asset descriptors in `[id:file]` or `[id1:id2:file]` format.
+    * `--in-sge-assets` (str): File name of SGE assets JSON/YAML under `--sge-dir` specifying paths to transcript, feature, and minmax files (default: `sge_assets.json`).
+    * `--in-fic-params` (str): File name of input JSON/YAML with SGE paths and FICTURE parameters under `--fic-dir`(default: `ficture.params.json`).
+    * `--out-fic-assets` (str): File name of output JSON/YAML file to write FICTURE assets (default: `ficture_assets.json`).
+    * `--out-catalog` (str): File name of output YAML file for assets (default: `catalog.yaml`).
     * `--rename-x` (str): Column renaming rule for X axis in `tippecanoe` (Default: x:lon).
     * `--rename-y` (str): Column renaming rule for Y axis in `tippecanoe` (Default: y:lat).
-    * `--colname-feature` (str): Column name for gene/feature name (Default: gene).
-    * `--colname-count` (str): Column name for feature count (Default: count).
-    * `--out-molecules-id` (str): Prefix for output molecule PMTiles files (Default: genes).
-    * `--max-join-dist-um` (float): Maximum join distance (µm) between molecules and pixels (Default: 0.1).
-    * `--join-tile-size` (float): Tile size (µm) for molecule–pixel joining. (Default: 500).
-    * `--max-tile-bytes` (int): Maximum allowed tile size in bytes for PMTiles (Default: 5e6).
-    * `--max-feature-counts` (int): Maximum number of features per tile (Default: 5e5).
-    * `--preserve-point-density-thres` (int): Threshold to preserve point density in PMTiles (Default: 1024).
-    * `--keep-intermediate-files` (flag): If set, retain intermediate files generated.
-    * `--skip-raster` (flag): If set, skip raster tile generation and related dependencies.
-    * `--tmp-dir` (str): Path to a temporary directory (Default: `<out-dir>/tmp`).
+    * `--colname-feature` (str): Column name for gene/feature name (default: `gene`).
+    * `--colname-count` (str): Column name for feature count (default: `count`).
+    * `--out-molecules-id` (str): Base name for output molecule PMTiles files (default: `genes`).
+    * `--max-join-dist-um` (float): Maximum join distance (µm) between molecules and pixels (default: `0.1`).
+    * `--bin-count` (int): Number of bins when splitting input molecules (default: `50`).
+    * `--join-tile-size` (float): Tile size (µm) for molecule–pixel joining (default: `500`).
+    * `--max-tile-bytes` (int): Maximum allowed tile size in bytes for PMTiles (default: `5_000_000`).
+    * `--max-feature-counts` (int): Maximum number of features per tile (default: `500_000`).
+    * `--preserve-point-density-thres` (int): Threshold to preserve point density in PMTiles (default: `1024`).
+    * `--transparent-below` / `--transparent-above` (int): Make pixels below/above the threshold transparent for dark/light backgrounds.
+    * `--keep-intermediate-files` (flag): Retain intermediate files generated.
+    * `--skip-raster` (flag): Skip raster tile generation and related dependencies.
+    * `--tmp-dir` (str): Path to a temporary directory (default: `<out-dir>/tmp`).
 
-    **Auxiliary Environment Parameters**:
+    **Environment Parameters**:
 
-    * `--gzip` (str): Path to the `gzip` binary. For faster compression, use `"pigz -p4"` (Default: gzip).
-    * `--pmtiles` (str): Path to the `pmtiles` binary from go-pmtiles (Default: pmtiles).
-    * `--gdal_translate` (str): Path to the `gdal_translate` binary (Default: gdal_translate).
-    * `--gdaladdo` (str): Path to the `gdaladdo` binary (Default: gdaladdo).
-    * `--tippecanoe` (str): Path to the `tippecanoe` binary (Default: tippecanoe).
-    * `--spatula` (str): Path to the `spatula` binary (Default: spatula).
+    * `--gzip` (str): Path to the `gzip` binary. For faster compression, use `pigz -p4` (default: `gzip`).
+    * `--pmtiles` (str): Path to the `pmtiles` binary from go-pmtiles (default: `pmtiles`).
+    * `--gdal_translate` (str): Path to the `gdal_translate` binary (default: `gdal_translate`).
+    * `--gdaladdo` (str): Path to the `gdaladdo` binary (default: `gdaladdo`).
+    * `--tippecanoe` (str): Path to the `tippecanoe` binary (default: `tippecanoe`).
+    * `--spatula` (str): Path to the `spatula` binary (default: `spatula`).
+
+    **Run Parameters**:
+
+    * `--dry-run` (flag): Generate the Makefile but do not execute it.
+    * `--restart` (flag): Ignore existing outputs and re-run all steps.
+    * `--makefn` (str): Output Makefile name (default: `run_cartload2.mk`).
+    * `--n-jobs` (int): Parallel jobs when executing the Makefile (default: 1).
+    * `--threads` (int): Max threads per job (tippecanoe, etc.) (default: 4).
+    * `--log` (flag): Write logs to a file under the output directory.
+    * `--log-suffix` (str, default: `.log`): Log filename suffix.
+
 
 ## Output
 

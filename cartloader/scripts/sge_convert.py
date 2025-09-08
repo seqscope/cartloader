@@ -22,9 +22,8 @@ def parse_arguments(_args):
     run_params = parser.add_argument_group("Run Options", "Run options.")
     run_params.add_argument('--dry-run', action='store_true', default=False, help='Generate Makefile and print commands without executing')
     run_params.add_argument('--restart', action='store_true', default=False, help='Ignore existing outputs and re-run all steps')
-    run_params.add_argument('--n-jobs', '-j', type=int, default=1, help='Number of parallel jobs to run (default: 1)')
     run_params.add_argument('--makefn', type=str, default="sge_convert.mk", help='File name of Makefile to write (default: sge_convert.mk)')
-    run_params.add_argument('--threads', type=int, default=1, help='Maximum number of threads per job (default: 1)')
+    run_params.add_argument('--n-jobs', '-j', type=int, default=1, help='Number of parallel jobs to run (default: 1)')
     
     # Input/output/key params
     inout_params = parser.add_argument_group("Input/Output Parameters", "Input/output paths and core settings.")
@@ -95,9 +94,9 @@ def parse_arguments(_args):
 
     # AUX polygon-filtering params
     aux_polyfilter_params = parser.add_argument_group('Density/Polygon Filtering Parameters')
+    # genomic feature, gene_header and count_header will be automatically based on the --colname-feature-name and --colnames-count
     aux_polyfilter_params.add_argument('--filter-by-density', action='store_true', default=False, help='Enable density-based filtering')
     aux_polyfilter_params.add_argument('--out-filtered-prefix', type=str, default="filtered", help='Prefix for filtered outputs and images under --out-dir (default: filtered)')
-    # genomic feature, gene_header and count_header will be automatically based on the --colname-feature-name, --colname-feature-id and --colnames-count
     aux_polyfilter_params.add_argument('--radius', type=int, default=15, help='Radius for the polygon area calculation (default: 15)')
     aux_polyfilter_params.add_argument('--quartile', type=int, default=2, help='Quartile for the polygon area calculation (default: 2)')
     aux_polyfilter_params.add_argument('--hex-n-move', type=int, default=1, help='Sliding step (default: 1)')
@@ -116,7 +115,7 @@ def parse_arguments(_args):
     env_params = parser.add_argument_group("ENV Parameters", "Paths to external tools")
     env_params.add_argument('--gzip', type=str, default="gzip", help='Path to gzip binary (default: gzip). For speed, consider "pigz -p 4"')
     env_params.add_argument('--spatula', type=str, default="spatula", help='Path to spatula binary (default: spatula)')
-    env_params.add_argument('--parquet-tools', type=str, default="parquet-tools", help='Path to parquet-tools (used with --in-parquet; default: parquet-tools)')
+    env_params.add_argument('--parquet-tools', type=str, default="parquet-tools", help='Path to parquet-tools (used with --in-parquet or --pos-parquet; default: parquet-tools)')
     env_params.add_argument('--gdal_translate', type=str, default=f"gdal_translate", help='Path to gdal_translate (used with --north-up; default: gdal_translate)')
     env_params.add_argument('--gdalwarp', type=str, default=f"gdalwarp", help='Path to gdalwarp (used with --north-up; default: gdalwarp)')
  
@@ -483,7 +482,7 @@ def sge_convert(_args):
 
     # write makefile
     if len(mm.targets) == 0:
-        logging.error("There is no target to run. Please make sure that at least one run option was turned on")
+        raise ValueError("There is no target to run. Please make sure that at least one run option was turned on")
         sys.exit(1)
     
     make_f = os.path.join(args.out_dir, args.makefn)

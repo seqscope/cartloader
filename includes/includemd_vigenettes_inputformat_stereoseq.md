@@ -1,4 +1,4 @@
-The StereoSeq SGE includes one tab-delimited “Bin1” gene expression matrix file:
+Stereo‑seq SGE includes one tab‑delimited “Bin1” gene expression matrix file:
 
 !!! info "TSV File Format"
 
@@ -9,7 +9,7 @@ The StereoSeq SGE includes one tab-delimited “Bin1” gene expression matrix f
     0610005C13Rik	7228	12814	2
     ```
 
-    * "`geneID`": gene symbols
-    * "`x`": x coordinates of each DNB on the captured chip
-    * "`y`": y coordinates of each DNB on the captured chip
-    * "`MIDCounts`": the number of UMI for each gene at each DNB
+    * `geneID`: Gene symbol.
+    * `x`: X coordinate of each DNB on the capture chip.
+    * `y`: Y coordinate of each DNB on the capture chip.
+    * `MIDCounts`: UMI count for each gene at each DNB.

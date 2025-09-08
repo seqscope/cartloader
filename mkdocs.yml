@@ -67,12 +67,20 @@ nav:
         - Xenium Starter Tutorial: vignettes/subregion_tutorials/xenium.md
         - MERSCOPE Starter Tutorial: vignettes/subregion_tutorials/merscope.md
         - CoxMX SMI Starter Tutorial: vignettes/subregion_tutorials/cosmxsmi.md
-
   - References:
-      - SGE Format Conversion: reference/sge_convert.md
-      - FICTURE Analysis: reference/run_ficture2.md
-      - cartloader Compilation: reference/run_cartload2.md
-      - Data Repository Upload: reference/upload_repository.md
+      - Overview: reference/intro.md
+      - SGE Preparation:
+          - SGE Format Conversion: reference/sge_convert.md
+          - SGE Utilities: reference/sge_utilities.md
+      - Analysis:
+          - FICTURE Analysis: reference/run_ficture2.md
+      - Packaging:
+          - Asset Packaging: reference/run_cartload2.md
+          - Image Import: reference/import_image.md
+          - Import Cell Analysis: reference/import_cell.md
+      - Upload:
+          - Data Repository Upload: reference/upload_repository.md
+
 # Watch for changes
 watch:
   - includes

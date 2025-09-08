@@ -1,12 +1,12 @@
 # Installation Guide
 
-This is an instruction to set up the required environment, and install dependencies and `cartloader`.
+This is an instruction to set up the required environment, and install dependencies and `CartLoader`.
 
 ---
 
 ## 1. Dependencies
 
-To ensure full functionality of `cartloader`, the following dependencies must be installed:
+To ensure full functionality of `CartLoader`, the following dependencies must be installed:
 
 ### **1.1 System Dependencies**  
 
@@ -22,7 +22,7 @@ The following external tools and utilities are required for handling spatial dat
 
 **Python & Related Packages:**
 
-- [`python`](https://www.python.org/) (`cartloader` has been tested with *v3.10* and *v3.13.1*)
+- [`python`](https://www.python.org/) (`CartLoader` has been tested with *v3.10* and *v3.13.1*)
 - [`parquet-tools`](https://github.com/apache/parquet-mr/tree/master/parquet-tools)
 
 **External Tools** (Included in submodules)
@@ -63,7 +63,7 @@ bash Miniconda3-latest-Linux-x86_64.sh
 
 ### 2.2 Creating an Environment
 
-Create a dedicated Conda environment for `cartloader`:
+Create a dedicated Conda environment for `CartLoader`:
 
 ```bash
 conda_env=ENV_NAME              # replace ENV_NAME with the name of your conda environment
@@ -83,7 +83,7 @@ conda install -c conda-forge gdal aws-cli imagemagick parquet-tools
 
 ---
 
-## 3. Installing `cartloader`
+## 3. Installing `CartLoader`
 
 Clone the repository and install it:
 

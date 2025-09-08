@@ -1,14 +1,14 @@
 # Vignettes
 
-We offer a series of tutorials to help users master the `cartloader` toolkit across a range of scenarios — from simple getting-started examples to processing full-scale ST datasets. 
+Explore a series of tutorials that help you learn `CartLoader` — from quick, getting‑started examples to processing full‑scale spatial transcriptomics (ST) datasets.
 
-For a more detailed explanation of each step, refer to our [References](../reference/sge_convert.md) Page.
+For step‑by‑step details of each module, see the [Reference](../reference/sge_convert.md) pages.
 
 ## Quick Start
 
-If you're new to `cartloader`, we recommend beginning with the [Quick Start](./quickstart/run_locally.md) tutorial. 
+If you’re new to `CartLoader`, start with the [Quick Start](./quickstart/run_locally.md) tutorial.
 
-This vignette provides a beginner-friendly walkthrough using a small mouse hippocampus dataset to walks through `cartloader` functions.
+It provides a beginner‑friendly walkthrough using a small mouse hippocampus dataset and introduces the core `CartLoader` functions.
 
 <div class="grid cards single-left" markdown>
 
@@ -23,9 +23,10 @@ This vignette provides a beginner-friendly walkthrough using a small mouse hippo
 
 ## Getting Started per Platform
 
-These tutorials show how to run the `cartloader` pipeline on a variety of ST platforms, using small, representative datasets.
+These tutorials demonstrate how to run the `CartLoader` pipeline on a variety of ST platforms using small, representative datasets.
 
-For consistency, we curated hippocampus from the mouse brain for each platform, when possible. If hippocampal data is unavailable for a given platform, we selected another brain subregion to illustrate the process.
+For consistency, we use mouse hippocampus when available. 
+<!-- If a platform lacks hippocampal data, we select a comparable brain subregion. -->
 
 !!! warning
 
@@ -90,15 +91,15 @@ For consistency, we curated hippocampus from the mouse brain for each platform, 
     [Read](./subregion_tutorials/cosmxsmi.md){ .md-button .md-button--primary .button-tight-small }
 </div>
 
-## Real-World Use Cases
-These examples demonstrate how to process walk through real-world **whole-sample** ST datasets. Each example uses a whole mouse brain sample for consistency.
+## Real‑World Use Cases
+These examples show how to process real‑world, whole‑sample ST datasets. Each example uses a whole mouse brain sample for consistency.
 
 !!! warning 
     Tutorials will be updated.
 
-## Multi-Sample Batch Analysis
+## Multi‑Sample Batch Analysis
 
-!!! warning 
-    This function is still under development
+!!! warning
+    This section is under active development.
 
-This upcoming section will showcase how to process **multiple samples** in a single batch. It will include tutorials on cross-sample analysis.
+Upcoming content will cover how to process **multiple samples** in a single batch, including cross‑sample analysis.

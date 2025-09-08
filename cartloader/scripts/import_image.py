@@ -21,8 +21,8 @@ def parse_arguments(_args):
     run_params = parser.add_argument_group("Run Options", "Execution controls for generating and running the Makefile")
     run_params.add_argument('--dry-run', action='store_true', default=False, help='Generate the Makefile but do not execute it')
     run_params.add_argument('--restart', action='store_true', default=False, help='Ignore existing outputs and re-run all steps')
-    run_params.add_argument('--n-jobs', type=int, default=1, help='Number of parallel jobs to run (default: 1)')
     run_params.add_argument('--makefn', type=str, default=None, help='Name of the generated Makefile (default: {out-prefix}.mk)')
+    run_params.add_argument('--n-jobs', type=int, default=1, help='Number of parallel jobs to run (default: 1)')
 
     cmd_params = parser.add_argument_group("Commands", "Actions to apply (order: ome2png → georeference/orientation → png2pmtiles)")
     cmd_params.add_argument('--ome2png', action='store_true', default=False, help='Convert OME-TIFF to PNG (e.g., Vizgen/Xenium). Also enables --georeference using bounds read from the OME-TIFF')
@@ -31,7 +31,7 @@ def parse_arguments(_args):
     cmd_params.add_argument('--rotate', type=str, default=None, choices=["90", "180", "270"],  help='Rotate clockwise by 90/180/270 degrees (applied before flips)')
     cmd_params.add_argument('--flip-vertical', action='store_true', default=False, help='Flip vertically (around X axis); applied after rotation')
     cmd_params.add_argument('--flip-horizontal', action='store_true', default=False, help='Flip horizontally (around Y axis); applied after rotation')
-    cmd_params.add_argument('--update-catalog', action='store_true', default=False, help='Update or create catalog.yaml with the generated PMTiles')
+    cmd_params.add_argument('--update-catalog', action='store_true', default=False, help='Update catalog.yaml with the generated PMTiles')
 
     inout_params = parser.add_argument_group(
         "Input/Output Parameters",
@@ -66,7 +66,7 @@ def parse_arguments(_args):
     aux_params2.add_argument('--srs', type=str, default='EPSG:3857', help='Spatial reference system identifier (default: EPSG:3857)')
     aux_params2.add_argument('--mono', action='store_true', default=False, help='Input is single-band (mono) PNG. Skip it if --ome2png is enabled.')
     aux_params2.add_argument('--rgba', action='store_true', default=False, help='Input is 4-band RGBA PNG. Skip it if --ome2png is enabled')
-    aux_params2.add_argument('--resample', type=str, default='cubic', help='Resampling method: near, bilinear, cubic, etc. (default: cubic)')
+    aux_params2.add_argument('--resample', type=str, default='cubic', help='Resampling method: near, bilinear, cubic, etc (default: cubic)')
     aux_params2.add_argument('--blocksize', type=int, default='512', help='Block size in pixels for GDAL operations (default: 512)')
 
     aux_params3 = parser.add_argument_group("Auxiliary parameters for --georeference", "Pick one of the following three ways to provide georeferencing bounds")

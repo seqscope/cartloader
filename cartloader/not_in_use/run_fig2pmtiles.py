@@ -147,7 +147,7 @@ def parse_arguments(_args):
 
     key_params = parser.add_argument_group("Key parameters")
     key_params.add_argument('--srs', type=str, default='EPSG:3857', help='For --georeference and --geotif2mbtiles, define the spatial reference system (default: EPSG:3857)')
-    key_params.add_argument('--mono', action='store_true', default=False, help='For --rotate, --flip-vertical/horizontal, and --geotif2mbtiles without --transform, define if the input image is black-and-white and single-banded. (default: False)')
+    key_params.add_argument('--mono', action='store_true', default=False, help='For --rotate, --flip-vertical/horizontal, and --geotif2mbtiles without --transform, define if the input image is black-and-white and single-banded (default: False)')
     key_params.add_argument('--rgba', action='store_true', default=False, help='RGBA, 4-banded image (default: False)')
     key_params.add_argument('--resample', type=str, default='cubic', help='For --geotif2mbtiles and --mbtiles2pmtiles, define the resampling method (default: cubic). Options: near, bilinear, cubic, etc.')
     key_params.add_argument('--blocksize', type=int, default='512', help='For --geotif2mbtiles and --mbtiles2pmtiles, define the blocksize (default: 512)')

@@ -8,16 +8,16 @@ While the rapid development of sequencing-based platforms (e.g., [Seq-Scope](htt
 
 To address this challenge, we introduce a scalable, harmonized, and cloud-friendly ecosystem for spatial transcriptomics data across platforms, composed of two components:
 
-- **cartloader** – a harmonized, scalable pipeline for high-resolution spatial omics data processing and analysis with retaining the original resolution.
-- [**cartostore**](https://github.com/seqscope/cartostore) – an open-access, cloud-hosted repository for dataset sharing and visualization.
+- **CartLoader** – a harmonized, scalable pipeline for high‑resolution spatial omics data processing and analysis while retaining the original resolution.
+- [**CartoStore**](https://github.com/seqscope/cartostore) – an open-access, cloud-hosted repository for dataset sharing and visualization.
 
 Together, this system should provide a unified solution for working with raw pixel-level spatial omics data—without sacrificing resolution or reproducibility.
 
 ---
 
-## `cartloader`: A Scalable Spatial Transcriptomics Pipeline
+## `CartLoader`: A Scalable Spatial Transcriptomics Pipeline
 
-This document introduces `cartloader`, which is the core engine of our ecosystem. It provides a modular, reproducible tool to harmonize, integrate, analyze, and visualize raw high-resolution ST data across platforms. Usage examples are provided in the [Vignettes](./vignettes/intro.md). Detailed descriptions of its workflow, inputs, outputs, and parameters are provided in the [Reference Pages](./reference/sge_convert.md).
+This document introduces `CartLoader`, which is the core engine of our ecosystem. It provides a modular, reproducible tool to harmonize, integrate, analyze, and visualize raw high-resolution ST data across platforms. Usage examples are provided in the [Vignettes](./vignettes/intro.md). Detailed descriptions of its workflow, inputs, outputs, and parameters are provided in the [Reference Pages](./reference/sge_convert.md).
 
 **Key Features**
 
@@ -30,18 +30,17 @@ This document introduces `cartloader`, which is the core engine of our ecosystem
 
 ---
 
-## [cartostore](https://github.com/seqscope/cartostore): Cloud Access and Visualization
+## [CartoStore](https://github.com/seqscope/cartostore): Cloud Access and Visualization
 
-As a natural companion to `cartloader`, [`cartostore`](https://github.com/seqscope/cartostore) hosts the dataset and the output from `cartloader` for public access and exploration.
+As a natural companion to `CartLoader`, [`CartoStore`](https://github.com/seqscope/cartostore) hosts the dataset and the output from `CartLoader` for public access and exploration.
 
-Designed for scalability and interoperability, [`cartostore`](https://github.com/seqscope/cartostore) uses spatially indexed formats like **PMTiles** to support interactive visualization and seamless integration.
+Designed for scalability and interoperability, [`CartoStore`](https://github.com/seqscope/cartostore) uses spatially indexed formats like **PMTiles** to support interactive visualization and seamless integration.
 
-Explore the [`cartostore` documentation](https://github.com/seqscope/cartostore) to learn more about dataset access and how to contribute.
+Explore the [`CartoStore` documentation](https://github.com/seqscope/cartostore) to learn more about dataset access and how to contribute.
 
 ---
 
 ## Citations:
 
-<!-- * cartloader+cartostore: [doi-to-be-added](link-to-be-added) -->
+<!-- * CartLoader+CartoStore: [doi-to-be-added](link-to-be-added) -->
 * FICTURE: [doi.org/10.1038/s41592-024-02415-2](https://www.nature.com/articles/s41592-024-02415-2)
-

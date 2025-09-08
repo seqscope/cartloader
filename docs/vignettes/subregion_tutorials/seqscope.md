@@ -14,7 +14,7 @@ Actual input formats are platform-dependent. Please refer to the [Vignettes](../
 
 **Data Access**
 
-The example data is hosted on Zenedo (10.5281/zenodo.15786632).
+The example data is hosted on Zenodo (10.5281/zenodo.15786632).
 
 Follow the commands below to download the example data.
 
@@ -63,7 +63,7 @@ n_factor=6,12                            # define number of factors in LDA train
   include-markdown "../../../includes/includemd_vigenettes_run_ficture2.md"
 %}
 
-## `cartloader` Compilation
+## `CartLoader` Asset Packaging
 
 {%
   include-markdown "../../../includes/includemd_vigenettes_run_cartload2.md"
@@ -72,7 +72,7 @@ n_factor=6,12                            # define number of factors in LDA train
 ## Upload to Data Repository
 
 {%
-  include-markdown "../../../includes/includemd_vigenettes_upload.md"
+  include-markdown "../../../includes/includemd_vigenettes_upload.md" preserve-includer-indent=false
 %}
 
 

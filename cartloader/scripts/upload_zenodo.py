@@ -148,7 +148,7 @@ def upload_zenodo(_args):
     group_flags.add_argument('--publish', action='store_true', default=False, help='If set, publish the deposition automatically after upload. '
                                                                                     'Recommended to leave this DISABLED and publish manually after verifying the deposition via the Zenodo web interface.'
                                                                                     )
-    group_flags.add_argument('--overwrite', action='store_true', default=False, help='Overwrite existing files with the same name.')
+    group_flags.add_argument('--restart', action='store_true', default=False, help='Restart all upload requests regardless of existing files.')
     group_flags.add_argument('--dry-run', action='store_true', default=False, help='Simulate the upload process without making changes.')
 
     args = parser.parse_args(_args)
@@ -307,7 +307,7 @@ def upload_zenodo(_args):
             raise ValueError(f" * No input files found")
 
         failed_list = []
-        print(f" * Checking overlapping with existing files in the Zenodo deposition (overwrite mode: {'On' if args.overwrite else 'Off'})")
+        print(f" * Checking overlapping with existing files in the Zenodo deposition (overwrite mode: {'On' if args.restart else 'Off'})")
         input_fnames = {os.path.basename(f): f for f in in_files_raw}
         existing_only = [f for f in existing_files if f not in input_fnames]
         input_overlap = [input_fnames[f] for f in input_fnames if f in existing_fnames]
@@ -330,7 +330,7 @@ def upload_zenodo(_args):
                 print("\n    - New input file(s) (not in deposition): N=0")
 
             if input_overlap:
-                if args.overwrite:
+                if args.restart:
                     print(f"\n    - Overlapping input file(s) (already in deposition): N={len(input_overlap)} (will be overwritten)")
                     failed_list2=uploading(input_overlap, touch_flag=False, flag_suffix="zenodo.done")
                     failed_list.extend(failed_list2)
@@ -352,17 +352,17 @@ def upload_zenodo(_args):
 
     failed_list=[]
     if args.upload_method == "all" or args.upload_method == "user_list":
-        failed_sublist=process_uploading_by_list(in_files_raw, existing_files, force_upload_files=[], touch_flag=False, flag_suffix="zenodo.done", overwrite=args.overwrite, dry_run=args.dry_run)
+        failed_sublist=process_uploading_by_list(in_files_raw, existing_files, force_upload_files=[], touch_flag=False, flag_suffix="zenodo.done", overwrite=args.restart, dry_run=args.dry_run)
         failed_list.extend(failed_sublist)
     elif args.upload_method == "catalog":
         print(f"\n1) Upload: tiled map data for SGE (with or without FICTURE)\n")
-        failed_sublist=process_uploading_by_list(cartload_files_raw, existing_files, force_upload_files=[], touch_flag=False, flag_suffix="zenodo.done", overwrite=args.overwrite, dry_run=args.dry_run)
+        failed_sublist=process_uploading_by_list(cartload_files_raw, existing_files, force_upload_files=[], touch_flag=False, flag_suffix="zenodo.done", overwrite=args.restart, dry_run=args.dry_run)
         failed_list.extend(failed_sublist)
         cartload_flag=os.path.join(args.in_dir, "cartload.zenodo.done")
         Path(cartload_flag).touch(exist_ok=True)
         if len(basemap_files_raw) > 0:
             print(f"\n2) Upload: tiled map data for background images, such as histology images\n")
-            failed_sublist=process_uploading_by_list(basemap_files_raw, existing_files, force_upload_files=[], touch_flag=True, flag_suffix="zenodo.done", overwrite=args.overwrite, dry_run=args.dry_run)
+            failed_sublist=process_uploading_by_list(basemap_files_raw, existing_files, force_upload_files=[], touch_flag=True, flag_suffix="zenodo.done", overwrite=args.restart, dry_run=args.dry_run)
             failed_list.extend(failed_sublist)
     if args.publish and not args.dry_run:
         print(f"\n Publishing the deposition {args.zenodo_deposition_id} ...")

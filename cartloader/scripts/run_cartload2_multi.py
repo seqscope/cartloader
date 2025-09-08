@@ -49,7 +49,7 @@ def parse_arguments(_args):
     inout_params.add_argument('--fic-dir', type=str, required=True, help='Path tp FICTURE results directory produced by "cartloader run_ficture"; must include FICTURE results and a parameter JSON (see --in-fic-params)')
     inout_params.add_argument('--in-list', type=str, required=True, help='Path to input TSV without header. One sample per row with 2 required columns [sample id, path to transcript] and 2 optional columns [title, description]. If id is omitted it defaults to sample (use lowercase and replace _ by -); quote title/description if they contain spaces.')
 
-    ## Show the default value in help text but not set it here. All defaults will be applied in run_cartload2_generic()
+    ## Show the default value in help text but not set it here. All defaults will be applied in run_cartload2()
     aux_params = parser.add_argument_group("Auxiliary Parameters", "Advanced settings; defaults work for most cases") 
     aux_params.add_argument('--in-fic-params', type=str, help='File name of FICTURE params JSON/YAML under --fic-dir, providing FICTURE paramaters (default: ficture.params.json)')
     aux_params.add_argument('--out-fic-assets', type=str, help='File name of output JSON/YAML for FICTURE asset metadata under --out-dir (default: ficture_assets.json)')
@@ -71,7 +71,7 @@ def parse_arguments(_args):
     aux_params.add_argument('--transparent-below', type=int, help='Set pixels below this value to transparent for dark background (range: 0~255)')
     aux_params.add_argument('--transparent-above', type=int, help='Set pixels above this value to transparent for light background (range: 0~255)')
 
-    ## Show the default value in help text but not set it here. All defaults will be applied in run_cartload2_generic()
+    ## Show the default value in help text but not set it here. All defaults will be applied in run_cartload2()
     env_params = parser.add_argument_group("Env Parameters", "Tool paths (override defaults if needed)")
     env_params.add_argument('--gzip', type=str, help='Path to gzip-compatible binary (tip: use "pigz -p4" for speed)')
     env_params.add_argument('--pmtiles', type=str, help='Path to pmtiles binary from go-pmtiles')
@@ -132,9 +132,9 @@ def run_cartload2_generic(_args):
 
         prerequisites = [ficture2_flag, fic_param_assets]
 
-        cmds = cmd_separator([], f"Running --run-cartload2-generic for sample {id}")
+        cmds = cmd_separator([], f"Running run_cartload2 for sample {id}")
         cmd = " ".join([
-            "cartloader", "run_cartload2_generic",
+            "cartloader", "run_cartload2",
             f"--out-dir {cart_dir}",
             f"--fic-dir {fic_dir}",
             f"--id {out_id}",

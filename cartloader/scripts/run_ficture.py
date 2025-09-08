@@ -41,7 +41,7 @@ def parse_arguments(_args):
     inout_params.add_argument('--out-dir', required= True, type=str, help='Output directory')
     inout_params.add_argument('--out-json', type=str, default=None, help="Output JSON file for summarizing the ficture parameters (default: <out-dir>/ficture.params.json)")
     inout_params.add_argument('--in-transcript', type=str, default=None, help='Path to the input unsorted transcript-indexed SGE file in TSV format (default: <out-dir>/transcripts.unsorted.tsv.gz)')
-    inout_params.add_argument('--in-minmax', type=str, default=None, help='Path to the input coordinate minmax TSV file. (default: <out-dir>/coordinate_minmax.tsv)')  
+    inout_params.add_argument('--in-minmax', type=str, default=None, help='Path to the input coordinate minmax TSV file (default: <out-dir>/coordinate_minmax.tsv)')  
     inout_params.add_argument('--in-feature', type=str, default=None,  help='Path to the input UMI count per gene TSV file.(default: feature.clean.tsv.gz).')
     inout_params.add_argument('--in-cstranscript', type=str, default=None, help='(Optional) Use --in-cstranscript if a coordinate-sorted transcript-indexed SGE file already exists to skip sorting, or to define a custom sorted file name (default: <out-dir>/transcripts.sorted.tsv.gz)')
     inout_params.add_argument('--in-feature-ficture', type=str, default=None, help='(Optional) Use --in-feature-ficture to provide a feature file for FICTURE analysis if such feature file exists.')
@@ -75,7 +75,7 @@ def parse_arguments(_args):
     # given the input sge should be standardized, the csv-delim, csv-colname-feature-name, ftr-delim, ftr-colname-feature-name are not necessary
     aux_ftrfilter_params.add_argument('--filter-by-overlapping-features', action='store_true', default=False, help='When the input SGE is stitched SGE, it is optional to filter the features in FICTURE analysis by only shared features')
     aux_ftrfilter_params.add_argument('--in-feature-dist', type=str, default=None, help='When the input SGE is stitched SGE, it is optional to filter the features in FICTURE analysis by only shared features and features with a minimal count in the ')
-    aux_ftrfilter_params.add_argument('--min-ct-per-ftr-tile', type=int, default=0, help='Apply a minimum count to filter overlapping feature. Filtering process will be applied if --min-ct-per-overlapftr > 0. (default: 0)')
+    aux_ftrfilter_params.add_argument('--min-ct-per-ftr-tile', type=int, default=0, help='Apply a minimum count to filter overlapping feature. Filtering process will be applied if --min-ct-per-overlapftr > 0 (default: 0)')
     aux_ftrfilter_params.add_argument('--out-feature-ficture', type=str, default="features.ficture.tsv.gz", help='File name for the output TSV file of feature used in FICTURE analysis')
     aux_ftrfilter_params.add_argument('--include-feature-list', type=str, default=None, help='A file containing a list of input genes to be included (feature name of IDs)')
     aux_ftrfilter_params.add_argument('--exclude-feature-list', type=str, default=None, help='A file containing a list of input genes to be excluded (feature name of IDs)')

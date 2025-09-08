@@ -588,8 +588,8 @@ def stepinator(_args):
     key_params.add_argument('--precision-um', type=int, default=None, help='Required if --sge-convert. Number of digits of transcript coordinates (default: 2)')
     key_params.add_argument('--filter-by-density', action='store_true', default=False, help='Required if --sge-convert or --run-ficture. If --sge-convert, it enables density-filtering. If --run-ficture, it defines the density-filtered SGE as input.')
     key_params.add_argument('--filtered-prefix', type=str, default=None, help='Required if --filtered-by-density. The prefix for density-filtered SGE (default: filtered)')
-    key_params.add_argument("--colname-count", type=str, default="count", help="Required if --sge-convert, --sge-stitch, --run-ficture, or --run-cartload-join. Column name that showing the expression count of the genomic feature of interest. (default: gene)")
-    # key_params.add_argument("--colnames-other-count", nargs="*", default=[], help="Optional if --sge-convert, --sge-stitch is enabled. It allows to keep other genomic features in the formatted SGE besides the genomic feature of interest. (default: [])")
+    key_params.add_argument("--colname-count", type=str, default="count", help="Required if --sge-convert, --sge-stitch, --run-ficture, or --run-cartload-join. Column name that showing the expression count of the genomic feature of interest (default: gene)")
+    # key_params.add_argument("--colnames-other-count", nargs="*", default=[], help="Optional if --sge-convert, --sge-stitch is enabled. It allows to keep other genomic features in the formatted SGE besides the genomic feature of interest (default: [])")
     # for run_ficture
     key_params.add_argument("--major-axis", type=str, default="X", choices=["X","Y"], help="Major axis (default: X)")
     key_params.add_argument("--ext-path", type=str, default=None, help="Required when --run-ficture1 with an external model. The path for the external model.")
@@ -598,7 +598,7 @@ def stepinator(_args):
     key_params.add_argument("--n-factor", '-n', type=str, default=None, help="Required if --run-ficture1 with LDA. Number of factors. ")
     key_params.add_argument("--image", type=str, nargs="?", default=[], help="""
                               (Optional) Provide image info as <image_id>;<path>;<ome>;<lower_thres_quantile>;<upper_thres_quantile>;<level>;<colorize>;<georeference>;<georef_tsv>;<georef_bounds>;<rotate_degree>;<flip_direction>. 
-                              Only <image_id> and <path> are required. Supports multiple files; use <image_id> to distinguish them. (Default: [])
+                              Only <image_id> and <path> are required. Supports multiple files; use <image_id> to distinguish them (default: [])
                               Define <ome> and <georeference> by True or False. If the image is OME TIFF, define <ome> as True. If georeference=True, specify <georef_tsv> or <georef_bounds>. 
                               Orientation allows rotation (90, 180, 270) and flipping (vertical, horizontal, both). 
                             """)
@@ -695,7 +695,7 @@ def stepinator(_args):
     )
     # use fic
     ficture_aux_params.add_argument('--filter-by-overlapping-features', action='store_true', default=False, help='Use overlapping features in FICTURE analysis')
-    ficture_aux_params.add_argument('--min-ct-per-ftr-tile', type=int, default=0, help='Apply a minimum count to filter overlapping feature. Filtering process will be applied if --min-ct-per-overlapftr > 0. (default: 0)')
+    ficture_aux_params.add_argument('--min-ct-per-ftr-tile', type=int, default=0, help='Apply a minimum count to filter overlapping feature. Filtering process will be applied if --min-ct-per-overlapftr > 0 (default: 0)')
     ficture_aux_params.add_argument("--cmap", '-c', type=str, default=None, help="Required if the user prefers to use a pre-built color map (Default: None)")
     ficture_aux_params.add_argument('--ficture-feature', type=str, default="features.ficture.tsv.gz", help='File name for the output TSV file of feature used in FICTURE analysis')
     ficture_aux_params.add_argument('--fic-include-feature-list', type=str, default=None, help='A file containing a list of input genes to be included (feature name of IDs)')

@@ -1,4 +1,4 @@
-The CosMx SMI by NanoString generates high-resolution spatial transcriptomics data with single-molecule resolution with a comma-separated values (CSV) table.
+NanoString CosMx SMI produces single‑molecule spatial transcriptomics data as a comma‑separated values (CSV) table.
 
 !!! info "CSV File Format"
 
@@ -10,10 +10,9 @@ The CosMx SMI by NanoString generates high-resolution spatial transcriptomics da
     ```
 
     * `fov`: The field of view (FOV) number.
-    * `cell_ID`: Unique identifier for a single cell within a given FOV. 0 if background or unassigned molecules.
-    * `x_global_px`, `y_global_px`: Global pixel coordinates relative to the tisse.
+    * `cell_ID`: Unique identifier for a single cell within a given FOV; 0 if background or unassigned molecules.
+    * `x_global_px`, `y_global_px`: Global pixel coordinates relative to the tissue.
     * `x_local_px`, `y_local_px`: The x or y position (in pixels) relative to the given FOV.
     * `z`: Z-plane index representing the depth (optical section) where the transcript was detected.
-    * `target`: Name of the target.
-    * `CellComp`: Subcellular location of target.
-
+    * `target`: Target name.
+    * `CellComp`: Subcellular location of the target.

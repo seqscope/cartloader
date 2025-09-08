@@ -25,7 +25,7 @@ def feature_overlapping(_args):
         
     )
     parser.add_argument("--in-tiles", type=str, nargs='*',  required=True, default=[], help="List of input information in a specific format: <feature_path>,<row>,<col>.")
-    parser.add_argument('--in-feature', type=str, default=None, help='(Optional) Optional. File with feature names and counts. Used to populate --out-overlap if provided. (default: None)')
+    parser.add_argument('--in-feature', type=str, default=None, help='(Optional) Optional. File with feature names and counts. Used to populate --out-overlap if provided (default: None)')
     parser.add_argument('--out-overlap', type=str, required=True, help='Output file for only the features that are present in all tiles. The output columns includes <feature_name>, <sum of count across all tiles> per count.')
     parser.add_argument('--out-dist', type=str, help='(Optional) Output distribution file for all features. The output columns includes <feature_name>, <number of tiles with the feature>, and <count> per tile per count.')
     parser.add_argument('--colname-feature-name', type=str, default='gene', help='Feature name column (default: gene)')

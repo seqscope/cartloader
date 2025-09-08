@@ -13,7 +13,7 @@ The input data originates from the mouse hippocampus and is extracted from an of
 
 **Data Access**
 
-The example data is hosted on Zenedo ().
+The example data is hosted on Zenodo.
 
 Follow the commands below to download the example data.
 
@@ -44,7 +44,7 @@ n_factor=6,12                            # define number of factors in LDA train
 
 !!! info "How to Define Scaling Factors for Visium HD"
 
-    10x Visium HD includes a `scalefactors_json.json` file that provides pixel-to-micrometer scaling information. `cartloader` can directly accept this file via the `--scale-json` option and will automatically compute the appropriate scaling factor, omitting manually calculate and specify `--units-per-um`. 
+    10x Visium HD includes a `scalefactors_json.json` file that provides pixel-to-micrometer scaling information. `CartLoader` can directly accept this file via the `--scale-json` option and will automatically compute the appropriate scaling factor, omitting manually calculate and specify `--units-per-um`. 
     
     Alternatively, users may bypass the JSON file by directly providing a value through the `--units-per-um` option.
 
@@ -81,7 +81,7 @@ cartloader run_ficture2 \
 {% include-markdown "../../../includes/includemd_vigenettes_run_ficture2.md" %}
 
 
-## `cartloader` Compilation
+## `CartLoader` Asset Packaging
 
 {%
   include-markdown "../../../includes/includemd_vigenettes_run_cartload2.md"
@@ -89,7 +89,7 @@ cartloader run_ficture2 \
 
 ## Upload to Data Repository
 {%
-  include-markdown "../../../includes/includemd_vigenettes_upload.md"
+  include-markdown "../../../includes/includemd_vigenettes_upload.md" preserve-includer-indent=false
 %}
 
 ## Output Data

@@ -8,7 +8,7 @@ Visium HD slides use a 2×2 µm grid of barcoded squares (`square_002um`) for 
     s_002um_01050_01530-1
     ```
 
-    * Column 1: spatial barcodes corresponding to specific locations on the tissue section. 
+    * Column 1: Spatial barcodes corresponding to specific locations on the tissue section.
 
 
 ??? "`features.tsv.gz` – feature metadata "
@@ -21,7 +21,7 @@ Visium HD slides use a 2×2 µm grid of barcoded squares (`square_002um`) for 
 
     * Column 1: Feature ID
     * Column 2: Feature symbol
-    * Column 3: Features types
+    * Column 3: Feature type
 
 ??? "`matrix.mtx.gz` – expression count matrix "
 

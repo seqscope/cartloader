@@ -211,7 +211,7 @@ def stage_run_cartload2(cart_dir, fic_dir, sge_dir, cell_assets, background_asse
 
     # Banner
     print("=" * 10, flush=True)
-    print("Executing --run-cartload2 (execute via make; function: run_cartload2_generic)", flush=True)
+    print("Executing --run-cartload2 (execute via make; function: run_cartload2)", flush=True)
     print("=" * 10, flush=True)
 
     # Handle prerequisites based on args
@@ -236,7 +236,7 @@ def stage_run_cartload2(cart_dir, fic_dir, sge_dir, cell_assets, background_asse
 
     # Build cartload2 command
     cartload_cmd = " ".join([
-        "cartloader", "run_cartload2_generic",
+        "cartloader", "run_cartload2",
         f"--out-dir {cart_dir}",
         f"--fic-dir {fic_dir}" if args.run_ficture2 else "",
         f"--ext-fic-dir {args.ext_fic_dir}" if args.import_ext_ficture2 else "",
