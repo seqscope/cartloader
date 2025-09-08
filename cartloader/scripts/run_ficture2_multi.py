@@ -79,7 +79,7 @@ def parse_arguments(_args):
     return parser.parse_args(_args)
 
 def define_lda_runs(args):
-    #assert args.init_lda, "--init-lda must be ON when running define_lda_runs()"
+    assert args.init_lda, "--init-lda must be ON when running define_lda_runs()"
     assert args.width is not None, "When --init-lda is ON, provide at least one train width for LDA training using --train-width"
 
     if args.n_factor is None:
@@ -496,7 +496,7 @@ def run_ficture2_multi(_args):
             decode_prefix = os.path.join(args.out_dir, "samples", sample, f"{sample}.{decode_id}")  ## decode_id contains the sample ID
             decode_pixel_tsv = f"{decode_prefix}.tsv.gz"
             decode_pixel_png = f"{decode_prefix}.png"
-            decode_pseudobulk_tsv = f"{decode_prefix}.pseudobulk.tsv"
+            decode_pseudobulk_tsv = f"{decode_prefix}.pseudobulk.tsv.gz"
             decode_de_tsv = f"{decode_prefix}.bulk_chisq.tsv"
             decode_info_tsv = f"{decode_prefix}.factor.info.tsv"
             prerequisities.append(f"{decode_prefix}.done")

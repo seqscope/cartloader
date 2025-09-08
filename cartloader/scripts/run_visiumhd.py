@@ -29,7 +29,7 @@ def parse_arguments(_args):
     cmd_params = parser.add_argument_group("Commands")
     cmd_params.add_argument('--load-space-ranger', action='store_true', default=False, help='Detect Space Ranger outputs in --space-ranger-dir and write --space-ranger-assets (JSON)')
     cmd_params.add_argument('--sge-convert', action='store_true', default=False, help='Convert SGE from Visium HD format to cartloader-compatible format')
-    cmd_params.add_argument('--run-ficture2', action='store_true', default=False, help='Run FICTURE (punkst) analysis on the converted SGE')
+    cmd_params.add_argument('--run-ficture2', action='store_true', default=False, help='Run FICTURE (punkst) analysis on the converted SGE. Note, --decode-scale is set to 2 by default for Visium HD')
     cmd_params.add_argument('--import-ext-ficture2', action='store_true', default=False, help='Import a set of existing FICTURE results')
     cmd_params.add_argument('--import-cells', action='store_true', default=False, help='Import Space Ranger cell analysis into tiles and update catalog.yaml (if present)')
     cmd_params.add_argument('--import-images', action='store_true', default=False, help='Import background images (e.g., DAPI) into raster tiles and update catalog.yaml (if present)')
@@ -251,7 +251,7 @@ def run_visiumhd(_args):
             f"--gdal_translate {args.gdal_translate}" if args.gdal_translate else "",
             ])
         sge_convert_cmd = add_param_to_cmd(sge_convert_cmd, args, ["spatula", "parquet_tools", "gdalwarp"])
-        sge_convert_cmd = add_param_to_cmd(sge_convert_cmd, args, ["restart","n_jobs","threads"])
+        sge_convert_cmd = add_param_to_cmd(sge_convert_cmd, args, ["restart","n_jobs"])
         
         run_command_w_preq(sge_convert_cmd, prerequisites=prereq, dry_run=args.dry_run, flush=True)
         
@@ -260,7 +260,7 @@ def run_visiumhd(_args):
             prereq = [sge_flag]
         else:
             prereq = [sge_assets]
-        stage_run_ficture2(fic_dir, sge_assets, args, prereq)
+        stage_run_ficture2(fic_dir, sge_assets, args, prereq, "--decode-scale 2")
 
     if args.import_cells:
         print("="*10, flush=True)
@@ -302,31 +302,32 @@ def run_visiumhd(_args):
             run_command_w_preq(import_cell_cmd, prerequisites=[], dry_run=args.dry_run, flush=True)
     
     if args.import_images:  ## TBC: currently supports only OME-TIFFs
-        print("="*10, flush=True)
-        print("Executing --import-images (execute via make)", flush=True)
-        print("="*10, flush=True)
+        print("NOTE: --import-images is not yet supported; skip this step for now.", flush=True)
+        # print("="*10, flush=True)
+        # print("Executing --import-images (execute via make)", flush=True)
+        # print("="*10, flush=True)
 
-        args.image_ids = validate_imageid_args(args, ranger_assets)
-        args.image_colors = validate_imagecol_args(args)
+        # args.image_ids = validate_imageid_args(args, ranger_assets)
+        # args.image_colors = validate_imagecol_args(args)
         
-        # (visiumhd-specific) btf when not use_json
-        tif_paths=[]
-        if not use_json:
-            assert args.btf_tifs, "--btf-tifs is required when --import-images is set with manual input mode. Otherwise, set --load-space-ranger to automatically detect the images."
-            assert_unique(args.btf_tifs, "--btf-tifs")
-            # length
-            if len(args.btf_tifs) < len(args.image_ids):
-                raise ValueError(f"--btf-tifs ({len(args.btf_tifs)}) must be >= --image-ids ({len(args.image_ids)}); ensure paths align in order")
-            # all items in BTF TIFFs should exist:
-            for tif_loc in args.btf_tifs:
-                tif_path = os.path.join(ranger_dir, tif_loc)
-                assert os.path.exists(tif_path), f"File not found: {tif_path} (provided by --space-ranger-dir and --btf-tifs)"
-                tif_paths.append(tif_path)
+        # # (visiumhd-specific) btf when not use_json
+        # tif_paths=[]
+        # if not use_json:
+        #     assert args.btf_tifs, "--btf-tifs is required when --import-images is set with manual input mode. Otherwise, set --load-space-ranger to automatically detect the images."
+        #     assert_unique(args.btf_tifs, "--btf-tifs")
+        #     # length
+        #     if len(args.btf_tifs) < len(args.image_ids):
+        #         raise ValueError(f"--btf-tifs ({len(args.btf_tifs)}) must be >= --image-ids ({len(args.image_ids)}); ensure paths align in order")
+        #     # all items in BTF TIFFs should exist:
+        #     for tif_loc in args.btf_tifs:
+        #         tif_path = os.path.join(ranger_dir, tif_loc)
+        #         assert os.path.exists(tif_path), f"File not found: {tif_path} (provided by --space-ranger-dir and --btf-tifs)"
+        #         tif_paths.append(tif_path)
 
-        stage_import_images(cart_dir, args, ranger_assets, use_json, tif_paths, catalog_yaml)
+        # stage_import_images(cart_dir, args, ranger_assets, use_json, tif_paths, catalog_yaml)
 
-        background_assets  = [ os.path.join(cart_dir, f"{image_id}_assets.json") for image_id in args.image_ids]
-        background_pmtiles = [ os.path.join(cart_dir, f"{image_id}.pmtiles")     for image_id in args.image_ids]
+        # background_assets  = [ os.path.join(cart_dir, f"{image_id}_assets.json") for image_id in args.image_ids]
+        # background_pmtiles = [ os.path.join(cart_dir, f"{image_id}.pmtiles")     for image_id in args.image_ids]
 
     if args.run_cartload2:   
         # prerequisites

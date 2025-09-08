@@ -44,7 +44,7 @@ def input_by_platform(args):
             "mex_bcd": os.path.join(args.in_mex, args.mex_bcd),
             "mex_ftr": os.path.join(args.in_mex, args.mex_ftr),
             "mex_mtx": os.path.join(args.in_mex, args.mex_mtx),
-            "in_parquet": args.in_parquet,
+            "pos_parquet": args.pos_parquet,
         }
     elif args.platform == "seqscope":
         in_dict = {

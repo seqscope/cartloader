@@ -169,7 +169,7 @@ def define_ficture_flags(fic_dir, width, n_factor, anchor_res: int = 6):
             flags.append(f"{dc_prefix}.png")  # decoding visual
     return flags
 
-def stage_run_ficture2(fic_dir, sge_assets, args, prereq):
+def stage_run_ficture2(fic_dir, sge_assets, args, prereq, aux_args=None):
     print("="*10, flush=True)
     print("Executing --run-ficture2 (execute via make)", flush=True)
     print("="*10, flush=True)
@@ -195,6 +195,8 @@ def stage_run_ficture2(fic_dir, sge_assets, args, prereq):
     # Add optional params
     ficture2_cmd = add_param_to_cmd(ficture2_cmd, args, ["spatula", "ficture2"])
     ficture2_cmd = add_param_to_cmd(ficture2_cmd, args, ["restart","n_jobs","threads"])
+    if aux_args:
+        ficture2_cmd += " " + aux_args
 
     # Execute
     run_command_w_preq(

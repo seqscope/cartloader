@@ -20,7 +20,7 @@ aux_args = {
         "gzip", "pmtiles", "gdaladdo", "tippecanoe", "spatula"
     ],
     "run":[
-        "dry_run", "restart", "n_jobs", "makefn", "threads", "log", "log_suffix"
+        "restart", "n_jobs", "threads", "log", "log_suffix"
     ]
 }
 
@@ -38,11 +38,11 @@ def parse_arguments(_args):
     run_params = parser.add_argument_group("Run Options", "Execution controls for generating and running the Makefile")
     run_params.add_argument('--dry-run', action='store_true', default=False, help='Generate the Makefile but do not execute it')
     run_params.add_argument('--restart', action='store_true', default=False, help='Ignore existing outputs and re-run all steps')
-    run_params.add_argument('--n-jobs', type=int, default=1, help='Number of parallel jobs to run (default: 1)')
     run_params.add_argument('--makefn', type=str, default="run_cartload2_multi.mk", help='Name of the generated Makefile (default: run_cartload2.mk)')
-    run_params.add_argument('--threads', type=int, default=4, help='Maximum number of threads per job for tippecanoe')
-    run_params.add_argument('--log', action='store_true', default=False, help='Write logs to a file under the output directory')
-    run_params.add_argument('--log-suffix', type=str, default=".log", help='Suffix for the log filename; final path is <out_dir>_cartload<suffix> (default: .log)')
+    run_params.add_argument('--n-jobs', type=int, default=None, help='Number of parallel jobs to run (default: 1)') # pass down to sub-makefiles
+    run_params.add_argument('--threads', type=int, default=None, help='Maximum number of threads per job for tippecanoe') # pass down to sub-makefiles
+    run_params.add_argument('--log', action='store_true', default=False, help='Write logs to a file under the output directory') # pass down to sub-makefiles
+    run_params.add_argument('--log-suffix', type=str, default=None, help='Suffix for the log filename; final path is <out_dir>_cartload<suffix> (default: .log)') # pass down to sub-makefiles
 
     inout_params = parser.add_argument_group("Input/Output Parameters")
     inout_params.add_argument('--out-dir', type=str, required=True, help='Output directory (PMTiles, assets JSON, and catalog YAML)')
@@ -92,7 +92,7 @@ def parse_arguments(_args):
     
     return args
 
-def run_cartload2_generic(_args):
+def run_cartload2_multi(_args):
     """
     Build resources for CartoScope
     """
@@ -108,7 +108,7 @@ def run_cartload2_generic(_args):
     ficture2_flag = os.path.join(args.fic_dir, "multi_json_each.done")
 
     # read the in_list
-    df=pd.read_csv(args.in_list, sep="\t", dtype=str, header=0)
+    df=pd.read_csv(args.in_list, sep="\t", dtype=str, header=None)
     
     if df.shape[1] < 2:
         raise ValueError(f"Input list {args.in_list} must have at least 2 columns: sample id and path to transcript")
@@ -128,7 +128,7 @@ def run_cartload2_generic(_args):
 
         cart_dir = os.path.join(args.out_dir, id)
         os.makedirs(cart_dir, exist_ok=True)
-        catalog_yaml = os.path.join(args.out_dir, args.out_catalog if args.out_catalog is not None else "catalog.yaml")
+        catalog_yaml = os.path.join(cart_dir, args.out_catalog if args.out_catalog is not None else "catalog.yaml")
 
         prerequisites = [ficture2_flag, fic_param_assets]
 
@@ -140,7 +140,8 @@ def run_cartload2_generic(_args):
             f"--id {out_id}",
             f"--title '{title}'" if title is not None else "",
             f"--desc '{desc}'" if desc is not None else "",
-            f"--gdal_translate '{args.gdal_translate}'" if args.gdal_translate is not None else ""
+            f"--gdal_translate '{args.gdal_translate}'" if args.gdal_translate is not None else "",
+            f"--makefn run_cartload2.mk",
         ])
         cmd = add_param_to_cmd(cmd, args, aux_args["params"])
         cmd = add_param_to_cmd(cmd, args, aux_args["env"])

@@ -52,7 +52,7 @@ def process_cell_geojson_w_mtx(cells_geojson, cell_ftr_mex, cells_out, bcd2clust
         [["lon", "lat", "cell_id", "count", "clusteridx"]]
         .rename(columns={"clusteridx": "topK"})
     )
-    df_bcd["topK"] = df_bcd["clusteridx"].apply(lambda x: str(x) if pd.notna(x) else "NA")
+    df_bcd["topK"] = df_bcd["topK"].apply(lambda x: str(x) if pd.notna(x) else "NA")
     df_bcd.to_csv(cells_out)
 
 def process_boundaries_geojson(input_geojson, output_geojson, bcd2clusteridx):
@@ -191,7 +191,7 @@ def import_visiumhd_cell(_args):
 
         logger.info(f"Loading cell cluster data from {clust_in}")
         sorted_clusters, cluster2idx, bcd2cluster, bcd2clusteridx=process_cluster_csv(clust_in)
-        logger.info(f"  * Loaded {len(bcd2cluster)} cells\n")
+        logger.info(f"  * Loaded {len(bcd2cluster)} cells")
         
         ## read/write DE results
         de_in = cell_data.get("DE", None)
