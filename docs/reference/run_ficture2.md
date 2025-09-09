@@ -70,7 +70,7 @@ Below are the core parameters. See more details in the collapsible section ("Aux
 * `--main`: Run all of the following five actions.
 * `--tile`: Run [tiling step](#tiling-step---tile).
 * `--segment`: Run [segmentation step](#segmentation-step---segment).
-* `--init-lda`: Run [LDA training step](#lda-training-step).
+* `--init-lda`: Run [LDA training step](#lda-training-step---init-lda).
 * `--decode`: Run [decoding step](#decoding-step---decode).
 * `--summary`: Run [summarization step](#summarization-step---summary).
 

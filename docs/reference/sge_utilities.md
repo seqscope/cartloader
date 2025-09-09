@@ -14,7 +14,7 @@ These utilities support specialized SGE preparation tasks that complement `sge_c
 
 ---
 
-## Reorient SGE (`sge_orientate`)
+## Reorient SGE (`sge_orientate`) {#reorient-sge-rotateflip}
 
 ### Action
 Rotations are clockwise; flips are applied after rotation.
@@ -53,7 +53,7 @@ cartloader sge_orientate  \
 
 ---
 
-## Stitch multiple SGE datasets (`sge_stitch`)
+## Stitch multiple SGE datasets (`sge_stitch`) {#stitch-multiple-sge-datasets}
 
 ### Action
 Stitch two or more SGE datasets into a single SGE. Optionally applies per‑tile orientation, and writes combined transcript/feature/minmax outputs. Can also run density‑based filtering and quick visualization.

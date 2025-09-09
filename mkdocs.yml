@@ -67,6 +67,13 @@ nav:
         - Xenium Starter Tutorial: vignettes/subregion_tutorials/xenium.md
         - MERSCOPE Starter Tutorial: vignettes/subregion_tutorials/merscope.md
         - CoxMX SMI Starter Tutorial: vignettes/subregion_tutorials/cosmxsmi.md
+      # Real‑world end‑to‑end workflows by platform
+      # (Rename or expand as needed; examples below.)
+      - Platform Workflows:
+        - Xenium Pipeline: vignettes/pipelines/xenium.md
+        - Visium HD Pipeline: vignettes/pipelines/visiumhd.md
+        # - CosMX SMI Pipeline: vignettes/pipelines/cosmxsmi.md   # example placeholder
+        # - MERSCOPE Pipeline: vignettes/pipelines/merscope.md     # example placeholder
   - References:
       - Overview: reference/intro.md
       - SGE Preparation:
@@ -74,12 +81,14 @@ nav:
           - SGE Utilities: reference/sge_utilities.md
       - Analysis:
           - FICTURE Analysis: reference/run_ficture2.md
+          - Feature Filtering: reference/feature_customization.md
       - Packaging:
           - Asset Packaging: reference/run_cartload2.md
-          - Image Import: reference/import_image.md
-          - Import Cell Analysis: reference/import_cell.md
+          - Background Image Import: reference/import_image.md
+          - Cell Analysis Import: reference/import_cell.md
       - Upload:
-          - Data Repository Upload: reference/upload_repository.md
+          - AWS Upload: reference/upload_aws.md
+          - Zenodo Upload: reference/upload_zenodo.md
 
 # Watch for changes
 watch:
@@ -99,6 +108,8 @@ markdown_extensions:
       permalink: true
       toc_depth: 2
   - pymdownx.details
+  - pymdownx.tabbed:
+      alternate_style: true
   - pymdownx.highlight:
       linenums: true
       css_class: 'highlight'

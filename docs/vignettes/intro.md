@@ -6,9 +6,7 @@ For step‑by‑step details of each module, see the [Reference](../reference/sg
 
 ## Quick Start
 
-If you’re new to `CartLoader`, start with the [Quick Start](./quickstart/run_locally.md) tutorial.
-
-It provides a beginner‑friendly walkthrough using a small mouse hippocampus dataset and introduces the core `CartLoader` functions.
+If you’re new to `CartLoader`, start with the [Quick Start](./quickstart/run_locally.md) tutorial, a beginner‑friendly walkthrough using a small mouse hippocampus dataset to core `CartLoader` functions.
 
 <div class="grid cards single-left" markdown>
 
@@ -23,12 +21,13 @@ It provides a beginner‑friendly walkthrough using a small mouse hippocampus da
 
 ## Getting Started per Platform
 
-These tutorials demonstrate how to run the `CartLoader` pipeline on a variety of ST platforms using small, representative datasets.
+These tutorials demonstrate how to run `CartLoader` on a variety of ST platforms using small, representative datasets.
 
-For consistency, we use mouse hippocampus when available. 
 <!-- If a platform lacks hippocampal data, we select a comparable brain subregion. -->
 
 !!! warning
+
+    For consistency, we use mouse hippocampus when available. 
 
     Each tutorial begins with data in the platform’s native format.
 
@@ -91,7 +90,7 @@ For consistency, we use mouse hippocampus when available.
     [Read](./subregion_tutorials/cosmxsmi.md){ .md-button .md-button--primary .button-tight-small }
 </div>
 
-## Real‑World Use Cases
+## Real‑world end‑to‑end workflows by platform
 These examples show how to process real‑world, whole‑sample ST datasets. Each example uses a whole mouse brain sample for consistency.
 
 !!! warning 

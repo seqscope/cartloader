@@ -1,4 +1,4 @@
-# Image Import and PMTiles
+# Background Image Import
 
 ## Overview
 
@@ -100,7 +100,7 @@ Below are the core arguments you’ll typically set. For all other options, expa
 
 - `--ome2png`: Extract PNG (and bounds) from OME‑TIFF (auto‑georeference), and/or
 - `--png2pmtiles`: Convert PNG to PMTiles (via GeoTIFF/MBTiles).
-- `--georeference`: For manual georeference (non‑OME inputs): use `--georeference` with one  of `--georef-*` options.
+- `--georeference`: For manual georeference (non‑OME inputs) ( used with one  of `--georef-*`).
 - `--rotate` [90|180|270]: Rotate clockwise (applied before flips).
 - `--flip-vertical` (flag): Flip vertically (around X axis; after rotation).
 - `--flip-horizontal` (flag): Flip horizontally (around Y axis; after rotation).

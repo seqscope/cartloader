@@ -37,6 +37,13 @@ This section documents the `CartLoader` CLI by task. The Reference panel organiz
     </li>
     </ul>
     [Read](./run_ficture2_multi.md){ .md-button .md-button--primary .button-tight-small }
+-   <ul>
+    <li>
+        <h4>Feature Customization</h4>
+        <p><code>feature_filtering</code>: Customize the feature set by list, substring, regex, or type for downstream analysis</p>
+    </li>
+    </ul>
+    [Read](./feature_customization.md){ .md-button .md-button--primary .button-tight-small }
 </div>
 
 ## Asset Packaging
@@ -72,14 +79,20 @@ This section documents the `CartLoader` CLI by task. The Reference panel organiz
 </div>
 
 
-## Upload
+## Data Repository Upload
 <div class="grid cards forref" markdown>
 -   <ul>
       <li>
-        <h4>Data Repository Upload</h4>
-        <p><code>upload_aws</code>, <code>upload_zenodo</code>: Publish outputs to S3 or Zenodo for sharing or web visualization.</p>
+        <h4>AWS Upload</h4>
+        <p><code>upload_aws</code>: Upload outputs to an S3 bucket for sharing or web visualization.</p>
       </li>
     </ul>
-    [Read](./upload_repository.md){ .md-button .md-button--primary .button-tight-small }
+    [Read](./upload_aws.md){ .md-button .md-button--primary .button-tight-small }
+-   <ul>
+      <li>
+        <h4>Zenodo Upload</h4>
+        <p><code>upload_zenodo</code>: Upload outputs to a Zenodo deposition, creating a new draft or updating an existing record.</p>
+      </li>
+    </ul>
+    [Read](./upload_zenodo.md){ .md-button .md-button--primary .button-tight-small }
 </div>
-

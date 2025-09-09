@@ -39,9 +39,9 @@ SGE datasets vary widely in format and resolution across platforms. Since `FICTU
 
 ## Example Usage
 
-### Input SGE in MEX Format
+### 1) Input SGE in MEX Format
 
-#### `Seq-Scope`
+#### 1.1) `Seq-Scope`
 ```bash
 cartloader sge_convert \
     --platform seqscope \
@@ -58,7 +58,7 @@ cartloader sge_convert \
     --spatula /path/to/spatula/binary 
 ```
 
-#### `10X Visium HD`
+#### 1.2) `10X Visium HD`
 ```bash
 cartloader sge_convert \
     --platform 10x_visium_hd \
@@ -71,7 +71,7 @@ cartloader sge_convert \
     --sge-visual 
 ```
 
-### Input SGE in TSV/CSV Format
+### 2) Input SGE in TSV/CSV Format
 
 This applies to input SGE in TSV/CSV format from platforms including 10x Xenium, Stereo‑seq, CosMx SMI, MERSCOPE, Pixel‑seq, and Nova‑ST. To simplify preprocessing, `sge_convert` automatically applies platform‑specific defaults for common CSV/TSV parameters.
 
