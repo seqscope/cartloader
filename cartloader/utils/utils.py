@@ -824,6 +824,9 @@ def update_and_copy_paths(data, out_dir, skip_keys=[], exe_copy=False):
 
                 # Update value to filename
                 d[key] = file_name
+            # if it is none, skip this key:value pair
+            elif value is None:
+                continue
             else:
                 raise ValueError("Failed at update_and_copy_paths. The value in the dictionary should be either path or a dictionary.")
 

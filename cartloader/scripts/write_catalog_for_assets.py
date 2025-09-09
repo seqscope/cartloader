@@ -97,17 +97,19 @@ def write_catalog_for_assets(_args):
 
     # - factors
     if args.fic_assets is not None or len(args.cell_assets)>0:
-        logger.info(f"Reading the FICTURE assets params {args.fic_assets}")
+        logger.info(f"Reading the Factor layers")
         if "factors" not in catalog_dict["assets"]:
             factors_list=[]
         else:
             factors_list = catalog_dict["assets"]["factors"]
         
         if args.fic_assets is not None: 
+            logger.info(f"Updating Factor layer with the FICTURE assets from {args.fic_assets}")
             fic_assets = load_file_to_dict(args.fic_assets)
             factors_list.extend(fic_assets)
 
         if len(args.cell_assets)>0:
+            logger.info(f"Updating Factor layer with the cell assets from {args.cell_assets}")
             for cell_assets_f in args.cell_assets:
                 cell_assets=load_file_to_dict(cell_assets_f)
                 # update_and_copy_paths will update the path to be only filename, which fits the needs of catalog.yaml
