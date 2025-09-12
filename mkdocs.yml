@@ -16,9 +16,13 @@ theme:
   - navigation.expand
   - navigation.path
   - content.code.annotate
+  - content.code.copy
   - content.grid
   - content.cards
   - content.footnote.tooltips
+  - content.tabs.link
+  - navigation.instant
+  - navigation.top
   palette:
   - media: "(prefers-color-scheme)"
     toggle:
@@ -66,29 +70,39 @@ nav:
         - Pixel-Seq Starter Tutorial: vignettes/subregion_tutorials/pixelseq.md
         - Xenium Starter Tutorial: vignettes/subregion_tutorials/xenium.md
         - MERSCOPE Starter Tutorial: vignettes/subregion_tutorials/merscope.md
-        - CoxMX SMI Starter Tutorial: vignettes/subregion_tutorials/cosmxsmi.md
+        - CosMX SMI Starter Tutorial: vignettes/subregion_tutorials/cosmxsmi.md
       # Real‑world end‑to‑end workflows by platform
       # (Rename or expand as needed; examples below.)
       - Platform Workflows:
-        - Xenium Pipeline: vignettes/pipelines/xenium.md
-        - Visium HD Pipeline: vignettes/pipelines/visiumhd.md
+        - Xenium end-to-end Tutorial: vignettes/pipelines/xenium.md
+        - Visium HD end-to-end Tutorial: vignettes/pipelines/visiumhd.md
         # - CosMX SMI Pipeline: vignettes/pipelines/cosmxsmi.md   # example placeholder
         # - MERSCOPE Pipeline: vignettes/pipelines/merscope.md     # example placeholder
   - References:
       - Overview: reference/intro.md
       - SGE Preparation:
           - SGE Format Conversion: reference/sge_convert.md
-          - SGE Utilities: reference/sge_utilities.md
+          - SGE Preparation Add-ons: reference/sge_addon.md
       - Analysis:
           - FICTURE Analysis: reference/run_ficture2.md
-          - Feature Filtering: reference/feature_customization.md
+          - Multi-Sample FICTURE Analysis: reference/run_ficture2_multi.md
+          - Feature Customization: reference/feature_customization.md
       - Packaging:
           - Asset Packaging: reference/run_cartload2.md
+          - Multi-Sample Asset Packaging: reference/run_cartload2_multi.md
           - Background Image Import: reference/import_image.md
           - Cell Analysis Import: reference/import_cell.md
       - Upload:
           - AWS Upload: reference/upload_aws.md
           - Zenodo Upload: reference/upload_zenodo.md
+      - Platform-specific Modules:
+          - Xenium:
+              - Pipeline Orchestrator : reference/run_xenium.md
+              - Pipeline Add-ons: reference/xenium_addon.md
+          - Visium HD:
+              - Pipeline Orchestrator: reference/run_visiumhd.md
+              - Pipeline Add-ons: reference/visiumhd_addon.md
+      
 
 # Watch for changes
 watch:
@@ -106,7 +120,7 @@ markdown_extensions:
       guess_lang: false 
   - toc:
       permalink: true
-      toc_depth: 2
+      toc_depth: 3
   - pymdownx.details
   - pymdownx.tabbed:
       alternate_style: true
@@ -124,7 +138,10 @@ markdown_extensions:
 plugins:
   - search
   - open-in-new-tab
-  - include-markdown
+  - include-markdown:
+      allowed_paths:
+        - assets
+        - includes
   - table-reader
   # - macros
 

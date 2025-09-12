@@ -1,6 +1,6 @@
 # Installation Guide
 
-This is an instruction to set up the required environment, and install dependencies and `CartLoader`.
+This guide explains how to set up the required environment and install dependencies and `CartLoader`.
 
 ---
 
@@ -45,7 +45,7 @@ The following external tools and utilities are required for handling spatial dat
 
 ## 2. Setting Up the Environment using `conda`
 
-We recommended to use `conda` to manage dependencies efficiently and avoid conflicts.
+We recommend using `conda` to manage dependencies efficiently and avoid conflicts.
 
 ### 2.1 Installing `conda`
 
@@ -66,10 +66,7 @@ bash Miniconda3-latest-Linux-x86_64.sh
 Create a dedicated Conda environment for `CartLoader`:
 
 ```bash
-conda_env=ENV_NAME              # replace ENV_NAME with the name of your conda environment
-python_version=3.13.1           # replace 3.13.1 with the version you prefer
-
-conda create -n ENV_NAME python=$python_version
+conda create -n ENV_NAME python=3.13.1   # replace ENV_NAME and Python version as desired
 conda activate ENV_NAME
 ```
 
@@ -126,15 +123,15 @@ make
 
 ### 4.2 Installing `punkst`
 
-Install [`punkst`](https://github.com/Yichen-Si/punkst) toolkit to use [`FICTURE` (Si et al., Nature Methods 2024)](https://www.nature.com/articles/s41592-024-02415-2).
+Install the [`punkst`](https://github.com/Yichen-Si/punkst) toolkit to use [`FICTURE` (Si et al., Nature Methods 2024)](https://www.nature.com/articles/s41592-024-02415-2).
 
-Please following the [`punkst` installation guide](https://yichen-si.github.io/punkst/install/).
+Please follow the [`punkst` installation guide](https://yichen-si.github.io/punkst/install/).
 
-??? "What is `FICTURE` and `punkst`"
+??? "What are `FICTURE` and `punkst`?"
 
     [`FICTURE`](https://www.nature.com/articles/s41592-024-02415-2) is a segmentation-free method that infers latent spatial factors—coherent spatial patterns of gene activity—that correspond to underlying transcriptional programs or tissue structures. These factors can then be projected back to the pixel level. Although `FICTURE` is built on a Latent Dirichlet Allocation (LDA) framework by default, it is also compatible with clustering outputs from external tools like `Seurat` for pixel-level projection.
 
-    The [`punkst`](https://github.com/Yichen-Si/punkst) toolkit is a streamlined implementation of the [`FICTURE`](https://www.nature.com/articles/s41592-024-02415-2), designed for improved computational efficiency and scalability while producing results equivalent to the original [`FICTURE`](https://www.nature.com/articles/s41592-024-02415-2).
+The [`punkst`](https://github.com/Yichen-Si/punkst) toolkit is a streamlined implementation of [`FICTURE`](https://www.nature.com/articles/s41592-024-02415-2), designed for improved computational efficiency and scalability while producing results equivalent to the original.
 
 ### 4.3 Installing `tippecanoe`
 
@@ -152,19 +149,19 @@ make install PREFIX=${env_dir}/cartloader/submodules/tippecanoe/  # Replace with
 
 ### 4.4 Installing `go-pmtiles`
 An easy way to install `go-pmtiles` is to download a release from [the official website](https://github.com/protomaps/go-pmtiles/releases) and decompress it.
-This will return a `pmtiles` bin file ready for use.
+This provides a `pmtiles` binary ready for use.
 
 Here is an example of its installation:
 
 ```bash
 cd ${env_dir}
-wget https://github.com/protomaps/go-pmtiles/releases/download/v1.28.0/go-pmtiles_1.28.0_Linux_x86_64.tar.gz ./
-tar -zxvf ./go-pmtiles_1.28.0_Linux_x86_64.tar.gz
+wget https://github.com/protomaps/go-pmtiles/releases/download/v1.28.0/go-pmtiles_1.28.0_Linux_x86_64.tar.gz
+tar -zxvf go-pmtiles_1.28.0_Linux_x86_64.tar.gz
 ```
 
 ### 4.5 Installing ImageMagick
 
-If you have already installed ImageMagick when [setting conda environment](#23-installing-dependencies), skip this step.
+If you already installed ImageMagick when [setting up the conda environment](#23-installing-dependencies), skip this step.
 
 ```bash
 cd ${env_dir}/cartloader/submodules/ImageMagick

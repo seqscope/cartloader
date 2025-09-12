@@ -2,8 +2,14 @@
 
 ## Overview
 
-Use `upload_zenodo` to publish CartLoader outputs — including PMTiles, decoded spatial factors, and the catalog — to a Zenodo deposition, either an existing one or a newly created draft.
+Use `upload_zenodo` to publish `CartLoader` outputs — including PMTiles, decoded spatial factors, and the catalog — to a Zenodo deposition, either an existing one or a newly created draft.
 
+---
+## Action
+
+Upload selected files to a Zenodo deposition (existing or new) using `all`, `catalog`, or `files` selection modes.
+
+---
 ## Requirements
 
 - A completed run of [`run_cartload2`](./run_cartload2.md), which produces:
@@ -39,52 +45,70 @@ Use `upload_zenodo` to publish CartLoader outputs — including PMTiles, decoded
                                 This is the deposition ID
     ```
 
+---
 ## Example Usage
 
-1) Upload files to an existing deposition ID:
+=== "Upload to an existing deposition"
 
-```bash
-zenodo_deposition_id=DEPOSITION_ID                # replace with your deposition ID
+    ```bash
+    zenodo_deposition_id=DEPOSITION_ID                # replace with your deposition ID
 
-cartloader upload_zenodo \
-  --in-dir /path/to/run_cartload2/output/directory \
-  --upload-method catalog \
-  --zenodo-token /path/to/zenodo_token.txt \
-  --zenodo-deposition-id ${zenodo_deposition_id}
-```
+    cartloader upload_zenodo \
+      --upload-method catalog \
+      --in-dir /path/to/run_cartload2/output/directory \
+      --zenodo-token /path/to/zenodo_token.txt \
+      --zenodo-deposition-id ${zenodo_deposition_id}
+    ```
 
-2) Create a new deposition and upload files (supply metadata):
+=== "Create a new deposition to upload"
+    Recommended: provide metadata.
 
-```bash
-cartloader upload_zenodo \
-  --upload-method catalog \
-  --in-dir /path/to/run_cartload2/output/directory \
-  --zenodo-token /path/to/zenodo_token.txt \
-  --title  "Title Info" \        
-  --creators "Creator Name" \   
-  --description "Description Info"
-```
+    ```bash
+    cartloader upload_zenodo \
+      --upload-method catalog \
+      --in-dir /path/to/run_cartload2/output/directory \
+      --zenodo-token /path/to/zenodo_token.txt \
+      --title  "Title Info" \        
+      --creators "Creator Name" \   
+      --description "Description Info"
+    ```
 
+=== "Upload explicit files"
+
+    ```bash
+    cartloader upload_zenodo \
+      --upload-method files \
+      --in-dir /path/to/run_cartload2/output/directory \
+      --files catalog.yaml genes_all.pmtiles some_factor.pmtiles \
+      --zenodo-token /path/to/zenodo_token.txt \
+      --zenodo-deposition-id ${zenodo_deposition_id}
+    ```
+
+---
 ## Parameters
 
 ### Input Selection
 - `--in-dir` (str): Path to the directory containing `run_cartload2` outputs.
-- `--upload-method` (str, default: `all`): Choose one of the following input modes to define files to upload:
-    - `all`: Upload every file in `--in-dir`.
-    - `catalog`: Upload files listed in a catalog YAML file.
-    - `user_list`: Upload only files specified via `--in-list`.
-- `--in-list` (list of str): List of files. Required if using `--upload-method user_list`.
-- `--catalog-yaml` (str): Path to a catalog.yaml file. Required if `--upload-method catalog`. If omitted, uses `<in-dir>/catalog.yaml`.
+- `--upload-method` (str, default: `all`): Which files to upload. 
+
+    !!! info "`--upload-method` Options"
+        * `all`: Upload every file in `--in-dir`,
+        * `catalog`: Upload files listed in a `catalog.yaml`,
+        * `files`: Upload only the filenames provided via `--files`.
+
+- `--files FILE [FILE ...]`: Filenames to upload (relative to `--in-dir` or absolute). Use with `--upload-method files`. Alias: `--filenames`.
+- `--catalog-yaml` (str): Path to a `catalog.yaml`. Required if `--upload-method catalog`. If omitted, uses `<in-dir>/catalog.yaml`.
 
 ### Zenodo Configuration
 - `--zenodo-token` (str): Path to your Zenodo access token file.
 - `--zenodo-deposition-id` (str): Zenodo deposition ID to upload files to. If the ID is for a published deposition, a new draft version is created automatically. If omitted, a new draft deposition is created. 
-- `--title` (str): Title for the new Zenodo deposition. Required only when creating a new deposition (i.e., if `--zenodo-deposition-id` is not provided or the existing deposition lacks these fields).
-- `--upload-type` (str, default: dataset): One of: dataset, software, publication, poster, presentation, image, video, lesson, other.
-- `--creators` (list of str): Creators in "Lastname, Firstname" format.
 - `--publish` (flag): Publish the deposition automatically after upload. Recommended to publish manually after reviewing via the Zenodo web interface.
 
-### Behavior Flags
-- `--dry-run` (flag): Simulate the upload without transferring files.
-- `--restart` (flag): Re-upload files regardless of existing ones.
+### Zenodo Metadata
+- `--title` (str): Title for Zenodo deposition. Required only when creating a new deposition (i.e., if `--zenodo-deposition-id` is not provided or the existing deposition lacks these fields).
+- `--upload-type` (str, default: dataset): One of: dataset, software, publication, poster, presentation, image, video, lesson, other.
+- `--creators` (list of str): Creators in "Lastname, Firstname" format.
 
+### Behavior Flags
+- `--dry-run` (flag): Simulate and print operations; do not execute uploads.
+- `--restart` (flag): Ignore existing files and re-upload from scratch.

@@ -4,13 +4,15 @@
 
 Following spatial factor inference via FICTURE analysis, `CartLoader` provides the `run_cartload2` module to package SGE data and spatial factor output from [FICTURE analysis](./run_ficture2.md) into standardized, spatially indexed, and storage‑efficient [PMTiles](https://github.com/protomaps/PMTiles), a web‑native tiling format. These PMTiles outputs are optimized for downstream analysis, interactive web visualization (e.g., in CartoScope), and data sharing across platforms.
 
+---
 ## Requirements
-- An SGE in the unified format (from [SGE format conversion](./sge_convert.md)) with a metadata file describing paths of SGE (`sge_assets.json`)
+- An SGE in the unified format (from [SGE format conversion](./sge_convert.md)) with a metadata file describing paths to SGE assets (`sge_assets.json`)
 - (Optional) A completed FICTURE run from [`run_ficture2`](./run_ficture2.md), including pixel-level decoding outputs and a metadata file describing the input-output structure (`ficture.params.json`)
 - (Optional) One or more deployed images with corresponding metadata file(s)
-- (Optional) A set of deployed cell-based analysis results and its meta file
+- (Optional) A set of deployed cell-based analysis results and its metadata file
 - Pre-installed CLI tools: `tippecanoe`, `gdal_translate`, `gdaladdo`, `pmtiles`, `spatula`, `gzip`.
 
+---
 ## Example Usage
 
 ```bash
@@ -29,9 +31,11 @@ cartloader run_cartload2 \
     --tippecanoe /path/to/tippecanoe/binary
 ```
 
+---
 ## Actions
 
-Depending on inputs provided, `run_cartload2` performs:
+!!! warning "Action Specifications"
+    SGE packaging and catalog preparation run by default. Enable optional integration actions using [input/output parameters](#inputoutput-parameters).
 
 ### SGE Packaging
 Converts transcript‑level SGE to raster PMTiles, including light and dark modes.
@@ -45,12 +49,13 @@ If FICTURE results is provided via `--fic-dir`:
 ### Additional Assets Integration (`--cell-assets` or `--background-assets`)
 Includes provided cell assets and background/basemap PMTiles in `catalog.yaml`; copies asset files into the output directory when they reside elsewhere.
 
-### Prepare Catalog and metadata
-Writes a FICTURE assets JSON (when factors are present) and a final `catalog.yaml` listing all layers.
+### Catalog and Metadata Preparation
+Writes a FICTURE assets JSON (when FICTURE integration is set) and a final `catalog.yaml` listing all layers.
 
+---
 ## Parameters
 
-Below are the core parameters. See more details in the collapsible "Auxiliary Paramaters" section.. 
+Below are the core parameters. See more details in the collapsible "Auxiliary Paramaters" section.
 
 ### Input/Output Parameters
 Must use `--sge-dir` or `--fic-dir` to provide SGE data.
@@ -71,6 +76,7 @@ Must use `--sge-dir` or `--fic-dir` to provide SGE data.
     Recommend to use the default values; override only if needed.
 
     **Auxiliary Conversion Parameters**:
+    
     * `--in-sge-assets` (str): File name of SGE assets JSON/YAML under `--sge-dir` specifying paths to transcript, feature, and minmax files (default: `sge_assets.json`).
     * `--in-fic-params` (str): File name of input JSON/YAML with SGE paths and FICTURE parameters under `--fic-dir`(default: `ficture.params.json`).
     * `--out-fic-assets` (str): File name of output JSON/YAML file to write FICTURE assets (default: `ficture_assets.json`).
@@ -102,29 +108,29 @@ Must use `--sge-dir` or `--fic-dir` to provide SGE data.
 
     **Run Parameters**:
 
-    * `--dry-run` (flag): Generate the Makefile but do not execute it.
-    * `--restart` (flag): Ignore existing outputs and re-run all steps.
-    * `--makefn` (str): Output Makefile name (default: `run_cartload2.mk`).
-    * `--n-jobs` (int): Parallel jobs when executing the Makefile (default: 1).
+    * `--dry-run` (flag): Generate the Makefile; do not execute.
+    * `--restart` (flag): Ignore existing outputs and rerun all steps.
+    * `--makefn` (str): Makefile name to write (default: `run_cartload2.mk`).
+    * `--n-jobs` (int): Number of parallel jobs (default: 1).
     * `--threads` (int): Max threads per job (tippecanoe, etc.) (default: 4).
     * `--log` (flag): Write logs to a file under the output directory.
-    * `--log-suffix` (str, default: `.log`): Log filename suffix.
+    * `--log-suffix` (str): Log filename suffix (default: `.log`).
 
-
+---
 ## Output
 
 ### Copied FICTURE Output
 
 Copied FICTURE output from `<fic_dir>`. See formats in [FICTURE analysis](./run_ficture2.md).
 
-### Rasterized transcript-level SGE
+### Rasterized Transcript-level SGE
 * SGE mono PMTiles (`sge-mono-dark.pmtiles` and `sge-mono-light.pmtiles`): Rasterized gene expression tiles created from raw SGE for web visualization.
 
 ### Rasterized Spatial Factor Maps
 * Factor probability PMTiles (`*-results.pmtiles`): Vector tiles encoding posterior topic probabilities per spatial location.
 * Decoded factor PMTiles (`*-pixel-raster.pmtiles`): Rasterized spatial factor maps derived from pixel-level decoding results.
 
-### Joined molecule-factor PMTiles
+### Joined Molecule-factor PMTiles
 * Joined molecule-factor TSV (`transcripts_pixel_joined.tsv.gz`): Merged file linking transcript-level SGE with decoded pixel factors.
 * Final molecule PMTiles (`genes_bin*.pmtiles`, `genes_index.tsv`, `genes_pmtiles_index.tsv`, `genes_bin_counts.json`): Indexed, multi-feature PMTiles built from joined pixel-factor data for CartoScope.
 

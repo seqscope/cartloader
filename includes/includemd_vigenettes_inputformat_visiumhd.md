@@ -1,6 +1,11 @@
-Visium HD slides use a 2×2 µm grid of barcoded squares (`square_002um`) for high-resolution spatial gene mapping. The SGE file format comprises several key files as below: 
+Visium HD slides use a 2×2 µm grid of barcoded squares (`square_002um`) for high-resolution spatial gene mapping. Use `filtered_feature_bc_matrix` to only process tissue-associated signals. 
 
-??? "`barcodes.tsv.gz` – spatial barcode for tissue locations "
+!!! warning "ATTENTION"
+    The file‑format examples below use a sample Visium HD dataset. Paths, IDs, and values are illustrative and may not match the dataset used in this tutorial.
+
+SGE comprises several key files as below: 
+
+??? "`filtered_feature_bc_matrix/barcodes.tsv.gz` – spatial barcode for tissue locations "
 
     ```text
     s_002um_00639_00600-1
@@ -11,7 +16,7 @@ Visium HD slides use a 2×2 µm grid of barcoded squares (`square_002um`) for 
     * Column 1: Spatial barcodes corresponding to specific locations on the tissue section.
 
 
-??? "`features.tsv.gz` – feature metadata "
+??? "`filtered_feature_bc_matrix/features.tsv.gz` – feature metadata "
 
     ```text
     ENSMUSG00000051951	Xkr4	Gene Expression
@@ -23,7 +28,7 @@ Visium HD slides use a 2×2 µm grid of barcoded squares (`square_002um`) for 
     * Column 2: Feature symbol
     * Column 3: Feature type
 
-??? "`matrix.mtx.gz` – expression count matrix "
+??? "`filtered_feature_bc_matrix/matrix.mtx.gz` – expression count matrix "
 
     ```text
     %%MatrixMarket matrix coordinate integer general

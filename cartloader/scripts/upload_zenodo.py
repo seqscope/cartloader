@@ -123,8 +123,8 @@ def upload_zenodo(_args):
     # I/O arguments
     group_io = parser.add_argument_group("Input/Output")
     group_io.add_argument('--in-dir', type=str, required=True, help='Path to the input directory containing files to upload.')
-    group_io.add_argument('--upload-method', type=str, default="all", choices=["all", "catalog", "user_list"], help='Method to determine which files to upload: "all" uploads every file in --in-dir; "catalog" uses filenames listed in a catalog YAML file; "user_list" uploads only files specified via --in-list.')
-    group_io.add_argument('--in-list', type=str, nargs='+', default=[], help='List of filenames to upload, e.g., "--in-list fileA.tif fileB.tif" (required if --upload-method is "user_list")')
+    group_io.add_argument('--upload-method', type=str, default="all", choices=["all", "catalog", "files"], help='Which files to upload: "all" uploads every file in --in-dir; "catalog" uses filenames from a catalog.yaml; "files" uploads only names provided via --files.')
+    group_io.add_argument('--files',  dest='files', type=str, nargs='+', default=[], help='Filenames to upload (relative to --in-dir or absolute). Use with --upload-method files.')
     group_io.add_argument('--catalog-yaml', type=str, default=None, help='Path to the catalog YAML file listing files to upload (required if --upload-method is "catalog"; defaults: <in_dir>/catalog.yaml)')
 
     # Zenodo credentials and config
@@ -222,7 +222,7 @@ def upload_zenodo(_args):
 
         # check if any file exists in the bucket
         bucket_url = response.json()["links"]["bucket"]
-        print(f" *  Checking files in the bucket_URL {bucket_url}")
+        print(f" *  Checking files in bucket URL: {bucket_url}")
         existing_files = list_existing_files(args.zenodo_deposition_id, ACCESS_TOKEN)
         print(f"      Found {len(existing_files)} existing files")
     else:
@@ -252,8 +252,8 @@ def upload_zenodo(_args):
         cartload_files_raw = [os.path.join(args.in_dir, fn) for fn in list(cartload_files)]
         basemap_files_raw = [os.path.join(args.in_dir, fn) for fn in list(basemap_files)]
         in_files_raw = list(set(cartload_files_raw + basemap_files_raw))
-    elif args.upload_method == "user_list":
-        in_files_raw = [os.path.join(args.in_dir, fn) for fn in args.in_list]
+    elif args.upload_method == "files":
+        in_files_raw = [fn if os.path.isabs(fn) else os.path.join(args.in_dir, fn) for fn in args.files]
     else:
         raise ValueError(f"Unsupported upload method: {args.upload_method}")
 
@@ -351,7 +351,7 @@ def upload_zenodo(_args):
         return failed_list
 
     failed_list=[]
-    if args.upload_method == "all" or args.upload_method == "user_list":
+    if args.upload_method == "all" or args.upload_method == "files":
         failed_sublist=process_uploading_by_list(in_files_raw, existing_files, force_upload_files=[], touch_flag=False, flag_suffix="zenodo.done", overwrite=args.restart, dry_run=args.dry_run)
         failed_list.extend(failed_sublist)
     elif args.upload_method == "catalog":
@@ -366,8 +366,7 @@ def upload_zenodo(_args):
             failed_list.extend(failed_sublist)
     if args.publish and not args.dry_run:
         print(f"\n Publishing the deposition {args.zenodo_deposition_id} ...")
-        failed_sublist=publish_deposition(args.zenodo_deposition_id, ACCESS_TOKEN)
-        failed_list.extend(failed_sublist)
+        publish_deposition(args.zenodo_deposition_id, ACCESS_TOKEN)
 
     if failed_list:
         print("-"*10)
@@ -378,13 +377,15 @@ def upload_zenodo(_args):
             print(f" * {failed_f}")
 
         print("\nTry the following commands to re-upload those failed files:")
+        failed_names = [os.path.basename(f) for f in failed_list]
         zenodo_cmd = " ".join([
             "cartloader", "upload_zenodo",
             f"--in-dir {args.in_dir}",
-            f"--upload-method list",
+            f"--upload-method files",
             f"--zenodo-token {args.zenodo_token}",
             f"--zenodo-deposition-id {args.zenodo_deposition_id}",
-            f"--in-list {" ".join(failed_list)}"
+            "--files",
+            *failed_names,
         ])
         print(zenodo_cmd)
     

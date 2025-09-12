@@ -2,6 +2,8 @@ The 10x Genomics Xenium platform outputs Spatial Gene Expression (SGE) data in a
 
 !!! info "CSV File Format"
 
+    <!--section1-start-->
+
     ```text
     "transcript_id","cell_id","overlaps_nucleus","feature_name","x_location","y_location","z_location","qv"
     281827164036151,133793,1,"Sox10",2350.0232,4153.6846,16.592316,40.0
@@ -17,3 +19,4 @@ The 10x Genomics Xenium platform outputs Spatial Gene Expression (SGE) data in a
     * "`y_location`": Y coordinate of the transcript.  
     * "`z_location`": Z coordinate (depth) of the transcript.  
     * "`qv`": Quality value indicating confidence in transcript detection.
+    <!--section1-end-->

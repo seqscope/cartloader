@@ -35,8 +35,8 @@ def validate_general_args(parser, args):
 
     # Upload to AWS requires bucket and id
     if args.upload_aws:
-        if not args.s3_bucket:
-            parser.error("--s3-bucket is required when --upload-aws is set")
+        if not args.s3_dir:
+            parser.error("--s3-dir is required when --upload-aws is set")
         if not args.id:
             parser.error("--id is required when --upload-aws is set")
 
@@ -278,7 +278,7 @@ def stage_upload_aws(cart_dir, args, prereq):
     aws_cmd = " ".join([
         "cartloader", "upload_aws",
         f"--in-dir {cart_dir}",
-        f"--s3-dir s3://{args.s3_bucket}/{args.id}",
+        f"--s3-dir {args.s3_dir}",
     ])
 
     # Inject optional params (preserves your original calls)

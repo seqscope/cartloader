@@ -80,7 +80,7 @@ def parse_arguments(_args):
 
     # Parameters for --upload-aws or --upload-zenodo
     upload_params = parser.add_argument_group("Parameters for --upload-aws and --upload-zenodo")
-    upload_params.add_argument("--s3-bucket", help="AWS S3 bucket, e.g., cartostore (required if --upload-aws)")
+    upload_params.add_argument("--s3-dir", help="AWS S3 directory to host output, e.g., s3://cartostore/test (required if --upload-aws)")
     upload_params.add_argument('--zenodo-token', type=str,  help='Path to a file containing your Zenodo access token (required if --upload-zenodo)')
     upload_params.add_argument('--zenodo-deposition-id', type=str, default=None,  help='Existing deposition ID. If published, creates a new version; omit to create a new deposition.')
     upload_params.add_argument('--zenodo-title', type=str, default=None, help='Deposition title; always quote the value, e.g., "Example Zenodo Title" (defaults to --title)') 

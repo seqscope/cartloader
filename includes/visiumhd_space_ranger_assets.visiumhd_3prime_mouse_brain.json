@@ -1,0 +1,40 @@
+{
+    "SGE": {
+        "TRANSCRIPT_MEX": "/example_dir/Visium_HD_3prime_Mouse_Brain/binned_outputs/square_002um/filtered_feature_bc_matrix",
+        "SCALE": "/example_dir/Visium_HD_3prime_Mouse_Brain/binned_outputs/square_002um/spatial/scalefactors_json.json",
+        "POSITION": "/example_dir/Visium_HD_3prime_Mouse_Brain/binned_outputs/square_002um/spatial/tissue_positions.parquet"
+    },
+    "CELLS": {
+        "CELL_FEATURE_MEX": "/example_dir/Visium_HD_3prime_Mouse_Brain/segmented_outputs/filtered_feature_cell_matrix",
+        "CELL_GEOJSON": "/example_dir/Visium_HD_3prime_Mouse_Brain/segmented_outputs/cell_segmentations.geojson",
+        "NUCLEUS_GEOJSON": "/example_dir/Visium_HD_3prime_Mouse_Brain/segmented_outputs/nucleus_segmentations.geojson",
+        "CLUSTER": "/example_dir/Visium_HD_3prime_Mouse_Brain/segmented_outputs/analysis/clustering/gene_expression_graphclust/clusters.csv",
+        "DE": "/example_dir/Visium_HD_3prime_Mouse_Brain/segmented_outputs/analysis/diffexp/gene_expression_graphclust/differential_expression.csv",
+        "PCA_PROJ": "/example_dir/Visium_HD_3prime_Mouse_Brain/segmented_outputs/analysis/pca/gene_expression_10_components/projection.csv",
+        "PCA_VAR": "/example_dir/Visium_HD_3prime_Mouse_Brain/segmented_outputs/analysis/pca/gene_expression_10_components/variance.csv",
+        "UMAP_PROJ": "/example_dir/Visium_HD_3prime_Mouse_Brain/segmented_outputs/analysis/umap/gene_expression_2_components/projection.csv"
+    },
+    "GRID_8um": {
+        "GRID_FEATURE_MEX": "/example_dir/Visium_HD_3prime_Mouse_Brain/binned_outputs/square_008um/filtered_feature_bc_matrix",
+        "SCALE": "/example_dir/Visium_HD_3prime_Mouse_Brain/binned_outputs/square_008um/spatial/scalefactors_json.json",
+        "POSITION": "/example_dir/Visium_HD_3prime_Mouse_Brain/binned_outputs/square_008um/spatial/tissue_positions.parquet",
+        "CLUSTER": "/example_dir/Visium_HD_3prime_Mouse_Brain/binned_outputs/square_008um/analysis/clustering/gene_expression_graphclust/clusters.csv",
+        "DE": "/example_dir/Visium_HD_3prime_Mouse_Brain/binned_outputs/square_008um/analysis/diffexp/gene_expression_graphclust/differential_expression.csv",
+        "PCA_PROJ": "/example_dir/Visium_HD_3prime_Mouse_Brain/binned_outputs/square_008um/analysis/pca/gene_expression_10_components/projection.csv",
+        "PCA_VAR": "/example_dir/Visium_HD_3prime_Mouse_Brain/binned_outputs/square_008um/analysis/pca/gene_expression_10_components/variance.csv",
+        "UMAP_PROJ": "/example_dir/Visium_HD_3prime_Mouse_Brain/binned_outputs/square_008um/analysis/umap/gene_expression_2_components/projection.csv"
+    },
+    "GRID_16um": {
+        "GRID_FEATURE_MEX": "/example_dir/Visium_HD_3prime_Mouse_Brain/binned_outputs/square_016um/filtered_feature_bc_matrix",
+        "SCALE": "/example_dir/Visium_HD_3prime_Mouse_Brain/binned_outputs/square_016um/spatial/scalefactors_json.json",
+        "POSITION": "/example_dir/Visium_HD_3prime_Mouse_Brain/binned_outputs/square_016um/spatial/tissue_positions.parquet",
+        "CLUSTER": "/example_dir/Visium_HD_3prime_Mouse_Brain/binned_outputs/square_016um/analysis/clustering/gene_expression_graphclust/clusters.csv",
+        "DE": "/example_dir/Visium_HD_3prime_Mouse_Brain/binned_outputs/square_016um/analysis/diffexp/gene_expression_graphclust/differential_expression.csv",
+        "PCA_PROJ": "/example_dir/Visium_HD_3prime_Mouse_Brain/binned_outputs/square_016um/analysis/pca/gene_expression_10_components/projection.csv",
+        "PCA_VAR": "/example_dir/Visium_HD_3prime_Mouse_Brain/binned_outputs/square_016um/analysis/pca/gene_expression_10_components/variance.csv",
+        "UMAP_PROJ": "/example_dir/Visium_HD_3prime_Mouse_Brain/binned_outputs/square_016um/analysis/umap/gene_expression_2_components/projection.csv"
+    },
+    "IMAGES": {
+        "HnE_BTF": "/example_dir/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_tissue_image.btf"
+    }
+}

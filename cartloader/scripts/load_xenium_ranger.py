@@ -100,7 +100,6 @@ xenium_key2patterns={
             "required": False,
             "filenames":["morphology_focus/morphology_focus_0003.ome.tif" ]
             },
-        # # Detect it but will not process it
         # "DAPI_3D_OME": {
         #     "required": False,
         #     "filenames":["morphology.ome.tif"]

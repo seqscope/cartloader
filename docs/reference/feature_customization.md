@@ -2,8 +2,11 @@
 
 ## Overview
 
-While `run_ficture2` allows filtering by regex, CartLoader also provides `feature_filtering`, which filters features (e.g., genes) from a CSV/TSV using explicit lists, substrings, regex patterns, or a type reference file. It writes a filtered CSV/TSV (gzipped) and can optionally export an annotation record describing which features were removed and why. The curated feature file can then be used downstream, including FICTURE analysis.
+`CartLoader` provides an add-on module, named `feature_filtering`, to filter features (e.g., genes) from a CSV/TSV using explicit lists, substrings, regex patterns, or a type reference file.
 
+The curated feature file can then be used downstream, including FICTURE analysis.
+
+---
 ## Example Usage
 
 ### 1) Filter by Regex
@@ -19,7 +22,7 @@ cartloader feature_filtering \
 
 ### 2) Filter by Lists
 
-CartLoader supports include-only and exclude-only list-based filtering; pick the one that fits your use case (or combine them). Below is an example using `--include-feature-list`.
+`CartLoader` supports include-only and exclude-only list-based filtering; pick the one that fits your use case (or combine them). Below is an example using `--include-feature-list`.
 
 ```bash
 include_list=/path/to/input_keep_genes.txt 
@@ -75,39 +78,46 @@ cartloader feature_filtering \
   --feature-type-ref-colidx-type 2
 ```
 
+---
+## Actions
+
+!!! warning "Action Specifications"
+    No action runs by default. Activate at least one using filtering criteria the [filter parameters](#filters-parameters).
+
+Include or exclude features by using explicit lists, substrings, regex patterns of feature name or types.
+Please note that:
+
+- Include criteria are restrictive (a feature must satisfy all provided include constraints).
+- Exclude criteria are subtractive (a feature matching any exclude constraint is removed).
+
+---
 ## Parameters
 
-!!! warning "Filtering Action"
-    At least one filtering criterion is required; otherwise the command errors.
-
-    Also, please note that:
-
-    - Include criteria are restrictive (a feature must satisfy all provided include constraints).
-    - Exclude criteria are subtractive (a feature matching any exclude constraint is removed).
-
-### Input/Output
+### Input/Output Parameters
 - `--in-csv` (str, required): Input CSV/TSV of features (plain text or gzipped).
-- `--out-csv` (str, required): Output filtered CSV/TSV; gzipped. If extension is not `.gz`, the tool appends `.gz`.
+- `--out-csv` (str, required): Output filtered CSV/TSV; gzipped.
 - `--out-record` (str): Optional TSV with `feature` and `filtering` reason per feature.
 - `--csv-colname-feature-name` (str): Feature column name in the input file (default: `gene`).
 - `--csv-delim` (str): Field delimiter for the input (applies to output as well; default: `\t`).
 - `--chunksize` (int): Chunk size for streaming reads (default: 50000).
 - `--log` (flag): Write logs to `feature_filtering.log` next to outputs.
 
-### List Filters
+### Filters Parameters
+#### List Filters Parameters
 - `--include-feature-list` (str): Path to a file with feature names to include.
 - `--exclude-feature-list` (str): Path to a file with feature names to exclude.
 
-### Substring Filters
+#### Substring Filters Parameters
 - `--include-feature-substr` (str): Include features containing the substring.
 - `--exclude-feature-substr` (str): Exclude features containing the substring.
 
-### Regex Filters
+#### Regex Filters Parameters
 - `--include-feature-regex` (str): Include features matching the regex.
 - `--exclude-feature-regex` (str): Exclude features matching the regex.
 
-### Type Filters
-If the reference file has a header row, specify the feature-name and feature-type columns with `--feature-type-ref-colname-*`; otherwise, use the 0-based index flags `--feature-type-ref-colidx-*`.
+#### Type Filters Parameters
+!!! info "Reference file columns (name vs. index)"
+    If the reference file has a header row, specify the feature-name and feature-type columns with `--feature-type-ref-colname-*`; otherwise, use the 0-based index flags `--feature-type-ref-colidx-*`.
 
 - `--include-feature-type-regex` (str): Include by feature type (e.g., `^protein_coding$`).
 - `--feature-type-ref` (str): Reference file with feature name and type columns.
@@ -117,6 +127,9 @@ If the reference file has a header row, specify the feature-name and feature-typ
 - `--feature-type-ref-colidx-name` (int): 0-based column index for feature name.
 - `--feature-type-ref-colidx-type` (int): 0-based column index for feature type.
 
+---
 ## Outputs
-- `--out-csv`: Filtered rows from the input CSV/TSV, gzipped. Overwrites existing file.
-- `--out-record` (optional): TSV mapping each feature to a `filtering` reason; empty when a feature is kept.
+
+A CSV/TSV file contains the remaining features. 
+
+If `--out-record` is set, a TSV mapping each feature to a `filtering` reason; empty when a feature is kept.

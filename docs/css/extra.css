@@ -14,7 +14,7 @@
 .grid.cards.single-left > ul > li {
   width: 360px;         /* Set desired width */
   height: auto;         /* Or: auto for more flexible height */
-  padding: 0.5rem;
+  padding: 0.2rem;
   box-sizing: border-box;
 }
 
@@ -112,7 +112,7 @@ figure {
 
 .grid.cards.forref > ul > li {
   width: 360px;                      /* Card width */
-  min-height: 270px;                 /* Baseline height; grows with content */
+  min-height: 250px;                 /* Baseline height; grows with content */
   flex: 0 0 auto;                    /* Prevent growing/shrinking */
   padding: 0.5rem 0.5rem 0.2rem 0.5rem;  /* smaller bottom padding */
   gap: 0;                            /* Spacing inside card's flex layout */
@@ -123,11 +123,40 @@ figure {
   overflow: visible;                 /* Ensure CTA remains visible */
 }
 
+/* Force two cards per row for quickstart intro (responsive) */
+.grid.cards.forref.two-up > ul > li {
+  width: auto;                                 /* override fixed width */
+  flex: 1 1 calc(50% - 0.5rem);                /* two columns with gap */
+  max-width: calc(50% - 0.5rem);
+  min-width: 300px;                             /* avoid overly narrow cards */
+}
+
+@media (max-width: 680px) {
+  .grid.cards.forref.two-up > ul > li {
+    flex-basis: 100%;
+    max-width: 100%;                            /* stack to single column on very small screens */
+  }
+}
+
 /* Pin the bottom call-to-action in generic and forref cards */
 .grid.cards.generic > ul > li > p:last-child,
 .grid.cards.forref > ul > li > p:last-child { margin-top: auto; }
 .grid.cards.generic > ul > li > a.md-button,
 .grid.cards.forref > ul > li > a.md-button { margin-top: auto; align-self: flex-start; display: inline-block; }
+
+/* Tighter CTA buttons on cards */
+.md-button.button-tight-small {
+  padding: 0.35rem 0.6rem;
+  font-size: 0.8rem;
+  line-height: 1.1;
+}
+
+/* Reduce top margin for headings inside cards */
+.grid.cards.forref h4,
+.grid.cards.generic h4 {
+  margin-top: 0.2rem;
+  margin-bottom: 0.2rem;
+}
 
 /* ==================TABLE=================== */
 
@@ -202,4 +231,19 @@ figure {
   height: 20px;
   border: 1px solid #ccc;
   border-radius: 4px;
+}
+
+/* ==================FIGURES=================== */
+
+.figure-caption-vigintro-large {
+  font-size: 0.9rem;
+  color: var(--md-default-fg-color--light);
+  text-align: center;
+  margin-top: 0.25rem;
+}
+
+/* ==================CODE=================== */
+
+.md-typeset pre > code {
+  border-radius: 6px;
 }

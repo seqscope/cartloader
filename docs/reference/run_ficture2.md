@@ -1,7 +1,7 @@
 # Spatial Factor Inference Analysis using FICTURE
 
 ## Overview
-Following format conversion, CartLoader provides the **`run_ficture2`** module to run spatial factor inference using [**`FICTURE`**](https://www.nature.com/articles/s41592-024-02415-2) (Si et al., *Nature Methods*, 2024). This method infers spatial factors directly at the pixel level with submicron resolution, eliminating the need for segmentation.
+Following format conversion, `CartLoader` provides the **`run_ficture2`** module to run spatial factor inference using [**`FICTURE`**](https://www.nature.com/articles/s41592-024-02415-2) (Si et al., *Nature Methods*, 2024). This method infers spatial factors directly at the pixel level with submicron resolution, eliminating the need for segmentation.
 
 !!! info "**What is `FICTURE`?**"
 
@@ -16,11 +16,13 @@ Following format conversion, CartLoader provides the **`run_ficture2`** module t
     
     Currently, `run_ficture2` uses the `punkst` version of `FICTURE`.
 
+---
 ## Requirements
 
 - An SGE in the unified format (from [SGE format conversion](./sge_convert.md))
 - Pre-installed tools: `spatula`, `punkst`, `gzip`, `sort`, `python`
 
+---
 ## Example Usage
 
 ```bash
@@ -41,9 +43,13 @@ cartloader run_ficture2 \
     --threads 20 
 ```
 
+---
 ## Actions
 
-### Tiling step (`--tile`)
+!!! warning "Action Specifications"
+    No action runs by default. Activate at least one using the [action parameters](#action-parameters).
+
+### Tiling Step (`--tile`)
 The tiling step takes the standardized SGE (from [SGE format conversion](./sge_convert.md)) as input. It reorganizes input coordinate data into non‑overlapping square tiles in a plain TSV format and generates an index file with tile offsets to enable efficient random access.
 
 ### Segmentation Step (`--segment`)
@@ -55,24 +61,19 @@ The LDA training step uses the hexagon TSV and JSON file from [segmentation step
 ### Decoding Step (`--decode`)
 The decoding step applies a trained LDA model from [LDA training step](#lda-training-step---init-lda) to tiled pixel-level transcript data from [tiling step](#tiling-step---tile) to infer the top spatial factors and their posterior probabilities for each pixel, enabling fine-grained spatial mapping of gene expression. It outputs a pixel-level annotation file in TSV format with coordinates and factor assignments, along with a pseudobulk gene-by-factor matrix in TSV format.
 
-### Summarization Step (`--summary`)
-The summarization step generate a JSON file to include all details of the `FICTURE` analysis, including input files, output files, and parameters.
-
+---
 ## Parameters
 
 Below are the core parameters. See more details in the collapsible section ("Auxiliary Paramaters") below.
 
 #### Action Parameters
 
-!!! warning "Action Specifications"
-    At least one of the actions (`--main`, `--tile`, `--segment`, `--init-lda`, `--decode`, `--summary`) should be enabled.
 
 * `--main`: Run all of the following five actions.
 * `--tile`: Run [tiling step](#tiling-step---tile).
 * `--segment`: Run [segmentation step](#segmentation-step---segment).
 * `--init-lda`: Run [LDA training step](#lda-training-step---init-lda).
 * `--decode`: Run [decoding step](#decoding-step---decode).
-* `--summary`: Run [summarization step](#summarization-step---summary).
 
 #### Input/Output Parameters
 
@@ -111,7 +112,7 @@ Below are the core parameters. See more details in the collapsible section ("Aux
     * LDA training-specific parameters:
         * `--min-ct-per-unit-train` (int): Minimum count for training (Default: 50).
         * `--train-epoch` (int): Number of epochs to train LDA model (Default: 2).
-    * Decoding-specific paramaters:
+    * Decoding-specific parameters:
         * `--fit-width` (int): Hexagon width (in µm) for model fitting (Default: same as train width).
         * `--min-ct-per-unit-fit` (int): Minimum count per unit during model fitting (Default: 50).
         * `--anchor-res` (int): Anchor resolution used in decoding (Default: 6).
@@ -136,14 +137,13 @@ Below are the core parameters. See more details in the collapsible section ("Aux
 
     ** Run Parameters**:
 
-    * `--dry-run` (flag): Generate the Makefile but do not execute it.
-    * `--restart` (flag): Ignore existing outputs and re-run all steps.
-    * `--makefn` (str): Output Makefile name (default: `run_ficture2.mk`)
-    * `--n-jobs` (int): Parallel jobs when executing the Makefile (default: 1).
-    * `--threads` (int): Max threads per job (tippecanoe, etc.) (default: 4).
+    * `--dry-run` (flag): Generate the Makefile; do not execute.
+    * `--restart` (flag): Ignore existing outputs and rerun all steps.
+    * `--makefn` (str): Makefile name to write (default: `run_ficture2.mk`).
+    * `--n-jobs` (int): Number of parallel jobs (default: 1).
+    * `--threads` (int): Max threads per job (default: 4).
 
-
-
+---
 ## Output
 
 ### Tiling Output

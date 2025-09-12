@@ -5,17 +5,19 @@
 `import_image` loads a histology or background image and produces a web‑ready PMTiles layer.
 It supports OME‑TIFF/TIFF/PNG inputs and offers optional orientation transforms.
 
+---
 ## Requirements
 - Input image: OME‑TIFF/TIFF/PNG.
-- Georeference bound (required if input image is neither georeferenced nor OME-TIFF)
+- Georeference bounds (required if input image is neither georeferenced nor OME‑TIFF)
 - Pre-installed CLI tools: `pmtiles`, `gdal_translate`, `gdaladdo`, `gdalinfo`.
 
+---
 ## Example Usage
 
 ### 1) OME‑TIFF → PNG → PMTiles (auto georeference)
 
 ```bash
-IMAGE_ID=TEST_ID      #replace TEST_ID by your own ID, and avoid whitespace
+IMAGE_ID=TEST_ID      # replace TEST_ID with your own ID (no whitespace)
 
 cartloader import_image \
   --ome2png --png2pmtiles --update-catalog \
@@ -32,7 +34,7 @@ cartloader import_image \
 Pick one bounds input method and enable `--georeference`.
 
 ```bash
-IMAGE_ID=TEST_ID      #replace TEST_ID by your own ID, and avoid whitespace
+IMAGE_ID=TEST_ID      # replace TEST_ID with your own ID (no whitespace)
 
 # A) Bounds string
 cartloader import_image \
@@ -71,37 +73,39 @@ cartloader import_image \
   --img-id ${IMAGE_ID}
 ```
 
+---
 ## Actions
+!!! warning "Action Specifications"
+    No action runs by default. Activate at least one using the [action parameters](#action-parameters).
 
-### Georeference (`--georeference`)
+### Georeference Step (`--georeference`)
 If input is OME-TIFF, extracts a PNG and bounds from the OME‑TIFF and georeferencing is applied automatically.
 
 If `--georeference` is applied with `--georef-*`, georeferencing is applied with bounds provided via one of `--georef-*`.
 
-### Orientation (`--rotate`, `--flip-vertical`, `--flip-horizontal`)
+### Orientation Step (`--rotate`, `--flip-vertical`, `--flip-horizontal`)
 If any of `--rotate`, `--flip-vertical`, `--flip-horizontal` is set, rotation and flips can be applied accordingly prior to tiling. It supports rotate the image clockwise by 90/180/270 degrees. Rotation is applied before flips.
 
-### OME‑TIFF to PNG (`--ome2png`)
+### OME‑TIFF to PNG Step (`--ome2png`)
 Converts an OME‑TIFF to PNG, reads bounds from OME metadata, and records color mode when applicable.
 
-### PNG to PMTiles (`--png2pmtiles`)
+### PNG to PMTiles Step (`--png2pmtiles`)
 Converts the PNG to GeoTIFF and then to PMTiles. An asset JSON is written during conversion.
 
-### Catalog update (`--update-catalog`)
+### Catalog Update Step (`--update-catalog`)
 Appends the generated `<img-id>.pmtiles` to `catalog.yaml` as a basemap layer. This only applies if `catalog.yaml` exists.
 
+---
 ## Parameters
 
-Below are the core arguments you’ll typically set. For all other options, expand the collapsible "Auxiliary Paramaters" section.
+Below are the core arguments you’ll typically set. For all other options, expand the collapsible "Auxiliary Parameters" section.
 
 ### Action Parameters
-!!! warning "Action Specifications"
-    At least one of the actions (`--ome2png`, `--png2pmtiles`, `--georeference`, `--rotate`, `--flip-vertical`, `--flip-horizontal`, `--update-catalog`) should be enabled.
 
-- `--ome2png`: Extract PNG (and bounds) from OME‑TIFF (auto‑georeference), and/or
-- `--png2pmtiles`: Convert PNG to PMTiles (via GeoTIFF/MBTiles).
-- `--georeference`: For manual georeference (non‑OME inputs) ( used with one  of `--georef-*`).
-- `--rotate` [90|180|270]: Rotate clockwise (applied before flips).
+- `--ome2png` (flag): Extract PNG (and bounds) from OME‑TIFF (auto‑georeference), and/or
+- `--png2pmtiles` (flag): Convert PNG to PMTiles (via GeoTIFF/MBTiles).
+- `--georeference` (flag): For manual georeference (non‑OME inputs) (used with one of `--georef-*`).
+- `--rotate` (int) [90|180|270]: Rotate clockwise (applied before flips).
 - `--flip-vertical` (flag): Flip vertically (around X axis; after rotation).
 - `--flip-horizontal` (flag): Flip horizontally (around Y axis; after rotation).
 - `--update-catalog` (flag): Update or create `catalog.yaml` with the generated PMTiles as a basemap.
@@ -114,7 +118,7 @@ Below are the core arguments you’ll typically set. For all other options, expa
     - `--in-img` (str): Path to input image (PNG or OME‑TIFF/TIFF).
     - `--in-json` (str): JSON/YAML mapping from image IDs to file paths.
 
-??? note "Auxiliary Paramaters"
+??? note "Auxiliary Parameters"
 
     **Auxiliary for --ome2png**
 
@@ -153,12 +157,12 @@ Below are the core arguments you’ll typically set. For all other options, expa
 
     **Run Parameters**
 
-      - `--dry-run` (flag): Generate the Makefile but do not execute it.
-      - `--restart` (flag): Ignore existing outputs and re‑run steps.
-      - `--n-jobs` (int, default: 1): Parallel jobs for Makefile execution.
-      - `--makefn` (str): Output Makefile name (default: `<out-dir>/<img-id>.mk`).
+      - `--dry-run` (flag): Generate the Makefile; do not execute.
+      - `--restart` (flag): Ignore existing outputs and rerun steps.
+      - `--n-jobs` (int): Number of parallel jobs (default: 1).
+      - `--makefn` (str): Makefile name to write (default: `<out-dir>/<img-id>.mk`).
 
-
+---
 ## Output
 
 Outputs are written under `--out-dir` with prefix `<img-id>`:

@@ -36,7 +36,7 @@ def parse_arguments(_args):
     inout_params = parser.add_argument_group("Input/Output Parameters", 'Two input modes: 1) Manual — set --xenium-ranger-dir and any "Manual Input Parameters" args. 2) Auto-detect — leave them unset; read from --xenium-ranger-assets (created by --load-xenium-ranger)')
     inout_params.add_argument('--xenium-ranger-dir', type=str, help='Path to the Xenium Ranger output directory containing transcript, cell, boundary, cluster, and image files (required if manual input mode is enabled or if --load-xenium-ranger)')
     inout_params.add_argument('--out-dir', type=str, required=True, help='Path to output directory. Stores converted SGE, FICTURE results, raster tiles in <out_dir>/sge, <out_dir>/ficture2, and <out_dir>/cartload2')
-    inout_params.add_argument('--xenium-ranger-assets', type=str, default=None, help='PPath to a JSON file containing Xenium Ranger outputs paths. Written by --load-space-ranger; read when auto-detection mode is on (default: <out_dir>/space_ranger_assets.json)')
+    inout_params.add_argument('--xenium-ranger-assets', type=str, default=None, help='Path to a JSON file containing Xenium Ranger outputs paths. Written by --load-space-ranger; read when auto-detection mode is on (default: <out_dir>/space_ranger_assets.json)')
     inout_params.add_argument('--ext-fic-dir', type=str, help='Path to an external FICTURE directory for loading external FICTURE assets (required if --import-ext-ficture2)')
 
     # Key Parameters (split by command)
@@ -68,7 +68,7 @@ def parse_arguments(_args):
     images_params.add_argument("--transparent-below", type=int, default=1, help='Set pixels below this value to transparent (range: 0~255; default: 1)')
 
     upload_params = parser.add_argument_group("Parameters for --upload-aws and --upload-zenodo")
-    upload_params.add_argument("--s3-bucket", help="AWS S3 bucket, e.g., cartostore (required if --upload-aws)")
+    upload_params.add_argument("--s3-dir", help="AWS S3 directory to host output, e.g., s3://cartostore/test (required if --upload-aws)")
     upload_params.add_argument('--zenodo-token', type=str,  help='Path to a file containing your Zenodo access token (required if --upload-zenodo)')
     upload_params.add_argument('--zenodo-deposition-id', type=str, default=None, help='Existing deposition ID. If published, creates a new version; omit to create a new deposition.')
     upload_params.add_argument('--zenodo-title', type=str, default=None, help='Deposition title; always quote the value, e.g., "Example Zenodo Title" (defaults to --title)') 

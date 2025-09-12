@@ -47,12 +47,12 @@ analysis_map={
 
 cell_map= {
     "CELL_FEATURE_MEX": {
-        "required": False,
+        "required": True,
         "filenames":["segmented_outputs/filtered_feature_cell_matrix"],
         "zip_suffixes": ["_segmented_outputs.tar.gz"]
         },
     "CELL_GEOJSON":{
-            "required": False,
+            "required": True,
             "filenames":["segmented_outputs/cell_segmentations.geojson"],
             "zip_suffixes": ["_segmented_outputs.tar.gz"]
         },
@@ -73,7 +73,7 @@ for key, relpath in analysis_map.items():
 
 def define_hexmap(r):
     hex_pattern = {
-        "HEX_FEATURE_MEX":  "filtered_feature_bc_matrix",
+        "GRID_FEATURE_MEX":  "filtered_feature_bc_matrix",
         "SCALE":        "spatial/scalefactors_json.json",
         "POSITION":     "spatial/tissue_positions.parquet",
     }
@@ -138,8 +138,8 @@ def load_space_ranger(_args):
             },
         },
         "CELLS": cell_map,
-        "HEX_8um": define_hexmap(8),
-        "HEX_16um": define_hexmap(16),
+        "GRID_8um": define_hexmap(8),
+        "GRID_16um": define_hexmap(16),
         "IMAGES":  {
             "HnE_BTF": {
                 "required": False,

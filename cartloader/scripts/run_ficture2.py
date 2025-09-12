@@ -7,7 +7,7 @@ def parse_arguments(_args):
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(
         prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}",
-        description="Run FICTURE2 tiling, segmentation, LDA training, decoding, and summary; writes a Makefile and executes steps."
+        description="Run FICTURE2 tiling, segmentation, LDA training, decoding;  writes a Makefile and executes steps."
     )
     repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -19,12 +19,12 @@ def parse_arguments(_args):
     run_params.add_argument('--threads', type=int, default=4, help='Maximum number of threads per job (default: 4)')
 
     cmd_params = parser.add_argument_group("Commands", "FICTURE steps to run")
-    cmd_params.add_argument('--main', action='store_true', default=False, help='Run all main functions, including tile, segment, init-lda, decode, and summary')
+    cmd_params.add_argument('--main', action='store_true', default=False, help='Run all main functions, including tile, segment, init-lda, decode') #, and summary')
     cmd_params.add_argument('--tile', action='store_true', default=False, help='(Main function) Perform tiling step')
     cmd_params.add_argument('--segment', action='store_true', default=False, help='(Main function) Hexagon segmentation into FICTURE-compatible format')
     cmd_params.add_argument('--init-lda', action='store_true', default=False, help='(Main function) Train LDA model(s)')
     cmd_params.add_argument('--decode', action='store_true', default=False, help='(Main function) Pixel-level decoding')
-    cmd_params.add_argument('--summary', action='store_true', default=False, help='(Main function) Write JSON summarizing FICTURE parameters and outputs')
+    #cmd_params.add_argument('--summary', action='store_true', default=False, help='(Main function) Write JSON summarizing FICTURE parameters and outputs')
     cmd_params.add_argument('--segment-10x', action='store_true', default=False, help='Hexagon segmentation into 10x MEX format')
 
     inout_params = parser.add_argument_group("Input/Output Parameters", "Input/output paths")
@@ -163,7 +163,7 @@ def run_ficture2(_args):
         args.segment = True
         args.init_lda = True
         args.decode = True
-        args.summary = True
+        # args.summary = True
 
     #assert not (args.init_lda and args.init_ext), "Cannot choose both --init-lda and --init-ext"
 
@@ -540,56 +540,56 @@ def run_ficture2(_args):
             cmds.append(cmd)
             mm.add_target(f"{decode_prefix}.png", [decode_summary_flag, color_map, minmax_prereq], cmds)
 
-    # - summary
-    if args.summary:
-        prerequisities=[feature_plain] 
-        summary_aux_args=[]
-        # lda or external model
-        if args.init_lda:
-            summary_aux_args_models = ["--lda-model"]
-            train_params = define_lda_runs(args)
-            for train_param in train_params:
-                train_width = train_param["train_width"]
-                n_factor = train_param["n_factor"]
-                model_prefix = os.path.join(args.out_dir, train_param["model_id"])
-                # prerequisities
-                prerequisities.append(f"{model_prefix}.done")
-                # args
-                summary_cmap = f"{model_prefix}.cmap.tsv"
-                summary_aux_args_models.append(f"lda,{model_prefix}.model.tsv,{train_param['model_id']},{train_width},{n_factor},{summary_cmap}")
-            summary_aux_args.append(" ".join(summary_aux_args_models))
-        # projection & decode
-        if args.decode:
-            summary_aux_args_decode = ["--decode"]
-            decode_runs = define_decode_runs(args)
-            for decode_params in decode_runs:
-                model_type = decode_params["model_type"]
-                model_id = decode_params["model_id"]
-                fit_width = decode_params["fit_width"]
-                decode_id = decode_params["decode_id"]
-                # prerequisities
-                if args.decode:
-                    prerequisities.append(f"{args.out_dir}/{decode_id}.done")
-                # args
-                if args.decode:
-                    summary_aux_args_decode.append(f"{model_type},{model_id},{decode_id},{fit_width},{args.anchor_res}")
-            if args.decode and len(summary_aux_args_decode) > 1:
-                summary_aux_args.append(" ".join(summary_aux_args_decode))
-        # summary
-        cmds = cmd_separator([], f"Summarizing output into to the <out_json> files...")
-        cmd = " ".join([
-            "cartloader", "write_json_for_ficture2",
-                "--merge --merge-override",
-                f"--in-transcript {args.in_transcript}",
-                f"--in-feature {args.in_feature}", # use the original feature file for SGE
-                f"--in-feature-ficture {feature_plain}",
-                f"--in-minmax {args.in_minmax}",
-                f"--out-json {args.out_json}",
-                " ".join(summary_aux_args)
-            ])
-        cmds.append(cmd)
-        prerequisities.append(minmax_prereq)
-        mm.add_target(args.out_json, prerequisities, cmds)
+    # - summary (update: always run)
+    # if args.summary:
+    prerequisities=[feature_plain] 
+    summary_aux_args=[]
+    # lda or external model
+    if args.init_lda:
+        summary_aux_args_models = ["--lda-model"]
+        train_params = define_lda_runs(args)
+        for train_param in train_params:
+            train_width = train_param["train_width"]
+            n_factor = train_param["n_factor"]
+            model_prefix = os.path.join(args.out_dir, train_param["model_id"])
+            # prerequisities
+            prerequisities.append(f"{model_prefix}.done")
+            # args
+            summary_cmap = f"{model_prefix}.cmap.tsv"
+            summary_aux_args_models.append(f"lda,{model_prefix}.model.tsv,{train_param['model_id']},{train_width},{n_factor},{summary_cmap}")
+        summary_aux_args.append(" ".join(summary_aux_args_models))
+    # projection & decode
+    if args.decode:
+        summary_aux_args_decode = ["--decode"]
+        decode_runs = define_decode_runs(args)
+        for decode_params in decode_runs:
+            model_type = decode_params["model_type"]
+            model_id = decode_params["model_id"]
+            fit_width = decode_params["fit_width"]
+            decode_id = decode_params["decode_id"]
+            # prerequisities
+            if args.decode:
+                prerequisities.append(f"{args.out_dir}/{decode_id}.done")
+            # args
+            if args.decode:
+                summary_aux_args_decode.append(f"{model_type},{model_id},{decode_id},{fit_width},{args.anchor_res}")
+        if args.decode and len(summary_aux_args_decode) > 1:
+            summary_aux_args.append(" ".join(summary_aux_args_decode))
+    # summary
+    cmds = cmd_separator([], f"Summarizing output into to the <out_json> files...")
+    cmd = " ".join([
+        "cartloader", "write_json_for_ficture2",
+            "--merge --merge-override",
+            f"--in-transcript {args.in_transcript}",
+            f"--in-feature {args.in_feature}", # use the original feature file for SGE
+            f"--in-feature-ficture {feature_plain}",
+            f"--in-minmax {args.in_minmax}",
+            f"--out-json {args.out_json}",
+            " ".join(summary_aux_args)
+        ])
+    cmds.append(cmd)
+    prerequisities.append(minmax_prereq)
+    mm.add_target(args.out_json, prerequisities, cmds)
 
     ## write makefile
     if len(mm.targets) == 0:

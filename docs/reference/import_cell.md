@@ -2,28 +2,23 @@
 
 ## Overview
 
-Import platform‑specific cell analysis outputs (cells, boundaries, clusters/DE), convert them to web‑ready layers (PMTiles/GeoJSON), and optionally register them in a cartloader catalog. Supported platforms include 10x Xenium and 10x Visium HD.
+Import platform‑specific cell analysis outputs (cells, boundaries, clusters/DE), convert them to web‑ready layers (PMTiles/GeoJSON), and optionally register them in a CartLoader catalog. Supported platforms include 10x Xenium and 10x Visium HD.
 
+---
 ## Requirements
 
 - Cell analysis outputs from the platform (see per‑platform sections).
 - For PMTiles conversion: `tippecanoe` installed and on PATH.
 - Optional catalog update: an existing `catalog.yaml` from [Asset Packaging](./run_cartload2.md).
 
-## Actions
-
-- `--cells`: Convert cell points/centroids to PMTiles with counts and top cluster index (topK).
-- `--boundaries`: Convert cell polygons to GeoJSON with `cell_id` and `topK` attributes.
-- `--summary`: Write a JSON summary of inputs/outputs and basic stats.
-- `--update-catalog`: Append generated layers to an existing `catalog.yaml` (not included in `--all`).
-- `--all`: Enable `--cells`, `--boundaries`, and `--summary` together.
-
+---
 ## Example Usages
+!!! warning "Two Input Modes"
 
-CartLoader accepts two input modes for each platform:
+    CartLoader accepts two input modes for each platform:
 
-- JSON mode: pass `--in-json` with required keys.
-- Manual mode: pass `--indir` with specific file locations.
+    - JSON mode: pass `--in-json` with required keys.
+    - Manual mode: pass `--indir` with specific file locations.
 
 === "Xenium Example"
 
@@ -52,13 +47,15 @@ CartLoader accepts two input modes for each platform:
     ```bash
     # JSON input mode (requires keys: CELL_FEATURE_MEX, CELL_GEOJSON, CLUSTER, DE)
     cartloader import_visiumhd_cell \
-      --cells --boundaries --summary \
+      --cells \
+      --boundaries \
       --outprefix /path/to/out/spaceranger \
       --in-json /path/to/visiumhd_cells.json
 
     # Manual input mode
     cartloader import_visiumhd_cell \
-      --cells --boundaries --summary \
+      --cells \
+      --boundaries \
       --outprefix /path/to/out/spaceranger \
       --indir /path/to/spaceranger_output \
       --mtx-cell filtered_feature_bc_matrix \
@@ -67,17 +64,30 @@ CartLoader accepts two input modes for each platform:
       --csv-diffexp analysis/diffexp/gene_expression_graphclust/differential_expression.csv
     ```
 
-## Parameters 
+---
+## Actions
+
+!!! warning "Action Specifications"
+    No action runs by default. Activate at least one using the [action parameters](#action-parameters).
+
+### Cell Conversion Step (`--cells`)
+Convert cell points/centroids, clusters, and differential expression results to PMTiles with counts and top cluster index (topK). A JSON summary of inputs/outputs and basic stats will be written.
+
+### Cell Boundary Conversion Step (`--boundaries`)
+Convert cell polygons to GeoJSON with `cell_id` and `topK` attributes. A JSON summary of inputs/outputs and basic stats will be written.
+
+### Catalog Update (`--update-catalog`)
+Append generated layers to an existing `catalog.yaml`.
+
+---
+## Parameters
 
 ### Action Parameters
-Activate at least one action: `--cells`, `--boundaries`, `--summary`, or `--update-catalog` (or `--all`).
 
-- `--cells`: Convert cell points/centroids to PMTiles with counts and top cluster index (topK).
-- `--boundaries`: Convert cell polygons to GeoJSON with `cell_id` and `topK` attributes.
-- `--summary`: Write a JSON summary of inputs/outputs and basic stats.
-- `--update-catalog`: Append generated layers to an existing `catalog.yaml` (not included in `--all`).
-- `--all`: Enable `--cells`, `--boundaries`, and `--summary` together.
-
+- `--cells`: run [cell conversion step](#cell-conversion-step---cells).
+- `--boundaries`: run [cell boundary conversion step](#cell-boundary-conversion-step---boundaries)
+- `--update-catalog`: run [catalog update](#catalog-update---update-catalog)
+- `--all`: Enable `--cells` and `--boundaries` together.
 
 ### Input/Output Parameters
 - `--outprefix` (str): Path prefix for outputs (e.g., `/path/to/out/sample`).
@@ -100,7 +110,7 @@ Activate at least one action: `--cells`, `--boundaries`, `--summary`, or `--upda
     - `--csv-clust` (str): Relative path under `--indir` to clustering results (CSV).
     - `--csv-diffexp` (str): Relative path under `--indir` to differential expression results (CSV).
 
-??? note "Auxiliary Paramaters"
+??? note "Auxiliary Parameters"
 
     **PMTiles Conversion**
 
@@ -130,6 +140,7 @@ Activate at least one action: `--cells`, `--boundaries`, `--summary`, or `--upda
       - `--threads` (int): Threads for tippecanoe conversion.
       - `--log` (flag), `--log-suffix` (str): Write logs alongside outputs.
 
+---
 ## Outputs
 
 - Cells PMTiles (`*.cells.pmtiles`): cell centroids/points with attributes `cell_id`, `count`, `topK`.

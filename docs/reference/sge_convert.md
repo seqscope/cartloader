@@ -4,6 +4,7 @@
 
 SGE datasets vary widely in format and resolution across platforms. Since `FICTURE` requires SGE in a specific format, `CartLoader` toolkit provides the `sge_convert` module to standardize raw, platform-specific SGE into a FICTURE-compatible format.
 
+---
 ## Requirements
 
 !!! info "Input Data Requirements"
@@ -36,12 +37,12 @@ SGE datasets vary widely in format and resolution across platforms. Since `FICTU
     * `spatula` (required if `--sge-visual` is set)
     * `gdal_translate`, `gdalwarp` (required if `--sge-visual` is set with `--north-up`)
 
-
+---
 ## Example Usage
 
 ### 1) Input SGE in MEX Format
 
-#### 1.1) `Seq-Scope`
+#### 1.1) Seq-Scope
 ```bash
 cartloader sge_convert \
     --platform seqscope \
@@ -58,7 +59,7 @@ cartloader sge_convert \
     --spatula /path/to/spatula/binary 
 ```
 
-#### 1.2) `10X Visium HD`
+#### 1.2) 10X Visium HD
 ```bash
 cartloader sge_convert \
     --platform 10x_visium_hd \
@@ -73,9 +74,7 @@ cartloader sge_convert \
 
 ### 2) Input SGE in TSV/CSV Format
 
-This applies to input SGE in TSV/CSV format from platforms including 10x Xenium, Stereo‑seq, CosMx SMI, MERSCOPE, Pixel‑seq, and Nova‑ST. To simplify preprocessing, `sge_convert` automatically applies platform‑specific defaults for common CSV/TSV parameters.
-
-Below is an example converting SGE from Stere-seq.
+This applies to input SGE in TSV/CSV format from platforms. Below is an example converting SGE from Stere-seq.
 
 ```bash
 cartloader sge_convert \
@@ -96,7 +95,7 @@ cartloader sge_convert \
 !!! warning "Verify Your Input Structure"
     Always double-check the column names and metadata format of your input files. If they differ from the expected defaults, override them using `--csv-*` and `--min-phred-score` options.
 
-??? "Click to view platform-specific default settings"
+!!! info "Platform-specific Default Settings"
 
     To streamline the process, `sge_convert` automatically applies platform‑dependent defaults for CSV/TSV parsing based on known file formats and column conventions.
     Below summarizes the default values for key parameters per supported platform:
@@ -117,7 +116,10 @@ cartloader sge_convert \
 ---
 ## Actions
 
-### SGE Conversion
+!!! warning "Action Specifications"
+    SGE conversion runs by default. If needed, activate other options: `--filter-by-density` and `--sge-visual`.
+
+### SGE Conversion (always runs)
 Converting SGE into a FICTURE-compatible TSV format. During conversion, SGE coordinates are rescaled to micrometer units based on the pixel resolution specified in the input. It's also available to apply feature (typically, genes) filtering.
 
 ### Density-based Filtering (`--filter-by-density`)
@@ -193,10 +195,11 @@ Below are the core parameters. See more details in the collapsible sections belo
 
     **Run Parameters**:
 
-    * `--dry-run` (flag): Generate the Makefile but do not execute it.
-    * `--restart` (flag): Ignore existing outputs and re-run all steps.
-    * `--makefn` (str): Output Makefile name (default: `sge_convert.mk`)
-    * `--n-jobs` (int): Parallel jobs when executing the Makefile (default: 1).
+    * `--dry-run` (flag): Generate the Makefile; do not execute.
+    * `--restart` (flag): Ignore existing outputs and rerun all steps.
+    * `--makefn` (str): Makefile name to write (default: `sge_convert.mk`).
+    * `--n-jobs` (int): Number of parallel jobs (default: 1).
+
 
 ### Density‑based Filtering
 

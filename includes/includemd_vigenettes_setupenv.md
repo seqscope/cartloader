@@ -19,7 +19,7 @@ aws=/path/to/aws/cli/binary             # path to AWS CLI binary
 cmap=/path/to/color/map                 # Path to fixed color map. CartLoader includes one at cartloader/assets/fixed_color_map_256.tsv.
 
 # Number of jobs
-n_jobs=10                               # If not specify, the number of jobs defaults to 1.
+n_jobs=10                               # If not specified, the number of jobs defaults to 1.
 
 # Activate the bioconda environment
 conda activate ENV_NAME                 # replace ENV_NAME with your conda environment name
