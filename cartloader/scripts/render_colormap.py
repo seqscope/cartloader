@@ -11,6 +11,7 @@ def parse_arguments(_args):
     parser.add_argument("--swatch-size", type=float, default=0.6, help="Size of each color swatch.")
     parser.add_argument("--font-size", type=int, default=14, help="Label font size.")
     parser.add_argument("--dpi", type=int, default=150, help="Image DPI.")
+    parser.add_argument("--max-per-row", type=int, default=12, help="Maximum labels per row before wrapping to next line (<=0 for single row).")
     parser.add_argument("--label-col", default="Name", help="Label column name (default: Name).")
     parser.add_argument("--r-col", default="R", help="Red column name (default: R).")
     parser.add_argument("--g-col", default="G", help="Green column name (default: G).")
@@ -75,10 +76,15 @@ def render_colormap(_args):
     if n == 0:
         raise ValueError("No rows found in TSV; nothing to render.")
 
-    spacing = args.swatch_size + 0.4  # spacing between swatches
-    label_offset = 0.15          # horizontal offset for label from swatch
-    fig_width = max(2.0, spacing * n)
-    fig_height = args.swatch_size + 0.3
+    # Layout with wrapping
+    cols = n if args.max_per_row <= 0 else min(n, args.max_per_row)
+    rows = (n + cols - 1) // cols
+
+    h_spacing = args.swatch_size + 0.4  # horizontal spacing between swatches
+    v_spacing = args.swatch_size + 0.5  # vertical spacing between rows
+    label_offset = 0.15                 # label offset from swatch
+    fig_width = max(2.0, h_spacing * cols)
+    fig_height = max(args.swatch_size + 0.3, v_spacing * rows)
 
     fig, ax = plt.subplots(figsize=(fig_width, fig_height))
     ax.axis("off")
@@ -89,8 +95,11 @@ def render_colormap(_args):
         except Exception as e:
             raise ValueError(f"Invalid RGB values in row {i}: {e}")
 
-        x = i * spacing
-        y = 0.0
+        r = i // cols
+        c = i % cols
+        # draw from top to bottom so first row appears at top
+        x = c * h_spacing
+        y = (rows - 1 - r) * v_spacing
         # Draw color swatch
         rect = Rectangle((x, y), args.swatch_size, args.swatch_size,
                          color=color, ec='white', linewidth=1.5)
@@ -106,8 +115,8 @@ def render_colormap(_args):
         ax.text(x + args.swatch_size + label_offset, y + args.swatch_size / 2.0,
                 label, va='center', ha='left', fontsize=args.font_size, color='dimgray')
 
-    ax.set_xlim(-0.2, spacing * n)
-    ax.set_ylim(-0.2, args.swatch_size + 0.2)
+    ax.set_xlim(-0.2, h_spacing * cols)
+    ax.set_ylim(-0.2, v_spacing * rows)
     fig.tight_layout()
     os.makedirs(os.path.dirname(args.out_png) or ".", exist_ok=True)
     fig.savefig(args.out_png, dpi=args.dpi, bbox_inches='tight')
