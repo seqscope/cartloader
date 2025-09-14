@@ -1,6 +1,6 @@
 See more details of output at the Reference pages for [run_ficture2](../docs/reference/run_ficture2.md) and [run_cartload2](../docs/reference/run_cartload2.md).
 
-### Spatial Factor Inference from `FICTURE`
+### Spatial Factor Inference
 Below is an example of spatial factor inference results from `FICTURE` using a training width of 18, 12 factors, a fit width of 18, and an anchor resolution of 6.
 
 ![FICTURE](../docs/images/starter_vignettes/seqscope.t18_f12_p18_a6.png)

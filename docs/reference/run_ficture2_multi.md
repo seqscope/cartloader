@@ -2,7 +2,7 @@
 
 ## Overview
 
-`run_ficture2_multi` orchestrates joint FICTURE analysis on >=2 samples. It tiles each sample, builds joint hex grids (one or more widths), trains LDA models per width/factor count, decodes per sample, and writes per‑sample JSON manifests summarizing results.
+`run_ficture2_multi` orchestrates joint FICTURE analysis on >=2 samples. It tiles each sample, builds joint hex grids (one or more widths), trains LDA models cross samples per width/factor count, decodes per sample, and writes per‑sample JSON manifests summarizing results.
 
 Use this when processing multiple samples together to learn shared spatial factors and generate per‑sample outputs in a single, parallelizable pipeline.
 

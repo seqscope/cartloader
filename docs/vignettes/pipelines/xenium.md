@@ -220,6 +220,19 @@ Example: [`includes/xenium_ranger_assets.human_lung_cancer.json`](../../../inclu
 {% include-markdown "../../../includes/xenium_ranger_assets.human_lung_cancer.json" %}
 ```
 
-### SGE/FICTURE/Cell/Images assets
+
+### Spatial Factor Inference
+Below is an example of spatial factor inference results from `FICTURE` using a training width of 18, 12 factors, a fit width of 18, and an anchor resolution of 6. See more details of output at the Reference pages for [run_ficture2](../docs/reference/run_ficture2.md)
+
+![FICTURE](../../images/pipeline_vignettes/xenium_human_lung_cancer_v1.2.t18_f24_p18_a6.png)
+![cmap](../../images/pipeline_vignettes/xenium_human_lung_cancer_v1.2.t18_f24.rgb.png)
+
+
+{{ read_csv('../../tabs/pixelseq_starter.t18-f12-p18-a6-info.tsv',sep = '\t') }}
+
+
+### SGE/FICTURE/Cell/Image assets
+
+See more details of output at the Reference pages for [run_cartload2](../..//reference/run_cartload2.md), [import_xenium_cell](../..//reference/import_cell.md), and [import_image](../../reference/import_image.md).
 
 TO-DO: path to those assets will be provided to serve the output

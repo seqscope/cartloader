@@ -90,34 +90,28 @@ These tutorials demonstrate how to run `CartLoader` on a variety of ST platforms
     [Read](./subregion_tutorials/cosmxsmi.md){ .md-button .md-button--primary .button-tight-small }
 </div>
 
-## Real‑world end‑to‑end workflows by platform
-These examples show how to process real‑world, whole‑sample ST datasets. Each example uses a whole mouse brain sample for consistency.
+## End‑to‑end workflows by platform
+These examples show how to process real‑world ST datasets from different platform using end-to-end workflow from `CartLoader`.
 
 <div class="grid cards generic" markdown>
 -   <figure markdown="span">
-    ![example3](../images/starter_vignettes/xenium.t12_f12_p12_a6.png){ width="100%" }
-    <figcaption class="figure-caption-vigintro-large">**10X Xenium** Starter Guide</figcaption>
+    ![example3](../images/pipeline_vignettes/xenium_human_lung_cancer_v1.2.t18_f24_p18_a6.png){ width="100%" }
+    <figcaption class="figure-caption-vigintro-large">**10X Xenium** Pipeline Guide</figcaption>
     </figure>
 
     [Read](./subregion_tutorials/xenium.md){ .md-button .md-button--primary .button-tight-small }
 
 -   <figure markdown="span">
-    ![example3](../images/starter_vignettes/merscope.t12_f12_p12_a6.png){ width="100%" }
-    <figcaption class="figure-caption-vigintro-large">**Vizgen MERSCOPE** Starter Guide</figcaption>
+    ![example3](../images/pipeline_vignettes/visiumhd_3prime_mouse_brain.t18_f24_p18_a6.png){ width="100%" }
+    <figcaption class="figure-caption-vigintro-large">**Visium HD** Pipeline Guide</figcaption>
     </figure>
 
-    [Read](./subregion_tutorials/merscope.md){ .md-button .md-button--primary .button-tight-small }
+    [Read](./pipelines/visiumhd.md){ .md-button .md-button--primary .button-tight-small }
 
--   <figure markdown="span">
-    ![example3](../images/starter_vignettes/cosmxsmi.t12_f12_p12_a6.png){ width="100%" }
-    <figcaption class="figure-caption-vigintro-large">**CosMX SMI** Starter Guide</figcaption>
-    </figure>
-
-    [Read](./subregion_tutorials/cosmxsmi.md){ .md-button .md-button--primary .button-tight-small }
 </div>
 
 
-## Multi‑Sample Batch Analysis
+## Multi‑Sample Analysis
 
 !!! warning
     This section is under active development.

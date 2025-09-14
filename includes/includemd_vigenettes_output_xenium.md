@@ -1,18 +1,10 @@
 See more details of output at the Reference pages for [run_ficture2](../docs/reference/run_ficture2.md) and [run_cartload2](../docs/reference/run_cartload2.md).
 
-### Spatial Factor Inference from `FICTURE`
+### Spatial Factor Inference
 Below is an example of spatial factor inference results produced by `FICTURE` using a training width of 12, 12 factors, a fit width of 12, and an anchor resolution of 6.
 
 ![FICTURE](../docs/images/starter_vignettes/xenium.t12_f12_p12_a6.png)
 ![cmap](../docs/images/starter_vignettes/xenium.t12-f12-rgb.png)
-
-<!-- 
-<div id="color-legend-container"></div>
-<script>
-  document.addEventListener("DOMContentLoaded", function() {
-    loadColorLegend("../../../tabs/colormap/xenium_starter.t12-f12-rgb.tsv", "color-legend-container");
-  });
-</script> -->
 
 {{ read_csv('../../tabs/xenium_starter.t12-f12-p12-a6-info.tsv',sep = '\t') }}
 

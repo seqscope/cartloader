@@ -76,6 +76,8 @@ nav:
       - Platform Workflows:
         - Xenium end-to-end Tutorial: vignettes/pipelines/xenium.md
         - Visium HD end-to-end Tutorial: vignettes/pipelines/visiumhd.md
+      - Multi-sample Showcases:
+        - Human Cortex Multi-sample Tutorial: vignettes/multi_sample.md
         # - CosMX SMI Pipeline: vignettes/pipelines/cosmxsmi.md   # example placeholder
         # - MERSCOPE Pipeline: vignettes/pipelines/merscope.md     # example placeholder
   - References:
