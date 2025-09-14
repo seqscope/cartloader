@@ -212,7 +212,7 @@ Below are explanations of the parameters used in the example. For the full list,
 
 ## Outputs
 
-### Xenium Assets JSON File
+### Xenium Assets JSON
 
 Example: [`includes/xenium_ranger_assets.human_lung_cancer.json`](../../../includes/xenium_ranger_assets.human_lung_cancer.json)
 
@@ -228,7 +228,7 @@ Below is an example of spatial factor inference results from `FICTURE` using a t
 ![cmap](../../images/pipeline_vignettes/xenium_human_lung_cancer_v1.2.t18_f24.rgb.png)
 
 
-{{ read_csv('../../tabs/pixelseq_starter.t18-f12-p18-a6-info.tsv',sep = '\t') }}
+{{ read_csv('../../tabs/./xenium_human_lung_cancer_v1.2.t18_f24_p18_a6.factor.info.tsv',sep = '\t') }}
 
 
 ### SGE/FICTURE/Cell/Image assets

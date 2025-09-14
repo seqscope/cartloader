@@ -137,24 +137,24 @@ You can upload the generated CartLoader outputs to your designated AWS S3 direct
 
 === "Upload a collection"
 
-```bash
-AWS_DIR=s3://your-bucket/${COLLECTION_ID} # Recommend to use COLLECTION_ID as directory name, this will create a subdirectory for each sample
+    ```bash
+    AWS_DIR=s3://your-bucket/${COLLECTION_ID} # Recommend to use COLLECTION_ID as directory name, this will create a subdirectory for each sample
 
-cartloader upload_aws \
-  --in-dir ./cartload2 \
-  --s3-dir ${AWS_DIR} \
-  --in-list ./input.tsv 
-```
+    cartloader upload_aws \
+      --in-dir ./cartload2 \
+      --s3-dir ${AWS_DIR} \
+      --in-list ./input.tsv 
+    ```
 
 === "Upload a single sample"
 
-```bash
-AWS_DIR=s3://your-bucket/${COLLECTION_ID} # Recommend to use COLLECTION_ID as directory name, this will create a subdirectory for each sample
+    ```bash
+    AWS_DIR=s3://your-bucket/${COLLECTION_ID} # Recommend to use COLLECTION_ID as directory name, this will create a subdirectory for each sample
 
-cartloader upload_aws \
-  --in-dir ./cartload2/FB080_O1a \
-  --s3-dir ${AWS_DIR}/fb080-01a
-```
+    cartloader upload_aws \
+      --in-dir ./cartload2/FB080_O1a \
+      --s3-dir ${AWS_DIR}/fb080-01a
+    ```
 
 ---
 ## Output Summary
@@ -166,11 +166,10 @@ See reference details: [run_ficture2_multi](../../reference/run_ficture2_multi.m
 Below is an example of spatial factor inference results from `FICTURE` using a training width of 18, 12 factors, a fit width of 18, and an anchor resolution of 6.
 
 ![FICTURE](../images/multisample_vigenettes/FB080_O1a.t18_f96_p18_a6.png)
-![cmap]()
+![cmap](../images/multi-sample.t18_f96.cmap.png)
 
 {{ read_csv('../tabs/FB080_O1a.t18_f96_p18_a6.factor.info.tsv',sep = '\t') }}
 
-
-
-
 ### Packed SGE and Spatial Factor Outputs Per Sample
+
+TO-DO: path to those assets will be provided to serve the output

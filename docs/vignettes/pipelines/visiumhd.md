@@ -202,13 +202,22 @@ Below are explanations of the parameters used in the example. For the full list,
 
 ## Outputs
 
-### Space Ranger Assets JSON File
+### Space Ranger Assets JSON
 
 Example: `includes/visiumhd_space_ranger_assets.visiumhd_3prime_mouse_brain.json`[](../../../includes/visiumhd_space_ranger_assets.visiumhd_3prime_mouse_brain.json)
 
 ```json
 {% include-markdown "../../../includes/visiumhd_space_ranger_assets.visiumhd_3prime_mouse_brain.json" %}
 ```
+
+### Spatial Factor Inference
+Below is an example of spatial factor inference results from `FICTURE` using a training width of 18, 12 factors, a fit width of 18, and an anchor resolution of 6. See more details of output at the Reference pages for [run_ficture2](../docs/reference/run_ficture2.md)
+
+![FICTURE](../../images/pipeline_vignettes/visiumhd_3prime_mouse_brain.t18_f24_p18_a6.png)
+![cmap](../../images/pipeline_vignettes/visiumhd_3prime_mouse_brain.t18_f24.rgb.png)
+
+{{ read_csv('../../tabs/visiumhd_3prime_mouse_brain.t18_f24_p18_a6.factor.info.tsv',sep = '\t') }}
+
 
 ### SGE/FICTURE/Cell/Images assets
 
