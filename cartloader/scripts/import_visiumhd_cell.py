@@ -1,17 +1,31 @@
 import sys, os, gzip, argparse, logging, warnings, shutil, subprocess, ast, csv, yaml, inspect, json
+import math
 import pandas as pd
 import numpy as np
 from scipy.io import mmread
 from scipy.stats import chi2
 
 from shapely.geometry import shape, mapping
+from shapely.affinity import scale as shapely_scale
+
+
 
 from cartloader.utils.minimake import minimake
 from cartloader.utils.utils import cmd_separator, scheck_app, create_custom_logger, flexopen, unquote_str, smartsort, write_dict_to_file, load_file_to_dict
 from cartloader.scripts.import_xenium_cell import process_cluster_csv, read_de_csv, write_de_tsv, write_cmap_tsv, tile_csv_into_pmtiles, make_factor_dict
+from cartloader.scripts.sge_convert import extract_unit2px_from_json
+
+def _rescale_geometry(geom, units_per_um):
+    """Rescale geometry coordinates into microns when needed."""
+    if units_per_um is None or math.isclose(units_per_um, 1.0):
+        return geom
+    if units_per_um == 0:
+        raise ValueError("units_per_um must be non-zero")
+    scale_factor = 1.0 / units_per_um
+    return shapely_scale(geom, xfact=scale_factor, yfact=scale_factor, origin=(0, 0))
 
 
-def process_cell_geojson_w_mtx(cells_geojson, cell_ftr_mex, cells_out, bcd2clusteridx):
+def process_cell_geojson_w_mtx(cells_geojson, cell_ftr_mex, cells_out, bcd2clusteridx, units_per_um):
     # Load barcodes
     bcd_path = os.path.join(cell_ftr_mex, "barcodes.tsv.gz")
     df_bcd_idx = pd.read_csv(bcd_path, header=None, names=["cell_id"])
@@ -35,14 +49,20 @@ def process_cell_geojson_w_mtx(cells_geojson, cell_ftr_mex, cells_out, bcd2clust
     # Load convert cells_geojson into csv
     with open(cells_geojson, "r") as f:
         cell_data = json.load(f)
-    df_bcd_xy = pd.DataFrame(
-        {
-            "cell_id": f"cellid_{f['properties']['cell_id']:09d}-1",
-            "lon": shape(f["geometry"]).centroid.x,
-            "lat": shape(f["geometry"]).centroid.y,
-        }
-        for f in cell_data["features"]
-    )
+    
+    def _iter_cell_centroids():
+        for feature in cell_data["features"]:
+            formatted_id = f"cellid_{feature['properties']['cell_id']:09d}-1"
+            geom = shape(feature["geometry"])
+            scaled_geom = _rescale_geometry(geom, units_per_um)
+            centroid = scaled_geom.centroid
+            yield {
+                "cell_id": formatted_id,
+                "lon": centroid.x,
+                "lat": centroid.y,
+            }
+
+    df_bcd_xy = pd.DataFrame(_iter_cell_centroids())
 
     # Merge and select final columns
     df_bcd = (
@@ -55,7 +75,7 @@ def process_cell_geojson_w_mtx(cells_geojson, cell_ftr_mex, cells_out, bcd2clust
     df_bcd["topK"] = df_bcd["topK"].apply(lambda x: str(x) if pd.notna(x) else "NA")
     df_bcd.to_csv(cells_out)
 
-def process_boundaries_geojson(input_geojson, output_geojson, bcd2clusteridx):
+def process_boundaries_geojson(input_geojson, output_geojson, bcd2clusteridx, units_per_um):
     with open(input_geojson) as f:
         geojson = json.load(f)
 
@@ -63,10 +83,12 @@ def process_boundaries_geojson(input_geojson, output_geojson, bcd2clusteridx):
         raw_id = feature["properties"]["cell_id"]
         formatted_id = f"cellid_{raw_id:09d}-1"
         clusteridx = bcd2clusteridx.get(formatted_id, "NA")
+        geom = _rescale_geometry(shape(feature["geometry"]), units_per_um)
         feature["properties"] = {
             "cell_id": formatted_id,
             "topK": str(clusteridx)
         }
+        feature["geometry"] = mapping(geom)
 
     with open(output_geojson, "w") as f:
         json.dump({"type": "FeatureCollection", "features": geojson["features"]}, f, indent=2)
@@ -105,6 +127,9 @@ def parse_arguments(_args):
     aux_inout_params.add_argument('--mtx-cell', type=str, default="segmented_outputs/filtered_feature_cell_matrix", help='Directory location of the cell feature MatrixMarket files under --indir (default: segmented_outputs/filtered_feature_cell_matrix)')
     aux_inout_params.add_argument('--csv-clust', type=str, default="analysis/clustering/gene_expression_graphclust/clusters.csv", help='Location of CSV with cell cluster assignments under --indir (default: analysis/clustering/gene_expression_graphclust/clusters.csv)')
     aux_inout_params.add_argument('--csv-diffexp', type=str, default="analysis/diffexp/gene_expression_graphclust/differential_expression.csv", help='Location of CSV with differential expression results under --indir (default: analysis/diffexp/gene_expression_graphclust/differential_expression.csv)')
+    # - scaling
+    aux_inout_params.add_argument('--scale-json', type=str, default=None, help=f'Location of scale JSON under --indir. If set, defaults --units-per-um from microns_per_pixel in this JSON file (No default value applied. Typical locations: square_002um/spatial/scalefactors_json.json; binned_outputs/square_002um/spatial/scalefactors_json.json")')
+    aux_inout_params.add_argument('--units-per-um', type=float, default=1, help='Coordinate units per µm in inputs (default: 1).')
 
     aux_conv_params = parser.add_argument_group("Auxiliary PMTiles Conversion Parameters")
     aux_conv_params.add_argument('--min-zoom', type=int, default=10, help='Minimum zoom level (default: 10)')
@@ -171,17 +196,27 @@ def import_visiumhd_cell(_args):
     #temp_fs=[]
 
     # read in_json if provided 
+    scale_json = None
+
     if args.in_json is not None:
         assert os.path.exists(args.in_json), f"File not found: {args.in_json} (--in-json)"
-        raw_data=load_file_to_dict(args.in_json)
-        cell_data=raw_data.get("CELLS", raw_data) # # use raw_data as default to support the flat dict build in the old scripts
+        raw_data = load_file_to_dict(args.in_json)
+        cell_data = raw_data.get("CELLS", raw_data)  # support flat dicts from older scripts
+        scale_json = raw_data.get("SGE", {}).get("SCALE", None)
     else:
-        cell_data={
+        if args.indir is None:
+            raise ValueError("--indir is required when --in-json is not provided")
+        scale_json =  os.path.join(args.indir, args.scale_json) if args.scale_json else None
+        cell_data = {
             "CELL_FEATURE_MEX": f"{args.indir}/{args.mtx_cell}",
             "CELL_GEOJSON": f"{args.indir}/{args.csv_boundaries}",
             "CLUSTER": f"{args.indir}/{args.csv_clust}",
             "DE": f"{args.indir}/{args.csv_diffexp}",
         }
+
+    if scale_json is not None:
+        assert os.path.exists(scale_json), f"File not found: {scale_json} (--scale-json)"
+        args.units_per_um = extract_unit2px_from_json(scale_json)
 
     # Cluster/DE
     if args.cells or args.boundaries:
@@ -234,7 +269,7 @@ def import_visiumhd_cell(_args):
         # convert cell geojson into csv format with cell_id, x, y, count
         cells_out=f"{args.outprefix}-cells.csv"
         logger.info(f"  * Reading cell data from {cells_json}; {cell_ftr_mex} and extracting geometry to {cells_out}")
-        process_cell_geojson_w_mtx(cells_json, cell_ftr_mex, cells_out, bcd2clusteridx)
+        process_cell_geojson_w_mtx(cells_json, cell_ftr_mex, cells_out, bcd2clusteridx, args.units_per_um)
 
         cells_pmtiles = f"{args.outprefix}-cells.pmtiles"
         logger.info(f"  * Generating PMTiles from cell geometry data into cell pmtiles: {cells_pmtiles}")
@@ -247,7 +282,7 @@ def import_visiumhd_cell(_args):
         ## read the cell CSV files
         bound_out=f"{args.outprefix}-boundaries.geojson"
         logger.info(f"  * Reading cell boundary data from {cells_json} and extracting geometry to {bound_out}")
-        process_boundaries_geojson(cells_json, bound_out, bcd2clusteridx)
+        process_boundaries_geojson(cells_json, bound_out, bcd2clusteridx, args.units_per_um)
 
         ## Run the tippecanoe command
         bound_pmtiles = f"{args.outprefix}-boundaries.pmtiles"
