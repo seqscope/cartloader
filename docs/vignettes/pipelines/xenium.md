@@ -1,4 +1,4 @@
-# Xenium Pipeline
+# Xenium End-to-End Pipeline
 
 ## Overview
 

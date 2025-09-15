@@ -6,17 +6,17 @@
 /* ==================GRID & CARDS=================== */
 
 /* single card alignment and fixed size */
-.grid.cards.single-left {
+/* .grid.cards.single-left {
   justify-content: flex-start !important;
   place-items: start !important;
 }
 
 .grid.cards.single-left > ul > li {
-  width: 360px;         /* Set desired width */
-  height: auto;         /* Or: auto for more flexible height */
+  width: 360px;                   
+  height: auto;                   
   padding: 0.2rem;
   box-sizing: border-box;
-}
+} */
 
 /* .grid.cards.generic > ul > li,
 .grid.cards.single-left > ul > li {
@@ -43,7 +43,7 @@
 }
 
 .grid.cards.generic > ul > li {
-  width: 360px;                      /* Fixed card width */
+  width: 320px;                      /* Fixed card width */
   height: auto;                      /* Let height expand with content */
   flex: 0 0 auto;                    /* Prevent growing/shrinking */
   padding: 0.5rem 0.5rem 0.2rem 0.5rem;  /* smaller bottom padding */

@@ -10,38 +10,39 @@ repo_url: https://github.com/seqscope/cartloader
 theme:
   name: material
   features:
-  - navigation.tabs
-  - navigation.indexes
-  - navigation.sections
-  - navigation.expand
-  - navigation.path
-  - content.code.annotate
-  - content.code.copy
-  - content.grid
-  - content.cards
-  - content.footnote.tooltips
-  - content.tabs.link
-  - navigation.instant
-  - navigation.top
+    - navigation.tabs
+    - navigation.indexes
+    - navigation.sections
+    - navigation.expand
+    - navigation.path
+    - content.code.annotate
+    - content.code.copy
+    - content.tooltips
+    - content.grid
+    - content.cards
+    - content.footnote.tooltips
+    - content.tabs.link
+    - navigation.instant
+    - navigation.top
   palette:
-  - media: "(prefers-color-scheme)"
-    toggle:
-      icon: material/link
-      name: Switch to light mode
-  - media: "(prefers-color-scheme: light)"
-    scheme: default
-    primary: indigo
-    accent: indigo
-    toggle:
-      icon: material/toggle-switch
-      name: Switch to dark mode
-  - media: "(prefers-color-scheme: dark)"
-    scheme: slate
-    primary: black
-    accent: indigo
-    toggle:
-      icon: material/toggle-switch-off
-      name: Switch to system preference
+    - media: "(prefers-color-scheme)"
+      toggle:
+        icon: material/link
+        name: Switch to light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/toggle-switch
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: black
+      accent: indigo
+      toggle:
+        icon: material/toggle-switch-off
+        name: Switch to system preference
   font:
     text: 'Roboto'
     code: 'Roboto Mono'
@@ -112,6 +113,12 @@ watch:
 
 # Markdown Extensions
 markdown_extensions:
+  # Ensure glossary is appended before abbreviation parsing
+  - pymdownx.snippets:
+      base_path: .
+      auto_append:
+        - includes/glossary.md
+      check_paths: True
   - abbr
   - tables
   - footnotes
@@ -130,10 +137,6 @@ markdown_extensions:
       linenums: true
       css_class: 'highlight'
   - pymdownx.superfences
-  - pymdownx.snippets:
-      auto_append:
-        - includes/glossary.md
-      check_paths: True
 # - pymdownx.inlinehilite
   - pymdownx.blocks.caption
 

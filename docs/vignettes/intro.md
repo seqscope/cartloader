@@ -8,7 +8,7 @@ For step‑by‑step details of each module, see the [Reference](../reference/sg
 
 If you’re new to `CartLoader`, start with the [Quick Start](./quickstart/run_locally.md) tutorial, a beginner‑friendly walkthrough using a small mouse hippocampus dataset to core `CartLoader` functions.
 
-<div class="grid cards single-left" markdown>
+<div class="grid cards generic" markdown>
 
 -   <figure markdown="span">
     ![Quick Start](../images/starter_vignettes/seqscope.t18_f12_p18_a6.png){ width="100%" }

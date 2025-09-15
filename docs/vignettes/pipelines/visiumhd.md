@@ -1,4 +1,4 @@
-# Visium HD Pipeline
+# Visium HD End-to-End Pipeline
 
 ## Overview
 

@@ -1,7 +1,7 @@
 
 The MERSCOPE input SGE includes one comma‑delimited text file in the following format:
 
-!!! info "CSV file format"
+!!! info "CSV File Format"
 
     ```text
     ,barcode_id,global_x,global_y,global_z,x,y,fov,gene
