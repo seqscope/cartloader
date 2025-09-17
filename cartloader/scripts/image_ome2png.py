@@ -34,7 +34,7 @@ def parse_arguments(_args):
     inout_params.add_argument('--rotate-clockwise', action='store_true', default=False)
     inout_params.add_argument('--rotate-counter', action='store_true', default=False)
     inout_params.add_argument('--high-memory', action='store_true', default=False)
-    inout_params.add_argument('--write-color-mode', action='store_true', default=False,  help='Save the color mode into a file (<out_prefix>.color.csv). This argument is specifically designed for "cartloader import_image" (default: False)')
+    inout_params.add_argument('--write-color-mode', action='store_true', default=False,  help='Save the color mode into a file (<out_prefix>.color.csv). This argument is specifically designed for "cartloader import_image"')
 
     # memory_params = parser.add_argument_group("Memory Management")
     # memory_params.add_argument('--max-memory-gb', type=float, default=4.0,
@@ -48,7 +48,14 @@ def parse_arguments(_args):
         parser.print_help()
         sys.exit(1)
 
-    return parser.parse_args(_args)
+    args = parser.parse_args(_args)
+
+    # Validate transparent range
+    if args.transparent_below is not None:
+        if not (0 <= args.transparent_below <= 255):
+            parser.error("--transparent-below must be between 0 and 255 inclusive")
+
+    return args
 
 def get_memory_usage():
     """Get current memory usage in GB"""

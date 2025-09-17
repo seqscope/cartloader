@@ -12,7 +12,7 @@ def parse_arguments(_args):
     - fic-dir: Directory containing the FICTURE output
     - out-dir: Output directory
     """
-    repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+    repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
     parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", description="Build resources for CartoScope, joining the pixel-level results from FICTURE")
 
@@ -48,18 +48,18 @@ def parse_arguments(_args):
     aux_params.add_argument('--out-catalog', type=str, default="catalog.yaml", help='The YAML file containing the output catalog')
     aux_params.add_argument('--background-assets', type=str, nargs="+", help='The JSON/YAML file containing background assets in the form of [id:file] or [id1:id2:file]')
     aux_params.add_argument('--major-axis', type=str, default="X", choices=['X', 'Y', 'auto'], help='Axis where transcripts.tsv.gz are sorted. Options: X, Y, auto. If "auto", it will be automatically defined by the longer axis. Default: X')
-    aux_params.add_argument('--rename-x', type=str, default='X:lon', help='tippecanoe parameters to rename X axis')  
-    aux_params.add_argument('--rename-y', type=str, default='Y:lat', help='tippecanoe parameters to rename Y axis')  
+    aux_params.add_argument('--rename-x', type=str, default='X:lon', help='tippecanoe parameters to rename the X axis')  
+    aux_params.add_argument('--rename-y', type=str, default='Y:lat', help='tippecanoe parameters to rename the Y axis')  
     aux_params.add_argument('--colname-feature', type=str, default='gene', help='Input/output Column name for gene name (default: gene)')
     aux_params.add_argument('--colname-count', type=str, default='count', help='Column name for feature counts')
     aux_params.add_argument('--out-molecules-id', type=str, default='genes', help='Prefix of output molecules PMTiles files. No directory path should be included')
     aux_params.add_argument('--max-join-dist-um', type=float, default=0.1, help='Maximum distance allowed to join molecules and pixel in micrometers')
     aux_params.add_argument('--max-tile-bytes', type=int, default=5000000, help='Maximum bytes for each tile in PMTiles')
-    aux_params.add_argument('--max-feature-counts', type=int, default=500000, help='Max feature limits per tile in PMTiles')
+    aux_params.add_argument('--max-feature-counts', type=int, default=500000, help='Maximum features per tile in PMTiles')
     aux_params.add_argument('--preserve-point-density-thres', type=int, default=1024, help='Threshold for preserving point density in PMTiles')
     aux_params.add_argument('--keep-intermediate-files', action='store_true', default=False, help='Keep intermediate output files')
-    aux_params.add_argument('--skip-raster', action='store_true', default=False, help='Skip processing raster files, removing dependency to gdal, go-pmtiles')
-    aux_params.add_argument('--tmp-dir', type=str, help='Temporary directory to be used (default: {out-dir}/tmp')
+    aux_params.add_argument('--skip-raster', action='store_true', default=False, help='Skip processing raster files, removing the dependency on GDAL and go-pmtiles')
+    aux_params.add_argument('--tmp-dir', type=str, help='Temporary directory to be used (default: {out-dir}/tmp)')
     if len(_args) == 0:
         parser.print_help()
         sys.exit(1)
@@ -104,17 +104,18 @@ def run_cartload_join(_args):
     # 2. Load FICTURE output metadata
     in_data = {}
     in_jsonf=f"{args.fic_dir}/{args.in_fic_params}"
-    print(in_jsonf)
+    # print(in_jsonf)
     in_data = load_file_to_dict(in_jsonf)
 
     ## sge 
     in_sge = in_data.get("in_sge", {})
     in_molecules = in_sge.get("in_cstranscript", None)
-    assert in_molecules is not None and os.path.exists(in_molecules), "Provide a valid input molecules file in the json file"
     in_features = in_sge.get("in_feature", None)
-    assert in_features is not None and os.path.exists(in_features), "Provide a valid input features file in the json file"
     in_minmax = in_sge.get("in_minmax", None)
-    assert in_minmax is not None and os.path.exists(in_minmax), "Provide a valid input minmax file in the json file"
+
+    assert in_molecules is not None and os.path.exists(in_molecules), f"File not found: {in_molecules}. Check your FICTURE JSON file {in_jsonf} (provided by --fic-dir and --in-fic-params)"
+    assert in_features is not None and os.path.exists(in_features), f"File not found: {in_features} Check your FICTURE JSON file {in_jsonf} (provided by --fic-dir and --in-fic-params)"
+    assert in_minmax is not None and os.path.exists(in_minmax), f"File not found: {in_minmax} Check your FICTURE JSON file {in_jsonf} (provided by --fic-dir and --in-fic-params)"
     
     ## identify the major axis of the data
     if args.major_axis == "auto":
@@ -306,10 +307,10 @@ def run_cartload_join(_args):
                 if not args.skip_raster:
                     cmds = cmd_separator([], f"Creating raster pixel-level factor {in_prefix} into PMTiles...")
                     cmd = " ".join([
-                        "cartloader", "run_fig2pmtiles",
+                        "cartloader", "image_png2pmtiles",
                         "--georeference", "--geotif2mbtiles", "--mbtiles2pmtiles",
-                        "--in-fig", in_pixel_png,
-                        "--in-tsv", in_pixel_tsvf,
+                        "--in-img", in_pixel_png,
+                        "--georef-pixel-tsv", in_pixel_tsvf,
                         "--out-prefix", f"{out_prefix}-pixel-raster",
                         f"--pmtiles '{args.pmtiles}'",
                         f"--gdal_translate '{args.gdal_translate}'",

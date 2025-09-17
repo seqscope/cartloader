@@ -89,9 +89,22 @@ def execute_makefile(make_f, dry_run, restart, n_jobs):
         if result.returncode != 0:
             print(f"Error in executing: {exe_cmd}")
             print(f"Error message:")
-            print(result.stderr.decode())
+            if result.stderr:
+                print("Error message:")
+                print(result.stderr)
+            else:
+                print("Process was terminated (possibly OOM-killed)")
             sys.exit(1)
-
+        # * The reason to disable is that this will not print anything
+        # result = subprocess.run(exe_cmd, shell=True, capture_output=True, text=True)
+        # if result.returncode != 0:
+        #     print(f"Error in executing: {exe_cmd}")
+        #     print("Error message:")
+        #     print(result.stderr)
+        #     sys.exit(1)
+        # else:
+        #     print(result.stdout)
+    
 def valid_and_touch_cmd(input_files, output_file):
     if not input_files:
         raise ValueError("Input file list cannot be empty.")
@@ -811,8 +824,31 @@ def update_and_copy_paths(data, out_dir, skip_keys=[], exe_copy=False):
 
                 # Update value to filename
                 d[key] = file_name
+            # if it is none, skip this key:value pair
+            elif value is None:
+                continue
             else:
                 raise ValueError("Failed at update_and_copy_paths. The value in the dictionary should be either path or a dictionary.")
 
     process_dict(data)
     return data
+
+#== 
+def assert_unique(seq, label, normalize=None):
+    """Assert all elements in seq are unique.
+    - label: used in error messages (e.g., "--image-ids")
+    - normalize: optional callable to normalize values before uniqueness check
+    """
+    if seq is None:
+        return
+    vals = list(seq)
+    norm = [normalize(v) for v in vals] if normalize else vals
+    seen = set()
+    dups = []
+    for v in norm:
+        if v in seen:
+            dups.append(v)
+        else:
+            seen.add(v)
+    assert not dups, f"Duplicate values detected for {label}; please ensure each value is unique. Duplicates: {sorted(set(dups))}"
+

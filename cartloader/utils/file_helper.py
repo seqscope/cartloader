@@ -1,4 +1,6 @@
 import os, tarfile
+from pathlib import Path
+
 
 def split_prefix_suffix_from_compression(filename):
     known_suffixes = [
@@ -34,6 +36,7 @@ def decompress_tar_gz(file_path, destination_directory):
         print(f"An error occurred during decompression: {e}")
 
 def all_items_defined(d):
+    # NOT IN USE 
     """
     Recursively check if all values in a nested dictionary are not None.
     Returns True if all values are defined (no None), otherwise False.
@@ -55,8 +58,8 @@ def find_valid_path(pattern, in_dir):
     """
     Search for the *first* existing file in 'in_dir' matching the filename pattern
     """
-    for filename in pattern["filename"]:
-        f=os.path.join(in_dir,filename)
+    for filename in pattern["filenames"]:
+        f=os.path.join(in_dir, filename)
         if os.path.exists(f):
             return f
     return None
@@ -86,3 +89,107 @@ def find_valid_path_from_zip(pattern, in_dir, unzip_dir, overwrite=False):
             return f
 
     return None
+
+
+def resolve_paths_by_pattern(
+    datdict: dict,
+    key2pattern: dict,
+    in_dir: str,
+    unzip_dir: str,
+    overwrite: bool,
+) -> dict:
+    """
+    Resolve file paths for visiumhd_key2patterns into datdict.
+    - Fills in missing keys using find_valid_path / find_valid_path_from_zip.
+    - Collects missing required files and raises ValueError if any are not found.
+    """
+    def _resolve_path(spec: dict) -> str | None:
+        """Return a valid path for this spec, trying zip sources if needed."""
+        path = find_valid_path(spec, in_dir)
+        if path is None and spec.get("zips"):
+            path = find_valid_path_from_zip(spec, in_dir, unzip_dir, overwrite)
+        return path
+
+    errors = []
+
+    for group, patterns in key2pattern.items():
+        gdict = datdict.setdefault(group, {})
+
+        for key, spec in patterns.items():
+            # Only resolve if missing/None
+            if gdict.get(key) is None:
+                gdict[key] = _resolve_path(spec)
+            
+            # If cannot find any path, drop it
+            if gdict.get(key) is None:
+                gdict.pop(key, None)
+
+            # Collect missing required files for error reporting
+            if spec.get("required") and not gdict.get(key):
+                filenames = spec.get("filenames") or []
+                pretty = ", ".join(filenames) if filenames else "<no patterns provided>"
+                errors.append(f"[{group}.{key}] using pattern(s): {pretty}")
+
+    if errors:
+        raise ValueError("Cannot find the required file(s):\n  - " + "\n  - ".join(errors))
+
+    return datdict
+
+
+# === populate the key2pattern from suffixes
+
+def populate_from_suffixes(spec: dict, in_dir: str, dest_key: str, suffix_key: str) -> None:
+    """
+    If spec[dest_key] is missing and spec[suffix_key] exists,
+    glob for *<suffix> files in in_dir and set spec[dest_key] to a
+    list of basenames (order-preserving, de-duplicated).
+    """
+    # Already populated or no suffixes to search for
+    if spec.get(dest_key) or not spec.get(suffix_key):
+        return
+
+    suffixes = spec[suffix_key]
+    if isinstance(suffixes, str):
+        suffixes = [suffixes]
+
+    matches = []
+    in_path = Path(in_dir)
+    for sfx in suffixes:
+        for p in in_path.glob(f"*{sfx}"):
+            if p.is_file():
+                matches.append(p.name)
+
+    # De-duplicate while preserving order
+    deduped = list(dict.fromkeys(matches))
+    spec[dest_key] = deduped
+
+
+# def populate_from_suffixes(spec: dict, in_dir: str, dest_key: str, suffix_key: str) -> None:
+#     """
+#     If spec[dest_key] is missing and spec[suffix_key] exists,
+#     glob for *<suffix> files in in_dir and set spec[dest_key] to a
+#     list of basenames (order-preserving, de-duplicated).
+#     """
+#     if not isinstance(spec, dict):
+#         raise TypeError(
+#             f"populate_from_suffixes expected a dict spec, got {type(spec).__name__}. "
+#             "Pass a single key's spec (e.g., for key, spec in group_specs.items(): ...)."
+#         )
+
+#     # Already populated or no suffixes to search for
+#     if spec.get(dest_key) or not spec.get(suffix_key):
+#         return
+
+#     suffixes = spec[suffix_key]
+#     if isinstance(suffixes, str):
+#         suffixes = [suffixes]
+
+#     matches = []
+#     in_path = Path(in_dir)
+#     for sfx in suffixes:
+#         for p in in_path.glob(f"*{sfx}"):
+#             if p.is_file():
+#                 matches.append(p.name)
+
+    # De-duplicate while preserving order
+    spec[dest_key] = list(dict.fromkeys(matches))

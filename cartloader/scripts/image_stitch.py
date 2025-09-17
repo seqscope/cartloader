@@ -7,7 +7,7 @@ from cartloader.utils.utils import cmd_separator, execute_makefile
 from cartloader.utils.minimake import minimake
 from cartloader.utils.image_helper import update_orient
 
-from cartloader.scripts.run_fig2pmtiles import get_orientation_suffix, cmds_for_dimensions, cmds_for_orientation
+from cartloader.scripts.image_png2pmtiles import get_orientation_suffix, cmds_for_dimensions, cmds_for_orientation
 
 # get the current path
 current_path = os.path.realpath(__file__)
@@ -27,8 +27,8 @@ def image_stitch(_args):
         """
     )
     run_params = parser.add_argument_group("Run Options", "Run options")
-    run_params.add_argument('--dry-run', action='store_true', default=False, help='Simulate the process without executing commands (default: False)')
-    run_params.add_argument('--restart', action='store_true', default=False, help='Ignore all intermediate files and start from the beginning (default: False)')
+    run_params.add_argument('--dry-run', action='store_true', default=False, help='Simulate the process without executing commands')
+    run_params.add_argument('--restart', action='store_true', default=False, help='Ignore all intermediate files and start from the beginning')
     run_params.add_argument('--n-jobs', '-j', type=int, default=1, help='Number of jobs (processes) to run in parallel (default: 1)')
     run_params.add_argument('--makefn', type=str, default=None, help='Makefile name. By default, it will be named as image_stitch_<filename>.mk based on the output file name.')
     
@@ -41,15 +41,15 @@ def image_stitch(_args):
                                                                                 "<vertical_flip> and <horizontal_flip> are booleans indicating if the image should be flipped vertically or horizontally.")
     inout_params.add_argument("--output", type=str, help="Path to the output stitched TIFF file.")
     inout_params.add_argument("--in-offsets", type=str, default=None, help="Path to the offsets file. Must contain columns: row, col, x_offset, y_offset, and units_per_um.")
-    inout_params.add_argument("--crop-tile-by-minmax", action='store_true', default=False, help="Enable cropping of tiles using min/max bounds (default: False).")
+    inout_params.add_argument("--crop-tile-by-minmax", action='store_true', default=False, help="Enable cropping tiles using min/max bounds (default: False).")
     inout_params.add_argument("--in-minmax", type=str, default=None, help="Required if --crop-tile-by-minmax is set. Path to the input min/max file with columns: row, col, global_xmin_um, global_ymin_um, global_xmax_um, global_ymax_um.")
-    inout_params.add_argument("--downsize", action='store_true', default=False, help="Downsize the final image for testing purposes (default: False).")
+    inout_params.add_argument("--downsize", action='store_true', default=False, help="Enable Downsizing the stitched image for testing purposes (default: False).")
     inout_params.add_argument("--downsize-prop", type=float, default=0.25, help="Proportion to downsize the image by (default: 0.25).")
     
     env_params = parser.add_argument_group("Env Parameters", "Environment parameters, e.g., tools.")
     env_params.add_argument('--gdal_translate', type=str, default=f"gdal_translate", help='Path to gdal_translate binary (default: gdal_translate)')
     env_params.add_argument('--gdalbuildvrt', type=str, default=f"gdalbuildvrt", help='Path to gdalbuildvrt binary (default: gdalbuildvrt)')
-    env_params.add_argument('--srs', type=str, default='EPSG:3857', help='Spatial reference system (default: EPSG:0)')
+    env_params.add_argument('--srs', type=str, default='EPSG:3857', help='Spatial reference system (default: EPSG:3857)')
     args = parser.parse_args(_args)
 
     mm = minimake()
@@ -102,7 +102,7 @@ def image_stitch(_args):
         # input params
         row, col, tif, georef, georef_tsv, georef_bound, rotate, vflip, hflip = in_tile.split(",")
 
-        assert os.path.exists(tif), f"Input image file {tif} (index: {row}, {col}) does not exist."
+        assert os.path.exists(tif), f"Tile (row {row}, col {col}): file not found {tif} (--in-tiles)"
         tile_prefix = os.path.join(out_dir, os.path.basename(tif).replace(".tif", "")) # tile_prefix for intermediate files
 
         row, col = str(int(row)), str(int(col))
@@ -126,8 +126,7 @@ def image_stitch(_args):
         
         # 1) georef (tif without coordinates)
         if georef: 
-            assert not (georef_bound is None and georef_tsv is None), f"Tile (row {row}, col {col}): Georeferencing requires either georef_bound or georef_tsv to be provided."
-            assert not (georef_bound is not None and georef_tsv is not None), f"Tile (row {row}, col {col}): Georeferencing requires only one of georef_bound or georef_tsv to be provided, not both."
+            assert (georef_bound is not None) ^ (georef_tsv is not None), f"Tile (row {row}, col {col}): georeferencing bounds not found (provide by --georef-bound or --georef-tsv)"
             if georef_bound is not None:
                 ulx, uly, lrx, lry = map(float, georef_bound.split("_"))
             elif georef_tsv is not None:
@@ -140,7 +139,7 @@ def image_stitch(_args):
                 lrx = float(ann2val["SIZE_X"])+1+ulx # Lower Right X-coordinate
                 lry = float(ann2val["SIZE_Y"])+1+uly # Lower Right Y-coordinate 
             ullr=f"{ulx} {uly} {lrx} {lry}"
-            cmds = cmd_separator([], f"Tile (row {row}, col {col}): Georeferencing with ullr ({ullr})")
+            cmds = cmd_separator([], f"Tile (row {row}, col {col}): Georeference (ULLR)")
             georef_f=f"{tile_prefix}.georef.tif"
             cmds.append(f"{args.gdal_translate} -of GTiff -a_srs {args.srs} -a_ullr {ullr} {tif} {georef_f}")
             mm.add_target(georef_f, [tif], cmds)
@@ -166,12 +165,12 @@ def image_stitch(_args):
             # extract local bounds from the ort_f
             #ullr_f = current_f.replace(".tif", f".bounds.offsets_x{x_offset}_y{y_offset}.txt")
             ullr_f =f"{tile_prefix}.globalcoord.ullr.txt"
-            cmds = cmd_separator([], f"Tile (row {row}, col {col}): Extracting bounds from {current_f} and adding offsets ({x_offset}, {y_offset}).")
+            cmds = cmd_separator([], f"Tile (row {row}, col {col}): Compute bounds + apply offsets")
             cmds.append(f"cartloader image_extract_ullr --input {current_f} --output {ullr_f} --x-offset {x_offset} --y-offset {y_offset}")
             mm.add_target(ullr_f, [current_f], cmds)
             # read the bounds
             gcoord_f = f"{tile_prefix}.globalcoord.tif"
-            cmds = cmd_separator([], f"Tile (row {row}, col {col}): Georeferencing with ullr after adding offsets ({x_offset}, {y_offset}).")
+            cmds = cmd_separator([], f"Tile (row {row}, col {col}): Georeference (offset ULLR)")
             # append a bash command to get the ullr from the first row in ullr_f
             cmds.append(f"ULLR=$(head -n 1 {ullr_f}) && \\")
             cmds.append(f"{args.gdal_translate} -of GTiff -a_srs {args.srs} -a_ullr $ULLR {current_f} {gcoord_f}")
@@ -182,14 +181,16 @@ def image_stitch(_args):
         if args.crop_tile_by_minmax:
             # read the minmax
             xmin, ymin, xmax, ymax = idx2minmax.get((row, col), (0, 0, 0, 0))
-            assert not (xmin == 0 and ymin == 0 and xmax == 0 and ymax == 0), f"Tile (row {row}, col {col}): The minmax for the tile is not provided in the input minmax file."
+            assert not (xmin == 0 and ymin == 0 and xmax == 0 and ymax == 0), f"Tile (row {row}, col {col}): min/max bounds not found (--in-minmax)"
+            
             ullr_f = f"{tile_prefix}.crop.ullr.txt"
-            cmds = cmd_separator([], f"Tile (row {row}, col {col}): Extracting bounds from {current_f} and cropping the image by minmax ({xmin}, {ymin}, {xmax}, {ymax}).")
+            cmds = cmd_separator([], f"Tile (row {row}, col {col}): Compute crop bounds")
             cmds.append(f"cartloader image_extract_ullr --input {current_f} --output {ullr_f} --crop-by-minmax --minmax {xmin},{xmax},{ymin},{ymax}")
             mm.add_target(ullr_f, [current_f], cmds)
+            
             # crop the image
             crop_f = f"{tile_prefix}.crop.tif"
-            cmds = cmd_separator([], f"Tile (row {row}, col {col}): Cropping the image by minmax ({xmin}, {ymin}, {xmax}, {ymax}).")
+            cmds = cmd_separator([], f"Tile (row {row}, col {col}): Crop by min/max")
             cmds.append(f"ULLR=$(head -n 1 {ullr_f}) && \\")
             cmds.append(f"{args.gdal_translate} -of GTiff -projwin $ULLR {current_f} {crop_f}")
             mm.add_target(crop_f, [current_f, ullr_f], cmds)
@@ -199,7 +200,7 @@ def image_stitch(_args):
 
     # 3) stitch
     # gdalbuildvrt + gdal_translate
-    cmds= cmd_separator([], f"Stitching the input into {args.output}")
+    cmds= cmd_separator([], f"Stitch tiles")
     out_vrt = args.output.replace(".tif", ".vrt")
     cmd = " ".join([args.gdalbuildvrt, out_vrt] + tiles)
     cmds.append(cmd)
@@ -214,7 +215,7 @@ def image_stitch(_args):
     # 4) downsize
     if args.downsize:
         downsize_f = args.output.replace(".tif", f".downsize_{args.downsize_prop}.tif")
-        cmds = cmd_separator([], f"Downsizing the image to {args.downsize_prop} of the original size.")
+        cmds = cmd_separator([], f"Downsize image")
         downsize_percentage = f"{args.downsize_prop * 100}%"
         cmds.append(f"gdal_translate -outsize {downsize_percentage} {downsize_percentage} -r cubic {args.output} {downsize_f}")
         mm.add_target(downsize_f, [args.output], cmds)

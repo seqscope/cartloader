@@ -11,44 +11,40 @@ def sge_stitch(_args):
     parser = argparse.ArgumentParser(
         prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}",
         description=""""
-        Stitching multiple tile SGEs into one SGE.
-        Outputs: A transcript-indexed SGE file, a coordinate minmax TSV file, and a feature file counting UMIs per feature. All output are in micro-meter precision.
+        Stitch multiple SGE tiles into one SGE.
+        Outputs: transcript-indexed SGE, coordinate min/max TSV, and per-feature UMI counts; all in micrometer precision.
         """
     )
     run_params = parser.add_argument_group("Run Options", "Run options")
-    run_params.add_argument('--dry-run', action='store_true', default=False, help='Simulate the process without executing commands (default: False)')
-    run_params.add_argument('--restart', action='store_true', default=False, help='Ignore all intermediate files and start from the beginning (default: False)')
-    run_params.add_argument('--n-jobs', '-j', type=int, default=1, help='Number of jobs (processes) to run in parallel (default: 1)')
-    run_params.add_argument('--makefn', type=str, default="sge_stitch.mk", help='Makefile name (default: sge_stitch.mk)')
-    run_params.add_argument('--threads', type=int, default=1, help='Maximum number of threads to use in each process (default: 1)')
+    run_params.add_argument('--dry-run', action='store_true', default=False, help='Generate Makefile and print commands without executing')
+    run_params.add_argument('--restart', action='store_true', default=False, help='Ignore existing outputs and re-run all steps')
+    run_params.add_argument('--n-jobs', '-j', type=int, default=1, help='Number of parallel jobs to run (default: 1)')
+    run_params.add_argument('--makefn', type=str, default="sge_stitch.mk", help='File name of Makefile to write (default: sge_stitch.mk)')
+    run_params.add_argument('--threads', type=int, default=1, help='Maximum number of threads per job (default: 1)')
     
-    inout_params = parser.add_argument_group("Input/Output Parameters", "Parameters to specify platform, input, output, and units per um, precision, and density-filtering for output.")
-    inout_params.add_argument("--in-tiles", type=str, nargs='*', default=[], help="List of the input SGEs tiles in a format of <transcript>,<feature>,<minmax>,<row>,<col>,<rotate>,<vertical_flip>,<horizontal_flip>. These are referred to as SGE tiles to distinguish them from the combined output SGE. ")
-    inout_params.add_argument("--out-dir", type=str, help="Output directory.")
-    inout_params.add_argument('--out-transcript', type=str, default="transcripts.unsorted.tsv.gz", help='Output for SGE stitch. File name of the compressed transcript-indexed SGE file in TSV format (default: transcripts.unsorted.tsv.gz).')
-    inout_params.add_argument('--out-minmax', type=str, default="coordinate_minmax.tsv", help='Output for SGE stitch. File name of the coordinate minmax TSV file (default: coordinate_minmax.tsv).')
-    inout_params.add_argument('--out-feature', type=str, default="feature.clean.tsv.gz", help='Output for SGE stitch. File name of the compressed UMI count per feature TSV file (default: feature.clean.tsv.gz).')
-    inout_params.add_argument('--out-tile-minmax', type=str, default="coordinate_minmax_per_tile.tsv", help='Output for SGE stitch. File name of the coordinate minmax per tile TSV file (default: coordinate_minmax_per_tile.tsv).')
-    inout_params.add_argument('--out-json',  type=str, default="sge_assets.json", help='Output json summarizing SGE information. (default: sge_assets.json).')
-    inout_params.add_argument('--feature-distribution', action='store_true', default=False, help='Action. Create a file to summarize the feature distribution across the input tiles')
-    inout_params.add_argument('--out-feature-distribution', type=str, default="feature.distribution.tsv.gz", help='Output for --feature-distribution. File name of the output summarizing the feature distribution across the input tiles (default: feature.distribution.tsv.gz)')
-    inout_params.add_argument('--filter-by-density', action='store_true', default=False, help='Action. Enable density-filtering for the output SGE(default: False). If enabled, check the density-filtering auxiliary parameters.')
-    inout_params.add_argument('--out-filtered-prefix', type=str, default="filtered", help='Output for --filter-by-density. If --filter-by-density, define the prefix for filtered SGE (default: filtered)')
+    inout_params = parser.add_argument_group("Input/Output Parameters", "Input/output paths and core settings.")
+    inout_params.add_argument("--in-tiles", type=str, nargs='*', default=[], help='List of input SGE tiles as "<transcript_path>,<feature_path>,<minmax_path>,<row>,<col>,<rotate>,<vertical_flip>,<horizontal_flip>"')
+    inout_params.add_argument("--out-dir", type=str, help='Path to output directory for stitched SGE, filtered outputs, visualizations, and Makefile')
+    inout_params.add_argument('--out-transcript', type=str, default="transcripts.unsorted.tsv.gz", help='File name of output transcript-indexed SGE TSV under --out-dir (default: transcripts.unsorted.tsv.gz)')
+    inout_params.add_argument('--out-feature', type=str, default="feature.clean.tsv.gz", help='File name of output per-gene UMI count TSV under --out-dir (default: feature.clean.tsv.gz)')
+    inout_params.add_argument('--out-minmax', type=str, default="coordinate_minmax.tsv", help='File name of output coordinate min/max TSV under --out-dir (default: coordinate_minmax.tsv)')
+    inout_params.add_argument('--out-tile-minmax', type=str, default="coordinate_minmax_per_tile.tsv", help='File name of output per-tile coordinate min/max TSV under --out-dir (default: coordinate_minmax_per_tile.tsv)')
+    inout_params.add_argument('--out-json',  type=str, default=None, help='Path to output JSON summarizing SGE assets (default: <out-dir>/sge_assets.json)')
 
-    key_params = parser.add_argument_group("Key Parameters", "Key Parameters")
-    key_params.add_argument("--colnames-count", type=str, default="count", help="Comma-separated column names for count (default: count)")
-    key_params.add_argument('--colname-feature-name', type=str, default='gene', help='Feature name column (default: gene)')
-    key_params.add_argument('--colname-feature-id', type=str, default=None, help='Feature ID column (default: None)')
-    key_params.add_argument('--colname-x', type=str, default="X", help='X column name (default: X)')
-    key_params.add_argument('--colname-y', type=str, default="Y", help='Y column name (default: Y)')
-    key_params.add_argument('--colnames-others', nargs='*', default=[], help='Columns names to keep (e.g., cell_id, overlaps_nucleus) (default: None)')
-    key_params.add_argument('--units-per-um', type=float, default=1.0, help='Units per um in the input transcript tsv files (default: 1.0)')
-    key_params.add_argument("--precision", type=int, default=2, help="Precision for the output minmax and transcript files (default: 2)")
+    key_params = parser.add_argument_group("Key Parameters", "Key output column names and numeric settings.")
+    key_params.add_argument("--colname-count", type=str, default="count", help='Comma-separated output column name(s) for UMI count (default: count)')
+    key_params.add_argument('--colname-feature-name', type=str, default='gene', help='Output column name for feature (gene) name (default: gene)')
+    key_params.add_argument('--colname-feature-id', type=str, default=None, help='Output column name for feature (gene) ID')
+    key_params.add_argument('--colname-x', type=str, default="X", help='Output column name for X (default: X)')
+    key_params.add_argument('--colname-y', type=str, default="Y", help='Output column name for Y (default: Y)')
+    key_params.add_argument('--colnames-others', nargs='*', default=[], help='Output column names to preserve (e.g., cell_id, overlaps_nucleus) (default: [])')
+    key_params.add_argument('--units-per-um', type=float, default=1.0, help='Coordinate units per µm in inputs (default: 1.0)')
+    key_params.add_argument("--precision", type=int, default=2, help='Precision for coordinates in stitched outputs (default: 2)')
 
     # polygon-filtering params
-    polyfilter_params = parser.add_argument_group('Density/Polygon Filtering Parameters','Parameters for filtering polygons based on the number of vertices.')
-    polyfilter_params.add_argument('--genomic-feature', type=str, default=None, help='Column name of genomic feature for polygon-filtering (default to --colnames-count if --colnames-count only specifies one column)')
-    polyfilter_params.add_argument('--mu-scale', type=int, default=1, help='Scale factor for the polygon area calculation (default: 1.0)')
+    polyfilter_params = parser.add_argument_group('Density/Polygon Filtering Parameters')
+    polyfilter_params.add_argument('--filter-by-density', action='store_true', default=False, help='Enable density-based filtering (default: False). See "Density/Polygon Filtering Parameters"')
+    polyfilter_params.add_argument('--out-filtered-prefix', type=str, default="filtered", help='Prefix for filtered outputs under --out-dir (default: filtered)')
     polyfilter_params.add_argument('--radius', type=int, default=15, help='Radius for the polygon area calculation (default: 15)')
     polyfilter_params.add_argument('--quartile', type=int, default=2, help='Quartile for the polygon area calculation (default: 2)')
     polyfilter_params.add_argument('--hex-n-move', type=int, default=1, help='Sliding step (default: 1)')
@@ -56,20 +52,24 @@ def sge_stitch(_args):
     # gene_header and count_header will be automatically based on the --colname-feature-name, --colname-feature-id and --colnames-count
     
     # AUX visualization params
-    visual_params = parser.add_argument_group("SGE Visualization Parameters", "Parameters for visualizing the output SGE in a north-up orientation.")
-    visual_params.add_argument('--sge-visual', action='store_true', default=False, help='(Optional) Plot the SGE in a greyscale PNG file. (default: False)')
-    visual_params.add_argument('--out-xy', type=str, default="xy.png", help='Output for SGE visualization image (default: xy.png)')
-    visual_params.add_argument('--north-up', action='store_true', default=False, help='If enabled, the sge will be visualized in a tif image north-up (default: False).')
-    visual_params.add_argument('--out-northup-tif', type=str, default="xy_northup.tif", help='Output for SGE visualization. The prefix for the output north-up image (default: north_up.tif)')
-    visual_params.add_argument('--srs', type=str, default='EPSG:3857', help='If --north-up, define the spatial reference system (default: EPSG:3857)')
-    visual_params.add_argument('--resample', type=str, default='cubic', help='Define the resampling method (default: cubic). Options: near, bilinear, cubic, etc.')
+    visual_params = parser.add_argument_group("SGE Visualization Parameters")
+    visual_params.add_argument('--sge-visual', action='store_true', default=False, help='Enable visualization; if filtering is enabled, visualizes both unfiltered and filtered SGEs')
+    visual_params.add_argument('--out-xy', type=str, default="xy.png", help='File name of output visualization image under --out-dir (default: xy.png). Filtered image is prefixed with --out-filtered-prefix')
+    visual_params.add_argument('--north-up', action='store_true', default=False, help='If enabled, produce north-up GeoTIFF visualization')
+    visual_params.add_argument('--out-northup-tif', type=str, default="xy_northup.tif", help='File name of north-up GeoTIFF under --out-dir (default: xy_northup.tif)')
+    visual_params.add_argument('--srs', type=str, default='EPSG:3857', help='If --north-up, spatial reference system (default: EPSG:3857)')
+    visual_params.add_argument('--resample', type=str, default='cubic', help='Resampling method (default: cubic). Options: near, bilinear, cubic, etc.')
+
+    ftrdis_params = parser.add_argument_group("Feature Distribution Parameters")
+    ftrdis_params.add_argument('--feature-distribution', action='store_true', default=False, help='Enable feature distribution summary across input tiles')
+    ftrdis_params.add_argument('--out-feature-distribution', type=str, default="feature.distribution.tsv.gz", help='File name of output feature distribution TSV under --out-dir (default: feature.distribution.tsv.gz)')
 
     # env params
-    env_params = parser.add_argument_group("ENV Parameters", "Environment parameters for the tools")
-    env_params.add_argument('--gzip', type=str, default="gzip", help='Path to gzip binary. For faster processing, use "pigz -p 4".')
-    env_params.add_argument('--spatula', type=str, default="spatula", help='Path to spatula binary.')
-    env_params.add_argument('--gdal_translate', type=str, default=f"gdal_translate", help='If --sge-visual with --north-up, provide path to gdal_translate binary')
-    env_params.add_argument('--gdalwarp', type=str, default=f"gdalwarp", help='If --sge-visual with --north-up, provide path to gdalwarp binary')
+    env_params = parser.add_argument_group("ENV Parameters", "Environment parameters for external tools")
+    env_params.add_argument('--gzip', type=str, default="gzip", help='Path to gzip binary. For faster compression, use "pigz -p 4" (default: gzip)')
+    env_params.add_argument('--spatula', type=str, default="spatula", help='Path to spatula binary (default: spatula)')
+    env_params.add_argument('--gdal_translate', type=str, default=f"gdal_translate", help='If --sge-visual with --north-up, path to gdal_translate binary (default: gdal_translate)')
+    env_params.add_argument('--gdalwarp', type=str, default=f"gdalwarp", help='If --sge-visual with --north-up, path to gdalwarp binary (default: gdalwarp)')
 
     args = parser.parse_args(_args)
 
@@ -97,7 +97,7 @@ def sge_stitch(_args):
             raise ValueError(f"Found duplicate layout index (row {row}, col {col}).")
         
         if not os.path.exists(transcript):
-            raise FileNotFoundError(f"Transcript file {transcript} does not exist.")
+            raise FileNotFoundError(f"File not found: {transcript} (--in-tiles)")
         
         # missing feature or minmax
         missing_ftr = feature is None or feature == "None" or feature == ""
@@ -127,7 +127,7 @@ def sge_stitch(_args):
                                     "--add-feature",
                                     f"--colname-feature-name {args.colname_feature_name}",
                                     f"--colname-feature-id {args.colname_feature_id}" if args.colname_feature_id else "",
-                                    f"--colnames-count {args.colnames_count}",
+                                    f"--colname-count {args.colname_count}",
                                     f"--out-feature {out_ftr}"
                                 ])
             cmds.append(add_ftr_cmd)
@@ -198,11 +198,6 @@ def sge_stitch(_args):
     out_feature_f = os.path.join(args.out_dir, args.out_feature)
     out_xy_f = os.path.join(args.out_dir, args.out_xy)
 
-    if "," in args.colnames_count:
-        colnames_count = args.colnames_count.split(",")
-    else:
-        colnames_count = [args.colnames_count]
-
     # combine sges
     cmds = cmd_separator([], f"Combining SGEs")
     combine_cmd=" ".join([f"cartloader", "sge_combine_tiles",
@@ -212,7 +207,7 @@ def sge_stitch(_args):
                             f"--out-transcript {args.out_transcript}",
                             f"--out-minmax {args.out_minmax}",
                             f"--out-feature {args.out_feature}",
-                            f"--colnames-count {' '.join(colnames_count)}",
+                            f"--colname-count {args.colname_count}",
                             f"--colname-feature-name {args.colname_feature_name}",
                             f"--colname-feature-id {args.colname_feature_id}" if args.colname_feature_id else "",
                             f"--colname-x {args.colname_x}",
@@ -252,9 +247,9 @@ def sge_stitch(_args):
             "filtered_prefix": os.path.join(args.out_dir, args.out_filtered_prefix),
             "flag": sge_filtered_flag,
             "gene_header": [args.colname_feature_name] if args.colname_feature_id is None else [args.colname_feature_name, args.colname_feature_id], # list
-            "count_header": args.colnames_count.split(","), #list
-            "genomic_feature": args.genomic_feature,
-            "mu_scale": args.mu_scale,
+            "count_header": [args.colname_count],
+            "genomic_feature": args.colname_count,
+            "mu_scale": 1,
             "radius": args.radius,
             "quartile": args.quartile,
             "hex_n_move": args.hex_n_move,
@@ -274,7 +269,7 @@ def sge_stitch(_args):
     overlap_cmd=" ".join([f"cartloader", "feature_distribution",
                         f"--in-tiles {' '.join(updated_ftrs)}",
                         f"--colname-feature-name {args.colname_feature_name}",
-                        f"--colnames-count {args.colnames_count}",
+                        f"--colname-count {args.colname_count}",
                         f"--output {out_dist_f}"
                     ])
     cmds.append(overlap_cmd)

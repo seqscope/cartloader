@@ -8,15 +8,15 @@ def parse_arguments(_args):
     """
     Parse command-line arguments.
     """
-    repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+    repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
     parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", description="Split and convert transcripts TSV file into pmtiles")
 
     cmd_params = parser.add_argument_group("Commands", "Commands to run together")
-    cmd_params.add_argument('--all', action='store_true', default=False, help='Run all commands (split, convert)')
+    cmd_params.add_argument('--all', action='store_true', default=False, help='Run all commands (split, convert, clean)')
     cmd_params.add_argument('--split', action='store_true', default=False, help='Split molecules TSV file into group-wise CSVs')
     cmd_params.add_argument('--convert', action='store_true', default=False, help='Convert the CSV files into pmtiles')
-    cmd_params.add_argument('--clean', action='store_true', default=False, help='Clean intermedate files')
+    cmd_params.add_argument('--clean', action='store_true', default=False, help='Clean intermediate files')
 
     inout_params = parser.add_argument_group("Input/Output Parameters", "Input/output directory/files.")
     inout_params.add_argument('--in-molecules', type=str, help='Input Long Format TSV/CSV (possibly gzipped) file containing the X/Y coordinates and gene expression counts per spot')

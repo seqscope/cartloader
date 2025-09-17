@@ -11,7 +11,7 @@ from cartloader.utils.utils import cmd_separator, scheck_app, find_major_axis, a
 def parse_arguments(_args):
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", 
-                                    description="""This script will take the raw file from different platform and generate a script to apply sge_convert, run_fixture, run_cartload_join and upload_aws_by_catalog.""")
+                                    description="""This script will take the raw file from different platform and generate a script to apply sge_convert, run_fixture, run_cartload_join and upload_aws.""")
     # run params
     run_params = parser.add_argument_group("Run Options", "")
     run_params.add_argument('--dry-run', action='store_true', default=False, help='Dry run. Generate only the Makefile without running it (default: False)')

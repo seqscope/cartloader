@@ -8,72 +8,71 @@ from cartloader.utils.utils import cmd_separator, scheck_app, create_custom_logg
 from cartloader.utils.image_helper import orient2axisorder, update_orient
 from cartloader.scripts.image_png2pmtiles import get_orientation_suffix
 
-# get the current path
-current_path = os.path.realpath(__file__)
-cartloader_dir=os.path.dirname(os.path.dirname(os.path.dirname(current_path)))
-gdal_get_size_script = os.path.join(cartloader_dir, 'cartloader', "utils", "gdal_get_size.sh")
 
 def parse_arguments(_args):
     """
     Parse command-line arguments.
     """
-    parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", description="Convert a figure (OME-TIFF, TIFF, or PNG) to pmtiles")
+    parser = argparse.ArgumentParser(
+        prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}",
+        description="Import an image (OME-TIFF/TIFF/PNG) and produce PMTiles; optional georeferencing/orientation and catalog update"
+    )
 
-    run_params = parser.add_argument_group("Run Options", "Run options for FICTURE commands")
-    run_params.add_argument('--dry-run', action='store_true', default=False, help='Dry run. Generate only the Makefile without running it (default: False)')
-    run_params.add_argument('--restart', action='store_true', default=False, help='Restart the run. Ignore all intermediate files and start from the beginning')
-    run_params.add_argument('--n-jobs', type=int, default=1, help='Number of jobs (processes) to run in parallel')
-    run_params.add_argument('--makefn', type=str, default=None, help='The file name of the Makefile to generate (default: {out-prefix}.mk)')
+    run_params = parser.add_argument_group("Run Options", "Execution controls for generating and running the Makefile")
+    run_params.add_argument('--dry-run', action='store_true', default=False, help='Generate the Makefile but do not execute it')
+    run_params.add_argument('--restart', action='store_true', default=False, help='Ignore existing outputs and re-run all steps')
+    run_params.add_argument('--makefn', type=str, default=None, help='Name of the generated Makefile (default: {out-prefix}.mk)')
+    run_params.add_argument('--n-jobs', type=int, default=1, help='Number of parallel jobs to run (default: 1)')
 
-    cmd_params = parser.add_argument_group("Commands", "Commands to run. In the order of: ome2png, georeference, rotate/flip, png2pmtiles")
-    cmd_params.add_argument('--ome2png', action='store_true', default=False, help='Convert OME-TIFF to PNG (Typically used for Vizgen and Xenium). If enabled, this will automatically set --georeference with bounds information from OME-TIFF.')
-    cmd_params.add_argument('--png2pmtiles', action='store_true', default=False, help='Convert PNG to pmtiles')
-    cmd_params.add_argument('--georeference', action='store_true', default=False, help='Plus function. Create a geotiff file from PNG or TIF file. If enabled, the user must provide georeferenced bounds using --in-tsv or --in-bounds.')
-    cmd_params.add_argument('--rotate', type=str, default=None, choices=["90", "180", "270"],  help='Plus function. Rotate the image by 90, 180, or 270 degrees clockwise. Rotate precedes flip.')
-    cmd_params.add_argument('--flip-vertical', action='store_true', default=False, help='Plus function. Flip the image vertically (flipped along Y-axis). Rotate precedes flip.')
-    cmd_params.add_argument('--flip-horizontal', action='store_true', default=False, help='Plus function. Flip the image horizontally (flipped along X-axis). Rotate precedes flip.')
-    cmd_params.add_argument('--update-catalog', action='store_true', default=False, help='Plus function. Flip the image horizontally (flipped along X-axis). Rotate precedes flip.')
+    cmd_params = parser.add_argument_group("Commands", "Actions to apply (order: ome2png → georeference/orientation → png2pmtiles)")
+    cmd_params.add_argument('--ome2png', action='store_true', default=False, help='Convert OME-TIFF to PNG (e.g., Vizgen/Xenium). Also enables --georeference using bounds read from the OME-TIFF')
+    cmd_params.add_argument('--png2pmtiles', action='store_true', default=False, help='Generate PMTiles from a PNG (and intermediate GeoTIFF)')
+    cmd_params.add_argument('--georeference', action='store_true', default=False, help='Georeference the image via bounds; required unless bounds come from --ome2png; provide bounds with --georef-*')
+    cmd_params.add_argument('--rotate', type=str, default=None, choices=["90", "180", "270"],  help='Rotate clockwise by 90/180/270 degrees (applied before flips)')
+    cmd_params.add_argument('--flip-vertical', action='store_true', default=False, help='Flip vertically (around X axis); applied after rotation')
+    cmd_params.add_argument('--flip-horizontal', action='store_true', default=False, help='Flip horizontally (around Y axis); applied after rotation')
+    cmd_params.add_argument('--update-catalog', action='store_true', default=False, help='Update catalog.yaml with the generated PMTiles')
 
-    inout_params = parser.add_argument_group("Input/Output Parameters", """
-                                             Two ways to define the input and output: 
-                                             1) use the --in-json and --fig-id to locate input image in the JSON file.
-                                             2) use --in-img to provide the path to input image.
-                                             """)
-    inout_params.add_argument('--out-dir', type=str, default=None, required=True, help='The output directory.')
-    inout_params.add_argument('--in-json', type=str, default=None, help='Input JSON. It should map figure IDs to image paths. Each key is a figure ID, and each value is the corresponding file path. If this is provided, --in-img will be ignored.')
-    inout_params.add_argument('--in-img', type=str, help='The input image file (PNG or TIF) to be converted to pmTiles')
-    inout_params.add_argument('--img-id', type=str, default=None, required=True, help='Image ID. This will be used as the output file name prefix. Also, if --in-json is provided, this will be used to locate the image in the JSON file.')
-    inout_params.add_argument('--catalog-yaml', type=str, default=None, help='For --update-catalog, define the catalog yaml file to update (default: <out_dir>/catalog.yaml)')
+    inout_params = parser.add_argument_group(
+        "Input/Output Parameters",
+        'Two input modes: 1) JSON + --img-id (use --in-json to map image IDs to paths); 2) direct path via --in-img'
+    )
+    inout_params.add_argument('--out-dir', type=str, required=True, help='Output directory')
+    inout_params.add_argument('--in-json', type=str, default=None, help='JSON/YAML mapping from image IDs to file paths; when set, --img-id selects the entry and --in-img is ignored')
+    inout_params.add_argument('--in-img', type=str, help='Path to input image (PNG or OME-TIFF/TIFF)')
+    inout_params.add_argument('--img-id', type=str, required=True, help='Image ID used as output filename prefix. When used with --in-json, selects the image to process')
+    inout_params.add_argument('--catalog-yaml', type=str, default=None, help='Catalog YAML path (required if --update-catalog; default: <out-dir>/catalog.yaml)')
 
     env_params = parser.add_argument_group("Env Parameters", "Environment parameters, e.g., tools.")
-    env_params.add_argument('--pmtiles', type=str, default=f"pmtiles", help='Path to pmtiles binary from go-pmtiles')
-    env_params.add_argument('--gdal_translate', type=str, default=f"gdal_translate", help='Path to gdal_translate binary')
-    env_params.add_argument('--gdaladdo', type=str, default=f"gdaladdo", help='Path to gdaladdo binary')
-    env_params.add_argument('--gdalinfo', type=str, default=f"gdalinfo", help='Path to gdalinfo binary')
+    env_params.add_argument('--pmtiles', type=str, default=f"pmtiles", help='Path to pmtiles binary from go-pmtiles (default: pmtiles)')
+    env_params.add_argument('--gdal_translate', type=str, default=f"gdal_translate", help='Path to gdal_translate binary (default: gdal_translate)')
+    env_params.add_argument('--gdaladdo', type=str, default=f"gdaladdo", help='Path to gdaladdo binary (default: gdaladdo)')
+    env_params.add_argument('--gdalinfo', type=str, default=f"gdalinfo", help='Path to gdalinfo binary (default: gdalinfo)')
 
     aux_params1 = parser.add_argument_group("Auxiliary parameters for --ome2png")
-    aux_params1.add_argument('--micron2pixel-csv', type=str, help='(Vizgen only) CSV file containing transformation parameters from microns to mosaic pixels. (typically micron_to_mosaic_pixel_transform.csv)')
-    aux_params1.add_argument("--page", type=int, help='For 3D (X/Y/Z) OME file, specify the z-value to extract the image from')
-    aux_params1.add_argument("--level", type=int, help='Level to extract from the OME-TIFF file')
-    aux_params1.add_argument("--series", type=int, help='Index of series to extract from the OME-TIFF file')
-    aux_params1.add_argument("--upper-thres-quantile", type=float, default=None, help='Quantile-based capped value for rescaling the image. Cannot be used with --upper-thres-intensity')
-    aux_params1.add_argument("--upper-thres-intensity", type=float, default=None, help='Intensity-based capped value for rescaling the image. Cannot be used with --upper-thres-quantile')
-    aux_params1.add_argument("--lower-thres-quantile", type=float, default=None, help='Quantile-based floored value for rescaling the image. Cannot be used with --lower-thres-intensity')
-    aux_params1.add_argument("--lower-thres-intensity", type=float, default=None, help='Intensity-based floored value for rescaling the image. Cannot be used with --lower-thres-quantile')
-    aux_params1.add_argument("--transparent-below", type=int, default=None, help='Set pixels below this value to transparent (0-255)')
-    aux_params1.add_argument("--colorize", type=str, help='Colorize the black-and-white image using a specific RGB code as a max value (does not work with RGB images)')
-    aux_params1.add_argument('--high-memory', action='store_true', default=False)
+    aux_params1.add_argument('--micron2pixel-csv', type=str, help='CSV file containing transformation parameters from microns to mosaic pixels (platform: Vizgen; typical: micron_to_mosaic_pixel_transform.csv)')
+    aux_params1.add_argument("--page", type=int, help='Z-slice index to extract from multi-page OME-TIFF (3D)')
+    aux_params1.add_argument("--level", type=int, help='Resolution level index to extract from OME-TIFF')
+    aux_params1.add_argument("--series", type=int, help='Series index to extract from OME-TIFF')
+    aux_params1.add_argument("--upper-thres-quantile", type=float, default=None, help='Rescale cap by quantile; mutually exclusive with --upper-thres-intensity')
+    aux_params1.add_argument("--upper-thres-intensity", type=float, default=None, help='Rescale cap by intensity; mutually exclusive with --upper-thres-quantile')
+    aux_params1.add_argument("--lower-thres-quantile", type=float, default=None, help='Rescale floor by quantile; mutually exclusive with --lower-thres-intensity')
+    aux_params1.add_argument("--lower-thres-intensity", type=float, default=None, help='Rescale floor by intensity; mutually exclusive with --lower-thres-quantile')
+    aux_params1.add_argument("--transparent-below", type=int, default=None, help='Set pixels below this value to transparent (range: 0-255)')
+    aux_params1.add_argument("--colorize", type=str, help='Colorize a mono image using an RGB hex or name. Cannot be used with RGB images.')
+    aux_params1.add_argument('--high-memory', action='store_true', default=False, help='Use a memory-intensive path for better performance on large OME-TIFFs')
 
-    aux_params2 = parser.add_argument_group("Auxiliary parameters for for --png2pmtiles")
-    aux_params2.add_argument('--georef-pixel-tsv', type=str, default=None, help='If --georeference is required without --ome2png, use the *.pixel.sorted.tsv.gz from run_ficture to provide georeferenced bounds.')
-    aux_params2.add_argument('--georef-bounds-tsv', type=str, default=None, help='If --georeference is required without --ome2png, use a tsv file with one line of <ulx>,<uly>,<lrx>,<lry> to provide georeferenced bounds.')
-    aux_params2.add_argument('--georef-bounds', type=str, default=None, help='If --georeference is required without --ome2png, provide the bounds in the format of "<ulx>,<uly>,<lrx>,<lry>", which represents upper-left X, upper-left Y, lower-right X, lower-right Y.')
-    aux_params2.add_argument('--srs', type=str, default='EPSG:3857', help='For --png2pmtiles, define the spatial reference system (default: EPSG:3857)')
-    aux_params2.add_argument('--mono', action='store_true', default=False, help='For --png2pmtiles without --ome2png, define if the input image is black-and-white and single-banded manually. (default: False)')
-    aux_params2.add_argument('--rgba', action='store_true', default=False, help='For --png2pmtiles without --ome2png, define if the image is RGBA, i.e., 4-banded, image manually (default: False)')
-    aux_params2.add_argument('--resample', type=str, default='cubic', help='For --png2pmtiles, define the resampling method (default: cubic). Options: near, bilinear, cubic, etc.')
-    aux_params2.add_argument('--blocksize', type=int, default='512', help='For --png2pmtiles, define the blocksize (default: 512)')
+    aux_params2 = parser.add_argument_group("Auxiliary parameters for --png2pmtiles")
+    aux_params2.add_argument('--srs', type=str, default='EPSG:3857', help='Spatial reference system identifier (default: EPSG:3857)')
+    aux_params2.add_argument('--mono', action='store_true', default=False, help='Input is single-band (mono) PNG. Skip it if --ome2png is enabled.')
+    aux_params2.add_argument('--rgba', action='store_true', default=False, help='Input is 4-band RGBA PNG. Skip it if --ome2png is enabled')
+    aux_params2.add_argument('--resample', type=str, default='cubic', help='Resampling method: near, bilinear, cubic, etc (default: cubic)')
+    aux_params2.add_argument('--blocksize', type=int, default='512', help='Block size in pixels for GDAL operations (default: 512)')
 
+    aux_params3 = parser.add_argument_group("Auxiliary parameters for --georeference", "Pick one of the following three ways to provide georeferencing bounds")
+    aux_params3.add_argument('--georef-pixel-tsv', type=str, default=None, help='Bounds source: *.pixel.sorted.tsv.gz from run_ficture2. Skip it if --ome2png is enabled')
+    aux_params3.add_argument('--georef-bounds-tsv', type=str, default=None, help='Bounds source TSV with one line: <ulx>,<uly>,<lrx>,<lry>. Skip it if --ome2png is enabled')
+    aux_params3.add_argument('--georef-bounds', type=str, default=None, help='Bounds string: "<ulx>,<uly>,<lrx>,<lry>". Skip it if --ome2png is enabled')
 
     if len(_args) == 0:
         parser.print_help()
@@ -89,28 +88,28 @@ aux_image_arg={
 }
 
 
-def get_mono(args):
-    # get the mono information
-    with tifffile.TiffFile(args.in_img) as tif:
-        n_pages = len(tif.pages)
-        if args.page is None:
-            if n_pages > 1:
-                raise ValueError("In --ome2png, multiple pages detected. Please specify the page number to extract the image from")
-            elif n_pages == 1:
-                args.page = 0
-            else:
-                raise ValueError("In --ome2png, no pages detected in the OME-TIFF file")
-        page = tif.series[args.series].levels[args.level].pages[args.page]
-        if len(page.shape) == 3:
-            if page.shape[2] != 3:
-                raise ValueError("In --ome2png, the colored image is not in RGB format")
-            args.mono = False
-        else:
-            args.mono = True
-    if args.colorize is not None:
-        assert args.mono is True, "In --ome2png, the colorize option is only available for black-and-white images"
-        args.mono = False
-    return args.mono
+# def get_mono(args):
+#     # get the mono information
+#     with tifffile.TiffFile(args.in_img) as tif:
+#         n_pages = len(tif.pages)
+#         if args.page is None:
+#             if n_pages > 1:
+#                 raise ValueError("In --ome2png, multiple pages detected. Please specify the page number to extract the image from")
+#             elif n_pages == 1:
+#                 args.page = 0
+#             else:
+#                 raise ValueError("In --ome2png, no pages detected in the OME-TIFF file")
+#         page = tif.series[args.series].levels[args.level].pages[args.page]
+#         if len(page.shape) == 3:
+#             if page.shape[2] != 3:
+#                 raise ValueError("In --ome2png, the colored image is not in RGB format")
+#             args.mono = False
+#         else:
+#             args.mono = True
+#     if args.colorize is not None:
+#         assert args.mono is True, "In --ome2png, the colorize option is only available for black-and-white images"
+#         args.mono = False
+#     return args.mono
 
 
 def import_image(_args):
@@ -127,7 +126,7 @@ def import_image(_args):
     # read in_json if provided
     assert args.img_id, f"Provide an ID for the image using --img-id"
     if args.in_json is not None:
-        assert os.path.exists(args.in_json), f"The input json file doesn't exist: {args.in_json}"
+        assert os.path.exists(args.in_json), f"File not found: {args.in_json} (--in-json)"
         xenium_ranger_data=load_file_to_dict(args.in_json)
         # only keep the key:value pairs that have a key in ["DAPI", "BOUNDARY_IMG", "INTERIOR_RNA_IMG", "INTERIOR_PROTEIN_IMG", "DAPI_3D", "DAPI_MIP"]
         args.in_img = xenium_ranger_data[args.img_id]
@@ -228,7 +227,7 @@ def import_image(_args):
             ort_suffix=get_orientation_suffix(args.rotate, args.flip_vertical, args.flip_horizontal)
             cond_out = f"{img_prefix}.{ort_suffix}.tif"
         
-        cmds = cmd_separator([], f"Processing PNG ({flat_img}): {", ".join(png2pmtiles_actions)}")
+        cmds = cmd_separator([], f"Processing PNG ({flat_img}): {',' .join(png2pmtiles_actions)}")
         cmd = " ".join([
             "cartloader image_png2pmtiles",
             "--georeference" if args.georeference else "",

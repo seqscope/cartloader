@@ -95,7 +95,7 @@ def cmd_sge_stitch(sgeinfo, args, env, generate_tile_minmax_only=False):
         f"--in-tiles {sgeinfo['in_tiles_str']}",
         f"--out-dir {sgeinfo['sge_dir']}",
         f"--units-per-um {sgeinfo.get('units_per_um', None)}" if sgeinfo.get("units_per_um", None) else "",
-        f"--colnames-count {sgeinfo.get('colnames_all_count', None)}" if sgeinfo.get('colnames_all_count', None) else "",
+        f"--colname-count {sgeinfo.get('colname_count', None)}" if sgeinfo.get('colname_count', None) else "",
         f"--sge-visual" if args.sge_visual else "",
         f"--n-jobs {args.n_jobs}" if args.n_jobs else "",
         f"--restart" if args.restart else "",
@@ -149,7 +149,7 @@ def cmd_sge_convert(sgeinfo, args, env):
         f"--platform {sgeinfo['platform']}",
         in_arg,
         f"--out-dir {sgeinfo['sge_dir']}",
-        f"--colnames-count {sgeinfo['colnames_all_count']}",
+        f"--colname-count {sgeinfo['colname_count']}",
         f"--filter-by-density --out-filtered-prefix {sgeinfo['filtered_prefix']} --genomic-feature {sgeinfo['colname_count']}" if sgeinfo['filter_by_density'] else "",
         f"--sge-visual" if args.sge_visual else "",
         f"--n-jobs {args.n_jobs}" if args.n_jobs else ""
@@ -450,7 +450,7 @@ def cmd_image_stitch(imginfo_by_tiles, args, env):
     return image_stitch_cmds
   
 def cmd_image_png2pmtiles(run_i, cartl_v, args, env):    
-    assert len(run_i.get("histology", [])) > 0, "Error: --histology is Required when running fig2pmtiles"
+    assert len(run_i.get("histology", [])) > 0, "Error: --histology is Required when running --image-png2pmtiles"
     img_cmds=[]
     #cartload_dir=os.path.join(run_i["run_dir"], "cartload")
     cartload_dir = os.path.join(run_i["run_dir"], ("cartload" if cartl_v == "1" else "cartload2"))
@@ -469,7 +469,7 @@ def cmd_image_png2pmtiles(run_i, cartl_v, args, env):
         # update the orientation
         histology = update_orient_in_histology(histology)
 
-        import_image_cmd = " ".join([
+        img_cmd = " ".join([
             "cartloader", "import_image",
             # actions
             "--ome2png" if histology.get("ome", False) else "",
@@ -511,7 +511,7 @@ def cmd_upload_aws(run_i, cartl_v,  args, env, additional_args=None):
     #     "aws s3 cp ${out}/catalog.yaml s3://${aws_bucket}/${id}/catalog.yaml",
     #     "grep -E '\.' ${out}/catalog.yaml | perl -lane 'print $F[$#F]' | xargs -I {} aws s3 cp ${out}/{} s3://${aws_bucket}/${id}/{}"
     # ])
-    # Option 2: use cartloader upload_aws_by_catalog.py
+    # Option 2: use cartloader upload_aws.py
     aws_cmd=" ".join([
         "cartloader", "upload_aws",
         f"--in-dir {cartload_dir}",
@@ -586,10 +586,10 @@ def stepinator(_args):
     key_params.add_argument('--units-per-um', type=float, default=None, help='Applicable if --sge-convert or --sge-stitch. Coordinate unit per um (conversion factor) (default: 1.00)') 
     key_params.add_argument('--scale-json', type=str, default=None, help="Applicable if --sge-convert on 10x_visium_hd datasets. Coordinate unit per um using the scale json file (default: None, typical naming convention: scalefactors_json.json)")
     key_params.add_argument('--precision-um', type=int, default=None, help='Required if --sge-convert. Number of digits of transcript coordinates (default: 2)')
-    key_params.add_argument('--filter-by-density', action='store_true', default=False, help='Required if --sge-convert or --run-ficture. If --sge-convert, it enables density-filtering. If --run-ficture, it defines the density-filtered SGE as input. (default: False)')
+    key_params.add_argument('--filter-by-density', action='store_true', default=False, help='Required if --sge-convert or --run-ficture. If --sge-convert, it enables density-filtering. If --run-ficture, it defines the density-filtered SGE as input.')
     key_params.add_argument('--filtered-prefix', type=str, default=None, help='Required if --filtered-by-density. The prefix for density-filtered SGE (default: filtered)')
-    key_params.add_argument("--colname-count", type=str, default="count", help="Required if --sge-convert, --sge-stitch, --run-ficture, or --run-cartload-join. Column name that showing the expression count of the genomic feature of interest. (default: gene)")
-    key_params.add_argument("--colnames-other-count", nargs="*", default=[], help="Optional if --sge-convert, --sge-stitch is enabled. It allows to keep other genomic features in the formatted SGE besides the genomic feature of interest. (default: [])")
+    key_params.add_argument("--colname-count", type=str, default="count", help="Required if --sge-convert, --sge-stitch, --run-ficture, or --run-cartload-join. Column name that showing the expression count of the genomic feature of interest (default: gene)")
+    # key_params.add_argument("--colnames-other-count", nargs="*", default=[], help="Optional if --sge-convert, --sge-stitch is enabled. It allows to keep other genomic features in the formatted SGE besides the genomic feature of interest (default: [])")
     # for run_ficture
     key_params.add_argument("--major-axis", type=str, default="X", choices=["X","Y"], help="Major axis (default: X)")
     key_params.add_argument("--ext-path", type=str, default=None, help="Required when --run-ficture1 with an external model. The path for the external model.")
@@ -598,7 +598,7 @@ def stepinator(_args):
     key_params.add_argument("--n-factor", '-n', type=str, default=None, help="Required if --run-ficture1 with LDA. Number of factors. ")
     key_params.add_argument("--image", type=str, nargs="?", default=[], help="""
                               (Optional) Provide image info as <image_id>;<path>;<ome>;<lower_thres_quantile>;<upper_thres_quantile>;<level>;<colorize>;<georeference>;<georef_tsv>;<georef_bounds>;<rotate_degree>;<flip_direction>. 
-                              Only <image_id> and <path> are required. Supports multiple files; use <image_id> to distinguish them. (Default: [])
+                              Only <image_id> and <path> are required. Supports multiple files; use <image_id> to distinguish them (default: [])
                               Define <ome> and <georeference> by True or False. If the image is OME TIFF, define <ome> as True. If georeference=True, specify <georef_tsv> or <georef_bounds>. 
                               Orientation allows rotation (90, 180, 270) and flipping (vertical, horizontal, both). 
                             """)
@@ -660,19 +660,19 @@ def stepinator(_args):
     format_aux_parameter.add_argument('--csv-colname-x', type=str, default=None, help='Column name for X-axis (default: x_location for 10x_xenium; x for bgi_stereoseq; x_local_px for cosmx_smi; global_x for vizgen_merscope; xcoord for pixel_seq; x for nova_st)')
     format_aux_parameter.add_argument('--csv-colname-y', type=str, default=None, help='Column name for Y-axis (default: y_location for 10x_xenium; y for bgi_stereoseq; y_local_px for cosmx_smi; global_y for vizgen_merscope; ycoord for pixel_seq; y for nova_st)')
     format_aux_parameter.add_argument('--csv-colname-feature-name', type=str, default=None, help='Column name for gene name (default: feature_name for 10x_xenium; geneID for bgi_stereoseq; target for cosmx_smi; gene for vizgen_merscope; geneName for pixel_seq; geneID for nova_st)')
-    format_aux_parameter.add_argument('--csv-colnames-count', type=str, default=None, help='Column name for expression count. If not provided, a count of 1 will be added for a feature in a pixel (default: MIDCounts for bgi_stereoseq; MIDCount for nova_st; None for the rest platforms).')
-    format_aux_parameter.add_argument('--csv-colname-feature-id', type=str, default=None, help='Column name for gene id (default: None)')
-    format_aux_parameter.add_argument('--csv-colnames-others', nargs='+', default=[], help='Columns names to keep (e.g., cell_id, overlaps_nucleus) (default: None)')
+    format_aux_parameter.add_argument('--csv-colname-count', type=str, default=None, help='Column name for expression count. If not provided, a count of 1 will be added for a feature in a pixel (default: MIDCounts for bgi_stereoseq; MIDCount for nova_st; None for the rest platforms).')
+    format_aux_parameter.add_argument('--csv-colname-feature-id', type=str, default=None, help='Column name for gene id')
+    format_aux_parameter.add_argument('--csv-colnames-others', nargs='+', default=[], help='Columns names to keep (e.g., cell_id, overlaps_nucleus)')
     format_aux_parameter.add_argument('--csv-colname-phredscore', type=str, default=None, help='Column name for Phred-scaled quality value (Q-Score) estimating the probability of incorrect call (default: qv for 10x_xenium and None for the rest platforms).') # qv
     format_aux_parameter.add_argument('--min-phred-score', type=float, default=None, help='Phred-scaled quality score cutoff (default: 20 for 10x_xenium and None for the rest platforms).')
     # feature-filtering
-    format_aux_parameter.add_argument('--include-feature-list', type=str, default=None, help='A file provides a list of gene names to include (default: None)')
-    format_aux_parameter.add_argument('--exclude-feature-list', type=str, default=None, help='A file provides a list of gene names to exclude (default: None)')
-    format_aux_parameter.add_argument('--include-feature-regex', type=str, default=None, help='Regex pattern for gene names to include (default: None)')
+    format_aux_parameter.add_argument('--include-feature-list', type=str, default=None, help='A file provides a list of gene names to include')
+    format_aux_parameter.add_argument('--exclude-feature-list', type=str, default=None, help='A file provides a list of gene names to exclude')
+    format_aux_parameter.add_argument('--include-feature-regex', type=str, default=None, help='Regex pattern for gene names to include')
     format_aux_parameter.add_argument('--exclude-feature-regex', type=str, default=None, help='Regex pattern for gene names to exclude (default: "^(BLANK|Blank-|NegCon|NegPrb)"). To skip this, use --exclude-feature-regex "".')
     format_aux_parameter.add_argument('--include-feature-type-regex', type=str, default=None, help='Regex pattern for gene type to include (default: None). Requires --csv-colname-feature-type or --feature-type-ref for gene type info') # (e.g. protein_coding|lncRNA)
-    format_aux_parameter.add_argument('--csv-colname-feature-type', type=str, default=None, help='If --include-feature-type-regex is used and the input file has gene type, define the column name for gene type info (default: None)')
-    format_aux_parameter.add_argument('--feature-type-ref', type=str, default=None, help='Path to a tab-separated gene reference file containing gene type information. The format should be: chrom, start position, end position, gene id, gene name, gene type (default: None)')
+    format_aux_parameter.add_argument('--csv-colname-feature-type', type=str, default=None, help='If --include-feature-type-regex is used and the input file has gene type, define the column name for gene type info')
+    format_aux_parameter.add_argument('--feature-type-ref', type=str, default=None, help='Path to a tab-separated gene reference file containing gene type information. The format should be: chrom, start position, end position, gene id, gene name, gene type')
     # Polygon-filtering
     #format_aux_parameter.add_argument('--mu-scale', type=int, default=None, help='Scale factor for the polygon area calculation (default: 1.0)')   # Always use --mu-scale 1, since this will be performed after sge conversion, which will apply --units-per-um to generate the output SGE in um
     format_aux_parameter.add_argument('--radius', type=int, default=None, help='Radius for the polygon area calculation (default: 15)')
@@ -685,7 +685,7 @@ def stepinator(_args):
         "Parameters for sge_stitch. Required if --sge-stitch is used with non-default values."
     )
     stitch_aux_parameter.add_argument('--colname-feature-name', type=str, default=None, help='Feature name column (default: gene)')
-    stitch_aux_parameter.add_argument('--colname-feature-id', type=str, default=None, help='Feature ID column (default: None)')
+    stitch_aux_parameter.add_argument('--colname-feature-id', type=str, default=None, help='Feature ID column')
     stitch_aux_parameter.add_argument('--colname-x', type=str, default=None, help='X column name (default: X)')
     stitch_aux_parameter.add_argument('--colname-y', type=str, default=None, help='Y column name (default: Y)')
 
@@ -694,14 +694,14 @@ def stepinator(_args):
         "Parameters for run_ficture. Required if --run-ficture is used with non-default values. Default values are recommended."
     )
     # use fic
-    ficture_aux_params.add_argument('--filter-by-overlapping-features', action='store_true', default=False, help='Use overlapping features in FICTURE analysis (default: False)')
-    ficture_aux_params.add_argument('--min-ct-per-ftr-tile', type=int, default=0, help='Apply a minimum count to filter overlapping feature. Filtering process will be applied if --min-ct-per-overlapftr > 0. (default: 0)')
+    ficture_aux_params.add_argument('--filter-by-overlapping-features', action='store_true', default=False, help='Use overlapping features in FICTURE analysis')
+    ficture_aux_params.add_argument('--min-ct-per-ftr-tile', type=int, default=0, help='Apply a minimum count to filter overlapping feature. Filtering process will be applied if --min-ct-per-overlapftr > 0 (default: 0)')
     ficture_aux_params.add_argument("--cmap", '-c', type=str, default=None, help="Required if the user prefers to use a pre-built color map (Default: None)")
-    ficture_aux_params.add_argument('--ficture-feature', type=str, default="features.ficture.tsv.gz", help='File name for the output TSV file of feature used in FICTURE analysis (default: None)')
-    ficture_aux_params.add_argument('--fic-include-feature-list', type=str, default=None, help='A file containing a list of input genes to be included (feature name of IDs) (default: None)')
-    ficture_aux_params.add_argument('--fic-exclude-feature-list', type=str, default=None, help='A file containing a list of input genes to be excluded (feature name of IDs) (default: None)')
-    ficture_aux_params.add_argument('--fic-include-feature-regex', type=str, default=None, help='A regex pattern of feature/gene names to be included (default: None)')
-    ficture_aux_params.add_argument('--fic-exclude-feature-regex', type=str, default=None, help='A regex pattern of feature/gene names to be excluded (default: None)')
+    ficture_aux_params.add_argument('--ficture-feature', type=str, default="features.ficture.tsv.gz", help='File name for the output TSV file of feature used in FICTURE analysis')
+    ficture_aux_params.add_argument('--fic-include-feature-list', type=str, default=None, help='A file containing a list of input genes to be included (feature name of IDs)')
+    ficture_aux_params.add_argument('--fic-exclude-feature-list', type=str, default=None, help='A file containing a list of input genes to be excluded (feature name of IDs)')
+    ficture_aux_params.add_argument('--fic-include-feature-regex', type=str, default=None, help='A regex pattern of feature/gene names to be included')
+    ficture_aux_params.add_argument('--fic-exclude-feature-regex', type=str, default=None, help='A regex pattern of feature/gene names to be excluded')
     ficture_aux_params.add_argument('--fic-include-feature-type-regex', type=str, default=None, help='A regex pattern of feature/gene type to be included (default: None). Requires --csv-colname-feature-type or --feature-type-ref for gene type info') # (e.g. protein_coding|lncRNA)
     # segmentation - ficture
     ficture_aux_params.add_argument('--hexagon-n-move', type=int, default=None, help='Level of hexagonal sliding when creating hexagon-indexed SGE in FICTURE compatible format (default: 1)')
@@ -802,7 +802,7 @@ def stepinator(_args):
     sgeinfo["filtered_prefix"] = sgeinfo.get("filtered_prefix", "filtered")
     # colnames for output
     sgeinfo["colname_count"] = sgeinfo.get("colname_count", "count")
-    sgeinfo["colnames_all_count"] = ",".join([sgeinfo["colname_count"]] + sgeinfo["colnames_other_count"].split(",")) if sgeinfo.get("colnames_other_count", None) is not None else sgeinfo["colname_count"]
+    #sgeinfo["colnames_all_count"] = ",".join([sgeinfo["colname_count"]] + sgeinfo["colnames_other_count"].split(",")) if sgeinfo.get("colnames_other_count", None) is not None else sgeinfo["colname_count"]
     # sge_dir    
     sgeinfo["sge_dir"] = os.path.join(out_dir, "sge")
     os.makedirs(sgeinfo['sge_dir'], exist_ok=True)
@@ -1050,9 +1050,6 @@ def stepinator(_args):
 
 
 if __name__ == "__main__":
-    # Get the path to the cartloader repository
-    cartloader_repo=os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-
     # Get the base file name without extension
     script_name = os.path.splitext(os.path.basename(__file__))[0]
 

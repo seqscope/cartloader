@@ -14,17 +14,12 @@ def parse_minmax(file_path):
 
 # This is separated from combine_sge_by_layout.py to be reusable for hist_stitch process.
 def feature_distribution(_args):
-    parser = argparse.ArgumentParser(
-        prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}",
-        description="""
-        Identify features shared across all input tiles and generate summary outputs.
-        """
-    )
-    parser.add_argument("--in-tiles", type=str, nargs='*',  required=True, default=[], help="List of input information in a specific format: <feature_path>,<row>,<col>.")
-    parser.add_argument('--output', type=str, help='(Optional) Output distribution file for all features. The output columns includes <feature_name>, <number of tiles with the feature>, and <count> per tile per count.')
-    parser.add_argument('--colname-feature-name', type=str, default='gene', help='Feature name column (default: gene)')
-    parser.add_argument("--min-ct-per-ftr-tile-list", type=int, nargs='*', default=[10,20,50,100,150,200,250,300], help="Minimum count to keep a shared feature (default: 0).")
-    parser.add_argument("--colnames-count", type=str, help="Columns (default: count).", default='count')
+    parser = argparse.ArgumentParser( prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", description="Identify features shared across all input tiles and generate summary outputs.")
+    parser.add_argument("--in-tiles", type=str, nargs='*', required=True, default=[], help="List of input entries, with each in the format <feature_path>,<row>,<col>.")
+    parser.add_argument('--output', type=str, required=True, help='Path to the feature distribution file containing: feature_name, number of tiles containing the feature, and per-tile counts. ')
+    parser.add_argument('--colname-feature-name', type=str, default='gene', help='Column name of feature (default: gene)')
+    parser.add_argument("--min-ct-per-ftr-tile-list", type=int, nargs='*', default=[10,20,50,100,150,200,250,300], help="A list of minimal count thresholds. Each will return the number of features that pass the threshold (default: 10 20 50 100 150 200 250 300).")
+    parser.add_argument("--colname-count", type=str, help="Column name of count (default: count).", default='count')
     parser.add_argument('--log', action='store_true', default=False, help='Write log to file')
     args = parser.parse_args(_args)
 
@@ -40,18 +35,17 @@ def feature_distribution(_args):
     # * input paths
     num_of_tiles = len(args.in_tiles)
     assert num_of_tiles > 0, "No input tiles provided."
-    assert all(len(in_tile.split(",")) == 3 for in_tile in args.in_tiles), "Each input tile should have 3 elements: <minmax_path>,<row>,<col>."
+    assert all(len(in_tile.split(",")) == 3 for in_tile in args.in_tiles), "Each input tile should have 3 elements: <feature_path>,<row>,<col>."
 
     df = pd.DataFrame(args.in_tiles, columns=["input"])
     df = df["input"].str.split(",", expand=True)
     df.columns = ["feature_path", "row", "col"]
     df["row"] = df["row"].astype(int)
     df["col"] = df["col"].astype(int)
-    colnames_count_tiles = [f"{row_id}_{col_id}_{col_count}" for row_id, col_id in zip(df["row"], df["col"]) for col_count in args.colnames_count]
+    colnames_count_tiles = [ f"{row_id}_{col_id}_{args.colname_count}" for row_id, col_id in zip(df["row"], df["col"]) ]
 
     # Start with an empty DataFrame
     ftr_data = None
-    colnames_count = args.colnames_count.split(",") if "," in args.colnames_count else [args.colnames_count]
     for idx, row in df.iterrows():
         feature_path = row["feature_path"]
         row_id = row["row"]
@@ -61,9 +55,9 @@ def feature_distribution(_args):
         data = pd.read_csv(feature_path, sep='\\t')
 
         # Select and rename relevant columns
-        selected = data[[args.colname_feature_name ] + colnames_count].copy()
+        selected = data[[args.colname_feature_name,  args.colname_count]].copy()
         selected.set_index(args.colname_feature_name, inplace=True)
-        selected.rename(columns={c: f"{row_id}_{col_id}_{c}" for c in colnames_count}, inplace=True)
+        selected.rename(columns={args.colname_count: f"{row_id}_{col_id}_{args.colname_count}"}, inplace=True)
 
         # Merge with running ftr_data
         if ftr_data is None:

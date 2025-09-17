@@ -286,7 +286,7 @@ def convert_tsv(cmds, args):
     # input: in_csv
     # output: out_transcript, out_minmax, out_feature
     transcript_tsv = args.out_transcript.replace(".gz", "")
-    format_cmd=f"cartloader format_generic --input {args.in_csv} --out-dir {args.out_dir} --out-transcript {transcript_tsv} --out-feature {args.out_feature} --out-minmax {args.out_minmax}"
+    format_cmd=f"cartloader sge_format_generic --input {args.in_csv} --out-dir {args.out_dir} --out-transcript {transcript_tsv} --out-feature {args.out_feature} --out-minmax {args.out_minmax}"
     aux_argset = set(item for lst in [ans_out, ans_incsv, ans_ftrname, ans_ftrtype] for item in lst)
     format_cmd = add_param_to_cmd(format_cmd, args, aux_argset)
     cmds.append(format_cmd)

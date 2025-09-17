@@ -3,41 +3,30 @@ import pandas as pd
 from cartloader.utils.minimake import minimake
 from cartloader.utils.utils import cmd_separator, scheck_app, add_param_to_cmd, read_minmax, flexopen, execute_makefile
 
+
 def parse_arguments(_args):
     """Parse command-line arguments."""
+    repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
     parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", description="Run FICTURE2")
 
     run_params = parser.add_argument_group("Run Options", "Run options for FICTURE commands")
-    run_params.add_argument('--dry-run', action='store_true', default=False, help='Dry run. Generate only the Makefile without running it')
-    run_params.add_argument('--restart', action='store_true', default=False, help='Restart the run. Ignore all intermediate files and start from the beginning')
-    run_params.add_argument('--threads', type=int, default=8, help='Maximum number of threads to use in each process')
-    run_params.add_argument('--n-jobs', type=int, default=2, help='Number of jobs (processes) to run in parallel')
-    run_params.add_argument('--makefn', type=str, default="run_ficture2_multi.mk", help='The name of the Makefile to generate (default: run_ficture.mk)')
+    run_params.add_argument('--dry-run', action='store_true', default=False, help='Generate the Makefile, and print commands without executing them')
+    run_params.add_argument('--restart', action='store_true', default=False, help='Ignore existing outputs and start from the beginning')
+    run_params.add_argument('--threads', type=int, default=8, help='Maximum number of threads per job (default: 8)')
+    run_params.add_argument('--n-jobs', type=int, default=2, help='Number of parallel jobs to run (default: 2)')
+    run_params.add_argument('--makefn', type=str, default="run_ficture2_multi.mk", help='File name of Makefile to write (default: run_ficture2_multi.mk)')
 
     inout_params = parser.add_argument_group("Input/Output Parameters", "Input and output parameters for FICTURE")
     inout_params.add_argument('--out-dir', required=True, type=str, help='Output directory')
-    inout_params.add_argument('--out-json', type=str, default=None, help="Output JSON file for summarizing the ficture parameters (default: <out-dir>/ficture.params.json)")
-    inout_params.add_argument('--in-list', type=str, default=None, help='Path to the input list file containing the sample name and input transcript file')
+    inout_params.add_argument('--out-json', type=str, default=None, help="Path to output JSON file to store analysis parameters (default: <out-dir>/ficture.params.json)")
+    inout_params.add_argument('--in-list', type=str, default=None, help='Path to input TSV with one row per sample: sample id and transcript file path')
 
     key_params = parser.add_argument_group("Key Parameters", "Key parameters that requires user's attention")
-    key_params.add_argument('--width', type=str, required=True, help='Comma-separated hexagon flat-to-flat widths (in um) for LDA training (default: None)')
+    key_params.add_argument('--width', type=str, required=True, help='Comma-separated hexagon flat-to-flat widths (in um) for LDA training')
     key_params.add_argument('--n-factor', type=str, required=True, help='Comma-separated list of factor counts for LDA training.')
     key_params.add_argument('--anchor-res', type=int, default=6, help='Anchor resolution for decoding (default: 6)')
-    key_params.add_argument('--cmap-file', type=str, default=os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "assets", "fixed_color_map_256.tsv"), help='Define the path to the fixed color map (default: <cartloader_dir>/assets/fixed_color_map_256.tsv)')
-
-    # env params
-    env_params = parser.add_argument_group("ENV Parameters", "Environment parameters, e.g., tools.")
-    env_params.add_argument('--gzip', type=str, default="gzip", help='Path to gzip binary. For faster processing, use "pigz -p 4"')
-    env_params.add_argument('--sort', type=str, default="sort", help='Path to sort binary. For faster processing, you may add arguments like "sort -T /path/to/new/tmpdir --parallel=20 -S 10G"')
-    env_params.add_argument('--sort-mem', type=str, default="1G", help='Memory size for each process (default: 1G)')
-    env_params.add_argument('--spatula', type=str, default=f"spatula",  help='Path to spatula binary (default: "spatula" in the system PATH)') # default=f"{repo_dir}/submodules/spatula/bin/spatula",
-    env_params.add_argument('--ficture2', type=str, default=os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "submodules", "punkst"),  help='Path to punkst(ficture2) repository (default: <cartloader_dir>/submodules/punkst)')
-    env_params.add_argument('--python', type=str, default="python3",  help='Python3 binary')
-
-    # AUX gene-filtering params
-    aux_ftrfilter_params = parser.add_argument_group( "Feature Customizing Auxiliary Parameters", "Auxiliary parameters for customizing features in FICTURE analysis without modifying the original input feature TSV file. This ensures the original feature TSV file is retained in the output JSON file for downstream processing .")
-    aux_ftrfilter_params.add_argument('--include-feature-regex', type=str, default=None, help='A regex pattern of feature/gene names to be included (default: None)')
-    aux_ftrfilter_params.add_argument('--exclude-feature-regex', type=str, default=None, help='A regex pattern of feature/gene names to be excluded (default: None)')
+    key_params.add_argument('--cmap-file', type=str, default=os.path.join(repo_dir, "assets", "fixed_color_map_256.tsv"), help='Path to fixed color map TSV (default: <cartloader_dir>/assets/fixed_color_map_256.tsv)')
 
     # aux params
     aux_params = parser.add_argument_group("Auxiliary Parameters", "Auxiliary parameters (using default is recommended)")
@@ -46,10 +35,10 @@ def parse_arguments(_args):
     aux_params.add_argument('--colidx-y',  type=int, default=2, help='Column index for Y-axis in the --in-transcript (default: 2)')
     aux_params.add_argument('--colidx-feature',  type=int, default=3, help='Column index for Y-axis in the --in-transcript (default: 3)')
     aux_params.add_argument('--colidx-count',  type=int, default=4, help='Column index for intensity in the --in-transcript (default: 4)')
+    # tile
     aux_params.add_argument('--tile-size', type=int, default=500, help='Tile size for tiling (default: 500)')
     aux_params.add_argument('--tile-buffer', type=int, default=1000, help='Tile buffer for tiling (default: 1000)')
     aux_params.add_argument('--seed', type=int, default=1, help='Random seed for random number generation (default: 0)')
-
     # segmentation - ficture
     aux_params.add_argument('--min-count-per-sample', type=int, default=50, help='Minimum count per sample in the tiled SGE (default: 50)')
     aux_params.add_argument('--min-ct-per-unit-hexagon', type=int, default=50, help='Minimum count per hexagon in hexagon segmentation in FICTURE compatible format (default: 50)')
@@ -62,11 +51,26 @@ def parse_arguments(_args):
     aux_params.add_argument('--decode-scale', type=int, default=1, help='scales input coordinates to pixels in the output image (default: 1)')
     # others parameters shared across steps
     aux_params.add_argument('--min-count-train', type=int, default=50, help='Minimum count for training (default: 50)')
-    aux_params.add_argument('--de-min-ct-per-feature', type=int, default=20, help='Minimum count per feature for differential expression test (default: 20)')
-    aux_params.add_argument('--de-max-pval', type=float, default=1e-3, help='p-value cutoff for differential expression (default: 1e-3)')
+    aux_params.add_argument('--de-min-ct-per-feature', type=int, default=20, help='Minimum count per feature for differential expression (default: 20)')
+    aux_params.add_argument('--de-max-pval', type=float, default=1e-3, help='P-value cutoff for differential expression (default: 1e-3)')
     aux_params.add_argument('--de-min-fold', type=float, default=1.5, help='Fold-change cutoff for differential expression (default: 1.5)')
     aux_params.add_argument('--redo-pseudobulk-decode', action='store_true', default=False, help='Recompute pseudobulk decode with spatula. If set, the existing pseudobulk decode will be overwritten.')
     aux_params.add_argument('--redo-merge-units', action='store_true', default=False, help='Recompute merge units. If set, the existing mergeed hexagons and LDA results will be overwritten.')
+
+    # AUX gene-filtering params
+    aux_ftrfilter_params = parser.add_argument_group( "Feature Customizing Auxiliary Parameters", "Customize features (typically genes) used by FICTURE without altering the original feature TSV") # This ensures the original feature TSV file is retained in the output JSON file for downstream processing 
+    aux_ftrfilter_params.add_argument('--include-feature-regex', type=str, default=None, help='Regex of feature names to include')
+    aux_ftrfilter_params.add_argument('--exclude-feature-regex', type=str, default=None, help='Regex of feature names to exclude')
+
+    # env params
+    env_params = parser.add_argument_group("ENV Parameters", "Environment parameters, e.g., tools.")
+    env_params.add_argument('--gzip', type=str, default="gzip", help='Path to gzip binary. For faster processing, use "pigz -p 4"')
+    env_params.add_argument('--sort', type=str, default="sort", help='Path to sort binary. For faster processing, you may add arguments like "sort -T /path/to/new/tmpdir --parallel=20 -S 10G"')
+    env_params.add_argument('--sort-mem', type=str, default="1G", help='Memory size for each process (default: 1G)')
+    env_params.add_argument('--spatula', type=str, default=f"spatula",  help='Path to spatula binary (default: "spatula" in the system PATH)') # default=f"{repo_dir}/submodules/spatula/bin/spatula",
+    env_params.add_argument('--ficture2', type=str, default=os.path.join(repo_dir, "submodules", "punkst"), help='Path to punkst (ficture2) repository (default: <cartloader_dir>/submodules/punkst)')
+    env_params.add_argument('--python', type=str, default="python3",  help='Python3 binary')
+
 
     if len(_args) == 0:
         parser.print_help()
@@ -75,7 +79,7 @@ def parse_arguments(_args):
     return parser.parse_args(_args)
 
 def define_lda_runs(args):
-    #assert args.init_lda, "--init-lda must be ON when running define_lda_runs()"
+    assert args.init_lda, "--init-lda must be ON when running define_lda_runs()"
     assert args.width is not None, "When --init-lda is ON, provide at least one train width for LDA training using --train-width"
 
     if args.n_factor is None:
@@ -146,7 +150,7 @@ def run_ficture2_multi(_args):
 
     # ficture2
     ficture2bin = os.path.join(args.ficture2, "bin/punkst")
-    assert os.path.exists(ficture2bin), f"ficture2 binary not found at {ficture2bin}; specify a valid --ficture2 path or ensure it's installed in cartloader's submodules/punkst directory."
+    assert os.path.exists(ficture2bin), f"File not found: {ficture2bin}. FICTURE2 Directory should include bin/punkst (--ficture2)"
     
     ficture2report = args.python + " " + os.path.join(args.ficture2, "ext/py/factor_report.py")
     
@@ -167,7 +171,7 @@ def run_ficture2_multi(_args):
             in_tsvs.append(toks[1])
     
     # cmap
-    assert os.path.exists(args.cmap_file), f"Color map not found at: {args.cmap_file}"
+    assert os.path.exists(args.cmap_file), f"File not found: {args.cmap_file} (--cmap-file)"
     
     # start mm
     mm = minimake()
@@ -492,7 +496,7 @@ def run_ficture2_multi(_args):
             decode_prefix = os.path.join(args.out_dir, "samples", sample, f"{sample}.{decode_id}")  ## decode_id contains the sample ID
             decode_pixel_tsv = f"{decode_prefix}.tsv.gz"
             decode_pixel_png = f"{decode_prefix}.png"
-            decode_pseudobulk_tsv = f"{decode_prefix}.pseudobulk.tsv"
+            decode_pseudobulk_tsv = f"{decode_prefix}.pseudobulk.tsv.gz"
             decode_de_tsv = f"{decode_prefix}.bulk_chisq.tsv"
             decode_info_tsv = f"{decode_prefix}.factor.info.tsv"
             prerequisities.append(f"{decode_prefix}.done")
@@ -530,9 +534,6 @@ def run_ficture2_multi(_args):
 
 
 if __name__ == "__main__":
-    # Get the path to the cartloader repository
-    cartloader_repo=os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-
     # Get the base file name without extension
     script_name = os.path.splitext(os.path.basename(__file__))[0]
 

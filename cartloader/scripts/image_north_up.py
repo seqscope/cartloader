@@ -10,9 +10,8 @@ def parse_arguments(_args):
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", 
                                     description="""
-                                    Create a north-up tif from the input SGE file. There are two options:
-                                    1) provide input png file with minmax file
-                                    2) provide input tif file that is already georeferenced
+                                    Create a north-up tif from the input SGE file. 
+                                    Input: can be provided by 1) provide input png file with minmax file, or 2) provide input tif file that is already georeferenced
                                      """)
     parser.add_argument('-i', '--in-png', type=str, help='Input png file')
     parser.add_argument('-t', '--in-tif', type=str, help='Input tif file')
@@ -33,7 +32,7 @@ def parse_arguments(_args):
 def image_north_up(_args):
     args = parse_arguments(_args)
 
-    assert args.in_png or args.in_tif, "Please provide either --in-png or --in-tif"
+    assert args.in_png or args.in_tif, "Path not provided: --in-png or --in-tif"
 
     out_dir = os.path.dirname(args.out_tif)
     os.makedirs(out_dir, exist_ok=True)
@@ -54,8 +53,9 @@ def image_north_up(_args):
     else:
         print(f"Starting with png: {args.in_png}")
         # prepare in/out
-        assert os.path.exists(args.in_png), "Please provide valid png file for png input using --in-png"
-        assert args.minmax and os.path.exists(args.minmax), "Please provide invalid minmax file for png input using --minmax"
+        assert os.path.exists(args.in_png), f"File not found: {args.in_png} (--in-png)"
+        assert args.minmax is not None, "Path not provided: --minmax"
+        assert os.path.exists(args.minmax), f"File not found: {args.minmax} (--minmax)"
         if args.in_tif is None:
             args.in_tif = args.out_tif.replace(".tif", ".raw.tif")
         # convert png to georeferenced tif
@@ -77,10 +77,6 @@ def image_north_up(_args):
 
 
 if __name__ == "__main__":
-    # get the cartloader path
-    global cartloader_repo
-    cartloader_repo=os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-    
     # Get the base file name without extension
     script_name = os.path.splitext(os.path.basename(__file__))[0]
 

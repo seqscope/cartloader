@@ -8,8 +8,7 @@ def parse_arguments(_args):
     """
     Write a new YAML file or update an existing YAML file for all output assets
     """
-    repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-
+    
     parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", description="Write YAML for all output assets")
 
     inout_params = parser.add_argument_group("Input/Output Parameters", "Input/output directories and files")
@@ -18,11 +17,11 @@ def parse_arguments(_args):
     inout_params.add_argument('--sge-index', type=str, help='Path to an index TSV file containing the SGE output converted to PMTiles.')
     inout_params.add_argument('--sge-counts', type=str, help='Path to a JSON file containing SGE counts per gene')
     inout_params.add_argument('--fic-assets', type=str,  help='Path to a JSON/YAML file containing FICTURE output assets')
-    inout_params.add_argument('--background-assets', type=str, nargs="+", default=[], help='Path(s) of one or more JSON/YAML file(s) containing background assets, if exist')
-    inout_params.add_argument('--cell-assets', type=str, nargs="+", default=[], help='Path(s) to one or more JSON/YAML file(s) containing cell segmentation assets, if exist')
+    inout_params.add_argument('--background-assets', type=str, nargs="+", default=[], help='Path(s) of one or more JSON/YAML file(s) containing background assets, if present')
+    inout_params.add_argument('--cell-assets', type=str, nargs="+", default=[], help='Path(s) to one or more JSON/YAML file(s) containing cell segmentation assets, if present')
     inout_params.add_argument('--basemap', type=str, nargs="+", default=[], help='One or more basemap assets. Each must be in the format "id:filename" or "id1:id2:filename", where each ID represents a basemap identifier.')    
-    inout_params.add_argument('--basemap-dir', type=str, default=None, help='Directory containing the basemap files. By default, the directory of the out-catalog file is used as the basemap directory')
-    inout_params.add_argument('--overview', type=str, help='Specify one of those basemaps as the overview asset, using its file name')
+    inout_params.add_argument('--basemap-dir', type=str, default=None, help='Directory containing the basemap files. By default, the directory of the out-catalog file is used as the basemap directory.')
+    inout_params.add_argument('--overview', type=str, help='Specify one of these basemaps as the overview asset, using its filename.')
     inout_params.add_argument('--check-equal', action="store_true", default=False, help="If enabled, the script checks for an existing file with matching content and skips writing the JSON/YAML unless differences are found.")
 
     key_params = parser.add_argument_group("Key Parameters", "Key parameters frequently used by users")
@@ -98,17 +97,19 @@ def write_catalog_for_assets(_args):
 
     # - factors
     if args.fic_assets is not None or len(args.cell_assets)>0:
-        logger.info(f"Reading the FICTURE assets params {args.fic_assets}")
+        logger.info(f"Reading the Factor layers")
         if "factors" not in catalog_dict["assets"]:
             factors_list=[]
         else:
             factors_list = catalog_dict["assets"]["factors"]
         
         if args.fic_assets is not None: 
+            logger.info(f"Updating Factor layer with the FICTURE assets from {args.fic_assets}")
             fic_assets = load_file_to_dict(args.fic_assets)
             factors_list.extend(fic_assets)
 
         if len(args.cell_assets)>0:
+            logger.info(f"Updating Factor layer with the cell assets from {args.cell_assets}")
             for cell_assets_f in args.cell_assets:
                 cell_assets=load_file_to_dict(cell_assets_f)
                 # update_and_copy_paths will update the path to be only filename, which fits the needs of catalog.yaml

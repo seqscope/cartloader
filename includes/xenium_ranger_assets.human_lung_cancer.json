@@ -1,0 +1,22 @@
+{
+    "SGE": {
+        "TRANSCRIPT": "/example_dir/Xenium_V1_humanLung_Cancer_FFPE_outs/transcripts.csv.gz"
+    },
+    "CELLS": {
+        "CELL": "/example_dir/Xenium_V1_humanLung_Cancer_FFPE_outs/cells.csv.gz",
+        "BOUNDARY": "/example_dir/Xenium_V1_humanLung_Cancer_FFPE_outs/cell_boundaries.csv.gz",
+        "CELL_FEATURE_MEX": "/example_dir/Xenium_V1_humanLung_Cancer_FFPE_outs/cell_feature_matrix",
+        "CLUSTER": "/example_dir/Xenium_V1_humanLung_Cancer_FFPE_outs/analysis/clustering/gene_expression_graphclust/clusters.csv",
+        "DE": "/example_dir/Xenium_V1_humanLung_Cancer_FFPE_outs/analysis/diffexp/gene_expression_graphclust/differential_expression.csv",
+        "PCA_PROJ": "/example_dir/Xenium_V1_humanLung_Cancer_FFPE_outs/analysis/pca/gene_expression_10_components/projection.csv",
+        "PCA_VAR": "/example_dir/Xenium_V1_humanLung_Cancer_FFPE_outs/analysis/pca/gene_expression_10_components/variance.csv",
+        "UMAP_PROJ": "/example_dir/Xenium_V1_humanLung_Cancer_FFPE_outs/analysis/umap/gene_expression_2_components/projection.csv"
+    },
+    "IMAGES": {
+        "DAPI_OME": "/example_dir/Xenium_V1_humanLung_Cancer_FFPE_outs/morphology_focus/morphology_focus_0000.ome.tif",
+        "BOUNDARY_OME": "/example_dir/Xenium_V1_humanLung_Cancer_FFPE_outs/morphology_focus/morphology_focus_0001.ome.tif",
+        "INTERIOR_RNA_OME": "/example_dir/Xenium_V1_humanLung_Cancer_FFPE_outs/morphology_focus/morphology_focus_0002.ome.tif",
+        "INTERIOR_PROTEIN_OME": "/example_dir/Xenium_V1_humanLung_Cancer_FFPE_outs/morphology_focus/morphology_focus_0003.ome.tif",
+        "DAPI_3D_OME": "/example_dir/Xenium_V1_humanLung_Cancer_FFPE_outs/morphology.ome.tif"
+    }
+}

@@ -1,7 +1,8 @@
 import pandas as pd
 import argparse
-import sys, os, gzip, argparse, logging, warnings, shutil
+import sys, os, gzip, argparse, logging, warnings, shutil, inspect
 import pandas as pd
+
 
 def hex_to_rgb(hex_code):
     """Convert HEX color code to normalized RGB values."""
@@ -10,11 +11,11 @@ def hex_to_rgb(hex_code):
     return r, g, b
 
 def cmap_hex2rgb(_args):
-    parser = argparse.ArgumentParser(description="Convert HEX codes to RGB in a TSV file.")
+    parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", description="Convert HEX codes to RGB in a TSV file.")
     parser.add_argument("--input", help="Path to the input file")
     parser.add_argument("--col-hex", default="Hex_Code", help="Name of the column containing HEX codes")
     parser.add_argument("--col-index", default="Color_Index", help="Name of the column containing color index values")
-    parser.add_argument("--output", default="output.tsv", help="Path to save the output TSV file (default: output.tsv)")
+    parser.add_argument("--output", default="output.tsv", help="Path to save the output TSV file (default: ./output.tsv)")
     
     args = parser.parse_args(_args)
     
@@ -46,9 +47,6 @@ def cmap_hex2rgb(_args):
     print(f"Converted data saved to {args.output}")
 
 if __name__ == "__main__":
-    # Get the path to the cartloader repository
-    cartloader_repo=os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-
     # Get the base file name without extension
     script_name = os.path.splitext(os.path.basename(__file__))[0]
 

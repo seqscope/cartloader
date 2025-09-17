@@ -79,7 +79,7 @@ def update_deposition_metadata(deposition_id, access_token, metadata):
     if response.status_code == 200:
         print(f" * Successfully updated metadata for deposition {deposition_id}")
     else:
-        raise RuntimeError(f"Failed to update deposition metadata. Please manually add those metadata: {response.status_code} - {response.text}")
+        raise RuntimeError(f"Failed to update deposition metadata. Please manually add that metadata: {response.status_code} - {response.text}")
 
 # === DEPOSITION ==
 def create_deposition(access_token, metadata=None):
@@ -102,9 +102,9 @@ def publish_deposition(deposition_id, access_token):
     url = f"https://zenodo.org/api/deposit/depositions/{deposition_id}/actions/publish"
     response = requests.post(url, params={'access_token': access_token})
     if response.status_code == 202:
-        print("Deposition published successfully!")
+        print("Deposition published successfully.")
     else:
-        print(f"Failed to publish. Please manually publish it : {response.status_code} - {response.text}")
+        print(f"Failed to publish. Please publish it manually: {response.status_code} - {response.text}")
 
 # == NEW VERSION ==
 def create_new_version(old_id, token):
@@ -122,10 +122,10 @@ def upload_zenodo(_args):
 
     # I/O arguments
     group_io = parser.add_argument_group("Input/Output")
-    group_io.add_argument('--in-dir', type=str, required=True, help='(Required) Path to the input directory containing files to upload.')
-    group_io.add_argument('--upload-method', type=str, default="all", choices=["all", "catalog", "user_list"], help='Method to determine which files to upload: "all" uploads every file in --in-dir; "catalog" uses filenames listed in a catalog YAML file; "user_list" uploads only files specified via --in-list.')
-    group_io.add_argument('--in-list', type=str, nargs='+', default=[], help='(Required if --upload-method is "user_list") One or more filenames to upload, e.g., "--in-list fileA.tif fileB.tif".')
-    group_io.add_argument('--catalog-yaml', type=str, default=None, help='(Required if --upload-method is "catalog") Path to the catalog YAML file listing files to upload (defaults to <in_dir>/catalog.yaml)')
+    group_io.add_argument('--in-dir', type=str, required=True, help='Path to the input directory containing files to upload.')
+    group_io.add_argument('--upload-method', type=str, default="all", choices=["all", "catalog", "files"], help='Which files to upload: "all" uploads every file in --in-dir; "catalog" uses filenames from a catalog.yaml; "files" uploads only names provided via --files.')
+    group_io.add_argument('--files',  dest='files', type=str, nargs='+', default=[], help='Filenames to upload (relative to --in-dir or absolute). Use with --upload-method files.')
+    group_io.add_argument('--catalog-yaml', type=str, default=None, help='Path to the catalog YAML file listing files to upload (required if --upload-method is "catalog"; defaults: <in_dir>/catalog.yaml)')
 
     # Zenodo credentials and config
     group_zenodo = parser.add_argument_group("Zenodo Configuration")
@@ -138,18 +138,18 @@ def upload_zenodo(_args):
 
     # Metadata fields
     group_meta = parser.add_argument_group("Deposition Metadata")
-    group_meta.add_argument('--title', type=str, default=None, help='Title of the deposition. Required if creating a new deposition or the existing deposition do not have a title')
-    group_meta.add_argument('--upload-type', type=str, default='dataset', choices=['dataset', 'software', 'publication', 'poster', 'presentation', 'image', 'video', 'lesson', 'other'], help='Type of upload for the Zenodo deposition (default: dataset). Required if creating a new deposition.')
-    group_meta.add_argument('--creators', type=str, nargs='+', default=[], help='List of creators in "Lastname, Firstname" format. Each name should be quoted. Required if creating a new deposition or the existing deposition do not have creator information.')
-    group_meta.add_argument('--description', type=str, default=None, help='(Optional) Description of the deposition.')
+    group_meta.add_argument('--title', type=str, default=None, help='Title of the deposition. Required if creating a new deposition or if the existing deposition does not have a title.')
+    group_meta.add_argument('--upload-type', type=str, default='dataset', choices=['dataset', 'software', 'publication', 'poster', 'presentation', 'image', 'video', 'lesson', 'other'], help='Type of upload for the Zenodo deposition (default: dataset). Required when creating a new deposition.')
+    group_meta.add_argument('--creators', type=str, nargs='+', default=[], help='List of creators in "Lastname, Firstname" format. Each name should be quoted. Required if creating a new deposition or if the existing deposition does not have creator information.')
+    group_meta.add_argument('--description', type=str, default=None, help='Description of the deposition.')
 
     # Behavior flags
     group_flags = parser.add_argument_group("Options")
     group_flags.add_argument('--publish', action='store_true', default=False, help='If set, publish the deposition automatically after upload. '
                                                                                     'Recommended to leave this DISABLED and publish manually after verifying the deposition via the Zenodo web interface.'
                                                                                     )
-    group_flags.add_argument('--overwrite', action='store_true', default=False, help='Overwrite overlapped existing files.')
-    group_flags.add_argument('--dry-run', action='store_true', default=False, help='Simulate the upload proccess without making changes.')
+    group_flags.add_argument('--restart', action='store_true', default=False, help='Restart all upload requests regardless of existing files.')
+    group_flags.add_argument('--dry-run', action='store_true', default=False, help='Simulate the upload process without making changes.')
 
     args = parser.parse_args(_args)
 
@@ -222,7 +222,7 @@ def upload_zenodo(_args):
 
         # check if any file exists in the bucket
         bucket_url = response.json()["links"]["bucket"]
-        print(f" *  Checking files in the bucket_URL {bucket_url}")
+        print(f" *  Checking files in bucket URL: {bucket_url}")
         existing_files = list_existing_files(args.zenodo_deposition_id, ACCESS_TOKEN)
         print(f"      Found {len(existing_files)} existing files")
     else:
@@ -246,14 +246,14 @@ def upload_zenodo(_args):
         in_files_raw = glob.glob(os.path.join(args.in_dir, "*"))
     elif args.upload_method == "catalog":
         catalog_f = args.catalog_yaml or os.path.join(args.in_dir, "catalog.yaml")
-        assert os.path.exists(catalog_f), f" * Missing catalog file: {catalog_f}"
+        assert os.path.exists(catalog_f), f"File not found: {catalog_f} (--catalog-yaml)"
         cartload_files, basemap_files = collect_files_from_yaml(catalog_f)
         fn_list = list(cartload_files) + basemap_files
         cartload_files_raw = [os.path.join(args.in_dir, fn) for fn in list(cartload_files)]
         basemap_files_raw = [os.path.join(args.in_dir, fn) for fn in list(basemap_files)]
         in_files_raw = list(set(cartload_files_raw + basemap_files_raw))
-    elif args.upload_method == "user_list":
-        in_files_raw = [os.path.join(args.in_dir, fn) for fn in args.in_list]
+    elif args.upload_method == "files":
+        in_files_raw = [fn if os.path.isabs(fn) else os.path.join(args.in_dir, fn) for fn in args.files]
     else:
         raise ValueError(f"Unsupported upload method: {args.upload_method}")
 
@@ -307,7 +307,7 @@ def upload_zenodo(_args):
             raise ValueError(f" * No input files found")
 
         failed_list = []
-        print(f" * Checking overlapping with existing files in the Zenodo deposition (overwrite mode: {'On' if args.overwrite else 'Off'})")
+        print(f" * Checking overlapping with existing files in the Zenodo deposition (overwrite mode: {'On' if args.restart else 'Off'})")
         input_fnames = {os.path.basename(f): f for f in in_files_raw}
         existing_only = [f for f in existing_files if f not in input_fnames]
         input_overlap = [input_fnames[f] for f in input_fnames if f in existing_fnames]
@@ -330,7 +330,7 @@ def upload_zenodo(_args):
                 print("\n    - New input file(s) (not in deposition): N=0")
 
             if input_overlap:
-                if args.overwrite:
+                if args.restart:
                     print(f"\n    - Overlapping input file(s) (already in deposition): N={len(input_overlap)} (will be overwritten)")
                     failed_list2=uploading(input_overlap, touch_flag=False, flag_suffix="zenodo.done")
                     failed_list.extend(failed_list2)
@@ -351,23 +351,22 @@ def upload_zenodo(_args):
         return failed_list
 
     failed_list=[]
-    if args.upload_method == "all" or args.upload_method == "user_list":
-        failed_sublist=process_uploading_by_list(in_files_raw, existing_files, force_upload_files=[], touch_flag=False, flag_suffix="zenodo.done", overwrite=args.overwrite, dry_run=args.dry_run)
+    if args.upload_method == "all" or args.upload_method == "files":
+        failed_sublist=process_uploading_by_list(in_files_raw, existing_files, force_upload_files=[], touch_flag=False, flag_suffix="zenodo.done", overwrite=args.restart, dry_run=args.dry_run)
         failed_list.extend(failed_sublist)
     elif args.upload_method == "catalog":
         print(f"\n1) Upload: tiled map data for SGE (with or without FICTURE)\n")
-        failed_sublist=process_uploading_by_list(cartload_files_raw, existing_files, force_upload_files=[], touch_flag=False, flag_suffix="zenodo.done", overwrite=args.overwrite, dry_run=args.dry_run)
+        failed_sublist=process_uploading_by_list(cartload_files_raw, existing_files, force_upload_files=[], touch_flag=False, flag_suffix="zenodo.done", overwrite=args.restart, dry_run=args.dry_run)
         failed_list.extend(failed_sublist)
         cartload_flag=os.path.join(args.in_dir, "cartload.zenodo.done")
         Path(cartload_flag).touch(exist_ok=True)
         if len(basemap_files_raw) > 0:
             print(f"\n2) Upload: tiled map data for background images, such as histology images\n")
-            failed_sublist=process_uploading_by_list(basemap_files_raw, existing_files, force_upload_files=[], touch_flag=True, flag_suffix="zenodo.done", overwrite=args.overwrite, dry_run=args.dry_run)
+            failed_sublist=process_uploading_by_list(basemap_files_raw, existing_files, force_upload_files=[], touch_flag=True, flag_suffix="zenodo.done", overwrite=args.restart, dry_run=args.dry_run)
             failed_list.extend(failed_sublist)
     if args.publish and not args.dry_run:
         print(f"\n Publishing the deposition {args.zenodo_deposition_id} ...")
-        failed_sublist=publish_deposition(args.zenodo_deposition_id, ACCESS_TOKEN)
-        failed_list.extend(failed_sublist)
+        publish_deposition(args.zenodo_deposition_id, ACCESS_TOKEN)
 
     if failed_list:
         print("-"*10)
@@ -378,13 +377,15 @@ def upload_zenodo(_args):
             print(f" * {failed_f}")
 
         print("\nTry the following commands to re-upload those failed files:")
+        failed_names = [os.path.basename(f) for f in failed_list]
         zenodo_cmd = " ".join([
             "cartloader", "upload_zenodo",
             f"--in-dir {args.in_dir}",
-            f"--upload-method list",
+            f"--upload-method files",
             f"--zenodo-token {args.zenodo_token}",
             f"--zenodo-deposition-id {args.zenodo_deposition_id}",
-            f"--in-list {" ".join(failed_list)}"
+            "--files",
+            *failed_names,
         ])
         print(zenodo_cmd)
     
