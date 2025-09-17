@@ -325,12 +325,12 @@ def run_ficture2(_args):
     # - segment 10x 
     if args.segment_10x:
         scheck_app(args.gzip)
-        assert args.segment_width_10x is not None, "When --segment-10x, provide at least one hexagon width for segmentation in 10X MEX format using --segment-width-10x"
+        assert args.segment_width_10x is not None, "When --segment-10x, provide at least one hexagon width for segmentation in 10x MEX format using --segment-width-10x"
         hexagon_widths=[int(x) for x in args.segment_width_10x.split(",")]
 
         for hexagon_width in hexagon_widths:
             hexagon_10x_prefix=f"{args.out_dir}/hexagon.d_{hexagon_width}.min1"
-            cmds = cmd_separator([], f"Creating hexagon-indexed SGE in 10X MEX format for {hexagon_width}um...")
+            cmds = cmd_separator([], f"Creating hexagon-indexed SGE in 10x MEX format for {hexagon_width}um...")
             cmd = " ".join([
                 ficture2bin, "tiles2hex",
                 f"--in-tsv {args.out_dir}/transcripts.tiled.tsv",

@@ -21,7 +21,7 @@ pmtiles=/path/to/pmtiles/binary         # path to pmtiles executable
 aws=/path/to/aws/cli/binary             # path to AWS CLI binary
 
 # (Optional) Define path to color map. 
-cmap=/path/to/color/map                 # Path to fixed color map. CartLoader includes one at cartloader/assets/fixed_color_map_256.tsv.
+cmap=/path/to/color/map                 # Path to fixed color map. `CartLoader` includes one at cartloader/assets/fixed_color_map_256.tsv.
 
 # Number of jobs
 n_jobs=10                               # If not specified, the number of jobs defaults to 1.

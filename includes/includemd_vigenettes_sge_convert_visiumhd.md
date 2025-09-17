@@ -1,4 +1,4 @@
-Convert the raw input to the unified SGE format. See more details in [Reference page](../docs/reference/sge_convert.md).
+Convert the raw input to the unified SGE format. See more details in its [Reference page](../docs/reference/sge_convert.md).
 
 ```bash
 cartloader sge_convert \

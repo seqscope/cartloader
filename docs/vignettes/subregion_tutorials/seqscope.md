@@ -37,14 +37,14 @@ Define data ID and analysis parameters:
 # Unique identifier for your dataset
 DATA_ID="seqscope_hippo"                # change this to reflect your dataset name
 PLATFORM="seqscope"                     # platform information
-SCALE=1000                            # scale from coordinate to micrometer
+SCALE=1000                              # scale from coordinate to micrometer
 
 # LDA parameters
 train_width=18                           # define LDA training hexagon width (comma-separated if multiple widths are applied)
 n_factor=6,12                            # define number of factors in LDA training (comma-separated if multiple n-factor are applied)
 ```
 
-!!! info "How to Define Scaling Factors for Seq-Scope"
+!!! info "How to Define Scaling Factors for Seq-Scope?"
 
     The latest [SeqScope](https://www.nature.com/articles/s41596-024-01065-0) with an Illumina NovaSeq 6000 uses [`NovaScope`](https://seqscope.github.io/NovaScope/) pipeline to process sequencing data. [`NovaScope`](https://seqscope.github.io/NovaScope/) defaults to generate SGE at nanometer (nm) resolution, meaning each pixel corresponds to 1 nm.
 

@@ -388,7 +388,7 @@ def sge_convert(_args):
     #  * 10x_xenium: convert parquet to csv
     if args.platform == "10x_xenium":
         if args.in_parquet is not None and args.in_csv is not None:
-            raise ValueError("For 10X Xenium, only one of the two input options (--in-parquet or --in-csv) can be specified for transcript data. Providing both will result in an error.")
+            raise ValueError("For 10x Xenium, only one of the two input options (--in-parquet or --in-csv) can be specified for transcript data. Providing both will result in an error.")
         if args.in_parquet is not None:
             cmds = cmd_separator([], f"Converting input parquet into a csv file : (platform: {args.platform})...")
             args.in_csv = f"{args.out_dir}/transcripts.parquet.csv.gz"

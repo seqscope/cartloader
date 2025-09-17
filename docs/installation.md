@@ -127,11 +127,11 @@ Install the [`punkst`](https://github.com/Yichen-Si/punkst) toolkit to use [`FIC
 
 Please follow the [`punkst` installation guide](https://yichen-si.github.io/punkst/install/).
 
-??? "What are `FICTURE` and `punkst`?"
+!!! info "What are `FICTURE` and `punkst`?"
 
     [`FICTURE`](https://www.nature.com/articles/s41592-024-02415-2) is a segmentation-free method that infers latent spatial factors—coherent spatial patterns of gene activity—that correspond to underlying transcriptional programs or tissue structures. These factors can then be projected back to the pixel level. Although `FICTURE` is built on a Latent Dirichlet Allocation (LDA) framework by default, it is also compatible with clustering outputs from external tools like `Seurat` for pixel-level projection.
 
-The [`punkst`](https://github.com/Yichen-Si/punkst) toolkit is a streamlined implementation of [`FICTURE`](https://www.nature.com/articles/s41592-024-02415-2), designed for improved computational efficiency and scalability while producing results equivalent to the original.
+    The [`punkst`](https://github.com/Yichen-Si/punkst) toolkit is a streamlined implementation of [`FICTURE`](https://www.nature.com/articles/s41592-024-02415-2), designed for improved computational efficiency and scalability while producing results equivalent to the original.
 
 ### 4.3 Installing `tippecanoe`
 

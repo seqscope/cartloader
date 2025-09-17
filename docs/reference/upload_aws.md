@@ -2,12 +2,12 @@
 
 ## Overview
 
-Use `upload_aws` to publish CartLoader outputs (PMTiles, decoded spatial factors, and the catalog) to Amazon S3 for sharing or deployment. Supports single‑dataset uploads and collection uploads (multiple datasets via `--in-list`).
+Use `upload_aws` to publish `CartLoader` outputs (PMTiles, decoded spatial factors, and the catalog) to Amazon S3 for sharing or deployment. Supports single‑dataset uploads and collection uploads (multiple datasets via `--in-list`).
 
 ---
 ## Action
 
-Upload CartLoader outputs (including `catalog.yaml`) to a specified S3 path for a single dataset or a collection (`--in-list`).
+Upload `CartLoader` outputs (including `catalog.yaml`) to a specified S3 path for a single dataset or a collection (`--in-list`).
 
 ---
 ## Requirements

@@ -14,7 +14,7 @@ def parse_arguments(_args):
     """
     repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-    parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", description="Process 10X Xenium output from Xenium Ranger, and return rastered and tiled sources for CartoScope (load → sge_convert → ficture2 → images/cells → cartload2 → uploads")
+    parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", description="Process 10x Xenium output from Xenium Ranger, and return rastered and tiled sources for CartoScope (load → sge_convert → ficture2 → images/cells → cartload2 → uploads")
 
     run_params = parser.add_argument_group("Run Options")
     run_params.add_argument('--dry-run', action='store_true', default=False, help='Print commands without executing')

@@ -1,4 +1,4 @@
-# 10X Xenium Starter Tutorial
+# 10x Xenium Starter Tutorial
 
 ## Input Data
 
@@ -43,9 +43,9 @@ train_width=12                           # define LDA training hexagon width (co
 n_factor=6,12                            # define number of factors in LDA training (comma-separated if multiple n-factor are applied)
 ```
 
-!!! info "How to Define Scaling Factors for Xenium"
+!!! info "How to Define Scaling Factors for Xenium?"
 
-    The Xenium example data currently used here provides SGE in micrometer units. Use define scaling factor from coordinate to micrometer as 1.
+    The Xenium example data currently used here provides SGE in micrometer units. Define scaling factor from coordinate to micrometer as 1.
 
 ## SGE Format Conversion
 

@@ -22,7 +22,7 @@ Upload selected files to a Zenodo deposition (existing or new) using `all`, `cat
 - A Zenodo access token saved in a file (for API authentication).
 - (Optional) A Zenodo deposition ID to upload to an existing deposition.
 
-!!! note "What are the Zenodo token and deposition ID, and how do you get them?"
+!!! info "What are the Zenodo token and deposition ID, and how do you get them?"
     **Zenodo Token File**
 
     `CartLoader` uses the Zenodo API for uploading files. To authenticate, Zenodo requires an access token.

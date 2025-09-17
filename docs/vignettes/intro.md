@@ -1,8 +1,8 @@
 # Vignettes
 
-Explore a series of tutorials that help you learn `CartLoader` — from quick, getting‑started examples to processing full‑scale spatial transcriptomics (ST) datasets.
+Explore a series of tutorials that help you learn `CartLoader` — from quick, getting‑started examples to processing full‑scale ST datasets.
 
-For step‑by‑step details of each module, see the [Reference](../reference/sge_convert.md) pages.
+To view details of a specific module, see [Reference](../reference/intro.md) section.
 
 ## Quick Start
 
@@ -45,7 +45,7 @@ These tutorials demonstrate how to run `CartLoader` on a variety of ST platforms
 
 -   <figure markdown="span">
     ![example2](../images/starter_vignettes/visiumhd.t18_f12_p18_a6.png)
-    <figcaption class="figure-caption-vigintro-large">**10X Visium HD** Starter Guide</figcaption>
+    <figcaption class="figure-caption-vigintro-large">**10x Visium HD** Starter Guide</figcaption>
     </figure>
 
     [Read](./subregion_tutorials/visiumhd.md){ .md-button .md-button--primary .button-tight-small }
@@ -70,7 +70,7 @@ These tutorials demonstrate how to run `CartLoader` on a variety of ST platforms
 <div class="grid cards generic" markdown>
 -   <figure markdown="span">
     ![example3](../images/starter_vignettes/xenium.t12_f12_p12_a6.png){ width="100%" }
-    <figcaption class="figure-caption-vigintro-large">**10X Xenium** Starter Guide</figcaption>
+    <figcaption class="figure-caption-vigintro-large">**10x Xenium** Starter Guide</figcaption>
     </figure>
 
     [Read](./subregion_tutorials/xenium.md){ .md-button .md-button--primary .button-tight-small }
@@ -96,7 +96,7 @@ These examples show how to process real‑world ST datasets from different platf
 <div class="grid cards generic" markdown>
 -   <figure markdown="span">
     ![example3](../images/pipeline_vignettes/xenium_human_lung_cancer_v1.2.t18_f24_p18_a6.png){ width="100%" }
-    <figcaption class="figure-caption-vigintro-large">**10X Xenium** Pipeline Guide</figcaption>
+    <figcaption class="figure-caption-vigintro-large">**10x Xenium** Pipeline Guide</figcaption>
     </figure>
 
     [Read](./subregion_tutorials/xenium.md){ .md-button .md-button--primary .button-tight-small }

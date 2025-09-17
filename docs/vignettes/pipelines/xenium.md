@@ -100,9 +100,9 @@ ___
 
 **Data Access**
 
-The example data is downloaded from 10X Data portal.
+The example data is downloaded from 10x Data portal.
 
-TO-DO: Code to download the data will be provided later.
+TODO: Code to download the data will be provided later.
 
 ___
 
@@ -123,13 +123,13 @@ SCALE=1                                     # coordinate to micrometer scaling f
 train_width=18                            # define LDA training hexagon width (comma-separated if multiple widths are applied)
 n_factor=24                               # define number of factors in LDA training (comma-separated if multiple n-factor are applied)
 
-# s3 path
-S3_DIR=/s3/path/to/s3/dir              # Recommend to use DATA_ID as directory name, such as s3://bucket_name/xenium-v1-humanlung-cancer-ffpe
+# Path to AWS S3 directory
+S3_DIR=/s3/path/to/s3/dir                 # Recommend to use DATA_ID as directory name, such as s3://bucket-name/xenium-v1-humanlung-cancer-ffpe
 ```
 
-!!! info "How to Define Scaling Factors for Xenium"
+!!! info "How to Define Scaling Factors for Xenium?"
 
-    The Xenium example data currently used here provides SGE in micrometer units. Use define scaling factor from coordinate to micrometer as 1.
+    The Xenium example data currently used here provides SGE in µm. Define scaling factor from coordinate to micrometer as 1.
 
 ## Run Pipelines
 
@@ -171,7 +171,7 @@ cartloader run_xenium \
 | `CartLoader` Modules                     | Flags in `run_xenium`  | Actions                                                                       | Prerequisites                                                             |
 |------------------------------------------|------------------------|-------------------------------------------------------------------------------|---------------------------------------------------------------------------|
 | `load_xenium_ranger`                     | `--load-xenium-ranger` | Summarize Xenium Ranger outputs into JSON                                     | Xenium Output files                                                       |
-| [`sge_convert`](./sge_convert.md)        | `--sge-convert`        | Convert SGE to CartLoader format; optional density filter and visuals         | Xenium assets JSON (from `load_xenium_ranger`) or transcript CSV/Parquet  |
+| [`sge_convert`](./sge_convert.md)        | `--sge-convert`        | Convert SGE to `CartLoader` format; optional density filter and visuals         | Xenium assets JSON (from `load_xenium_ranger`) or transcript CSV/Parquet  |
 | [`run_ficture2`](./run_ficture2.md)      | `--run-ficture2`       | FICTURE analysis                                                              | SGE (from `sge_convert`); FICTURE parameters (`--width`, `--n-factor`)    |
 | [`import_xenium_cell`](./import_cell.md) | `--import-cells`       | Import cell points, boundaries, cluster, de;                                  | Xenium assets JSON or manual CSVs; also `--cell-id`                       |
 | [`import_image`](./import_image.md)      | `--import-images`      | Import background images (OME‑TIFF) → PNG/PMTiles;                            | Xenium assets JSON or `--ome-tifs`; also `--image-ids`  or `--all-images` |

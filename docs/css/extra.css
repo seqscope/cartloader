@@ -112,7 +112,7 @@ figure {
 
 .grid.cards.forref > ul > li {
   width: 360px;                      /* Card width */
-  min-height: 250px;                 /* Baseline height; grows with content */
+  min-height: 200px;                 /* Baseline height; grows with content */
   flex: 0 0 auto;                    /* Prevent growing/shrinking */
   padding: 0.5rem 0.5rem 0.2rem 0.5rem;  /* smaller bottom padding */
   gap: 0;                            /* Spacing inside card's flex layout */

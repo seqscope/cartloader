@@ -59,7 +59,7 @@ cartloader sge_convert \
     --spatula /path/to/spatula/binary 
 ```
 
-#### 1.2) 10X Visium HD
+#### 1.2) 10x Visium HD
 ```bash
 cartloader sge_convert \
     --platform 10x_visium_hd \
@@ -102,7 +102,7 @@ cartloader sge_convert \
 
     | Platform               | `--csv-comment`<sup>1</sup> | `--csv-delim` | `--csv-colname-x` | `--csv-colname-y` | `--csv-colnames-count` | `--csv-colname-feature-name` |
     |------------------------|-----------------------------|---------------|-------------------|-------------------|------------------------|------------------------------|
-    | 10X Xenium<sup>2</sup> | `False`                     | `,`           | `x_location`      | `y_location`      | -                      | `feature_name`               |
+    | 10x Xenium<sup>2</sup> | `False`                     | `,`           | `x_location`      | `y_location`      | -                      | `feature_name`               |
     | StereoSeq              | `False`                     | `\t`          | `x`               | `y`               | `MIDCounts`            | `geneID`                     |
     | CosMx SMI              | `False`                     | `,`           | `x_local_px`      | `y_local_px`      | -                      | `target`                     |
     | MERSCOPE               | `False`                     | `,`           | `global_x`        | `global_y`        | -                      | `gene`                       |
@@ -110,7 +110,7 @@ cartloader sge_convert \
     
     <sub><sup>1</sup> `--csv-comment`: If `True`, the lines starts with `#` will be treated as comments and will be skipped.
 
-    <sub><sup>2</sup> 10X Xenium: Besides the above default settings, for 10X Xenium data, `sge_convert` also applies `--csv-colname-phredscore qv ` and `--min-phred-score 20`.
+    <sub><sup>2</sup> 10x Xenium: Besides the above default settings, for 10x Xenium data, `sge_convert` also applies `--csv-colname-phredscore qv ` and `--min-phred-score 20`.
 
 
 ---

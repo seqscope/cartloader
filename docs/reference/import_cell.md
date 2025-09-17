@@ -2,7 +2,7 @@
 
 ## Overview
 
-Import platform‑specific cell analysis outputs (cells, boundaries, clusters/DE), convert them to web‑ready layers (PMTiles/GeoJSON), and optionally register them in a CartLoader catalog. Supported platforms include 10x Xenium and 10x Visium HD.
+Import platform‑specific cell analysis outputs (cells, boundaries, clusters/DE), convert them to web‑ready layers (PMTiles/GeoJSON), and optionally register them in a `CartLoader` catalog. Supported platforms include 10x Xenium and 10x Visium HD.
 
 ---
 ## Requirements
@@ -15,7 +15,7 @@ Import platform‑specific cell analysis outputs (cells, boundaries, clusters/DE
 ## Example Usages
 !!! warning "Two Input Modes"
 
-    CartLoader accepts two input modes for each platform:
+    `CartLoader` accepts two input modes for each platform:
 
     - JSON mode: pass `--in-json` with required keys.
     - Manual mode: pass `--indir` with specific file locations.

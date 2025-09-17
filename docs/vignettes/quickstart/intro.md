@@ -1,6 +1,6 @@
 # Quick Start
 
-Get started with CartLoader using a small mouse hippocampus dataset. Choose one of the options below.
+Get started with `CartLoader` using a small mouse hippocampus dataset. Choose one of the options below.
 
 ## Options
 

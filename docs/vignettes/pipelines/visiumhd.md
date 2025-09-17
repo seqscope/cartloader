@@ -2,7 +2,7 @@
 
 ## Overview
 
-This tutorial walks through end‑to‑end processing of 10x Visium HD data with `CartLoader`: converting inputs, running FICTURE, importing cell results and histology, packaging assets, and optionally uploading for sharing.
+This tutorial walks through end‑to‑end processing of 10x Visium HD data with `CartLoader`: converting inputs, running FICTURE, importing cell results and histology, packaging assets, and uploading for sharing.
 
 ## Input Data
 ---
@@ -111,15 +111,17 @@ Define data ID and analysis parameters:
 
 ```bash
 # Unique identifier for your dataset
-DATA_ID="visiumhd_hippo"                 # change this to reflect your dataset name
-PLATFORM="10x_visium_hd"                 # platform information
+DATA_ID="visiumhd_3prime_mouse_brain"    # change this to reflect your dataset name
 
 # LDA parameters
 train_width=18                           # define LDA training hexagon width (comma-separated if multiple widths are applied)
 n_factor=6,12                            # define number of factors in LDA training (comma-separated if multiple n-factor are applied)
+
+# Path to AWS S3 directory
+S3_DIR=/s3/path/to/s3/dir                # Recommend to use DATA_ID as directory name, such as s3://bucket-name/visiumhd-3prime-mouse-brain
 ```
 
-!!! info "How to define scaling for Visium HD"
+!!! info "How to define scaling for Visium HD?"
 
     10x Visium HD provides `scalefactors_json.json` (pixel‑to‑µm). `CartLoader` accepts it via `--scale-json` and computes the scaling automatically, so you don’t need to manually specify `--units-per-um`.
     
@@ -162,7 +164,7 @@ cartloader run_visiumhd \
 | `CartLoader` Modules                    | Flags in `run_visiumhd` | Actions                                                                       | Prerequisites                                                                 |
 |-----------------------------------------|-------------------------|-------------------------------------------------------------------------------|-------------------------------------------------------------------------------|
 | `load_space_ranger`                     | `--load-space-ranger`   | Summarize Space Ranger outputs into JSON                                      | Space Ranger Output files                                                     |
-| [`sge_convert`](./sge_convert.md)       | `--sge-convert`         | Convert SGE to CartLoader format; optional density filter and visuals         | Space Ranger assets JSON (from `load_space_ranger`) or transcript CSV/Parquet |
+| [`sge_convert`](./sge_convert.md)       | `--sge-convert`         | Convert SGE to `CartLoader` format; optional density filter and visuals         | Space Ranger assets JSON (from `load_space_ranger`) or transcript CSV/Parquet |
 | [`run_ficture2`](./run_ficture2.md)     | `--run-ficture2`        | FICTURE analysis                                                              | SGE (from `sge_convert`); FICTURE parameters (`--width`, `--n-factor`)        |
 | [`import_space_cell`](./import_cell.md) | `--import-cells`        | Import cell points, boundaries, cluster, de;                                  | Space Ranger assets JSON or manual CSVs; also `--cell-id`                     |
 | [`import_image`](./import_image.md)     | `--import-images`       | Import background images (BTF-TIFF) → PNG/PMTiles;                            | Space Ranger assets JSON or `--btf-tifs`; also `--image-ids`/`--all-images`   |

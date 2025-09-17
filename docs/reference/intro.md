@@ -40,7 +40,7 @@ This section documents the `CartLoader` CLI by task.
 -   <ul>
     <li>
         <h4>Feature Customization</h4>
-        <p><code>feature_filtering</code>: Customize the feature set by list, substring, regex, or type for downstream analysis</p>
+        <p><code>feature_filtering</code>: Customize the feature set by list, substring, regex, or type for downstream analysis, e.g., FICTURE</p>
     </li>
     </ul>
     [Read](./feature_customization.md){ .md-button .md-button--primary .button-tight-small }

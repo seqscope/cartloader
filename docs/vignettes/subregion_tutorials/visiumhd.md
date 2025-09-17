@@ -1,8 +1,8 @@
-# 10X VisiumHD Starter Tutorial
+# 10x VisiumHD Starter Tutorial
 
 ## Input Data
 
-The input data originates from the mouse hippocampus and is extracted from an official release of mouse brain spatial gene expression (SGE) data.
+The input data originates from the mouse hippocampus and is extracted from an official release of mouse brain SGE data.
 
 **File Format**
 
@@ -42,7 +42,7 @@ train_width=18                           # define LDA training hexagon width (co
 n_factor=6,12                            # define number of factors in LDA training (comma-separated if multiple n-factor are applied)
 ```
 
-!!! info "How to Define Scaling Factors for Visium HD"
+!!! info "How to Define Scaling Factors for Visium HD?"
 
     10x Visium HD includes a `scalefactors_json.json` file that provides pixel-to-micrometer scaling information. `CartLoader` can directly accept this file via the `--scale-json` option and will automatically compute the appropriate scaling factor, omitting manually calculate and specify `--units-per-um`. 
     

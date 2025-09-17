@@ -12,7 +12,7 @@ Following format conversion, `CartLoader` provides the **`run_ficture2`** module
 
 !!! info "**The `punkst` version of `FICTURE`**"
 
-    To efficiently run FICTURE-based inference, CartLoader integrates [`punkst`](https://github.com/Yichen-Si/punkst), an optimized implementation of FICTURE that maintains output equivalence while enhancing computational scalability and performance. 
+    To efficiently run FICTURE-based inference, `CartLoader` integrates [`punkst`](https://github.com/Yichen-Si/punkst), an optimized implementation of FICTURE that maintains output equivalence while enhancing computational scalability and performance. 
     
     Currently, `run_ficture2` uses the `punkst` version of `FICTURE`.
 

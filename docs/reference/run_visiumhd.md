@@ -45,7 +45,7 @@ An end‑to‑end workflow for 10x Visium HD data using `CartLoader` to run step
 
 !!! info "Action Specifications"
     
-    `run_visiumhd` orchestrates multiple CartLoader modules; enable and combine actions with flags.
+    `run_visiumhd` orchestrates multiple `CartLoader` modules; enable and combine actions with flags.
     
     No action runs by default. Activate at least one action flag.
 

@@ -8,7 +8,7 @@
 
 ### AWS Uploads
 
-Upload the generated CartLoader outputs to your designated AWS S3 directory:
+Upload the generated `CartLoader` outputs to your designated AWS S3 directory:
 <!--section1-end-->
 
 ```bash
@@ -24,7 +24,7 @@ cartloader upload_aws \
 
 | Parameter       | Required  | Type   | Description                                                                 |
 |-----------------|-----------|--------|-----------------------------------------------------------------------------|
-| `--in-dir`      | required  | string | Path to the input directory containing the CartLoader asset packaging output    |
+| `--in-dir`      | required  | string | Path to the input directory containing the `CartLoader` asset packaging output    |
 | `--s3-dir`      | required  | string | Path to the target S3 directory for uploading                               |
 | `--aws`         |           | string | Path to the AWS CLI binary                                                  |
 | `--n-jobs`      |           | int    | Number of parallel jobs                                                     |
@@ -32,7 +32,7 @@ cartloader upload_aws \
 <!--section2-start-->
 ### Zenodo Uploads
 
-Upload the generated CartLoader outputs to your designated Zenodo deposition or a new deposition.
+Upload the generated `CartLoader` outputs to your designated Zenodo deposition or a new deposition.
 <!--section2-end-->
 
 ```bash
@@ -49,7 +49,7 @@ cartloader upload_zenodo \
 <!--section3-start-->
 | Parameter         | Required | Type        | Description                                                                                                                                                                                                         |
 |-------------------|----------|-------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `--in-dir`        | required | string      | Path to the input directory containing the CartLoader asset packaging output                                                                                                                                            |
+| `--in-dir`        | required | string      | Path to the input directory containing the `CartLoader` asset packaging output                                                                                                                                            |
 | `--upload-method` | required | string      | Method to determine which files to upload. Options: `all` to upload all files in `--in-dir`; `catalog` to upload files listed in a catalog YAML file; `user_list` to upload files explicitly listed via `--in-list` |
 | `--catalog-yaml`  |          | string      | Required if `--upload-method catalog`. Path to `catalog.yaml` generated in `run_cartload2`. If absent, uses the catalog in the input directory specified by `--in-dir`.                                             |
 | `--zenodo-token` | required | string      | Path to your Zenodo access token file                                                                                                                                                                               |
