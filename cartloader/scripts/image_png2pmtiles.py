@@ -1,6 +1,7 @@
 import sys, os, gzip, argparse, subprocess, inspect
 import pandas as pd
 import numpy as np
+import tifffile
 
 from cartloader.utils.minimake import minimake
 from cartloader.utils.utils import cmd_separator, scheck_app, create_custom_logger, add_param_to_cmd, scheck_actions, write_dict_to_file, execute_makefile
@@ -108,6 +109,7 @@ def parse_arguments(_args):
     key_params.add_argument('--georef-pixel-tsv', type=str, default=None, help='If --georeference is required, use the *.pixel.sorted.tsv.gz from run_ficture to provide georeferenced bounds.')
     key_params.add_argument('--georef-bounds-tsv', type=str, default=None, help='If --georeference is required, provide the bounds via a tsv file. This TSV should include 1 line with <ulx>,<uly>,<lrx>,<lry> ')
     key_params.add_argument('--georef-bounds', type=str, default=None, help='If --georeference is required, provide the bounds in the format of "<ulx>,<uly>,<lrx>,<lry>", which represents upper-left X, upper-left Y, lower-right X, lower-right Y.')
+    key_params.add_argument('--georef-detect', type=str, default=None, help='If --georeference is required, detect the bounds from the image metadata. Supported formats: ome')
     key_params.add_argument('--srs', type=str, default='EPSG:3857', help='For --georeference and --geotif2mbtiles, define the spatial reference system (default: EPSG:3857)')
     key_params.add_argument('--mono', action='store_true', default=False, help='Define if the input image is black-and-white and single-banded. Omit this if using --color-mode-record')
     key_params.add_argument('--rgba', action='store_true', default=False, help='RGBA, 4-banded image. Omit this if using --color-mode-record')
@@ -185,7 +187,7 @@ def image_png2pmtiles(_args):
         georef_f =f"{args.out_prefix}.georef.tif"
         cmds = cmd_separator([], f"Geo-referencing {args.in_img} to {georef_f}")
 
-        if  args.georef_bounds is not None:
+        if args.georef_bounds is not None:
             ulx,uly,lrx,lry = args.georef_bounds.split(",")
         elif args.georef_bounds_tsv is not None:
             with open(args.georef_bounds_tsv, 'r') as f:
@@ -200,7 +202,32 @@ def image_png2pmtiles(_args):
             ulx = float(ann2val["OFFSET_X"]) # Upper left X-coordinate
             uly = float(ann2val["OFFSET_Y"]) # Upper left Y-coordinate
             lrx = float(ann2val["SIZE_X"]) + 1 + ulx # Lower Right X-coordinate
-            lry = float(ann2val["SIZE_Y"]) + 1 + uly # Lower Right Y-coordinate 
+            lry = float(ann2val["SIZE_Y"]) + 1 + uly # Lower Right Y-coordinate
+        elif args.georef_detect is not None:
+            if args.georef_detect.lower() == "ome":
+                # read the image metadata using tifffile
+                with tifffile.TiffFile(args.in_img) as tif:
+                    try:
+                        #tags = {tag.name: tag.value for tag in tif.pages[0].tags.values()}
+                        meta = tifffile.xml2dict(tif.ome_metadata) ## extract metadata
+                        meta = meta['OME']['Image']['Pixels']
+                        physical_size_x = meta['PhysicalSizeX']
+                        physical_size_y = meta['PhysicalSizeY']
+                        size_x = meta['SizeX']
+                        size_y = meta['SizeY']
+                        px_size_unit = meta.get('PhysicalSizeXUnit', 'um')
+                        if px_size_unit != 'um' and px_size_unit != 'µm':
+                            raise ValueError(f"Physical size unit is not in um: {px_size_unit}")
+                        offset_um_x = meta.get('OffsetX', 0)
+                        offset_um_y = meta.get('OffsetY', 0)
+                        ulx = offset_um_x
+                        uly = offset_um_y
+                        lrx = offset_um_x + physical_size_x * size_x
+                        lry = offset_um_y + physical_size_y * size_y
+                    except Exception as e:
+                        raise ValueError(f"Error in parsing OME-TIFF metadata: {e}")    
+            else:
+                raise ValueError(f"Unsupported format for --georef-detect: {args.georef_detect}. Currently, only 'OME' is supported.") 
         else:
             raise ValueError("Please provide bounds to georeference the image by --georef-bounds, --georef-bounds-tsv, --georef-pixel-tsv.")
 
@@ -274,7 +301,7 @@ def image_png2pmtiles(_args):
 
         cmds = cmd_separator([], f"Resampling mbtiles and converting to pmtiles: {mbtile_f}")
         cmds.append(f"cp {mbtile_f} {mbtile_f_ann}")
-        cmds.append(f"'{args.gdaladdo}' {mbtile_f_ann} -r {args.resample} 2 4 8 16 32 64 128 256") # Build internal overviews. 
+        cmds.append(f"'{args.gdaladdo}' {mbtile_f_ann} -r {args.resample} 2 4 8 16 32 64 128 256 512 1024 2048 4096") # Build internal overviews. 
         cmds.append(f"'{args.pmtiles}' convert --force {mbtile_f_ann} {pmtiles_f}")
         cmds.append(f" [ -f {pmtiles_f} ] && rm {mbtile_f_ann}") # clean temp files
         mm.add_target(pmtiles_f, [mbtile_flag], cmds)
