@@ -243,8 +243,3 @@ See more details of output at the Reference pages for [run_cartload2](../..//ref
 - Factor PMTiles (examples): `<out-dir>/cartload2/t18_f24_p18_a6-results.pmtiles`, `<out-dir>/cartload2/t18_f24_p18_a6-pixel-raster.pmtiles`
 
 individual PMTiles and asset JSON files reside alongside it under `<out-dir>/cartload2/`.
-
-
-!!! warning 
-    Output assets will be provided.
-

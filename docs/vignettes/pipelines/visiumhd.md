@@ -218,7 +218,6 @@ Below is an example of spatial factor inference results from `FICTURE` using a t
 
 {{ read_csv('../../tabs/visiumhd_3prime_mouse_brain.t18_f24_p18_a6.factor.info.tsv',sep = '\t') }}
 
-
 ### SGE/FICTURE/Cell/Images assets
 
 See more details of output at the Reference pages for [run_cartload2](../..//reference/run_cartload2.md), [import_xenium_cell](../..//reference/import_cell.md), and [import_image](../../reference/import_image.md).
@@ -228,4 +227,3 @@ Individual PMTiles and asset JSON files reside alongside it under `<out-dir>/car
 - SGE PMTiles (examples): `<out-dir>/cartload2/sge-mono-dark.pmtiles`, `<out-dir>/cartload2/sge-mono-light.pmtiles`
 - Factor PMTiles (examples): `<out-dir>/cartload2/t18_f24_p18_a6-results.pmtiles`, `<out-dir>/cartload2/t18_f24_p18_a6-pixel-raster.pmtiles`
 - Cells and Boundaries PMTiles: `<out-dir>/cartload2/spaceranger-cells.pmtiles`, `<out-dir>/cartload2/spaceranger-boundaries.pmtiles`
-
