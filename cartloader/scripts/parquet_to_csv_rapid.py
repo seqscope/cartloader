@@ -15,7 +15,7 @@ def parquet_to_csv_rapid(_args):
     aux_params.add_argument('--threads', type=int, default=24, help='Number of threads for pigz. Default: 24')
     aux_params.add_argument('--pigz', type=str, default="pigz", help='Path to pigz binary. Default: pigz')
     aux_params.add_argument('--batch-size', type=int, default=131072, help='Batch size for processing. Default: 131072')
-    aux_params.add_argument('--compression-level', type=int, default=6, help='Compression level for pigz. Default: 6')
+    aux_params.add_argument('--compress-level', type=int, default=6, help='Compression level for pigz. Default: 6')
 
     args = parser.parse_args(_args)
 
@@ -23,7 +23,7 @@ def parquet_to_csv_rapid(_args):
         parquet_file=args.in_parquet,
         out_path=args.out_csv_gz,
         batch_size=args.batch_size,
-        compression_level=args.compression_level,
+        compress_level=args.compression_level,
         pigz_path=args.pigz,
         pigz_threads=args.threads
     )
