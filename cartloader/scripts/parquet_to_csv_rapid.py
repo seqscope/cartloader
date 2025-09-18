@@ -23,7 +23,7 @@ def parquet_to_csv_rapid(_args):
         parquet_file=args.in_parquet,
         out_path=args.out_csv_gz,
         batch_size=args.batch_size,
-        compress_level=args.compression_level,
+        compress_level=args.compress_level,
         pigz_path=args.pigz,
         pigz_threads=args.threads
     )
