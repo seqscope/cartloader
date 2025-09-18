@@ -115,7 +115,7 @@ def parse_arguments(_args):
     key_params.add_argument('--rgba', action='store_true', default=False, help='RGBA, 4-banded image. Omit this if using --color-mode-record')
     key_params.add_argument('--color-mode-record', type=str, default=None, help='This argument is specifically designed to be used in "cartloader import_image"')
     key_params.add_argument('--resample', type=str, default='cubic', help='Resampling method (default: cubic). Options: near, bilinear, cubic, etc.')
-    key_params.add_argument('--blocksize', type=int, default='512', help='Blocksize when creating mbtiles (default: 512)')
+    key_params.add_argument('--blocksize', type=int, default=512, help='Blocksize when creating mbtiles (default: 512)')
     #key_params.add_argument('--remove-intermediate-files', action='store_true', default=False, help='If set, remove intermediate files (e.g., .mbtiles) after generating the final output.')
     
     env_params = parser.add_argument_group("Env Parameters", "Environment parameters, e.g., tools.")

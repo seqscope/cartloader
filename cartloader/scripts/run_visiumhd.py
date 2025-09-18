@@ -5,9 +5,9 @@ import hashlib
 
 from cartloader.utils.minimake import minimake
 from cartloader.utils.utils import add_param_to_cmd, cmd_separator, run_command_w_preq, load_file_to_dict, assert_unique
-from cartloader.utils.pipeline_helper import validate_general_args, validate_imageid_args, validate_imagecol_args, stage_run_ficture2, stage_run_cartload2, stage_upload_aws, stage_upload_zenodo, stage_import_images
+from cartloader.utils.pipeline_helper import resolve_image_plan, validate_general_args, validate_imageid_args, validate_imagecol_args, validate_imageloc_args, stage_run_ficture2, stage_run_cartload2, stage_upload_aws, stage_upload_zenodo, stage_import_images
 
-manual_str="--mex-transcript, --json-scale, --parquet-position, --geojson-cells, --mtx-cells, --csv-*, --btf-tifs"
+manual_str="--mex-transcript, --json-scale, --parquet-position, --geojson-cells, --mtx-cells, --csv-*, --tifs"
 
 def parse_arguments(_args):
     """
@@ -73,10 +73,8 @@ def parse_arguments(_args):
 
     # Parameters for --import-images
     images_params = parser.add_argument_group("Parameters for --import-images", "Two input modes: 1) use --image-ids select images; 2) use --all-images to deploy all images from --space-ranger-assets")
-    images_params.add_argument('--image-ids', type=str, default=["DAPI_OME", "BOUNDARY_OME", "INTERIOR_RNA_OME", "INTERIOR_PROTEIN_OME", "DAPI_MIP_OME"], nargs="+", help='One or more image IDs to import (default: "DAPI_OME", "BOUNDARY_OME", "INTERIOR_RNA_OME", "INTERIOR_PROTEIN_OME", "DAPI_MIP_OME").')
-    images_params.add_argument('--image-colors', type=str, nargs='*', default=[], help='List of 6-digits HEX RGB codes (e.g., #1f77b4 or 1f77b4). Order matches --image-ids. Defaults cover up to 10 images; provide more if needed.')
+    images_params.add_argument('--image-ids', type=str, default=["HnE_BTF"], nargs="+", help='One or more image IDs to import (default: ["HnE_BTF"])')
     images_params.add_argument('--all-images', action='store_true', help='Enable to deploy all images from --space-ranger-assets regardless --image-ids')
-    images_params.add_argument("--transparent-below", type=int, default=1, help='Set pixels below this value to transparent (range: 0~255; default: 1)')
 
     # Parameters for --upload-aws or --upload-zenodo
     upload_params = parser.add_argument_group("Parameters for --upload-aws and --upload-zenodo")
@@ -94,7 +92,7 @@ def parse_arguments(_args):
     aux_inout_params.add_argument('--mtx-cells', type=str, default=None, help='Location of the cell feature matrix in MTX format under --space-ranger-dir (used with --import-cells)')
     aux_inout_params.add_argument('--csv-clust', type=str, default=None, help='Location of the CSV file containing cell cluster assignments under --space-ranger-dir (used with --import-cells)') 
     aux_inout_params.add_argument('--csv-diffexp', type=str, default=None, help='Location of the CSV file with differential expression results under --space-ranger-dir (used with --import-cells)') 
-    aux_inout_params.add_argument('--btf-tifs', type=str, nargs="+", default=[], help="List of locations of one or more input BTF TIFF(s) under --space-ranger-dir. The order must match the order of the image IDs in --image-ids (used with --import-images)")
+    aux_inout_params.add_argument('--tifs', type=str, nargs="+", default=[], help="List of locations of one or more input BTF TIFF(s) under --space-ranger-dir. The order must match the order of the image IDs in --image-ids (used with --import-images)")
 
     # Default settings: tools will use the PATH: sort, gzip, python3
     env_params = parser.add_argument_group("Env Parameters", "Environment parameters, e.g., tools.")
@@ -123,7 +121,7 @@ def parse_arguments(_args):
         args.space_ranger_assets = os.path.join(args.out_dir, "space_ranger_assets.json")
 
     # * Manual inputs vs asset JSON are mutually exclusive when --load-space-ranger
-    manual_mode = any([ args.mex_transcript, args.json_scale, args.geojson_cells, args.mtx_cells, args.csv_clust, args.csv_diffexp] + (args.btf_tifs or []))
+    manual_mode = any([ args.mex_transcript, args.json_scale, args.geojson_cells, args.mtx_cells, args.csv_clust, args.csv_diffexp] + (args.tifs or []))
     
     if manual_mode:
         if args.load_space_ranger:
@@ -162,7 +160,7 @@ def run_visiumhd(_args):
         os.makedirs(cart_dir, exist_ok=True)
     
     # use json or not
-    manual_inputs = [ args.mex_transcript, args.json_scale, args.geojson_cells, args.mtx_cells, args.csv_clust, args.csv_diffexp] + (args.btf_tifs or [])
+    manual_inputs = [ args.mex_transcript, args.json_scale, args.geojson_cells, args.mtx_cells, args.csv_clust, args.csv_diffexp] + (args.tifs or [])
     use_json = not any(x is not None for x in manual_inputs)
 
     # Common paths
@@ -221,13 +219,13 @@ def run_visiumhd(_args):
             if not args.json_scale and not args.units_per_um:
                 raise ValueError(
                         "Cannot find scale factor. Specify it using one of the following options:\n"
-                        "  1) Enable automatic detection with --load-space-ranger\n"
-                        "  2) Specify the file path with --json-scale\n"
+                        "  1) Enable automatic detection with --load-space-ranger, which will detect scale JSON file\n"
+                        "  2) Specify path to the scale JSON file with --json-scale\n"
                         "  3) Provide the scale factor directly with --units-per-um"
                     )
 
             prereq=[]
-            for key, value in sge_convert_input:
+            for key, value in sge_convert_input.items():
                 assert value, f"{key} is required when using manual inputs for --sge-convert"
                 file_path=os.path.join(ranger_dir, value)
                 assert os.path.exists(file_path), f"File not found: {file_path} ({key})"
@@ -302,32 +300,35 @@ def run_visiumhd(_args):
             run_command_w_preq(import_cell_cmd, prerequisites=[], dry_run=args.dry_run, flush=True)
     
     if args.import_images:  ## TBC: currently supports only OME-TIFFs
-        print("NOTE: --import-images is not yet supported; skip this step for now.", flush=True)
-        # print("="*10, flush=True)
-        # print("Executing --import-images (execute via make)", flush=True)
-        # print("="*10, flush=True)
+        print("="*10, flush=True)
+        print("Executing --import-images (execute via make)", flush=True)
+        print("="*10, flush=True)
 
-        # args.image_ids = validate_imageid_args(args, ranger_assets)
-        # args.image_colors = validate_imagecol_args(args)
+        image_ids = validate_imageid_args(args.image_ids, ranger_assets, all_images=args.all_images, dry_run=args.dry_run)
+        image_colors = []
         
-        # # (visiumhd-specific) btf when not use_json
-        # tif_paths=[]
-        # if not use_json:
-        #     assert args.btf_tifs, "--btf-tifs is required when --import-images is set with manual input mode. Otherwise, set --load-space-ranger to automatically detect the images."
-        #     assert_unique(args.btf_tifs, "--btf-tifs")
-        #     # length
-        #     if len(args.btf_tifs) < len(args.image_ids):
-        #         raise ValueError(f"--btf-tifs ({len(args.btf_tifs)}) must be >= --image-ids ({len(args.image_ids)}); ensure paths align in order")
-        #     # all items in BTF TIFFs should exist:
-        #     for tif_loc in args.btf_tifs:
-        #         tif_path = os.path.join(ranger_dir, tif_loc)
-        #         assert os.path.exists(tif_path), f"File not found: {tif_path} (provided by --space-ranger-dir and --btf-tifs)"
-        #         tif_paths.append(tif_path)
+        # (visiumhd-specific) tifs when not use_json
+        if not use_json:
+            if len(args.tifs) < len(image_ids):
+                raise ValueError(f"--tifs ({len(args.tifs)}) must be >= --image-ids ({len(image_ids)}); ensure paths align in order")
+            tif_paths = validate_imageloc_args(ranger_dir, tifs_loc=args.tifs, 
+                            loc_label="--tifs", ranger_dir_label="--space-ranger-dir")
+        else:
+            tif_paths=[]
 
-        # stage_import_images(cart_dir, args, ranger_assets, use_json, tif_paths, catalog_yaml)
+        # image plan (id/color/use_json/img_path/ranger_assets/prereq)
+        image_plans = resolve_image_plan(image_ids, image_colors, use_json, ranger_assets,  tif_paths)
+        
+        # cmd and execution
+        stage_import_images(cart_dir, args, image_plans, 
+                            ome2png=False, 
+                            transparent_below=None,
+                            georef_detect="OME",
+                            update_catalog=True if (not args.run_cartload2 and os.path.exists(catalog_yaml)) else False
+                            )
 
-        # background_assets  = [ os.path.join(cart_dir, f"{image_id}_assets.json") for image_id in args.image_ids]
-        # background_pmtiles = [ os.path.join(cart_dir, f"{image_id}.pmtiles")     for image_id in args.image_ids]
+        background_assets  = [ os.path.join(cart_dir, f"{image_id}_assets.json") for image_id in image_ids]
+        background_pmtiles = [ os.path.join(cart_dir, f"{image_id}.pmtiles")     for image_id in image_ids]
 
     if args.run_cartload2:   
         # prerequisites

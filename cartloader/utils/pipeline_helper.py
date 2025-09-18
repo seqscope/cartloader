@@ -56,13 +56,13 @@ def validate_general_args(parser, args):
 #   images
 #  =============
 
-def validate_imageid_args(args, ranger_assets):
+def validate_imageid_args(image_ids, ranger_assets, all_images=False, dry_run=True):
     # Determine image IDs when use --use-json and --all-images
-    if args.all_images:
+    if all_images:
         print(" * --all-images are enabled", flush=True)
-        if args.dry_run:
+        if dry_run:
             print(" * Dry run: skip image detection; using default values --image-ids ", flush=True)
-            assert args.image_ids, ("In dry-run mode with --all-images, please pass --image-ids explicitly.")
+            assert image_ids, ("In dry-run mode with --all-images, please pass --image-ids explicitly.")
         else:
             print(f"* Detecting all existing images from {ranger_assets}")
             data = load_file_to_dict(ranger_assets)
@@ -70,20 +70,20 @@ def validate_imageid_args(args, ranger_assets):
             if images_data is None:
                 raise ValueError("The IMAGES section is missing in the input assets JSON; rerun detect step or provide --image-ids explicitly")
             images_data = {k: v for k, v in images_data.items() if v is not None}
-            args.image_ids = list(images_data.keys())
+            image_ids = list(images_data.keys())
     else:
-        assert args.image_ids, "--image-ids is required when --import-images"
+        assert image_ids, "--image-ids is required when --import-images"
 
     # image_ids
-    assert_unique(args.image_ids, "--image-ids")
-    image_ids = list(args.image_ids)
-    print(f"    - image IDs (N={len(image_ids)}): {image_ids}")
-    return image_ids
+    assert_unique(image_ids, "--image-ids")
+    image_ids_out = list(image_ids)
+    print(f"    - image IDs (N={len(image_ids_out)}): {image_ids_out}")
+    return image_ids_out
 
-def validate_imagecol_args(args):
+def validate_imagecol_args(image_ids, image_colors):
     # Colors
-    if args.image_colors:
-        assert_unique(args.image_colors, "--image-colors", normalize=lambda c: str(c).lstrip('#').lower())
+    if image_colors:
+        assert_unique(image_colors, "--image-colors", normalize=lambda c: str(c).lstrip('#').lower())
     else:
         default_colors = [        ## A list of colors that work both for dark and light backgrounds
             "#1f77b4",  # Blue
@@ -97,63 +97,79 @@ def validate_imagecol_args(args):
             "#bcbd22",  # Olive
             "#17becf",  # Cyan
         ]
-        args.image_colors = default_colors[:len(args.image_ids)]
-    assert len(args.image_ids) <= len(args.image_colors), "Please specify image colors more or equal to the number of color image IDs"
-    print(f"    - image colors (N={len(args.image_colors)}): {args.image_colors}")
-    image_colors = list(args.image_colors)
-    return image_colors
+        image_colors = default_colors[:len(image_ids)]
+    assert len(image_ids) <= len(image_colors), "Please specify image colors more or equal to the number of color image IDs"
+    print(f"    - image colors (N={len(image_colors)}): {image_colors}")
+    image_colors_out = list(image_colors)
+    return image_colors_out
 
-def resolve_image_plan(args, ranger_assets, use_json, img_paths):
+def validate_imageloc_args(ranger_dir, tifs_loc, loc_label, ranger_dir_label):
+    tif_paths = []
+    assert tifs_loc, f"{loc_label} is required when --import-images is set with manual input mode. Otherwise, enable auto-detection mode."
+    assert_unique(tifs_loc, loc_label)
+    # all items, should exist:
+    for tif_loc in tifs_loc:
+        tif_path = os.path.join(ranger_dir, tif_loc)
+        assert os.path.exists(tif_path), f"File not found: {tif_path} (provided by {ranger_dir_label} and {loc_label})"
+        tif_paths.append(tif_path)
+    return tif_paths
+
+
+def resolve_image_plan(image_ids, image_colors, use_json, ranger_assets, img_paths):
     """
     Build an image import plan with IDs, colors, inputs, and per-image prerequisites.
     Returns (plan)
-    plan: list of dicts with keys {id, color, ome_path, prereq}
+    plan: list of dicts with keys {id, color, img_path, prereq}
     """
     # Build plan
     plan = []
-    for i, iid in enumerate(args.image_ids):
+    for i, iid in enumerate(image_ids):
         if not use_json:
             img_path = img_paths[i]
         plan.append({
                 'id': iid,
-                'color': args.image_colors[i].replace('#',''),
-                'ome_path': None if use_json else img_path,
-                'prereq': [ranger_assets] if use_json else [img_path],
+                'color': image_colors[i].replace('#','') if len(image_colors) > 0 else None,
+                'use_json': use_json,
+                'img_path': None if use_json else img_path,
+                'ranger_assets': ranger_assets if use_json else None,
+                'prereq': [ranger_assets] if use_json else [img_path]
             })
     return plan
 
-def stage_import_images(cart_dir, args, ranger_assets, use_json, tif_paths, catalog_yaml):
-    plan = resolve_image_plan(args, ranger_assets, use_json, tif_paths)
+def stage_import_images(cart_dir, args, image_plans, ome2png=False, transparent_below=None, georef_detect=None, update_catalog=False):
 
-    for spec in plan:
+    for spec in image_plans:
         image_id = spec['id']
         image_color = spec['color']
-        prereq = spec['prereq']
-        ome_path = spec['ome_path']
+
+        use_json = spec['use_json']
 
         print(f" * Image ID: {image_id}", flush=True)
         print(f" * Image color: {image_color}", flush=True)
 
         import_image_cmd = " ".join([
             "cartloader", "import_image",
-            "--ome2png",
-            "--png2pmtiles",
-            f"--update-catalog" if not args.run_cartload2 and os.path.exists(catalog_yaml) else "",
-            f"--in-json {ranger_assets}" if use_json else "",
-            f"--in-img {ome_path}" if not use_json else "",
+            f"--in-json {spec.get('ranger_assets', None)}" if use_json else "",
+            f"--in-img {spec.get('img_path', None)}" if not use_json else "",
             f"--out-dir {cart_dir}",
             f"--img-id {image_id}",
-            f"--colorize \"{image_color}\"",
-            f"--upper-thres-quantile 0.95",
-            f"--lower-thres-quantile 0.5",
-            f"--transparent-below {args.transparent_below}" if args.transparent_below is not None else "",
+            # ome2png
+            "--ome2png" if ome2png else "",
+            f"--colorize \"{image_color}\"" if ome2png and image_color else "",
+            f"--upper-thres-quantile 0.95" if ome2png else "",
+            f"--lower-thres-quantile 0.5" if ome2png else "",
+            f"--transparent-below {transparent_below}" if ome2png and transparent_below is not None else "",
+            # png2pmtiles
+            "--png2pmtiles",
+            "--georeference --georef-detect {georef_detect}" if georef_detect else "",
+            # update catalog
+            f"--update-catalog" if update_catalog else "",
             f"--gdal_translate {args.gdal_translate}" if args.gdal_translate else "",
         ])
         import_image_cmd = add_param_to_cmd(import_image_cmd, args, ["pmtiles", "gdaladdo"])
         import_image_cmd = add_param_to_cmd(import_image_cmd, args, ["restart","n_jobs"])
 
-        run_command_w_preq(import_image_cmd, prerequisites=prereq, dry_run=args.dry_run, flush=True)
-
+        run_command_w_preq(import_image_cmd, prerequisites=spec.get('prereq', []), dry_run=args.dry_run, flush=True)
 
 #  =============
 #   ficture

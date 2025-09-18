@@ -95,11 +95,9 @@ ___
 
 **Data Access**
 
-The example dataset comes from the 10x Genomics Data Portal.
+Downloaded the ST data from [10x Genomics Dataset portal](https://www.10xgenomics.com/datasets/visium-hd-three-prime-mouse-brain-fresh-frozen).
 
-TODO: add code snippet to download the data.
 ___
-
 
 ## Set Up the Environment
 
@@ -159,7 +157,7 @@ cartloader run_visiumhd \
 **Action Flags to Enable Modules**
 
 !!! warning "Actions"
-    `run_visiumhd` runs multiple `CartLoader` modules; enable and combine actions with flags.
+    `run_visiumhd` runs multiple `CartLoader` modules together; enable and combine actions with flags.
 
 | `CartLoader` Modules                    | Flags in `run_visiumhd` | Actions                                                                       | Prerequisites                                                                 |
 |-----------------------------------------|-------------------------|-------------------------------------------------------------------------------|-------------------------------------------------------------------------------|
@@ -167,7 +165,7 @@ cartloader run_visiumhd \
 | [`sge_convert`](./sge_convert.md)       | `--sge-convert`         | Convert SGE to `CartLoader` format; optional density filter and visuals         | Space Ranger assets JSON (from `load_space_ranger`) or transcript CSV/Parquet |
 | [`run_ficture2`](./run_ficture2.md)     | `--run-ficture2`        | FICTURE analysis                                                              | SGE (from `sge_convert`); FICTURE parameters (`--width`, `--n-factor`)        |
 | [`import_space_cell`](./import_cell.md) | `--import-cells`        | Import cell points, boundaries, cluster, de;                                  | Space Ranger assets JSON or manual CSVs; also `--cell-id`                     |
-| [`import_image`](./import_image.md)     | `--import-images`       | Import background images (BTF-TIFF) → PNG/PMTiles;                            | Space Ranger assets JSON or `--btf-tifs`; also `--image-ids`/`--all-images`   |
+| [`import_image`](./import_image.md)     | `--import-images`       | Import background images (BTF-TIFF) → PNG/PMTiles;                            | Space Ranger assets JSON or `--tifs`; also `--image-ids`/`--all-images`   |
 | [`run_cartload2`](./run_cartload2.md)   | `--run-cartload2`       | Package SGE, optional FICTURE/cells/images into PMTiles; write `catalog.yaml` | SGE, optional FICTURE assets or any imported cell/image assets; `--id`        |
 | [`upload_aws`](./upload_aws.md)         | `--upload-aws`          | Upload catalog and PMTiles to S3                                              | `catalog.yaml` (from `run_cartload2`); `--s3-bucket`, `--id`                  |
 | [`upload_zenodo`](./upload_zenodo.md)   | `--upload-zenodo`       | Upload catalog and PMTiles to Zenodo                                          | `catalog.yaml` (from `run_cartload2`); `--zenodo-token`                       |
@@ -198,7 +196,7 @@ Below are explanations of the parameters used in the example. For the full list,
 | `--filter-by-density`              | optional with `--sge-convert`              | Enable density‑based transcript filtering.                                            |
 | `--exclude-feature-regex`          | optional with `--sge-convert`              | Regex to exclude features (e.g., controls).                                           |
 | `--csv-clust`, `--csv-diffexp`     | `--import-cells` (manual)                  | Paths to clusters/DE CSVs (relative to `--space-ranger-dir`).                         |
-| `--btf-tifs`                       | `--import-images` (manual)                 | One or more BTF/TIFF paths (relative to `--space-ranger-dir`).                        |
+| `--tifs`                       | `--import-images` (manual)                 | One or more BTF/TIFF paths (relative to `--space-ranger-dir`).                        |
 | `--title`, `--desc`                | optional with `--run-cartload2`            | Human‑readable catalog title/description.                                             | 
 | `--zenodo-token`                   | `--upload-zenodo`                          | Path to file containing Zenodo access token.                                          |-->
 
@@ -223,4 +221,11 @@ Below is an example of spatial factor inference results from `FICTURE` using a t
 
 ### SGE/FICTURE/Cell/Images assets
 
-TO-DO: path to those assets will be provided to serve the output
+See more details of output at the Reference pages for [run_cartload2](../..//reference/run_cartload2.md), [import_xenium_cell](../..//reference/import_cell.md), and [import_image](../../reference/import_image.md).
+
+Individual PMTiles and asset JSON files reside alongside it under `<out-dir>/cartload2/`.
+- Catalog to serve: `<out-dir>/cartload2/catalog.yaml`
+- SGE PMTiles (examples): `<out-dir>/cartload2/sge-mono-dark.pmtiles`, `<out-dir>/cartload2/sge-mono-light.pmtiles`
+- Factor PMTiles (examples): `<out-dir>/cartload2/t18_f24_p18_a6-results.pmtiles`, `<out-dir>/cartload2/t18_f24_p18_a6-pixel-raster.pmtiles`
+- Cells and Boundaries PMTiles: `<out-dir>/cartload2/spaceranger-cells.pmtiles`, `<out-dir>/cartload2/spaceranger-boundaries.pmtiles`
+

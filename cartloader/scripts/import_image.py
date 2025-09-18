@@ -15,7 +15,7 @@ def parse_arguments(_args):
     """
     parser = argparse.ArgumentParser(
         prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}",
-        description="Import an image (OME-TIFF/TIFF/PNG) and produce PMTiles; optional georeferencing/orientation and catalog update"
+        description="Import an image (OME-TIFF/TIFF/PNG) and produce PMTiles; optional georeferencing/orientation and catalog update. To apply a single action, please use the module directly (e.g., cartloader image_ome2png).",
     )
 
     run_params = parser.add_argument_group("Run Options", "Execution controls for generating and running the Makefile")
@@ -27,7 +27,7 @@ def parse_arguments(_args):
     cmd_params = parser.add_argument_group("Commands", "Actions to apply (order: ome2png → georeference/orientation → png2pmtiles)")
     cmd_params.add_argument('--ome2png', action='store_true', default=False, help='Convert OME-TIFF to PNG (e.g., Vizgen/Xenium). Also enables --georeference using bounds read from the OME-TIFF')
     cmd_params.add_argument('--png2pmtiles', action='store_true', default=False, help='Generate PMTiles from a PNG (and intermediate GeoTIFF)')
-    cmd_params.add_argument('--georeference', action='store_true', default=False, help='Georeference the image via bounds; required unless bounds come from --ome2png; provide bounds with --georef-*')
+    cmd_params.add_argument('--georeference', action='store_true', default=False, help='Georeference the image via bounds; require to provide bounds with --georef-*, unless bounds come from --ome2png; ')
     cmd_params.add_argument('--rotate', type=str, default=None, choices=["90", "180", "270"],  help='Rotate clockwise by 90/180/270 degrees (applied before flips)')
     cmd_params.add_argument('--flip-vertical', action='store_true', default=False, help='Flip vertically (around X axis); applied after rotation')
     cmd_params.add_argument('--flip-horizontal', action='store_true', default=False, help='Flip horizontally (around Y axis); applied after rotation')
@@ -67,18 +67,24 @@ def parse_arguments(_args):
     aux_params2.add_argument('--mono', action='store_true', default=False, help='Input is single-band (mono) PNG. Skip it if --ome2png is enabled.')
     aux_params2.add_argument('--rgba', action='store_true', default=False, help='Input is 4-band RGBA PNG. Skip it if --ome2png is enabled')
     aux_params2.add_argument('--resample', type=str, default='cubic', help='Resampling method: near, bilinear, cubic, etc (default: cubic)')
-    aux_params2.add_argument('--blocksize', type=int, default='512', help='Block size in pixels for GDAL operations (default: 512)')
+    aux_params2.add_argument('--blocksize', type=int, default=512, help='Block size in pixels for GDAL operations (default: 512)')
 
     aux_params3 = parser.add_argument_group("Auxiliary parameters for --georeference", "Pick one of the following three ways to provide georeferencing bounds")
     aux_params3.add_argument('--georef-pixel-tsv', type=str, default=None, help='Bounds source: *.pixel.sorted.tsv.gz from run_ficture2. Skip it if --ome2png is enabled')
     aux_params3.add_argument('--georef-bounds-tsv', type=str, default=None, help='Bounds source TSV with one line: <ulx>,<uly>,<lrx>,<lry>. Skip it if --ome2png is enabled')
     aux_params3.add_argument('--georef-bounds', type=str, default=None, help='Bounds string: "<ulx>,<uly>,<lrx>,<lry>". Skip it if --ome2png is enabled')
+    aux_params2.add_argument('--georef-detect', type=str, default=None, help="Used the detect bounds from image metadata (e.g., 'OME'). Extracted bounds will automatically be applied to png2pmtiles")
 
     if len(_args) == 0:
         parser.print_help()
         sys.exit(1)
+    args = parser.parse_args(_args)
 
-    return parser.parse_args(_args)
+    # sanity check
+    # assert args.img_id, f"Provide an ID for the image using --img-id" # already required
+    scheck_actions(args, ["--ome2png", "--png2pmtiles", "--georeference", "--rotate", "--flip-vertical", "--flip-horizontal"], context="actions")
+
+    return args 
 
 aux_image_arg={
     "ome2png": ["page", "level", "series", "upper_thres_quantile", "upper_thres_intensity", "lower_thres_quantile", "lower_thres_intensity", "transparent_below", "colorize", "high_memory"],
@@ -115,23 +121,19 @@ aux_image_arg={
 def import_image(_args):
     args=parse_arguments(_args)
 
-    # actions
-    scheck_actions(args, ["--ome2png", "--png2pmtiles", "--georeference", "--rotate", "--flip-vertical", "--flip-horizontal"], context="actions")
-
     # output dir
     os.makedirs(args.out_dir, exist_ok=True)
     img_prefix =  os.path.join(args.out_dir, args.img_id)
 
     # input files
     # read in_json if provided
-    assert args.img_id, f"Provide an ID for the image using --img-id"
     if args.in_json is not None:
         assert os.path.exists(args.in_json), f"File not found: {args.in_json} (--in-json)"
         xenium_ranger_data=load_file_to_dict(args.in_json)
         # only keep the key:value pairs that have a key in ["DAPI", "BOUNDARY_IMG", "INTERIOR_RNA_IMG", "INTERIOR_PROTEIN_IMG", "DAPI_3D", "DAPI_MIP"]
-        args.in_img = xenium_ranger_data[args.img_id]
+        args.in_img = xenium_ranger_data.get(args.img_id, None)
 
-    assert args.in_img is not None and os.path.exists(args.in_img), "Please provide a valid input figure file using --in-img"
+    assert args.in_img is not None and os.path.exists(args.in_img), "Please provide a valid input figure file using --in-img or --in-json with --img-id"
     
     # start mm
     mm = minimake()
@@ -142,6 +144,7 @@ def import_image(_args):
         
     # 1. Transform the figure
     if args.ome2png:
+        prereq = [args.in_img]
         transform_prefix = f"{img_prefix}.transform"
         transform_bounds_tsv = f"{transform_prefix}.bounds.csv"   
         transform_f = f"{transform_prefix}.png"
@@ -163,7 +166,7 @@ def import_image(_args):
         cmds.append(cmd)
         # >1 output: transform_f, transform_prefix.bounds 
         cmds.append(f"[ -f {transform_f} ] && [ -f {transform_bounds_tsv} ] && touch {transform_prefix}.done")
-        mm.add_target(f"{transform_prefix}.done", [args.in_img], cmds)
+        mm.add_target(f"{transform_prefix}.done", prereq, cmds)
         
         # update for georeference and bounds
         args.georeference = True
@@ -182,12 +185,53 @@ def import_image(_args):
         color_mode=None
 
     # 2. Use image png2pmtiles
-    pmtiles_f = os.path.join(args.out_dir, f"{args.img_id}.pmtiles")
-    if args.png2pmtiles:
-        if args.ome2png:
-            prereq = [f"{transform_prefix}.done"]
+    # 2A Only reorient the image without convert to pmtiles
+    if args.png2pmtiles and (args.georeference or args.flip_vertical or args.flip_horizontal or args.rotate is not None):
+        
+        prereq = [f"{transform_prefix}.done"] if args.ome2png else [flat_img]
+        
+        # define actions
+        png2pmtiles_actions=[]
+        if args.georeference:
+            png2pmtiles_actions.append("georeferencing")
+        if args.flip_vertical or args.flip_horizontal or args.rotate is not None:
+            png2pmtiles_actions.append("orientation")
+
+        # define the output from the last step
+        if "georeferencing" in png2pmtiles_actions and "orientation" not in png2pmtiles_actions:
+            cond_out =f"{img_prefix}.georef.tif"
         else:
-            prereq = [flat_img]
+            ort_suffix=get_orientation_suffix(args.rotate, args.flip_vertical, args.flip_horizontal)
+            cond_out = f"{img_prefix}.{ort_suffix}.tif"
+        
+        # run the step
+        cmds = cmd_separator([], f"Processing PNG ({flat_img}): {',' .join(png2pmtiles_actions)}")
+        cmd = " ".join([
+            "cartloader image_png2pmtiles",
+            "--georeference" if args.georeference else "",
+            f"--rotate {args.rotate}" if args.rotate else "",
+            "--flip-vertical" if args.flip_vertical else "",
+            "--flip-horizontal" if args.flip_horizontal else "", 
+            f"--in-img {flat_img}",
+            f"--out-prefix {img_prefix}",
+            f"--color-mode-record {color_mode}" if color_mode else "",
+            f"--mono {args.mono}" if args.mono and not color_mode else "",
+            f"--rgba {args.rgba}" if args.rgba and not color_mode else "",
+            f"--georef-detect {args.georef_detect}" if args.georef_detect else "",
+            f"--gdal_translate {args.gdal_translate}" if args.gdal_translate else "",
+        ])
+        cmd = add_param_to_cmd(cmd, args, list(set(aux_image_arg["orientate"] + aux_image_arg["georeference"])))
+        cmd = add_param_to_cmd(cmd, args, ["restart", "n_jobs"])
+        cmds.append(cmd)
+        mm.add_target(cond_out, [flat_img], cmds)
+    
+    # 2B Convert to pmtiles
+    if args.png2pmtiles:
+
+        prereq = [f"{transform_prefix}.done"] if args.ome2png else [flat_img]
+
+        pmtiles_f = os.path.join(args.out_dir, f"{args.img_id}.pmtiles")
+
         cmds = cmd_separator([], f"Converting PNG ({flat_img}) to PMTiles ({pmtiles_f})")
         cmd = " ".join([
             "cartloader image_png2pmtiles",
@@ -206,47 +250,17 @@ def import_image(_args):
             f"--color-mode-record {color_mode}" if color_mode else "",
             f"--mono {args.mono}" if args.mono and not color_mode else "",
             f"--rgba {args.rgba}" if args.rgba and not color_mode else "",
+            f"--georef-detect {args.georef_detect}" if args.georef_detect else "",
             f"--gdal_translate {args.gdal_translate}" if args.gdal_translate else "",
         ])
         cmd = add_param_to_cmd(cmd, args, list(set(aux_image_arg["png2pmtiles"] + aux_image_arg["georeference"])))
         cmd = add_param_to_cmd(cmd, args, ["restart", "n_jobs"])
         cmds.append(cmd)
         mm.add_target(pmtiles_f, prereq, cmds)
-    elif args.georeference or args.flip_vertical or args.flip_horizontal or args.rotate is not None:
-        # define actions
-        png2pmtiles_actions=[]
-        if args.georeference:
-            png2pmtiles_actions.append("georeferencing")
-        if args.flip_vertical or args.flip_horizontal or args.rotate is not None:
-            png2pmtiles_actions.append("orientation")
 
-        # define the output from the last step
-        if "georeferencing" in png2pmtiles_actions and "orientation" not in png2pmtiles_actions:
-            cond_out =f"{img_prefix}.georef.tif"
-        else:
-            ort_suffix=get_orientation_suffix(args.rotate, args.flip_vertical, args.flip_horizontal)
-            cond_out = f"{img_prefix}.{ort_suffix}.tif"
-        
-        cmds = cmd_separator([], f"Processing PNG ({flat_img}): {',' .join(png2pmtiles_actions)}")
-        cmd = " ".join([
-            "cartloader image_png2pmtiles",
-            "--georeference" if args.georeference else "",
-            f"--rotate {args.rotate}" if args.rotate else "",
-            "--flip-vertical" if args.flip_vertical else "",
-            "--flip-horizontal" if args.flip_horizontal else "", 
-            f"--in-img {flat_img}",
-            f"--out-prefix {img_prefix}",
-            f"--color-mode-record {color_mode}" if color_mode else "",
-            f"--mono {args.mono}" if args.mono and not color_mode else "",
-            f"--rgba {args.rgba}" if args.rgba and not color_mode else "",
-            f"--gdal_translate {args.gdal_translate}" if args.gdal_translate else "",
-        ])
-        cmd = add_param_to_cmd(cmd, args, list(set(aux_image_arg["orientate"] + aux_image_arg["georeference"])))
-        cmds.append(cmd)
-        mm.add_target(cond_out, prereq, cmds)
-    
     # 3. Update the catalog.yaml file with the new pmtiles and upload to AWS
     if args.update_catalog:
+        prereq=[pmtiles_f, args.catalog_yaml]
         if args.catalog_yaml is None:
             args.catalog_yaml = os.path.join(args.out_dir, "catalog.yaml")
         cmds = cmd_separator([], f"Updating yaml for pmtiles: {pmtiles_f}")        
@@ -258,9 +272,9 @@ def import_image(_args):
         ])
         cmds.append(cmd)
         cmds.append(f"touch {pmtiles_f}.yaml.done")
-        mm.add_target(f"{pmtiles_f}.yaml.done", [pmtiles_f, args.catalog_yaml], cmds)
+        mm.add_target(f"{pmtiles_f}.yaml.done", prereq, cmds)
 
-    # 7. Upload new PMtiles to AWS
+    # Upload new PMtiles to AWS
     # if args.upload_aws:
     #     assert args.aws_dir is not None, "Please provide the AWS S3 bucket path using --aws-bucket"
     #     cmds = cmd_separator([], f"Uploading pmtiles to AWS: {geotif_f}")

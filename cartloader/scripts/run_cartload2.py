@@ -126,7 +126,7 @@ def copy_rgb_tsv(in_rgb, out_rgb):
                 rgb_g = int(toks[col2idx["G"]])/255
                 rgb_b = int(toks[col2idx["B"]])/255
                 name = toks[col2idx["Name"]]
-                outf.write(f"{name}\t{name}\t{rgb_r:.5f}\t{rgb_g:.5f}\t{rgb_b:5f}\n")
+                outf.write(f"{name}\t{name}\t{rgb_r:.5f}\t{rgb_g:.5f}\t{rgb_b:.5f}\n")
 
 def run_cartload2(_args):
     """

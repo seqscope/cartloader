@@ -1,5 +1,4 @@
 import logging, os, shutil, sys, importlib, csv, shlex, subprocess, json, yaml, re, gzip
-import os
 from collections import Counter
 
 def get_func(name):
@@ -109,7 +108,7 @@ def valid_and_touch_cmd(input_files, output_file):
     if not input_files:
         raise ValueError("Input file list cannot be empty.")
     checks = " && ".join([f'[ -f "{inp}" ]' for inp in input_files])
-    touch_cmd = f'{checks} && touch {output_file}'
+    touch_cmd = f'{checks} && touch "{output_file}"'
     return touch_cmd
 
 # ====
@@ -117,11 +116,15 @@ def valid_and_touch_cmd(input_files, output_file):
 # ====
 def scheck_app(app_cmd):
     """
-    Check if the specified application is available
+    Check if the specified application is available.
+    Accepts either a bare executable name or a command string with flags.
     """
-    #if not shutil.which(app_cmd.split(" ")[0]):
-    if not shutil.which(app_cmd):
-        logging.error(f"Cannot find {app_cmd}. Please make sure that the path to specify {app_cmd} is correct")
+    # Only check the executable part when flags are included
+    exe = app_cmd.split()[0] if isinstance(app_cmd, str) else app_cmd
+    if not shutil.which(exe):
+        logging.error(
+            f"Cannot find executable '{exe}' (from '{app_cmd}'). Please verify your PATH or provide a correct path."
+        )
         sys.exit(1)
 
 def scheck_file(file_path):
@@ -851,4 +854,3 @@ def assert_unique(seq, label, normalize=None):
         else:
             seen.add(v)
     assert not dups, f"Duplicate values detected for {label}; please ensure each value is unique. Duplicates: {sorted(set(dups))}"
-

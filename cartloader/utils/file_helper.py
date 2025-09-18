@@ -163,33 +163,3 @@ def populate_from_suffixes(spec: dict, in_dir: str, dest_key: str, suffix_key: s
     deduped = list(dict.fromkeys(matches))
     spec[dest_key] = deduped
 
-
-# def populate_from_suffixes(spec: dict, in_dir: str, dest_key: str, suffix_key: str) -> None:
-#     """
-#     If spec[dest_key] is missing and spec[suffix_key] exists,
-#     glob for *<suffix> files in in_dir and set spec[dest_key] to a
-#     list of basenames (order-preserving, de-duplicated).
-#     """
-#     if not isinstance(spec, dict):
-#         raise TypeError(
-#             f"populate_from_suffixes expected a dict spec, got {type(spec).__name__}. "
-#             "Pass a single key's spec (e.g., for key, spec in group_specs.items(): ...)."
-#         )
-
-#     # Already populated or no suffixes to search for
-#     if spec.get(dest_key) or not spec.get(suffix_key):
-#         return
-
-#     suffixes = spec[suffix_key]
-#     if isinstance(suffixes, str):
-#         suffixes = [suffixes]
-
-#     matches = []
-#     in_path = Path(in_dir)
-#     for sfx in suffixes:
-#         for p in in_path.glob(f"*{sfx}"):
-#             if p.is_file():
-#                 matches.append(p.name)
-
-    # De-duplicate while preserving order
-    spec[dest_key] = list(dict.fromkeys(matches))
