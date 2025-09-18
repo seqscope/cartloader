@@ -1,3 +1,4 @@
+import io
 import logging, os, shutil, sys, importlib, csv, shlex, subprocess, json, yaml, re, gzip
 import os
 from collections import Counter
@@ -852,3 +853,57 @@ def assert_unique(seq, label, normalize=None):
             seen.add(v)
     assert not dups, f"Duplicate values detected for {label}; please ensure each value is unique. Duplicates: {sorted(set(dups))}"
 
+#=== fast parquet conversion with polars and pigz
+def parquet_to_csv_with_polars_pigz(
+    parquet_file: str,
+    out_path: str = "out.csv.gz",
+    batch_size: int = 131_072,       # tune up/down for speed vs. memory
+    compress_level: int = 6,         # 1-9
+    pigz_path: str = "pigz",
+    pigz_threads: int | None = None, # defaults to os.cpu_count()
+):
+    import polars as pl
+
+    # Build the lazy frame
+    lf = pl.scan_parquet(parquet_file)
+
+    # Ensure output directory exists
+    os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
+
+    # Open output file handle (pigz writes its stdout here)
+    with open(out_path, "wb") as fout:
+        # Compose pigz command: read from stdin, write compressed to stdout
+        cmd = [pigz_path, f"-{compress_level}", "-c"]
+        if pigz_threads is None:
+            pigz_threads = os.cpu_count() or 1
+        cmd.extend(["-p", str(pigz_threads)])
+
+        # Start pigz process
+        proc = subprocess.Popen(
+            cmd,
+            stdin=subprocess.PIPE,   # we'll stream text CSV into pigz's stdin
+            stdout=fout,             # pigz writes compressed bytes here
+            stderr=subprocess.PIPE
+        )
+        
+        try:
+            # Wrap pigz's binary stdin with a text writer for CSV
+            text_in = io.TextIOWrapper(proc.stdin, encoding="utf-8", newline="", write_through=True)
+            try:
+                lf.sink_csv(text_in, include_header=True, batch_size=batch_size)
+                text_in.flush()
+            finally:
+                # Close wrapper and underlying pipe, then prevent communicate() from touching it
+                text_in.close()
+                proc.stdin = None
+
+            # Now it's safe to collect stderr
+            _, stderr = proc.communicate()
+            if proc.returncode != 0:
+                raise RuntimeError(
+                    f"pigz exited with code {proc.returncode}.\nStderr:\n{stderr.decode('utf-8', 'ignore')}"
+                )
+        except Exception:
+            # Make sure the process is torn down on error
+            proc.kill()
+            raise

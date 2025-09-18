@@ -9,3 +9,4 @@ rasterio
 requests
 setuptools
 PyYAML
+parquet-tools
