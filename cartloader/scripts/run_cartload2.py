@@ -42,6 +42,8 @@ def parse_arguments(_args):
     aux_params.add_argument('--in-fic-params', type=str, default="ficture.params.json", help='File name of FICTURE params JSON/YAML under --fic-dir, providing FICTURE paramaters (default: ficture.params.json)')
     aux_params.add_argument('--out-fic-assets', type=str, default="ficture_assets.json", help='File name of output JSON/YAML for FICTURE asset metadata under --out-dir (default: ficture_assets.json)')
     aux_params.add_argument('--out-catalog', type=str, default="catalog.yaml", help='File name of output catalog YAML under --out-dir (default: catalog.yaml)')
+    # sge scale
+    # aux_params.add_argument('--sge-scale', type=int, default=1, help='Scale factor from input coordinates to output sge image pixels (default: 1)')
     # tippecanoe/PMTiles 
     aux_params.add_argument('--rename-x', type=str, default='x:lon', help='Column rename mapping for X axis in tippecanoe, format old:new (default: x:lon)')  
     aux_params.add_argument('--rename-y', type=str, default='y:lat', help='Column rename mapping for Y axis in tippecanoe, format old:new (default: y:lat)')  
@@ -173,7 +175,8 @@ def run_cartload2(_args):
             f"--gdal_translate '{args.gdal_translate}'",
             f"--gdaladdo '{args.gdaladdo}'",
             f"--spatula '{args.spatula}'",
-            "--keep-intermediate-files" if args.keep_intermediate_files else ""
+            "--keep-intermediate-files" if args.keep_intermediate_files else "",
+            # f"--sge-scale {args.sge_scale}" if args.sge_scale else "",
         ])
         cmds.append(cmd)
         # Use a flag to make sure both light and dark pmtiles are done 

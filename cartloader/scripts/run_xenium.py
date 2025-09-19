@@ -50,6 +50,8 @@ def parse_arguments(_args):
     fic_params.add_argument('--n-factor', type=str, default=None, help='Comma-separated list of factor counts for LDA training (required if --run-ficture2)')
     fic_params.add_argument('--colname-feature', type=str, default='gene', help='Column name for feature name (used with --run-ficture2 and --run-cartload2; default: gene)')
     fic_params.add_argument('--colname-count', type=str, default='count', help='Column name for UMI counts (used with --run-ficture2 and --run-cartload2; default: count)')
+    fic_params.add_argument('--fic-include-feature-regex', type=str, default=None, help='Regex of feature names to include when running --run-ficture2')
+    fic_params.add_argument('--fic-exclude-feature-regex', type=str, default=None, help='Regex of feature names to exclude when running --run-ficture2, e.g., apply "^(mt-.*$|Gm\\d+$)" for mouse datasets to exclude mitochondrial gene and Pseudogenes')
 
     cart_params = parser.add_argument_group("Parameters for --run-cartload2")
     cart_params.add_argument('--id', type=str, help='Identifier for output assets; no whitespace; prefer "-" over "_" (required if --run-cartload2)')
@@ -178,6 +180,7 @@ def run_xenium(_args):
 
         if os.path.exists(ranger_assets) and not args.restart:
             print(f" * Skip --load-xenium-ranger since the Xenium Ranger raw input assets file ({ranger_assets}) already exists. You can use --restart to force execution of this step.", flush=True)
+            print("\n", flush=True)
             print(load_xenium_cmd, flush=True)
         else:
             run_command_w_preq(load_xenium_cmd, prerequisites=[], dry_run=args.dry_run, flush=True)
@@ -208,7 +211,7 @@ def run_xenium(_args):
             f"--in-csv {os.path.join(ranger_dir, args.csv_transcript)}" if not use_json else "",
             f"--units-per-um {args.units_per_um}" if args.units_per_um else "",
             f"--filter-by-density" if args.filter_by_density else "",
-            f"--exclude-feature-regex {args.exclude_feature_regex}" if args.exclude_feature_regex else "",
+            f"--exclude-feature-regex \"{args.exclude_feature_regex}\"" if args.exclude_feature_regex else "",
             "--sge-visual --north-up", # always north up
             f"--gdal_translate {args.gdal_translate}" if args.gdal_translate else "",
             ])
@@ -260,6 +263,7 @@ def run_xenium(_args):
 
         if os.path.exists(cell_assets) and not args.restart:
             print(f" * Skip --import-cells since the Xenium Ranger cell assets file ({cell_assets}) already exists. You can use --restart to force execution of this step.", flush=True)
+            print("\n", flush=True)
             print(import_cell_cmd, flush=True)
         else:
             run_command_w_preq(import_cell_cmd, prerequisites=[], dry_run=args.dry_run, flush=True)

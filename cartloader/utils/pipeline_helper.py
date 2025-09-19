@@ -77,7 +77,6 @@ def validate_imageid_args(image_ids, ranger_assets, all_images=False, dry_run=Tr
     # image_ids
     assert_unique(image_ids, "--image-ids")
     image_ids_out = list(image_ids)
-    print(f"    - image IDs (N={len(image_ids_out)}): {image_ids_out}")
     return image_ids_out
 
 def validate_imagecol_args(image_ids, image_colors):
@@ -161,7 +160,7 @@ def stage_import_images(cart_dir, args, image_plans, ome2png=False, transparent_
             f"--transparent-below {transparent_below}" if ome2png and transparent_below is not None else "",
             # png2pmtiles
             "--png2pmtiles",
-            "--georeference --georef-detect {georef_detect}" if georef_detect else "",
+            f"--georeference --georef-detect {georef_detect}" if georef_detect else "",
             # update catalog
             f"--update-catalog" if update_catalog else "",
             f"--gdal_translate {args.gdal_translate}" if args.gdal_translate else "",
@@ -206,6 +205,8 @@ def stage_run_ficture2(fic_dir, sge_assets, args, prereq, aux_args=None):
         f"--n-factor {args.n_factor}",
         f"--colname-feature {args.colname_feature}" if args.colname_feature else "",
         f"--colname-count {args.colname_count}" if args.colname_count else "",
+        f"--include-feature-regex \"{args.fic_include_feature_regex}\"" if args.fic_include_feature_regex else "",
+        f"--exclude-feature-regex \"{args.fic_exclude_feature_regex}\"" if args.fic_exclude_feature_regex else "",
     ])
     
     # Add optional params

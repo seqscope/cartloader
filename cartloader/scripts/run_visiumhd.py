@@ -50,7 +50,7 @@ def parse_arguments(_args):
     sge_params = parser.add_argument_group("Parameters for --sge-convert")
     sge_params.add_argument('--units-per-um', type=float, default=None, help='Coordinate unit per um in raw SGE (default: 1.00)')  
     sge_params.add_argument('--filter-by-density', action='store_true', default=False, help='Enable to filter SGE by density')
-    sge_params.add_argument('--exclude-feature-regex', type=str, default=None, help='Regex for feature names to exclude (default: "^(BLANK_|DeprecatedCodeword_|NegCon|UnassignedCodeword_)")')
+    sge_params.add_argument('--exclude-feature-regex', type=str, default=None, help='Regex for feature names to exclude when running --sge-convert(default: "^(BLANK_|DeprecatedCodeword_|NegCon|UnassignedCodeword_)")')
 
     # Parameters for --run-ficture2
     fic_params = parser.add_argument_group("Parameters for --run-ficture2")
@@ -58,6 +58,8 @@ def parse_arguments(_args):
     fic_params.add_argument('--n-factor', type=str, default=None, help='Comma-separated list of factor counts for LDA training (required if --run-ficture2)')
     fic_params.add_argument('--colname-feature', type=str, default='gene', help='Column name for feature name (used with --run-ficture2 and --run-cartload2; default: gene)')
     fic_params.add_argument('--colname-count', type=str, default='count', help='Column name for UMI counts (used with --run-ficture2 and --run-cartload2; default: count)')
+    fic_params.add_argument('--fic-include-feature-regex', type=str, default=None, help='Regex of feature names to include when running --run-ficture2')
+    fic_params.add_argument('--fic-exclude-feature-regex', type=str, default=None, help='Regex of feature names to exclude when running --run-ficture2, e.g., apply "^(mt-.*$|Gm\\d+$)" for mouse datasets to exclude mitochondrial gene and Pseudogenes')
 
     # Parameters for --run-cartload2
     cart_params = parser.add_argument_group("Parameters for --run-cartload2")
@@ -195,6 +197,7 @@ def run_visiumhd(_args):
     
         if os.path.exists(ranger_assets) and not args.restart:
             print(f" * Skip --load-space-ranger since the Space Ranger raw input assets file ({args.space_ranger_assets}) already exists. You can use --restart to force execution of this step.", flush=True)
+            print("\n", flush=True)
             print(load_space_cmd, flush=True)
         else:
             run_command_w_preq(load_space_cmd, prerequisites=[], dry_run=args.dry_run, flush=True)
@@ -246,7 +249,7 @@ def run_visiumhd(_args):
             f"--scale-json {os.path.join(ranger_dir, args.json_scale)}" if (not use_json and args.json_scale) else "",
             f"--units-per-um {args.units_per_um}" if (not use_json and args.units_per_um) else "",
             f"--filter-by-density" if args.filter_by_density else "",
-            f"--exclude-feature-regex {args.exclude_feature_regex}" if args.exclude_feature_regex else "",
+            f"--exclude-feature-regex \"{args.exclude_feature_regex}\"" if args.exclude_feature_regex else "",
             "--sge-visual --north-up", # always north up
             f"--gdal_translate {args.gdal_translate}" if args.gdal_translate else "",
             ])
@@ -297,6 +300,7 @@ def run_visiumhd(_args):
 
         if os.path.exists(cell_assets) and not args.restart:
             print(f" * Skip --import-cells since the Space Ranger cell assets file ({cell_assets}) already exists. You can use --restart to force execution of this step.", flush=True)
+            print("\n", flush=True)
             print(import_cell_cmd, flush=True)
         else:
             run_command_w_preq(import_cell_cmd, prerequisites=[], dry_run=args.dry_run, flush=True)
