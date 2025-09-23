@@ -152,14 +152,16 @@ def populate_from_suffixes(spec: dict, in_dir: str, dest_key: str, suffix_key: s
     if isinstance(suffixes, str):
         suffixes = [suffixes]
 
-    matches = []
+    matches: list[str] = []
     in_path = Path(in_dir)
     for sfx in suffixes:
-        for p in in_path.glob(f"*{sfx}"):
-            if p.is_file():
-                matches.append(p.name)
+        # search recursively so pre-extracted assets in nested folders are detected
+        pattern = f"**/*{sfx}"
+        for p in in_path.glob(pattern):
+            if p.is_file() or p.is_dir():
+                rel_path = p.relative_to(in_path)
+                matches.append(str(rel_path))
 
     # De-duplicate while preserving order
     deduped = list(dict.fromkeys(matches))
     spec[dest_key] = deduped
-

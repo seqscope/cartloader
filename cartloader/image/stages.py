@@ -7,6 +7,8 @@ import os
 from dataclasses import dataclass
 from typing import Dict, Optional
 
+import shlex
+
 import tifffile
 
 from cartloader.utils.minimake import minimake
@@ -43,13 +45,20 @@ def configure_color_mode(args) -> None:
         or getattr(args, "geotif2mbtiles", False)
     )
 
+    setattr(args, "color_mode_pending", False)
+
     if not needs_color_mode or not color_mode_record:
         return
 
     if getattr(args, "mono", False) or getattr(args, "rgba", False):
         raise ValueError("--color-mode-record cannot be combined with --mono or --rgba")
 
+    allow_missing = getattr(args, "allow_missing_color_mode_record", False)
+
     if not os.path.exists(color_mode_record):
+        if allow_missing:
+            args.color_mode_pending = True
+            return
         raise FileNotFoundError(f"File not found: {color_mode_record} (--color-mode-record)")
 
     with open(color_mode_record, "r", encoding="utf-8") as handle:
@@ -289,34 +298,67 @@ def register_geotif2mbtiles_stage(
     )
     cmds.append(cleanup_cmd)
 
-    band_args = "-b 1"
-    if getattr(args, "rgba", False):
-        band_args = "-b 1 -b 2 -b 3 -b 4"
-    elif not getattr(args, "mono", False):
-        band_args = "-b 1 -b 2 -b 3"
+    color_mode_record = getattr(args, "color_mode_record", None)
+    resolve_at_runtime = bool(color_mode_record) and getattr(args, "color_mode_pending", False)
 
-    translate_cmd = " ".join(
-        [
-            args.gdal_translate,
-            band_args,
-            "-strict",
-            f"-co \"ZOOM_LEVEL_STRATEGY=UPPER\"",
-            f"-co \"RESAMPLING={args.resample}\"",
-            f"-co \"BLOCKSIZE={args.blocksize}\"",
-            "-ot Byte",
-            "-scale" if getattr(args, "mono", False) else "",
-            "-of mbtiles",
-            f"-a_srs {args.srs}",
-            src_tif,
-            mbtile_f,
-        ]
-    )
+    if resolve_at_runtime:
+        quoted_record = shlex.quote(color_mode_record)
+        translate_cmd = "; ".join(
+            [
+                f"COLOR_MODE=$(head -n 1 {quoted_record} | tr '[:upper:]' '[:lower:]')",
+                "case \"$COLOR_MODE\" in",
+                "rgba) BAND_ARGS=\"-b 1 -b 2 -b 3 -b 4\"; SCALE_FLAG=\"\" ;;",
+                "mono) BAND_ARGS=\"-b 1\"; SCALE_FLAG=\"-scale\" ;;",
+                "rgb) BAND_ARGS=\"-b 1 -b 2 -b 3\"; SCALE_FLAG=\"\" ;;",
+                "*) echo \"Invalid color mode '$COLOR_MODE' in {color_mode_record}\" >&2; exit 1 ;;",
+                "esac",
+                args.gdal_translate,
+                "$BAND_ARGS",
+                "-strict",
+                f"-co \"ZOOM_LEVEL_STRATEGY=UPPER\"",
+                f"-co \"RESAMPLING={args.resample}\"",
+                f"-co \"BLOCKSIZE={args.blocksize}\"",
+                "-ot Byte",
+                "$SCALE_FLAG",
+                "-of mbtiles",
+                f"-a_srs {args.srs}",
+                src_tif,
+                mbtile_f,
+            ]
+        )
+    else:
+        band_args = "-b 1"
+        if getattr(args, "rgba", False):
+            band_args = "-b 1 -b 2 -b 3 -b 4"
+        elif not getattr(args, "mono", False):
+            band_args = "-b 1 -b 2 -b 3"
+
+        translate_cmd = " ".join(
+            [
+                args.gdal_translate,
+                band_args,
+                "-strict",
+                f"-co \"ZOOM_LEVEL_STRATEGY=UPPER\"",
+                f"-co \"RESAMPLING={args.resample}\"",
+                f"-co \"BLOCKSIZE={args.blocksize}\"",
+                "-ot Byte",
+                "-scale" if getattr(args, "mono", False) else "",
+                "-of mbtiles",
+                f"-a_srs {args.srs}",
+                src_tif,
+                mbtile_f,
+            ]
+        )
+
     cmds.append(translate_cmd)
     validation_cmd = (
         f" [ -f {mbtile_f} ]  && [ ! -f {journal_db} ] && [ ! -f {partial_db} ] && touch {mbtile_flag}"
     )
     cmds.append(validation_cmd)
-    mm.add_target(mbtile_flag, [src_tif], cmds)
+    prereqs = [src_tif]
+    if resolve_at_runtime:
+        prereqs.append(color_mode_record)
+    mm.add_target(mbtile_flag, prereqs, cmds)
 
     return {
         "mbtile_flag": mbtile_flag,

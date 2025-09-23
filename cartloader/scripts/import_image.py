@@ -196,6 +196,8 @@ def import_image(_args):
         png_args.color_mode_record = color_mode
         png_args.geotif2mbtiles = True
         png_args.mbtiles2pmtiles = True
+        if color_mode:
+            png_args.allow_missing_color_mode_record = True
 
         configure_color_mode(png_args)
 

@@ -143,6 +143,7 @@ def load_space_ranger(_args):
         "IMAGES":  {
             "HnE_BTF": {
                 "required": False,
+                # Accept either the legacy BTF export or the more common TIFF histology image
                 "filename_suffixes": ["_tissue_image.btf"],
                 "zip_suffixes": ["_square_002um_binned_outputs.tar.gz", "_binned_outputs.tar.gz"],
             }
