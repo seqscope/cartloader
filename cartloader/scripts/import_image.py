@@ -190,31 +190,35 @@ def import_image(_args):
     pipeline_result = None
     pmtiles_f = None
     if args.png2pmtiles:
-        png_args = copy.deepcopy(args)
-        png_args.in_img = flat_img
-        png_args.out_prefix = img_prefix
-        png_args.color_mode_record = color_mode
-        png_args.geotif2mbtiles = True
-        png_args.mbtiles2pmtiles = True
-        if color_mode:
-            png_args.allow_missing_color_mode_record = True
+        prereq = [f"{transform_prefix}.done"] if args.ome2png else [flat_img]
 
-        configure_color_mode(png_args)
+        pmtiles_f = os.path.join(args.out_dir, f"{args.img_id}.pmtiles")
 
-        if png_args.flip_vertical or png_args.flip_horizontal or png_args.rotate is not None:
-            png_args.rotate, png_args.flip_vertical, png_args.flip_horizontal = update_orient(
-                png_args.rotate, png_args.flip_vertical, png_args.flip_horizontal
-            )
-
-        pipeline_result = register_png2pmtiles_pipeline(
-            mm,
-            png_args,
-            in_img=flat_img,
-            out_prefix=img_prefix,
-        )
-
-        flat_img = pipeline_result.final_tif
-        pmtiles_f = pipeline_result.pmtiles_path
+        cmds = cmd_separator([], f"Converting PNG ({flat_img}) to PMTiles ({pmtiles_f})")
+        cmd = " ".join([
+            "cartloader image_png2pmtiles",
+            # actions
+            "--georeference" if args.georeference else "",
+            f"--rotate {args.rotate}" if args.rotate else "",
+            "--flip-vertical" if args.flip_vertical else "",
+            "--flip-horizontal" if args.flip_horizontal else "", 
+            "--geotif2mbtiles",
+            "--mbtiles2pmtiles", # this step will write down a asset JSON file
+            # in
+            f"--in-img {flat_img}",
+            # out
+            f"--out-prefix {img_prefix}",
+            # params
+            f"--color-mode-record {color_mode}" if color_mode else "",
+            f"--mono {args.mono}" if args.mono and not color_mode else "",
+            f"--rgba {args.rgba}" if args.rgba and not color_mode else "",
+            f"--georef-detect {args.georef_detect}" if args.georef_detect else "",
+            f"--gdal_translate {args.gdal_translate}" if args.gdal_translate else "",
+        ])
+        cmd = add_param_to_cmd(cmd, args, list(set(aux_image_arg["png2pmtiles"] + aux_image_arg["georeference"])))
+        cmd = add_param_to_cmd(cmd, args, ["restart", "n_jobs"])
+        cmds.append(cmd)
+        mm.add_target(pmtiles_f, prereq, cmds)
 
     # 3. Update the catalog.yaml file with the new pmtiles and upload to AWS
     if args.update_catalog:
@@ -234,15 +238,6 @@ def import_image(_args):
         cmds.append(f"touch {pmtiles_f}.yaml.done")
         mm.add_target(f"{pmtiles_f}.yaml.done", prereq, cmds)
 
-    # Upload new PMtiles to AWS
-    # if args.upload_aws:
-    #     assert args.aws_dir is not None, "Please provide the AWS S3 bucket path using --aws-bucket"
-    #     cmds = cmd_separator([], f"Uploading pmtiles to AWS: {geotif_f}")
-    #     pmtiles_fn=os.path.basename(pmtiles_f)
-    #     cmds.append(f"aws s3 cp {pmtiles_f} {args.aws_dir}/{pmtiles_fn}")
-    #     cmds.append(f"aws s3 cp {catalog_f} {args.aws_dir}/{catalog_f}")
-    #     cmds.append(f"touch {pmtiles_f}.aws.done")
-    #     mm.add_target(f"{pmtiles_f}.aws.done", [pmtiles_f], cmds)
 
     ## write makefile
     make_f=os.path.join(args.out_dir, args.makefn) if args.makefn is not None else f"{img_prefix}.mk"
