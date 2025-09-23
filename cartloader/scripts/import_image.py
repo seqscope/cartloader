@@ -1,12 +1,12 @@
-import sys, os, gzip, argparse, subprocess, inspect
+import sys, os, gzip, argparse, subprocess, inspect, copy
 import pandas as pd
 import numpy as np
 import tifffile
 
 from cartloader.utils.minimake import minimake
-from cartloader.utils.utils import cmd_separator, scheck_app, create_custom_logger, add_param_to_cmd, write_dict_to_file, load_file_to_dict, scheck_actions, execute_makefile
-from cartloader.utils.image_helper import orient2axisorder, update_orient
-from cartloader.scripts.image_png2pmtiles import get_orientation_suffix
+from cartloader.utils.utils import cmd_separator, scheck_app, add_param_to_cmd, write_dict_to_file, load_file_to_dict, scheck_actions, execute_makefile
+from cartloader.utils.orient_helper import update_orient
+from cartloader.image import configure_color_mode, register_png2pmtiles_pipeline
 
 
 def parse_arguments(_args):
@@ -150,6 +150,8 @@ def import_image(_args):
         transform_f = f"{transform_prefix}.png"
         color_mode=f"{transform_prefix}.color.csv"
 
+        assert not args.georef_bounds and not args.georef_pixel_tsv and not args.georef_bounds_tsv, f"Since --ome2png, skip --georef-pixel-tsv, --georef-bounds, and --georef-bounds-tsv. The georeferenced bounds will be automatically extract from the OME TIFF file"
+
         cmds = cmd_separator([], f"Converting OME TIFF ({args.in_img}) to PNG ({transform_f})")
         cmd= " ".join([
             "cartloader image_ome2png",
@@ -158,8 +160,8 @@ def import_image(_args):
             f"--out-prefix {transform_prefix}",
             f"--rotate-clockwise" if args.rotate == "90" else "", # Note image_ome2png has different options than the 90,180,270
             f"--rotate-counter" if args.rotate == "270" else "",
-            f"--flip-vertical" if args.flip_vertical else "",
-            f"--flip-horizontal" if args.flip_horizontal else "",
+            # f"--flip-vertical" if args.flip_vertical else "",
+            # f"--flip-horizontal" if args.flip_horizontal else "",
             f"--write-color-mode"
         ])
         cmd = add_param_to_cmd(cmd, args, aux_image_arg["ome2png"])
@@ -170,13 +172,12 @@ def import_image(_args):
         
         # update for georeference and bounds
         args.georeference = True
-        assert not args.georef_bounds and not args.georef_pixel_tsv and not args.georef_bounds_tsv, f"Since --ome2png, skip --georef-pixel-tsv, --georef-bounds, and --georef-bounds-tsv. The georeferenced bounds will be automatically extract from the OME TIFF file"
         args.georef_bounds_tsv =  transform_bounds_tsv
 
-        # update the flip/rotate information and georeferencing
-        args.rotate=None
-        args.flip_vertical=False
-        args.flip_horizontal=False
+        # # update the flip/rotate information and georeferencing
+        # args.rotate=None
+        # args.flip_vertical=False
+        # args.flip_horizontal=False
         
         # update input for the next step
         flat_img = transform_f
@@ -184,82 +185,38 @@ def import_image(_args):
         flat_img = args.in_img
         color_mode=None
 
-    # 2. Use image png2pmtiles
-    # 2A Only reorient the image without convert to pmtiles
-    if args.png2pmtiles and (args.georeference or args.flip_vertical or args.flip_horizontal or args.rotate is not None):
-        
-        prereq = [f"{transform_prefix}.done"] if args.ome2png else [flat_img]
-        
-        # define actions
-        png2pmtiles_actions=[]
-        if args.georeference:
-            png2pmtiles_actions.append("georeferencing")
-        if args.flip_vertical or args.flip_horizontal or args.rotate is not None:
-            png2pmtiles_actions.append("orientation")
-
-        # define the output from the last step
-        if "georeferencing" in png2pmtiles_actions and "orientation" not in png2pmtiles_actions:
-            cond_out =f"{img_prefix}.georef.tif"
-        else:
-            ort_suffix=get_orientation_suffix(args.rotate, args.flip_vertical, args.flip_horizontal)
-            cond_out = f"{img_prefix}.{ort_suffix}.tif"
-        
-        # run the step
-        cmds = cmd_separator([], f"Processing PNG ({flat_img}): {',' .join(png2pmtiles_actions)}")
-        cmd = " ".join([
-            "cartloader image_png2pmtiles",
-            "--georeference" if args.georeference else "",
-            f"--rotate {args.rotate}" if args.rotate else "",
-            "--flip-vertical" if args.flip_vertical else "",
-            "--flip-horizontal" if args.flip_horizontal else "", 
-            f"--in-img {flat_img}",
-            f"--out-prefix {img_prefix}",
-            f"--color-mode-record {color_mode}" if color_mode else "",
-            f"--mono {args.mono}" if args.mono and not color_mode else "",
-            f"--rgba {args.rgba}" if args.rgba and not color_mode else "",
-            f"--georef-detect {args.georef_detect}" if args.georef_detect else "",
-            f"--gdal_translate {args.gdal_translate}" if args.gdal_translate else "",
-        ])
-        cmd = add_param_to_cmd(cmd, args, list(set(aux_image_arg["orientate"] + aux_image_arg["georeference"])))
-        cmd = add_param_to_cmd(cmd, args, ["restart", "n_jobs"])
-        cmds.append(cmd)
-        mm.add_target(cond_out, [flat_img], cmds)
-    
-    # 2B Convert to pmtiles
+    # 2. PNG → PMTiles pipeline (georeference/orientation/tiles)
+    pipeline_result = None
+    pmtiles_f = None
     if args.png2pmtiles:
+        png_args = copy.deepcopy(args)
+        png_args.in_img = flat_img
+        png_args.out_prefix = img_prefix
+        png_args.color_mode_record = color_mode
+        png_args.geotif2mbtiles = True
+        png_args.mbtiles2pmtiles = True
 
-        prereq = [f"{transform_prefix}.done"] if args.ome2png else [flat_img]
+        configure_color_mode(png_args)
 
-        pmtiles_f = os.path.join(args.out_dir, f"{args.img_id}.pmtiles")
+        if png_args.flip_vertical or png_args.flip_horizontal or png_args.rotate is not None:
+            png_args.rotate, png_args.flip_vertical, png_args.flip_horizontal = update_orient(
+                png_args.rotate, png_args.flip_vertical, png_args.flip_horizontal
+            )
 
-        cmds = cmd_separator([], f"Converting PNG ({flat_img}) to PMTiles ({pmtiles_f})")
-        cmd = " ".join([
-            "cartloader image_png2pmtiles",
-            # actions
-            "--georeference" if args.georeference else "",
-            f"--rotate {args.rotate}" if args.rotate else "",
-            "--flip-vertical" if args.flip_vertical else "",
-            "--flip-horizontal" if args.flip_horizontal else "", 
-            "--geotif2mbtiles",
-            "--mbtiles2pmtiles", # this step will write down a asset JSON file
-            # in
-            f"--in-img {flat_img}",
-            # out
-            f"--out-prefix {img_prefix}",
-            # params
-            f"--color-mode-record {color_mode}" if color_mode else "",
-            f"--mono {args.mono}" if args.mono and not color_mode else "",
-            f"--rgba {args.rgba}" if args.rgba and not color_mode else "",
-            f"--georef-detect {args.georef_detect}" if args.georef_detect else "",
-            f"--gdal_translate {args.gdal_translate}" if args.gdal_translate else "",
-        ])
-        cmd = add_param_to_cmd(cmd, args, list(set(aux_image_arg["png2pmtiles"] + aux_image_arg["georeference"])))
-        cmd = add_param_to_cmd(cmd, args, ["restart", "n_jobs"])
-        cmds.append(cmd)
-        mm.add_target(pmtiles_f, prereq, cmds)
+        pipeline_result = register_png2pmtiles_pipeline(
+            mm,
+            png_args,
+            in_img=flat_img,
+            out_prefix=img_prefix,
+        )
+
+        flat_img = pipeline_result.final_tif
+        pmtiles_f = pipeline_result.pmtiles_path
 
     # 3. Update the catalog.yaml file with the new pmtiles and upload to AWS
     if args.update_catalog:
+        if pmtiles_f is None:
+            pmtiles_f = os.path.join(args.out_dir, f"{args.img_id}.pmtiles")
         prereq=[pmtiles_f, args.catalog_yaml]
         if args.catalog_yaml is None:
             args.catalog_yaml = os.path.join(args.out_dir, "catalog.yaml")

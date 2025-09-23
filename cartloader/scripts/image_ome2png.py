@@ -29,10 +29,11 @@ def parse_arguments(_args):
     inout_params.add_argument("--lower-thres-intensity", type=float, default=0, help='Intensity-based floored value (default: 0)')
     inout_params.add_argument("--transparent-below", type=int, default=0, help='Set pixels below this value to transparent (0-255; default:0)')
     inout_params.add_argument("--colorize", type=str, help='Colorize using RGB code as max value')
-    inout_params.add_argument('--flip-horizontal', action='store_true', default=False)
-    inout_params.add_argument('--flip-vertical', action='store_true', default=False)
-    inout_params.add_argument('--rotate-clockwise', action='store_true', default=False)
-    inout_params.add_argument('--rotate-counter', action='store_true', default=False)
+
+    # inout_params.add_argument('--flip-horizontal', action='store_true', default=False)
+    # inout_params.add_argument('--flip-vertical', action='store_true', default=False)
+    # inout_params.add_argument('--rotate-clockwise', action='store_true', default=False)
+    # inout_params.add_argument('--rotate-counter', action='store_true', default=False)
     inout_params.add_argument('--high-memory', action='store_true', default=False)
     inout_params.add_argument('--write-color-mode', action='store_true', default=False,  help='Save the color mode into a file (<out_prefix>.color.csv). This argument is specifically designed for "cartloader import_image"')
 
@@ -273,7 +274,6 @@ def image_ome2png(_args):
         r, g, b = None, None, None
         if args.colorize:
             r, g, b = hex_to_rgb(args.colorize)
-
 
         if args.high_memory:
             segments = [image_array_highmem]

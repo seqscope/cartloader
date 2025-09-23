@@ -106,7 +106,7 @@ def sge_add_minmax_by_chunk(args):
 
     print(f"Minmax saved to {args.out_minmax}")
 
-def sge_adds_on(_args):
+def sge_supp(_args):
     """Generate a feature file for the SGE."""
     args = parse_arguments(_args)
 

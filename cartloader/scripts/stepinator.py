@@ -11,7 +11,7 @@ import datetime
 from types import SimpleNamespace
 
 from cartloader.utils.utils import add_param_to_cmd, scheck_file
-from cartloader.utils.image_helper import update_orient_in_histology
+from cartloader.utils.orient_helper import update_orient
 from cartloader.utils.sge_helper import aux_sge_args
 from cartloader.utils.execution import write_jobfile, submit_job
 
@@ -449,6 +449,30 @@ def cmd_image_stitch(imginfo_by_tiles, args, env):
         image_stitch_cmds.append(image_stitch_cmd)
     return image_stitch_cmds
   
+# Update the orientation of a histology image
+def update_orient_in_histology(histology):
+    hist_path = histology["path"]
+
+    rotation = histology.get("rotate", None)
+    
+    flip = histology.get("flip", None)
+    flip_vertical = flip in [ "vertical", "both"]
+    flip_horizontal = flip in ["horizontal", "both"]
+
+    new_rot, new_vflip, new_hflip = update_orient(rotation, flip_vertical, flip_horizontal, hist_path)
+
+    # Update the histology dictionary with the best solution
+    histology["rotate"] = new_rot
+    if new_vflip and new_hflip:
+        histology["flip"] = "both"
+    elif new_vflip:
+        histology["flip"] = "vertical"
+    elif new_hflip:
+        histology["flip"] = "horizontal"
+    else:
+        histology["flip"] = None
+    return histology
+
 def cmd_image_png2pmtiles(run_i, cartl_v, args, env):    
     assert len(run_i.get("histology", [])) > 0, "Error: --histology is Required when running --image-png2pmtiles"
     img_cmds=[]

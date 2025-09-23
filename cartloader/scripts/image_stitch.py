@@ -1,17 +1,81 @@
-import sys, os, gzip, argparse, logging, warnings, shutil, re, copy, time, pickle, inspect, warnings, json, yaml
+import sys, os, argparse, logging, warnings, shutil, re, copy, time, pickle, inspect, warnings, json, yaml
 import pandas as pd
 import subprocess
-import rasterio # for extracting bounds
+from types import SimpleNamespace
 
 from cartloader.utils.utils import cmd_separator, execute_makefile
 from cartloader.utils.minimake import minimake
-from cartloader.utils.image_helper import update_orient
-
-from cartloader.scripts.image_png2pmtiles import get_orientation_suffix, cmds_for_dimensions, cmds_for_orientation
+from cartloader.utils.orient_helper import update_orient
+from cartloader.image import register_georeference_stage, register_orientation_stage
 
 # get the current path
 current_path = os.path.realpath(__file__)
 cartloader_dir=os.path.dirname(os.path.dirname(os.path.dirname(current_path)))
+
+
+def _parse_georef_info(georef_info: str, row: str, col: str, args) -> SimpleNamespace:
+    if not georef_info or not georef_info.strip():
+        raise ValueError(
+            f"Tile (row {row}, col {col}): georeferencing requested but georef_info is empty"
+        )
+
+    if ";" in georef_info:
+        raise ValueError(
+            f"Tile (row {row}, col {col}): invalid georef_info '{georef_info}'. Provide a single key:value entry"
+        )
+
+    token = georef_info.strip()
+    if not token:
+        raise ValueError(
+            f"Tile (row {row}, col {col}): georeferencing requested but georef_info is empty"
+        )
+
+    allowed_keys = ("bounds", "bounds_tsv", "bounds_pixel_tsv", "detect")
+    token_lower = token.lower()
+    key = None
+    value = None
+    for candidate in allowed_keys:
+        prefix_colon = f"{candidate}:"
+        prefix_eq = f"{candidate}="
+        if token_lower.startswith(prefix_colon):
+            key = candidate
+            value = token[len(prefix_colon):]
+            break
+        if token_lower.startswith(prefix_eq):
+            key = candidate
+            value = token[len(prefix_eq):]
+            break
+
+    if key is None:
+        raise ValueError(
+            f"Tile (row {row}, col {col}): invalid georef_info '{token}'. Expected one of {allowed_keys} followed by ':'"
+        )
+
+    value = value.strip()
+    if not value:
+        raise ValueError(
+            f"Tile (row {row}, col {col}): georef_info '{token}' is missing a value"
+        )
+
+    geo_args = SimpleNamespace(
+        gdal_translate=args.gdal_translate,
+        srs=args.srs,
+        georef_bounds=None,
+        georef_bounds_tsv=None,
+        georef_pixel_tsv=None,
+        georef_detect=None,
+    )
+
+    if key == "bounds":
+        geo_args.georef_bounds = value.replace("_", ",")
+    elif key == "bounds_tsv":
+        geo_args.georef_bounds_tsv = value
+    elif key == "bounds_pixel_tsv":
+        geo_args.georef_pixel_tsv = value
+    elif key == "detect":
+        geo_args.georef_detect = value
+
+    return geo_args
 
 def image_stitch(_args):
     parser = argparse.ArgumentParser(
@@ -33,10 +97,9 @@ def image_stitch(_args):
     run_params.add_argument('--makefn', type=str, default=None, help='Makefile name. By default, it will be named as image_stitch_<filename>.mk based on the output file name.')
     
     inout_params = parser.add_argument_group("Input/Output Parameters", "Input/Output Parameters")
-    inout_params.add_argument("--in-tiles", type=str, nargs='*', default=[], help="List of input tiles in the format: <row>,<col>,<path>,<georef>,<georef_tsv>,<georef_bounds>,<rotate>,<vertical_flip>,<horizontal_flip>."
+    inout_params.add_argument("--in-tiles", type=str, nargs='*', default=[], help="List of input tiles in the format: <row>,<col>,<path>,<georef>,<georef_info>,<rotate>,<vertical_flip>,<horizontal_flip>."
                                                                                 "<georef>: Boolean flag indicating whether georeferencing is required."
-                                                                                "<georef_tsv>: Path to a *.pixel.sorted.tsv.gz file from run_ficture*, used to determine georeferenced bounds."
-                                                                                "<georef_bounds>: Manual bounding box (ullr) in the format <ulx>_<uly>_<lrx>_<lry> if georeferencing is needed."
+                                                                                "<georef_info>: key:value entry describing bounds; supported keys: bounds (ulx_uly_lrx_lry), bounds_tsv, bounds_pixel_tsv, detect; supported detect type: ome."
                                                                                 "<rotate>: Rotation angle (0, 90, 180, or 270)."
                                                                                 "<vertical_flip> and <horizontal_flip> are booleans indicating if the image should be flipped vertically or horizontally.")
     inout_params.add_argument("--output", type=str, help="Path to the output stitched TIFF file.")
@@ -49,8 +112,17 @@ def image_stitch(_args):
     env_params = parser.add_argument_group("Env Parameters", "Environment parameters, e.g., tools.")
     env_params.add_argument('--gdal_translate', type=str, default=f"gdal_translate", help='Path to gdal_translate binary (default: gdal_translate)')
     env_params.add_argument('--gdalbuildvrt', type=str, default=f"gdalbuildvrt", help='Path to gdalbuildvrt binary (default: gdalbuildvrt)')
+    env_params.add_argument('--gdalinfo', type=str, default='gdalinfo', help='Path to gdalinfo binary (default: gdalinfo)')
+    env_params.add_argument('--gdalwarp', type=str, default='gdalwarp', help='Path to gdalwarp binary (default: gdalwarp)')
     env_params.add_argument('--srs', type=str, default='EPSG:3857', help='Spatial reference system (default: EPSG:3857)')
+
+    color_params = parser.add_argument_group("Color Options", "Band configuration for orientation")
+    color_params.add_argument('--mono', action='store_true', default=False, help='Treat tiles as single-band images during orientation')
+    color_params.add_argument('--rgba', action='store_true', default=False, help='Treat tiles as 4-band RGBA images during orientation (mutually exclusive with --mono)')
     args = parser.parse_args(_args)
+
+    if args.mono and args.rgba:
+        parser.error("--mono and --rgba are mutually exclusive")
 
     mm = minimake()
 
@@ -76,7 +148,7 @@ def image_stitch(_args):
         # assuming the coordinates in the image in um
         offsets["x_offset_um"] = offsets["x_offset_unit"] / offsets["units_per_um"]
         offsets["y_offset_um"] = offsets["y_offset_unit"] / offsets["units_per_um"]
-   
+
         # create dict between (row, col) to x_offset, y_offset
         idx2offsets = {
             (row["row"], row["col"]): (row["x_offset_um"], row["y_offset_um"])
@@ -100,7 +172,12 @@ def image_stitch(_args):
     tiles = []
     for in_tile in args.in_tiles:
         # input params
-        row, col, tif, georef, georef_tsv, georef_bound, rotate, vflip, hflip = in_tile.split(",")
+        parts = in_tile.split(",")
+        if len(parts) != 8:
+            raise ValueError(
+                "--in-tiles entries must have 8 fields (row,col,path,georef,georef_info,rotate,vertical_flip,horizontal_flip)"
+            )
+        row, col, tif, georef, georef_info, rotate, vflip, hflip = parts
 
         assert os.path.exists(tif), f"Tile (row {row}, col {col}): file not found {tif} (--in-tiles)"
         tile_prefix = os.path.join(out_dir, os.path.basename(tif).replace(".tif", "")) # tile_prefix for intermediate files
@@ -110,8 +187,7 @@ def image_stitch(_args):
         # actions
         # - georef
         georef = str(georef).lower() == "true"
-        georef_tsv = georef_tsv if georef_tsv else None
-        georef_bound = georef_bound if georef_bound else None
+        georef_info = georef_info.strip()
         # - orient
         rotate = str(rotate) if rotate else None
         vflip = str(vflip).lower() == "true"
@@ -126,39 +202,33 @@ def image_stitch(_args):
         
         # 1) georef (tif without coordinates)
         if georef: 
-            assert (georef_bound is not None) ^ (georef_tsv is not None), f"Tile (row {row}, col {col}): georeferencing bounds not found (provide by --georef-bound or --georef-tsv)"
-            if georef_bound is not None:
-                ulx, uly, lrx, lry = map(float, georef_bound.split("_"))
-            elif georef_tsv is not None:
-                with gzip.open(georef_tsv, 'rt') as f:
-                    for i in range(3):
-                        line = f.readline()
-                ann2val = {x.split("=")[0]:x.split("=")[1] for x in line.strip().replace("##", "").split(";")}
-                ulx = float(ann2val["OFFSET_X"]) # Upper left X-coordinate
-                uly = float(ann2val["OFFSET_Y"]) # Upper left Y-coordinate
-                lrx = float(ann2val["SIZE_X"])+1+ulx # Lower Right X-coordinate
-                lry = float(ann2val["SIZE_Y"])+1+uly # Lower Right Y-coordinate 
-            ullr=f"{ulx} {uly} {lrx} {lry}"
-            cmds = cmd_separator([], f"Tile (row {row}, col {col}): Georeference (ULLR)")
-            georef_f=f"{tile_prefix}.georef.tif"
-            cmds.append(f"{args.gdal_translate} -of GTiff -a_srs {args.srs} -a_ullr {ullr} {tif} {georef_f}")
-            mm.add_target(georef_f, [tif], cmds)
-            current_f = georef_f
+            geo_args = _parse_georef_info(georef_info, row, col, args)
+
+            current_f = register_georeference_stage(
+                mm,
+                geo_args,
+                in_img=current_f,
+                out_prefix=tile_prefix,
+            )
 
         # 2) rotate
         if orient:
-            # Generate Dimension file to provide height and width
-            # dim_f = current_f.replace(".tif", "") + ".dim.tsv"
-            dim_f = os.path.splitext(current_f)[0] + ".dim.tsv"     # Modify this since encountered a case with two tif in the figure name
-            cmds = cmds_for_dimensions(current_f, dim_f)
-            mm.add_target(dim_f, [current_f], cmds)
-            # Generate the orientated file
-            ort_suffix = get_orientation_suffix(rotate, vflip, hflip)
-            ort_f = f"{tile_prefix}.{ort_suffix}.tif"
-            cmds = cmds_for_orientation( current_f, dim_f, ort_f, rotate, vflip, hflip)
-            mm.add_target(ort_f, [current_f, dim_f], cmds) 
-            current_f = ort_f
-            # update the ullr
+            orient_args = SimpleNamespace(
+                rotate=rotate,
+                flip_vertical=vflip,
+                flip_horizontal=hflip,
+                mono=args.mono,
+                rgba=args.rgba,
+                gdalinfo=args.gdalinfo,
+                gdalwarp=args.gdalwarp,
+            )
+
+            current_f = register_orientation_stage(
+                mm,
+                orient_args,
+                src_tif=current_f,
+                out_prefix=tile_prefix,
+            )
             
         # 3) add offsets
         if add_offsets:
