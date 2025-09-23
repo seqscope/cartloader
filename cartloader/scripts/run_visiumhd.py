@@ -77,7 +77,7 @@ def parse_arguments(_args):
     images_params = parser.add_argument_group("Parameters for --import-images", ('Two input modes: 1) use --image-ids select images; 2) use --all-images to deploy all images from --space-ranger-assets. '
                                                                                  'Note, run_visiumhd is currently designed for H&E images in BTF format with OME-XML metadata, i.e., it always define --georef-detect OME. '
                                                                                  'For other images, consider run "cartloader import_image" directly with appropriate parameters.'))
-    images_params.add_argument('--image-ids', type=str, default=["HnE_BTF"], nargs="+", help='One or more image IDs to import (default: ["HnE_BTF"])')
+    images_params.add_argument('--image-ids', type=str, default=["HnE"], nargs="+", help='One or more image IDs to import (default: ["HnE"])')
     images_params.add_argument('--all-images', action='store_true', help='Enable to deploy all images from --space-ranger-assets regardless --image-ids')
 
     # Parameters for --upload-aws or --upload-zenodo

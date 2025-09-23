@@ -98,7 +98,6 @@ def validate_imagecol_args(image_ids, image_colors):
         ]
         image_colors = default_colors[:len(image_ids)]
     assert len(image_ids) <= len(image_colors), "Please specify image colors more or equal to the number of color image IDs"
-    print(f"    - image colors (N={len(image_colors)}): {image_colors}")
     image_colors_out = list(image_colors)
     return image_colors_out
 
