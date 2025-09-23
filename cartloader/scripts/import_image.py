@@ -130,8 +130,9 @@ def import_image(_args):
     if args.in_json is not None:
         assert os.path.exists(args.in_json), f"File not found: {args.in_json} (--in-json)"
         xenium_ranger_data=load_file_to_dict(args.in_json)
+        image_data = xenium_ranger_data.get("IMAGES", xenium_ranger_data)
         # only keep the key:value pairs that have a key in ["DAPI", "BOUNDARY_IMG", "INTERIOR_RNA_IMG", "INTERIOR_PROTEIN_IMG", "DAPI_3D", "DAPI_MIP"]
-        args.in_img = xenium_ranger_data.get(args.img_id, None)
+        args.in_img = image_data.get(args.img_id, None)
 
     assert args.in_img is not None and os.path.exists(args.in_img), "Please provide a valid input figure file using --in-img or --in-json with --img-id"
     
