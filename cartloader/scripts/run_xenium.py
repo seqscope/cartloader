@@ -1,4 +1,4 @@
-y import sys, os, argparse, logging, subprocess, inspect, re
+import sys, os, argparse, logging, subprocess, inspect, re
 from pathlib import Path
 import hashlib
 from typing import Iterable, List, Optional
@@ -216,7 +216,7 @@ def run_xenium(_args):
             f"--gdal_translate {args.gdal_translate}" if args.gdal_translate else "",
             ])
         sge_convert_cmd = add_param_to_cmd(sge_convert_cmd, args, ["spatula", "parquet_tools", "gdalwarp"])
-        sge_convert_cmd = add_param_to_cmd(sge_convert_cmd, args, ["restart","n_jobs","threads"])
+        sge_convert_cmd = add_param_to_cmd(sge_convert_cmd, args, ["restart","n_jobs"])
         
         run_command_w_preq(sge_convert_cmd, prerequisites=prereq, dry_run=args.dry_run, flush=True)
         

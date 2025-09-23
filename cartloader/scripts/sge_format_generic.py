@@ -15,7 +15,6 @@ def sge_format_generic(_args):
                                      """)
     inout_params = parser.add_argument_group("Input/Output Parameters")
     inout_params.add_argument('--input', type=str, help='Path to input transcript-indexed SGE TSV/CSV')
-    inout_params.add_argument('--out-dir', required= True, type=str, help='Output directory')
     inout_params.add_argument('--out-dir', required= True, type=str, help='Path to output directory')
     inout_params.add_argument('--out-transcript', type=str, default="transcripts.unsorted.tsv", help='File name of output transcript-indexed SGE TSV (default: transcripts.unsorted.tsv)')
     inout_params.add_argument('--out-minmax', type=str, default="coordinate_minmax.tsv", help='File name of output coordinate min/max TSV (default: coordinate_minmax.tsv)')
