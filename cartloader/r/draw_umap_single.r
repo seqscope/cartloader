@@ -48,14 +48,14 @@ cmapgrp$add_argument("--prob-palette",        type = "character", default = "vir
 plotgrp <- parser$add_argument_group("Optional Plot Parameters")
 plotgrp$add_argument("--dpi",           type = "integer",  default = 300,
                     help = "DPI for the generated plot (default: 300)")
-plotgrp$add_argument("--base-dim",      type = "double", default = 3,
-                    help = "Baseline inches added before scaling for auto-computed dimension (default: 4)")
+plotgrp$add_argument("--base-dim",      type = "double", default = 2,
+                    help = "Baseline inches per panel added before scaling for auto-computed dimension (default: 2)")
 plotgrp$add_argument("--scale-factor",  type = "double", default = 0.1,
                     help = "Inches per data unit of span for auto-computed dimension (default: 0.1)")
-plotgrp$add_argument("--min-dim",       type = "double", default = 3,
-                    help = "Minimum size in inches for auto-computed dimension (default: 4)")
+plotgrp$add_argument("--min-dim",       type = "double", default = 2,
+                    help = "Minimum size in inches per panel for auto-computed dimension (default: 2)")
 plotgrp$add_argument("--max-dim",       type = "double", default = 15,
-                    help = "Maximum size in inches for auto-computed dimension (default: 15)")
+                    help = "Maximum size in inches per panel for auto-computed dimension (default: 15)")
 plotgrp$add_argument("--plot-dim",      type = "double", default = NULL, 
                     help = "Manual defined single plot size in inches (used for BOTH width and height) because it uses a 1:1 aspect. If omitted, the size is auto-computed from data span.")
 
@@ -147,13 +147,16 @@ if (pcol %in% names(plot_dt)) {
 
 # Expand rows per facet level efficiently
 make_panels_dt <- function() {
-  rbindlist(lapply(ordered_levels, function(lbl) {
+  dt <- rbindlist(lapply(ordered_levels, function(lbl) {
     tmp <- copy(dt_core)
     tmp[, panel_factor := lbl]
     tmp[, is_highlight := topf == lbl]
     tmp[, prob_value := ifelse(is_highlight, prob, NA_real_)]
     tmp
   }), use.names = TRUE)
+  # Ensure facet order follows numeric interpretation when applicable
+  dt[, panel_factor := factor(panel_factor, levels = ordered_levels)]
+  dt
 }
 
 if (args$mode %in% c("binary", "both")) {
@@ -187,7 +190,10 @@ if (args$mode %in% c("binary", "both")) {
     ggplot2::coord_equal() +
     theme_00(base_size = 11) +
     ggplot2::labs(title = "UMAP", subtitle = args$subtitle, x = xcol, y = ycol) +
-    ggplot2::theme(legend.position = "none", panel.grid.minor = ggplot2::element_blank())
+    ggplot2::theme(legend.position = "none", 
+                    panel.grid.minor = ggplot2::element_blank(),
+                    plot.title = ggplot2::element_text(size = 16),
+                    plot.subtitle = ggplot2::element_text(size = 12))
 
   out_png <- paste0(args$out, ".umap.single.binary.png")
   ggplot2::ggsave(
@@ -224,7 +230,9 @@ if (args$mode %in% c("prob", "both")) {
     ggplot2::coord_equal() +
     theme_00(base_size = 11) +
     ggplot2::labs(title = "UMAP", subtitle = args$subtitle, x = xcol, y = ycol, color = "Prob") +
-    ggplot2::theme(panel.grid.minor = ggplot2::element_blank())
+    ggplot2::theme(panel.grid.minor = ggplot2::element_blank(),
+                    plot.title = ggplot2::element_text(size = 16),
+                    plot.subtitle = ggplot2::element_text(size = 12))
 
   out_png <- paste0(args$out, ".umap.single.prob.png")
   ggplot2::ggsave(
