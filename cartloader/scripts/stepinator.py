@@ -89,7 +89,7 @@ def validate_yaml_config(yml, args):
     - If image actions requested, HISTOLOGY (or in_tiles under SGE for sge_stitch) must exist
     """
     # out_dir
-    if args.out_dir is None and yml.get("out_dir", None) is None:
+    if yml.get("out_dir", None) is None:
         raise AssertionError("Error: --out-dir or out_dir in YAML is required")
 
     need_sge = args.sge_convert or args.sge_stitch or args.run_ficture or args.run_cartload
@@ -111,7 +111,6 @@ def validate_yaml_config(yml, args):
         if args.image_png2pmtiles:
             hist = yml.get("HISTOLOGY", [])
             assert isinstance(hist, list) and len(hist) > 0, "Error: YAML must contain HISTOLOGY for image_png2pmtiles"
-        # for image_stitch, either HISTOLOGY with in_tiles or SGE.in_tiles will be used downstream
     return True
 
 class StepinatorRunner:
@@ -189,7 +188,7 @@ def cmd_sge_stitch(sgeinfo, args, env, generate_tile_minmax_only=False):
         f"--n-jobs {args.n_jobs}" if args.n_jobs else "",
         f"--restart" if args.restart else "",
         "--generate-tile-minmax-only" if generate_tile_minmax_only else "",
-        f"--filter-by-density --out-filtered-prefix {sgeinfo['filtered_prefix']} --genomic-feature {sgeinfo['colname_count']}" if sgeinfo['filter_by_density'] else "",
+        f"--filter-by-density --out-filtered-prefix {sgeinfo['filtered_prefix']} " if sgeinfo['filter_by_density'] else "",
         f"--north-up" if args.north_up else "",
     ])
 
@@ -250,7 +249,7 @@ def cmd_sge_convert(sgeinfo, args, env):
         in_arg,
         f"--out-dir {sgeinfo['sge_dir']}",
         f"--colname-count {sgeinfo['colname_count']}",
-        f"--filter-by-density --out-filtered-prefix {sgeinfo['filtered_prefix']} --genomic-feature {sgeinfo['colname_count']}" if sgeinfo['filter_by_density'] else "",
+        f"--filter-by-density --out-filtered-prefix {sgeinfo['filtered_prefix']} " if sgeinfo['filter_by_density'] else "",
         f"--sge-visual" if args.sge_visual else "",
         f"--n-jobs {args.n_jobs}" if args.n_jobs else "",
         f"--north-up" if args.north_up else "",
