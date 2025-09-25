@@ -371,7 +371,9 @@ def import_xenium_cell(_args):
     if args.update_catalog:
         ## read the input catalog.yaml file
         if args.catalog_yaml is None:
-            args.catalog_yaml = os.path.join(args.in_dir, "catalog.yaml")
+            ## get the basedir of the output prefix
+            out_dir = os.path.dirname(args.outprefix)
+            args.catalog_yaml = os.path.join(out_dir, "catalog.yaml")
         
         logger.info(f"Updating catalog YAML file: {args.catalog_yaml}")
         ##TO-DO: catalog_yaml should be within the same dir with the output assets
