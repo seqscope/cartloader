@@ -79,7 +79,7 @@ def parse_arguments(_args):
     return parser.parse_args(_args)
 
 def define_lda_runs(args):
-    assert args.init_lda, "--init-lda must be ON when running define_lda_runs()"
+    #assert args.init_lda, "--init-lda must be ON when running define_lda_runs()"
     assert args.width is not None, "When --init-lda is ON, provide at least one train width for LDA training using --train-width"
 
     if args.n_factor is None:
