@@ -910,3 +910,26 @@ def parquet_to_csv_with_polars_pigz(
             # Make sure the process is torn down on error
             proc.kill()
             raise
+
+def merge_config(base_config, args, keys, prefix=None):
+    """
+    Merges parameters from a base configuration dictionary and command-line arguments.
+    Args:
+        base_config (dict): Dictionary containing default values.
+        args (argparse.Namespace): Parsed command-line arguments.
+        keys (list): Keys to be merged from args and base_config.
+        prefix (str, optional): Prefix to be added to keys in args.
+    Returns:
+        SimpleNamespace: Merged configuration.
+    """
+    from types import SimpleNamespace
+
+    config = base_config.get(prefix, {}).copy() if prefix else base_config.copy()
+    for key in keys:
+        val = getattr(args, f"{prefix}_{key}" if prefix else key, None)
+        #print(f"{prefix}_{key}" if prefix else key)
+        if isinstance(val, str) and val is not None:
+            config[key] = val
+        elif isinstance(val, list) and len(val) > 0:
+            config[key] = val
+    return SimpleNamespace(**config)
