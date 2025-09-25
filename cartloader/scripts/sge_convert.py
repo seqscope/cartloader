@@ -171,7 +171,7 @@ def convert_visiumhd(cmds, args):
     if args.use_parquet_tools:
         cmds.append(f"{args.parquet_tools} csv {args.pos_parquet} |  {args.gzip} -c > {tmp_parquet}")
     else:
-        cmds.append(f"cartloader parquet_to_csv_rapid --in-parquet {args.in_parquet} --out-csv-gz {tmp_parquet} --pigz {args.pigz} --threads {args.pigz_threads}")
+        cmds.append(f"cartloader parquet_to_csv_rapid --in-parquet {args.pos_parquet} --out-csv-gz {tmp_parquet} --pigz {args.pigz} --threads {args.pigz_threads}")
 
     # * --scale_json: if applicable
     if args.scale_json is not None:
