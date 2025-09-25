@@ -8,7 +8,7 @@ cartloader sge_convert \
   --in-csv ./input.tsv.gz \
   --units-per-um ${SCALE} \
   --out-dir ./sge \
-  --exclude-feature-regex '^(BLANK|NegCon|NegPrb)' \
+  --exclude-feature-regex '^(BLANK|Neg|Intergenic|Deprecated|Unassigned)' \
   --sge-visual \
   --spatula ${spatula} \
   --n-jobs ${n_jobs}

@@ -44,6 +44,7 @@ def parse_arguments(_args):
     inout_params.add_argument('--out-feature', type=str, default="feature.clean.tsv.gz", help='File name of output compressed per-gene UMI count TSV under --out-dir (default: feature.clean.tsv.gz)')
     inout_params.add_argument('--out-minmax', type=str, default="coordinate_minmax.tsv", help='File name of output coordinate min/max TSV under --out-dir (default: coordinate_minmax.tsv)')
     inout_params.add_argument('--out-json',  type=str, default=None, help='Path to output JSON manifest of SGE paths (default: <out-dir>/sge_assets.json)')
+    inout_params.add_argument('--use-parquet-tools', action='store_true', help='Use parquet-tools instead of polars/pigz for parquet to csv conversion (default: False). parquet-tools may be slower for large files.')
 
     # AUX input MEX params
     aux_in_mex_params = parser.add_argument_group("IN-MEX Auxiliary Parameters", "10x Visium HD and SeqScope: auxiliary inputs")
@@ -116,6 +117,8 @@ def parse_arguments(_args):
     env_params.add_argument('--gzip', type=str, default="gzip", help='Path to gzip binary (default: gzip). For speed, consider "pigz -p 4"')
     env_params.add_argument('--spatula', type=str, default="spatula", help='Path to spatula binary (default: spatula)')
     env_params.add_argument('--parquet-tools', type=str, default="parquet-tools", help='Path to parquet-tools (used with --in-parquet or --pos-parquet; default: parquet-tools)')
+    env_params.add_argument('--pigz', type=str, default="pigz", help='Path to pigz binary (default: pigz)')
+    env_params.add_argument('--pigz-threads', type=int, default=4, help='Number of threads for pigz (default: 4)')
     env_params.add_argument('--gdal_translate', type=str, default=f"gdal_translate", help='Path to gdal_translate (used with --north-up; default: gdal_translate)')
     env_params.add_argument('--gdalwarp', type=str, default=f"gdalwarp", help='Path to gdalwarp (used with --north-up; default: gdalwarp)')
  
@@ -165,7 +168,11 @@ def convert_visiumhd(cmds, args):
     ## output: out_transcript, out_minmax, out_feature
     # * --pos-parquet: convert parquet to csv
     tmp_parquet = f"{args.out_dir}/tissue_positions.csv.gz"
-    cmds.append(f"{args.parquet_tools} csv {args.pos_parquet} |  {args.gzip} -c > {tmp_parquet}")
+    if args.use_parquet_tools:
+        cmds.append(f"{args.parquet_tools} csv {args.pos_parquet} |  {args.gzip} -c > {tmp_parquet}")
+    else:
+        cmds.append(f"cartloader parquet_to_csv_rapid --in-parquet {args.in_parquet} --out-csv-gz {tmp_parquet} --pigz {args.pigz} --threads {args.pigz_threads}")
+
     # * --scale_json: if applicable
     if args.scale_json is not None:
         assert os.path.exists(args.scale_json), f"File not found: {args.scale_json} (--scale-json)"
@@ -392,7 +399,10 @@ def sge_convert(_args):
         if args.in_parquet is not None:
             cmds = cmd_separator([], f"Converting input parquet into a csv file : (platform: {args.platform})...")
             args.in_csv = f"{args.out_dir}/transcripts.parquet.csv.gz"
-            cmds.append(f"{args.parquet_tools} csv {args.in_parquet} |  {args.gzip} -c > {args.in_csv}")
+            if args.use_parquet_tools:
+                cmds.append(f"{args.parquet_tools} csv {args.in_parquet} |  {args.gzip} -c > {args.in_csv}")
+            else:
+                cmds.append(f"cartloader parquet_to_csv_rapid --in-parquet {args.in_parquet} --out-csv-gz {args.in_csv} --pigz {args.pigz} --threads {args.pigz_threads}")
             mm.add_target(args.in_csv, [args.in_parquet], cmds) 
             # update the prereq for convert
             in_raw_filelist=[args.in_csv] 
