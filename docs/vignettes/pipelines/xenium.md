@@ -100,9 +100,7 @@ ___
 
 **Data Access**
 
-The example data is downloaded from 10x Data portal.
-
-TODO: Code to download the data will be provided later.
+Downloaded the ST data from [10x Genomics Dataset portal](https://www.10xgenomics.com/datasets/xenium-human-lung-cancer-post-xenium-technote).
 
 ___
 
@@ -165,7 +163,7 @@ cartloader run_xenium \
 **Action Flags to Enable Modules**
 
 !!! warning "Actions"
-    `run_xenium` runs multiple `CartLoader` modules; enable and combine actions with flags.
+    `run_xenium` runs multiple `CartLoader` modules together; enable and combine actions with flags.
 
 
 | `CartLoader` Modules                     | Flags in `run_xenium`  | Actions                                                                       | Prerequisites                                                             |
@@ -205,7 +203,7 @@ Below are explanations of the parameters used in the example. For the full list,
     | `--filter-by-density`              | optional with `--sge-convert`              | Enable density‑based transcript filtering.                                            |
     | `--exclude-feature-regex`          | optional with `--sge-convert`              | Regex to exclude features (e.g., controls).                                           |
     | `--csv-clust`, `--csv-diffexp`     | `--import-cells` (manual)                  | Paths to clusters/DE CSVs (relative to `--space-ranger-dir`).                         |
-    | `--btf-tifs`                       | `--import-images` (manual)                 | One or more BTF/TIFF paths (relative to `--space-ranger-dir`).                        |
+    | `--tifs`                           | `--import-images` (manual)                 | One or more BTF/TIFF paths (relative to `--space-ranger-dir`).                        |
     | `--title`, `--desc`                | optional with `--run-cartload2`            | Human‑readable catalog title/description.                                             | 
     | `--zenodo-token`                   | `--upload-zenodo`                          | Path to file containing Zenodo access token.                                          |-->
 
@@ -235,4 +233,13 @@ Below is an example of spatial factor inference results from `FICTURE` using a t
 
 See more details of output at the Reference pages for [run_cartload2](../..//reference/run_cartload2.md), [import_xenium_cell](../..//reference/import_cell.md), and [import_image](../../reference/import_image.md).
 
-TO-DO: path to those assets will be provided to serve the output
+- SGE assets JSON: `<out-dir>/sge/sge_assets.json`
+- FICTURE assets JSON: `<out-dir>/cartload2/ficture_assets.json` (when `--run-ficture2`)
+- Cells assets JSON: `<out-dir>/cartload2/spaceranger_assets.json` (default `--cell-id spaceranger`)
+  - Cells PMTiles: `<out-dir>/cartload2/spaceranger-cells.pmtiles`
+  - Boundaries PMTiles: `<out-dir>/cartload2/spaceranger-boundaries.pmtiles`
+- Catalog to serve: `<out-dir>/cartload2/catalog.yaml`
+- SGE PMTiles (examples): `<out-dir>/cartload2/sge-mono-dark.pmtiles`, `<out-dir>/cartload2/sge-mono-light.pmtiles`
+- Factor PMTiles (examples): `<out-dir>/cartload2/t18_f24_p18_a6-results.pmtiles`, `<out-dir>/cartload2/t18_f24_p18_a6-pixel-raster.pmtiles`
+
+individual PMTiles and asset JSON files reside alongside it under `<out-dir>/cartload2/`.

@@ -2,7 +2,7 @@ import sys, os, gzip, argparse, logging, warnings, shutil, re, copy, time, pickl
 import pandas as pd
 from collections import defaultdict
 import math
-from cartloader.utils.image_helper import update_orient, orient2axisorder
+from cartloader.utils.orient_helper import update_orient, orient2axisorder
 
 def parse_arguments(_args):
     """Parse command-line arguments."""

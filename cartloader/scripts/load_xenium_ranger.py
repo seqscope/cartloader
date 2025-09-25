@@ -147,7 +147,8 @@ def load_xenium_ranger(_args):
                                         args.overwrite)
     
     write_dict_to_file(datdict, args.out_json, check_equal=True, sort_keys=False)
- 
+    print(f"Created a JSON file at: {args.out_json}")
+
 if __name__ == "__main__":
     # Get the base file name without extension
     script_name = os.path.splitext(os.path.basename(__file__))[0]

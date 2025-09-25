@@ -18,7 +18,7 @@ Import platform‑specific cell analysis outputs (cells, boundaries, clusters/DE
     `CartLoader` accepts two input modes for each platform:
 
     - JSON mode: pass `--in-json` with required keys.
-    - Manual mode: pass `--indir` with specific file locations.
+    - Manual mode: pass `--in-dir` with specific file locations.
 
 === "Xenium Example"
 
@@ -34,7 +34,7 @@ Import platform‑specific cell analysis outputs (cells, boundaries, clusters/DE
     cartloader import_xenium_cell \
       --cells --boundaries --summary \
       --outprefix /path/to/out/xeniumranger \
-      --indir /path/to/xenium_ranger_output \
+      --in-dir /path/to/xenium_ranger_output \
       --csv-cells analysis/cell_feature_matrix/cells.csv \
       --csv-boundaries analysis/cell_segmentation/cells_boundary.geojson \
       --csv-clust analysis/clustering/gene_expression_graphclust/clusters.csv \
@@ -57,7 +57,7 @@ Import platform‑specific cell analysis outputs (cells, boundaries, clusters/DE
       --cells \
       --boundaries \
       --outprefix /path/to/out/spaceranger \
-      --indir /path/to/spaceranger_output \
+      --in-dir /path/to/spaceranger_output \
       --mtx-cell filtered_feature_bc_matrix \
       --geojson-cells spatial/cells.geojson \
       --csv-clust analysis/clustering/gene_expression_graphclust/clusters.csv \
@@ -95,20 +95,20 @@ Append generated layers to an existing `catalog.yaml`.
 === "Xenium Input"
 
     - `--in-json` (str): Path to JSON with keys `CELL`, `BOUNDARY`, `CLUSTER`, `DE` (JSON mode).
-    - `--indir` (str): Path to Xenium Ranger output directory (manual mode base path).
-    - `--csv-cells` (str): Relative path under `--indir` to cells table (CSV/Parquet).
-    - `--csv-boundaries` (str): Relative path under `--indir` to cell boundaries (GeoJSON/CSV).
-    - `--csv-clust` (str): Relative path under `--indir` to clustering results (CSV).
-    - `--csv-diffexp` (str): Relative path under `--indir` to differential expression results (CSV).
+    - `--in-dir` (str): Path to Xenium Ranger output directory (manual mode base path).
+    - `--csv-cells` (str): Relative path under `--in-dir` to cells table (CSV/Parquet).
+    - `--csv-boundaries` (str): Relative path under `--in-dir` to cell boundaries (GeoJSON/CSV).
+    - `--csv-clust` (str): Relative path under `--in-dir` to clustering results (CSV).
+    - `--csv-diffexp` (str): Relative path under `--in-dir` to differential expression results (CSV).
 
 === "Visium HD Input"
 
     - `--in-json` (str): Path to JSON with keys `CELL_FEATURE_MEX`, `CELL_GEOJSON`, `CLUSTER`, `DE` (JSON mode).
-    - `--indir` (str): Path to Space Ranger output directory (manual mode base path).
-    - `--mtx-cell` (str): Relative path under `--indir` to cell-feature matrix directory.
-    - `--geojson-cells` (str): Relative path under `--indir` to cell geometries (GeoJSON).
-    - `--csv-clust` (str): Relative path under `--indir` to clustering results (CSV).
-    - `--csv-diffexp` (str): Relative path under `--indir` to differential expression results (CSV).
+    - `--in-dir` (str): Path to Space Ranger output directory (manual mode base path).
+    - `--mtx-cell` (str): Relative path under `--in-dir` to cell-feature matrix directory.
+    - `--geojson-cells` (str): Relative path under `--in-dir` to cell geometries (GeoJSON).
+    - `--csv-clust` (str): Relative path under `--in-dir` to clustering results (CSV).
+    - `--csv-diffexp` (str): Relative path under `--in-dir` to differential expression results (CSV).
 
 ??? note "Auxiliary Parameters"
 

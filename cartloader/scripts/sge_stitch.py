@@ -5,7 +5,7 @@ import subprocess
 from cartloader.utils.utils import cmd_separator, scheck_app, add_param_to_cmd, log_dataframe, write_dict_to_file, execute_makefile
 from cartloader.utils.minimake import minimake
 from cartloader.scripts.sge_convert import sge_visual, sge_density_filtering, sge_visual_northup
-from cartloader.utils.image_helper import update_orient
+from cartloader.utils.orient_helper import update_orient
 
 def sge_stitch(_args):
     parser = argparse.ArgumentParser(
@@ -111,7 +111,7 @@ def sge_stitch(_args):
         if missing_minmax: 
             cmds = cmd_separator([], f"Creating missing minmax file for {transcript}")
             out_minmax = os.path.join(in_dir, f"{in_id}.minmax.tsv") if in_id else os.path.join(in_dir, f"coordinate_minmax.tsv")
-            add_minmax_cmd =" ".join([f"cartloader", "sge_adds_on",
+            add_minmax_cmd =" ".join([f"cartloader", "sge_supp",
                                     f"--in-transcript {transcript}",
                                     "--add-minmax",
                                     f"--out-minmax {out_minmax}"
@@ -122,7 +122,7 @@ def sge_stitch(_args):
         if missing_ftr: 
             cmds = cmd_separator([], f"Creating missing feature file for {transcript}")
             out_ftr = os.path.join(in_dir, f"{in_id}.feature.tsv.gz") if in_id else os.path.join(in_dir, f"feature.clean.tsv.gz")
-            add_ftr_cmd =" ".join([f"cartloader", "sge_adds_on",
+            add_ftr_cmd =" ".join([f"cartloader", "sge_supp",
                                     f"--in-transcript {transcript}",
                                     "--add-feature",
                                     f"--colname-feature-name {args.colname_feature_name}",

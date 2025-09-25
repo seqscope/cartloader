@@ -1,4 +1,4 @@
-import sys, os, re, gzip, logging, argparse, inspect, subprocess, gzip
+import sys, os, re, gzip, logging, argparse, inspect, subprocess
 import pandas as pd
 import numpy as np
 
@@ -121,7 +121,7 @@ def convert_generic_tsv_to_pmtiles(_args):
 
     if ( args.rename_column and len(args.rename_column) != n_renamed ):
         ## identify columns that are not found
-        missing_cols = dict_cols_to_rename - set(dict_cols_to_rename.keys())
+        missing_cols = set(dict_cols_to_rename.keys()) - set(hdr_cols_input)
         logger.error(f"Error in renaming columns. The following columns are missing {missing_cols}")
         sys.exit(1)
         

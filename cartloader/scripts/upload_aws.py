@@ -34,7 +34,7 @@ def collect_files_from_yaml(catalog_f):
         catalog = yaml.safe_load(catalog_file)
     catalog_pair=traverse_dict(catalog)
 
-    keys_id = {"id", "title", "name", "model_id", "proj_id", "decode_id", "cells_id"}
+    keys_id = {"id", "title", "name", "model_id", "proj_id", "decode_id", "cells_id", "raw_pixel_col"}
     cartload_files = []
     hist_files = []
 
@@ -110,6 +110,8 @@ def upload_aws(_args):
             cartload_prerequisites.append(catalog_f)
             
             for filename in cartload_files:
+                # if filename is None:
+                #     continue
                 file_path=os.path.join(in_dir, filename)
                 s3_file_path = os.path.join(s3_dir, filename) 
                 cmds.append(f"{args.aws} s3 cp {file_path} {s3_file_path}")
@@ -122,6 +124,8 @@ def upload_aws(_args):
         # step 2. Upload basemap files to AWS besides cartload
         if not args.upload_cartload_only:
             for filename in hist_files:
+                # if filename is None:
+                #     continue
                 cmds=cmd_separator([], f"Uploading additional basemaps to AWS: {filename}...")
                 file_path=os.path.join(in_dir, filename)
                 s3_file_path = os.path.join(s3_dir, filename) 

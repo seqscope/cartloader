@@ -112,7 +112,7 @@ Manual mode inputs (relative to `--space-ranger-dir`):
 - `--transparent-below`: Make pixels below value transparent (0–255; default: 1)
 
 Manual mode inputs (relative to `--space-ranger-dir`):
-- `--btf-tifs`: One or more BTF/TIFF paths
+- `--tifs`: One or more BTF/TIFF paths
 
 ### CartLoad2 (with `--run-cartload2`)
 

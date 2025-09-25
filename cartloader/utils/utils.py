@@ -1,6 +1,5 @@
 import io
 import logging, os, shutil, sys, importlib, csv, shlex, subprocess, json, yaml, re, gzip
-import os
 from collections import Counter
 
 def get_func(name):
@@ -110,7 +109,7 @@ def valid_and_touch_cmd(input_files, output_file):
     if not input_files:
         raise ValueError("Input file list cannot be empty.")
     checks = " && ".join([f'[ -f "{inp}" ]' for inp in input_files])
-    touch_cmd = f'{checks} && touch {output_file}'
+    touch_cmd = f'{checks} && touch "{output_file}"'
     return touch_cmd
 
 # ====
@@ -118,11 +117,15 @@ def valid_and_touch_cmd(input_files, output_file):
 # ====
 def scheck_app(app_cmd):
     """
-    Check if the specified application is available
+    Check if the specified application is available.
+    Accepts either a bare executable name or a command string with flags.
     """
-    #if not shutil.which(app_cmd.split(" ")[0]):
-    if not shutil.which(app_cmd):
-        logging.error(f"Cannot find {app_cmd}. Please make sure that the path to specify {app_cmd} is correct")
+    # Only check the executable part when flags are included
+    exe = app_cmd.split()[0] if isinstance(app_cmd, str) else app_cmd
+    if not shutil.which(exe):
+        logging.error(
+            f"Cannot find executable '{exe}' (from '{app_cmd}'). Please verify your PATH or provide a correct path."
+        )
         sys.exit(1)
 
 def scheck_file(file_path):
@@ -907,3 +910,26 @@ def parquet_to_csv_with_polars_pigz(
             # Make sure the process is torn down on error
             proc.kill()
             raise
+
+def merge_config(base_config, args, keys, prefix=None):
+    """
+    Merges parameters from a base configuration dictionary and command-line arguments.
+    Args:
+        base_config (dict): Dictionary containing default values.
+        args (argparse.Namespace): Parsed command-line arguments.
+        keys (list): Keys to be merged from args and base_config.
+        prefix (str, optional): Prefix to be added to keys in args.
+    Returns:
+        SimpleNamespace: Merged configuration.
+    """
+    from types import SimpleNamespace
+
+    config = base_config.get(prefix, {}).copy() if prefix else base_config.copy()
+    for key in keys:
+        val = getattr(args, f"{prefix}_{key}" if prefix else key, None)
+        #print(f"{prefix}_{key}" if prefix else key)
+        if isinstance(val, str) and val is not None:
+            config[key] = val
+        elif isinstance(val, list) and len(val) > 0:
+            config[key] = val
+    return SimpleNamespace(**config)

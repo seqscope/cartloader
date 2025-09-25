@@ -5,7 +5,7 @@ from typing import Iterable, List, Optional
 
 # from cartloader.utils.minimake import minimake
 from cartloader.utils.utils import add_param_to_cmd, cmd_separator, run_command_w_preq, load_file_to_dict, assert_unique
-from cartloader.utils.pipeline_helper import validate_general_args, validate_imageid_args, validate_imagecol_args, stage_run_ficture2, stage_run_cartload2, stage_upload_aws, stage_upload_zenodo, stage_import_images
+from cartloader.utils.pipeline_helper import resolve_image_plan, validate_general_args, validate_imageid_args, validate_imagecol_args, validate_imageloc_args, stage_run_ficture2, stage_run_cartload2, stage_upload_aws, stage_upload_zenodo, stage_import_images
 
 
 def parse_arguments(_args):
@@ -36,7 +36,7 @@ def parse_arguments(_args):
     inout_params = parser.add_argument_group("Input/Output Parameters", 'Two input modes: 1) Manual — set --xenium-ranger-dir and any "Manual Input Parameters" args. 2) Auto-detect — leave them unset; read from --xenium-ranger-assets (created by --load-xenium-ranger)')
     inout_params.add_argument('--xenium-ranger-dir', type=str, help='Path to the Xenium Ranger output directory containing transcript, cell, boundary, cluster, and image files (required if manual input mode is enabled or if --load-xenium-ranger)')
     inout_params.add_argument('--out-dir', type=str, required=True, help='Path to output directory. Stores converted SGE, FICTURE results, raster tiles in <out_dir>/sge, <out_dir>/ficture2, and <out_dir>/cartload2')
-    inout_params.add_argument('--xenium-ranger-assets', type=str, default=None, help='Path to a JSON file containing Xenium Ranger outputs paths. Written by --load-space-ranger; read when auto-detection mode is on (default: <out_dir>/space_ranger_assets.json)')
+    inout_params.add_argument('--xenium-ranger-assets', type=str, default=None, help='Path to a JSON file containing Xenium Ranger outputs paths. Written by --load-space-ranger; read when auto-detection mode is on (default: <out_dir>/xenium_ranger_assets.json)')
     inout_params.add_argument('--ext-fic-dir', type=str, help='Path to an external FICTURE directory for loading external FICTURE assets (required if --import-ext-ficture2)')
 
     # Key Parameters (split by command)
@@ -50,6 +50,8 @@ def parse_arguments(_args):
     fic_params.add_argument('--n-factor', type=str, default=None, help='Comma-separated list of factor counts for LDA training (required if --run-ficture2)')
     fic_params.add_argument('--colname-feature', type=str, default='gene', help='Column name for feature name (used with --run-ficture2 and --run-cartload2; default: gene)')
     fic_params.add_argument('--colname-count', type=str, default='count', help='Column name for UMI counts (used with --run-ficture2 and --run-cartload2; default: count)')
+    fic_params.add_argument('--fic-include-feature-regex', type=str, default=None, help='Regex of feature names to include when running --run-ficture2')
+    fic_params.add_argument('--fic-exclude-feature-regex', type=str, default=None, help='Regex of feature names to exclude when running --run-ficture2, e.g., apply "^(mt-.*$|Gm\\d+$)" for mouse datasets to exclude mitochondrial gene and Pseudogenes')
 
     cart_params = parser.add_argument_group("Parameters for --run-cartload2")
     cart_params.add_argument('--id', type=str, help='Identifier for output assets; no whitespace; prefer "-" over "_" (required if --run-cartload2)')
@@ -178,6 +180,7 @@ def run_xenium(_args):
 
         if os.path.exists(ranger_assets) and not args.restart:
             print(f" * Skip --load-xenium-ranger since the Xenium Ranger raw input assets file ({ranger_assets}) already exists. You can use --restart to force execution of this step.", flush=True)
+            print("\n", flush=True)
             print(load_xenium_cmd, flush=True)
         else:
             run_command_w_preq(load_xenium_cmd, prerequisites=[], dry_run=args.dry_run, flush=True)
@@ -208,12 +211,12 @@ def run_xenium(_args):
             f"--in-csv {os.path.join(ranger_dir, args.csv_transcript)}" if not use_json else "",
             f"--units-per-um {args.units_per_um}" if args.units_per_um else "",
             f"--filter-by-density" if args.filter_by_density else "",
-            f"--exclude-feature-regex {args.exclude_feature_regex}" if args.exclude_feature_regex else "",
+            f"--exclude-feature-regex \"{args.exclude_feature_regex}\"" if args.exclude_feature_regex else "",
             "--sge-visual --north-up", # always north up
             f"--gdal_translate {args.gdal_translate}" if args.gdal_translate else "",
             ])
         sge_convert_cmd = add_param_to_cmd(sge_convert_cmd, args, ["spatula", "parquet_tools", "gdalwarp"])
-        sge_convert_cmd = add_param_to_cmd(sge_convert_cmd, args, ["restart","n_jobs","threads"])
+        sge_convert_cmd = add_param_to_cmd(sge_convert_cmd, args, ["restart","n_jobs"])
         
         run_command_w_preq(sge_convert_cmd, prerequisites=prereq, dry_run=args.dry_run, flush=True)
         
@@ -260,6 +263,7 @@ def run_xenium(_args):
 
         if os.path.exists(cell_assets) and not args.restart:
             print(f" * Skip --import-cells since the Xenium Ranger cell assets file ({cell_assets}) already exists. You can use --restart to force execution of this step.", flush=True)
+            print("\n", flush=True)
             print(import_cell_cmd, flush=True)
         else:
             run_command_w_preq(import_cell_cmd, prerequisites=[], dry_run=args.dry_run, flush=True)
@@ -269,28 +273,31 @@ def run_xenium(_args):
         print("Executing --import-images (execute via make)", flush=True)
         print("="*10, flush=True)
 
-        args.image_ids = validate_imageid_args(args, ranger_assets)
-        args.image_colors = validate_imagecol_args(args)
+        image_ids = validate_imageid_args(args.image_ids, ranger_assets, all_images=args.all_images, dry_run=args.dry_run)
+        image_colors = validate_imagecol_args(image_ids, args.image_colors)
         
         # (xenium-specific) ome_tifs when not use_json
-        tif_paths=[]
         if not use_json:
-            assert args.ome_tifs, "--ome-tifs is required when --import-images is set with manual input mode. Otherwise, set --load-xenium-ranger to automatically detect the images."
-            assert_unique(args.ome_tifs, "--ome-tifs")
-            # length
-            if len(args.ome_tifs) < len(args.image_ids):
-                raise ValueError(f"--ome-tifs ({len(args.ome_tifs)}) must be >= --image-ids ({len(args.image_ids)}); ensure paths align in order")
-            # all items in OME-TIFFs should exist:
-            for tif_loc in args.ome_tifs:
-                tif_path = os.path.join(ranger_dir, tif_loc)
-                assert os.path.exists(tif_path), f"File not found: {tif_path} (provided by --xenium-ranger-dir and --ome-tifs)"
-                tif_paths.append(tif_path)
+            if len(args.ome_tifs) < len(image_ids):
+                raise ValueError(f"--ome-tifs ({len(args.ome_tifs)}) must be >= --image-ids ({len(image_ids)}); ensure paths align in order")
+            tif_paths = validate_imageloc_args(ranger_dir, tifs_loc=args.ome_tifs, 
+                            loc_label="--ome-tifs", ranger_dir_label="--xenium-ranger-dir")
+        else:
+            tif_paths=[]
+
+        # image plan (id/color/use_json/img_path/ranger_assets/prereq)
+        image_plans = resolve_image_plan(image_ids, image_colors, use_json, ranger_assets, tif_paths)
         
         # cmd and execution
-        stage_import_images(cart_dir, args, ranger_assets, use_json, tif_paths, catalog_yaml)
+        stage_import_images(cart_dir, args, image_plans, 
+                            ome2png=True, 
+                            transparent_below=args.transparent_below,
+                            georef_detect=None,
+                            update_catalog=True if not args.run_cartload2 and os.path.exists(catalog_yaml) else False
+                            )
 
-        background_assets  = [ os.path.join(cart_dir, f"{image_id}_assets.json") for image_id in args.image_ids]
-        background_pmtiles = [ os.path.join(cart_dir, f"{image_id}.pmtiles")     for image_id in args.image_ids]
+        background_assets  = [ os.path.join(cart_dir, f"{image_id}_assets.json") for image_id in image_ids]
+        background_pmtiles = [ os.path.join(cart_dir, f"{image_id}.pmtiles")     for image_id in image_ids]
 
     if args.run_cartload2:   
         # prerequisites

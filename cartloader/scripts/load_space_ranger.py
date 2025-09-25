@@ -90,7 +90,6 @@ def define_hexmap(r):
         }
     return hex_map
 
-
 #==================
 
 def load_space_ranger(_args):
@@ -141,13 +140,12 @@ def load_space_ranger(_args):
         "GRID_8um": define_hexmap(8),
         "GRID_16um": define_hexmap(16),
         "IMAGES":  {
-            "HnE_BTF": {
+            "HnE": {
                 "required": False,
-                "filename_suffixes": ["_tissue_image.btf"],
-                "zip_suffixes": ["_square_002um_binned_outputs.tar.gz", "_binned_outputs.tar.gz"],
-            }
+                "filename_suffixes": ["_tissue_image.btf", "_tissue_image.tif", "_tissue_image.tiff"],
+                "zip_suffixes": [],
+            },
         }
-
     }
 
     # - Update the pattern if "zips" is empty but "zip_suffixes" are defined; as well as filenames
@@ -167,7 +165,7 @@ def load_space_ranger(_args):
                                         args.in_dir,
                                         args.unzip_dir,
                                         args.overwrite)
-                
+
     write_dict_to_file(datdict, args.out_json, check_equal=True, sort_keys=False)
     print(f"Created a JSON file at: {args.out_json}")
 
