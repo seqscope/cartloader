@@ -863,7 +863,7 @@ def parquet_to_csv_with_polars_pigz(
     batch_size: int = 131_072,       # tune up/down for speed vs. memory
     compress_level: int = 6,         # 1-9
     pigz_path: str = "pigz",
-    pigz_threads: int | None = None, # defaults to os.cpu_count()
+    pigz_threads: int = 4, # defaults to os.cpu_count()
 ):
     import polars as pl
 
