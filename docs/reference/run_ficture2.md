@@ -61,6 +61,10 @@ The LDA training step uses the hexagon TSV and JSON file from [segmentation step
 ### Decoding Step (`--decode`)
 The decoding step applies a trained LDA model from [LDA training step](#lda-training-step---init-lda) to tiled pixel-level transcript data from [tiling step](#tiling-step---tile) to infer the top spatial factors and their posterior probabilities for each pixel, enabling fine-grained spatial mapping of gene expression. It outputs a pixel-level annotation file in TSV format with coordinates and factor assignments, along with a pseudobulk gene-by-factor matrix in TSV format.
 
+### UMAP Visualization Step (`--umap`)
+
+The UMAP visualization step generate UMAP plots to visualize the relationships between different spatial factors from [LDA training step](#lda-training-step---init-lda).
+
 ---
 ## Parameters
 
@@ -74,6 +78,7 @@ Below are the core parameters. See more details in the collapsible section ("Aux
 * `--segment`: Run [segmentation step](#segmentation-step---segment).
 * `--init-lda`: Run [LDA training step](#lda-training-step---init-lda).
 * `--decode`: Run [decoding step](#decoding-step---decode).
+* `--umap`: Run [UMAP step](#umap-visualization-step---umap).
 
 #### Input/Output Parameters
 
@@ -315,7 +320,7 @@ Below are the core parameters. See more details in the collapsible section ("Aux
 	* Columns (int): Feature identifiers (e.g., gene names or indices)
 	* Values (float): Posterior probability of a feature in a factor.
 
-* `t{width}_f{n_factor}_p{width}_a{anchor_res}.bulk_chisq.tsv`: Same format as the `t{width}_f{n_factor}.bulk_chisq.tsv`
+* `t{width}_f{n_factor}_p{width}_a{anchor_.res}.bulk_chisq.tsv`: Same format as the `t{width}_f{n_factor}.bulk_chisq.tsv`
 * `t{width}_f{n_factor}_p{width}_a{anchor_res}.factor.info.tsv`:  Same format as the `t{width}_f{n_factor}.factor.info.tsv`
 * `t{width}_f{n_factor}_p{width}_a{anchor_res}.factor.info.html`: Same format as the `t{width}_f{n_factor}.factor.info.html`
 
@@ -349,3 +354,8 @@ Below are the core parameters. See more details in the collapsible section ("Aux
     ]
     }
     ```
+
+### UMAP Output
+
+* `t{width}_f{n_factor}.umap.png`: A UMAP plot that visualizes the relationships between spatial factors.
+* `t{width}_f{n_factor}.umap.single.prob.png`: A gallery of images, with each image showing a single factor color-coded by probability.

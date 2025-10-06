@@ -238,9 +238,8 @@ draw_umap_plot <- function(
   x_col = "UMAP1",
   y_col = "UMAP2"
 ) {
-  aes_args <- list(color = color_column)
-  p <- ggplot(plot_data, aes_string(x = x_col, y = y_col)) +
-    geom_point(do.call(aes_string, aes_args), size = 0.25, alpha = 0.35, shape = 16) +
+  p <- ggplot(plot_data, aes(x = !!sym(x_col), y = !!sym(y_col))) +
+    geom_point(aes(color = !!sym(color_column)), size = 0.25, alpha = 0.35, shape = 16) +
     labs(title = "UMAP", subtitle = subtitle, x = x_col, y = y_col) +
     coord_equal() +
     theme_00(base_size = 12) +

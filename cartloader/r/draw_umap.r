@@ -102,7 +102,7 @@ p <- draw_umap_plot(
   color_column = plot_prep$color_column,
   subtitle     = args$subtitle,
   x_col        = args$tsv_colname_umap1,
-  y_col        = args$tsv_colname_umap2,
+  y_col        = args$tsv_colname_umap2
 )
 
 umap_png = paste0(args$out_prefix, ".umap.png")
