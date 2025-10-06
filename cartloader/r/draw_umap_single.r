@@ -12,38 +12,39 @@ source(file.path(script_dir, "umap_utils.r"))
 parser <- ArgumentParser(description = "Draw one UMAP scatter plot for each factor")
 parser$add_argument("--input",                type = "character",   required = TRUE,
                     help = "Path to TSV containing UMAP coordinates and metadata")
-parser$add_argument("--mode",                 type="character",     default="binary",
+parser$add_argument("--out-prefix",                  type = "character",   required = TRUE,
+                    help = "Output prefix")
+parser$add_argument("--mode",                 type="character",     default="prob",
                     help = paste0(
                         "How to color the hexagons/cells:",
                         "'binary' = highlight hexagons/cells that belong to the current factor;",
                         "'prob'   = color hexagons/cells by their probability for the factor;",
                         "'both'   = generate both.",
-                        "Default: binary"))
-parser$add_argument("--tsv-colname-factor",   type = "character",   default = "topK",
-                    help = "Column name in input used to colour the scatter (default: topK)")
-parser$add_argument("--tsv-colname-umap1",       type = "character",   default = "UMAP1",
-                    help = "Column name for UMAP X coordinate (default: UMAP1)")
-parser$add_argument("--tsv-colname-umap2",       type = "character",   default = "UMAP2",
-                    help = "Column name for UMAP Y coordinate (default: UMAP2)")
-parser$add_argument("--tsv-colname-prob",    type = "character",   default = "topP",
-                    help = "Column name for probability (used when --mode is prob or both; default: topP)")
-parser$add_argument("--out",                  type = "character",   required = TRUE,
-                    help = "Output prefix")
+                        "Default: prob"))
 parser$add_argument("--subtitle",             type = "character",   default = NULL,
                     help = "Optional identifier used as the subtitle for the generated plot")
 
 cmapgrp <- parser$add_argument_group("Optional Color Map Parameters.")
 cmapgrp$add_argument("--cmap",                 type = "character", default = NULL,
-                    help = "TSV with colour map. If omitted, use a fixed color map from cartloader (used if --mode is binary or both)")
+                    help = "TSV with colour map for binary mode. If omitted, use a fixed color map from cartloader (used if --mode is binary or both)")
 cmapgrp$add_argument("--cmap-colname-factor",  type = "character", default = "Name",
                     help = "Column name in colour map for factor labels (default: Name) (used if --mode is binary or both)")
 cmapgrp$add_argument("--cmap-colname-hex",     type = "character", default = "Color_hex",
                     help = "Column name in colour map for hex values (default: Color_hex) (used if --mode is binary or both)")
-
 cmapgrp$add_argument("--missing-colour",       type = "character", default = "#a1a1a1ff",
                     help = "Hex colour to use for missing factor levels (default: #a1a1a1ff)")
 cmapgrp$add_argument("--prob-palette",        type = "character", default = "viridis",
-                    help = "Viridis palette option for probability mode (e.g., viridis, magma, plasma, inferno, cividis, turbo). Default: viridis")
+                    help = "Viridis palette option for probability mode (e.g., viridis, magma, plasma, inferno, cividis, turbo). Default: viridis (used if --mode is prob or both)")
+
+tsvcolname <- parser$add_argument_group("Optional Input Column Name Parameters")
+tsvcolname$add_argument("--tsv-colname-umap1",       type = "character",   default = "UMAP1",
+                    help = "Column name for UMAP X coordinate (default: UMAP1)")
+tsvcolname$add_argument("--tsv-colname-umap2",       type = "character",   default = "UMAP2",
+                    help = "Column name for UMAP Y coordinate (default: UMAP2)")
+tsvcolname$add_argument("--tsv-colname-factor",   type = "character",   default = "topK",
+                    help = "Column name in input used to colour the scatter (default: topK)")
+tsvcolname$add_argument("--tsv-colname-prob",    type = "character",   default = "topP",
+                    help = "Column name for probability (used when --mode is prob or both; default: topP)")
 
 plotgrp <- parser$add_argument_group("Optional Plot Parameters")
 plotgrp$add_argument("--dpi",           type = "integer",  default = 300,
@@ -56,7 +57,7 @@ plotgrp$add_argument("--min-dim",       type = "double", default = 2,
                     help = "Minimum size in inches per panel for auto-computed dimension (default: 2)")
 plotgrp$add_argument("--max-dim",       type = "double", default = 15,
                     help = "Maximum size in inches per panel for auto-computed dimension (default: 15)")
-plotgrp$add_argument("--plot-dim",      type = "double", default = NULL, 
+plotgrp$add_argument("--plot-dim",      type = "double", default = NULL,
                     help = "Manual defined single plot size in inches (used for BOTH width and height) because it uses a 1:1 aspect. If omitted, the size is auto-computed from data span.")
 
 args <- parser$parse_args()
@@ -195,7 +196,7 @@ if (args$mode %in% c("binary", "both")) {
                     plot.title = ggplot2::element_text(size = 16),
                     plot.subtitle = ggplot2::element_text(size = 12))
 
-  out_png <- paste0(args$out, ".umap.single.binary.png")
+  out_png <- paste0(args$out_prefix, ".umap.single.binary.png")
   ggplot2::ggsave(
     out_png,
     plot = p_bin,
@@ -234,7 +235,7 @@ if (args$mode %in% c("prob", "both")) {
                     plot.title = ggplot2::element_text(size = 16),
                     plot.subtitle = ggplot2::element_text(size = 12))
 
-  out_png <- paste0(args$out, ".umap.single.prob.png")
+  out_png <- paste0(args$out_prefix, ".umap.single.prob.png")
   ggplot2::ggsave(
     out_png,
     plot = p_prob,

@@ -3,13 +3,14 @@ import pandas as pd
 from cartloader.utils.minimake import minimake
 from cartloader.utils.utils import cmd_separator, scheck_app, add_param_to_cmd, read_minmax, flexopen, write_dict_to_file, load_file_to_dict, execute_makefile
 
+repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 def parse_arguments(_args):
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(
         prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}",
         description="Run FICTURE2 tiling, segmentation, LDA training, decoding;  writes a Makefile and executes steps."
     )
-    repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
     run_params = parser.add_argument_group("Run Options", "Run options.")
     run_params.add_argument('--dry-run', action='store_true', default=False, help='Generate the Makefile and print commands without executing them')
@@ -26,6 +27,7 @@ def parse_arguments(_args):
     cmd_params.add_argument('--decode', action='store_true', default=False, help='(Main function) Pixel-level decoding')
     #cmd_params.add_argument('--summary', action='store_true', default=False, help='(Main function) Write JSON summarizing FICTURE parameters and outputs')
     cmd_params.add_argument('--segment-10x', action='store_true', default=False, help='Hexagon segmentation into 10x MEX format')
+    cmd_params.add_argument('--umap', action='store_true', default=False, help='Create umap')
 
     inout_params = parser.add_argument_group("Input/Output Parameters", "Input/output paths")
     inout_params.add_argument('--out-dir', required=True, type=str, help='Output directory')
@@ -80,6 +82,7 @@ def parse_arguments(_args):
     
     # env params
     env_params = parser.add_argument_group("ENV Parameters", "Paths to external tools")
+    env_params.add_argument('--R', type=str, default="R", help='Path to R binary (default: R).')
     env_params.add_argument('--gzip', type=str, default="gzip", help='Path to gzip binary (default: gzip). For speed, consider "pigz -p 4"')
     env_params.add_argument('--sort', type=str, default="sort", help='Path to sort binary (default: sort). For faster processing, you may include flags like "sort -T /tmp --parallel=20 -S 10G"')
     env_params.add_argument('--sort-mem', type=str, default="1G", help='Sort memory limit per process (default: 1G)')
@@ -362,8 +365,8 @@ def run_ficture2(_args):
             cmds.append(f"[ -f {hexagon_10x_dir}/barcodes.tsv.gz ] && [ -f {hexagon_10x_dir}/features.tsv.gz ]  && [ -f {hexagon_10x_dir}/matrix.mtx.gz ] && touch {hexagon_10x_dir}/hexagon_10x.done" )
             mm.add_target(f"{hexagon_10x_dir}/hexagon_10x.done", [f"{args.out_dir}/transcripts.tiled.done", feature_plain], cmds)
 
-    # - lda
-    if args.init_lda:
+    # - lda or umap
+    if args.init_lda or args.umap:
         lda_runs = define_lda_runs(args)
         for lda_params in lda_runs:
             # params & prefix
@@ -376,70 +379,117 @@ def run_ficture2(_args):
 
             # files
             hexagon = f"{args.out_dir}/hexagon.d_{train_width}.randomized.tsv"
-            meta = f"{args.out_dir}/hexagon.d_{train_width}.json"
+            hexagon_meta = f"{args.out_dir}/hexagon.d_{train_width}.json"
             lda_model_matrix = f"{model_prefix}.model.tsv"
             lda_fit_tsv = f"{model_prefix}.results.tsv"
             #lda_postcount_tsv = f"{model_prefix}.pseudobulk.tsv"
             lda_de = f"{model_prefix}.bulk_chisq.tsv"
 
-            # 1) fit model
-            cmds = cmd_separator([], f"LDA training for {train_width}um and {n_factor} factors...")
-            cmd = " ".join([
-                ficture2bin, "lda4hex",
-                f"--in-data {hexagon}",
-                f"--in-meta {meta}",
-                f"--out-prefix {model_prefix}.unsorted",
-                f"--n-topics {n_factor}",
-                f"--transform",
-                f"--min-count-train {args.min_ct_per_unit_train}",
-                f"--min-count-per-feature {args.min_ct_per_feature}",
-                f"--features {feature_nohdr}",
-                f"--include-feature-regex '{args.include_feature_regex}'" if args.include_feature_regex is not None else "",
-                f"--exclude-feature-regex '{args.exclude_feature_regex}'" if args.exclude_feature_regex is not None else "",
-                f"--minibatch-size {args.minibatch_size}",
-                f"--seed {args.seed}",
-                f"--n-epochs {args.train_epoch}",
-                f"--threads {args.threads}",
-                ])
-            cmds.append(cmd)
-            #cmd = f"cut -f 2- {model_prefix}.unsorted.results.tsv > {model_prefix}.unsorted.results.nohex.tsv"
-            #cmds.append(cmd)
-            cmd = " ".join([
-                args.spatula, "append-topk-tsv",
-                f"--in-model {model_prefix}.unsorted.model.tsv",
-                f"--in-json {meta}",
-                f"--out-model {model_prefix}.model.tsv",
-                f"--reorder",
-                f"--in-tsv {model_prefix}.unsorted.results.tsv",
-                f"--out-tsv {model_prefix}.results.tsv.gz",
-                f"--offset-model 1"
-            ])
-            cmds.append(cmd)
-            #cmds.append(f"rm -f {model_prefix}.unsorted.model.tsv {model_prefix}.unsorted.results.tsv {model_prefix}.unsorted.results.nohex.tsv")
-            cmds.append(f"rm -f {model_prefix}.unsorted.model.tsv {model_prefix}.unsorted.results.tsv")
-            cmds.append(f"[ -f {lda_fit_tsv}.gz ] && [ -f {lda_model_matrix} ] && touch {model_prefix}.done" )
-            mm.add_target(f"{model_prefix}.done", [f"{args.out_dir}/transcripts.tiled.done", f"{args.out_dir}/hexagon.d_{train_width}.done", feature_plain], cmds)
-
-            # create color table
-            cmds = cmd_separator([], f"Generate the color map ")
             color_map=f"{model_prefix}.cmap.tsv"
-            cmds.append(f'head -n $(({n_factor} + 1)) "{args.cmap_file}" > "{color_map}"')
-            mm.add_target(color_map, [args.cmap_file], cmds)
 
-            # 2) DE
-            cmds = cmd_separator([], f" LDA DE/report for {train_width}um and {n_factor} factors...")
-            cmds.append(f"{ficture2de} --input {lda_model_matrix} --output {lda_de} --feature_label Feature --min_ct_per_feature {args.min_ct_per_feature} --max_pval_output {args.de_max_pval} --min_fold_output {args.de_min_fold}")
-            cmd = " ".join([
-                ficture2report,
-                f"--de {lda_de}",
-                f"--pseudobulk {lda_model_matrix}",
-                f"--feature_label Feature",
-                f"--color_table {color_map}",
-                f"--output_pref {model_prefix}"
+            # 1) fit model
+            if args.init_lda:
+                cmds = cmd_separator([], f"LDA training for {train_width}um and {n_factor} factors...")
+                cmd = " ".join([
+                    ficture2bin, "lda4hex",
+                    f"--in-data {hexagon}",
+                    f"--in-meta {hexagon_meta}",
+                    f"--out-prefix {model_prefix}.unsorted",
+                    f"--n-topics {n_factor}",
+                    f"--transform",
+                    f"--min-count-train {args.min_ct_per_unit_train}",
+                    f"--min-count-per-feature {args.min_ct_per_feature}",
+                    f"--features {feature_nohdr}",
+                    f"--include-feature-regex '{args.include_feature_regex}'" if args.include_feature_regex is not None else "",
+                    f"--exclude-feature-regex '{args.exclude_feature_regex}'" if args.exclude_feature_regex is not None else "",
+                    f"--minibatch-size {args.minibatch_size}",
+                    f"--seed {args.seed}",
+                    f"--n-epochs {args.train_epoch}",
+                    f"--threads {args.threads}",
+                    ])
+                cmds.append(cmd)
+                #cmd = f"cut -f 2- {model_prefix}.unsorted.results.tsv > {model_prefix}.unsorted.results.nohex.tsv"
+                #cmds.append(cmd)
+                cmd = " ".join([
+                    args.spatula, "append-topk-tsv",
+                    f"--in-model {model_prefix}.unsorted.model.tsv",
+                    f"--in-json {hexagon_meta}",
+                    f"--out-model {model_prefix}.model.tsv",
+                    f"--reorder",
+                    f"--in-tsv {model_prefix}.unsorted.results.tsv",
+                    f"--out-tsv {model_prefix}.results.tsv.gz",
+                    f"--offset-model 1"
                 ])
-            cmds.append(cmd)
-            cmds.append(f"[ -f {lda_de} ] && [ -f {model_prefix}.factor.info.html ] && touch {model_prefix}_summary.done")
-            mm.add_target(f"{model_prefix}_summary.done", [f"{model_prefix}.done", color_map], cmds)
+                cmds.append(cmd)
+                #cmds.append(f"rm -f {model_prefix}.unsorted.model.tsv {model_prefix}.unsorted.results.tsv {model_prefix}.unsorted.results.nohex.tsv")
+                cmds.append(f"rm -f {model_prefix}.unsorted.model.tsv {model_prefix}.unsorted.results.tsv")
+                cmds.append(f"[ -f {lda_fit_tsv}.gz ] && [ -f {lda_model_matrix} ] && touch {model_prefix}.done" )
+                mm.add_target(f"{model_prefix}.done", [f"{args.out_dir}/transcripts.tiled.done", f"{args.out_dir}/hexagon.d_{train_width}.done", feature_plain], cmds)
+
+                # create color table
+                cmds = cmd_separator([], f"Generate the color map ")
+                cmds.append(f'head -n $(({n_factor} + 1)) "{args.cmap_file}" > "{color_map}"')
+                mm.add_target(color_map, [args.cmap_file], cmds)
+
+                # 2) DE
+                cmds = cmd_separator([], f" LDA DE/report for {train_width}um and {n_factor} factors...")
+                cmds.append(f"{ficture2de} --input {lda_model_matrix} --output {lda_de} --feature_label Feature --min_ct_per_feature {args.min_ct_per_feature} --max_pval_output {args.de_max_pval} --min_fold_output {args.de_min_fold}")
+                cmd = " ".join([
+                    ficture2report,
+                    f"--de {lda_de}",
+                    f"--pseudobulk {lda_model_matrix}",
+                    f"--feature_label Feature",
+                    f"--color_table {color_map}",
+                    f"--output_pref {model_prefix}"
+                    ])
+                cmds.append(cmd)
+                cmds.append(f"[ -f {lda_de} ] && [ -f {model_prefix}.factor.info.html ] && touch {model_prefix}_summary.done")
+                mm.add_target(f"{model_prefix}_summary.done", [f"{model_prefix}.done", color_map], cmds)
+
+            # - umap
+            if args.umap:
+                scheck_app(args.R)
+
+                create_umap_rscript=f"{repo_dir}/cartloader/r/create_umap.r"
+                draw_umap_rscript=f"{repo_dir}/cartloader/r/draw_umap.r"
+                draw_umap_single_rscript=f"{repo_dir}/cartloader/r/draw_umap_single.r"
+
+            
+                umap_tsv = f"{model_prefix}.umap.tsv.gz"
+                umap_png = f"{model_prefix}.umap.png"
+                umap_single_prob_png = f"{model_prefix}.umap.single.prob.png"
+
+                cmds = cmd_separator([], f"UMAP for {train_width}um and {n_factor} factors...")
+                cmd = " ".join([
+                    f"Rscript {create_umap_rscript}",
+                    f"--input {lda_fit_tsv}",
+                    f"--out-prefix {model_prefix}"
+                    ])
+                cmds.append(cmd)
+                mm.add_target(umap_tsv, [f"{model_prefix}.done", color_map], cmds)
+
+                cmds = cmd_separator([], f"UMAP Visualization for {train_width}um and {n_factor} factors...")
+                cmd = " ".join([
+                    f"Rscript {draw_umap_rscript}",
+                    f"--input {umap_tsv}",
+                    f"--out-prefix {model_prefix}",
+                    f"--cmap {color_map}",
+                    f'--subtitle "{model_id}"'
+                    ])
+                cmds.append(cmd)
+                mm.add_target(umap_png, [f"{model_prefix}.done", color_map], cmds)
+
+                cmds = cmd_separator([], f"UMAP Visualization (plot for individual factors; colorized by probability) for {train_width}um and {n_factor} factors...")
+                cmd = " ".join([
+                    f"Rscript {draw_umap_single_rscript}",
+                    f"--input {umap_tsv}",
+                    f"--out-prefix {model_prefix}",
+                    f"--cmap {color_map}",
+                    f'--subtitle "{model_id}"',
+                    f"--mode prob"
+                    ])
+                cmds.append(cmd)
+                mm.add_target(umap_single_prob_png, [f"{model_prefix}.done", color_map], cmds)
 
     # - decode
     if args.decode:

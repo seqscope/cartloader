@@ -11,7 +11,7 @@ source(file.path(script_dir, "umap_utils.r"))
 parser <- ArgumentParser(description = "UMAP embedding on topic matrices")
 parser$add_argument("--input",               type = "character", required = TRUE,
                     help = "Path to input TSV with metadata columns followed by numeric topic columns")
-parser$add_argument("--out",                 type = "character", required = TRUE,
+parser$add_argument("--out-prefix",                 type = "character", required = TRUE,
                     help = "Output file prefix (no extension)")
 parser$add_argument("--tsv-colname-meta", nargs = "+", default = c("x", "y", "topK", "topP"),
                     help = "One or more column names for metadata in input TSV file")
@@ -69,7 +69,7 @@ if (length(meta_keep) == 0) {
   out_dt <- cbind(df_lda[, ..meta_keep], umap_df)
 }
 
-umap_out_tsv <- paste0(args$out, ".umap.tsv.gz")
+umap_out_tsv <- paste0(args$out_prefix, ".umap.tsv.gz")
 fwrite(out_dt, umap_out_tsv, sep = "\t")
 log_message(paste("Wrote:", umap_out_tsv))
 log_message("Done.")
