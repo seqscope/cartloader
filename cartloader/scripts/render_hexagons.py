@@ -7,33 +7,35 @@ from collections import Counter
 from cartloader.utils.utils import create_custom_logger
 
 
-_WEB_MERCATOR_ORIGIN_SHIFT = 20037508.342789244
+SQRT_3 = math.sqrt(3)
 
 
-def _lonlat_to_mercator(lon, lat):
-    x = lon * _WEB_MERCATOR_ORIGIN_SHIFT / 180.0
-    lat = max(min(lat, 89.9999), -89.9999)
-    y = math.log(math.tan((90 + lat) * math.pi / 360.0)) * _WEB_MERCATOR_ORIGIN_SHIFT / math.pi
-    return x, y
+def _hexagon_vertices(center_x, center_y, flat_width, orientation):
+    """Return a closed ring describing a hexagon centred on (x, y).
 
+    The generated coordinates stay in the same projected coordinate system as the
+    input data (typically Web Mercator metres). Tippecanoe receives the CRS via
+    ``-s EPSG:3857`` so it will reproject these planar coordinates as needed.
+    """
 
-def _mercator_to_lonlat(x, y):
-    lon = x / _WEB_MERCATOR_ORIGIN_SHIFT * 180.0
-    lat = y / _WEB_MERCATOR_ORIGIN_SHIFT * math.pi
-    lat = (2 * math.atan(math.exp(lat)) - math.pi / 2.0) * 180.0 / math.pi
-    return lon, lat
+    if flat_width <= 0:
+        raise ValueError("flat_width must be positive")
 
-
-def _hexagon_vertices(lon, lat, side_length, orientation):
-    center_x, center_y = _lonlat_to_mercator(lon, lat)
-    angle_offset = 0 if orientation == 'pointy' else 30
+    if orientation == 'pointy':
+        # flat_width equals the left-to-right distance between opposite sides
+        edge_length = flat_width / SQRT_3
+        angle_offset = 30
+    else:
+        # flat_width equals the top-to-bottom distance between opposite sides
+        edge_length = flat_width / 2.0
+        angle_offset = 0
     coords = []
     for i in range(6):
         angle = math.radians(angle_offset + (i * 60))
-        vertex_x = center_x + side_length * math.cos(angle)
-        vertex_y = center_y + side_length * math.sin(angle)
-        vertex_lon, vertex_lat = _mercator_to_lonlat(vertex_x, vertex_y)
-        coords.append([vertex_lon, vertex_lat])
+        vertex_x = center_x + edge_length * math.cos(angle)
+        vertex_y = center_y + edge_length * math.sin(angle)
+        coords.append([vertex_x, vertex_y])
+
     coords.append(coords[0])
     return coords
 
@@ -50,8 +52,8 @@ def _build_parser(repo_dir, prog_name):
 
     geom_params = parser.add_argument_group("Geometry Parameters", "Parameters controlling feature geometry.")
     geom_params.add_argument('--geometry-type', choices=['point', 'hexagon'], default='hexagon', help='Geometry to generate for each row. Use point for centroid output or hexagon for polygonal tiles (default: hexagon)')
-    geom_params.add_argument('--hex-width', type=float, help='Side length of the hexagon in projected meters (Web Mercator) (used if --geometry-type is hexagon)')
-    geom_params.add_argument('--hex-orientation', choices=['pointy', 'flat'], default='pointy', help='Orientation of generated hexagons in Web Mercator (pointy = vertex at east; flat = flat edge at top)')
+    geom_params.add_argument('--hex-width', type=float, help='Flat-to-flat width of the hexagon in the input coordinate system (typically Web Mercator metres when used with tippecanoe) (used if --geometry-type is hexagon)')
+    geom_params.add_argument('--hex-orientation', choices=['pointy', 'flat'], default='pointy', help='Orientation of generated hexagons in Web Mercator (pointy = vertex at north/south; flat = flat edge at top/bottom)')
     geom_params.add_argument('--lon-column', type=str, default='lon', help='Name of longitude column in the processed data (used for geometry generation)')
     geom_params.add_argument('--lat-column', type=str, default='lat', help='Name of latitude column in the processed data (used for geometry generation)')
 
@@ -245,7 +247,31 @@ def _run_tippecanoe(data_path, args, logger):
     logger.info(f"Converting the processed {'GeoJSON' if args.geometry_type == 'hexagon' else 'CSV/TSV'} data to PMTiles format")
     my_env = os.environ.copy()
     my_env["TIPPECANOE_MAX_THREADS"] = str(args.threads)
-    cmd = f"'{args.tippecanoe}' -t {args.tmp_dir} -o {args.out_prefix}{args.out_pmtiles_suffix} -Z {args.min_zoom} -z {args.max_zoom} --force -s EPSG:3857 -M {args.max_tile_bytes} -O {args.max_feature_counts} --drop-densest-as-needed --extend-zooms-if-still-dropping '--preserve-point-density-threshold={args.preserve_point_density_thres}' --no-duplication --no-clipping --buffer 0 {data_path}"
+    cmd_parts = [
+        f"'{args.tippecanoe}'",
+        f"-t {args.tmp_dir}",
+        f"-o {args.out_prefix}{args.out_pmtiles_suffix}",
+        f"-Z {args.min_zoom}",
+        f"-z {args.max_zoom}",
+        "--force",
+        "-s EPSG:3857",
+        f"-M {args.max_tile_bytes}",
+        f"-O {args.max_feature_counts}",
+        "--drop-densest-as-needed",
+        "--extend-zooms-if-still-dropping",
+        f"'--preserve-point-density-threshold={args.preserve_point_density_thres}'",
+    ]
+
+    if args.geometry_type == 'hexagon':
+        cmd_parts.append("--no-line-simplification")
+        cmd_parts.append("--no-simplification-of-shared-nodes")
+    else:
+        cmd_parts.append("--no-duplication")
+        cmd_parts.append("--no-clipping")
+        cmd_parts.append("--buffer 0")
+    cmd_parts.append(data_path)
+
+    cmd = " ".join(cmd_parts)
     print("Command to run:" + cmd)
     result = subprocess.run(cmd, shell=True, env=my_env)
     if result.returncode != 0:
