@@ -155,7 +155,7 @@ def _validate_geometry_requirements(args, hdr_cols_output, logger):
         logger.error(f"Missing required coordinate columns {missing_geom_cols} in the processed header")
         sys.exit(1)
 
-def _write_hexagon_features(chunk, geojson_handle, args):
+def _write_hexagon_features(chunk, geojson_handle, args, feature_state):
     skipped_geometry_rows = 0
     records = chunk.to_dict(orient='records')
     for record in records:
@@ -188,7 +188,15 @@ def _write_hexagon_features(chunk, geojson_handle, args):
             "properties": properties,
             "geometry": {"type": "Polygon", "coordinates": [vertices]}
         }
-        geojson_handle.write(json.dumps(feature, separators=(',', ':')) + '\n')
+
+        if feature_state["first"]:
+            geojson_handle.write('\n')
+            feature_state["first"] = False
+        else:
+            geojson_handle.write(',\n')
+
+        geojson_handle.write(json.dumps(feature, separators=(',', ':')))
+        feature_state["count"] += 1
 
     return skipped_geometry_rows
 
@@ -198,10 +206,13 @@ def _process_input_chunks(args, hdr_cols_output, hdr_index_output, data_path, lo
     n_chunks = 0
     skipped_geometry_rows = 0
     geojson_handle = None
+    feature_state = None
 
     try:
         if args.geometry_type == 'hexagon':
             geojson_handle = open(data_path, 'w', encoding='utf-8')
+            geojson_handle.write('{"type":"FeatureCollection","features":[')
+            feature_state = {"first": True, "count": 0}
 
         for chunk in pd.read_csv(args.in_tsv, sep=args.in_delim, chunksize=args.chunk_size, usecols=hdr_index_output):
             chunk.columns = hdr_cols_output
@@ -215,15 +226,20 @@ def _process_input_chunks(args, hdr_cols_output, hdr_index_output, data_path, lo
                     mode='w' if n_chunks == 0 else 'a'
                 )
             else:
-                skipped_geometry_rows += _write_hexagon_features(chunk, geojson_handle, args)
+                skipped_geometry_rows += _write_hexagon_features(chunk, geojson_handle, args, feature_state)
 
             n_chunks += 1
             logger.info(f"Finished processing chunk {n_chunks} of size {args.chunk_size}...")
     finally:
         if geojson_handle is not None:
+            if feature_state["first"]:
+                geojson_handle.write(']}')
+            else:
+                geojson_handle.write('\n]}')
             geojson_handle.close()
 
-    return n_chunks, skipped_geometry_rows
+    n_features = 0 if feature_state is None else feature_state["count"]
+    return n_chunks, skipped_geometry_rows, n_features
 
 def _run_tippecanoe(data_path, args, logger):
     logger.info(f"Converting the processed {'GeoJSON' if args.geometry_type == 'hexagon' else 'CSV/TSV'} data to PMTiles format")
@@ -267,9 +283,12 @@ def render_hexagons(_args):
     data_suffix = args.out_geojson_suffix if args.geometry_type == 'hexagon' else args.out_csv_suffix
     data_path = f"{args.out_prefix}{data_suffix}"
 
-    _, skipped_geometry_rows = _process_input_chunks(args, hdr_cols_output, hdr_index_output, data_path, logger)
-    if args.geometry_type == 'hexagon' and skipped_geometry_rows:
-        logger.warning(f"Skipped {skipped_geometry_rows} rows with missing or invalid coordinates while generating hexagons")
+    _, skipped_geometry_rows, n_features = _process_input_chunks(args, hdr_cols_output, hdr_index_output, data_path, logger)
+    if args.geometry_type == 'hexagon':
+        if n_features == 0:
+            logger.warning("Generated GeoJSON contains no polygon features. Check coordinate columns and width settings.")
+        if skipped_geometry_rows:
+            logger.warning(f"Skipped {skipped_geometry_rows} rows with missing or invalid coordinates while generating hexagons")
 
     if not args.skip_pmtiles:
         _run_tippecanoe(data_path, args, logger)
