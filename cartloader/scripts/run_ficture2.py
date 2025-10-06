@@ -453,7 +453,6 @@ def run_ficture2(_args):
                 create_umap_rscript=f"{repo_dir}/cartloader/r/create_umap.r"
                 draw_umap_rscript=f"{repo_dir}/cartloader/r/draw_umap.r"
                 draw_umap_single_rscript=f"{repo_dir}/cartloader/r/draw_umap_single.r"
-
             
                 umap_tsv = f"{model_prefix}.umap.tsv.gz"
                 umap_png = f"{model_prefix}.umap.png"
@@ -462,7 +461,7 @@ def run_ficture2(_args):
                 cmds = cmd_separator([], f"UMAP for {train_width}um and {n_factor} factors...")
                 cmd = " ".join([
                     f"Rscript {create_umap_rscript}",
-                    f"--input {lda_fit_tsv}",
+                    f"--input {lda_fit_tsv}.gz",
                     f"--out-prefix {model_prefix}"
                     ])
                 cmds.append(cmd)
@@ -477,7 +476,7 @@ def run_ficture2(_args):
                     f'--subtitle "{model_id}"'
                     ])
                 cmds.append(cmd)
-                mm.add_target(umap_png, [f"{model_prefix}.done", color_map], cmds)
+                mm.add_target(umap_png, [f"{model_prefix}.done", color_map, umap_tsv], cmds)
 
                 cmds = cmd_separator([], f"UMAP Visualization (plot for individual factors; colorized by probability) for {train_width}um and {n_factor} factors...")
                 cmd = " ".join([
@@ -489,7 +488,7 @@ def run_ficture2(_args):
                     f"--mode prob"
                     ])
                 cmds.append(cmd)
-                mm.add_target(umap_single_prob_png, [f"{model_prefix}.done", color_map], cmds)
+                mm.add_target(umap_single_prob_png, [f"{model_prefix}.done", color_map, umap_tsv], cmds)
 
     # - decode
     if args.decode:
