@@ -207,11 +207,13 @@ def run_cartload2(_args):
 
         for train_param in in_fic_params:
             model_id = train_param["model_id"]
+            model_rgb = train_param["cmap"]
+            train_width = train_param["train_width"]
+            in_prefix = f"{args.fic_dir}/{model_id}"
+
             ## ?? what is factormap?
             factormap_path = train_param.get("factor_map", None)
-            model_rgb = train_param["cmap"]
-
-            in_prefix = f"{args.fic_dir}/{model_id}"
+            
             out_id = model_id.replace("_", "-")
             out_prefix = f"{args.out_dir}/{out_id}"
 
@@ -256,9 +258,10 @@ def run_cartload2(_args):
             in_fit_tsvf = train_param.get("fit_path", f"{in_prefix}.results.tsv.gz")
             if os.path.exists(in_fit_tsvf):
                 cmd = " ".join([
-                    "cartloader", "convert_generic_tsv_to_pmtiles",
+                    "cartloader", "render_hexagons",
                     "--in-tsv", in_fit_tsvf,
                     "--out-prefix", out_prefix,
+                    f"--hex-width {train_width}",
                     "--rename-column", args.rename_x, args.rename_y,
                     "--threads", str(args.threads),
                     "--max-tile-bytes", str(args.max_tile_bytes),

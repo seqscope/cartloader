@@ -25,9 +25,9 @@ def parse_arguments(_args):
     cmd_params.add_argument('--segment', action='store_true', default=False, help='(Main function) Hexagon segmentation into FICTURE-compatible format')
     cmd_params.add_argument('--init-lda', action='store_true', default=False, help='(Main function) Train LDA model(s)')
     cmd_params.add_argument('--decode', action='store_true', default=False, help='(Main function) Pixel-level decoding')
+    cmd_params.add_argument('--umap', action='store_true', default=False, help='(Main function) Create umap')
     #cmd_params.add_argument('--summary', action='store_true', default=False, help='(Main function) Write JSON summarizing FICTURE parameters and outputs')
     cmd_params.add_argument('--segment-10x', action='store_true', default=False, help='Hexagon segmentation into 10x MEX format')
-    cmd_params.add_argument('--umap', action='store_true', default=False, help='Create umap')
 
     inout_params = parser.add_argument_group("Input/Output Parameters", "Input/output paths")
     inout_params.add_argument('--out-dir', required=True, type=str, help='Output directory')
@@ -167,6 +167,7 @@ def run_ficture2(_args):
         args.init_lda = True
         args.decode = True
         # args.summary = True
+        args.umap = True
 
     #assert not (args.init_lda and args.init_ext), "Cannot choose both --init-lda and --init-ext"
 

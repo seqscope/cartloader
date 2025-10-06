@@ -48,6 +48,13 @@ def _build_parser(repo_dir, prog_name):
     inout_params.add_argument('--in-tsv', type=str, required=True, help='Generic TSV file to convert to PMTiles. Typically named as *.tsv.gz, and must include spatial coordinates.')
     inout_params.add_argument('--out-prefix', type=str, required=True, help='Prefix of output files. New directory will be created if needed')
 
+    geom_params = parser.add_argument_group("Geometry Parameters", "Parameters controlling feature geometry.")
+    geom_params.add_argument('--geometry-type', choices=['point', 'hexagon'], default='hexagon', help='Geometry to generate for each row. Use point for centroid output or hexagon for polygonal tiles (default: hexagon)')
+    geom_params.add_argument('--hex-width', type=float, help='Side length of the hexagon in projected meters (Web Mercator) (used if --geometry-type is hexagon)')
+    geom_params.add_argument('--hex-orientation', choices=['pointy', 'flat'], default='pointy', help='Orientation of generated hexagons in Web Mercator (pointy = vertex at east; flat = flat edge at top)')
+    geom_params.add_argument('--lon-column', type=str, default='lon', help='Name of longitude column in the processed data (used for geometry generation)')
+    geom_params.add_argument('--lat-column', type=str, default='lat', help='Name of latitude column in the processed data (used for geometry generation)')
+
     iocol_params = parser.add_argument_group("Input/Output Columns Parameters", "Input/output column parameters.")
     iocol_params.add_argument('--remove-column', type=str, nargs='+', help='List of column names to remove')
     iocol_params.add_argument('--rename-column', type=str, nargs='+', help='List of columns to rename in the format of [old_name1:new_name1] [old_name2:new_name2] .... Note that lon/lat must exist in the output columns')
@@ -71,13 +78,6 @@ def _build_parser(repo_dir, prog_name):
     aux_params.add_argument('--max-feature-counts', type=int, default=500000, help='Max feature limits per tile in PMTiles')
     aux_params.add_argument('--preserve-point-density-thres', type=int, default=1024, help='Threshold for preserving point density in PMTiles')
     aux_params.add_argument('--tmp-dir', type=str, help='Temporary directory to be used (default: out-dir/tmp; specify /tmp if needed)')
-
-    geom_params = parser.add_argument_group("Geometry Parameters", "Parameters controlling feature geometry.")
-    geom_params.add_argument('--geometry-type', choices=['point', 'hexagon'], default='point', help='Geometry to generate for each row. Use point for centroid output or hexagon for polygonal tiles')
-    geom_params.add_argument('--hex-width', type=float, help='Side length of the hexagon in projected meters (Web Mercator) when --geometry-type is hexagon (required)')
-    geom_params.add_argument('--hex-orientation', choices=['pointy', 'flat'], default='pointy', help='Orientation of generated hexagons in Web Mercator (pointy = vertex at east; flat = flat edge at top)')
-    geom_params.add_argument('--lon-column', type=str, default='lon', help='Name of longitude column in the processed data (used for geometry generation)')
-    geom_params.add_argument('--lat-column', type=str, default='lat', help='Name of latitude column in the processed data (used for geometry generation)')
 
     return parser
 
@@ -236,7 +236,7 @@ def _run_tippecanoe(data_path, args, logger):
         logger.error("Error while converting processed data into PMTiles")
         sys.exit(1)
 
-def convert_generic_tsv_to_pmtiles(_args):
+def render_hexagons(_args):
     """Convert a generic TSV file into PMTiles format."""
     repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -244,10 +244,7 @@ def convert_generic_tsv_to_pmtiles(_args):
     parser = _build_parser(repo_dir, prog_name)
     args = parser.parse_args(_args)
 
-    logger = create_custom_logger(
-        __name__,
-        args.out_prefix + "_convert_generic_tsv_to_pmtiles" + args.log_suffix if args.log else None
-    )
+    logger = create_custom_logger(__name__, args.out_prefix + "_render_hexagons" + args.log_suffix if args.log else None)
 
     # prepare dirs
     out_dir = os.path.dirname(args.out_prefix)
