@@ -265,6 +265,7 @@ def _run_tippecanoe(data_path, args, logger):
     if args.geometry_type == 'hexagon':
         cmd_parts.append("--no-line-simplification")
         cmd_parts.append("--no-simplification-of-shared-nodes")
+        cmd_parts.append("--generate-ids")
     else:
         cmd_parts.append("--no-duplication")
         cmd_parts.append("--no-clipping")
