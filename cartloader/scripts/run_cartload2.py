@@ -114,21 +114,44 @@ def pick_sge_inputs(args):
     # neither source provided, actionable error
     raise KeyError("Path not provided for SGE. Provide using --sge-dir with --in-sge-assets or --fic-dir with --in-fic-params")
 
-def copy_rgb_tsv(in_rgb, out_rgb):
-    with open(in_rgb, 'r') as f:
-        hdrs = f.readline().rstrip().split("\t")
-        col2idx = {hdr: i for i, hdr in enumerate(hdrs)}
-        with open(out_rgb, 'w') as outf:
-            outf.write("\t".join(["Name", "Color_index", "R", "G", "B"]) + "\n")
+def copy_rgb_tsv(in_rgb, out_rgb, restart=False):
+    def _get_content(path):
+        with open(path, 'r') as f:
+            hdrs = f.readline().rstrip().split("\t")
+            col2idx = {hdr: i for i, hdr in enumerate(hdrs)}
+            lines = ["\t".join(["Name", "Color_index", "R", "G", "B"])]
             for line in f:
                 toks = line.rstrip().split("\t")
                 if len(toks) != len(hdrs):
-                    raise ValueError(f"Input RGB file {in_rgb} has inconsistent number of columns")
+                    raise ValueError(f"Input RGB file {path} has inconsistent number of columns")
                 rgb_r = int(toks[col2idx["R"]])/255
                 rgb_g = int(toks[col2idx["G"]])/255
                 rgb_b = int(toks[col2idx["B"]])/255
                 name = toks[col2idx["Name"]]
-                outf.write(f"{name}\t{name}\t{rgb_r:.5f}\t{rgb_g:.5f}\t{rgb_b:.5f}\n")
+                lines.append(f"{name}\t{name}\t{rgb_r:.5f}\t{rgb_g:.5f}\t{rgb_b:.5f}")
+        return "\n".join(lines) + "\n"
+
+    # Desired behavior:
+    # - If restart is True OR output file does not exist: (re)generate the file.
+    # - Otherwise: compare to expected output and skip rewrite if identical.
+    expected_content = _get_content(in_rgb)
+
+    if restart or not os.path.exists(out_rgb):
+        with open(out_rgb, 'w') as f:
+            f.write(expected_content)
+        return
+
+    try:
+        with open(out_rgb, 'r') as f:
+            existing_content = f.read()
+        if existing_content == expected_content:
+            return  # up-to-date; no rewrite needed
+    except Exception:
+        # On read/compare failure, fall through to regenerate
+        pass
+
+    with open(out_rgb, 'w') as f:
+        f.write(expected_content)
 
 def run_cartload2(_args):
     """
@@ -281,7 +304,7 @@ def run_cartload2(_args):
                 if val["required"] or os.path.exists(val["in"]):
                     prerequisites.append(val["in"])
                     if key == "rgb":
-                        copy_rgb_tsv(val["in"], val["out"])
+                        copy_rgb_tsv(val["in"], val["out"], restart=args.restart)
                     else:
                         cmds.append(f"cp {val['in']} {val['out']}")
                     outfiles.append(val["out"])
@@ -375,7 +398,7 @@ def run_cartload2(_args):
                 f"--max-dist {args.max_join_dist_um}",
                 f"--tile-size {args.join_tile_size}"
             ]
-             + [ f"--decode-prefix-tsv {join_pixel_ids[i]}_,{join_pixel_tsvs[i]}" for i in range(len(join_pixel_tsvs)) ]
+            + [ f"--decode-prefix-tsv {join_pixel_ids[i]}_,{join_pixel_tsvs[i]}" for i in range(len(join_pixel_tsvs)) ]
         )
         cmds.append(cmd)
         cmds.append(f"{args.gzip} -f {out_join_pixel_prefix}.tsv")
