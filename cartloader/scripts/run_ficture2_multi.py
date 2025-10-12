@@ -24,7 +24,7 @@ def parse_arguments(_args):
 
     key_params = parser.add_argument_group("Key Parameters", "Key parameters that requires user's attention")
     key_params.add_argument('--width', type=str, required=True, help='Comma-separated hexagon flat-to-flat widths (in um) for LDA training')
-    key_params.add_argument('--n-factor', type=str, required=True, help='Comma-separated list of factor counts for LDA training.')
+    key_params.add_argument('--n-factor', type=str, help='Comma-separated list of factor counts for LDA training.')
     key_params.add_argument('--anchor-res', type=int, default=6, help='Anchor resolution for decoding (default: 6)')
     key_params.add_argument('--cmap-file', type=str, default=os.path.join(repo_dir, "assets", "fixed_color_map_256.tsv"), help='Path to fixed color map TSV (default: <cartloader_dir>/assets/fixed_color_map_256.tsv)')
 
@@ -56,6 +56,9 @@ def parse_arguments(_args):
     aux_params.add_argument('--de-min-fold', type=float, default=1.5, help='Fold-change cutoff for differential expression (default: 1.5)')
     aux_params.add_argument('--redo-pseudobulk-decode', action='store_true', default=False, help='Recompute pseudobulk decode with spatula. If set, the existing pseudobulk decode will be overwritten.')
     aux_params.add_argument('--redo-merge-units', action='store_true', default=False, help='Recompute merge units. If set, the existing mergeed hexagons and LDA results will be overwritten.')
+    # project from external model
+    aux_params.add_argument('--pretrained-model', type=str, help='Path to a pre-trained model to use for projection. If provided, LDA training will be skipped, and the provided model will be used for projection.')
+    aux_params.add_argument('--retrain', action='store_true', default=False, help='If set, retain the pre-trained model. Only applicable when --pretrained-model is set.')
 
     # AUX gene-filtering params
     aux_ftrfilter_params = parser.add_argument_group( "Feature Customizing Auxiliary Parameters", "Customize features (typically genes) used by FICTURE without altering the original feature TSV") # This ensures the original feature TSV file is retained in the output JSON file for downstream processing 
@@ -82,20 +85,32 @@ def define_lda_runs(args):
     #assert args.init_lda, "--init-lda must be ON when running define_lda_runs()"
     assert args.width is not None, "When --init-lda is ON, provide at least one train width for LDA training using --train-width"
 
-    if args.n_factor is None:
-        print("Warning: --n-factor is not provided for LDA. Using default values: 12,24")
-        args.n_factor = "12,24"
-    #assert args.n_factor is not None, "When --init-lda is ON, provide at least one n.factor for LDA training using --n-factor"
+    if args.pretrained_model is not None: ## if pretrained_model is provided, n_factor should be empty
+        if args.n_factor is not None:
+            raise ValueError("When --pretrained-model is provided, --n-factor should not be provided.")
+        
+        ## read the first line of the model to get n_factor
+        with flexopen(args.pretrained_model) as rf:
+            hdrs = rf.readline().rstrip().split("\t")
+            n_factor = len(hdrs) - 1
 
-    train_widths = [int(x) for x in args.width.split(",")] if args.width else [] #and not (args.use_external_model and args.external_model_type == "custom") else []
-    n_factors = [int(x) for x in args.n_factor.split(",")] if args.n_factor else []  #and not (args.use_external_model and args.external_model_type == "custom") else []
+        train_widths = [int(x) for x in args.width.split(",")] if args.width else [] #and not (args.use_external_model and args.external_model_type == "custom") else []
+        n_factors = [n_factor]  #and not (args.use_external_model and args.external_model_type == "custom") else []
+    else:
+        if args.n_factor is None:
+            print("Warning: --n-factor is not provided for LDA. Using default values: 12")
+            args.n_factor = "12"
+        #assert args.n_factor is not None, "When --init-lda is ON, provide at least one n.factor for LDA training using --n-factor"
+
+        train_widths = [int(x) for x in args.width.split(",")] if args.width else [] #and not (args.use_external_model and args.external_model_type == "custom") else []
+        n_factors = [int(x) for x in args.n_factor.split(",")] if args.n_factor else []  #and not (args.use_external_model and args.external_model_type == "custom") else []
 
     train_params= [
         {
-         "model_type": "lda",
-         "train_width": train_width,
-         "n_factor": n_factor,
-         "model_id":f"t{train_width}_f{n_factor}",
+        "model_type": "lda",
+        "train_width": train_width,
+        "n_factor": n_factor,
+        "model_id":f"t{train_width}_f{n_factor}",
         }
         for train_width in train_widths
         for n_factor in n_factors
@@ -143,6 +158,9 @@ def run_ficture2_multi(_args):
     """
     # args
     args=parse_arguments(_args)
+
+    if args.n_factor is None and args.pretrained_model is None:
+        raise ValueError("When --pretrained-model is not provided, --n-factor is required.")
 
     # input/output/other files
     # dirs
@@ -249,34 +267,82 @@ def run_ficture2_multi(_args):
         lda_de = f"{model_prefix}.bulk_chisq.tsv"
 
         # 1) fit model
-        cmds = cmd_separator([], f"LDA training for {train_width}um and {n_factor} factors...")
-        cmd = " ".join([
-            ficture2bin, "lda4hex",
-            f"--in-data {hexagon}",
-            f"--in-meta {meta}",
-            f"--out-prefix {model_prefix}.unsorted",
-            f"--n-topics {n_factor}",
-            f"--transform",
-            f"--minibatch-size {args.minibatch_size}",
-            f"--seed {args.seed}",
-            f"--n-epochs {args.train_epoch}",
-            f"--threads {args.threads}",
+        if args.pretrained_model is not None:
+            cmds = cmd_separator([], f"LDA training for {train_width}um and {n_factor} factors...")
+            if args.retrain:
+                cmd = " ".join([
+                    ficture2bin, "lda4hex",
+                    f"--in-data {hexagon}",
+                    f"--in-meta {meta}",
+                    f"--out-prefix {model_prefix}.unsorted",
+                    f"--model-prior {args.pretrained_model}",
+                    f"--transform",
+                    f"--minibatch-size {args.minibatch_size}",
+                    f"--seed {args.seed}",
+                    f"--n-epochs {args.train_epoch}",
+                    f"--threads {args.threads}",
+                    ])
+                cmds.append(cmd)
+            else:
+                cmd = f"cp {args.pretrained_model} {model_prefix}.unsorted.model.tsv"
+                cmds.append(cmd)
+                cmd = " ".join([
+                    ficture2bin, "lda4hex",
+                    f"--in-data {hexagon}",
+                    f"--in-meta {meta}",
+                    f"--out-prefix {model_prefix}.unsorted",
+                    f"--projection-only",
+                    f"--model-prior {model_prefix}.unsorted.model.tsv",
+                    f"--transform",
+                    f"--minibatch-size {args.minibatch_size}",
+                    f"--seed {args.seed}",
+                    f"--n-epochs {args.train_epoch}",
+                    f"--threads {args.threads}",
+                    ])
+                cmds.append(cmd)
+            cmd = " ".join([
+                args.spatula, "append-topk-tsv",
+                f"--in-model {model_prefix}.unsorted.model.tsv",
+                f"--in-json {meta}",
+                f"--out-model {model_prefix}.model.tsv",
+                f"--reorder",
+                f"--in-tsv {model_prefix}.unsorted.results.tsv",
+                f"--out-tsv {model_prefix}.results.tsv.gz",
+                f"--offset-model 1"
             ])
-        cmds.append(cmd)
-        cmd = " ".join([
-            args.spatula, "append-topk-tsv",
-            f"--in-model {model_prefix}.unsorted.model.tsv",
-            f"--in-json {meta}",
-            f"--out-model {model_prefix}.model.tsv",
-            f"--reorder",
-            f"--in-tsv {model_prefix}.unsorted.results.tsv",
-            f"--out-tsv {model_prefix}.results.tsv.gz",
-            f"--offset-model 1"
-        ])
-        cmds.append(cmd)
-        cmds.append(f"rm -f {model_prefix}.unsorted.model.tsv {model_prefix}.unsorted.results.tsv")
-        cmds.append(f"[ -f {lda_fit_tsv}.gz ] && [ -f {lda_model_matrix} ] && touch {model_prefix}.done" )
-        mm.add_target(f"{model_prefix}.done", [f"{args.out_dir}/multi.done"], cmds)
+            cmds.append(cmd)
+            cmds.append(f"rm -f {model_prefix}.unsorted.model.tsv {model_prefix}.unsorted.results.tsv")
+            cmds.append(f"[ -f {lda_fit_tsv}.gz ] && [ -f {lda_model_matrix} ] && touch {model_prefix}.done" )
+            mm.add_target(f"{model_prefix}.done", [f"{args.out_dir}/multi.done"], cmds)
+        else:
+            cmds = cmd_separator([], f"LDA training for {train_width}um and {n_factor} factors...")
+            cmd = " ".join([
+                ficture2bin, "lda4hex",
+                f"--in-data {hexagon}",
+                f"--in-meta {meta}",
+                f"--out-prefix {model_prefix}.unsorted",
+                f"--n-topics {n_factor}",
+                f"--transform",
+                f"--minibatch-size {args.minibatch_size}",
+                f"--seed {args.seed}",
+                f"--n-epochs {args.train_epoch}",
+                f"--threads {args.threads}",
+                ])
+            cmds.append(cmd)
+            cmd = " ".join([
+                args.spatula, "append-topk-tsv",
+                f"--in-model {model_prefix}.unsorted.model.tsv",
+                f"--in-json {meta}",
+                f"--out-model {model_prefix}.model.tsv",
+                f"--reorder",
+                f"--in-tsv {model_prefix}.unsorted.results.tsv",
+                f"--out-tsv {model_prefix}.results.tsv.gz",
+                f"--offset-model 1"
+            ])
+            cmds.append(cmd)
+            cmds.append(f"rm -f {model_prefix}.unsorted.model.tsv {model_prefix}.unsorted.results.tsv")
+            cmds.append(f"[ -f {lda_fit_tsv}.gz ] && [ -f {lda_model_matrix} ] && touch {model_prefix}.done" )
+            mm.add_target(f"{model_prefix}.done", [f"{args.out_dir}/multi.done"], cmds)
 
         # create color table
         cmds = cmd_separator([], f"Generate the color map ")
