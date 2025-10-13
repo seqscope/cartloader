@@ -18,7 +18,7 @@ parser$add_argument("--tsv-colname-umap1",       type = "character",   default =
                     help = "Column name for UMAP X coordinate (default: UMAP1)")
 parser$add_argument("--tsv-colname-umap2",       type = "character",   default = "UMAP2",
                     help = "Column name for UMAP Y coordinate (default: UMAP2)")
-parser$add_argument("--out",                  type = "character",   required = TRUE,
+parser$add_argument("--out-prefix",                  type = "character",   required = TRUE,
                     help = "Output prefix")
 parser$add_argument("--subtitle",             type = "character",   default = NULL,
                     help = "Optional identifier used as the subtitle for the generated plot")
@@ -102,10 +102,10 @@ p <- draw_umap_plot(
   color_column = plot_prep$color_column,
   subtitle     = args$subtitle,
   x_col        = args$tsv_colname_umap1,
-  y_col        = args$tsv_colname_umap2,
+  y_col        = args$tsv_colname_umap2
 )
 
-umap_png = paste0(args$out, ".umap.png")
+umap_png = paste0(args$out_prefix, ".umap.png")
 ggsave( umap_png, 
         plot = p, 
         width = plot_dim, 
