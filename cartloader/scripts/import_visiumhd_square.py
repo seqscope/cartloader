@@ -49,6 +49,8 @@ def parse_arguments(_args):
     aux_inout_params.add_argument('--scale-json', type=str, default="spatial/scalefactors_json.json", help=f'Location of scale JSON under --in-dir. If set, defaults --units-per-um from microns_per_pixel in this JSON file (No default value applied. Typical locations: square_002um/spatial/scalefactors_json.json; binned_outputs/square_002um/spatial/scalefactors_json.json")')
     aux_inout_params.add_argument('--units-per-um', type=float, default=1, help='Coordinate units per µm in inputs (default: 1).')
     aux_inout_params.add_argument('--use-parquet-tools', action='store_true', help='Use parquet-tools instead of polars/pigz for parquet to csv conversion (default: False). parquet-tools may be slower for large files.')
+    aux_inout_params.add_argument('--pos-colname-x', type=str, default='pxl_col_in_fullres', help='Column name for X coordinates in --pos-parquet (platform: 10x Visium HD; default: pxl_row_in_fullres)')
+    aux_inout_params.add_argument('--pos-colname-y', type=str, default='pxl_row_in_fullres', help='Column name for Y coordinates in --pos-parquet (platform: 10x Visium HD; default: pxl_col_in_fullres)')
 
     aux_conv_params = parser.add_argument_group("Auxiliary PMTiles Conversion Parameters")
     aux_conv_params.add_argument('--min-zoom', type=int, default=10, help='Minimum zoom level (default: 10)')
@@ -185,8 +187,8 @@ def import_visiumhd_square(_args):
         col2idx = {c: i for i, c in enumerate(hdrs)}
         try:
             ibcd = col2idx["barcode"]
-            ix = col2idx["pxl_row_in_fullres"]
-            iy = col2idx["pxl_col_in_fullres"]
+            ix = col2idx[args.pos_colname_x]
+            iy = col2idx[args.pos_colname_y]
         except KeyError as e:
             raise ValueError(f"Required columns not found in {parquet_path}: {e}")
         logger.info(f"  * Reading binned data from {parquet_path} and writing to {geojson_out}")
