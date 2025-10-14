@@ -279,7 +279,7 @@ def _run_tippecanoe(data_path, args, logger):
         logger.error("Error while converting processed data into PMTiles")
         sys.exit(1)
 
-def render_hexagons(_args):
+def run_hex2pmtiles(_args):
     """Convert a generic TSV file into PMTiles format."""
     repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -287,7 +287,7 @@ def render_hexagons(_args):
     parser = _build_parser(repo_dir, prog_name)
     args = parser.parse_args(_args)
 
-    logger = create_custom_logger(__name__, args.out_prefix + "_render_hexagons" + args.log_suffix if args.log else None)
+    logger = create_custom_logger(__name__, args.out_prefix + "_hex2pmtiles" + args.log_suffix if args.log else None)
 
     # prepare dirs
     out_dir = os.path.dirname(args.out_prefix)

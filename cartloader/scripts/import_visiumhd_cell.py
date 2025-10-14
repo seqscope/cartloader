@@ -170,7 +170,7 @@ def import_visiumhd_cell(_args):
     # parse argument
     args=parse_arguments(_args)
 
-    logger = create_custom_logger(__name__, args.outprefix + "_importxenium" + args.log_suffix if args.log else None)
+    logger = create_custom_logger(__name__, args.outprefix + "_import_visium_cell" + args.log_suffix if args.log else None)
     logger.info("Analysis Started")
 
     if args.all:

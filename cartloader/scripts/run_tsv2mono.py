@@ -37,6 +37,7 @@ def parse_arguments(_args):
     aux_params.add_argument('--keep-intermediate-files', action='store_true', default=False, help='Keep intermediate output files')
     aux_params.add_argument('--transparent-below', type=int, default=0, help='Threshold for transparent pixels below this value for dark background image (default: 0)')
     aux_params.add_argument('--transparent-above', type=int, default=255, help='Threshold for transparent pixels above this value for light background image (default: 255)')
+    aux_params.add_argument('--units-per-pixel', type=int, default=1, help='scales input coordinates to pixels in the output image (default: 1)')
     
     run_params = parser.add_argument_group("Run Options", "Run options for FICTURE commands")
     run_params.add_argument('--restart', action='store_true', default=False, help='Restart the run. Ignore all intermediate files and start from the beginning')
@@ -94,6 +95,7 @@ def run_tsv2mono(_args):
         "--icol-cnt", str(icol_cnt) if icol_cnt is not None else "-1",
         "--ullr", f"{minmax['xmin']},{minmax['ymin']},{minmax['xmax']},{minmax['ymax']}",
         "--auto-adjust",
+        "--coord-per-pixel", str(args.units_per_pixel),
         "--skip-lines", "1",
     ])
 

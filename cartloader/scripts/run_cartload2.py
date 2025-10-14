@@ -64,6 +64,7 @@ def parse_arguments(_args):
     # img
     aux_params.add_argument('--transparent-below', type=int, help='Set pixels below this value to transparent for dark background (range: 0~255)')
     aux_params.add_argument('--transparent-above', type=int, help='Set pixels above this value to transparent for light background (range: 0~255)')
+    aux_params.add_argument('--sge-scale', type=int, default=1, help='scales input coordinates to pixels in the output image (default: 1)')
 
     env_params = parser.add_argument_group("Env Parameters", "Tool paths (override defaults if needed)")
     # aux_params.add_argument('--magick', type=str, default=f"magick", help='Path to ImageMagick binary') # Disable this function. The user need to add the path to the ImageMagick binary directory to the PATH environment variable
@@ -194,6 +195,7 @@ def run_cartload2(_args):
             "--out-prefix", f"{args.out_dir}/sge-mono",
             "--colname-count", args.colname_count,
             "--main",
+            "--units-per-pixel", str(args.sge_scale),
             f"--pmtiles '{args.pmtiles}'",
             f"--gdal_translate '{args.gdal_translate}'",
             f"--gdaladdo '{args.gdaladdo}'",
@@ -281,7 +283,7 @@ def run_cartload2(_args):
             in_fit_tsvf = train_param.get("fit_path", f"{in_prefix}.results.tsv.gz")
             if os.path.exists(in_fit_tsvf):
                 cmd = " ".join([
-                    "cartloader", "render_hexagons",
+                    "cartloader", "run_hex2pmtiles",
                     "--in-tsv", in_fit_tsvf,
                     "--out-prefix", out_prefix,
                     f"--hex-width {train_width}",
