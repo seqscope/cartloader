@@ -125,6 +125,9 @@ def import_image(_args):
     os.makedirs(args.out_dir, exist_ok=True)
     img_prefix =  os.path.join(args.out_dir, args.img_id)
 
+    if args.catalog_yaml is None:
+        args.catalog_yaml = os.path.join(args.out_dir, "catalog.yaml")
+    
     # input files
     # read in_json if provided
     if args.in_json is not None:
@@ -170,7 +173,7 @@ def import_image(_args):
         # >1 output: transform_f, transform_prefix.bounds 
         cmds.append(f"[ -f {transform_f} ] && [ -f {transform_bounds_tsv} ] && touch {transform_prefix}.done")
         mm.add_target(f"{transform_prefix}.done", prereq, cmds)
-        
+
         # update for georeference and bounds
         args.georeference = True
         args.georef_bounds_tsv =  transform_bounds_tsv
@@ -225,8 +228,6 @@ def import_image(_args):
         if pmtiles_f is None:
             pmtiles_f = os.path.join(args.out_dir, f"{args.img_id}.pmtiles")
         prereq=[pmtiles_f, args.catalog_yaml]
-        if args.catalog_yaml is None:
-            args.catalog_yaml = os.path.join(args.out_dir, "catalog.yaml")
         cmds = cmd_separator([], f"Updating yaml for pmtiles: {pmtiles_f}")        
         cmd= " ".join([
             "cartloader write_catalog_for_assets",
@@ -237,7 +238,6 @@ def import_image(_args):
         cmds.append(cmd)
         cmds.append(f"touch {pmtiles_f}.yaml.done")
         mm.add_target(f"{pmtiles_f}.yaml.done", prereq, cmds)
-
 
     ## write makefile
     make_f=os.path.join(args.out_dir, args.makefn) if args.makefn is not None else f"{img_prefix}.mk"
