@@ -20,7 +20,7 @@ def parse_arguments(_args):
     run_params.add_argument('--threads', type=int, default=4, help='Maximum number of threads per job (default: 4)')
 
     cmd_params = parser.add_argument_group("Commands", "FICTURE steps to run")
-    cmd_params.add_argument('--main', action='store_true', default=False, help='Run all main functions, including tile, segment, init-lda, decode') #, and summary')
+    cmd_params.add_argument('--main', action='store_true', default=False, help='Run all main functions, including tile, segment, init-lda, decode, umap') #, and summary')
     cmd_params.add_argument('--tile', action='store_true', default=False, help='(Main function) Perform tiling step')
     cmd_params.add_argument('--segment', action='store_true', default=False, help='(Main function) Hexagon segmentation into FICTURE-compatible format')
     cmd_params.add_argument('--init-lda', action='store_true', default=False, help='(Main function) Train LDA model(s)')
