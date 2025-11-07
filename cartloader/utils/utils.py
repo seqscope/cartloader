@@ -480,6 +480,8 @@ def ficture_params_to_factor_assets(params, skip_raster=False):
     suffix_hex_coarse = ".pmtiles"
     suffix_hex_fine = ".pmtiles"
     suffix_raster = "-pixel-raster.pmtiles"
+    suffix_umap_tsv = "-umap.tsv.gz"
+    suffix_umap_pmtiles = "-umap.pmtiles"
 
     out_assets = []
     for param in params: ## train_params is a list of dictionaries
@@ -677,6 +679,11 @@ def ficture2_params_to_factor_assets(params, skip_raster=False):
             }
             if "factor_map" in param:
                 out_asset["factor_map"] = model_id + suffix_factormap
+            if param.get("umap_available"):
+                out_asset["umap"] = {
+                    "tsv": model_id + suffix_umap_tsv,
+                    "pmtiles": model_id + suffix_umap_pmtiles
+                }
             out_assets.append(out_asset)
         elif len_decode_params == 1:
             decode_param = param["decode_params"][0]
@@ -701,6 +708,11 @@ def ficture2_params_to_factor_assets(params, skip_raster=False):
             }
             if "factor_map" in param:
                 out_asset["factor_map"] = model_id + suffix_factormap
+            if param.get("umap_available"):
+                out_asset["umap"] = {
+                    "tsv": model_id + suffix_umap_tsv,
+                    "pmtiles": model_id + suffix_umap_pmtiles
+                }
             out_assets.append(out_asset)
         else: ## multiple decode_params
             for decode_param in param["decode_params"]:
@@ -725,6 +737,11 @@ def ficture2_params_to_factor_assets(params, skip_raster=False):
                 }
                 if "factor_map" in param:
                     out_asset["factor_map"] = model_id + suffix_factormap
+                if param.get("umap_available"):
+                    out_asset["umap"] = {
+                        "tsv": model_id + suffix_umap_tsv,
+                        "pmtiles": model_id + suffix_umap_pmtiles
+                    }
                 out_assets.append(out_asset)
     return out_assets
 

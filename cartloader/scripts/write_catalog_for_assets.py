@@ -117,6 +117,22 @@ def write_catalog_for_assets(_args):
                 factors_list.append(cell_assets)
                 flags.append(f"{cell_assets_f}.done")
 
+        if factors_list:
+            normalized_factors = []
+            for factor_entry in factors_list:
+                umap_info = factor_entry.get("umap")
+                if isinstance(umap_info, dict):
+                    normalized = {}
+                    for key, value in umap_info.items():
+                        if isinstance(value, str):
+                            normalized[key] = os.path.basename(value)
+                    if normalized:
+                        factor_entry["umap"] = normalized
+                    else:
+                        factor_entry.pop("umap", None)
+                normalized_factors.append(factor_entry)
+            factors_list = normalized_factors
+
         ## add files to the catalog
         unique_factors = {item['id']: item for item in factors_list}         # Use a dictionary to keep the latest entry by 'id'
         factors_list = list(unique_factors.values())                         # Get the deduplicated list

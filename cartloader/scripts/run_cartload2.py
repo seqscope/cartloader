@@ -56,6 +56,11 @@ def parse_arguments(_args):
     aux_params.add_argument('--max-tile-bytes', type=int, default=5000000, help='Maximum tile size in bytes for tippecanoe/PMTiles (default: 5000000)')
     aux_params.add_argument('--max-feature-counts', type=int, default=500000, help='Maximum features per tile for tippecanoe/PMTiles (default: 500000)')
     aux_params.add_argument('--preserve-point-density-thres', type=int, default=1024, help='Tippecanoe point-density preservation threshold (default: 1024)')
+    aux_params.add_argument('--umap-factor-column', type=str, default='topK', help='Column name encoding the dominant factor assignment in a UMAP TSV (default: topK)')
+    aux_params.add_argument('--umap-x-column', type=str, default='UMAP1', help='Column name for the UMAP X coordinate (default: UMAP1)')
+    aux_params.add_argument('--umap-y-column', type=str, default='UMAP2', help='Column name for the UMAP Y coordinate (default: UMAP2)')
+    aux_params.add_argument('--umap-min-zoom', type=int, default=0, help='Minimum zoom for generated UMAP PMTiles (default: 0)')
+    aux_params.add_argument('--umap-max-zoom', type=int, default=6, help='Maximum zoom for generated UMAP PMTiles (default: 6)')
     # ?
     aux_params.add_argument('--skip-raster', action='store_true', default=False, help='Skip raster image generation (no GDAL/go-pmtiles required)')
     # tmp
@@ -219,6 +224,21 @@ def run_cartload2(_args):
         if len(in_fic_params) == 0:  # parameters are empty
             logger.error(f"FICTURE 'train_params' is empty after loading {fic_jsonf} (provided by --fic-dir and --in-fic-params)")
 
+        for train_param in in_fic_params:
+            model_id = train_param["model_id"]
+            model_prefix = os.path.join(args.fic_dir, model_id)
+            umap_candidates = [
+                train_param.get("umap_tsv_path"),
+                f"{model_prefix}.umap.tsv.gz",
+                f"{model_prefix}.umap.tsv"
+            ]
+            umap_src = next((path for path in umap_candidates if path and os.path.exists(path)), None)
+            if umap_src:
+                train_param["_umap_input"] = umap_src
+                train_param["umap_available"] = True
+            else:
+                train_param["umap_available"] = False
+
         # create the output assets json
         out_fic_assets = ficture2_params_to_factor_assets(in_fic_params, args.skip_raster)
 
@@ -310,6 +330,48 @@ def run_cartload2(_args):
                     else:
                         cmds.append(f"cp {val['in']} {val['out']}")
                     outfiles.append(val["out"])
+
+            umap_src = train_param.get("_umap_input")
+            if umap_src:
+                prerequisites.append(umap_src)
+                umap_tsv_out = f"{out_prefix}-umap.tsv.gz"
+                if umap_src.endswith(".gz"):
+                    cmds.append(f"cp {umap_src} {umap_tsv_out}")
+                else:
+                    cmds.append(f"{args.gzip} -c '{umap_src}' > '{umap_tsv_out}'")
+                outfiles.append(umap_tsv_out)
+
+                umap_ndjson = f"{out_prefix}-umap.ndjson"
+                umap_pmtiles = f"{out_prefix}-umap.pmtiles"
+                convert_cmd = " ".join([
+                    "cartloader", "render_umap",
+                    f"--input {umap_tsv_out}",
+                    f"--out {umap_ndjson}",
+                    f"--factor-column {args.umap_factor_column}",
+                    f"--x-column {args.umap_x_column}",
+                    f"--y-column {args.umap_y_column}"
+                ])
+                cmds.append(convert_cmd)
+
+                tippecanoe_cmd = " ".join([
+                    f"TIPPECANOE_MAX_THREADS={args.threads}",
+                    f"'{args.tippecanoe}'",
+                    f"-t {args.tmp_dir}",
+                    f"-o {umap_pmtiles}",
+                    "-Z", str(args.umap_min_zoom),
+                    "-z", str(args.umap_max_zoom),
+                    "-l", "umap",
+                    "--force",
+                    "--drop-densest-as-needed",
+                    "--extend-zooms-if-still-dropping",
+                    "--no-duplication",
+                    f"--preserve-point-density-threshold={args.preserve_point_density_thres}",
+                    umap_ndjson
+                ])
+                cmds.append(tippecanoe_cmd)
+                if not args.keep_intermediate_files:
+                    cmds.append(f"rm -f {umap_ndjson}")
+                outfiles.append(umap_pmtiles)
             
             touch_flag_cmd=valid_and_touch_cmd(outfiles, f"{out_prefix}.done") # this only touch the flag file when all output files exist
             cmds.append(touch_flag_cmd)
