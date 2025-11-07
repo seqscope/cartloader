@@ -97,7 +97,8 @@ Upload `CartLoader` outputs (including `catalog.yaml`) to a specified S3 path fo
 ### Input/Output
 - `--in-dir` (str): Input dir (single) or parent dir with per-sample subdirs (collection).
 - `--catalog-yaml` (str): Path to catalog.yaml (single mode only; default: `<in_dir>/catalog.yaml`).
-- `--upload-cartload-only` (flag): Upload only cartload-generated files.
+- `--upload-basics-only` (flag): Upload only cartload-generated basic files.
+- `--upload-optional-only` (flag): Upload only cartload-generated optional files, such as umap and alias.
 - `--upload-basemap-only` (flag): Upload only additional basemap PMTiles.
 
 ### Collection Parameters

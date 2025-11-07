@@ -863,7 +863,9 @@ def stepinator(_args):
                     os.makedirs(run_i["cartl_dir"], exist_ok=True)
                     runner.add(cmd_run_cartload(run_i, fic_v, args, env))
                     if args.upload_aws:
-                        runner.add(cmd_upload_aws(run_i, args, env, aws_bucket, "--upload-cartload-only"))
+                        runner.add(cmd_upload_aws(run_i, args, env, aws_bucket, "--upload-basics-only"))
+                    if args.upload_aws:
+                        runner.add(cmd_upload_aws(run_i, args, env, aws_bucket, "--upload-optional-only"))
 
                 if args.image_png2pmtiles:
                     run_i["histology"] = imginfo
