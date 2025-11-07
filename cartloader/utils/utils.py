@@ -480,8 +480,6 @@ def ficture_params_to_factor_assets(params, skip_raster=False):
     suffix_hex_coarse = ".pmtiles"
     suffix_hex_fine = ".pmtiles"
     suffix_raster = "-pixel-raster.pmtiles"
-    suffix_umap_tsv = "-umap.tsv.gz"
-    suffix_umap_pmtiles = "-umap.pmtiles"
 
     out_assets = []
     for param in params: ## train_params is a list of dictionaries
@@ -655,7 +653,8 @@ def ficture2_params_to_factor_assets(params, skip_raster=False):
     suffix_rgb = "-rgb.tsv"
     suffix_hex_coarse = ".pmtiles"
     suffix_raster = "-pixel-raster.pmtiles"
-
+    suffix_umap_tsv = "-umap.tsv.gz"
+    suffix_umap_pmtiles = "-umap.pmtiles"
     out_assets = []
     for param in params: ## train_params is a list of dictionaries
         if not "model_id" in param:
