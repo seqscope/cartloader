@@ -56,9 +56,9 @@ def parse_arguments(_args):
     aux_params.add_argument('--max-tile-bytes', type=int, default=5000000, help='Maximum tile size in bytes for tippecanoe/PMTiles (default: 5000000)')
     aux_params.add_argument('--max-feature-counts', type=int, default=500000, help='Maximum features per tile for tippecanoe/PMTiles (default: 500000)')
     aux_params.add_argument('--preserve-point-density-thres', type=int, default=1024, help='Tippecanoe point-density preservation threshold (default: 1024)')
-    aux_params.add_argument('--umap-factor-column', type=str, default='topK', help='Column name encoding the dominant factor assignment in a UMAP TSV (default: topK)')
-    aux_params.add_argument('--umap-x-column', type=str, default='UMAP1', help='Column name for the UMAP X coordinate (default: UMAP1)')
-    aux_params.add_argument('--umap-y-column', type=str, default='UMAP2', help='Column name for the UMAP Y coordinate (default: UMAP2)')
+    aux_params.add_argument('--umap-colname-factor', type=str, default='topK', help='Column name encoding the dominant factor assignment in a UMAP TSV (default: topK)')
+    aux_params.add_argument('--umap-colname-x', type=str, default='UMAP1', help='Column name for the UMAP X coordinate (default: UMAP1)')
+    aux_params.add_argument('--umap-colname-y', type=str, default='UMAP2', help='Column name for the UMAP Y coordinate (default: UMAP2)')
     aux_params.add_argument('--umap-min-zoom', type=int, default=0, help='Minimum zoom for generated UMAP PMTiles (default: 0)')
     aux_params.add_argument('--umap-max-zoom', type=int, default=18, help='Maximum zoom for generated UMAP PMTiles (default: 18)')
     # ?
@@ -317,9 +317,9 @@ def run_cartload2(_args):
                     "cartloader", "render_umap",
                     f"--input {umap_tsv_out}",
                     f"--out {umap_ndjson}",
-                    f"--colname-factor {args.umap_factor_column}",
-                    f"--colname-x {args.umap_x_column}",
-                    f"--colname-y {args.umap_y_column}"
+                    f"--colname-factor {args.umap_colname_factor}",
+                    f"--colname-x {args.umap_colname_x}",
+                    f"--colname-y {args.umap_colname_y}"
                 ])
                 cmds.append(convert_cmd)
                 # 2) ndjson to pmtiles

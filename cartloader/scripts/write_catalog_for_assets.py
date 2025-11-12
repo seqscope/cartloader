@@ -25,7 +25,7 @@ def parse_arguments(_args):
     inout_params.add_argument('--check-equal', action="store_true", default=False, help="If enabled, the script checks for an existing file with matching content and skips writing the JSON/YAML unless differences are found.")
 
     key_params = parser.add_argument_group("Key Parameters", "Key parameters frequently used by users")
-    key_params.add_argument('--id', type=str, help='The identifier of the output assets')
+    key_params.add_argument('--id', type=str, help='The identifier of the output assets (required if --write-mode is write)')
     key_params.add_argument('--title', type=str, help='The title of the output assets')
     key_params.add_argument('--desc', type=str, help='The description of output assets')
     key_params.add_argument('--log', action='store_true', default=False, help='Write log to file')
@@ -114,6 +114,8 @@ def write_catalog_for_assets(_args):
                 cell_assets=load_file_to_dict(cell_assets_f)
                 # update_and_copy_paths will update the path to be only filename, which fits the needs of catalog.yaml
                 cell_assets=update_and_copy_paths(cell_assets, out_dir, skip_keys=["id", "name", "cells_id"], exe_copy=True)
+                # check if any item in the factor_list already has the same id as cell_assets['id'], if so, remove it first
+                factors_list = [item for item in factors_list if item.get('id') != cell_assets.get('id')]
                 factors_list.append(cell_assets)
                 flags.append(f"{cell_assets_f}.done")
 
