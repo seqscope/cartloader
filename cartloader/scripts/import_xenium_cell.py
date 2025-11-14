@@ -417,7 +417,7 @@ def import_xenium_cell(_args):
         assert os.path.exists(umap_in), (f'File not found: {umap_in} ("UMAP_PROJ" in --in-json)' if args.in_json is not None else f'File not found: {umap_in} (--csv-umap)')
 
         logger.info(f"Processing UMAP projection from {umap_in}")
-        write_umap_tsv(umap_in, umap_tsv_out, bcd2cluster)
+        write_umap_tsv(umap_in, umap_tsv_out, bcd2clusteridx)
 
         logger.info(f"  * Generated PMTiles for UMAP projection:{umap_pmtiles}")
         umap_tsv2pmtiles(umap_tsv_out, umap_pmtiles, args)

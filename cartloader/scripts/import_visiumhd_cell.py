@@ -124,6 +124,8 @@ def parse_arguments(_args):
     aux_inout_params.add_argument('--mtx-cells', type=str, default="segmented_outputs/filtered_feature_cell_matrix", help='Directory location of the cell feature MatrixMarket files under --in-dir (default: segmented_outputs/filtered_feature_cell_matrix)')
     aux_inout_params.add_argument('--csv-clust', type=str, default="analysis/clustering/gene_expression_graphclust/clusters.csv", help='Location of CSV with cell cluster assignments under --in-dir (default: analysis/clustering/gene_expression_graphclust/clusters.csv)')
     aux_inout_params.add_argument('--csv-diffexp', type=str, default="analysis/diffexp/gene_expression_graphclust/differential_expression.csv", help='Location of CSV with differential expression results under --in-dir (default: analysis/diffexp/gene_expression_graphclust/differential_expression.csv)')
+    aux_inout_params.add_argument('--csv-umap', type=str, default="analysis/pca/gene_expression_10_components/projection.csv", help='Location of CSV with UMAP results under --in-dir (default: analysis/pca/gene_expression_10_components/projection.csv')
+
     # - scaling
     aux_inout_params.add_argument('--scale-json', type=str, default=None, help=f'Location of scale JSON under --in-dir. If set, defaults --units-per-um from microns_per_pixel in this JSON file (No default value applied. Typical locations: square_002um/spatial/scalefactors_json.json; binned_outputs/square_002um/spatial/scalefactors_json.json")')
     aux_inout_params.add_argument('--units-per-um', type=float, default=1, help='Coordinate units per µm in inputs (default: 1).')
@@ -208,7 +210,7 @@ def import_visiumhd_cell(_args):
         scale_json =  os.path.join(args.in_dir, args.scale_json) if args.scale_json else None
         cell_data = {
             "CELL_FEATURE_MEX": f"{args.in_dir}/{args.mtx_cells}",
-            "CELL_GEOJSON": f"{args.in_dir}/{args.csv_boundaries}",
+            "CELL_GEOJSON": f"{args.in_dir}/{args.geojson_cells}",
             "CLUSTER": f"{args.in_dir}/{args.csv_clust}",
             "DE": f"{args.in_dir}/{args.csv_diffexp}",
             "UMAP_PROJ": f"{args.in_dir}/{args.csv_umap}"
@@ -217,8 +219,10 @@ def import_visiumhd_cell(_args):
     if scale_json is not None:
         assert os.path.exists(scale_json), f"File not found: {scale_json} (--scale-json)"
         args.units_per_um = extract_unit2px_from_json(scale_json)
-
-
+        logger.info(f"Setting --units-per-um = {args.units_per_um} from {scale_json}")
+    else:
+        logger.warning(f"No scale JSON provided; assuming --units-per-um = {args.units_per_um}")
+    
     # Cluster/DE
     if args.cells or args.boundaries or args.umap:
         clust_in = cell_data.get("CLUSTER", None)
@@ -254,7 +258,7 @@ def import_visiumhd_cell(_args):
     # Process segmented calls 
     if args.cells or args.boundaries:
         cells_json=cell_data.get("CELL_GEOJSON", None)
-        assert os.path.exists(cells_json), (f'Path not provided: CELL_GEOJSON in --in-json' if args.in_json is not None else f'Path not provided: --geojson-cells')
+        assert cells_json is not None, (f'Path not provided: CELL_GEOJSON in --in-json' if args.in_json is not None else f'Path not provided: --geojson-cells')
         assert os.path.exists(cells_json), (f'File not found: {cells_json} (CELL_GEOJSON in --in-json)' if args.in_json is not None else f'File not found: {cells_json} (--geojson-cells)')
     
     if args.cells:
@@ -265,7 +269,7 @@ def import_visiumhd_cell(_args):
         bcd_path = os.path.join(cell_ftr_mex, "barcodes.tsv.gz")
         mtx_path = os.path.join(cell_ftr_mex, "matrix.mtx.gz")
         assert os.path.exists(bcd_path), (f"File not found: {bcd_path} (barcodes.tsv.gz in CELL_FEATURE_MEX from --in-json)" if args.in_json is not None else f"File not found: {bcd_path} (barcodes.tsv.gz from --mtx-cells)")
-        assert os.path.exists(bcd_path), (f"File not found: {mtx_path} (matrix.mtx.gz in CELL_FEATURE_MEX from --in-json)" if args.in_json is not None else f"File not found: {mtx_path} (matrix.mtx.gz from --mtx-cells)")
+        assert os.path.exists(mtx_path), (f"File not found: {mtx_path} (matrix.mtx.gz in CELL_FEATURE_MEX from --in-json)" if args.in_json is not None else f"File not found: {mtx_path} (matrix.mtx.gz from --mtx-cells)")
 
         logger.info(f"Processing cell information from {cells_json}; {cell_ftr_mex}")
 
@@ -303,7 +307,7 @@ def import_visiumhd_cell(_args):
         assert os.path.exists(umap_in), (f'File not found: {umap_in} ("UMAP_PROJ" in --in-json)' if args.in_json is not None else f'File not found: {umap_in} (--csv-umap)')
 
         logger.info(f"Processing UMAP projection from {umap_in}")
-        write_umap_tsv(umap_in, umap_tsv_out, bcd2cluster)
+        write_umap_tsv(umap_in, umap_tsv_out, bcd2clusteridx)
 
         logger.info(f"  * Generated PMTiles for UMAP projection:{umap_pmtiles}")
         umap_tsv2pmtiles(umap_tsv_out, umap_pmtiles, args)

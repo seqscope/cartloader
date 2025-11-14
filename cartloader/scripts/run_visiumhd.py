@@ -98,6 +98,7 @@ def parse_arguments(_args):
     aux_inout_params.add_argument('--csv-clust', type=str, default=None, help='Location of the CSV file containing cell cluster assignments under --space-ranger-dir (used with --import-cells)') 
     aux_inout_params.add_argument('--csv-diffexp', type=str, default=None, help='Location of the CSV file with differential expression results under --space-ranger-dir (used with --import-cells)') 
     aux_inout_params.add_argument('--tifs', type=str, nargs="+", default=[], help="List of locations of one or more input BTF TIFF(s) under --space-ranger-dir. The order must match the order of the image IDs in --image-ids (used with --import-images)")
+    aux_inout_params.add_argument('--csv-square', type=str, nargs="+", default=[], help="List of locations of one or more input BTF TIFF(s) under --space-ranger-dir. The order must match the order of the image IDs in --image-ids (used with --import-images)")
 
     # Default settings: tools will use the PATH: sort, gzip, python3
     env_params = parser.add_argument_group("Env Parameters", "Environment parameters, e.g., tools.")
@@ -337,39 +338,37 @@ def run_visiumhd(_args):
         background_assets  = [ os.path.join(cart_dir, f"{image_id}_assets.json") for image_id in image_ids]
         background_pmtiles = [ os.path.join(cart_dir, f"{image_id}.pmtiles")     for image_id in image_ids]
 
-    if args.import_squares:
-        print("="*10, flush=True)
-        print("Executing --import-squares (execute directly)", flush=True)
-        print("="*10, flush=True)
+    #if args.import_squares:
+        ## TBC
+        # print("="*10, flush=True)
+        # print("Executing --import-squares (execute directly)", flush=True)
+        # print("="*10, flush=True)
 
-        if use_json:
-            prereq = [args.space_ranger_assets]
-        else:
-            parser.error("--import-squares currently requires --load-space-ranger to be set or manual input mode to be disabled.")
+        # if use_json:
+        #     prereq = [args.space_ranger_assets]
+        # else:
+            
 
-        print(f" * Input JSON: {args.space_ranger_assets}", flush=True)        
-        import_square_cmd=" ".join([
-            "cartloader", "import_visiumhd_square",
-            # actions
-            "--all",
-            f"--update-catalog" if not args.run_cartload2 and os.path.exists(catalog_yaml) else "",
-            # output
-            f"--outprefix {cart_dir}/squares",
-            # (conditional) input
-            f"--in-json {args.space_ranger_assets}",
-            f"--in-dir {args.space_ranger_dir}" if args.space_ranger_dir else "",
-            # key params
-            f"--tippecanoe {args.tippecanoe}" if args.tippecanoe else "",
-            f"--threads {args.threads}" if args.threads else "",
-        ])
+        # print(f" * Input JSON: {args.space_ranger_assets}", flush=True)        
+        # import_square_cmd=" ".join([
+        #     "cartloader", "import_visiumhd_square",
+        #     # output
+        #     f"--out {cart_dir}/{args.cell_id}-sq{}",
+        #     # (conditional) input
+        #     f"--in-json {args.space_ranger_assets}",
+        #     f"--in-dir {args.space_ranger_dir}" if args.space_ranger_dir else "",
+        #     # key params
+        #     f"--tippecanoe {args.tippecanoe}" if args.tippecanoe else "",
+        #     f"--threads {args.threads}" if args.threads else "",
+        # ])
 
-        squares_assets = os.path.join(cart_dir, "squares_assets.json")
-        if os.path.exists(squares_assets) and not args.restart:
-            print(f" * Skip --import-squares since the Space Ranger square assets file ({squares_assets}) already exists. You can use --restart to force execution of this step.", flush=True)
-            print("\n", flush=True)
-            print(import_square_cmd, flush=True)
-        else:
-            run_command_w_preq(import_square_cmd, prerequisites=[], dry_run=args.dry_run, flush=True)
+        # squares_assets = os.path.join(cart_dir, "squares_assets.json")
+        # if os.path.exists(squares_assets) and not args.restart:
+        #     print(f" * Skip --import-squares since the Space Ranger square assets file ({squares_assets}) already exists. You can use --restart to force execution of this step.", flush=True)
+        #     print("\n", flush=True)
+        #     print(import_square_cmd, flush=True)
+        # else:
+        #     run_command_w_preq(import_square_cmd, prerequisites=[], dry_run=args.dry_run, flush=True)
 
     if args.run_cartload2:   
         # prerequisites

@@ -11,8 +11,8 @@ from shapely.affinity import scale as shapely_scale
 
 from cartloader.utils.minimake import minimake
 from cartloader.utils.utils import cmd_separator, scheck_app, create_custom_logger, flexopen, unquote_str, smartsort, write_dict_to_file, load_file_to_dict
-from cartloader.scripts.import_xenium_cell import process_cluster_csv, read_de_csv, write_de_tsv, write_cmap_tsv, tile_csv_into_pmtiles, make_factor_dict
 from cartloader.scripts.sge_convert import extract_unit2px_from_json
+from cartloader.scripts.import_xenium_cell import process_cluster_csv, read_de_csv, write_de_tsv, write_cmap_tsv, tile_csv_into_pmtiles, make_factor_dict, write_umap_tsv, umap_tsv2pmtiles
 
 def parse_arguments(_args):
     """
@@ -46,11 +46,13 @@ def parse_arguments(_args):
     aux_inout_params.add_argument('--csv-clust', type=str, default="analysis/clustering/gene_expression_graphclust/clusters.csv", help='Location of CSV with cell cluster assignments under --in-dir (default: analysis/clustering/gene_expression_graphclust/clusters.csv)')
     aux_inout_params.add_argument('--csv-diffexp', type=str, default="analysis/diffexp/gene_expression_graphclust/differential_expression.csv", help='Location of CSV with differential expression results under --in-dir (default: analysis/diffexp/gene_expression_graphclust/differential_expression.csv)')
     # - scaling
-    aux_inout_params.add_argument('--scale-json', type=str, default="spatial/scalefactors_json.json", help=f'Location of scale JSON under --in-dir. If set, defaults --units-per-um from microns_per_pixel in this JSON file (No default value applied. Typical locations: square_002um/spatial/scalefactors_json.json; binned_outputs/square_002um/spatial/scalefactors_json.json")')
+    aux_inout_params.add_argument('--scale-json', type=str, default="spatial/scalefactors_json.json", help=f'Location of scale JSON under --in-dir. If set, defaults --units-per-um from microns_per_pixel in this JSON file (default: spatial/scalefactors_json.json")')
     aux_inout_params.add_argument('--units-per-um', type=float, default=1, help='Coordinate units per µm in inputs (default: 1).')
     aux_inout_params.add_argument('--use-parquet-tools', action='store_true', help='Use parquet-tools instead of polars/pigz for parquet to csv conversion (default: False). parquet-tools may be slower for large files.')
     aux_inout_params.add_argument('--pos-colname-x', type=str, default='pxl_col_in_fullres', help='Column name for X coordinates in --pos-parquet (platform: 10x Visium HD; default: pxl_row_in_fullres)')
     aux_inout_params.add_argument('--pos-colname-y', type=str, default='pxl_row_in_fullres', help='Column name for Y coordinates in --pos-parquet (platform: 10x Visium HD; default: pxl_col_in_fullres)')
+
+    aux_inout_params.add_argument('--csv-umap', type=str, default="analysis/pca/gene_expression_10_components/projection.csv", help='Location of CSV with UMAP results under --in-dir (default: analysis/pca/gene_expression_10_components/projection.csv')
 
     aux_conv_params = parser.add_argument_group("Auxiliary PMTiles Conversion Parameters")
     aux_conv_params.add_argument('--min-zoom', type=int, default=10, help='Minimum zoom level (default: 10)')
@@ -63,7 +65,7 @@ def parse_arguments(_args):
     aux_params.add_argument('--tsv-cmap', type=str, default=f"{repo_dir}/assets/fixed_color_map_60.tsv", help=f'Location of TSV with color mappings for clusters (default: {repo_dir}/assets/fixed_color_map_60.tsv)')
     aux_params.add_argument('--de-max-pval', type=float, default=0.01, help='Maximum p-value for differential expression (default: 0.01)')
     aux_params.add_argument('--de-min-fc', type=float, default=1.2, help='Minimum fold change for differential expression (default: 1.2)')
-    aux_params.add_argument('--col-rename', type=str, nargs='+', help='Columns to rename in the output file. Format: old_name1:new_name1 old_name2:new_name2 ...')
+    # aux_params.add_argument('--col-rename', type=str, nargs='+', help='Columns to rename in the output file. Format: old_name1:new_name1 old_name2:new_name2 ...')
     aux_params.add_argument('--catalog-yaml', type=str, help='Path to catalog.yaml to update (used with --update-catalog; default: <in-dir>/catalog.yaml)')
     aux_params.add_argument('--keep-intermediate-files', action='store_true', default=False, help='Keep intermediate output files')
     aux_params.add_argument('--tmp-dir', type=str, help='Temporary directory for intermediate files (default: out-dir/tmp or /tmp if specified)')
@@ -98,6 +100,8 @@ def import_visiumhd_square(_args):
     logger = create_custom_logger(__name__, args.outprefix + "_import_visium_square" + args.log_suffix if args.log else None)
     logger.info("Analysis Started")
 
+    assert args.bin_size > 0, "--bin-size must be a positive integer"
+
     # create output directory if needed
     out_dir = os.path.dirname(args.outprefix)
     out_base = os.path.basename(args.outprefix)
@@ -110,23 +114,27 @@ def import_visiumhd_square(_args):
             os.makedirs(args.tmp_dir, exist_ok=True)
 
     # read in_json if provided 
+    label = f"GRID_{args.bin_size}um"
+
     scale_json = None
     temp_fs = []
 
     if args.in_json is not None:
         assert os.path.exists(args.in_json), f"File not found: {args.in_json} (--in-json)"
         raw_data = load_file_to_dict(args.in_json)
-        raise ValueError("--in-json mode is not currently supported. Please use manual input mode with --in-dir and related parameters.")
-#        cell_data = raw_data.get("CELLS", raw_data)  # support flat dicts from older scripts
-#        scale_json = raw_data.get("SGE", {}).get("SCALE", None)
+        scale_json = raw_data.get(label, {}).get("SCALE", None)
+        bin_data = raw_data.get(label, {})
     else:
         if args.in_dir is None:
             raise ValueError("--in-dir is required when --in-json is not provided")
+        
         scale_json =  os.path.join(args.in_dir, args.scale_json) if args.scale_json else None
+        
         bin_data = {
-            "PARQUET": os.path.join(args.in_dir, args.parquet),
+            "POSITION": os.path.join(args.in_dir, args.parquet),
             "CLUSTER": os.path.join(args.in_dir, args.csv_clust),
             "DE": os.path.join(args.in_dir, args.csv_diffexp),
+            "UMAP_PROJ": f"{args.in_dir}/{args.csv_umap}"
         }
 
     if scale_json is not None:
@@ -137,7 +145,7 @@ def import_visiumhd_square(_args):
         logger.warning(f"No scale JSON provided; assuming --units-per-um = {args.units_per_um}")
 
     ## convert parquet files to csv
-    parquet_path = bin_data["PARQUET"]
+    parquet_path = bin_data["POSITION"]
     parquet_csv_path = args.outprefix + ".parquet.csv.gz"
     if args.use_parquet_tools:
         par2csv_cmd = f"{args.parquet_tools} csv {parquet_path} |  {args.gzip} -c > {parquet_csv_path}"
@@ -216,16 +224,36 @@ def import_visiumhd_square(_args):
         tile_csv_into_pmtiles(geojson_out, bins_pmtiles, args, logger, no_dup=True)
         temp_fs.append(geojson_out)
 
+    # UMAP
+    umap_in = bin_data.get("UMAP_PROJ", None)
+    umap_tsv_out = f"{args.outprefix}-umap.tsv.gz"
+    umap_pmtiles = f"{args.outprefix}-umap.pmtiles"
+
+    assert umap_in is not None, (f'Path not provided: "UMAP_PROJ" in field "{label}" --in-json' if args.in_json is not None else 'Path not provided: --csv-umap')
+    assert os.path.exists(umap_in), (f'File not found: {umap_in} ("UMAP_PROJ" in field "{label}" --in-json)' if args.in_json is not None else f'File not found: {umap_in} (--csv-umap)')
+
+    logger.info(f"Processing UMAP projection from {umap_in}")
+    write_umap_tsv(umap_in, umap_tsv_out, bcd2cluster)
+
+    logger.info(f"  * Generated PMTiles for UMAP projection:{umap_pmtiles}")
+    umap_tsv2pmtiles(umap_tsv_out, umap_pmtiles, args)
+
+
     # JSON/YAML (always summary)
     factor_id = out_base if args.id is None else args.id
     factor_name = out_base if args.name is None else args.name
     pmtiles_keys=[]
     if os.path.exists(f"{args.outprefix}-bins.pmtiles"):
         pmtiles_keys.append(f"sq{args.bin_size:03d}")
+    
+    if os.path.exists(f"{args.outprefix}-umap.pmtiles") and os.path.exists(f"{args.outprefix}-umap.tsv.gz"):
+        umap_src = True
+    else:
+        umap_src = False
 
     out_assets_f=f"{args.outprefix}_assets.json"
     logger.info(f"Summarizing assets information into {out_assets_f}")
-    new_factor = make_factor_dict(factor_id, factor_name, args.outprefix, pmtiles_keys)
+    new_factor = make_factor_dict(factor_id, factor_name, args.outprefix, pmtiles_keys, umap_src)
     write_dict_to_file(new_factor, out_assets_f, check_equal=True)
 
     if args.update_catalog:
@@ -240,7 +268,7 @@ def import_visiumhd_square(_args):
             catalog = yaml.load(f, Loader=yaml.FullLoader)  # Preserves order
 
         ## add files to the catalog
-        new_factor = make_factor_dict(factor_id, factor_name, out_base, pmtiles_keys)
+        new_factor = make_factor_dict(factor_id, factor_name, out_base, pmtiles_keys, umap_src)
         if "factors" not in catalog["assets"]:
             raise ValueError("No factors found in the catalog.yaml file. Check if the file is correct.")
         catalog["assets"]["factors"].append(new_factor)
