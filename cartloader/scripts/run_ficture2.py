@@ -26,7 +26,6 @@ def parse_arguments(_args):
     cmd_params.add_argument('--init-lda', action='store_true', default=False, help='(Main function) Train LDA model(s)')
     cmd_params.add_argument('--decode', action='store_true', default=False, help='(Main function) Pixel-level decoding')
     cmd_params.add_argument('--umap', action='store_true', default=False, help='(Main function) Create umap')
-    #cmd_params.add_argument('--summary', action='store_true', default=False, help='(Main function) Write JSON summarizing FICTURE parameters and outputs')
     cmd_params.add_argument('--segment-10x', action='store_true', default=False, help='Hexagon segmentation into 10x MEX format')
 
     inout_params = parser.add_argument_group("Input/Output Parameters", "Input/output paths")
@@ -591,23 +590,40 @@ def run_ficture2(_args):
             mm.add_target(f"{decode_prefix}.png", [decode_summary_flag, color_map, minmax_prereq], cmds)
 
     # - summary (update: always run)
-    if args.init_lda or args.decode:
+    if args.init_lda or args.decode or args.umap:
         prerequisities=[feature_plain] 
         summary_aux_args=[]
         # lda or external model
-        if args.init_lda:
-            summary_aux_args_models = ["--lda-model"]
+        if args.init_lda or args.umap:
+            
+            if args.init_lda:
+                summary_aux_args_models = ["--lda-model"]
+            if args.umap:
+                summary_aux_args_umap = ["--umap"]
+            
             train_params = define_lda_runs(args)
             for train_param in train_params:
                 train_width = train_param["train_width"]
                 n_factor = train_param["n_factor"]
                 model_prefix = os.path.join(args.out_dir, train_param["model_id"])
-                # prerequisities
-                prerequisities.append(f"{model_prefix}.done")
-                # args
-                summary_cmap = f"{model_prefix}.cmap.tsv"
-                summary_aux_args_models.append(f"lda,{model_prefix}.model.tsv,{train_param['model_id']},{train_width},{n_factor},{summary_cmap}")
-            summary_aux_args.append(" ".join(summary_aux_args_models))
+
+                if args.init_lda:
+                    # prerequisities
+                    prerequisities.append(f"{model_prefix}.done")
+                    # args
+                    summary_cmap = f"{model_prefix}.cmap.tsv"
+                    summary_aux_args_models.append(f"lda,{model_prefix}.model.tsv,{train_param['model_id']},{train_width},{n_factor},{summary_cmap}")
+
+                    summary_aux_args.append(" ".join(summary_aux_args_models))
+
+                if args.umap:
+                    umap_tsv = f"{model_prefix}.umap.tsv.gz"
+                    umap_png = f"{model_prefix}.umap.png"
+                    umap_single_prob_png = f"{model_prefix}.umap.single.prob.png"
+                    prerequisities.extend([umap_tsv, umap_png, umap_single_prob_png])
+                    summary_aux_args_umap.append(f"{train_param['model_id']},{umap_tsv},{umap_png},{umap_single_prob_png}")
+                    summary_aux_args.append(" ".join(summary_aux_args_umap))
+
         # projection & decode
         if args.decode:
             summary_aux_args_decode = ["--decode"]
@@ -625,6 +641,7 @@ def run_ficture2(_args):
                     summary_aux_args_decode.append(f"{model_type},{model_id},{decode_id},{fit_width},{args.anchor_res}")
             if args.decode and len(summary_aux_args_decode) > 1:
                 summary_aux_args.append(" ".join(summary_aux_args_decode))
+
         # summary
         cmds = cmd_separator([], f"Summarizing output into to the <out_json> files...")
         cmd = " ".join([

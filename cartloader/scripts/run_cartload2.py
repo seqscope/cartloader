@@ -224,21 +224,6 @@ def run_cartload2(_args):
         if len(in_fic_params) == 0:  # parameters are empty
             logger.error(f"FICTURE 'train_params' is empty after loading {fic_jsonf} (provided by --fic-dir and --in-fic-params)")
 
-        for train_param in in_fic_params:
-            model_id = train_param["model_id"]
-            model_prefix = os.path.join(args.fic_dir, model_id)
-            umap_candidates = [
-                train_param.get("umap_tsv_path"),
-                f"{model_prefix}.umap.tsv.gz",
-                f"{model_prefix}.umap.tsv"
-            ]
-            umap_src = next((path for path in umap_candidates if path and os.path.exists(path)), None)
-            if umap_src:
-                train_param["_umap_input"] = umap_src
-                train_param["umap_available"] = True
-            else:
-                train_param["umap_available"] = False
-
         # create the output assets json
         out_fic_assets = ficture2_params_to_factor_assets(in_fic_params, args.skip_raster)
 
@@ -255,6 +240,10 @@ def run_cartload2(_args):
             model_rgb = train_param["cmap"]
             train_width = train_param["train_width"]
             in_prefix = f"{args.fic_dir}/{model_id}"
+
+            umap_src = train_param.get("umap")
+            if umap_src:
+                assert os.path.exists(umap_src), f"UMAP input file not found: {umap_src} for model {model_id} in FICTURE params {fic_jsonf} (provided by --fic-dir and --in-fic-params)"
 
             ## ?? what is factormap?
             factormap_path = train_param.get("factor_map", None)
@@ -287,6 +276,7 @@ def run_cartload2(_args):
                     "out": f"{out_prefix}-info.tsv"
                 }
             }
+
             if factormap_path is not None:
                 train_inout["factor_map"] = {
                     "required": False,
@@ -295,7 +285,6 @@ def run_cartload2(_args):
                 }
 
             # umap
-            umap_src = train_param.get("_umap_input")
             if umap_src:
                 cmds = cmd_separator([], f"Converting UMAP for {model_id} into PMTiles and copying relevant files..")
                 prerequisites = [umap_src]
@@ -347,7 +336,6 @@ def run_cartload2(_args):
                 cmds.append(touch_flag_cmd)
                 mm.add_target(f"{out_prefix}-umap.done", prerequisites, cmds)
                 
-
             cmds = cmd_separator([], f"Converting LDA-trained factors {model_id} into PMTiles and copying relevant files..")
             
             prerequisites = []

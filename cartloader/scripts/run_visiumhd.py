@@ -32,6 +32,7 @@ def parse_arguments(_args):
     cmd_params.add_argument('--run-ficture2', action='store_true', default=False, help='Run FICTURE (punkst) analysis on the converted SGE. Note, --decode-scale is set to 2 by default for Visium HD')
     cmd_params.add_argument('--import-ext-ficture2', action='store_true', default=False, help='Import a set of existing FICTURE results')
     cmd_params.add_argument('--import-cells', action='store_true', default=False, help='Import Space Ranger cell analysis into tiles and update catalog.yaml (if present)')
+    cmd_params.add_argument('--import-squares', action='store_true', default=False, help='Import Space Ranger square bins results into tiles and update catalog.yaml (if present)')
     cmd_params.add_argument('--import-images', action='store_true', default=False, help='Import background images (e.g., DAPI) into raster tiles and update catalog.yaml (if present)')
     cmd_params.add_argument('--run-cartload2', action='store_true', default=False, help='Package SGE into raster tiles (import FICTURE results if --run-ficture2). Write catalog.yaml summarizing assets')
     cmd_params.add_argument('--upload-aws', action='store_true', default=False, help='Upload output assets into AWS')
@@ -335,6 +336,40 @@ def run_visiumhd(_args):
 
         background_assets  = [ os.path.join(cart_dir, f"{image_id}_assets.json") for image_id in image_ids]
         background_pmtiles = [ os.path.join(cart_dir, f"{image_id}.pmtiles")     for image_id in image_ids]
+
+    if args.import_squares:
+        print("="*10, flush=True)
+        print("Executing --import-squares (execute directly)", flush=True)
+        print("="*10, flush=True)
+
+        if use_json:
+            prereq = [args.space_ranger_assets]
+        else:
+            parser.error("--import-squares currently requires --load-space-ranger to be set or manual input mode to be disabled.")
+
+        print(f" * Input JSON: {args.space_ranger_assets}", flush=True)        
+        import_square_cmd=" ".join([
+            "cartloader", "import_visiumhd_square",
+            # actions
+            "--all",
+            f"--update-catalog" if not args.run_cartload2 and os.path.exists(catalog_yaml) else "",
+            # output
+            f"--outprefix {cart_dir}/squares",
+            # (conditional) input
+            f"--in-json {args.space_ranger_assets}",
+            f"--in-dir {args.space_ranger_dir}" if args.space_ranger_dir else "",
+            # key params
+            f"--tippecanoe {args.tippecanoe}" if args.tippecanoe else "",
+            f"--threads {args.threads}" if args.threads else "",
+        ])
+
+        squares_assets = os.path.join(cart_dir, "squares_assets.json")
+        if os.path.exists(squares_assets) and not args.restart:
+            print(f" * Skip --import-squares since the Space Ranger square assets file ({squares_assets}) already exists. You can use --restart to force execution of this step.", flush=True)
+            print("\n", flush=True)
+            print(import_square_cmd, flush=True)
+        else:
+            run_command_w_preq(import_square_cmd, prerequisites=[], dry_run=args.dry_run, flush=True)
 
     if args.run_cartload2:   
         # prerequisites

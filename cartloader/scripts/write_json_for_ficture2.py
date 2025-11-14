@@ -14,6 +14,7 @@ def parse_arguments(_args):
     parser.add_argument('--in-feature-ficture', type=str, default=None, help='(Optional) If FICTURE used a different feature file than the in-feature file, specify the path to the feature file used for FICTURE analysis.')
     parser.add_argument('--lda-model', nargs='*', type=str, default=None, help='LDA Model information: <model_type>,<model_path>,<model_id>,<train_width>,<n_factor>,<cmap>')
     parser.add_argument('--decode', nargs='*', type=str, default=None, help='Projection information: <model_type>,<model_id>,<projection_id>,<fit_width>,<anchor_res>')
+    parser.add_argument('--umap', action='store_true', default=False, help='UMAP information if exists: <model_id>,<umap_tsv>,<umap_png>,<umap_single_factor_png>.')
     parser.add_argument('--merge', action='store_true', default=False, help='If enabled and the output JSON already exists, integrates new input into the existing file. If not set, the script will write a new JSON file or overwrite the existing JSON file.')
     parser.add_argument('--merge-override', action='store_true', default=False, help='When used with --merge, allows new input arguments (--in-transcript, --in-feature, --in-minmax, --in-feature-ficture) to override conflicting values in the existing profile. If not set and a conflict occurs, the script will raise an error.')
 
@@ -115,7 +116,6 @@ def write_json_for_ficture2(_args):
                 model_dict[(model_type, model_id)]["decode_params"].append(decode_entry)
             else:
                 warnings.warn(f"No matching model for decode entry: {dec}")  # Warning if model not found
-
 
     def update_single_value(old_val, new_val, error_msg, override):
         """Update a single scalar value with merge override logic."""
