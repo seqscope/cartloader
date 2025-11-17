@@ -4,6 +4,7 @@ from pathlib import Path
 
 from cartloader.utils.minimake import minimake
 from cartloader.utils.utils import cmd_separator, scheck_app, create_custom_logger, load_file_to_dict, write_dict_to_file, ficture2_params_to_factor_assets, read_minmax, flexopen, execute_makefile, valid_and_touch_cmd
+from cartloader.utils.color_helper import normalize_rgb
 
 def parse_arguments(_args):
     """
@@ -130,9 +131,10 @@ def copy_rgb_tsv(in_rgb, out_rgb, restart=False):
                 toks = line.rstrip().split("\t")
                 if len(toks) != len(hdrs):
                     raise ValueError(f"Input RGB file {path} has inconsistent number of columns")
-                rgb_r = int(toks[col2idx["R"]])/255
-                rgb_g = int(toks[col2idx["G"]])/255
-                rgb_b = int(toks[col2idx["B"]])/255
+                rgb_r = float(toks[col2idx["R"]])
+                rgb_g = float(toks[col2idx["G"]])
+                rgb_b = float(toks[col2idx["B"]])
+                rgb_r, rgb_g, rgb_b = normalize_rgb(rgb_r, rgb_g, rgb_b)
                 name = toks[col2idx["Name"]]
                 lines.append(f"{name}\t{name}\t{rgb_r:.5f}\t{rgb_g:.5f}\t{rgb_b:.5f}")
         return "\n".join(lines) + "\n"

@@ -5,7 +5,8 @@ import tifffile, json
 from PIL import Image
 
 from cartloader.utils.minimake import minimake
-from cartloader.utils.utils import cmd_separator, scheck_app, create_custom_logger, read_minmax, hex_to_rgb
+from cartloader.utils.utils import cmd_separator, scheck_app, create_custom_logger, read_minmax
+from cartloader.utils.color_helper import hex_to_rgb255
 
 def parse_arguments(_args):
     """
@@ -208,7 +209,7 @@ def transform_aligned_histology(_args):
         logger.info(f"Rescaling the image into 8 bits using [{args.lower_thres_intensity}, {args.upper_thres_intensity}] as clipping thresholds")
         image = ((np.clip(image, a_min=args.lower_thres_intensity, a_max=args.upper_thres_intensity) - args.lower_thres_intensity) / (args.upper_thres_intensity - args.lower_thres_intensity))
         if args.colorize is not None:
-            r, g, b = hex_to_rgb(args.colorize)            
+            r, g, b = hex_to_rgb255(args.colorize)            
             image = np.stack([image * r, image * g, image * b], axis=-1).astype(np.uint8)
             is_mono = False
         else:
