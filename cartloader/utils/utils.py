@@ -47,6 +47,7 @@ def add_param_to_cmd(cmd, args, aux_argset, underscore2dash=True):
 
 def run_command(command, use_bash=False):
     executable_shell = "/bin/bash" if use_bash else "/bin/sh"
+    print(f"Running: {command}")
     try:
         result = subprocess.run(
             command, 

@@ -252,10 +252,10 @@ def import_visiumhd_square(_args):
     umap_tsv2pmtiles(umap_tsv_out, umap_pmtiles, args)
 
     logger.info(f"  * UMAP Visualization for all factors...")
-    umap_tsv2png(umap_tsv_out, args.outprefix, cmap_out)
+    umap_tsv2png(umap_tsv_out, args.outprefix, cmap_out, title = f"Square Bin {args.bin_size}um")
 
     logger.info(f"  * UMAP Visualization (plot for individual factors; colorized by cluster)...")
-    umap_tsv2indpng(umap_tsv_out, args.outprefix, cmap_out)
+    umap_tsv2indpng(umap_tsv_out, args.outprefix, cmap_out, mode="binary", title = f"Square Bin {args.bin_size}um")
 
     # JSON/YAML (always summary)
     factor_id = out_base if args.id is None else args.id

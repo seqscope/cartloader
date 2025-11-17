@@ -196,7 +196,7 @@ def umap_tsv2pmtiles(umap_tsv_out, umap_pmtiles, args):
     ])
     run_command(tippecanoe_cmd)
 
-def umap_tsv2png(umap_tsv, model_prefix, color_map):
+def umap_tsv2png(umap_tsv, model_prefix, color_map, title="Cell Segmentation"):
     draw_umap_rscript=f"{repo_dir}/cartloader/r/draw_umap.r"
 
     plot_cmd = " ".join([
@@ -204,11 +204,11 @@ def umap_tsv2png(umap_tsv, model_prefix, color_map):
         f"--input {umap_tsv}",
         f"--out-prefix {model_prefix}",
         f"--cmap {color_map}",
-        f'--subtitle "Cell Segmentation"'
+        f'--subtitle \"{title}\"',
         ])
     run_command(plot_cmd)
 
-def umap_tsv2indpng(umap_tsv, model_prefix, color_map):
+def umap_tsv2indpng(umap_tsv, model_prefix, color_map, mode="binary", title="Cell Segmentation"):
     draw_umap_single_rscript=f"{repo_dir}/cartloader/r/draw_umap_single.r"
 
     plot_cmd = " ".join([
@@ -216,8 +216,8 @@ def umap_tsv2indpng(umap_tsv, model_prefix, color_map):
         f"--input {umap_tsv}",
         f"--out-prefix {model_prefix}",
         f"--cmap {color_map}",
-        f'--subtitle "Cell Segmentation"',
-        f"--mode binary"
+        f'--subtitle  \"{title}\"',
+        f"--mode {mode}"
         ])
     run_command(plot_cmd)
 
