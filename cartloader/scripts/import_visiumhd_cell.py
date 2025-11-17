@@ -21,7 +21,6 @@ def _rescale_geometry(geom, units_per_um):
     scale_factor = 1.0 / units_per_um
     return shapely_scale(geom, xfact=scale_factor, yfact=scale_factor, origin=(0, 0))
 
-
 def process_cell_geojson_w_mtx(cells_geojson, cell_ftr_mex, cells_out, bcd2clusteridx, units_per_um):
     # Load barcodes
     bcd_path = os.path.join(cell_ftr_mex, "barcodes.tsv.gz")

@@ -48,10 +48,13 @@ def collect_files_from_yaml(catalog_f):
         else:
             subkey = key.split(".")[-1] if "." in key else key
             if subkey not in keys_id:
-                if key.endswith("umap.tsv.gz") or key.endswith("umap.pmtiles") or key.endswith("umap.png") or key.endswith("umap.single.prob.png") or subkey == "alias":
+                if key.endswith("umap.tsv") or key.endswith("umap.png") or key.endswith("umap.ind_png") or key.endswith("umap.pmtiles") or subkey == "alias":
                     cartload_optional_files.append(value)
+                    # print(repr(key)+"\t"+"cartload_optional_files")
                 else:
                     cartload_required_files.append(value)
+                    # print(repr(key)+"\t"+"cartload_required_files")
+
 
     # Deduplicate cartload_files
     cartload_required_files = list(set(cartload_required_files))
@@ -115,6 +118,7 @@ def upload_aws(_args):
         upload_opt = True if not args.upload_basics_only and not args.upload_basemap_only else False
         upload_bm = True if not args.upload_basics_only and not args.upload_optional_only else False
 
+        print(";".join(basics_files)+"\n")
         # upload cartload basics
         if upload_basics:
             cmds=cmd_separator([], f"Uploading cartload files to AWS...")
@@ -131,6 +135,7 @@ def upload_aws(_args):
             cmds.append(f"touch {cartload_flag}")
             mm.add_target(cartload_flag, basics_prerequisites, cmds)
 
+        print(";".join(optional_files)+"\n")
         # upload cartload optional
         if upload_opt:
             for filename in optional_files:
@@ -139,7 +144,8 @@ def upload_aws(_args):
                 s3_file_path = os.path.join(s3_dir, filename) 
                 cmds.append(f'{args.aws} s3 cp "{file_path}" "{s3_file_path}" && {args.aws} s3 cp "{catalog_f}" "{s3_catalog_f}" && touch {file_path}.aws.done')
                 mm.add_target(f"{file_path}.aws.done", [file_path], cmds)
-
+        
+        print(";".join(basemap_files)+"\n")
         # Upload basemap files to AWS besides cartload
         if upload_bm:
             for filename in basemap_files:

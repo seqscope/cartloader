@@ -1,5 +1,3 @@
-
-
 def hex_to_rgb01(hex_code):
     """Convert RGB HEX code to normalized RGB values (0-1)"""
     hex_code = hex_code.lstrip('#')
@@ -21,3 +19,17 @@ def normalize_rgb(r, g, b):
     if max(r, g, b) > 1.0:
         return (float(r) / 255.0, float(g) / 255.0, float(b) / 255.0)
     return (float(r), float(g), float(b))
+
+def rgb_to_hex(r, g, b):
+    """Convert RGB values (0-1 or 0-255) to a hex color string (e.g., "#FFA500")."""
+    r01, g01, b01 = normalize_rgb(r, g, b)
+
+    r255 = int(round(r01 * 255.0))
+    g255 = int(round(g01 * 255.0))
+    b255 = int(round(b01 * 255.0))
+
+    r255 = min(255, max(0, r255))
+    g255 = min(255, max(0, g255))
+    b255 = min(255, max(0, b255))
+
+    return f"#{r255:02X}{g255:02X}{b255:02X}"

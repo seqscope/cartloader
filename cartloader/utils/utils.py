@@ -681,14 +681,22 @@ def ficture2_params_to_factor_assets(params, skip_raster=False):
     suffix_raster = "-pixel-raster.pmtiles"
     suffix_umap_tsv = "-umap.tsv.gz"
     suffix_umap_pmtiles = "-umap.pmtiles"
+    suffix_umap_png = ".umap.png"
+    suffix_umap_ind_png = ".umap.single.prob.png"
+
     out_assets = []
     for param in params: ## train_params is a list of dictionaries
+        # print(param)
+        # print(param.get("umap", "NO UMAP"))
         if not "model_id" in param:
             raise ValueError(f"model_id is missing from FICTURE parameters")
         model_id = param["model_id"].replace("_", "-")
 
         len_decode_params = len(param["decode_params"])
+        umap_params = param.get("umap",{})
 
+        # construct out_assets 
+        out_asset={}
         if len_decode_params == 0: ## train_param only
             out_asset = {
                 "id": model_id,
@@ -704,12 +712,6 @@ def ficture2_params_to_factor_assets(params, skip_raster=False):
             }
             if "factor_map" in param:
                 out_asset["factor_map"] = model_id + suffix_factormap
-            if param.get("umap_available"):
-                out_asset["umap"] = {
-                    "tsv": model_id + suffix_umap_tsv,
-                    "pmtiles": model_id + suffix_umap_pmtiles
-                }
-            out_assets.append(out_asset)
         elif len_decode_params == 1:
             decode_param = param["decode_params"][0]
             if not "decode_id" in decode_param:
@@ -733,12 +735,6 @@ def ficture2_params_to_factor_assets(params, skip_raster=False):
             }
             if "factor_map" in param:
                 out_asset["factor_map"] = model_id + suffix_factormap
-            if param.get("umap_available"):
-                out_asset["umap"] = {
-                    "tsv": model_id + suffix_umap_tsv,
-                    "pmtiles": model_id + suffix_umap_pmtiles
-                }
-            out_assets.append(out_asset)
         else: ## multiple decode_params
             for decode_param in param["decode_params"]:
                 if not "decode_id" in decode_param:
@@ -762,12 +758,17 @@ def ficture2_params_to_factor_assets(params, skip_raster=False):
                 }
                 if "factor_map" in param:
                     out_asset["factor_map"] = model_id + suffix_factormap
-                if param.get("umap_available"):
-                    out_asset["umap"] = {
-                        "tsv": model_id + suffix_umap_tsv,
-                        "pmtiles": model_id + suffix_umap_pmtiles
-                    }
-                out_assets.append(out_asset)
+        # add umap
+        if umap_params:
+            out_asset["umap"] = {
+                "tsv": model_id + suffix_umap_tsv,
+                "pmtiles": model_id + suffix_umap_pmtiles,
+                "png": model_id + suffix_umap_png,
+                "ind_png": model_id + suffix_umap_ind_png,
+            }
+        # append
+        out_assets.append(out_asset)
+
     return out_assets
 
 def create_symlink(A, B):

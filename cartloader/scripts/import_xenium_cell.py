@@ -6,6 +6,8 @@ import subprocess
 
 from cartloader.utils.utils import scheck_app, create_custom_logger, flexopen, unquote_str, smartsort, write_dict_to_file, load_file_to_dict, run_command
 
+from cartloader.utils.color_helper import normalize_rgb, rgb_to_hex
+
 repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 def process_cluster_csv(clust_csv, barcode_col="Barcode", cluster_col="Cluster"):
@@ -88,27 +90,7 @@ def write_de_tsv(clust2genes, out_path, sorted_clusters):
 #                     )
 #                 wf.write(line)
 
-def rgb_for_hex(row):
-    vals = [float(row[ch]) for ch in ("R", "G", "B")]
-    if any(v > 1.0 for v in vals):
-        # Already 0–255
-        rgb_255 = [int(round(v)) for v in vals]
-    else:
-        # Convert 0–1 → 0–255
-        rgb_255 = [int(round(v * 255.0)) for v in vals]
-    # Clamp
-    return [min(255, max(0, v)) for v in rgb_255]
-
-def normalize_to_unit(row):
-    vals = [float(row[ch]) for ch in ("R", "G", "B")]
-    if any(v > 1.0 for v in vals):  # 0–255 input
-        # Convert to 0–1
-        vals01 = [v / 255.0 for v in vals]
-        return [min(1.0, max(0.0, v)) for v in vals01]
-    else:
-        # Already 0–1
-        return vals
-
+# this rgb will be 0-1
 def write_cmap_tsv(out_cmap, tsv_cmap, sorted_clusters):
     with flexopen(tsv_cmap, "rt") as f:
         reader = csv.DictReader(f, delimiter="\t")
@@ -125,14 +107,16 @@ def write_cmap_tsv(out_cmap, tsv_cmap, sorted_clusters):
         fieldnames.append("Color_hex")
 
     for row in rows:
-        r01, g01, b01 = normalize_to_unit(row)
+        r = float(row["R"])
+        g = float(row["G"])
+        b = float(row["B"])
+        r01, g01, b01 = normalize_rgb(r, g, b)
         row["R"] = f"{r01:.6f}"
         row["G"] = f"{g01:.6f}"
         row["B"] = f"{b01:.6f}"
 
-        r255, g255, b255 = rgb_for_hex(row)
         if not has_color_hex:
-            row["Color_hex"] = f"#{r255:02X}{g255:02X}{b255:02X}"
+            row["Color_hex"] = rgb_to_hex(r01, g01, b01)
 
     with flexopen(out_cmap, "wt") as wf:
         writer = csv.DictWriter(wf, fieldnames=fieldnames, delimiter="\t")
@@ -255,7 +239,7 @@ def make_factor_dict(factor_id, factor_name, outprefix, factor_type, pmtiles_key
         factor_dict["umap"] = {
             "tsv": f"{outprefix}-umap.tsv.gz",
             "png": f"{outprefix}.umap.png",
-            "single_png": f"{outprefix}.umap.single.binary.png",
+            "ind_png": f"{outprefix}.umap.single.binary.png",
             "pmtiles": f"{outprefix}-umap.pmtiles"
         }
     return factor_dict
