@@ -63,6 +63,8 @@ def parse_arguments(_args):
     aux_conv_params = parser.add_argument_group("Auxiliary PMTiles Conversion Parameters")
     aux_conv_params.add_argument('--min-zoom', type=int, default=10, help='Minimum zoom level (default: 10)')
     aux_conv_params.add_argument('--max-zoom', type=int, default=18, help='Maximum zoom level (default: 18)')
+    aux_conv_params.add_argument('--umap-min-zoom', type=int, default=0, help='Minimum zoom level for UMAP (default: 0)')
+    aux_conv_params.add_argument('--umap-max-zoom', type=int, default=18, help='Maximum zoom level for UMAP (default: 18)')
     aux_conv_params.add_argument('--max-tile-bytes', type=int, default=5000000, help='Maximum bytes for each tile in PMTiles (default: 5000000)')
     aux_conv_params.add_argument('--max-feature-counts', type=int, default=500000, help='Max feature limits per tile in PMTiles (default: 500000)')
     aux_conv_params.add_argument('--preserve-point-density-thres', type=int, default=1024, help='Threshold for preserving point density in PMTiles (default: 1024)')
