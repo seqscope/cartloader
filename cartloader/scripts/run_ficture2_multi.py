@@ -550,7 +550,8 @@ def run_ficture2_multi(_args):
             lda_info_tsv = f"{model_prefix}.factor.info.tsv"
             prerequisities.append(f"{model_prefix}.done")
             summary_aux_args_models.append(f"lda,{model_id},{train_width},{n_factor},{summary_cmap},{model_prefix}.model.tsv,{lda_sample_fit_tsv},{lda_de_tsv},{lda_info_tsv}")
-        summary_aux_args.append(" ".join(summary_aux_args_models))
+        if len(summary_aux_args_models) > 1:
+            summary_aux_args.append(" ".join(summary_aux_args_models))
 
         summary_aux_args_decodes = ["--decode"]
         decode_runs = define_decode_runs(args)
@@ -567,19 +568,22 @@ def run_ficture2_multi(_args):
             decode_info_tsv = f"{decode_prefix}.factor.info.tsv"
             prerequisities.append(f"{decode_prefix}.done")
             summary_aux_args_decodes.append(f"{model_type},{model_id},{decode_id},{fit_width},{args.anchor_res},{decode_pixel_tsv},{decode_pixel_png},{decode_pseudobulk_tsv},{decode_de_tsv},{decode_info_tsv}")
-        summary_aux_args.append(" ".join(summary_aux_args_decodes))
+        if len(summary_aux_args_decodes) > 1:
+            summary_aux_args.append(" ".join(summary_aux_args_decodes))
 
-        cmd = " ".join([
+        summary_cmd_parts = [
             "cartloader", "write_json_for_ficture2_multi",
-                "--merge",
-                f"--in-transcript {sample_transcript}",
-                f"--in-feature {sample_feature_hdr}", # use the original feature file for SGE
-                f"--in-feature-ficture {sample_feature_hdr}",
-                f"--in-minmax {sample_minmax}",
-                f"--out-dir {sample_out_dir}",
-                f"--out-json {sample_out_json}",
-                " ".join(summary_aux_args)            
-            ])
+            "--mode append",
+            f"--in-transcript {sample_transcript}",
+            f"--in-feature {sample_feature_hdr}", # use the original feature file for SGE
+            f"--in-minmax {sample_minmax}",
+            f"--out-dir {sample_out_dir}",
+            f"--out-json {sample_out_json}",
+        ]
+        if sample_feature_hdr:
+            summary_cmd_parts.append(f"--in-feature-ficture {sample_feature_hdr}")
+        summary_cmd_parts.extend(arg for arg in summary_aux_args if arg)
+        cmd = " ".join(summary_cmd_parts)
         cmds.append(cmd)
         mm.add_target(sample_out_json, prerequisities, cmds)
         json_each_targets.append(sample_out_json)

@@ -10,9 +10,9 @@ from shapely.affinity import scale as shapely_scale
 
 
 from cartloader.utils.minimake import minimake
-from cartloader.utils.utils import cmd_separator, scheck_app, create_custom_logger, flexopen, unquote_str, smartsort, write_dict_to_file, load_file_to_dict
+from cartloader.utils.utils import cmd_separator, scheck_app, create_custom_logger, flexopen, unquote_str, smartsort, write_dict_to_file, load_file_to_dict, scheck_app
 from cartloader.scripts.sge_convert import extract_unit2px_from_json
-from cartloader.scripts.import_xenium_cell import process_cluster_csv, read_de_csv, write_de_tsv, write_cmap_tsv, tile_csv_into_pmtiles, make_factor_dict, write_umap_tsv, umap_tsv2pmtiles
+from cartloader.scripts.import_xenium_cell import process_cluster_csv, read_de_csv, write_de_tsv, write_cmap_tsv, tile_csv_into_pmtiles, make_factor_dict, write_umap_tsv, umap_tsv2pmtiles, umap_tsv2png, umap_tsv2indpng
 
 def parse_arguments(_args):
     """
@@ -48,11 +48,17 @@ def parse_arguments(_args):
     # - scaling
     aux_inout_params.add_argument('--scale-json', type=str, default="spatial/scalefactors_json.json", help=f'Location of scale JSON under --in-dir. If set, defaults --units-per-um from microns_per_pixel in this JSON file (default: spatial/scalefactors_json.json")')
     aux_inout_params.add_argument('--units-per-um', type=float, default=1, help='Coordinate units per µm in inputs (default: 1).')
-    aux_inout_params.add_argument('--use-parquet-tools', action='store_true', help='Use parquet-tools instead of polars/pigz for parquet to csv conversion (default: False). parquet-tools may be slower for large files.')
     aux_inout_params.add_argument('--pos-colname-x', type=str, default='pxl_col_in_fullres', help='Column name for X coordinates in --pos-parquet (platform: 10x Visium HD; default: pxl_row_in_fullres)')
     aux_inout_params.add_argument('--pos-colname-y', type=str, default='pxl_row_in_fullres', help='Column name for Y coordinates in --pos-parquet (platform: 10x Visium HD; default: pxl_col_in_fullres)')
-
     aux_inout_params.add_argument('--csv-umap', type=str, default="analysis/pca/gene_expression_10_components/projection.csv", help='Location of CSV with UMAP results under --in-dir (default: analysis/pca/gene_expression_10_components/projection.csv')
+
+    aux_colnames_params = parser.add_argument_group("Auxiliary Colname Parameters", "Override column names for input files")
+    aux_colnames_params.add_argument('--pos-colname-barcode', type=str, default='barcode', help='Column name for bin barcode in --parquet (default: barcode)')
+    aux_colnames_params.add_argument('--clust-colname-barcode', type=str, default='Barcode', help='Column name for bin barcode in --csv-clust (default: Barcode)')
+    aux_colnames_params.add_argument('--clust-colname-cluster', type=str, default='Cluster', help='Column name for cluster label in --csv-clust (default: Cluster)')
+    aux_colnames_params.add_argument('--umap-colname-barcode', type=str, default='Barcode', help='Column name for bin barcode in --csv-umap (default: Barcode)')
+    aux_colnames_params.add_argument('--umap-colname-x', type=str, default='UMAP-1', help='Column name for UMAP X coordinate in --csv-umap (default: UMAP-1)')
+    aux_colnames_params.add_argument('--umap-colname-y', type=str, default='UMAP-2', help='Column name for UMAP Y coordinate in --csv-umap (default: UMAP-2)')
 
     aux_conv_params = parser.add_argument_group("Auxiliary PMTiles Conversion Parameters")
     aux_conv_params.add_argument('--min-zoom', type=int, default=10, help='Minimum zoom level (default: 10)')
@@ -62,10 +68,10 @@ def parse_arguments(_args):
     aux_conv_params.add_argument('--preserve-point-density-thres', type=int, default=1024, help='Threshold for preserving point density in PMTiles (default: 1024)')
 
     aux_params = parser.add_argument_group("Auxiliary Parameters", "Advanced settings; defaults work for most cases")    
+    aux_params.add_argument('--use-parquet-tools', action='store_true', help='Use parquet-tools instead of polars/pigz for parquet to csv conversion (default: False). parquet-tools may be slower for large files.')
     aux_params.add_argument('--tsv-cmap', type=str, default=f"{repo_dir}/assets/fixed_color_map_60.tsv", help=f'Location of TSV with color mappings for clusters (default: {repo_dir}/assets/fixed_color_map_60.tsv)')
     aux_params.add_argument('--de-max-pval', type=float, default=0.01, help='Maximum p-value for differential expression (default: 0.01)')
     aux_params.add_argument('--de-min-fc', type=float, default=1.2, help='Minimum fold change for differential expression (default: 1.2)')
-    # aux_params.add_argument('--col-rename', type=str, nargs='+', help='Columns to rename in the output file. Format: old_name1:new_name1 old_name2:new_name2 ...')
     aux_params.add_argument('--catalog-yaml', type=str, help='Path to catalog.yaml to update (used with --update-catalog; default: <in-dir>/catalog.yaml)')
     aux_params.add_argument('--keep-intermediate-files', action='store_true', default=False, help='Keep intermediate output files')
     aux_params.add_argument('--tmp-dir', type=str, help='Temporary directory for intermediate files (default: out-dir/tmp or /tmp if specified)')
@@ -76,6 +82,7 @@ def parse_arguments(_args):
     env_params.add_argument('--gzip', type=str, default="gzip", help='Path to gzip binary (default: gzip)')
     env_params.add_argument('--pigz', type=str, default="pigz", help='Path to pigz binary (default: pigz)')
     env_params.add_argument('--pigz-threads', type=int, default=4, help='Number of threads for pigz (default: 4)')
+    env_params.add_argument('--R', type=str, default="R", help='Path to R binary (default: R).')
 
     if len(_args) == 0:
         parser.print_help()
@@ -165,8 +172,12 @@ def import_visiumhd_square(_args):
     assert os.path.exists(clust_in), (f'File not found: {clust_in} ("CLUSTER" in --in-json)' if args.in_json is not None else f'File not found: {clust_in} (--csv-clust)')
 
     logger.info(f"Loading cell cluster data from {clust_in}")
-    sorted_clusters, cluster2idx, bcd2cluster, bcd2clusteridx = process_cluster_csv(clust_in)
-    logger.info(f"  * Loaded {len(bcd2cluster)} barcodes with {len(sorted_clusters)} clusters (min: {sorted_clusters[0]}, max: {sorted_clusters[-1]})")
+    sorted_clusters, cluster2idx, bcd2clusteridx = process_cluster_csv(
+        clust_in,
+        barcode_col=args.clust_colname_barcode,
+        cluster_col=args.clust_colname_cluster
+    )
+    logger.info(f"  * Loaded {len(bcd2clusteridx)} barcodes with {len(sorted_clusters)} clusters (min: {sorted_clusters[0]}, max: {sorted_clusters[-1]})")
         
     ## read/write DE results
     de_in = bin_data.get("DE", None)
@@ -194,7 +205,7 @@ def import_visiumhd_square(_args):
         hdrs = rf.readline().rstrip().split(',')
         col2idx = {c: i for i, c in enumerate(hdrs)}
         try:
-            ibcd = col2idx["barcode"]
+            ibcd = col2idx[args.pos_colname_barcode]
             ix = col2idx[args.pos_colname_x]
             iy = col2idx[args.pos_colname_y]
         except KeyError as e:
@@ -208,8 +219,7 @@ def import_visiumhd_square(_args):
             bcd = toks[ibcd]
             x = float(toks[ix])/args.units_per_um
             y = float(toks[iy])/args.units_per_um
-            clust = bcd2cluster.get(bcd, "NA")
-            clusteridx = cluster2idx.get(clust, "NA") if clust != "NA" else "NA"
+            clusteridx = bcd2clusteridx.get(bcd, "NA")
             vertices = []
             half_bin = args.bin_size / 2.0
             vertices.append(f"[{(x - half_bin):.3f},{(y - half_bin):.3f}]")
@@ -225,6 +235,7 @@ def import_visiumhd_square(_args):
         temp_fs.append(geojson_out)
 
     # UMAP
+    scheck_app(args.R)
     umap_in = bin_data.get("UMAP_PROJ", None)
     umap_tsv_out = f"{args.outprefix}-umap.tsv.gz"
     umap_pmtiles = f"{args.outprefix}-umap.pmtiles"
@@ -233,11 +244,16 @@ def import_visiumhd_square(_args):
     assert os.path.exists(umap_in), (f'File not found: {umap_in} ("UMAP_PROJ" in field "{label}" --in-json)' if args.in_json is not None else f'File not found: {umap_in} (--csv-umap)')
 
     logger.info(f"Processing UMAP projection from {umap_in}")
-    write_umap_tsv(umap_in, umap_tsv_out, bcd2cluster)
+    write_umap_tsv(umap_in, umap_tsv_out, bcd2clusteridx, args)
 
     logger.info(f"  * Generated PMTiles for UMAP projection:{umap_pmtiles}")
     umap_tsv2pmtiles(umap_tsv_out, umap_pmtiles, args)
 
+    logger.info(f"  * UMAP Visualization for all factors...")
+    umap_tsv2png(umap_tsv_out, args.outprefix, args.tsv_cmap)
+
+    logger.info(f"  * UMAP Visualization (plot for individual factors; colorized by probability)...")
+    umap_tsv2indpng(umap_tsv_out, args.outprefix, args.tsv_cmap)
 
     # JSON/YAML (always summary)
     factor_id = out_base if args.id is None else args.id
@@ -246,7 +262,7 @@ def import_visiumhd_square(_args):
     if os.path.exists(f"{args.outprefix}-bins.pmtiles"):
         pmtiles_keys.append(f"sq{args.bin_size:03d}")
     
-    if os.path.exists(f"{args.outprefix}-umap.pmtiles") and os.path.exists(f"{args.outprefix}-umap.tsv.gz"):
+    if os.path.exists(f"{args.outprefix}-umap.pmtiles") and os.path.exists(f"{args.outprefix}-umap.tsv.gz") and os.path.exists(f"{args.outprefix}.umap.png") and os.path.exists(f"{args.outprefix}.umap.single.prob.png"):
         umap_src = True
     else:
         umap_src = False
@@ -285,7 +301,6 @@ def import_visiumhd_square(_args):
             for temp_f in temp_fs:
                 if os.path.exists(temp_f):
                     os.remove(temp_f)
-
 
     logger.info("Analysis Finished")
 

@@ -4,38 +4,38 @@ import numpy as np
 from scipy.stats import chi2
 import subprocess
 
-from cartloader.utils.utils import create_custom_logger, flexopen, unquote_str, smartsort, write_dict_to_file, load_file_to_dict, run_command
+from cartloader.utils.utils import scheck_app, create_custom_logger, flexopen, unquote_str, smartsort, write_dict_to_file, load_file_to_dict, run_command
 
-def process_cluster_csv(clust_csv):
+repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+def process_cluster_csv(clust_csv, barcode_col="Barcode", cluster_col="Cluster"):
     bcd2cluster = {}
     cluster2cnt = {}
     with flexopen(clust_csv, "rt") as f:
-        for line in f:
-            if line.startswith("Barcode"):
-                continue
-            (bcd, cluster) = line.strip().split(",")
-            bcd = unquote_str(bcd)
-            bcd2cluster[bcd] = cluster
-            cluster2cnt[cluster] = cluster2cnt.get(cluster, 0) + 1
-    #sorted_clusters, cluster2idx = smartsort(clusters)
-    ## sort clusters from largest to smallest
+        reader = csv.DictReader(f)
+        for row in reader:
+            bcd = unquote_str(row[barcode_col])
+            clust = row[cluster_col]
+            bcd2cluster[bcd] = clust
+            cluster2cnt[clust] = cluster2cnt.get(clust, 0) + 1
+    
     sorted_clusters = sorted(cluster2cnt.keys(), key=lambda x: cluster2cnt[x], reverse=True)
     cluster2idx = {cluster: idx for idx, cluster in enumerate(sorted_clusters)}
-    bcd2clusteridx = {bcd: cluster2idx[clust] for bcd, clust in bcd2cluster.items() if clust in cluster2idx}
-    return sorted_clusters, cluster2idx, bcd2cluster, bcd2clusteridx
+    bcd2clusteridx = {bcd: cluster2idx[clust] for bcd, clust in bcd2cluster.items()}
+    return sorted_clusters, cluster2idx, bcd2clusteridx
 
-def process_cells_csv(cells_csv, out_csv, bcd2clusteridx):
+def process_cells_csv(cells_csv, out_csv, bcd2clusteridx, cell_id_col="cell_id", x_col="x_centroid", y_col="y_centroid", count_col="transcript_counts"):
     with flexopen(cells_csv, "rt") as f, flexopen(out_csv, "wt") as wf:
         reader = csv.DictReader(f)
-        required_cols = {"cell_id", "x_centroid", "y_centroid", "transcript_counts"}
+        required_cols = {cell_id_col, x_col, y_col, count_col}
         if not required_cols.issubset(reader.fieldnames):
             raise ValueError(f"Missing expected columns: {required_cols - set(reader.fieldnames)}")
         wf.write("lon,lat,cell_id,count,topK\n")
         for row in reader:
-            cell_id = row["cell_id"]
-            x = row["x_centroid"]
-            y = row["y_centroid"]
-            count = row["transcript_counts"]
+            cell_id = row[cell_id_col]
+            x = row[x_col]
+            y = row[y_col]
+            count = row[count_col]
             clusteridx = bcd2clusteridx.get(cell_id, "NA")
             wf.write(",".join([x, y, cell_id, count, str(clusteridx)]) + "\n")
 
@@ -113,12 +113,19 @@ def tile_csv_into_pmtiles(file_in, file_out, args, logger, no_dup=True):
     else:
         logger.info("   * PMTiles creation command completed successfully")
 
-def write_umap_tsv(umap_in, umap_tsv_out, bcd2cluster):
+def write_umap_tsv(umap_in, umap_tsv_out, bcd2clusteridx, args):
     umap_df = pd.read_csv(umap_in)
-    if 'Barcode' not in umap_df.columns:
-        raise ValueError(f"Column 'Barcode' not found in UMAP projection file: {umap_in}")
-    umap_df['topK'] = umap_df['Barcode'].map(bcd2cluster).fillna("NA").astype(str)
-    umap_df.rename(columns={"UMAP-1": "UMAP1", "UMAP-2":"UMAP2"}, inplace=True)
+    for col in [args.umap_colname_barcode, args.umap_colname_x, args.umap_colname_y]:
+        if col not in umap_df.columns:
+            raise ValueError(f"Column '{col}' not found in UMAP projection file: {umap_in}")
+
+    # here use idx to ensure the cluster is the reclustered one (after ranking by size)
+    umap_df['topK'] = umap_df[args.umap_colname_barcode].map(bcd2clusteridx).fillna("NA").astype(str)
+    if args.umap_colname_barcode == "Barcode":
+        umap_df.rename(columns={args.umap_colname_x: "UMAP1", args.umap_colname_y: "UMAP2"}, inplace=True)
+    else:
+        umap_df.rename(columns={args.umap_colname_barcode: "Barcode", args.umap_colname_x: "UMAP1", args.umap_colname_y: "UMAP2"}, inplace=True)
+    
     umap_df = umap_df[['Barcode', 'topK', 'UMAP1', 'UMAP2']]
     umap_df.to_csv(umap_tsv_out, index=False, compression='gzip', sep="\t")
 
@@ -153,6 +160,31 @@ def umap_tsv2pmtiles(umap_tsv_out, umap_pmtiles, args):
     ])
     run_command(tippecanoe_cmd)
 
+def umap_tsv2png(umap_tsv, model_prefix, color_map):
+    draw_umap_rscript=f"{repo_dir}/cartloader/r/draw_umap.r"
+
+    plot_cmd = " ".join([
+        f"Rscript {draw_umap_rscript}",
+        f"--input {umap_tsv}",
+        f"--out-prefix {model_prefix}",
+        f"--cmap {color_map}",
+        f'--subtitle "Cell Segmentation"'
+        ])
+    run_command(plot_cmd)
+
+def umap_tsv2indpng(umap_tsv, model_prefix, color_map):
+    draw_umap_single_rscript=f"{repo_dir}/cartloader/r/draw_umap_single.r"
+
+    plot_cmd = " ".join([
+        f"Rscript {draw_umap_single_rscript}",
+        f"--input {umap_tsv}",
+        f"--out-prefix {model_prefix}",
+        f"--cmap {color_map}",
+        f'--subtitle "Cell Segmentation"',
+        f"--mode prob"
+        ])
+    run_command(plot_cmd)
+
 def make_factor_dict(factor_id, factor_name, outprefix, pmtiles_keys=[], umap_src=False):
     pmtiles={}
     for key in pmtiles_keys:
@@ -169,6 +201,8 @@ def make_factor_dict(factor_id, factor_name, outprefix, pmtiles_keys=[], umap_sr
     if umap_src:
         factor_dict["umap"] = {
             "tsv": f"{outprefix}-umap.tsv.gz",
+            "png": f"{outprefix}.umap.png",
+            "single_png": f"{outprefix}.umap.single.prob.png",
             "pmtiles": f"{outprefix}-umap.pmtiles"
         }
     return factor_dict
@@ -206,11 +240,6 @@ def parse_arguments(_args):
     aux_inout_params.add_argument('--csv-clust', type=str, default="analysis/clustering/gene_expression_graphclust/clusters.csv", help='Location of CSV with cell cluster assignments under --in-dir (default: analysis/clustering/gene_expression_graphclust/clusters.csv)')
     aux_inout_params.add_argument('--csv-diffexp', type=str, default="analysis/diffexp/gene_expression_graphclust/differential_expression.csv", help='Location of CSV with differential expression results under --in-dir (default: analysis/diffexp/gene_expression_graphclust/differential_expression.csv)')
     aux_inout_params.add_argument('--csv-umap', type=str, default="analysis/pca/gene_expression_10_components/projection.csv", help='Location of CSV with UMAP results under --in-dir (default: analysis/pca/gene_expression_10_components/projection.csv')
-    
-    # aux_colnames_params = parser.add_argument_group("Auxiliary Colname Parameters")
-    # aux_colnames_params.add_argument('--umap-colname-barcode', type=str, default='Barcode', help='Column name for the cell barcode in the --csv-umap (default: Barcode)')
-    # aux_colnames_params.add_argument('--umap-colname-x', type=str, default='UMAP-1', help='Column name for the UMAP X coordinate in the --csv-umap (default: UMAP-1)')
-    # aux_colnames_params.add_argument('--umap-colname-y', type=str, default='UMAP-2', help='Column name for the UMAP Y coordinate in the --csv-umap (default: UMAP-2)')
 
     aux_conv_params = parser.add_argument_group("Auxiliary PMTiles Conversion Parameters")
     aux_conv_params.add_argument('--min-zoom', type=int, default=10, help='Minimum zoom level for cells and boundaries (default: 10)')
@@ -225,16 +254,31 @@ def parse_arguments(_args):
     aux_params.add_argument('--tsv-cmap', type=str, default=f"{repo_dir}/assets/fixed_color_map_60.tsv", help=f'Location of TSV with color mappings for clusters under --in-dir (default: {repo_dir}/assets/fixed_color_map_60.tsv)')
     aux_params.add_argument('--de-max-pval', type=float, default=0.01, help='Maximum p-value for differential expression (default: 0.01)')
     aux_params.add_argument('--de-min-fc', type=float, default=1.2, help='Minimum fold change for differential expression (default: 1.2)')
-    aux_params.add_argument('--col-rename', type=str, nargs='+', help='Columns to rename in the output file. Format: old_name1:new_name1 old_name2:new_name2 ...')
     aux_params.add_argument('--catalog-yaml', type=str, help='Path to catalog.yaml to update (used with --update-catalog; default: <out_dir>/catalog.yaml)')
     aux_params.add_argument('--out-catalog-yaml', type=str, help='Path to save the updated catalog.yaml as a new file instead of overwriting the input (--catalog-yaml). Defaults to the same path as --catalog-yaml (used with --update-catalog)')
     #aux_params.add_argument('--keep-intermediate-files', action='store_true', default=False, help='Keep intermediate output files')
     aux_params.add_argument('--tmp-dir', type=str, help='Temporary directory for intermediate files (default: out-dir/tmp or /tmp if specified)')
 
+
+    aux_colnames_params = parser.add_argument_group("Auxiliary Colname Parameters", "Override column names for input files")
+    aux_colnames_params.add_argument('--cells-colname-cell-id', type=str, default='cell_id', help='Column name for cell ID in --csv-cells (default: cell_id)')
+    aux_colnames_params.add_argument('--cells-colname-x', type=str, default='x_centroid', help='Column name for X coordinate in --csv-cells (default: x_centroid)')
+    aux_colnames_params.add_argument('--cells-colname-y', type=str, default='y_centroid', help='Column name for Y coordinate in --csv-cells (default: y_centroid)')
+    aux_colnames_params.add_argument('--cells-colname-count', type=str, default='transcript_counts', help='Column name for transcript count in --csv-cells (default: transcript_counts)')
+    aux_colnames_params.add_argument('--clust-colname-barcode', type=str, default='Barcode', help='Column name for cell barcode in --csv-clust (default: Barcode)')
+    aux_colnames_params.add_argument('--clust-colname-cluster', type=str, default='Cluster', help='Column name for cluster label in --csv-clust (default: Cluster)')
+    aux_colnames_params.add_argument('--boundaries-colname-cell-id', type=str, default='cell_id', help='Column name for cell ID in --csv-boundaries (default: cell_id)')
+    aux_colnames_params.add_argument('--boundaries-colname-x', type=str, default='vertex_x', help='Column name for X coordinate in --csv-boundaries (default: vertex_x)')
+    aux_colnames_params.add_argument('--boundaries-colname-y', type=str, default='vertex_y', help='Column name for Y coordinate in --csv-boundaries (default: vertex_y)')
+    aux_colnames_params.add_argument('--umap-colname-barcode', type=str, default='Barcode', help='Column name for barcode in --csv-umap (default: Barcode)')
+    aux_colnames_params.add_argument('--umap-colname-x', type=str, default='UMAP-1', help='Column name for UMAP X coordinate in --csv-umap (default: UMAP-1)')
+    aux_colnames_params.add_argument('--umap-colname-y', type=str, default='UMAP-2', help='Column name for UMAP Y coordinate in --csv-umap (default: UMAP-2)')
+
     env_params = parser.add_argument_group("ENV Parameters", "Environment parameters for the tools")
     env_params.add_argument('--tippecanoe', type=str, default=f"{repo_dir}/submodules/tippecanoe/tippecanoe", help='Path to tippecanoe binary (default: <cartloader_dir>/submodules/tippecanoe/tippecanoe)')
     env_params.add_argument('--parquet-tools', type=str, default="parquet-tools", help='Path to parquet-tools binary. Required if a Parquet file is provided to --csv-cells (default: parquet-tools)')
-
+    env_params.add_argument('--R', type=str, default="Rscript", help='Path to Rscript binary (default: Rscript)')
+    
     if len(_args) == 0:
         parser.print_help()
         sys.exit(1)
@@ -301,8 +345,19 @@ def import_xenium_cell(_args):
         assert os.path.exists(clust_in), (f'File not found: {clust_in} ("CLUSTER" in --in-json)' if args.in_json is not None else f'File not found: {clust_in} (--csv-clust)')
 
         logger.info(f"Loading cell cluster data from {clust_in}")
-        sorted_clusters, cluster2idx, bcd2cluster, bcd2clusteridx=process_cluster_csv(clust_in)
-        logger.info(f"  * Loaded {len(bcd2cluster)} cells")
+        sorted_clusters, cluster2idx, bcd2clusteridx = process_cluster_csv(
+            clust_in,
+            barcode_col=args.clust_colname_barcode,
+            cluster_col=args.clust_colname_cluster
+        )
+        logger.info(f"  * Loaded {len(bcd2clusteridx)} cells")
+        
+        ## write the color map
+        cmap_out=f"{args.outprefix}-rgb.tsv"
+        assert os.path.exists(args.tsv_cmap), f"File not found: {args.tsv_cmap} (--tsv-cmap)"        
+        
+        logger.info(f"  * Writing color map from {args.tsv_cmap} to {cmap_out}")
+        write_cmap_tsv(cmap_out, args.tsv_cmap, sorted_clusters)
 
     if args.cells or args.boundaries:
         ## read/write DE results
@@ -318,13 +373,6 @@ def import_xenium_cell(_args):
         de_out=f"{args.outprefix}-cells-bulk-de.tsv"
         logger.info(f"  * Writing DE results for {len(clust2genes)} clusters) to {de_out}")
         write_de_tsv(clust2genes, de_out, sorted_clusters)
-
-        ## write the color map
-        cmap_out=f"{args.outprefix}-rgb.tsv"
-        assert os.path.exists(args.tsv_cmap), f"File not found: {args.tsv_cmap} (--tsv-cmap)"        
-
-        logger.info(f"  * Writing color map from {args.tsv_cmap} to {cmap_out}")
-        write_cmap_tsv(cmap_out, args.tsv_cmap, sorted_clusters)
 
     # Process segmented calls 
     if args.cells:
@@ -354,7 +402,15 @@ def import_xenium_cell(_args):
         ## create a cell output file with cell_id, x, y, count
         cells_out=f"{args.outprefix}-cells.csv"
         logger.info(f"  * Reading cell data from {cells_csv} and extracting geometry to {cells_out}")
-        process_cells_csv(cells_csv, cells_out, bcd2clusteridx)
+        process_cells_csv(
+            cells_csv,
+            cells_out,
+            bcd2clusteridx,
+            cell_id_col=args.cells_colname_cell_id,
+            x_col=args.cells_colname_x,
+            y_col=args.cells_colname_y,
+            count_col=args.cells_colname_count
+        )
 
         cells_pmtiles = f"{args.outprefix}-cells.pmtiles"
         logger.info(f"  * Generating PMTiles from cell geometry data into cell pmtiles: {cells_pmtiles}")
@@ -374,32 +430,34 @@ def import_xenium_cell(_args):
         ## read the cell CSV files
         bound_out=f"{args.outprefix}-boundaries.geojson"
         logger.info(f"  * Reading cell boundary data from {bound_in} and extracting geometry to {bound_out}")
-        with flexopen(bound_in, "rt") as f:
-            with flexopen(bound_out, "wt") as wf:
-                current_cell_id = None
-                current_vertices = []
-                hdrs = f.readline().rstrip().split(",")
-                assert unquote_str(hdrs[0]) == "cell_id"
-                assert unquote_str(hdrs[1]) == "vertex_x"
-                assert unquote_str(hdrs[2]) == "vertex_y"
-                for line in f:
-                    toks = line.strip().split(",")
-                    cell_id = unquote_str(toks[0])
-                    x = float(toks[1])
-                    y = float(toks[2])
-                    if current_cell_id is None:
-                        current_cell_id = cell_id
-                    if cell_id != current_cell_id:
-                        cluster = bcd2cluster.get(current_cell_id, "NA")
-                        clusteridx = cluster2idx.get(cluster, "NA") if cluster != "NA" else "NA"
-                        wf.write(f'{{"type": "Feature", "geometry": {{"type": "Polygon", "coordinates": [[{",".join(current_vertices)}]]}}, "properties": {{"cell_id": "{current_cell_id}", "topK": "{clusteridx}"}}}}\n')
-                        current_cell_id = cell_id
-                        current_vertices = []
-                    current_vertices.append(f'[{x},{y}]')
-                if current_cell_id is not None:
-                    cluster = bcd2cluster.get(current_cell_id, "NA")
-                    clusteridx = cluster2idx.get(cluster, "NA") if cluster != "NA" else "NA"
+        col_id = args.boundaries_colname_cell_id
+        col_x = args.boundaries_colname_x
+        col_y = args.boundaries_colname_y
+        with flexopen(bound_in, "rt") as f, flexopen(bound_out, "wt") as wf:
+            reader = csv.DictReader(f)
+            hdrs = reader.fieldnames
+            assert hdrs[0] == col_id and hdrs[1] == col_x and hdrs[2] == col_y
+            current_cell_id = None
+            current_vertices = []
+            for row in reader:
+                cell_id = unquote_str(row[col_id])
+                x = float(row[col_x])
+                y = float(row[col_y])
+                if current_cell_id is None:
+                    current_cell_id = cell_id
+                if cell_id != current_cell_id:
+                    # cluster = bcd2cluster.get(current_cell_id, "NA")
+                    # clusteridx = cluster2idx.get(cluster, "NA") if cluster != "NA" else "NA"
+                    clusteridx = bcd2clusteridx.get(current_cell_id, "NA")
                     wf.write(f'{{"type": "Feature", "geometry": {{"type": "Polygon", "coordinates": [[{",".join(current_vertices)}]]}}, "properties": {{"cell_id": "{current_cell_id}", "topK": "{clusteridx}"}}}}\n')
+                    current_cell_id = cell_id
+                    current_vertices = []
+                current_vertices.append(f'[{x},{y}]')
+            if current_cell_id is not None:
+                # cluster = bcd2cluster.get(current_cell_id, "NA")
+                # clusteridx = cluster2idx.get(cluster, "NA") if cluster != "NA" else "NA"
+                clusteridx = bcd2clusteridx.get(current_cell_id, "NA")
+                wf.write(f'{{"type": "Feature", "geometry": {{"type": "Polygon", "coordinates": [[{",".join(current_vertices)}]]}}, "properties": {{"cell_id": "{current_cell_id}", "topK": "{clusteridx}"}}}}\n')
 
         ## Run the tippecanoe command
         bound_pmtiles = f"{args.outprefix}-boundaries.pmtiles"
@@ -409,6 +467,8 @@ def import_xenium_cell(_args):
     
     # UMAP
     if args.umap:
+        scheck_app(args.R)
+
         umap_in = cell_data.get("UMAP_PROJ", None)
         umap_tsv_out = f"{args.outprefix}-umap.tsv.gz"
         umap_pmtiles = f"{args.outprefix}-umap.pmtiles"
@@ -417,10 +477,17 @@ def import_xenium_cell(_args):
         assert os.path.exists(umap_in), (f'File not found: {umap_in} ("UMAP_PROJ" in --in-json)' if args.in_json is not None else f'File not found: {umap_in} (--csv-umap)')
 
         logger.info(f"Processing UMAP projection from {umap_in}")
-        write_umap_tsv(umap_in, umap_tsv_out, bcd2clusteridx)
+        write_umap_tsv(umap_in, umap_tsv_out, bcd2clusteridx, args)
 
         logger.info(f"  * Generated PMTiles for UMAP projection:{umap_pmtiles}")
         umap_tsv2pmtiles(umap_tsv_out, umap_pmtiles, args)
+
+        logger.info(f"  * UMAP Visualization for all factors...")
+        umap_tsv2png(umap_tsv_out, args.outprefix, args.tsv_cmap)
+
+        logger.info(f"  * UMAP Visualization (plot for individual factors; colorized by probability)...")
+        umap_tsv2indpng(umap_tsv_out, args.outprefix, args.tsv_cmap)
+
 
     # JSON/YAML (always summary)
     ## add the new factor to the catalog
@@ -433,7 +500,7 @@ def import_xenium_cell(_args):
     if os.path.exists(f"{args.outprefix}-boundaries.pmtiles"):
         pmtiles_keys.append("boundaries")
 
-    if os.path.exists(f"{args.outprefix}-umap.pmtiles") and os.path.exists(f"{args.outprefix}-umap.tsv.gz"):
+    if os.path.exists(f"{args.outprefix}-umap.pmtiles") and os.path.exists(f"{args.outprefix}-umap.tsv.gz") and os.path.exists(f"{args.outprefix}.umap.png") and os.path.exists(f"{args.outprefix}.umap.single.prob.png"):
         umap_src = True
     else:
         umap_src = False

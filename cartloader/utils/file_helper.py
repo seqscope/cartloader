@@ -1,7 +1,6 @@
 import os, tarfile
 from pathlib import Path
 
-
 def split_prefix_suffix_from_compression(filename):
     known_suffixes = [
         '.tar.gz', '.tar.bz2', '.tar.xz', '.tar.zst',

@@ -1,7 +1,9 @@
-import sys, os, gzip, argparse, logging, warnings, shutil, re, inspect, warnings, glob, json
+import sys, os, gzip, argparse, logging, warnings, shutil, re, inspect, warnings, glob, json, copy
 from collections import defaultdict, OrderedDict
 # from cartloader.utils.minimake import minimake
 # from cartloader.utils.utils import cmd_separator, scheck_app
+
+from cartloader.utils.utils import write_json, reconcile_field
 
 def parse_arguments(_args):
     """Parse command-line arguments."""
@@ -9,100 +11,142 @@ def parse_arguments(_args):
                                      description="Write a JSON file to summarize the parameters.")
     parser.add_argument('--out-dir', required=True, type=str, help='Output directory')
     parser.add_argument('--out-json', type=str, default=None, help='Path to the output JSON file. Default: <out-dir>/ficture.params.json')
+    parser.add_argument('--mode', type=str, default="write", choices=["write", "append"], help='Write mode for the output JSON. Default: write. If write, a new file will be created based on the arguments provided. If append, the new parameters will be merged into the existing JSON file if it exists.')
     parser.add_argument('--in-transcript', type=str, default=None, help='Path to the transcript file.')
     parser.add_argument('--in-feature', type=str, default=None, help='Path to the feature file.')
     parser.add_argument('--in-minmax', type=str, default=None, help='Path to the minmax file.')
     parser.add_argument('--in-feature-ficture', type=str, default=None, help='(Optional) If FICTURE used a different feature file than the in-feature file, specify the path to the feature file used for FICTURE analysis.')
     parser.add_argument('--lda-model', nargs='*', type=str, default=None, help='LDA Model information: <model_type>,<model_path>,<model_id>,<train_width>,<n_factor>,<cmap>')
     parser.add_argument('--decode', nargs='*', type=str, default=None, help='Projection information: <model_type>,<model_id>,<projection_id>,<fit_width>,<anchor_res>')
-    parser.add_argument('--merge', action='store_true', default=False, help='Merge into the existing JSON file.')
-    parser.add_argument('--overwrite', action='store_true', default=False, help='Overwrite the existing JSON file.')
 
     if len(_args) == 0:
         parser.print_help()
         sys.exit(1)
     return parser.parse_args(_args) 
 
-def write_json(data, filename):
-    """Write the given data to a JSON file."""
-    with open(filename, 'w') as file:
-        json.dump(data, file, indent=4, sort_keys=False)
+def _normalize_path(path):
+    return os.path.abspath(path) if path is not None else None
 
-def merge_params(params1, params2, keynames, nodenames):
-    out_params = []
-    cur_key_name = keynames[0]
-    next_key_names = keynames[1:]
-    cur_node_name = nodenames[0]
-    next_node_names = nodenames[1:]
-    ## sanity check: make sure that cur_key_name exists in each entry
-    value2idx = {} ## value -> (idx1, idx2)
-    for (i, p) in enumerate(params1):
-        if cur_key_name not in p:
-            raise ValueError(f"Key '{cur_key_name}' does not exist in the parameter entry: {p}")
-        value2idx[p[cur_key_name]] = [i, None]
-    for (i, p) in enumerate(params2):
-        if cur_key_name not in p:
-            raise ValueError(f"Key '{cur_key_name}' does not exist in the parameter entry: {p}")
-        if p[cur_key_name] in value2idx:
-            value2idx[p[cur_key_name]][1] = i
+def _needs_feature_entry(feature_path, sge_feature_path):
+    if feature_path is None:
+        return False
+    if sge_feature_path is None:
+        return True
+    return _normalize_path(feature_path) != _normalize_path(sge_feature_path)
+
+def build_sge_data(args, old_data):
+    sge_keys = ["in_transcript", "in_feature", "in_minmax"]
+    new_sge = {key: getattr(args, key) for key in sge_keys}
+
+    if args.mode == "write" or not old_data:
+        for key in sge_keys:
+            path = new_sge[key]
+            assert path is not None, f"Path not provided: --{key.replace('_', '-')}"
+            assert os.path.exists(path), f"File not found: {path} ( --{key.replace('_', '-')})"
+        return new_sge
+
+    old_sge = old_data.get("in_sge", {})
+    final_sge = {}
+
+    for key in sge_keys:
+        new_path = new_sge[key]
+        old_path = old_sge.get(key)
+
+        if new_path is None:
+            assert old_path is not None, f"Path for --{key.replace('_', '-')} not provided and not present in existing JSON."
+            assert os.path.exists(old_path), f"File not found: {old_path} (from existing JSON for --{key.replace('_', '-')})"
+            final_sge[key] = old_path
         else:
-            value2idx[p[cur_key_name]] = [None, i]
-    ## merge the parameters
-    for (key, [idx1, idx2]) in value2idx.items():
-        if idx1 is not None and idx2 is not None: ## merge the contents
-            if len(next_key_names) > 0:
-                mrg_params = merge_params(params1[idx1][cur_node_name], params2[idx2][cur_node_name], next_key_names, next_node_names)
-                params1[idx1][cur_node_name] = mrg_params
-                params2[idx2][cur_node_name] = mrg_params
-                if params1[idx1] != params2[idx2]:
-                    raise ValueError(f"Conflicting parameters: {params1[idx1]} vs {params2[idx2]}")
-                else:
-                    out_params.append(params1[idx1])
+            assert os.path.exists(new_path), ( f"File not found: {new_path} ( --{key.replace('_', '-')})")
+            if old_path is not None:
+                assert os.path.abspath(new_path) == os.path.abspath(old_path), f"Found inconsistent absolute path for '{key}' SGE between existing json ({old_path}) and the input arguments ({new_path})."
+                final_sge[key] = old_path
             else:
-                if params1[idx1] != params2[idx2]:
-                    raise ValueError(f"Conflicting parameters: {params1[idx1]} vs {params2[idx2]}")
-                else:
-                    out_params.append(params1[idx1])
-        elif idx1 is not None:
-            out_params.append(params1[idx1])
-        else:
-            out_params.append(params2[idx2])
-    return out_params
+                final_sge[key] = new_path
+    return final_sge
 
 def write_json_for_ficture2_multi(_args):
     args = parse_arguments(_args)
-    if args.overwrite and args.merge:
-        raise ValueError("Cannot use both --overwrite and --merge options.")
     if args.out_json is None:
         args.out_json = os.path.join(args.out_dir, "ficture.params.json")
     
-    # Input SGE data
-    sge_data={
-        "in_transcript": args.in_transcript,
-        "in_feature": args.in_feature,
-        "in_minmax": args.in_minmax
-    }
-    # Model data structure
-    train_params = []
+    old_data = {}
+    old_train_params = []
+    old_feature_ficture = None
     model_dict = {}
-    # Process model data
+
+    if args.mode == "append" and os.path.exists(args.out_json):
+        with open(args.out_json, "r") as f:
+            old_data = json.load(f)
+        old_feature_ficture = old_data.get("in_feature_ficture")
+        old_train_params = copy.deepcopy(old_data.get("train_params", []))
+
+    sge_data = build_sge_data(args, old_data)
+    sge_feature_path = sge_data.get("in_feature")
+
+    train_params = []
+    legacy_feature = old_feature_ficture if _needs_feature_entry(old_feature_ficture, sge_feature_path) else None
+    for entry in old_train_params:
+        feature_present = "feature" in entry
+        feature_value = entry.get("feature")
+        if feature_present and not _needs_feature_entry(feature_value, sge_feature_path):
+            entry.pop("feature", None)
+            feature_present = False
+        if not feature_present and legacy_feature is not None:
+            entry["feature"] = legacy_feature
+        entry.setdefault("decode_params", [])
+        train_params.append(entry)
+        model_dict[(entry["model_type"], entry["model_id"])] = entry
+
     if args.lda_model is not None:
         for model in args.lda_model:
             model_type, model_id, train_width, n_factor, cmap, model_path, fit_tsv_path, de_tsv_path, info_tsv_path = model.split(',')
-            model_entry = {
-                "model_type": model_type,
-                "model_id": model_id,
-                "train_width": int(train_width),
-                "n_factor": int(n_factor),
-                "cmap": cmap,
-                "model_path": model_path,
-                "fit_path": fit_tsv_path,
-                "de_path": de_tsv_path,
-                "info_path": info_tsv_path,
-                "decode_params": []
-            }
-            model_dict[(model_type, model_id)] = model_entry
-            train_params.append(model_entry)
+            key = (model_type, model_id)
+            existing = model_dict.get(key)
+            if existing is None:
+                model_entry = {
+                    "model_type": model_type,
+                    "model_id": model_id,
+                    "train_width": int(train_width),
+                    "n_factor": int(n_factor),
+                    "cmap": cmap,
+                    "model_path": model_path,
+                    "fit_path": fit_tsv_path,
+                    "de_path": de_tsv_path,
+                    "info_path": info_tsv_path,
+                    "decode_params": []
+                }
+                if _needs_feature_entry(args.in_feature_ficture, sge_feature_path):
+                    model_entry["feature"] = args.in_feature_ficture
+                model_dict[key] = model_entry
+                train_params.append(model_entry)
+            else:
+                msg_id = f"model ({model_type}, {model_id})"
+                reconcile_field(
+                    existing, "train_width", int(train_width),
+                    type="override",
+                    msg_id=msg_id
+                )
+                reconcile_field(existing, "n_factor", int(n_factor), type="override", msg_id=msg_id)
+                reconcile_field(existing, "cmap", cmap, type="override", msg_id=msg_id)
+                reconcile_field(
+                    existing, "model_path", model_path,
+                    type="override",
+                    msg_id=msg_id,
+                    normalize=lambda p: os.path.abspath(p)
+                )
+                reconcile_field(existing, "fit_path", fit_tsv_path, type="override", msg_id=msg_id)
+                reconcile_field(existing, "de_path", de_tsv_path, type="override", msg_id=msg_id)
+                reconcile_field(existing, "info_path", info_tsv_path, type="override", msg_id=msg_id)
+                if _needs_feature_entry(args.in_feature_ficture, sge_feature_path):
+                    reconcile_field(
+                        existing, "feature", args.in_feature_ficture,
+                        type="override",
+                        msg_id=msg_id,
+                        normalize=lambda p: os.path.abspath(p) if p is not None else None
+                    )
+                elif "feature" in existing and not _needs_feature_entry(existing.get("feature"), sge_feature_path):
+                    existing.pop("feature", None)
 
     # Process decode data
     if args.decode is not None:
@@ -118,39 +162,25 @@ def write_json_for_ficture2_multi(_args):
                 "de_tsv_path": decode_de_tsv,
                 "info_tsv_path": decode_info_tsv
             }
-            if (model_type, model_id) in model_dict:
-                model_dict[(model_type, model_id)]["decode_params"].append(decode_entry)
+            model_entry = model_dict.get((model_type, model_id))
+            assert model_entry is not None, f"No matching model for decode entry: {dec}"
+            existing_dec = next((d for d in model_entry["decode_params"] if d["decode_id"] == decode_id), None)
+            if existing_dec is None:
+                model_entry["decode_params"].append(decode_entry)
+            else:
+                msg_id = f"model ({model_type}, {model_id}) - decode_id {decode_id}"
+                reconcile_field(existing_dec, "fit_width", int(fit_width), type="override", msg_id=msg_id)
+                reconcile_field(existing_dec, "anchor_res", int(anchor_res), type="override", msg_id=msg_id)
+                reconcile_field(existing_dec, "pixel_tsv_path", decode_pixel_tsv, type="override", msg_id=msg_id)
+                reconcile_field(existing_dec, "pixel_png_path", decode_pixel_png, type="override", msg_id=msg_id)
+                reconcile_field(existing_dec, "pseudobulk_tsv_path", decode_pseudobulk_tsv, type="override", msg_id=msg_id)
+                reconcile_field(existing_dec, "de_tsv_path", decode_de_tsv, type="override", msg_id=msg_id)
+                reconcile_field(existing_dec, "info_tsv_path", decode_info_tsv, type="override", msg_id=msg_id)
     
-    # Construct final JSON data
-    if args.in_feature_ficture is None:
-        json_data = {
-            "in_sge": sge_data,
-            "train_params": train_params
-        }
-    else:
-        json_data = {
-            "in_sge": sge_data,
-            "in_feature_ficture": args.in_feature_ficture,
-            "train_params": train_params
-        }
-    if os.path.exists(args.out_json):
-        if args.overwrite:
-            print(f'Overwriting the existing JSON file: {args.out_json}')
-        elif args.merge:
-            print(f'Merging with the existing JSON file: {args.out_json}')
-            with open(args.out_json, 'r') as file:
-                existing_data = json.load(file)
-            if "in_sge" not in existing_data:
-                raise ValueError("Existing JSON file does not have the 'in_sge' key.")
-            if "train_params" not in existing_data:
-                raise ValueError("Existing JSON file does not have the 'train_params' key.")
-            ## The in_sge data must be identical
-            if existing_data["in_sge"] != sge_data:
-                raise ValueError("The 'in_sge' data in the existing JSON file is different from the new data. NOT compartible and --merge option failed")
-            ## Merge the existing data with the new data
-            json_data["train_params"] = merge_params(existing_data["train_params"], json_data["train_params"], ["model_id", "decode_id"], ["decode_params", ""])
-        else:
-            raise FileExistsError(f"Output JSON file already exists: {args.out_json}. Please use --overwrite to overwrite the file, and --merge to merge with existing JSON file")
+    json_data = {
+        "in_sge": sge_data,
+        "train_params": train_params
+    }
 
     write_json(json_data, args.out_json)
     print(f'Data has been written to {args.out_json}')

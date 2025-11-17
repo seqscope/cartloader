@@ -613,7 +613,6 @@ def run_ficture2(_args):
                     # args
                     summary_cmap = f"{model_prefix}.cmap.tsv"
                     summary_aux_args_models.append(f"lda,{model_prefix}.model.tsv,{train_param['model_id']},{train_width},{n_factor},{summary_cmap}")
-
                     summary_aux_args.append(" ".join(summary_aux_args_models))
 
                 if args.umap:
@@ -644,16 +643,18 @@ def run_ficture2(_args):
 
         # summary
         cmds = cmd_separator([], f"Summarizing output into to the <out_json> files...")
-        cmd = " ".join([
+        summary_cmd_parts = [
             "cartloader", "write_json_for_ficture2",
-                "--merge --merge-override",
-                f"--in-transcript {args.in_transcript}",
-                f"--in-feature {args.in_feature}", # use the original feature file for SGE
-                f"--in-feature-ficture {feature_plain}",
-                f"--in-minmax {args.in_minmax}",
-                f"--out-json {args.out_json}",
-                " ".join(summary_aux_args)
-            ])
+            "--mode append",
+            f"--in-transcript {args.in_transcript}",
+            f"--in-feature {args.in_feature}", # use the original feature file for SGE
+            f"--in-minmax {args.in_minmax}",
+            f"--out-json {args.out_json}",
+        ]
+        if feature_plain:
+            summary_cmd_parts.append(f"--in-feature-ficture {feature_plain}")
+        summary_cmd_parts.extend(arg for arg in summary_aux_args if arg)
+        cmd = " ".join(summary_cmd_parts)
         cmds.append(cmd)
         prerequisities.append(minmax_prereq)
         mm.add_target(args.out_json, prerequisities, cmds)

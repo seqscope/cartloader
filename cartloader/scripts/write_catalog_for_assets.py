@@ -13,7 +13,7 @@ def parse_arguments(_args):
 
     inout_params = parser.add_argument_group("Input/Output Parameters", "Input/output directories and files")
     inout_params.add_argument('--out-catalog', type=str, required=True, help='JSON/YAML file containing the output assets')
-    inout_params.add_argument('--write-mode', type=str, default="append", choices=["append", "write"], help='Write mode for the output catalog. Default: append. If write, a new file will be created based on the arguments provided. If append, the new assets will be added or updated in the existing catalog file.')
+    inout_params.add_argument('--mode', type=str, default="append", choices=["append", "write"], help='Write mode for the output catalog. Default: append. If write, a new file will be created based on the arguments provided. If append, the new assets will be added or updated in the existing catalog file.')
     inout_params.add_argument('--sge-index', type=str, help='Path to an index TSV file containing the SGE output converted to PMTiles.')
     inout_params.add_argument('--sge-counts', type=str, help='Path to a JSON file containing SGE counts per gene')
     inout_params.add_argument('--fic-assets', type=str,  help='Path to a JSON/YAML file containing FICTURE output assets')
@@ -25,7 +25,7 @@ def parse_arguments(_args):
     inout_params.add_argument('--check-equal', action="store_true", default=False, help="If enabled, the script checks for an existing file with matching content and skips writing the JSON/YAML unless differences are found.")
 
     key_params = parser.add_argument_group("Key Parameters", "Key parameters frequently used by users")
-    key_params.add_argument('--id', type=str, help='The identifier of the output assets (required if --write-mode is write)')
+    key_params.add_argument('--id', type=str, help='The identifier of the output assets (required if --mode is write)')
     key_params.add_argument('--title', type=str, help='The title of the output assets')
     key_params.add_argument('--desc', type=str, help='The description of output assets')
     key_params.add_argument('--log', action='store_true', default=False, help='Write log to file')
@@ -53,7 +53,7 @@ def write_catalog_for_assets(_args):
     flags = []
 
     ## if the output catalog file exists, check the write mode
-    if os.path.exists(args.out_catalog) and args.write_mode == "append":
+    if os.path.exists(args.out_catalog) and args.mode == "append":
         logger.info(f"Found an existing catalog file {args.out_catalog}. This file will be appended.")
         with open(args.out_catalog, 'r') as stream:
             catalog_dict = yaml.load(stream, Loader=yaml.FullLoader)

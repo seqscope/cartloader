@@ -296,6 +296,36 @@ def read_minmax(filename, format):
 # file - dict
 #======
 
+def reconcile_field(obj, key, new_val, type="override", msg_id=None, normalize=None):
+    """
+      - If old value is None, take new_val
+      - If new_val is None, keep old
+      - If both exist, ensure consistency (after optional normalize)
+    """
+    assert type in ["strict", "override"], "Unknown reconcile type. Supported types: 1) strict -- raise error if both exist and differ; 2) override -- always take new_val if both exist."
+    old_val = obj.get(key)
+
+    # No new value provided → keep old
+    if new_val is None:
+        return
+
+    # No existing old value → fill it
+    if old_val is None:
+        obj[key] = new_val
+        return
+
+    # Both exist 
+    v_old = normalize(old_val) if normalize else old_val
+    v_new = normalize(new_val) if normalize else new_val
+
+    if type == "override":
+        if v_old != v_new:
+            print(f"Warning: Inconsistent field '{key}' value for {msg_id}. Overriding from '{v_old}' to '{v_new}'.")
+        obj[key] = new_val
+        return
+    else:
+        assert v_old == v_new, f"Inconsistent field '{key}' value for {msg_id}: existing '{v_old}' vs new '{v_new}'."
+
 ## code suggested by ChatGPT
 def load_file_to_dict(file_path, file_type=None):
     """
@@ -380,6 +410,11 @@ def load_file_to_dict(file_path, file_type=None):
 #             yaml.safe_dump(data, file, default_flow_style=False)
 #     else:
 #         raise ValueError("Unsupported file type. Please provide 'json' or 'yaml'/'yml' as file_type.")
+
+def write_json(data, filename):
+    """Write the given data to a JSON file."""
+    with open(filename, 'w') as file:
+        json.dump(data, file, indent=4, sort_keys=False)
 
 def write_dict_to_file(data, file_path, file_type=None, check_equal=True, default_flow_style=False, sort_keys=False):
     """

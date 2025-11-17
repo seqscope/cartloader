@@ -48,7 +48,7 @@ def collect_files_from_yaml(catalog_f):
         else:
             subkey = key.split(".")[-1] if "." in key else key
             if subkey not in keys_id:
-                if key.endswith("umap.tsv") or key.endswith("umap.pmtiles") or subkey == "alias":
+                if key.endswith("umap.tsv.gz") or key.endswith("umap.pmtiles") or key.endswith("umap.png") or key.endswith("umap.single.prob.png") or subkey == "alias":
                     cartload_optional_files.append(value)
                 else:
                     cartload_required_files.append(value)

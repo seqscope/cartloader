@@ -5,7 +5,7 @@ import hashlib
 
 from cartloader.utils.minimake import minimake
 from cartloader.utils.utils import add_param_to_cmd, cmd_separator, run_command_w_preq, load_file_to_dict, assert_unique
-from cartloader.utils.pipeline_helper import resolve_image_plan, validate_general_args, validate_imageid_args, validate_imagecol_args, validate_imageloc_args, stage_run_ficture2, stage_run_cartload2, stage_upload_aws, stage_upload_zenodo, stage_import_images
+from cartloader.utils.pipeline_helper import resolve_image_plan, validate_general_args, validate_imageid_args, validate_imagecol_args, validate_imageloc_args, stage_run_ficture2, stage_run_cartload2, stage_upload_aws, stage_upload_zenodo, stage_import_images, resolve_square_plan, stage_import_squares
 
 manual_str="--mex-transcript, --json-scale, --parquet-position, --geojson-cells, --mtx-cells, --csv-*, --tifs"
 
@@ -98,7 +98,7 @@ def parse_arguments(_args):
     aux_inout_params.add_argument('--csv-clust', type=str, default=None, help='Location of the CSV file containing cell cluster assignments under --space-ranger-dir (used with --import-cells)') 
     aux_inout_params.add_argument('--csv-diffexp', type=str, default=None, help='Location of the CSV file with differential expression results under --space-ranger-dir (used with --import-cells)') 
     aux_inout_params.add_argument('--tifs', type=str, nargs="+", default=[], help="List of locations of one or more input BTF TIFF(s) under --space-ranger-dir. The order must match the order of the image IDs in --image-ids (used with --import-images)")
-    aux_inout_params.add_argument('--csv-square', type=str, nargs="+", default=[], help="List of locations of one or more input BTF TIFF(s) under --space-ranger-dir. The order must match the order of the image IDs in --image-ids (used with --import-images)")
+    aux_inout_params.add_argument('--square-input', type=str, nargs="+", default=[], help="List of locations of one or more input square bins under --space-ranger-dir. For each bin, provide its size and path to each file in the following format: bin_size,bin_pos_parquet,bin_csv_cluster,bin_csv_diffexp,bin_scale_json,bin_csv_umap (used with --import-squares)")
 
     # Default settings: tools will use the PATH: sort, gzip, python3
     env_params = parser.add_argument_group("Env Parameters", "Environment parameters, e.g., tools.")
@@ -325,7 +325,7 @@ def run_visiumhd(_args):
             tif_paths=[]
 
         # image plan (id/color/use_json/img_path/ranger_assets/prereq)
-        image_plans = resolve_image_plan(image_ids, image_colors, use_json, ranger_assets,  tif_paths)
+        image_plans = resolve_image_plan(image_ids, image_colors, use_json, ranger_assets, tif_paths)
         
         # cmd and execution
         stage_import_images(cart_dir, args, image_plans, 
@@ -338,37 +338,16 @@ def run_visiumhd(_args):
         background_assets  = [ os.path.join(cart_dir, f"{image_id}_assets.json") for image_id in image_ids]
         background_pmtiles = [ os.path.join(cart_dir, f"{image_id}.pmtiles")     for image_id in image_ids]
 
-    #if args.import_squares:
-        ## TBC
-        # print("="*10, flush=True)
-        # print("Executing --import-squares (execute directly)", flush=True)
-        # print("="*10, flush=True)
+    if args.import_squares:
+        print("="*10, flush=True)
+        print("Executing --import-squares (execute directly)", flush=True)
+        print("="*10, flush=True)
 
-        # if use_json:
-        #     prereq = [args.space_ranger_assets]
-        # else:
-            
-
-        # print(f" * Input JSON: {args.space_ranger_assets}", flush=True)        
-        # import_square_cmd=" ".join([
-        #     "cartloader", "import_visiumhd_square",
-        #     # output
-        #     f"--out {cart_dir}/{args.cell_id}-sq{}",
-        #     # (conditional) input
-        #     f"--in-json {args.space_ranger_assets}",
-        #     f"--in-dir {args.space_ranger_dir}" if args.space_ranger_dir else "",
-        #     # key params
-        #     f"--tippecanoe {args.tippecanoe}" if args.tippecanoe else "",
-        #     f"--threads {args.threads}" if args.threads else "",
-        # ])
-
-        # squares_assets = os.path.join(cart_dir, "squares_assets.json")
-        # if os.path.exists(squares_assets) and not args.restart:
-        #     print(f" * Skip --import-squares since the Space Ranger square assets file ({squares_assets}) already exists. You can use --restart to force execution of this step.", flush=True)
-        #     print("\n", flush=True)
-        #     print(import_square_cmd, flush=True)
-        # else:
-        #     run_command_w_preq(import_square_cmd, prerequisites=[], dry_run=args.dry_run, flush=True)
+        square_plans = resolve_square_plan(ranger_dir, use_json, ranger_assets, args.square_input)
+        square_plans = sorted(square_plans, key=lambda x: x["bin_size"])
+        stage_import_squares(cart_dir, args, square_plans,
+                            update_catalog=True if (not args.run_cartload2 and os.path.exists(catalog_yaml)) else False
+                            )
 
     if args.run_cartload2:   
         # prerequisites

@@ -241,10 +241,6 @@ def run_cartload2(_args):
             train_width = train_param["train_width"]
             in_prefix = f"{args.fic_dir}/{model_id}"
 
-            umap_src = train_param.get("umap")
-            if umap_src:
-                assert os.path.exists(umap_src), f"UMAP input file not found: {umap_src} for model {model_id} in FICTURE params {fic_jsonf} (provided by --fic-dir and --in-fic-params)"
-
             ## ?? what is factormap?
             factormap_path = train_param.get("factor_map", None)
             
@@ -285,18 +281,32 @@ def run_cartload2(_args):
                 }
 
             # umap
-            if umap_src:
+            umap = train_param.get("umap", {})
+            if len(umap)>0:
+                umap_tsv = umap.get("tsv", None)
+                umap_png = umap.get("png", None)
+                umap_idv_png = umap.get("ind_png", None)
+                for f in (umap_tsv, umap_png, umap_idv_png):
+                    assert f is not None, f"UMAP entry incomplete for model {model_id} in FICTURE params {fic_jsonf} (provided by --fic-dir and --in-fic-params)"
+                    assert os.path.exists(f), f"UMAP file not found: {f} for model {model_id} in FICTURE params {fic_jsonf} (provided by --fic-dir and --in-fic-params)"
+
                 cmds = cmd_separator([], f"Converting UMAP for {model_id} into PMTiles and copying relevant files..")
-                prerequisites = [umap_src]
+                prerequisites = [umap_tsv, umap_png, umap_idv_png]
                 outfiles=[]
 
                 # copy a tsv file (to support export in CartoScope)
                 umap_tsv_out = f"{out_prefix}-umap.tsv.gz"
-                if umap_src.endswith(".gz"):
-                    cmds.append(f"cp {umap_src} {umap_tsv_out}")
+                if umap_tsv.endswith(".gz"):
+                    cmds.append(f"cp {umap_tsv} {umap_tsv_out}")
                 else:
-                    cmds.append(f"{args.gzip} -c '{umap_src}' > '{umap_tsv_out}'")
+                    cmds.append(f"{args.gzip} -c '{umap_tsv}' > '{umap_tsv_out}'")
                 outfiles.append(umap_tsv_out)
+
+                cmds.append(f"cp {umap_png} {out_prefix}.umap.png")
+                outfiles.append(f"{out_prefix}.umap.png")
+
+                cmds.append(f"cp {umap_idv_png} {out_prefix}.umap.single.prob.png")
+                outfiles.append(f"{out_prefix}.umap.single.prob.png")
 
                 # tsv.gz to pmtiles
                 umap_ndjson = f"{out_prefix}-umap.ndjson"
