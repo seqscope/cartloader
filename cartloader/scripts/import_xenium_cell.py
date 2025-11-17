@@ -73,20 +73,72 @@ def write_de_tsv(clust2genes, out_path, sorted_clusters):
                     chisq = chi2.isf(pval, 1)
                 wf.write("\t".join([gname, str(clusteridx), f"{chisq:.4f}", f"{pval:.4e}",f"{fc:.4f}", f"{avgcount:.4f}", f"{log10pval:.4f}"]) + "\n")
 
-def write_cmap_tsv(out_cmap, tsv_cmap, sorted_clusters):
-    with flexopen(out_cmap, "wt") as wf:
-        with flexopen(tsv_cmap, "rt") as f:
-            # Write header line
-            wf.write(f.readline())
+# def write_cmap_tsv(out_cmap, tsv_cmap, sorted_clusters):
+#     with flexopen(out_cmap, "wt") as wf:
+#         with flexopen(tsv_cmap, "rt") as f:
+#             # Write header line
+#             wf.write(f.readline())
 
-            # Write color lines for each cluster
-            for i in range(len(sorted_clusters)):
-                line = f.readline()
-                if not line:
-                    raise ValueError(
-                        f"Not enough colors in the color map file {tsv_cmap}"
-                    )
-                wf.write(line)
+#             # Write color lines for each cluster
+#             for i in range(len(sorted_clusters)):
+#                 line = f.readline()
+#                 if not line:
+#                     raise ValueError(
+#                         f"Not enough colors in the color map file {tsv_cmap}"
+#                     )
+#                 wf.write(line)
+
+def rgb_for_hex(row):
+    vals = [float(row[ch]) for ch in ("R", "G", "B")]
+    if any(v > 1.0 for v in vals):
+        # Already 0–255
+        rgb_255 = [int(round(v)) for v in vals]
+    else:
+        # Convert 0–1 → 0–255
+        rgb_255 = [int(round(v * 255.0)) for v in vals]
+    # Clamp
+    return [min(255, max(0, v)) for v in rgb_255]
+
+def normalize_to_unit(row):
+    vals = [float(row[ch]) for ch in ("R", "G", "B")]
+    if any(v > 1.0 for v in vals):  # 0–255 input
+        # Convert to 0–1
+        vals01 = [v / 255.0 for v in vals]
+        return [min(1.0, max(0.0, v)) for v in vals01]
+    else:
+        # Already 0–1
+        return vals
+
+def write_cmap_tsv(out_cmap, tsv_cmap, sorted_clusters):
+    with flexopen(tsv_cmap, "rt") as f:
+        reader = csv.DictReader(f, delimiter="\t")
+        rows = list(reader)
+        fieldnames = reader.fieldnames
+
+    required = ["R", "G", "B", "Name"]
+    for col in required:
+        assert col in fieldnames, f"Color map file {tsv_cmap} is missing required column: {col}"
+
+    assert len(rows) >= len(sorted_clusters), f"Not enough colors in {tsv_cmap}: needed {len(sorted_clusters)}, found {len(rows)}"
+    has_color_hex = "Color_hex" in fieldnames
+    if not has_color_hex:
+        fieldnames.append("Color_hex")
+
+    for row in rows:
+        r01, g01, b01 = normalize_to_unit(row)
+        row["R"] = f"{r01:.6f}"
+        row["G"] = f"{g01:.6f}"
+        row["B"] = f"{b01:.6f}"
+
+        r255, g255, b255 = rgb_for_hex(row)
+        if not has_color_hex:
+            row["Color_hex"] = f"#{r255:02X}{g255:02X}{b255:02X}"
+
+    with flexopen(out_cmap, "wt") as wf:
+        writer = csv.DictWriter(wf, fieldnames=fieldnames, delimiter="\t")
+        writer.writeheader()
+        for i in range(len(sorted_clusters)):
+            writer.writerow(rows[i])
 
 def tile_csv_into_pmtiles(file_in, file_out, args, logger, no_dup=True):
     tippecanoe_cmd = " ".join([
@@ -181,18 +233,19 @@ def umap_tsv2indpng(umap_tsv, model_prefix, color_map):
         f"--out-prefix {model_prefix}",
         f"--cmap {color_map}",
         f'--subtitle "Cell Segmentation"',
-        f"--mode prob"
+        f"--mode binary"
         ])
     run_command(plot_cmd)
 
-def make_factor_dict(factor_id, factor_name, outprefix, pmtiles_keys=[], umap_src=False):
+def make_factor_dict(factor_id, factor_name, outprefix, factor_type, pmtiles_keys=[], umap_src=False):
     pmtiles={}
     for key in pmtiles_keys:
         pmtiles[key]=f"{outprefix}-{key}.pmtiles"
+    model_label=f"{factor_type}_id"
     factor_dict ={
         "id": factor_id,
         "name": factor_name,
-        "cells_id": factor_id,
+        model_label: factor_id,
         "rgb": f"{outprefix}-rgb.tsv",
         "de": f"{outprefix}-cells-bulk-de.tsv",
         "raw_pixel_col": None,
@@ -202,7 +255,7 @@ def make_factor_dict(factor_id, factor_name, outprefix, pmtiles_keys=[], umap_sr
         factor_dict["umap"] = {
             "tsv": f"{outprefix}-umap.tsv.gz",
             "png": f"{outprefix}.umap.png",
-            "single_png": f"{outprefix}.umap.single.prob.png",
+            "single_png": f"{outprefix}.umap.single.binary.png",
             "pmtiles": f"{outprefix}-umap.pmtiles"
         }
     return factor_dict
@@ -483,10 +536,10 @@ def import_xenium_cell(_args):
         umap_tsv2pmtiles(umap_tsv_out, umap_pmtiles, args)
 
         logger.info(f"  * UMAP Visualization for all factors...")
-        umap_tsv2png(umap_tsv_out, args.outprefix, args.tsv_cmap)
+        umap_tsv2png(umap_tsv_out, args.outprefix, cmap_out)
 
-        logger.info(f"  * UMAP Visualization (plot for individual factors; colorized by probability)...")
-        umap_tsv2indpng(umap_tsv_out, args.outprefix, args.tsv_cmap)
+        logger.info(f"  * UMAP Visualization (plot for individual factors; colorized by cluster)...")
+        umap_tsv2indpng(umap_tsv_out, args.outprefix, cmap_out)
 
 
     # JSON/YAML (always summary)
@@ -500,14 +553,14 @@ def import_xenium_cell(_args):
     if os.path.exists(f"{args.outprefix}-boundaries.pmtiles"):
         pmtiles_keys.append("boundaries")
 
-    if os.path.exists(f"{args.outprefix}-umap.pmtiles") and os.path.exists(f"{args.outprefix}-umap.tsv.gz") and os.path.exists(f"{args.outprefix}.umap.png") and os.path.exists(f"{args.outprefix}.umap.single.prob.png"):
+    if os.path.exists(f"{args.outprefix}-umap.pmtiles") and os.path.exists(f"{args.outprefix}-umap.tsv.gz") and os.path.exists(f"{args.outprefix}.umap.png") and os.path.exists(f"{args.outprefix}.umap.single.binary.png"):
         umap_src = True
     else:
         umap_src = False
 
     out_assets_f=f"{args.outprefix}_assets.json"
     logger.info(f"Summarizing assets information into {out_assets_f}")
-    new_factor = make_factor_dict(factor_id, factor_name, args.outprefix, pmtiles_keys, umap_src)
+    new_factor = make_factor_dict(factor_id, factor_name, args.outprefix, factor_type="cells", pmtiles_keys=pmtiles_keys, umap_src=umap_src)
     write_dict_to_file(new_factor, out_assets_f, check_equal=True)
 
     if args.update_catalog:
@@ -522,7 +575,7 @@ def import_xenium_cell(_args):
             catalog = yaml.load(f, Loader=yaml.FullLoader)  # Preserves order
 
         ## add files to the catalog
-        new_factor = make_factor_dict(factor_id, factor_name, out_base, pmtiles_keys, umap_src)
+        new_factor = make_factor_dict(factor_id, factor_name, out_base, factor_type="cells", pmtiles_keys=pmtiles_keys, umap_src=umap_src)
         print(new_factor)
         if "factors" not in catalog["assets"]:
             catalog["assets"]["factors"] = [new_factor]

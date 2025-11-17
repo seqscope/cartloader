@@ -19,6 +19,7 @@ def parse_arguments(_args):
     inout_params.add_argument('--fic-assets', type=str,  help='Path to a JSON/YAML file containing FICTURE output assets')
     inout_params.add_argument('--background-assets', type=str, nargs="+", default=[], help='Path(s) of one or more JSON/YAML file(s) containing background assets, if present')
     inout_params.add_argument('--cell-assets', type=str, nargs="+", default=[], help='Path(s) to one or more JSON/YAML file(s) containing cell segmentation assets, if present')
+    inout_params.add_argument('--square-assets', type=str, nargs="+", default=[], help='Path(s) to one or more JSON/YAML file(s) containing square assets, if present')
     inout_params.add_argument('--basemap', type=str, nargs="+", default=[], help='One or more basemap assets. Each must be in the format "id:filename" or "id1:id2:filename", where each ID represents a basemap identifier.')    
     inout_params.add_argument('--basemap-dir', type=str, default=None, help='Directory containing the basemap files. By default, the directory of the out-catalog file is used as the basemap directory.')
     inout_params.add_argument('--overview', type=str, help='Specify one of these basemaps as the overview asset, using its filename.')
@@ -96,7 +97,7 @@ def write_catalog_for_assets(_args):
         catalog_dict["assets"]["overview"]=args.overview
 
     # - factors
-    if args.fic_assets is not None or len(args.cell_assets)>0:
+    if args.fic_assets is not None or len(args.cell_assets)>0 or len(args.square_assets) >0:
         logger.info(f"Reading the Factor layers")
         if "factors" not in catalog_dict["assets"]:
             factors_list=[]
@@ -111,13 +112,22 @@ def write_catalog_for_assets(_args):
         if len(args.cell_assets)>0:
             logger.info(f"Updating Factor layer with the cell assets from {args.cell_assets}")
             for cell_assets_f in args.cell_assets:
-                cell_assets=load_file_to_dict(cell_assets_f)
+                cell_assets = load_file_to_dict(cell_assets_f)
                 # update_and_copy_paths will update the path to be only filename, which fits the needs of catalog.yaml
-                cell_assets=update_and_copy_paths(cell_assets, out_dir, skip_keys=["id", "name", "cells_id"], exe_copy=True)
+                cell_assets = update_and_copy_paths(cell_assets, out_dir, skip_keys=["id", "name", "cells_id"], exe_copy=True)
                 # check if any item in the factor_list already has the same id as cell_assets['id'], if so, remove it first
                 factors_list = [item for item in factors_list if item.get('id') != cell_assets.get('id')]
                 factors_list.append(cell_assets)
                 flags.append(f"{cell_assets_f}.done")
+
+        if len(args.square_assets)>0:
+            logger.info(f"Updating Factor layer with the square assets from {args.square_assets}")
+            for square_assets_f in args.square_assets:
+                square_assets = load_file_to_dict(square_assets_f)
+                square_assets = update_and_copy_paths(square_assets, out_dir, skip_keys=["id", "name", "cells_id"], exe_copy=True)
+                factors_list = [item for item in factors_list if item.get('id') != square_assets.get('id')]
+                factors_list.append(square_assets)
+                flags.append(f"{square_assets_f}.done")
 
         if factors_list:
             normalized_factors = []

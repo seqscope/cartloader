@@ -30,8 +30,9 @@ def parse_arguments(_args):
     inout_params.add_argument('--out-dir', type=str, required=True, help='Output directory (PMTiles, assets JSON, and catalog YAML)')
     inout_params.add_argument('--sge-dir', type=str, help='Path to SGE directory produced by "cartloader sge_convert"; must include SGE files and an assets JSON (see --in-sge-assets)')
     inout_params.add_argument('--fic-dir', type=str, help='Path tp FICTURE results directory produced by "cartloader run_ficture"; must include FICTURE results and a parameter JSON (see --in-fic-params)')
-    inout_params.add_argument('--cell-assets', type=str, nargs="+", default=[], help='Optional list of cell asset JSON/YAML files produced by import_xenium_cell/import_*_cell')
+    inout_params.add_argument('--cell-assets', type=str, nargs="+", default=[], help='Optional list of cell asset JSON/YAML files produced by import_xenium_cell or import_visiumhd_cell')
     inout_params.add_argument('--background-assets', type=str, nargs="+", default=[], help='Optional list of background asset specs (JSON/YAML or inline id:path or id1:id2:path)')
+    inout_params.add_argument('--square-assets', type=str, nargs="+", default=[], help='Optional list of square asset JSON/YAML files produced by import_visiumhd_square')
 
     key_params = parser.add_argument_group("Key Parameters", "Metadata")
     key_params.add_argument('--id', type=str, required=True, help='Identifier for the output assets; avoid whitespace (use "-" instead of "_")')
@@ -517,7 +518,8 @@ def run_cartload2(_args):
         f"--log --log-suffix '{args.log_suffix}'" if args.log else ""
         ] + (["--overview", f"sge-mono-dark.pmtiles", "--basemap", f"sge:dark:sge-mono-dark.pmtiles", f"sge:light:sge-mono-light.pmtiles"] if not args.skip_raster else []
         ) + (["--background-assets"] + args.background_assets if args.background_assets else []
-        ) + ([f"--cell-assets"] + args.cell_assets if args.cell_assets else [])
+        ) + ([f"--cell-assets"] + args.cell_assets if args.cell_assets else []
+        ) + ([f"--square-assets"] + args.square_assets if args.square_assets else [])
     )
 
     if ( args.id is not None ):
@@ -540,7 +542,9 @@ def run_cartload2(_args):
         prerequisites_yaml.extend(args.background_assets)
     if args.cell_assets:
         prerequisites_yaml.extend(args.cell_assets)
-    
+    if args.square_assets:
+        prerequisites_yaml.extend(args.square_assets)
+
     cmds.append(cmd)
     mm.add_target(f"{out_catalog_f}", prerequisites_yaml, cmds)
 

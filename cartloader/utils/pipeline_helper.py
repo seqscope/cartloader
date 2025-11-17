@@ -236,13 +236,14 @@ def resolve_square_plan(ranger_dir, use_json, ranger_assets, square_input):
 
     return square_plans
 
+
 def stage_import_squares(cart_dir, args, square_plans, update_catalog=False):
     for spec in square_plans:   
         ranger_assets = spec.get("ranger_assets", None)         
         ranger_dir = spec.get("ranger_dir", None)
         
         bin_size = spec["bin_size"]
-        outprefix = os.path.join(cart_dir, f"{args.cell_id}-sq{bin_size:03d}")
+        outprefix = os.path.join(cart_dir, f"{args.square_id}-sq{bin_size:03d}")
         square_assets = f"{outprefix}_assets.json" # output 
         
         import_square_cmd = " ".join(filter(None, [
@@ -260,12 +261,14 @@ def stage_import_squares(cart_dir, args, square_plans, update_catalog=False):
             f"--threads {args.threads}" if args.threads else "",
             f"--tsv-cmap {args.tsv_cmap}" if args.tsv_cmap else "",
             f"--update-catalog" if update_catalog else "",
+            f"--threads {args.threads}" if args.threads else "",
+            f"--use-parquet-tools" if args.use_parquet_tools else "",
         ]))
 
         prereq = spec.get("prereq", [])
         if os.path.exists(square_assets) and not args.restart:
             print(f" * Skip --import-squares for bin size {bin_size} since the assets file ({square_assets}) already exists. Use --restart to force execution.", flush=True)
-            print("\n", flush=True)
+            # print("\n", flush=True)
             print(import_square_cmd, flush=True)
             continue
 
@@ -327,7 +330,9 @@ def stage_run_ficture2(fic_dir, sge_assets, args, prereq, aux_args=None):
 #  =============
 #   cartload2
 #  =============
-def stage_run_cartload2(cart_dir, fic_dir, sge_dir, cell_assets, background_assets, args, prereq):
+def stage_run_cartload2(cart_dir, fic_dir, sge_dir, 
+                        cell_assets, square_assets, background_assets, 
+                        args, prereq):
 
     # Banner
     print("=" * 10, flush=True)
@@ -354,6 +359,9 @@ def stage_run_cartload2(cart_dir, fic_dir, sge_dir, cell_assets, background_asse
     if args.import_images:
         prereq.extend(background_assets)
 
+    if getattr(args, "import_squares", False):
+        prereq.extend(square_assets)
+
     # Build cartload2 command
     cartload_cmd = " ".join([
         "cartloader", "run_cartload2",
@@ -363,6 +371,7 @@ def stage_run_cartload2(cart_dir, fic_dir, sge_dir, cell_assets, background_asse
         f"--sge-dir {sge_dir}" if not (args.run_ficture2 or args.import_ext_ficture2) else "",
         f"--cell-assets {cell_assets}" if args.import_cells else "",
         f"--background-assets {' '.join(background_assets)}" if background_assets else "",
+        f"--square-assets  {' '.join(square_assets)}" if square_assets else "",
         f"--id {args.id}",
         f"--title {shlex.quote(args.title)}" if args.title else "",
         f"--desc {shlex.quote(args.desc)}" if args.desc else "",
@@ -439,7 +448,7 @@ def stage_upload_zenodo(cart_dir, args, prereq, flag):
 
     # Skip if all flags exist and not restarting
     if (all(os.path.exists(f) for f in flag) and not args.restart):
-        print(" * Skip --upload-zenodo since all flags exist. Use --restart to force execution.", flush=True)
+        print(" * Skip --upload-zenodo since all flags exist. Use --restart to force execution.\n", flush=True)
         print(zenodo_cmd, flush=True)
     else:
         run_command_w_preq(zenodo_cmd, prerequisites=prereq, dry_run=args.dry_run, flush=True)

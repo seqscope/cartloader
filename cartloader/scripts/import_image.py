@@ -43,12 +43,6 @@ def parse_arguments(_args):
     inout_params.add_argument('--img-id', type=str, required=True, help='Image ID used as output filename prefix. When used with --in-json, selects the image to process')
     inout_params.add_argument('--catalog-yaml', type=str, default=None, help='Catalog YAML path (required if --update-catalog; default: <out-dir>/catalog.yaml)')
 
-    env_params = parser.add_argument_group("Env Parameters", "Environment parameters, e.g., tools.")
-    env_params.add_argument('--pmtiles', type=str, default=f"pmtiles", help='Path to pmtiles binary from go-pmtiles (default: pmtiles)')
-    env_params.add_argument('--gdal_translate', type=str, default=f"gdal_translate", help='Path to gdal_translate binary (default: gdal_translate)')
-    env_params.add_argument('--gdaladdo', type=str, default=f"gdaladdo", help='Path to gdaladdo binary (default: gdaladdo)')
-    env_params.add_argument('--gdalinfo', type=str, default=f"gdalinfo", help='Path to gdalinfo binary (default: gdalinfo)')
-
     aux_params1 = parser.add_argument_group("Auxiliary parameters for --ome2png")
     aux_params1.add_argument('--micron2pixel-csv', type=str, help='CSV file containing transformation parameters from microns to mosaic pixels (platform: Vizgen; typical: micron_to_mosaic_pixel_transform.csv)')
     aux_params1.add_argument("--page", type=int, help='Z-slice index to extract from multi-page OME-TIFF (3D)')
@@ -74,6 +68,12 @@ def parse_arguments(_args):
     aux_params3.add_argument('--georef-bounds-tsv', type=str, default=None, help='Bounds source TSV with one line: <ulx>,<uly>,<lrx>,<lry>. Skip it if --ome2png is enabled')
     aux_params3.add_argument('--georef-bounds', type=str, default=None, help='Bounds string: "<ulx>,<uly>,<lrx>,<lry>". Skip it if --ome2png is enabled')
     aux_params2.add_argument('--georef-detect', type=str, default=None, help="Used the detect bounds from image metadata (e.g., 'OME'). Extracted bounds will automatically be applied to png2pmtiles")
+
+    env_params = parser.add_argument_group("Env Parameters", "Environment parameters, e.g., tools.")
+    env_params.add_argument('--pmtiles', type=str, default=f"pmtiles", help='Path to pmtiles binary from go-pmtiles (default: pmtiles)')
+    env_params.add_argument('--gdal_translate', type=str, default=f"gdal_translate", help='Path to gdal_translate binary (default: gdal_translate)')
+    env_params.add_argument('--gdaladdo', type=str, default=f"gdaladdo", help='Path to gdaladdo binary (default: gdaladdo)')
+    env_params.add_argument('--gdalinfo', type=str, default=f"gdalinfo", help='Path to gdalinfo binary (default: gdalinfo)')
 
     if len(_args) == 0:
         parser.print_help()

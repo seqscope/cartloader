@@ -327,11 +327,10 @@ def import_visiumhd_cell(_args):
         umap_tsv2pmtiles(umap_tsv_out, umap_pmtiles, args)
 
         logger.info(f"  * UMAP Visualization for all factors...")
-        umap_tsv2png(umap_tsv_out, args.outprefix, args.tsv_cmap)
+        umap_tsv2png(umap_tsv_out, args.outprefix, cmap_out)
 
-        logger.info(f"  * UMAP Visualization (plot for individual factors; colorized by probability)...")
-        umap_tsv2indpng(umap_tsv_out, args.outprefix, args.tsv_cmap)
-
+        logger.info(f"  * UMAP Visualization (plot for individual factors; colorized by cluster)...")
+        umap_tsv2indpng(umap_tsv_out, args.outprefix, cmap_out)
 
     # JSON/YAML (always summary)
     factor_id = out_base if args.id is None else args.id
@@ -342,14 +341,14 @@ def import_visiumhd_cell(_args):
     if os.path.exists(f"{args.outprefix}-boundaries.pmtiles"):
         pmtiles_keys.append("boundaries")
 
-    if os.path.exists(f"{args.outprefix}-umap.pmtiles") and os.path.exists(f"{args.outprefix}-umap.tsv.gz") and os.path.exists(f"{args.outprefix}.umap.png") and os.path.exists(f"{args.outprefix}.umap.single.prob.png"):
+    if os.path.exists(f"{args.outprefix}-umap.pmtiles") and os.path.exists(f"{args.outprefix}-umap.tsv.gz") and os.path.exists(f"{args.outprefix}.umap.png") and os.path.exists(f"{args.outprefix}.umap.single.binary.png"):
         umap_src = True
     else:
         umap_src = False
 
     out_assets_f=f"{args.outprefix}_assets.json"
     logger.info(f"Summarizing assets information into {out_assets_f}")
-    new_factor = make_factor_dict(factor_id, factor_name, args.outprefix, pmtiles_keys, umap_src)
+    new_factor = make_factor_dict(factor_id, factor_name, args.outprefix, factor_type="cells", pmtiles_keys=pmtiles_keys, umap_src=umap_src)
     write_dict_to_file(new_factor, out_assets_f, check_equal=True)
 
     if args.update_catalog:
@@ -364,7 +363,7 @@ def import_visiumhd_cell(_args):
             catalog = yaml.load(f, Loader=yaml.FullLoader)  # Preserves order
 
         ## add files to the catalog
-        new_factor = make_factor_dict(factor_id, factor_name, out_base, pmtiles_keys, umap_src)
+        new_factor = make_factor_dict(factor_id, factor_name, out_base, factor_type="cells", pmtiles_keys=pmtiles_keys, umap_src=umap_src)
         print(new_factor)
         if "factors" not in catalog["assets"]:
             catalog["assets"]["factors"] = [new_factor]

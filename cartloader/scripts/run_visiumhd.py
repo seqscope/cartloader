@@ -74,6 +74,11 @@ def parse_arguments(_args):
     cells_params.add_argument('--cell-name', type=str, help='Name of Space Ranger cell results (defaults to --cell-id)')
     cells_params.add_argument('--tsv-cmap', type=str, default=None, help='Path to a color map TSV file for cell clusters')
 
+    # Parameters for --import-squares
+    squares_params = parser.add_argument_group("Parameters for --import-squares")
+    squares_params.add_argument('--square-id', type=str, default="spaceranger", help='Identifier of Space Ranger cell results; no whitespace (default: spaceranger)')
+    squares_params.add_argument('--use-parquet-tools', action='store_true', help='Use parquet-tools instead of polars/pigz for parquet to csv conversion (default: False). parquet-tools may be slower for large files.')
+
     # Parameters for --import-images
     images_params = parser.add_argument_group("Parameters for --import-images", ('Two input modes: 1) use --image-ids select images; 2) use --all-images to deploy all images from --space-ranger-assets. '
                                                                                  'Note, run_visiumhd is currently designed for H&E images in BTF format with OME-XML metadata, i.e., it always define --georef-detect OME. '
@@ -198,8 +203,8 @@ def run_visiumhd(_args):
             ])
     
         if os.path.exists(ranger_assets) and not args.restart:
-            print(f" * Skip --load-space-ranger since the Space Ranger raw input assets file ({args.space_ranger_assets}) already exists. You can use --restart to force execution of this step.", flush=True)
-            print("\n", flush=True)
+            print(f"* Skip --load-space-ranger since the Space Ranger raw input assets file ({args.space_ranger_assets}) already exists. You can use --restart to force execution of this step.\n", flush=True)
+            # print("\n", flush=True)
             print(load_space_cmd, flush=True)
         else:
             run_command_w_preq(load_space_cmd, prerequisites=[], dry_run=args.dry_run, flush=True)
@@ -254,6 +259,7 @@ def run_visiumhd(_args):
             f"--exclude-feature-regex \"{args.exclude_feature_regex}\"" if args.exclude_feature_regex else "",
             "--sge-visual --north-up", # always north up
             f"--gdal_translate {args.gdal_translate}" if args.gdal_translate else "",
+            f"--use-parquet-tools" if args.use_parquet_tools else "",
             ])
         sge_convert_cmd = add_param_to_cmd(sge_convert_cmd, args, ["spatula", "parquet_tools", "gdalwarp"])
         sge_convert_cmd = add_param_to_cmd(sge_convert_cmd, args, ["restart","n_jobs"])
@@ -301,8 +307,8 @@ def run_visiumhd(_args):
         ])
 
         if os.path.exists(cell_assets) and not args.restart:
-            print(f" * Skip --import-cells since the Space Ranger cell assets file ({cell_assets}) already exists. You can use --restart to force execution of this step.", flush=True)
-            print("\n", flush=True)
+            print(f" * Skip --import-cells since the Space Ranger cell assets file ({cell_assets}) already exists. You can use --restart to force execution of this step.\n", flush=True)
+            # print("\n", flush=True)
             print(import_cell_cmd, flush=True)
         else:
             run_command_w_preq(import_cell_cmd, prerequisites=[], dry_run=args.dry_run, flush=True)
@@ -348,6 +354,8 @@ def run_visiumhd(_args):
         stage_import_squares(cart_dir, args, square_plans,
                             update_catalog=True if (not args.run_cartload2 and os.path.exists(catalog_yaml)) else False
                             )
+        
+        square_assets = [ os.path.join(cart_dir, f"{args.square_id}-sq{spec["bin_size"]:03d}_assets.json") for spec in square_plans]
 
     if args.run_cartload2:   
         # prerequisites
@@ -355,7 +363,13 @@ def run_visiumhd(_args):
             prereq = [sge_flag]
         else:
             prereq = [sge_assets] 
-        stage_run_cartload2(cart_dir, fic_dir, sge_dir, cell_assets, background_assets, args, prereq)
+
+        
+
+        stage_run_cartload2(cart_dir, fic_dir, sge_dir, 
+                            cell_assets, square_assets, background_assets, 
+                            args, 
+                            prereq)
         
     if args.upload_aws:
         # prerequisites

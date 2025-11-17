@@ -620,7 +620,7 @@ def run_ficture2(_args):
                     umap_png = f"{model_prefix}.umap.png"
                     umap_single_prob_png = f"{model_prefix}.umap.single.prob.png"
                     prerequisities.extend([umap_tsv, umap_png, umap_single_prob_png])
-                    summary_aux_args_umap.append(f"{train_param['model_id']},{umap_tsv},{umap_png},{umap_single_prob_png}")
+                    summary_aux_args_umap.append(f"lda,{train_param['model_id']},{umap_tsv},{umap_png},{umap_single_prob_png}")
                     summary_aux_args.append(" ".join(summary_aux_args_umap))
 
         # projection & decode
