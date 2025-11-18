@@ -222,16 +222,20 @@ def umap_tsv2indpng(umap_tsv, model_prefix, color_map, mode="binary", title="Cel
     run_command(plot_cmd)
 
 def make_factor_dict(factor_id, factor_name, outprefix, factor_type, pmtiles_keys=[], umap_src=False):
+    assert factor_type in ["cell", "square"], "Currently only support cell and square type..."
     pmtiles={}
     for key in pmtiles_keys:
-        pmtiles[key]=f"{outprefix}-{key}.pmtiles"
+        if factor_type=="cell":
+            pmtiles[key]=f"{outprefix}-{key}.pmtiles"
+        elif factor_type=="square":
+            pmtiles["boundaries"]=f"{outprefix}.pmtiles"
     model_label=f"{factor_type}_id"
     factor_dict ={
         "id": factor_id,
         "name": factor_name,
         model_label: factor_id,
         "rgb": f"{outprefix}-rgb.tsv",
-        "de": f"{outprefix}-cells-bulk-de.tsv",
+        "de": f"{outprefix}-cells-bulk-de.tsv" if factor_type=="cell" else f"{outprefix}-bulk-de.tsv",
         "raw_pixel_col": None,
         "pmtiles": pmtiles,
     }
@@ -396,134 +400,134 @@ def import_xenium_cell(_args):
         logger.info(f"  * Writing color map from {args.tsv_cmap} to {cmap_out}")
         write_cmap_tsv(cmap_out, args.tsv_cmap, sorted_clusters)
 
-    if args.cells or args.boundaries:
-        ## read/write DE results
-        de_in = cell_data.get("DE", None)
-        # presence and existence for differential expression file
-        assert de_in is not None, ('Path not provided: "DE" in --in-json' if args.in_json is not None else 'Path not provided: --csv-diffexp')
-        assert os.path.exists(de_in), (f'File not found: {de_in} ("DE" in --in-json)' if args.in_json is not None else f'File not found: {de_in} (--csv-diffexp)')        
+    # if args.cells or args.boundaries:
+    #     ## read/write DE results
+    #     de_in = cell_data.get("DE", None)
+    #     # presence and existence for differential expression file
+    #     assert de_in is not None, ('Path not provided: "DE" in --in-json' if args.in_json is not None else 'Path not provided: --csv-diffexp')
+    #     assert os.path.exists(de_in), (f'File not found: {de_in} ("DE" in --in-json)' if args.in_json is not None else f'File not found: {de_in} (--csv-diffexp)')        
 
-        logger.info(f"  * Reading DE results from {de_in}")
-        clust2genes=read_de_csv(de_in, cluster2idx, args.de_min_fc, args.de_max_pval)
+    #     logger.info(f"  * Reading DE results from {de_in}")
+    #     clust2genes=read_de_csv(de_in, cluster2idx, args.de_min_fc, args.de_max_pval)
 
-        ## write DE results
-        de_out=f"{args.outprefix}-cells-bulk-de.tsv"
-        logger.info(f"  * Writing DE results for {len(clust2genes)} clusters) to {de_out}")
-        write_de_tsv(clust2genes, de_out, sorted_clusters)
+    #     ## write DE results
+    #     de_out=f"{args.outprefix}-cells-bulk-de.tsv"
+    #     logger.info(f"  * Writing DE results for {len(clust2genes)} clusters) to {de_out}")
+    #     write_de_tsv(clust2genes, de_out, sorted_clusters)
 
-    # Process segmented calls 
-    if args.cells:
-        cells_in = cell_data.get("CELL", None)
-        # presence and existence for cells file
-        assert cells_in is not None, ('Path not provided: "CELL" in --in-json' if args.in_json is not None else 'Path not provided: --csv-cells')
-        assert os.path.exists(cells_in), (f'File not found: {cells_in} ("CELL" in --in-json)' if args.in_json is not None else f'File not found: {cells_in} (--csv-cells)')
+    # # Process segmented calls 
+    # if args.cells:
+    #     cells_in = cell_data.get("CELL", None)
+    #     # presence and existence for cells file
+    #     assert cells_in is not None, ('Path not provided: "CELL" in --in-json' if args.in_json is not None else 'Path not provided: --csv-cells')
+    #     assert os.path.exists(cells_in), (f'File not found: {cells_in} ("CELL" in --in-json)' if args.in_json is not None else f'File not found: {cells_in} (--csv-cells)')
         
-        logger.info(f"Processing cell information from {cells_in}")
+    #     logger.info(f"Processing cell information from {cells_in}")
 
-        # convert cell parquet into csv format
-        if cells_in.endswith(".parquet"):
-            cells_parquet=cells_in
-            cells_csv = os.path.join(out_dir, "cells.csv.gz")
-            par2csv_cmd=f"{args.parquet_tools} csv {cells_parquet} |  gzip -c > {cells_csv}"
+    #     # convert cell parquet into csv format
+    #     if cells_in.endswith(".parquet"):
+    #         cells_parquet=cells_in
+    #         cells_csv = os.path.join(out_dir, "cells.csv.gz")
+    #         par2csv_cmd=f"{args.parquet_tools} csv {cells_parquet} |  gzip -c > {cells_csv}"
             
-            logger.info(f"  * Converting {cells_in} from parquet to CSV: {par2csv_cmd}")
-            result = subprocess.run(par2csv_cmd, shell=True, capture_output=True)
-            if result.returncode != 0:
-                logger.error(f"Command {par2csv_cmd}\nfailed with error: {result.stderr.decode()}")
-                sys.exit(1)
-            # else:
-            #     temp_fs.append(cells_csv)
-        else:
-            cells_csv = cells_in
+    #         logger.info(f"  * Converting {cells_in} from parquet to CSV: {par2csv_cmd}")
+    #         result = subprocess.run(par2csv_cmd, shell=True, capture_output=True)
+    #         if result.returncode != 0:
+    #             logger.error(f"Command {par2csv_cmd}\nfailed with error: {result.stderr.decode()}")
+    #             sys.exit(1)
+    #         # else:
+    #         #     temp_fs.append(cells_csv)
+    #     else:
+    #         cells_csv = cells_in
         
-        ## create a cell output file with cell_id, x, y, count
-        cells_out=f"{args.outprefix}-cells.csv"
-        logger.info(f"  * Reading cell data from {cells_csv} and extracting geometry to {cells_out}")
-        process_cells_csv(
-            cells_csv,
-            cells_out,
-            bcd2clusteridx,
-            cell_id_col=args.cells_colname_cell_id,
-            x_col=args.cells_colname_x,
-            y_col=args.cells_colname_y,
-            count_col=args.cells_colname_count
-        )
+    #     ## create a cell output file with cell_id, x, y, count
+    #     cells_out=f"{args.outprefix}-cells.csv"
+    #     logger.info(f"  * Reading cell data from {cells_csv} and extracting geometry to {cells_out}")
+    #     process_cells_csv(
+    #         cells_csv,
+    #         cells_out,
+    #         bcd2clusteridx,
+    #         cell_id_col=args.cells_colname_cell_id,
+    #         x_col=args.cells_colname_x,
+    #         y_col=args.cells_colname_y,
+    #         count_col=args.cells_colname_count
+    #     )
 
-        cells_pmtiles = f"{args.outprefix}-cells.pmtiles"
-        logger.info(f"  * Generating PMTiles from cell geometry data into cell pmtiles: {cells_pmtiles}")
-        tile_csv_into_pmtiles(cells_out, cells_pmtiles, args, logger, no_dup=True)
-        #temp_fs.append(cells_out)
+    #     cells_pmtiles = f"{args.outprefix}-cells.pmtiles"
+    #     logger.info(f"  * Generating PMTiles from cell geometry data into cell pmtiles: {cells_pmtiles}")
+    #     tile_csv_into_pmtiles(cells_out, cells_pmtiles, args, logger, no_dup=True)
+    #     #temp_fs.append(cells_out)
         
 
-    # Process cell boundaries
-    if args.boundaries:
-        bound_in = cell_data.get("BOUNDARY", None)
-        # presence and existence for boundary file
-        assert bound_in is not None, ('Path not provided: "BOUNDARY" in --in-json' if args.in_json is not None else 'Path not provided: --csv-boundaries')
-        assert os.path.exists(bound_in), (f'File not found: {bound_in} ("BOUNDARY" in --in-json)' if args.in_json is not None else f'File not found: {bound_in} (--csv-boundaries)')
+    # # Process cell boundaries
+    # if args.boundaries:
+    #     bound_in = cell_data.get("BOUNDARY", None)
+    #     # presence and existence for boundary file
+    #     assert bound_in is not None, ('Path not provided: "BOUNDARY" in --in-json' if args.in_json is not None else 'Path not provided: --csv-boundaries')
+    #     assert os.path.exists(bound_in), (f'File not found: {bound_in} ("BOUNDARY" in --in-json)' if args.in_json is not None else f'File not found: {bound_in} (--csv-boundaries)')
 
-        logger.info(f"Processing cell boundary information from {bound_in}")
+    #     logger.info(f"Processing cell boundary information from {bound_in}")
 
-        ## read the cell CSV files
-        bound_out=f"{args.outprefix}-boundaries.geojson"
-        logger.info(f"  * Reading cell boundary data from {bound_in} and extracting geometry to {bound_out}")
-        col_id = args.boundaries_colname_cell_id
-        col_x = args.boundaries_colname_x
-        col_y = args.boundaries_colname_y
-        with flexopen(bound_in, "rt") as f, flexopen(bound_out, "wt") as wf:
-            reader = csv.DictReader(f)
-            hdrs = reader.fieldnames
-            assert hdrs[0] == col_id and hdrs[1] == col_x and hdrs[2] == col_y
-            current_cell_id = None
-            current_vertices = []
-            for row in reader:
-                cell_id = unquote_str(row[col_id])
-                x = float(row[col_x])
-                y = float(row[col_y])
-                if current_cell_id is None:
-                    current_cell_id = cell_id
-                if cell_id != current_cell_id:
-                    # cluster = bcd2cluster.get(current_cell_id, "NA")
-                    # clusteridx = cluster2idx.get(cluster, "NA") if cluster != "NA" else "NA"
-                    clusteridx = bcd2clusteridx.get(current_cell_id, "NA")
-                    wf.write(f'{{"type": "Feature", "geometry": {{"type": "Polygon", "coordinates": [[{",".join(current_vertices)}]]}}, "properties": {{"cell_id": "{current_cell_id}", "topK": "{clusteridx}"}}}}\n')
-                    current_cell_id = cell_id
-                    current_vertices = []
-                current_vertices.append(f'[{x},{y}]')
-            if current_cell_id is not None:
-                # cluster = bcd2cluster.get(current_cell_id, "NA")
-                # clusteridx = cluster2idx.get(cluster, "NA") if cluster != "NA" else "NA"
-                clusteridx = bcd2clusteridx.get(current_cell_id, "NA")
-                wf.write(f'{{"type": "Feature", "geometry": {{"type": "Polygon", "coordinates": [[{",".join(current_vertices)}]]}}, "properties": {{"cell_id": "{current_cell_id}", "topK": "{clusteridx}"}}}}\n')
+    #     ## read the cell CSV files
+    #     bound_out=f"{args.outprefix}-boundaries.geojson"
+    #     logger.info(f"  * Reading cell boundary data from {bound_in} and extracting geometry to {bound_out}")
+    #     col_id = args.boundaries_colname_cell_id
+    #     col_x = args.boundaries_colname_x
+    #     col_y = args.boundaries_colname_y
+    #     with flexopen(bound_in, "rt") as f, flexopen(bound_out, "wt") as wf:
+    #         reader = csv.DictReader(f)
+    #         hdrs = reader.fieldnames
+    #         assert hdrs[0] == col_id and hdrs[1] == col_x and hdrs[2] == col_y
+    #         current_cell_id = None
+    #         current_vertices = []
+    #         for row in reader:
+    #             cell_id = unquote_str(row[col_id])
+    #             x = float(row[col_x])
+    #             y = float(row[col_y])
+    #             if current_cell_id is None:
+    #                 current_cell_id = cell_id
+    #             if cell_id != current_cell_id:
+    #                 # cluster = bcd2cluster.get(current_cell_id, "NA")
+    #                 # clusteridx = cluster2idx.get(cluster, "NA") if cluster != "NA" else "NA"
+    #                 clusteridx = bcd2clusteridx.get(current_cell_id, "NA")
+    #                 wf.write(f'{{"type": "Feature", "geometry": {{"type": "Polygon", "coordinates": [[{",".join(current_vertices)}]]}}, "properties": {{"cell_id": "{current_cell_id}", "topK": "{clusteridx}"}}}}\n')
+    #                 current_cell_id = cell_id
+    #                 current_vertices = []
+    #             current_vertices.append(f'[{x},{y}]')
+    #         if current_cell_id is not None:
+    #             # cluster = bcd2cluster.get(current_cell_id, "NA")
+    #             # clusteridx = cluster2idx.get(cluster, "NA") if cluster != "NA" else "NA"
+    #             clusteridx = bcd2clusteridx.get(current_cell_id, "NA")
+    #             wf.write(f'{{"type": "Feature", "geometry": {{"type": "Polygon", "coordinates": [[{",".join(current_vertices)}]]}}, "properties": {{"cell_id": "{current_cell_id}", "topK": "{clusteridx}"}}}}\n')
 
-        ## Run the tippecanoe command
-        bound_pmtiles = f"{args.outprefix}-boundaries.pmtiles"
-        logger.info(f"  * Generating PMTiles from boundary geometry data into boundary pmtiles: {bound_pmtiles}")
-        tile_csv_into_pmtiles(bound_out, bound_pmtiles, args, logger, no_dup=False)
-        #temp_fs.append(bound_out)
+    #     ## Run the tippecanoe command
+    #     bound_pmtiles = f"{args.outprefix}-boundaries.pmtiles"
+    #     logger.info(f"  * Generating PMTiles from boundary geometry data into boundary pmtiles: {bound_pmtiles}")
+    #     tile_csv_into_pmtiles(bound_out, bound_pmtiles, args, logger, no_dup=False)
+    #     #temp_fs.append(bound_out)
     
-    # UMAP
-    if args.umap:
-        scheck_app(args.R)
+    # # UMAP
+    # if args.umap:
+    #     scheck_app(args.R)
 
-        umap_in = cell_data.get("UMAP_PROJ", None)
-        umap_tsv_out = f"{args.outprefix}-umap.tsv.gz"
-        umap_pmtiles = f"{args.outprefix}-umap.pmtiles"
+    #     umap_in = cell_data.get("UMAP_PROJ", None)
+    #     umap_tsv_out = f"{args.outprefix}-umap.tsv.gz"
+    #     umap_pmtiles = f"{args.outprefix}-umap.pmtiles"
 
-        assert umap_in is not None, ('Path not provided: "UMAP_PROJ" in --in-json' if args.in_json is not None else 'Path not provided: --csv-umap')
-        assert os.path.exists(umap_in), (f'File not found: {umap_in} ("UMAP_PROJ" in --in-json)' if args.in_json is not None else f'File not found: {umap_in} (--csv-umap)')
+    #     assert umap_in is not None, ('Path not provided: "UMAP_PROJ" in --in-json' if args.in_json is not None else 'Path not provided: --csv-umap')
+    #     assert os.path.exists(umap_in), (f'File not found: {umap_in} ("UMAP_PROJ" in --in-json)' if args.in_json is not None else f'File not found: {umap_in} (--csv-umap)')
 
-        logger.info(f"Processing UMAP projection from {umap_in}")
-        write_umap_tsv(umap_in, umap_tsv_out, bcd2clusteridx, args)
+    #     logger.info(f"Processing UMAP projection from {umap_in}")
+    #     write_umap_tsv(umap_in, umap_tsv_out, bcd2clusteridx, args)
 
-        logger.info(f"  * Generated PMTiles for UMAP projection:{umap_pmtiles}")
-        umap_tsv2pmtiles(umap_tsv_out, umap_pmtiles, args)
+    #     logger.info(f"  * Generated PMTiles for UMAP projection:{umap_pmtiles}")
+    #     umap_tsv2pmtiles(umap_tsv_out, umap_pmtiles, args)
 
-        logger.info(f"  * UMAP Visualization for all factors...")
-        umap_tsv2png(umap_tsv_out, args.outprefix, cmap_out)
+    #     logger.info(f"  * UMAP Visualization for all factors...")
+    #     umap_tsv2png(umap_tsv_out, args.outprefix, cmap_out)
 
-        logger.info(f"  * UMAP Visualization (plot for individual factors; colorized by cluster)...")
-        umap_tsv2indpng(umap_tsv_out, args.outprefix, cmap_out)
+    #     logger.info(f"  * UMAP Visualization (plot for individual factors; colorized by cluster)...")
+    #     umap_tsv2indpng(umap_tsv_out, args.outprefix, cmap_out)
 
 
     # JSON/YAML (always summary)

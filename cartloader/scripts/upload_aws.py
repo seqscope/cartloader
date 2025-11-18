@@ -118,7 +118,7 @@ def upload_aws(_args):
         upload_opt = True if not args.upload_basics_only and not args.upload_basemap_only else False
         upload_bm = True if not args.upload_basics_only and not args.upload_optional_only else False
 
-        print(";".join(basics_files)+"\n")
+        # print(";".join(basics_files)+"\n")
         # upload cartload basics
         if upload_basics:
             cmds=cmd_separator([], f"Uploading cartload files to AWS...")
@@ -135,7 +135,7 @@ def upload_aws(_args):
             cmds.append(f"touch {cartload_flag}")
             mm.add_target(cartload_flag, basics_prerequisites, cmds)
 
-        print(";".join(optional_files)+"\n")
+        # print(";".join(optional_files)+"\n")
         # upload cartload optional
         if upload_opt:
             for filename in optional_files:
@@ -145,7 +145,7 @@ def upload_aws(_args):
                 cmds.append(f'{args.aws} s3 cp "{file_path}" "{s3_file_path}" && {args.aws} s3 cp "{catalog_f}" "{s3_catalog_f}" && touch {file_path}.aws.done')
                 mm.add_target(f"{file_path}.aws.done", [file_path], cmds)
         
-        print(";".join(basemap_files)+"\n")
+        # print(";".join(basemap_files)+"\n")
         # Upload basemap files to AWS besides cartload
         if upload_bm:
             for filename in basemap_files:

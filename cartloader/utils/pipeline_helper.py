@@ -258,7 +258,6 @@ def stage_import_squares(cart_dir, args, square_plans, update_catalog=False):
             f"--scale-json {spec.get('SCALE')}" if not spec["use_json"] and spec.get('SCALE') else "",
             f"--csv-umap {spec.get('UMAP_PROJ')}" if not spec["use_json"] and spec.get('UMAP_PROJ') else "",
             f"--tippecanoe {args.tippecanoe}" if args.tippecanoe else "",
-            f"--threads {args.threads}" if args.threads else "",
             f"--tsv-cmap {args.tsv_cmap}" if args.tsv_cmap else "",
             f"--update-catalog" if update_catalog else "",
             f"--threads {args.threads}" if args.threads else "",
