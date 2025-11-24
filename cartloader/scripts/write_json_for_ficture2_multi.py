@@ -18,6 +18,7 @@ def parse_arguments(_args):
     parser.add_argument('--in-feature-ficture', type=str, default=None, help='(Optional) If FICTURE used a different feature file than the in-feature file, specify the path to the feature file used for FICTURE analysis.')
     parser.add_argument('--lda-model', nargs='*', type=str, default=None, help='LDA Model information: <model_type>,<model_path>,<model_id>,<train_width>,<n_factor>,<cmap>')
     parser.add_argument('--decode', nargs='*', type=str, default=None, help='Projection information: <model_type>,<model_id>,<projection_id>,<fit_width>,<anchor_res>')
+    parser.add_argument('--umap', nargs='*', type=str, default=None, help='UMAP information if exists. Each entry: <model_type>,<model_id>,<umap_tsv>,<umap_png>,<umap_single_factor_png>.')
 
     if len(_args) == 0:
         parser.print_help()
@@ -176,6 +177,27 @@ def write_json_for_ficture2_multi(_args):
                 reconcile_field(existing_dec, "pseudobulk_tsv_path", decode_pseudobulk_tsv, type="override", msg_id=msg_id)
                 reconcile_field(existing_dec, "de_tsv_path", decode_de_tsv, type="override", msg_id=msg_id)
                 reconcile_field(existing_dec, "info_tsv_path", decode_info_tsv, type="override", msg_id=msg_id)
+
+    if args.umap is not None:
+        for umap in args.umap:
+            model_type, model_id, umap_tsv, umap_png, umap_single_factor_png = umap.split(',')
+            model_entry = model_dict.get((model_type, model_id))
+            assert model_entry is not None, f"No matching model for UMAP entry: {umap}"
+
+            umap_entry = {
+                "tsv": umap_tsv,
+                "png": umap_png,
+                "ind_png": umap_single_factor_png
+            }
+
+            if "umap" not in model_entry:
+                model_entry["umap"] = umap_entry
+            else:
+                existing_umap = model_entry["umap"]
+                msg_id = f"model ({model_type}, {model_id}) - UMAP"
+                reconcile_field(existing_umap, "tsv", umap_tsv, type="override", msg_id=msg_id)
+                reconcile_field(existing_umap, "png", umap_png, type="override", msg_id=msg_id)
+                reconcile_field(existing_umap, "ind_png", umap_single_factor_png, type="override", msg_id=msg_id)
     
     json_data = {
         "in_sge": sge_data,
