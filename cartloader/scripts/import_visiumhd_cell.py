@@ -125,10 +125,10 @@ def parse_arguments(_args):
     aux_inout_params.add_argument('--in-dir', type=str, help='Input directory containing the Space Ranger output files.')
     aux_inout_params.add_argument('--geojson-cells', type=str, default="segmented_outputs/cell_segmentations.geojson", help='Location of GEOJSON with cell locations under --in-dir (default: segmented_outputs/cell_segmentations.geojson)')
     aux_inout_params.add_argument('--mtx-cells', type=str, default="segmented_outputs/filtered_feature_cell_matrix", help='Directory location of the cell feature MatrixMarket files under --in-dir (default: segmented_outputs/filtered_feature_cell_matrix)')
-    aux_inout_params.add_argument('--csv-clust', type=str, default="analysis/clustering/gene_expression_graphclust/clusters.csv", help='Location of CSV with cell cluster assignments under --in-dir (default: analysis/clustering/gene_expression_graphclust/clusters.csv)')
-    aux_inout_params.add_argument('--csv-diffexp', type=str, default="analysis/diffexp/gene_expression_graphclust/differential_expression.csv", help='Location of CSV with differential expression results under --in-dir (default: analysis/diffexp/gene_expression_graphclust/differential_expression.csv)')
+    aux_inout_params.add_argument('--csv-clust', type=str, default="segmented_outputs/analysis/clustering/gene_expression_graphclust/clusters.csv", help='Location of CSV with cell cluster assignments under --in-dir (default: analysis/clustering/gene_expression_graphclust/clusters.csv)')
+    aux_inout_params.add_argument('--csv-diffexp', type=str, default="segmented_outputs/analysis/diffexp/gene_expression_graphclust/differential_expression.csv", help='Location of CSV with differential expression results under --in-dir (default: analysis/diffexp/gene_expression_graphclust/differential_expression.csv)')
     # - scaling
-    aux_inout_params.add_argument('--scale-json', type=str, default=None, help=f'Location of scale JSON under --in-dir. If set, defaults --units-per-um from microns_per_pixel in this JSON file (No default value applied. Typical locations: square_002um/spatial/scalefactors_json.json; binned_outputs/square_002um/spatial/scalefactors_json.json")')
+    aux_inout_params.add_argument('--scale-json', type=str, default="binned_outputs/square_002um/spatial/scalefactors_json.json", help=f'Location of scale JSON under --in-dir. If set, defaults --units-per-um from microns_per_pixel in this JSON file (No default value applied. Typical locations: square_002um/spatial/scalefactors_json.json; binned_outputs/square_002um/spatial/scalefactors_json.json")')
     aux_inout_params.add_argument('--units-per-um', type=float, default=1, help='Coordinate units per µm in inputs (default: 1).')
 
     aux_conv_params = parser.add_argument_group("Auxiliary PMTiles Conversion Parameters")
@@ -209,7 +209,7 @@ def import_visiumhd_cell(_args):
         scale_json =  os.path.join(args.in_dir, args.scale_json) if args.scale_json else None
         cell_data = {
             "CELL_FEATURE_MEX": f"{args.in_dir}/{args.mtx_cells}",
-            "CELL_GEOJSON": f"{args.in_dir}/{args.csv_boundaries}",
+            "CELL_GEOJSON": f"{args.in_dir}/{args.geojson_cells}",
             "CLUSTER": f"{args.in_dir}/{args.csv_clust}",
             "DE": f"{args.in_dir}/{args.csv_diffexp}",
         }
