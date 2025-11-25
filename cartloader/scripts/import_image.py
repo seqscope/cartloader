@@ -43,12 +43,6 @@ def parse_arguments(_args):
     inout_params.add_argument('--img-id', type=str, required=True, help='Image ID used as output filename prefix. When used with --in-json, selects the image to process')
     inout_params.add_argument('--catalog-yaml', type=str, default=None, help='Catalog YAML path (required if --update-catalog; default: <out-dir>/catalog.yaml)')
 
-    env_params = parser.add_argument_group("Env Parameters", "Environment parameters, e.g., tools.")
-    env_params.add_argument('--pmtiles', type=str, default=f"pmtiles", help='Path to pmtiles binary from go-pmtiles (default: pmtiles)')
-    env_params.add_argument('--gdal_translate', type=str, default=f"gdal_translate", help='Path to gdal_translate binary (default: gdal_translate)')
-    env_params.add_argument('--gdaladdo', type=str, default=f"gdaladdo", help='Path to gdaladdo binary (default: gdaladdo)')
-    env_params.add_argument('--gdalinfo', type=str, default=f"gdalinfo", help='Path to gdalinfo binary (default: gdalinfo)')
-
     aux_params1 = parser.add_argument_group("Auxiliary parameters for --ome2png")
     aux_params1.add_argument('--micron2pixel-csv', type=str, help='CSV file containing transformation parameters from microns to mosaic pixels (platform: Vizgen; typical: micron_to_mosaic_pixel_transform.csv)')
     aux_params1.add_argument("--page", type=int, help='Z-slice index to extract from multi-page OME-TIFF (3D)')
@@ -74,6 +68,12 @@ def parse_arguments(_args):
     aux_params3.add_argument('--georef-bounds-tsv', type=str, default=None, help='Bounds source TSV with one line: <ulx>,<uly>,<lrx>,<lry>. Skip it if --ome2png is enabled')
     aux_params3.add_argument('--georef-bounds', type=str, default=None, help='Bounds string: "<ulx>,<uly>,<lrx>,<lry>". Skip it if --ome2png is enabled')
     aux_params2.add_argument('--georef-detect', type=str, default=None, help="Used the detect bounds from image metadata (e.g., 'OME'). Extracted bounds will automatically be applied to png2pmtiles")
+
+    env_params = parser.add_argument_group("Env Parameters", "Environment parameters, e.g., tools.")
+    env_params.add_argument('--pmtiles', type=str, default=f"pmtiles", help='Path to pmtiles binary from go-pmtiles (default: pmtiles)')
+    env_params.add_argument('--gdal_translate', type=str, default=f"gdal_translate", help='Path to gdal_translate binary (default: gdal_translate)')
+    env_params.add_argument('--gdaladdo', type=str, default=f"gdaladdo", help='Path to gdaladdo binary (default: gdaladdo)')
+    env_params.add_argument('--gdalinfo', type=str, default=f"gdalinfo", help='Path to gdalinfo binary (default: gdalinfo)')
 
     if len(_args) == 0:
         parser.print_help()
@@ -125,6 +125,9 @@ def import_image(_args):
     os.makedirs(args.out_dir, exist_ok=True)
     img_prefix =  os.path.join(args.out_dir, args.img_id)
 
+    if args.catalog_yaml is None:
+        args.catalog_yaml = os.path.join(args.out_dir, "catalog.yaml")
+    
     # input files
     # read in_json if provided
     if args.in_json is not None:
@@ -170,7 +173,7 @@ def import_image(_args):
         # >1 output: transform_f, transform_prefix.bounds 
         cmds.append(f"[ -f {transform_f} ] && [ -f {transform_bounds_tsv} ] && touch {transform_prefix}.done")
         mm.add_target(f"{transform_prefix}.done", prereq, cmds)
-        
+
         # update for georeference and bounds
         args.georeference = True
         args.georef_bounds_tsv =  transform_bounds_tsv
@@ -225,8 +228,6 @@ def import_image(_args):
         if pmtiles_f is None:
             pmtiles_f = os.path.join(args.out_dir, f"{args.img_id}.pmtiles")
         prereq=[pmtiles_f, args.catalog_yaml]
-        if args.catalog_yaml is None:
-            args.catalog_yaml = os.path.join(args.out_dir, "catalog.yaml")
         cmds = cmd_separator([], f"Updating yaml for pmtiles: {pmtiles_f}")        
         cmd= " ".join([
             "cartloader write_catalog_for_assets",
@@ -237,7 +238,6 @@ def import_image(_args):
         cmds.append(cmd)
         cmds.append(f"touch {pmtiles_f}.yaml.done")
         mm.add_target(f"{pmtiles_f}.yaml.done", prereq, cmds)
-
 
     ## write makefile
     make_f=os.path.join(args.out_dir, args.makefn) if args.makefn is not None else f"{img_prefix}.mk"

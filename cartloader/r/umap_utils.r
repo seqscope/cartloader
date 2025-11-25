@@ -56,7 +56,7 @@ prepare_topic_matrix <- function(df, meta_cols, sqrt_transform = TRUE, zero_fill
 
 run_umap_embedding <- function(mat, n_neighbors = 50, threads = 8, pca_dims = 0, metric = "cosine") {
   pca_arg <- if (pca_dims > 0) pca_dims else NULL
-  uwot::umap(
+  uwot::umap2(
     X            = mat,
     metric       = metric,
     n_components = 2,

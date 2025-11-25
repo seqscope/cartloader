@@ -12,6 +12,7 @@ aux_args = {
         "rename_x","rename_y",
         "colname_feature", "colname_count",
         "out_molecules_id", "max_join_dist_um", "join_tile_size", "bin_count", "max_tile_bytes", "max_feature_counts", "preserve_point_density_thres",
+        "umap_colname_factor", "umap_colname_x", "umap_colname_y", "umap_min_zoom", "umap_max_zoom",
         "skip_raster",
         "tmp_dir", "keep_intermediate_files",
         "transparent_below", "transparent_above"
@@ -65,6 +66,11 @@ def parse_arguments(_args):
     aux_params.add_argument('--max-tile-bytes', type=int, help='Maximum tile size in bytes for tippecanoe/PMTiles (default: 5000000)')
     aux_params.add_argument('--max-feature-counts', type=int, help='Maximum features per tile for tippecanoe/PMTiles (default: 500000)')
     aux_params.add_argument('--preserve-point-density-thres', type=int, help='Tippecanoe point-density preservation threshold (default: 1024)')
+    aux_params.add_argument('--umap-colname-factor', type=str, help='Column name encoding the dominant factor assignment in a UMAP TSV (default: topK)')
+    aux_params.add_argument('--umap-colname-x', type=str, help='Column name for the UMAP X coordinate (default: UMAP1)')
+    aux_params.add_argument('--umap-colname-y', type=str, help='Column name for the UMAP Y coordinate (default: UMAP2)')
+    aux_params.add_argument('--umap-min-zoom', type=int, help='Minimum zoom for generated UMAP PMTiles (default: 0)')
+    aux_params.add_argument('--umap-max-zoom', type=int, help='Maximum zoom for generated UMAP PMTiles (default: 18)')
     aux_params.add_argument('--skip-raster', action='store_true', help='Skip raster image generation (no GDAL/go-pmtiles required)')
     aux_params.add_argument('--tmp-dir', type=str, help='Temporary directory (default: <out_dir>/tmp)')
     aux_params.add_argument('--keep-intermediate-files', action='store_true', help='Keep intermediate files instead of cleaning up')

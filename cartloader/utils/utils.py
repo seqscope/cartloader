@@ -47,6 +47,7 @@ def add_param_to_cmd(cmd, args, aux_argset, underscore2dash=True):
 
 def run_command(command, use_bash=False):
     executable_shell = "/bin/bash" if use_bash else "/bin/sh"
+    print(f"Running: {command}")
     try:
         result = subprocess.run(
             command, 
@@ -296,6 +297,36 @@ def read_minmax(filename, format):
 # file - dict
 #======
 
+def reconcile_field(obj, key, new_val, type="override", msg_id=None, normalize=None):
+    """
+      - If old value is None, take new_val
+      - If new_val is None, keep old
+      - If both exist, ensure consistency (after optional normalize)
+    """
+    assert type in ["strict", "override"], "Unknown reconcile type. Supported types: 1) strict -- raise error if both exist and differ; 2) override -- always take new_val if both exist."
+    old_val = obj.get(key)
+
+    # No new value provided → keep old
+    if new_val is None:
+        return
+
+    # No existing old value → fill it
+    if old_val is None:
+        obj[key] = new_val
+        return
+
+    # Both exist 
+    v_old = normalize(old_val) if normalize else old_val
+    v_new = normalize(new_val) if normalize else new_val
+
+    if type == "override":
+        if v_old != v_new:
+            print(f"Warning: Inconsistent field '{key}' value for {msg_id}. Overriding from '{v_old}' to '{v_new}'.")
+        obj[key] = new_val
+        return
+    else:
+        assert v_old == v_new, f"Inconsistent field '{key}' value for {msg_id}: existing '{v_old}' vs new '{v_new}'."
+
 ## code suggested by ChatGPT
 def load_file_to_dict(file_path, file_type=None):
     """
@@ -381,6 +412,11 @@ def load_file_to_dict(file_path, file_type=None):
 #     else:
 #         raise ValueError("Unsupported file type. Please provide 'json' or 'yaml'/'yml' as file_type.")
 
+def write_json(data, filename):
+    """Write the given data to a JSON file."""
+    with open(filename, 'w') as file:
+        json.dump(data, file, indent=4, sort_keys=False)
+
 def write_dict_to_file(data, file_path, file_type=None, check_equal=True, default_flow_style=False, sort_keys=False):
     """
     Write a dictionary to a JSON or YAML file.
@@ -455,16 +491,7 @@ def factor_id_to_name(factor_id):
             return factor_id
     else:
         return factor_id
-    
-def hex_to_rgb(hex_code):
-    """
-    Parse an RGB hex code (e.g., "#FFA500") to three integer values (R, G, B).
-    """
-    hex_code = hex_code.lstrip('#')  # Remove the '#' character if present
-    r = int(hex_code[0:2], 16)  # First two characters -> Red
-    g = int(hex_code[2:4], 16)  # Next two characters -> Green
-    b = int(hex_code[4:6], 16)  # Last two characters -> Blue
-    return r, g, b
+
 
 ## transform FICTURE parameters to FACTOR assets (new standard)
 def ficture_params_to_factor_assets(params, skip_raster=False):
@@ -653,15 +680,24 @@ def ficture2_params_to_factor_assets(params, skip_raster=False):
     suffix_rgb = "-rgb.tsv"
     suffix_hex_coarse = ".pmtiles"
     suffix_raster = "-pixel-raster.pmtiles"
+    suffix_umap_tsv = "-umap.tsv.gz"
+    suffix_umap_pmtiles = "-umap.pmtiles"
+    suffix_umap_png = ".umap.png"
+    suffix_umap_ind_png = ".umap.single.prob.png"
 
     out_assets = []
     for param in params: ## train_params is a list of dictionaries
+        # print(param)
+        # print(param.get("umap", "NO UMAP"))
         if not "model_id" in param:
             raise ValueError(f"model_id is missing from FICTURE parameters")
         model_id = param["model_id"].replace("_", "-")
 
         len_decode_params = len(param["decode_params"])
+        umap_params = param.get("umap",{})
 
+        # construct out_assets 
+        out_asset={}
         if len_decode_params == 0: ## train_param only
             out_asset = {
                 "id": model_id,
@@ -677,7 +713,6 @@ def ficture2_params_to_factor_assets(params, skip_raster=False):
             }
             if "factor_map" in param:
                 out_asset["factor_map"] = model_id + suffix_factormap
-            out_assets.append(out_asset)
         elif len_decode_params == 1:
             decode_param = param["decode_params"][0]
             if not "decode_id" in decode_param:
@@ -701,7 +736,6 @@ def ficture2_params_to_factor_assets(params, skip_raster=False):
             }
             if "factor_map" in param:
                 out_asset["factor_map"] = model_id + suffix_factormap
-            out_assets.append(out_asset)
         else: ## multiple decode_params
             for decode_param in param["decode_params"]:
                 if not "decode_id" in decode_param:
@@ -725,7 +759,17 @@ def ficture2_params_to_factor_assets(params, skip_raster=False):
                 }
                 if "factor_map" in param:
                     out_asset["factor_map"] = model_id + suffix_factormap
-                out_assets.append(out_asset)
+        # add umap
+        if umap_params:
+            out_asset["umap"] = {
+                "tsv": model_id + suffix_umap_tsv,
+                "pmtiles": model_id + suffix_umap_pmtiles,
+                "png": model_id + suffix_umap_png,
+                "ind_png": model_id + suffix_umap_ind_png,
+            }
+        # append
+        out_assets.append(out_asset)
+
     return out_assets
 
 def create_symlink(A, B):
