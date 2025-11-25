@@ -4,6 +4,7 @@ from pathlib import Path
 
 from cartloader.utils.minimake import minimake
 from cartloader.utils.utils import cmd_separator, scheck_app, create_custom_logger, load_file_to_dict, write_dict_to_file, ficture2_params_to_factor_assets, read_minmax, flexopen, execute_makefile, valid_and_touch_cmd
+from cartloader.utils.color_helper import normalize_rgb
 
 def parse_arguments(_args):
     """
@@ -29,8 +30,9 @@ def parse_arguments(_args):
     inout_params.add_argument('--out-dir', type=str, required=True, help='Output directory (PMTiles, assets JSON, and catalog YAML)')
     inout_params.add_argument('--sge-dir', type=str, help='Path to SGE directory produced by "cartloader sge_convert"; must include SGE files and an assets JSON (see --in-sge-assets)')
     inout_params.add_argument('--fic-dir', type=str, help='Path tp FICTURE results directory produced by "cartloader run_ficture"; must include FICTURE results and a parameter JSON (see --in-fic-params)')
-    inout_params.add_argument('--cell-assets', type=str, nargs="+", default=[], help='Optional list of cell asset JSON/YAML files produced by import_xenium_cell/import_*_cell')
+    inout_params.add_argument('--cell-assets', type=str, nargs="+", default=[], help='Optional list of cell asset JSON/YAML files produced by import_xenium_cell or import_visiumhd_cell')
     inout_params.add_argument('--background-assets', type=str, nargs="+", default=[], help='Optional list of background asset specs (JSON/YAML or inline id:path or id1:id2:path)')
+    inout_params.add_argument('--square-assets', type=str, nargs="+", default=[], help='Optional list of square asset JSON/YAML files produced by import_visiumhd_square')
 
     key_params = parser.add_argument_group("Key Parameters", "Metadata")
     key_params.add_argument('--id', type=str, required=True, help='Identifier for the output assets; avoid whitespace (use "-" instead of "_")')
@@ -56,6 +58,11 @@ def parse_arguments(_args):
     aux_params.add_argument('--max-tile-bytes', type=int, default=5000000, help='Maximum tile size in bytes for tippecanoe/PMTiles (default: 5000000)')
     aux_params.add_argument('--max-feature-counts', type=int, default=500000, help='Maximum features per tile for tippecanoe/PMTiles (default: 500000)')
     aux_params.add_argument('--preserve-point-density-thres', type=int, default=1024, help='Tippecanoe point-density preservation threshold (default: 1024)')
+    aux_params.add_argument('--umap-colname-factor', type=str, default='topK', help='Column name encoding the dominant factor assignment in a UMAP TSV (default: topK)')
+    aux_params.add_argument('--umap-colname-x', type=str, default='UMAP1', help='Column name for the UMAP X coordinate (default: UMAP1)')
+    aux_params.add_argument('--umap-colname-y', type=str, default='UMAP2', help='Column name for the UMAP Y coordinate (default: UMAP2)')
+    aux_params.add_argument('--umap-min-zoom', type=int, default=0, help='Minimum zoom for generated UMAP PMTiles (default: 0)')
+    aux_params.add_argument('--umap-max-zoom', type=int, default=18, help='Maximum zoom for generated UMAP PMTiles (default: 18)')
     # ?
     aux_params.add_argument('--skip-raster', action='store_true', default=False, help='Skip raster image generation (no GDAL/go-pmtiles required)')
     # tmp
@@ -125,9 +132,10 @@ def copy_rgb_tsv(in_rgb, out_rgb, restart=False):
                 toks = line.rstrip().split("\t")
                 if len(toks) != len(hdrs):
                     raise ValueError(f"Input RGB file {path} has inconsistent number of columns")
-                rgb_r = int(toks[col2idx["R"]])/255
-                rgb_g = int(toks[col2idx["G"]])/255
-                rgb_b = int(toks[col2idx["B"]])/255
+                rgb_r = float(toks[col2idx["R"]])
+                rgb_g = float(toks[col2idx["G"]])
+                rgb_b = float(toks[col2idx["B"]])
+                rgb_r, rgb_g, rgb_b = normalize_rgb(rgb_r, rgb_g, rgb_b)
                 name = toks[col2idx["Name"]]
                 lines.append(f"{name}\t{name}\t{rgb_r:.5f}\t{rgb_g:.5f}\t{rgb_b:.5f}")
         return "\n".join(lines) + "\n"
@@ -267,6 +275,7 @@ def run_cartload2(_args):
                     "out": f"{out_prefix}-info.tsv"
                 }
             }
+
             if factormap_path is not None:
                 train_inout["factor_map"] = {
                     "required": False,
@@ -274,6 +283,72 @@ def run_cartload2(_args):
                     "out": f"{out_prefix}-factor-map.tsv"
                 }
 
+            # umap
+            umap = train_param.get("umap", {})
+            if len(umap)>0:
+                umap_tsv = umap.get("tsv", None)
+                umap_png = umap.get("png", None)
+                umap_idv_png = umap.get("ind_png", None)
+                for f in (umap_tsv, umap_png, umap_idv_png):
+                    assert f is not None, f"UMAP entry incomplete for model {model_id} in FICTURE params {fic_jsonf} (provided by --fic-dir and --in-fic-params)"
+                    assert os.path.exists(f), f"UMAP file not found: {f} for model {model_id} in FICTURE params {fic_jsonf} (provided by --fic-dir and --in-fic-params)"
+
+                cmds = cmd_separator([], f"Converting UMAP for {model_id} into PMTiles and copying relevant files..")
+                prerequisites = [umap_tsv, umap_png, umap_idv_png]
+                outfiles=[]
+
+                # copy a tsv file (to support export in CartoScope)
+                umap_tsv_out = f"{out_prefix}-umap.tsv.gz"
+                if umap_tsv.endswith(".gz"):
+                    cmds.append(f"cp {umap_tsv} {umap_tsv_out}")
+                else:
+                    cmds.append(f"{args.gzip} -c '{umap_tsv}' > '{umap_tsv_out}'")
+                outfiles.append(umap_tsv_out)
+
+                cmds.append(f"cp {umap_png} {out_prefix}.umap.png")
+                outfiles.append(f"{out_prefix}.umap.png")
+
+                cmds.append(f"cp {umap_idv_png} {out_prefix}.umap.single.prob.png")
+                outfiles.append(f"{out_prefix}.umap.single.prob.png")
+
+                # tsv.gz to pmtiles
+                umap_ndjson = f"{out_prefix}-umap.ndjson"
+                umap_pmtiles = f"{out_prefix}-umap.pmtiles"
+                # 1) Use NDJSON (Newline-Delimited JSON) than JSON: 1) this file is light; 2) tippecanoe can process each line without reading all info
+                convert_cmd = " ".join([
+                    "cartloader", "render_umap",
+                    f"--input {umap_tsv_out}",
+                    f"--out {umap_ndjson}",
+                    f"--colname-factor {args.umap_colname_factor}",
+                    f"--colname-x {args.umap_colname_x}",
+                    f"--colname-y {args.umap_colname_y}"
+                ])
+                cmds.append(convert_cmd)
+                # 2) ndjson to pmtiles
+                tippecanoe_cmd = " ".join([
+                    f"TIPPECANOE_MAX_THREADS={args.threads}",
+                    f"'{args.tippecanoe}'",
+                    f"-t {args.tmp_dir}",
+                    f"-o {umap_pmtiles}",
+                    "-Z", str(args.umap_min_zoom),
+                    "-z", str(args.umap_max_zoom),
+                    "-l", "umap",
+                    "--force",
+                    "--drop-densest-as-needed",
+                    "--extend-zooms-if-still-dropping",
+                    "--no-duplication",
+                    f"--preserve-point-density-threshold={args.preserve_point_density_thres}",
+                    umap_ndjson
+                ])
+                cmds.append(tippecanoe_cmd)
+                if not args.keep_intermediate_files:
+                    cmds.append(f"rm -f {umap_ndjson}")
+                outfiles.append(umap_pmtiles)
+
+                touch_flag_cmd=valid_and_touch_cmd(outfiles, f"{out_prefix}-umap.done") # this only touch the flag file when all output files exist
+                cmds.append(touch_flag_cmd)
+                mm.add_target(f"{out_prefix}-umap.done", prerequisites, cmds)
+                
             cmds = cmd_separator([], f"Converting LDA-trained factors {model_id} into PMTiles and copying relevant files..")
             
             prerequisites = []
@@ -443,7 +518,8 @@ def run_cartload2(_args):
         f"--log --log-suffix '{args.log_suffix}'" if args.log else ""
         ] + (["--overview", f"sge-mono-dark.pmtiles", "--basemap", f"sge:dark:sge-mono-dark.pmtiles", f"sge:light:sge-mono-light.pmtiles"] if not args.skip_raster else []
         ) + (["--background-assets"] + args.background_assets if args.background_assets else []
-        ) + ([f"--cell-assets"] + args.cell_assets if args.cell_assets else [])
+        ) + ([f"--cell-assets"] + args.cell_assets if args.cell_assets else []
+        ) + ([f"--square-assets"] + args.square_assets if args.square_assets else [])
     )
 
     if ( args.id is not None ):
@@ -466,7 +542,9 @@ def run_cartload2(_args):
         prerequisites_yaml.extend(args.background_assets)
     if args.cell_assets:
         prerequisites_yaml.extend(args.cell_assets)
-    
+    if args.square_assets:
+        prerequisites_yaml.extend(args.square_assets)
+
     cmds.append(cmd)
     mm.add_target(f"{out_catalog_f}", prerequisites_yaml, cmds)
 

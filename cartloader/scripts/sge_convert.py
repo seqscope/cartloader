@@ -386,7 +386,7 @@ def sge_convert(_args):
             #   NegControlCodeword_*
             #   NegControlProbe_*
             #   UnassignedCodeword_*
-            args.exclude_feature_regex = "^(BLANK_|Blank-|DeprecatedCodeword_|NegCon|UnassignedCodeword_)"
+            args.exclude_feature_regex = "^(BLANK|Blank-|Deprecated|Intergenic|NegCon|Unassigned)"
             print(f"Using --exclude-feature-regex: {args.exclude_feature_regex }")
     
     # mm

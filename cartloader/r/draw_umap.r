@@ -112,7 +112,8 @@ ggsave( umap_png,
         height = plot_dim, 
         units = "in",
         dpi = args$dpi, 
-        bg = "white")
+        bg = "white",
+        limitsize = FALSE)
 
 
 log_message(paste("Wrote:", umap_png))

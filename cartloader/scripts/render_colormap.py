@@ -4,6 +4,9 @@ import argparse
 import os
 import sys, inspect
 
+from cartloader.utils.color_helper import normalize_rgb
+
+
 def parse_arguments(_args):
     parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", description="Render a color map legend image from TSV.")
     parser.add_argument("--in-tsv", required=True, help="Input TSV with columns [Name, R, G, B].")
@@ -22,7 +25,6 @@ def parse_arguments(_args):
 
     return parser.parse_args(_args)
 
-
 def _import_libs():
     try:
         import pandas as pd  # type: ignore
@@ -35,14 +37,6 @@ def _import_libs():
             f"Import error: {e}\n"
         )
         sys.exit(1)
-
-
-def _normalize_rgb(r, g, b):
-    """Return tuple in 0-1 range. Accepts 0-1 floats or 0-255 integers/floats."""
-    # If any channel > 1.0, assume 0-255 scale
-    if max(r, g, b) > 1.0:
-        return (float(r) / 255.0, float(g) / 255.0, float(b) / 255.0)
-    return (float(r), float(g), float(b))
 
 
 def render_colormap(_args):
@@ -91,7 +85,7 @@ def render_colormap(_args):
 
     for i, row in df.iterrows():
         try:
-            color = _normalize_rgb(row[args.r_col], row[args.g_col], row[args.b_col])
+            color = normalize_rgb(row[args.r_col], row[args.g_col], row[args.b_col])
         except Exception as e:
             raise ValueError(f"Invalid RGB values in row {i}: {e}")
 

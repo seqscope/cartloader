@@ -9,7 +9,8 @@ from collections import Counter
 import gc
 
 from cartloader.utils.minimake import minimake
-from cartloader.utils.utils import cmd_separator, scheck_app, create_custom_logger, read_minmax, hex_to_rgb
+from cartloader.utils.utils import cmd_separator, scheck_app, create_custom_logger, read_minmax
+from cartloader.utils.color_helper import hex_to_rgb255
 
 def parse_arguments(_args):
     # [Previous argument parsing code remains the same]
@@ -273,7 +274,7 @@ def image_ome2png(_args):
         # Process color information
         r, g, b = None, None, None
         if args.colorize:
-            r, g, b = hex_to_rgb(args.colorize)
+            r, g, b = hex_to_rgb255(args.colorize)
 
         if args.high_memory:
             segments = [image_array_highmem]

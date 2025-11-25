@@ -307,7 +307,7 @@ def run_xenium(_args):
             prereq = [sge_assets] 
         
         # cmd and execution
-        stage_run_cartload2(cart_dir, fic_dir, sge_dir, cell_assets, background_assets, args, prereq)
+        stage_run_cartload2(cart_dir, fic_dir, sge_dir, cell_assets, [], background_assets, args, prereq)
         
     if args.upload_aws:
         # prerequisites

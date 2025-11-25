@@ -3,11 +3,11 @@ import pandas as pd
 from cartloader.utils.minimake import minimake
 from cartloader.utils.utils import cmd_separator, scheck_app, add_param_to_cmd, read_minmax, flexopen, execute_makefile
 
+repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 
 def parse_arguments(_args):
     """Parse command-line arguments."""
-    repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
     parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", description="Run FICTURE2")
 
     run_params = parser.add_argument_group("Run Options", "Run options for FICTURE commands")
@@ -16,6 +16,7 @@ def parse_arguments(_args):
     run_params.add_argument('--threads', type=int, default=8, help='Maximum number of threads per job (default: 8)')
     run_params.add_argument('--n-jobs', type=int, default=2, help='Number of parallel jobs to run (default: 2)')
     run_params.add_argument('--makefn', type=str, default="run_ficture2_multi.mk", help='File name of Makefile to write (default: run_ficture2_multi.mk)')
+    run_params.add_argument('--umap', action='store_true', default=False, help='Create UMAP plots for each LDA model')
 
     inout_params = parser.add_argument_group("Input/Output Parameters", "Input and output parameters for FICTURE")
     inout_params.add_argument('--out-dir', required=True, type=str, help='Output directory')
@@ -73,6 +74,7 @@ def parse_arguments(_args):
     env_params.add_argument('--spatula', type=str, default=f"spatula",  help='Path to spatula binary (default: "spatula" in the system PATH)') # default=f"{repo_dir}/submodules/spatula/bin/spatula",
     env_params.add_argument('--ficture2', type=str, default=os.path.join(repo_dir, "submodules", "punkst"), help='Path to punkst (ficture2) repository (default: <cartloader_dir>/submodules/punkst)')
     env_params.add_argument('--python', type=str, default="python3",  help='Python3 binary')
+    env_params.add_argument('--R', type=str, default="R", help='Path to R binary for UMAP generation (default: R)')
 
 
     if len(_args) == 0:
@@ -249,6 +251,8 @@ def run_ficture2_multi(_args):
 
     # step 2. multi-sample LDA training
     scheck_app(args.spatula)
+    if args.umap:
+        scheck_app(args.R)
     lda_runs = define_lda_runs(args)
     for lda_params in lda_runs:
         # params & prefix
@@ -367,6 +371,47 @@ def run_ficture2_multi(_args):
         cmds.append(cmd)
         cmds.append(f"[ -f {lda_de} ] && [ -f {model_prefix}.factor.info.html ] && touch {model_prefix}_summary.done")
         mm.add_target(f"{model_prefix}_summary.done", [f"{model_prefix}.done", color_map], cmds)
+
+        if args.umap:
+            create_umap_rscript = f"{repo_dir}/cartloader/r/create_umap.r"
+            draw_umap_rscript = f"{repo_dir}/cartloader/r/draw_umap.r"
+            draw_umap_single_rscript = f"{repo_dir}/cartloader/r/draw_umap_single.r"
+
+            umap_tsv = f"{model_prefix}.umap.tsv.gz"
+            umap_png = f"{model_prefix}.umap.png"
+            umap_single_prob_png = f"{model_prefix}.umap.single.prob.png"
+
+            cmds = cmd_separator([], f"UMAP for {train_width}um and {n_factor} factors...")
+            cmd = " ".join([
+                f"Rscript {create_umap_rscript}",
+                f"--input {lda_fit_tsv}.gz",
+                f"--out-prefix {model_prefix}"
+            ])
+            cmds.append(cmd)
+            mm.add_target(umap_tsv, [f"{model_prefix}.done", color_map], cmds)
+
+            cmds = cmd_separator([], f"UMAP Visualization for {train_width}um and {n_factor} factors...")
+            cmd = " ".join([
+                f"Rscript {draw_umap_rscript}",
+                f"--input {umap_tsv}",
+                f"--out-prefix {model_prefix}",
+                f"--cmap {color_map}",
+                f'--subtitle "{model_id}"'
+            ])
+            cmds.append(cmd)
+            mm.add_target(umap_png, [f"{model_prefix}.done", color_map, umap_tsv], cmds)
+
+            cmds = cmd_separator([], f"UMAP Visualization (plot for individual factors; colorized by probability) for {train_width}um and {n_factor} factors...")
+            cmd = " ".join([
+                f"Rscript {draw_umap_single_rscript}",
+                f"--input {umap_tsv}",
+                f"--out-prefix {model_prefix}",
+                f"--cmap {color_map}",
+                f'--subtitle "{model_id}"',
+                f"--mode prob"
+            ])
+            cmds.append(cmd)
+            mm.add_target(umap_single_prob_png, [f"{model_prefix}.done", color_map, umap_tsv], cmds)
 
         # Perform LDA projection for each sample
         lda_each_targets = []
@@ -537,6 +582,7 @@ def run_ficture2_multi(_args):
         prerequisities = [f"{args.out_dir}/multi.done"]
 
         summary_aux_args_models = ["--lda-model"]
+        summary_aux_args_umap = ["--umap"] if args.umap else []
         lda_runs = define_lda_runs(args)
         for lda_params in lda_runs:
             # params & prefix
@@ -550,7 +596,16 @@ def run_ficture2_multi(_args):
             lda_info_tsv = f"{model_prefix}.factor.info.tsv"
             prerequisities.append(f"{model_prefix}.done")
             summary_aux_args_models.append(f"lda,{model_id},{train_width},{n_factor},{summary_cmap},{model_prefix}.model.tsv,{lda_sample_fit_tsv},{lda_de_tsv},{lda_info_tsv}")
-        summary_aux_args.append(" ".join(summary_aux_args_models))
+            if args.umap:
+                umap_tsv = f"{model_prefix}.umap.tsv.gz"
+                umap_png = f"{model_prefix}.umap.png"
+                umap_single_prob_png = f"{model_prefix}.umap.single.prob.png"
+                prerequisities.extend([umap_tsv, umap_png, umap_single_prob_png])
+                summary_aux_args_umap.append(f"lda,{model_id},{umap_tsv},{umap_png},{umap_single_prob_png}")
+        if len(summary_aux_args_models) > 1:
+            summary_aux_args.append(" ".join(summary_aux_args_models))
+        if args.umap and len(summary_aux_args_umap) > 1:
+            summary_aux_args.append(" ".join(summary_aux_args_umap))
 
         summary_aux_args_decodes = ["--decode"]
         decode_runs = define_decode_runs(args)
@@ -567,19 +622,22 @@ def run_ficture2_multi(_args):
             decode_info_tsv = f"{decode_prefix}.factor.info.tsv"
             prerequisities.append(f"{decode_prefix}.done")
             summary_aux_args_decodes.append(f"{model_type},{model_id},{decode_id},{fit_width},{args.anchor_res},{decode_pixel_tsv},{decode_pixel_png},{decode_pseudobulk_tsv},{decode_de_tsv},{decode_info_tsv}")
-        summary_aux_args.append(" ".join(summary_aux_args_decodes))
+        if len(summary_aux_args_decodes) > 1:
+            summary_aux_args.append(" ".join(summary_aux_args_decodes))
 
-        cmd = " ".join([
+        summary_cmd_parts = [
             "cartloader", "write_json_for_ficture2_multi",
-                "--merge",
-                f"--in-transcript {sample_transcript}",
-                f"--in-feature {sample_feature_hdr}", # use the original feature file for SGE
-                f"--in-feature-ficture {sample_feature_hdr}",
-                f"--in-minmax {sample_minmax}",
-                f"--out-dir {sample_out_dir}",
-                f"--out-json {sample_out_json}",
-                " ".join(summary_aux_args)            
-            ])
+            "--mode append",
+            f"--in-transcript {sample_transcript}",
+            f"--in-feature {sample_feature_hdr}", # use the original feature file for SGE
+            f"--in-minmax {sample_minmax}",
+            f"--out-dir {sample_out_dir}",
+            f"--out-json {sample_out_json}",
+        ]
+        if sample_feature_hdr:
+            summary_cmd_parts.append(f"--in-feature-ficture {sample_feature_hdr}")
+        summary_cmd_parts.extend(arg for arg in summary_aux_args if arg)
+        cmd = " ".join(summary_cmd_parts)
         cmds.append(cmd)
         mm.add_target(sample_out_json, prerequisities, cmds)
         json_each_targets.append(sample_out_json)

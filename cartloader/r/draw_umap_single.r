@@ -204,7 +204,8 @@ if (args$mode %in% c("binary", "both")) {
     height = plot_dim * grid_nrow,
     units = "in",
     dpi = args$dpi,
-    bg = "white"
+    bg = "white",
+    limitsize = FALSE
   )
   log_message(paste("Wrote:", out_png))
 }
@@ -243,7 +244,8 @@ if (args$mode %in% c("prob", "both")) {
     height = plot_dim * grid_nrow,
     units = "in",
     dpi = args$dpi,
-    bg = "white"
+    bg = "white",
+    limitsize = FALSE
   )
   log_message(paste("Wrote:", out_png))
 }

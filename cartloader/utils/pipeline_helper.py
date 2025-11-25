@@ -170,6 +170,110 @@ def stage_import_images(cart_dir, args, image_plans, ome2png=False, transparent_
         run_command_w_preq(import_image_cmd, prerequisites=spec.get('prereq', []), dry_run=args.dry_run, flush=True)
 
 #  =============
+#   squares
+#  =============
+
+def resolve_square_plan(ranger_dir, use_json, ranger_assets, square_input):
+    square_plans = []
+
+    if use_json:
+        if not ranger_assets or not os.path.exists(ranger_assets):
+            raise ValueError("No space_ranger assets JSON found; run with --load-space-ranger or provide --square-input entries")
+        data = load_file_to_dict(ranger_assets)
+        
+        for key, spec in data.items():
+            if not isinstance(key, str) and (key.startswith("GRID_") or key.startswith("SQUARE_")) and key.endswith("um"):
+                continue
+            try:
+                bin_token = key.split("_", 1)[1]
+                bin_size = int(bin_token.rstrip("um"))
+            except (IndexError, ValueError):
+                continue
+            required = ["POSITION", "CLUSTER", "DE", "UMAP_PROJ"]
+            missing = [field for field in required if not spec.get(field)]
+            if missing:
+                print(f" * Skipping {key} due to missing fields: {', '.join(missing)}", flush=True)
+                continue
+            square_plans.append({
+                "bin_size": bin_size,
+                "use_json": True,
+                "ranger_assets": ranger_assets,
+                "prereq": [ranger_assets],
+            })
+            print(f" * Detected square bin size {bin_size}um from {key}", flush=True)
+    elif square_input:
+        if not ranger_dir:
+            raise ValueError("--space-ranger-dir is required when --square-input is provided")
+        for square_input in square_input:
+            inputs = [tok.strip() for tok in square_input.split(",")]
+            if len(inputs) != 6:
+                raise ValueError(f"Invalid --square-input entry: {square_input}. Must provide 6 comma-separated values: bin_size,position_parquet,csv_cluster,csv_diffexp,scale_json,csv_umap")
+            bin_size_str, bin_pos_parquet, bin_csv_cluster, bin_csv_diffexp, bin_scale_json, bin_csv_umap = inputs
+            try:
+                bin_size = int(bin_size_str)
+            except ValueError as exc:
+                raise ValueError(f"Invalid bin size in --square-input entry: {square_input}") from exc
+            prereq_paths = [bin_pos_parquet, bin_csv_cluster, bin_csv_diffexp, bin_scale_json, bin_csv_umap]
+            prereq = [os.path.join(ranger_dir, f) for f in prereq_paths if f]
+            square_plans.append({
+                "bin_size": bin_size,
+                "use_json": False,
+                "ranger_assets": None,
+                "prereq": prereq,
+                "ranger_dir": ranger_dir,
+                "POSITION": bin_pos_parquet,
+                "CLUSTER": bin_csv_cluster,
+                "DE": bin_csv_diffexp,
+                "SCALE": bin_scale_json,
+                "UMAP_PROJ": bin_csv_umap,
+            })
+            # print(f" * Added manual square bin size {bin_size}um from --square-input entry", flush=True)
+    else:
+        raise ValueError("No square binning input provided; use --load-space-ranger or provide --square-input entries")
+    
+    if not square_plans:
+        raise ValueError("No square bin inputs detected; provide --square-input entries or regenerate --space-ranger-assets.")
+
+    return square_plans
+
+
+def stage_import_squares(cart_dir, args, square_plans, update_catalog=False):
+    for spec in square_plans:   
+        ranger_assets = spec.get("ranger_assets", None)         
+        ranger_dir = spec.get("ranger_dir", None)
+        
+        bin_size = spec["bin_size"]
+        outprefix = os.path.join(cart_dir, f"{args.square_id}-sq{bin_size:03d}")
+        square_assets = f"{outprefix}_assets.json" # output 
+        
+        import_square_cmd = " ".join(filter(None, [
+            "cartloader", "import_visiumhd_square",
+            f"--outprefix {outprefix}",
+            f"--bin-size {bin_size}",
+            f"--in-json {ranger_assets}" if spec["use_json"] else "",
+            f"--in-dir {ranger_dir}" if not spec["use_json"] else "",
+            f"--parquet {spec.get('POSITION')}" if not spec["use_json"] and spec.get('POSITION') else "",
+            f"--csv-clust {spec.get('CLUSTER')}" if not spec["use_json"] and spec.get('CLUSTER') else "",
+            f"--csv-diffexp {spec.get('DE')}" if not spec["use_json"] and spec.get('DE') else "",
+            f"--scale-json {spec.get('SCALE')}" if not spec["use_json"] and spec.get('SCALE') else "",
+            f"--csv-umap {spec.get('UMAP_PROJ')}" if not spec["use_json"] and spec.get('UMAP_PROJ') else "",
+            f"--tippecanoe {args.tippecanoe}" if args.tippecanoe else "",
+            f"--tsv-cmap {args.tsv_cmap}" if args.tsv_cmap else "",
+            f"--update-catalog" if update_catalog else "",
+            f"--threads {args.threads}" if args.threads else "",
+            f"--use-parquet-tools" if args.use_parquet_tools else "",
+        ]))
+
+        prereq = spec.get("prereq", [])
+        if os.path.exists(square_assets) and not args.restart:
+            print(f" * Skip --import-squares for bin size {bin_size} since the assets file ({square_assets}) already exists. Use --restart to force execution.", flush=True)
+            # print("\n", flush=True)
+            print(import_square_cmd, flush=True)
+            continue
+
+        run_command_w_preq(import_square_cmd, prerequisites=prereq, dry_run=args.dry_run, flush=True)
+
+#  =============
 #   ficture
 #  =============
 def define_ficture_flags(fic_dir, width, n_factor, anchor_res: int = 6):
@@ -225,7 +329,9 @@ def stage_run_ficture2(fic_dir, sge_assets, args, prereq, aux_args=None):
 #  =============
 #   cartload2
 #  =============
-def stage_run_cartload2(cart_dir, fic_dir, sge_dir, cell_assets, background_assets, args, prereq):
+def stage_run_cartload2(cart_dir, fic_dir, sge_dir, 
+                        cell_assets, square_assets, background_assets, 
+                        args, prereq):
 
     # Banner
     print("=" * 10, flush=True)
@@ -252,6 +358,9 @@ def stage_run_cartload2(cart_dir, fic_dir, sge_dir, cell_assets, background_asse
     if args.import_images:
         prereq.extend(background_assets)
 
+    if getattr(args, "import_squares", False):
+        prereq.extend(square_assets)
+
     # Build cartload2 command
     cartload_cmd = " ".join([
         "cartloader", "run_cartload2",
@@ -261,6 +370,7 @@ def stage_run_cartload2(cart_dir, fic_dir, sge_dir, cell_assets, background_asse
         f"--sge-dir {sge_dir}" if not (args.run_ficture2 or args.import_ext_ficture2) else "",
         f"--cell-assets {cell_assets}" if args.import_cells else "",
         f"--background-assets {' '.join(background_assets)}" if background_assets else "",
+        f"--square-assets  {' '.join(square_assets)}" if square_assets else "",
         f"--id {args.id}",
         f"--title {shlex.quote(args.title)}" if args.title else "",
         f"--desc {shlex.quote(args.desc)}" if args.desc else "",
@@ -337,7 +447,7 @@ def stage_upload_zenodo(cart_dir, args, prereq, flag):
 
     # Skip if all flags exist and not restarting
     if (all(os.path.exists(f) for f in flag) and not args.restart):
-        print(" * Skip --upload-zenodo since all flags exist. Use --restart to force execution.", flush=True)
+        print(" * Skip --upload-zenodo since all flags exist. Use --restart to force execution.\n", flush=True)
         print(zenodo_cmd, flush=True)
     else:
         run_command_w_preq(zenodo_cmd, prerequisites=prereq, dry_run=args.dry_run, flush=True)

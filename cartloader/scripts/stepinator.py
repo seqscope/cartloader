@@ -320,13 +320,18 @@ def cmd_run_ficture(run_i, fic_v, args, env):
                 scheck_file(os.path.join(run_i["sge_dir"], file))
     
     # key params
-    assert run_i["train_width"] is not None, "Error: When --run-ficture1 or --run-ficture2, provide width"
-    assert not (fic_v == "2" and ext_path), "Error: --run-ficture2 does not support --ext-path"
-    if ext_path:
-        assert ext_id is not None, "Error: --ext-id is required when running ficture with an external model"
-        assert os.path.exists(ext_path), f"Error: --ext-path is defined with a missing file: {ext_path}"
-    else:
-        assert run_i["n_factor"] is not None, "Error: --n-factor is required when running --run-ficture1/--run-ficture2 with LDA"
+    if args.run_ficture:
+        assert run_i["train_width"] is not None, "Error: When --run-ficture1 or --run-ficture2, provide width"
+        assert not (fic_v == "2" and ext_path), "Error: --run-ficture2 does not support --ext-path"
+    
+        if ext_path:
+            assert ext_id is not None, "Error: --ext-id is required when running ficture with an external model"
+            assert os.path.exists(ext_path), f"Error: --ext-path is defined with a missing file: {ext_path}"
+        else:
+            assert run_i["n_factor"] is not None, "Error: --n-factor is required when running --run-ficture1/--run-ficture2 with LDA"
+
+    if args.segment_10x:
+        assert run_i["hexagon_width_10x"] is not None, "Error: When --segment-10x, provide --hexagon-width-10x in RUNS"
 
     if fic_v == "1":
         # cmap
@@ -342,19 +347,22 @@ def cmd_run_ficture(run_i, fic_v, args, env):
             f"--makefn {mkbn}.{timestamp}.mk",
             f"--out-dir {fic_dir}",
             sge_arg,
+            # input
             f"--major-axis {run_i['major_axis']}",
             f"--colname-count {run_i['colname_count']}" if run_i['colname_count'] else "",
-            f"{'--init-ext' if ext_path and args.init_ext else '--main-ext' if ext_path else '--main'}",
+            # action
+            f"{'--init-ext' if ext_path and args.init_ext else '--main-ext' if ext_path else '--main'}" if args.run_ficture else "",
+            "--segment-10x" if args.segment_10x else "",
+            # ficture params
             f"--ext-path {ext_path}" if ext_path else "",
             f"--ext-id {ext_id}" if ext_path else "",
             "--copy-ext-model" if ext_path and run_i["copy_ext_model"] else "",
             f"--n-factor {run_i['n_factor']}" if ext_path is None else "",
             f"--train-width {run_i['train_width']}",
             "--skip-coarse-report" if args.skip_coarse_report else "",
-            "--segment-10x" if args.segment_10x else "",
-            # f"--filter-by-overlapping-features --in-feature-dist {in_dist}" if run_i["filter_by_overlapping_features"] else "",
-            # f"--min-ct-per-ftr-tile {run_i['min_ct_per_ftr_tile']}" if run_i["filter_by_overlapping_features"] and run_i["min_ct_per_ftr_tile"] > 0 else "",
             cmap_arg,
+            # seg params
+            f"--hexagon-width-10x {run_i['hexagon_width_10x']}" if args.segment_10x and run_i['hexagon_width_10x'] else "",
             f"--n-jobs {args.n_jobs}" if args.n_jobs else "",
             f"--restart" if args.restart else "",
             f"--threads {args.threads}"
@@ -370,14 +378,18 @@ def cmd_run_ficture(run_i, fic_v, args, env):
             "cartloader", "run_ficture2",
             f"--makefn {mkbn}.{timestamp}.mk",
             f"--out-dir {fic_dir}",
+            # input
             sge_arg,
             f"--colname-count {run_i['colname_count']}" if run_i['colname_count'] else "",
-            "--main",
-            f"--width {run_i['train_width']}",
-            f"--n-factor {run_i['n_factor']}",
-            # f"--filter-by-overlapping-features --in-feature-dist {in_dist}" if run_i["filter_by_overlapping_features"] else "",
-            # f"--min-ct-per-ftr-tile {run_i['min_ct_per_ftr_tile']}" if run_i["filter_by_overlapping_features"] and run_i["min_ct_per_ftr_tile"] > 0 else "",
+            # action
+            "--main" if args.run_ficture else "",
+            "--segment-10x" if args.segment_10x else "",
+            # ficture2 params
+            f"--width {run_i['train_width']}" if run_i['train_width'] else "",
+            f"--n-factor {run_i['n_factor']}" if run_i['n_factor'] else "",
             cmap_arg,
+            # seg params
+            f"--hexagon-width-10x {run_i['hexagon_width_10x']}" if args.segment_10x and run_i['hexagon_width_10x'] else "",
             f"--n-jobs {args.n_jobs}" if args.n_jobs else "",
             f"--restart" if args.restart else "",
             f"--threads {args.threads}"
@@ -653,7 +665,7 @@ def stepinator(_args):
     # =========
     #  Sanity check
     # =========
-    assert args.sge_stitch or args.sge_convert or args.run_ficture or args.run_cartload or args.image_png2pmtiles or args.upload_aws, "Error: At least one action is required"
+    assert args.sge_stitch or args.sge_convert or args.run_ficture or args.run_cartload or args.image_png2pmtiles or args.upload_aws or args.segment_10x, "Error: At least one action is required"
 
     # sge
     assert not (args.sge_convert and args.sge_stitch), "Error: --sge-convert and --sge-stitch cannot be applied together"
@@ -800,7 +812,7 @@ def stepinator(_args):
     # =========
     #  Downstream
     # =========
-    if args.run_ficture or args.run_cartload or args.image_png2pmtiles or args.upload_aws:
+    if args.segment_10x or args.run_ficture or args.run_cartload or args.image_png2pmtiles or args.upload_aws:
 
         # when only 1 run_id exists, no need to specify the run_ids
         avail_runs=[run_i.get("run_id") for run_i in yml.get("RUNS", [])]
@@ -829,6 +841,7 @@ def stepinator(_args):
                 # analysis parameters
                 run_i["train_width"] = run_i.get("train_width", None)     
                 run_i["n_factor"] = run_i.get("n_factor", None)           # will fill in the default value in lda
+                run_i["hexagon_width_10x"] = run_i.get("hexagon_width_10x", None) # only used when --segment-10x is set
                 # customizing feature filtering 
                 if run_i.get("include_feature_type_regex", None) and run_i.get("feature_type_ref", None) is None:
                     if sgeinfo.get("csv_colname_feature_type", None) is None:
@@ -842,7 +855,7 @@ def stepinator(_args):
                 # ----
                 os.makedirs(run_i["run_dir"], exist_ok=True)
 
-                if args.run_ficture:
+                if args.run_ficture or args.segment_10x:
                     os.makedirs(run_i["fic_dir"], exist_ok=True)
                     runner.add(cmd_run_ficture(run_i, fic_v, args, env))
 
@@ -850,7 +863,9 @@ def stepinator(_args):
                     os.makedirs(run_i["cartl_dir"], exist_ok=True)
                     runner.add(cmd_run_cartload(run_i, fic_v, args, env))
                     if args.upload_aws:
-                        runner.add(cmd_upload_aws(run_i, args, env, aws_bucket, "--upload-cartload-only"))
+                        runner.add(cmd_upload_aws(run_i, args, env, aws_bucket, "--upload-basics-only"))
+                    if args.upload_aws:
+                        runner.add(cmd_upload_aws(run_i, args, env, aws_bucket, "--upload-optional-only"))
 
                 if args.image_png2pmtiles:
                     run_i["histology"] = imginfo

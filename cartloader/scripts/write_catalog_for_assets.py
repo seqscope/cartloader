@@ -13,19 +13,20 @@ def parse_arguments(_args):
 
     inout_params = parser.add_argument_group("Input/Output Parameters", "Input/output directories and files")
     inout_params.add_argument('--out-catalog', type=str, required=True, help='JSON/YAML file containing the output assets')
-    inout_params.add_argument('--write-mode', type=str, default="append", choices=["append", "write"], help='Write mode for the output catalog. Default: append. If write, a new file will be created based on the arguments provided. If append, the new assets will be added or updated in the existing catalog file.')
+    inout_params.add_argument('--mode', type=str, default="append", choices=["append", "write"], help='Write mode for the output catalog. Default: append. If write, a new file will be created based on the arguments provided. If append, the new assets will be added or updated in the existing catalog file.')
     inout_params.add_argument('--sge-index', type=str, help='Path to an index TSV file containing the SGE output converted to PMTiles.')
     inout_params.add_argument('--sge-counts', type=str, help='Path to a JSON file containing SGE counts per gene')
     inout_params.add_argument('--fic-assets', type=str,  help='Path to a JSON/YAML file containing FICTURE output assets')
     inout_params.add_argument('--background-assets', type=str, nargs="+", default=[], help='Path(s) of one or more JSON/YAML file(s) containing background assets, if present')
     inout_params.add_argument('--cell-assets', type=str, nargs="+", default=[], help='Path(s) to one or more JSON/YAML file(s) containing cell segmentation assets, if present')
+    inout_params.add_argument('--square-assets', type=str, nargs="+", default=[], help='Path(s) to one or more JSON/YAML file(s) containing square assets, if present')
     inout_params.add_argument('--basemap', type=str, nargs="+", default=[], help='One or more basemap assets. Each must be in the format "id:filename" or "id1:id2:filename", where each ID represents a basemap identifier.')    
     inout_params.add_argument('--basemap-dir', type=str, default=None, help='Directory containing the basemap files. By default, the directory of the out-catalog file is used as the basemap directory.')
     inout_params.add_argument('--overview', type=str, help='Specify one of these basemaps as the overview asset, using its filename.')
     inout_params.add_argument('--check-equal', action="store_true", default=False, help="If enabled, the script checks for an existing file with matching content and skips writing the JSON/YAML unless differences are found.")
 
     key_params = parser.add_argument_group("Key Parameters", "Key parameters frequently used by users")
-    key_params.add_argument('--id', type=str, help='The identifier of the output assets')
+    key_params.add_argument('--id', type=str, help='The identifier of the output assets (required if --mode is write)')
     key_params.add_argument('--title', type=str, help='The title of the output assets')
     key_params.add_argument('--desc', type=str, help='The description of output assets')
     key_params.add_argument('--log', action='store_true', default=False, help='Write log to file')
@@ -53,7 +54,7 @@ def write_catalog_for_assets(_args):
     flags = []
 
     ## if the output catalog file exists, check the write mode
-    if os.path.exists(args.out_catalog) and args.write_mode == "append":
+    if os.path.exists(args.out_catalog) and args.mode == "append":
         logger.info(f"Found an existing catalog file {args.out_catalog}. This file will be appended.")
         with open(args.out_catalog, 'r') as stream:
             catalog_dict = yaml.load(stream, Loader=yaml.FullLoader)
@@ -96,7 +97,7 @@ def write_catalog_for_assets(_args):
         catalog_dict["assets"]["overview"]=args.overview
 
     # - factors
-    if args.fic_assets is not None or len(args.cell_assets)>0:
+    if args.fic_assets is not None or len(args.cell_assets)>0 or len(args.square_assets) >0:
         logger.info(f"Reading the Factor layers")
         if "factors" not in catalog_dict["assets"]:
             factors_list=[]
@@ -111,11 +112,38 @@ def write_catalog_for_assets(_args):
         if len(args.cell_assets)>0:
             logger.info(f"Updating Factor layer with the cell assets from {args.cell_assets}")
             for cell_assets_f in args.cell_assets:
-                cell_assets=load_file_to_dict(cell_assets_f)
+                cell_assets = load_file_to_dict(cell_assets_f)
                 # update_and_copy_paths will update the path to be only filename, which fits the needs of catalog.yaml
-                cell_assets=update_and_copy_paths(cell_assets, out_dir, skip_keys=["id", "name", "cells_id"], exe_copy=True)
+                cell_assets = update_and_copy_paths(cell_assets, out_dir, skip_keys=["id", "name", "cells_id"], exe_copy=True)
+                # check if any item in the factor_list already has the same id as cell_assets['id'], if so, remove it first
+                factors_list = [item for item in factors_list if item.get('id') != cell_assets.get('id')]
                 factors_list.append(cell_assets)
                 flags.append(f"{cell_assets_f}.done")
+
+        if len(args.square_assets)>0:
+            logger.info(f"Updating Factor layer with the square assets from {args.square_assets}")
+            for square_assets_f in args.square_assets:
+                square_assets = load_file_to_dict(square_assets_f)
+                square_assets = update_and_copy_paths(square_assets, out_dir, skip_keys=["id", "name", "square_id"], exe_copy=True)
+                factors_list = [item for item in factors_list if item.get('id') != square_assets.get('id')]
+                factors_list.append(square_assets)
+                flags.append(f"{square_assets_f}.done")
+
+        if factors_list:
+            normalized_factors = []
+            for factor_entry in factors_list:
+                umap_info = factor_entry.get("umap")
+                if isinstance(umap_info, dict):
+                    normalized = {}
+                    for key, value in umap_info.items():
+                        if isinstance(value, str):
+                            normalized[key] = os.path.basename(value)
+                    if normalized:
+                        factor_entry["umap"] = normalized
+                    else:
+                        factor_entry.pop("umap", None)
+                normalized_factors.append(factor_entry)
+            factors_list = normalized_factors
 
         ## add files to the catalog
         unique_factors = {item['id']: item for item in factors_list}         # Use a dictionary to keep the latest entry by 'id'
