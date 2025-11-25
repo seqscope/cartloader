@@ -900,19 +900,49 @@ def assert_unique(seq, label, normalize=None):
             seen.add(v)
     assert not dups, f"Duplicate values detected for {label}; please ensure each value is unique. Duplicates: {sorted(set(dups))}"
 
-#=== fast parquet conversion with polars and pigz
 def parquet_to_csv_with_polars_pigz(
     parquet_file: str,
     out_path: str = "out.csv.gz",
-    batch_size: int = 131_072,       # tune up/down for speed vs. memory
-    compress_level: int = 6,         # 1-9
+    batch_size: int = 131_072,
+    compress_level: int = 6,
     pigz_path: str = "pigz",
-    pigz_threads: int = 4, # defaults to os.cpu_count()
+    pigz_threads: int = None,  # Changed default to None to handle logic inside
 ):
+    """
+    Streams a Parquet file to a compressed CSV using Polars and Pigz.
+    Automatically converts Binary columns to UTF-8 Strings to prevent CSV write errors.
+    """
     import polars as pl
-
+    
     # Build the lazy frame
     lf = pl.scan_parquet(parquet_file)
+
+    # ---------------------------------------------------------
+    # FIX: Detect Binary columns and cast to String (UTF-8)
+    # ---------------------------------------------------------
+    # Get schema to identify column types (lazy, does not read data)
+    try:
+        # Polars >= 0.20.0
+        schema = lf.collect_schema()
+    except AttributeError:
+        # Older Polars versions
+        schema = lf.schema
+
+    binary_cols = []
+    for col_name, dtype in schema.items():
+        if dtype == pl.Binary:
+            binary_cols.append(col_name)
+
+    if binary_cols:
+        print(f"Converting binary columns to UTF-8 string: {binary_cols}")
+        # FIX: Use .cast(pl.String) instead of .bin.decode("utf-8")
+        # .bin.decode("utf-8") is not supported in older Polars versions (only hex/base64).
+        # .cast(pl.String) assumes the binary data is valid UTF-8.
+        lf = lf.with_columns([
+            pl.col(c).cast(pl.String)
+            for c in binary_cols
+        ])
+    # ---------------------------------------------------------
 
     # Ensure output directory exists
     os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
@@ -921,6 +951,8 @@ def parquet_to_csv_with_polars_pigz(
     with open(out_path, "wb") as fout:
         # Compose pigz command: read from stdin, write compressed to stdout
         cmd = [pigz_path, f"-{compress_level}", "-c"]
+        
+        # specific logic for threads
         if pigz_threads is None:
             pigz_threads = os.cpu_count() or 1
         cmd.extend(["-p", str(pigz_threads)])
@@ -935,7 +967,13 @@ def parquet_to_csv_with_polars_pigz(
         
         try:
             # Wrap pigz's binary stdin with a text writer for CSV
-            text_in = io.TextIOWrapper(proc.stdin, encoding="utf-8", newline="", write_through=True)
+            text_in = io.TextIOWrapper(
+                proc.stdin, 
+                encoding="utf-8", 
+                newline="", 
+                write_through=True
+            )
+            
             try:
                 lf.sink_csv(text_in, include_header=True, batch_size=batch_size)
                 text_in.flush()
@@ -952,7 +990,8 @@ def parquet_to_csv_with_polars_pigz(
                 )
         except Exception:
             # Make sure the process is torn down on error
-            proc.kill()
+            if proc.poll() is None:
+                proc.kill()
             raise
 
 def merge_config(base_config, args, keys, prefix=None):
