@@ -347,7 +347,7 @@ def import_visiumhd_cell(_args):
 
     out_assets_f=f"{args.outprefix}_assets.json"
     logger.info(f"Summarizing assets information into {out_assets_f}")
-    new_factor = make_factor_dict(factor_id, factor_name, args.outprefix, factor_type="cells", pmtiles_keys=pmtiles_keys, umap_src=umap_src)
+    new_factor = make_factor_dict(factor_id, factor_name, args.outprefix, factor_type="cell", pmtiles_keys=pmtiles_keys, umap_src=umap_src)
     write_dict_to_file(new_factor, out_assets_f, check_equal=True)
 
     if args.update_catalog:
@@ -362,7 +362,7 @@ def import_visiumhd_cell(_args):
             catalog = yaml.load(f, Loader=yaml.FullLoader)  # Preserves order
 
         ## add files to the catalog
-        new_factor = make_factor_dict(factor_id, factor_name, out_base, factor_type="cells", pmtiles_keys=pmtiles_keys, umap_src=umap_src)
+        new_factor = make_factor_dict(factor_id, factor_name, out_base, factor_type="cell", pmtiles_keys=pmtiles_keys, umap_src=umap_src)
         print(new_factor)
         if "factors" not in catalog["assets"]:
             catalog["assets"]["factors"] = [new_factor]
