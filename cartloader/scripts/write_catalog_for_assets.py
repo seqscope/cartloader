@@ -114,7 +114,7 @@ def write_catalog_for_assets(_args):
             for cell_assets_f in args.cell_assets:
                 cell_assets = load_file_to_dict(cell_assets_f)
                 # update_and_copy_paths will update the path to be only filename, which fits the needs of catalog.yaml
-                cell_assets = update_and_copy_paths(cell_assets, out_dir, skip_keys=["id", "name", "cells_id"], exe_copy=True)
+                cell_assets = update_and_copy_paths(cell_assets, out_dir, skip_keys=["id", "name", "cells_id", "cell_id"], exe_copy=True)
                 # check if any item in the factor_list already has the same id as cell_assets['id'], if so, remove it first
                 factors_list = [item for item in factors_list if item.get('id') != cell_assets.get('id')]
                 factors_list.append(cell_assets)

@@ -222,10 +222,10 @@ def umap_tsv2indpng(umap_tsv, model_prefix, color_map, mode="binary", title="Cel
     run_command(plot_cmd)
 
 def make_factor_dict(factor_id, factor_name, outprefix, factor_type, pmtiles_keys=[], umap_src=False):
-    assert factor_type in ["cell", "square"], "Currently only support cell and square type..."
+    assert factor_type in ["cells", "square"], "Currently only support cells and square type..."
     pmtiles={}
     for key in pmtiles_keys:
-        if factor_type=="cell":
+        if factor_type=="cells":
             pmtiles[key]=f"{outprefix}-{key}.pmtiles"
         elif factor_type=="square":
             pmtiles["boundaries"]=f"{outprefix}.pmtiles"
@@ -235,7 +235,7 @@ def make_factor_dict(factor_id, factor_name, outprefix, factor_type, pmtiles_key
         "name": factor_name,
         model_label: factor_id,
         "rgb": f"{outprefix}-rgb.tsv",
-        "de": f"{outprefix}-cells-bulk-de.tsv" if factor_type=="cell" else f"{outprefix}-bulk-de.tsv",
+        "de": f"{outprefix}-cells-bulk-de.tsv" if factor_type=="cells" else f"{outprefix}-bulk-de.tsv",
         "raw_pixel_col": None,
         "pmtiles": pmtiles,
     }
@@ -548,7 +548,7 @@ def import_xenium_cell(_args):
 
     out_assets_f=f"{args.outprefix}_assets.json"
     logger.info(f"Summarizing assets information into {out_assets_f}")
-    new_factor = make_factor_dict(factor_id, factor_name, args.outprefix, factor_type="cell", pmtiles_keys=pmtiles_keys, umap_src=umap_src)
+    new_factor = make_factor_dict(factor_id, factor_name, args.outprefix, factor_type="cells", pmtiles_keys=pmtiles_keys, umap_src=umap_src)
     write_dict_to_file(new_factor, out_assets_f, check_equal=True)
 
     if args.update_catalog:
@@ -563,7 +563,7 @@ def import_xenium_cell(_args):
             catalog = yaml.load(f, Loader=yaml.FullLoader)  # Preserves order
 
         ## add files to the catalog
-        new_factor = make_factor_dict(factor_id, factor_name, out_base, factor_type="cell", pmtiles_keys=pmtiles_keys, umap_src=umap_src)
+        new_factor = make_factor_dict(factor_id, factor_name, out_base, factor_type="cells", pmtiles_keys=pmtiles_keys, umap_src=umap_src)
         print(new_factor)
         if "factors" not in catalog["assets"]:
             catalog["assets"]["factors"] = [new_factor]

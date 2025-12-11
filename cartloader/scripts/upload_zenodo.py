@@ -357,14 +357,20 @@ def upload_zenodo(_args):
         failed_list.extend(failed_sublist)
     elif args.upload_method == "catalog":
         print(f"\n1) Upload: tiled map data for SGE (with or without FICTURE)\n")
-        failed_sublist=process_uploading_by_list(cartload_files_raw, existing_files, force_upload_files=[], touch_flag=False, flag_suffix="zenodo.done", overwrite=args.restart, dry_run=args.dry_run)
+        failed_sublist=process_uploading_by_list(basic_files_raw, existing_files, force_upload_files=[], touch_flag=False, flag_suffix="zenodo.done", overwrite=args.restart, dry_run=args.dry_run)
         failed_list.extend(failed_sublist)
         cartload_flag=os.path.join(args.in_dir, "cartload.zenodo.done")
         Path(cartload_flag).touch(exist_ok=True)
+        
         if len(basemap_files_raw) > 0:
             print(f"\n2) Upload: tiled map data for background images, such as histology images\n")
             failed_sublist=process_uploading_by_list(basemap_files_raw, existing_files, force_upload_files=[], touch_flag=True, flag_suffix="zenodo.done", overwrite=args.restart, dry_run=args.dry_run)
             failed_list.extend(failed_sublist)
+        if len(opt_files_raw) > 0:
+            print(f"\n3) Upload: optional files\n")
+            failed_sublist=process_uploading_by_list(opt_files_raw, existing_files, force_upload_files=[], touch_flag=True, flag_suffix="zenodo.done", overwrite=args.restart, dry_run=args.dry_run)
+            failed_list.extend(failed_sublist)
+    
     if args.publish and not args.dry_run:
         print(f"\n Publishing the deposition {args.zenodo_deposition_id} ...")
         publish_deposition(args.zenodo_deposition_id, ACCESS_TOKEN)
