@@ -243,7 +243,7 @@ def upload_zenodo(_args):
     
     print(f" * Upload method: {args.upload_method}")
     if args.upload_method == "all":
-        in_files_raw = glob.glob(os.path.join(args.in_dir, "*"))
+        in_files_raw = [p for p in glob.glob(os.path.join(args.in_dir, "*")) if os.path.isfile(p)]
     elif args.upload_method == "catalog":
         catalog_f = args.catalog_yaml or os.path.join(args.in_dir, "catalog.yaml")
         assert os.path.exists(catalog_f), f"File not found: {catalog_f} (--catalog-yaml)"
@@ -333,7 +333,7 @@ def upload_zenodo(_args):
             if input_overlap:
                 if args.restart:
                     print(f"\n    - Overlapping input file(s) (already in deposition): N={len(input_overlap)} (will be overwritten)")
-                    failed_list2=uploading(input_overlap, touch_flag=False, flag_suffix="zenodo.done")
+                    failed_list2=uploading(input_overlap, dry_run, touch_flag=False, flag_suffix="zenodo.done")
                     failed_list.extend(failed_list2)
                 else:
                     print(f"\n    - Overlapping input file(s) (already in deposition): N={len(input_overlap)} (will be skipped)")
@@ -359,8 +359,9 @@ def upload_zenodo(_args):
         print(f"\n1) Upload: tiled map data for SGE (with or without FICTURE)\n")
         failed_sublist=process_uploading_by_list(basic_files_raw, existing_files, force_upload_files=[], touch_flag=False, flag_suffix="zenodo.done", overwrite=args.restart, dry_run=args.dry_run)
         failed_list.extend(failed_sublist)
-        cartload_flag=os.path.join(args.in_dir, "cartload.zenodo.done")
-        Path(cartload_flag).touch(exist_ok=True)
+        if not args.dry_run:
+            cartload_flag=os.path.join(args.in_dir, "cartload.zenodo.done")
+            Path(cartload_flag).touch(exist_ok=True)
         
         if len(basemap_files_raw) > 0:
             print(f"\n2) Upload: tiled map data for background images, such as histology images\n")
