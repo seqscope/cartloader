@@ -3,7 +3,7 @@
 
 ## Overview
 
-An end‑to‑end workflow for 10x Visium HD data using `CartLoader` to run steps (including load Space Ranger assets, convert SGE, run FICTURE, import cells and images, package assets, and upload for sharing) as needed.
+An end‑to‑end workflow for 10x Visium HD data using `CartLoader` to run steps (including load Space Ranger assets, convert SGE, run FICTURE, import cells, square-bin outputs with optional UMAPs, background images, package assets, and upload for sharing) as needed.
 
 ---
 ## Requirements
@@ -55,6 +55,7 @@ See details for each flag:
 - [`--sge-convert`](./sge_convert.md#actions)
 - [`--run-ficture2`](./run_ficture2.md#actions)
 - [`--import-cells`](./import_cell.md#actions)
+- `--import-squares`: Import Space Ranger square bins (multi-resolution) including optional UMAP coordinates per bin size; writes square assets JSONs and updates `catalog.yaml`.
 - [`--import-images`](./import_image.md#actions)
 - [`--run-cartload2`](./run_cartload2.md#actions)
 - [`--upload-aws`](./upload_aws.md#actions)
@@ -104,6 +105,12 @@ In manual mode, provide inputs relative to `--space-ranger-dir`:
 Manual mode inputs (relative to `--space-ranger-dir`):
 - `--csv-clust`: Cluster assignments CSV
 - `--csv-diffexp`: Differential expression CSV
+
+### Import Squares (with `--import-squares`)
+
+- `--square-id`: Prefix for square-bin assets (default: `spaceranger`)
+- `--use-parquet-tools`: Use `parquet-tools` instead of polars/pigz for Parquet→CSV conversion (slower on large files)
+- `--square-input`: Manual mode only: one or more square bin definitions, each as `bin_size,bin_pos_parquet,bin_csv_cluster,bin_csv_diffexp,bin_scale_json,bin_csv_umap`. UMAP CSV is optional; include to expose 2D embeddings per bin size.
 
 ### Import Images (with `--import-images`)
 
@@ -158,6 +165,7 @@ Outputs depend on the enabled action flags. Refer to each module page for full o
 - `--sge-convert`: Unified SGE files and an assets manifest (`sge_assets.json`). See details in [sge_convert reference](./sge_convert.md#output)
 - `--run-ficture2` or `--import-ext-ficture2`: Generates FICTURE analysis artifacts (factor models, decoded maps, PMTiles, summaries). See details in [run_ficture2 reference](./run_ficture2.md#output)
 - `--import-cells`: Cells PMTiles, boundaries GeoJSON, and summaries under `cartload2/`. See details in [import_cells reference](./import_cell.md#outputs).
+- `--import-squares`: Square-bin PMTiles plus assets JSONs per bin size (e.g., `<square-id>-sq050_assets.json`), including optional UMAP TSVs when provided.
 - `--import-images`: Background image PMTiles (and intermediates) under `cartload2/`. See details in [import_images reference](./import_image.md#output).
 - `--run-cartload2`: Sources packaged into PMTiles and a `catalog.yaml`. See details in [run_cartload2 reference](./run_cartload2.md#output).
 - `--upload-aws`: Uploads generated assets and `catalog.yaml` to the specified S3 path.

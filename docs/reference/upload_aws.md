@@ -2,7 +2,7 @@
 
 ## Overview
 
-Use `upload_aws` to publish `CartLoader` outputs (PMTiles, decoded spatial factors, and the catalog) to Amazon S3 for sharing or deployment. Supports single‑dataset uploads and collection uploads (multiple datasets via `--in-list`).
+Use `upload_aws` to publish `CartLoader` outputs (PMTiles, decoded spatial factors, and the catalog) to Amazon S3 for sharing or deployment. Supports single‑dataset uploads and collection uploads (multiple datasets via `--in-list`). File lists are taken from `catalog.yaml` and split into cartload basics (required outputs), cartload optional files (e.g., UMAP, alias), and additional basemaps (non-SGE PMTiles).
 
 ---
 ## Action
@@ -78,6 +78,7 @@ Upload `CartLoader` outputs (including `catalog.yaml`) to a specified S3 path fo
 
         * `--s3-dir` is the collection prefix (e.g., `s3://bucket/collection-id`).
         * Each dataset uploads to a subdirectory under that prefix: `.../<s3_id>/`.
+        * Subdirectory naming: use `catalog.yaml:id` when available; otherwise lowercase the sample ID from `--in-list` and replace underscores with hyphens.
 
         ```
         /path/to/parent_s3_directory/   # defined by `--s3-dir` (often the collection ID)
@@ -96,10 +97,10 @@ Upload `CartLoader` outputs (including `catalog.yaml`) to a specified S3 path fo
 
 ### Input/Output
 - `--in-dir` (str): Input dir (single) or parent dir with per-sample subdirs (collection).
-- `--catalog-yaml` (str): Path to catalog.yaml (single mode only; default: `<in_dir>/catalog.yaml`).
-- `--upload-basics-only` (flag): Upload only cartload-generated basic files.
-- `--upload-optional-only` (flag): Upload only cartload-generated optional files, such as umap and alias.
-- `--upload-basemap-only` (flag): Upload only additional basemap PMTiles.
+- `--catalog-yaml` (str): Path to catalog.yaml (single mode only; default: `<in_dir>/catalog.yaml`; not valid with `--in-list`).
+- `--upload-basics-only` (flag): Upload only cartload-generated basic files (skip optional and additional basemaps).
+- `--upload-optional-only` (flag): Upload only cartload-generated optional files, such as UMAP and alias (skip basics and basemaps).
+- `--upload-basemap-only` (flag): Upload only additional basemap PMTiles (skip basics and optionals).
 
 ### Collection Parameters
 - `--in-list` (str): TSV of sample IDs (no header); enables collection mode. Use the same TSV you pass as `--in-list` to `run_ficture2_multi` and `run_cartload2_multi`.
@@ -112,3 +113,4 @@ Upload `CartLoader` outputs (including `catalog.yaml`) to a specified S3 path fo
 - `--dry-run` (flag): Generate the Makefile; do not execute.
 - `--restart` (flag): Ignore existing outputs and rerun from scratch.
 - `--n-jobs` (int): Number of parallel jobs (default: 2).
+- `--makefn` (str): Name of the generated Makefile (default: `upload_aws.mk`, written inside `--in-dir`).

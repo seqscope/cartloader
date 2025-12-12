@@ -33,7 +33,7 @@ cartloader run_ficture2_multi \
 ---
 ## Actions
 
-All actions will be applied by default:
+All actions run by default (UMAPs can be skipped with `--skip-umap`):
 
 - Multisample prepare: tiles inputs, builds joint hex grids at requested `--width` values
 - LDA training: trains LDA models for each `(width, n-factor)` pair
@@ -68,6 +68,8 @@ Below are the core arguments you’ll typically set. Flag names and behavior fol
 - `--n-factor` (str): Comma‑separated factor counts for training (e.g., `12,24`).
 - `--anchor-res` (int): Anchor resolution used in decode IDs (see outputs).
 - `--cmap-file` (str, defaults to [fixed_color_map_256.tsv](../../assets/fixed_color_map_256.tsv)): Colormap TSV used to colorize factors.
+- `--umap` (flag): Generate UMAP embeddings/plots for each LDA model (on by default).
+- `--skip-umap` (flag): Skip UMAP generation (overrides `--umap`).
 
 ### Run Options
 
@@ -96,6 +98,7 @@ Outputs are written under `--out-dir`.
     - `.results.tsv.gz`: Posterior per unit (hex/pixel) with top factor columns.
     - `.bulk_chisq.tsv`: Per‑factor differential feature table.
     - `.factor.info.tsv` and optional `.factor.info.html`: Factor summaries and colors.
+    - `.umap.tsv.gz`, `.umap.png`, `.umap.single.prob.png`: UMAP coordinates and plots for factors (written unless `--skip-umap`).
 
 - Decode (per sample × model/width): prefix `<sample>.<decode_id>`
     - `.tsv.gz`: Pixel‑level decode with posterior/assignments.

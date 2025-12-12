@@ -95,6 +95,7 @@ nav:
           - Multi-Sample Asset Packaging: reference/run_cartload2_multi.md
           - Background Image Import: reference/import_image.md
           - Cell Analysis Import: reference/import_cell.md
+          - Square Analysis Import: reference/import_square.md
       - Upload:
           - AWS Upload: reference/upload_aws.md
           - Zenodo Upload: reference/upload_zenodo.md
