@@ -63,7 +63,7 @@ The decoding step applies a trained LDA model from [LDA training step](#lda-trai
 
 ### UMAP Visualization Step (`--umap`)
 
-The UMAP visualization step generate UMAP plots to visualize the relationships between different spatial factors from [LDA training step](#lda-training-step---init-lda).
+The UMAP visualization step generates UMAP embeddings of factors learned in [LDA training](#lda-training-step---init-lda), writing both coordinates and plots for reuse downstream.
 
 ---
 ## Parameters
@@ -357,5 +357,6 @@ Below are the core parameters. See more details in the collapsible section ("Aux
 
 ### UMAP Output
 
+* `t{width}_f{n_factor}.umap.tsv.gz`: UMAP coordinates per factor with factor IDs and colors; can be reused by downstream pipelines (e.g., upload optional files).
 * `t{width}_f{n_factor}.umap.png`: A UMAP plot that visualizes the relationships between spatial factors.
 * `t{width}_f{n_factor}.umap.single.prob.png`: A gallery of images, with each image showing a single factor color-coded by probability.

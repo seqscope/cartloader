@@ -49,7 +49,9 @@ def parse_arguments(_args):
     aux_params.add_argument('--train-epoch', type=int, default=2, help='Training epoch for LDA model (default: 2)')
     #aux_params.add_argument('--min-ct-per-unit-fit', type=int, default=50, help='Minimum count per hexagon unit during model fitting (default: 20)')
     #aux_params.add_argument('--fit-plot-um-per-pixel', type=float, default=1, help='Image resolution for fit coarse plot (default: 1)')  # in Scopeflow, this is set to 2
-    aux_params.add_argument('--decode-scale', type=int, default=1, help='scales input coordinates to pixels in the output image (default: 1)')
+    aux_params.add_argument('--skip-umap', action='store_true', default=False, help='Skip creating umap')
+    aux_params.add_argument('--decode-scale', type=int, default=2, help='Training epoch for LDA model (default: 2)')
+
     # others parameters shared across steps
     aux_params.add_argument('--min-count-train', type=int, default=50, help='Minimum count for training (default: 50)')
     aux_params.add_argument('--de-min-ct-per-feature', type=int, default=20, help='Minimum count per feature for differential expression (default: 20)')
@@ -251,7 +253,7 @@ def run_ficture2_multi(_args):
 
     # step 2. multi-sample LDA training
     scheck_app(args.spatula)
-    if args.umap:
+    if not args.skip_umap:
         scheck_app(args.R)
     lda_runs = define_lda_runs(args)
     for lda_params in lda_runs:
@@ -372,7 +374,7 @@ def run_ficture2_multi(_args):
         cmds.append(f"[ -f {lda_de} ] && [ -f {model_prefix}.factor.info.html ] && touch {model_prefix}_summary.done")
         mm.add_target(f"{model_prefix}_summary.done", [f"{model_prefix}.done", color_map], cmds)
 
-        if args.umap:
+        if not args.skip_umap:
             create_umap_rscript = f"{repo_dir}/cartloader/r/create_umap.r"
             draw_umap_rscript = f"{repo_dir}/cartloader/r/draw_umap.r"
             draw_umap_single_rscript = f"{repo_dir}/cartloader/r/draw_umap_single.r"
@@ -582,7 +584,7 @@ def run_ficture2_multi(_args):
         prerequisities = [f"{args.out_dir}/multi.done"]
 
         summary_aux_args_models = ["--lda-model"]
-        summary_aux_args_umap = ["--umap"] if args.umap else []
+        summary_aux_args_umap = ["--umap"] if not args.skip_umap else []
         lda_runs = define_lda_runs(args)
         for lda_params in lda_runs:
             # params & prefix
@@ -596,7 +598,7 @@ def run_ficture2_multi(_args):
             lda_info_tsv = f"{model_prefix}.factor.info.tsv"
             prerequisities.append(f"{model_prefix}.done")
             summary_aux_args_models.append(f"lda,{model_id},{train_width},{n_factor},{summary_cmap},{model_prefix}.model.tsv,{lda_sample_fit_tsv},{lda_de_tsv},{lda_info_tsv}")
-            if args.umap:
+            if not args.skip_umap:
                 umap_tsv = f"{model_prefix}.umap.tsv.gz"
                 umap_png = f"{model_prefix}.umap.png"
                 umap_single_prob_png = f"{model_prefix}.umap.single.prob.png"
@@ -604,7 +606,7 @@ def run_ficture2_multi(_args):
                 summary_aux_args_umap.append(f"lda,{model_id},{umap_tsv},{umap_png},{umap_single_prob_png}")
         if len(summary_aux_args_models) > 1:
             summary_aux_args.append(" ".join(summary_aux_args_models))
-        if args.umap and len(summary_aux_args_umap) > 1:
+        if not args.skip_umap and len(summary_aux_args_umap) > 1:
             summary_aux_args.append(" ".join(summary_aux_args_umap))
 
         summary_aux_args_decodes = ["--decode"]

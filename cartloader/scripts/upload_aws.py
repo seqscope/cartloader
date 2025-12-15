@@ -34,7 +34,7 @@ def collect_files_from_yaml(catalog_f):
         catalog = yaml.safe_load(catalog_file)
     catalog_pair=traverse_dict(catalog)
 
-    keys_id = {"id", "title", "name", "model_id", "proj_id", "decode_id", "cells_id", "square_id", "raw_pixel_col"}
+    keys_id = {"id", "title", "name", "model_id", "proj_id", "decode_id", "cells_id", "cell_id", "square_id", "raw_pixel_col"}
     cartload_required_files = [] 
     cartload_optional_files = [] 
     basemap_files = []
