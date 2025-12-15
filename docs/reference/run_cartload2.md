@@ -64,6 +64,7 @@ Must use `--sge-dir` or `--fic-dir` to provide SGE data.
 * `--fic-dir` (str): Path to the input Directory from `run_ficture2`; must include `--in-fic-params` JSON/YAML.
 * `--cell-assets` (list of str): Optional cell asset JSON/YAML files (e.g., from `import_*_cell`) to include.
 * `--background-assets` (list of str): Optional basemap assets (e.g., from cell `import_image`); JSON/YAML or inline specs `id:path` or `id1:id2:path`.
+* `--square-assets` (list of str): Optional square asset JSON/YAML files (e.g., from `import_visiumhd_square`) to include.
 * `--out-dir` (str): Path to the output directory for PMTiles, assets JSON, and catalog YAML.
 
 ### Dataset ID and Descriptions
@@ -93,6 +94,12 @@ Must use `--sge-dir` or `--fic-dir` to provide SGE data.
     * `--max-feature-counts` (int): Maximum number of features per tile (default: `500_000`).
     * `--preserve-point-density-thres` (int): Threshold to preserve point density in PMTiles (default: `1024`).
     * `--transparent-below` / `--transparent-above` (int): Make pixels below/above the threshold transparent for dark/light backgrounds.
+    * `--sge-scale` (float): Scales input coordinates to pixels in the output image (default: 1).
+    * `--umap-colname-factor` (str): Column name encoding the dominant factor assignment in a UMAP TSV (default: `topK`).
+    * `--umap-colname-x` (str): Column name for the UMAP X coordinate (default: `UMAP1`).
+    * `--umap-colname-y` (str): Column name for the UMAP Y coordinate (default: `UMAP2`).
+    * `--umap-min-zoom` (int): Minimum zoom for generated UMAP PMTiles (default: `0`).
+    * `--umap-max-zoom` (int): Maximum zoom for generated UMAP PMTiles (default: `18`).
     * `--keep-intermediate-files` (flag): Retain intermediate files generated.
     * `--skip-raster` (flag): Skip raster tile generation and related dependencies.
     * `--tmp-dir` (str): Path to a temporary directory (default: `<out-dir>/tmp`).

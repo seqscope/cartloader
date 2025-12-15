@@ -65,6 +65,10 @@ The decoding step applies a trained LDA model from [LDA training step](#lda-trai
 
 The UMAP visualization step generates UMAP embeddings of factors learned in [LDA training](#lda-training-step---init-lda), writing both coordinates and plots for reuse downstream.
 
+### 10x Segmentation Step (`--segment-10x`)
+
+The 10x segmentation step aggregates tiled pixel data into 10x Genomics-compatible hexagonal bin formats (MEX matrix). This allows the data to be used with tools designed for 10x Visium data.
+
 ---
 ## Parameters
 
@@ -79,6 +83,7 @@ Below are the core parameters. See more details in the collapsible section ("Aux
 * `--init-lda`: Run [LDA training step](#lda-training-step---init-lda).
 * `--decode`: Run [decoding step](#decoding-step---decode).
 * `--umap`: Run [UMAP step](#umap-visualization-step---umap).
+* `--segment-10x`: Run [10x segmentation step](#10x-segmentation-step---segment-10x).
 
 #### Input/Output Parameters
 
@@ -95,6 +100,7 @@ Below are the core parameters. See more details in the collapsible section ("Aux
 * `--include-feature-regex` (str): (Optional) Regex pattern for including features/genes.
 * `--exclude-feature-regex` (str): (Optional) Regex pattern for excluding features/genes.
 * `--cmap-file` (str): (Optional) Path to fixed color map TSV file. If not provided, FICTURE will generate a color map.
+* `--segment-width-10x` (str): Comma-separated hexagon flat-to-flat widths (µm) in 10x format (required if `--segment-10x`).
 
 ??? note "Auxiliary Paramaters"
 
@@ -119,26 +125,32 @@ Below are the core parameters. See more details in the collapsible section ("Aux
         * `--train-epoch` (int): Number of epochs to train LDA model (Default: 2).
     * Decoding-specific parameters:
         * `--fit-width` (int): Hexagon width (in µm) for model fitting (Default: same as train width).
-        * `--min-ct-per-unit-fit` (int): Minimum count per unit during model fitting (Default: 50).
+        <!-- * `--min-ct-per-unit-fit` (int): Minimum count per unit during model fitting (Default: 50). -->
         * `--anchor-res` (int): Anchor resolution used in decoding (Default: 6).
         * `--radius-buffer` (int): Buffer added to anchor resolution for decoding (Default: 1).
-        * `--fit-plot-um-per-pixel` (int): Image resolution for fit coarse plots (Default: 1).
-        * `--decode-scale` (int): Scales input coordinates to pixels in the output image (Default: 1)')
+        <!-- * `--fit-plot-um-per-pixel` (int): Image resolution for fit coarse plots (Default: 1). -->
+        * `--decode-scale` (int): Scales input coordinates to pixels in the output image (Default: 1)
     * Shared paramaters across steps:
         * `--seed` (int): Random seed for reproducibility (Default: 1).
         * `--min-ct-per-feature` (int): Minimum count per feature for LDA and decoding (Default: 20).
         * `--de-max-pval` (float): p-value cutoff for differential expression (Default: 1e-3).
         * `--de-min-fold` (float): Fold-change threshold for differential expression (Default: 1.5).
 
-    ** Environment Parameters**:
+    **Feature Filtering Parameters**:
+
+    * `--include-feature-regex` (str): Regex of feature names to include.
+    * `--exclude-feature-regex` (str): Regex of feature names to exclude.
+    
+    **Environment Parameters**:
     For tools that require specifying the path to their executable binaries, you may omit the path if the binary is already included in your system's `PATH`.
 
     * `--gzip` (str): Path to `gzip` binary; consider `pigz -p 4` for speed (Default: `gzip`).
     * `--sort` (str): Path to `sort` binary (Default: `sort`).
-    * `--sort-mem` (str): Memory allocated per `sort` process (Default: 1G).
+    * `--sort-mem` (str): Memory allocated per `sort` process (Default: `1G`).
     * `--spatula` (str): Path to `spatula` binary (Default: `spatula`).
     * `--ficture2` (str): Path to the `punkst` repository (Default to `punkst` directory in `submodules`)
     * `--python` (str): Path to Python 3 binary (Default: `python3`).
+    * `--R` (str): Path to `R` binary for UMAP generation (default: `R`).
 
     ** Run Parameters**:
 

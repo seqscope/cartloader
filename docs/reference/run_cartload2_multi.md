@@ -76,6 +76,11 @@ Below lists the most common parameters. Additional flags are forwarded to per‑
     * `--max-tile-bytes` (int): Maximum allowed tile size in bytes for PMTiles (default: `5_000_000`).
     * `--max-feature-counts` (int): Maximum number of features per tile (default: `500_000`).
     * `--preserve-point-density-thres` (int): Threshold to preserve point density in PMTiles (default: `1024`).
+    * `--umap-colname-factor` (str): Column name encoding dominant factor in UMAP (default: `topK`).
+    * `--umap-colname-x` (str): Column name for UMAP X coordinate (default: `UMAP1`).
+    * `--umap-colname-y` (str): Column name for UMAP Y coordinate (default: `UMAP2`).
+    * `--umap-min-zoom` (int): Minimum zoom for UMAP PMTiles (default: `0`).
+    * `--umap-max-zoom` (int): Maximum zoom for UMAP PMTiles (default: `18`).
     * `--transparent-below` / `--transparent-above` (int): Make pixels below/above the threshold transparent for dark/light backgrounds.
     * `--keep-intermediate-files` (flag): Retain intermediate files generated.
     * `--skip-raster` (flag): Skip raster tile generation and related dependencies.

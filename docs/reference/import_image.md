@@ -141,9 +141,8 @@ Below are the core arguments you’ll typically set. For all other options, expa
       - `--blocksize` (int, default: `512`): GDAL block size in pixels.
 
     **Auxiliary for --georeference**
-
-    Pick one bounds source:
-
+      Pick one bounds source:
+      - `--georef-detect` (flag): Used the detect bounds from image metadata (e.g., 'OME'). Extracted bounds will automatically be applied to png2pmtiles.
       - `--georef-pixel-tsv` (str): Pixel TSV (e.g., `*.pixel.sorted.tsv.gz` from run_ficture2).
       - `--georef-bounds-tsv` (str): One‑line TSV with `ulx,uly,lrx,lry`.
       - `--georef-bounds` (str): Bounds string `"ulx,uly,lrx,lry"`.
