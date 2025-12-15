@@ -408,7 +408,7 @@ def stage_upload_aws(cart_dir, args, prereq):
     ])
 
     # Inject optional params (preserves your original calls)
-    aws_cmd = add_param_to_cmd(aws_cmd, args, ["aws"])
+    aws_cmd = add_param_to_cmd(aws_cmd, args, ["aws", "profile"])
     aws_cmd = add_param_to_cmd(aws_cmd, args, ["restart", "n_jobs"])
     
     # Execute

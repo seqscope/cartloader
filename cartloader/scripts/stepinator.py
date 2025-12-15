@@ -27,7 +27,7 @@ aux_env_args = {
         "run_ficture": ['bgzip', "tabix", "gzip", "sort", "sort_mem"],
         "run_cartload": ['gzip', 'pmtiles', 'gdal_translate', 'gdaladdo', 'tippecanoe', 'spatula'],
         "image_png2pmtiles": ['pmtiles', 'gdal_translate', 'gdaladdo', "gdalinfo"],
-        "upload_aws": ['aws']
+        "upload_aws": ['aws', 'profile']
 }
 
 aux_env_args["run_ficture1"]= aux_env_args["run_ficture"]
