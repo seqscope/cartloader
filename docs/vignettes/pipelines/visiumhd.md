@@ -202,9 +202,7 @@ Below are explanations of the parameters used in the example. For the full list,
 
 ## Outputs
 
-### Space Ranger Assets JSON
-
-Example: `includes/visiumhd_space_ranger_assets.visiumhd_3prime_mouse_brain.json`[](../../../includes/visiumhd_space_ranger_assets.visiumhd_3prime_mouse_brain.json)
+<!-- ### Space Ranger Assets JSON
 
 ```json
 {% include-markdown "../../../includes/visiumhd_space_ranger_assets.visiumhd_3prime_mouse_brain.json" %}
@@ -226,4 +224,24 @@ Individual PMTiles and asset JSON files reside alongside it under `<out-dir>/car
 - Catalog to serve: `<out-dir>/cartload2/catalog.yaml`
 - SGE PMTiles (examples): `<out-dir>/cartload2/sge-mono-dark.pmtiles`, `<out-dir>/cartload2/sge-mono-light.pmtiles`
 - Factor PMTiles (examples): `<out-dir>/cartload2/t18_f24_p18_a6-results.pmtiles`, `<out-dir>/cartload2/t18_f24_p18_a6-pixel-raster.pmtiles`
-- Cells and Boundaries PMTiles: `<out-dir>/cartload2/spaceranger-cells.pmtiles`, `<out-dir>/cartload2/spaceranger-boundaries.pmtiles`
+- Cells and Boundaries PMTiles: `<out-dir>/cartload2/spaceranger-cells.pmtiles`, `<out-dir>/cartload2/spaceranger-boundaries.pmtiles` -->
+
+<div class="grid cards generic" markdown>
+
+-   ![Interactive Exploration](../../images/pipeline_vignettes/visiumhd_3prime_mouse_brain.t18_f24_p18_a6.png)
+
+    ---
+
+    #### View/Explore
+
+    The output are available in both CartoScope. 
+
+    [Explore in CartoScope](http://localhost:5173/dataset?uri=s3%2Fcartostore%2Fdata%2Fbatch%3D2025_12%2Fcartloader-pipeline-example-collection%2Fvisiumhd_3prime_mouse_brain){ .md-button .md-button--primary .button-tight-small }
+
+    <!-- [Download from Zenodo](https://zenodo.org/records/17958847){ .md-button .button-tight-small } -->
+
+</div>
+
+See more details of output at the Reference pages for [run_ficture2](../docs/reference/run_ficture2.md) and [run_cartload2](../docs/reference/run_cartload2.md).
+
+

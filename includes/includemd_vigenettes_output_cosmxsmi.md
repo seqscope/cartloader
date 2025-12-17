@@ -1,6 +1,6 @@
 <div class="grid cards generic" markdown>
 
--   ![Interactive Exploration](../docs/images/starter_vignettes/cosmxsmi.t18_f12_p18_a6.png)
+-   ![Interactive Exploration](../docs/images/starter_vignettes/cosmxsmi.t12_f12_p12_a6.png)
 
     ---
 
