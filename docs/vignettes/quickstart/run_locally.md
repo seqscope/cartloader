@@ -46,7 +46,7 @@ Download the example data:
 work_dir=/path/to/work/directory        # path to work directory that contains the downloaded input data
 cd $work_dir
 
-wget https://zenodo.org/records/15786632/files/seqscope_starter.std.tar.gz
+wget https://zenodo.org/records/17953582/files/seqscope_starter.std.tar.gz
 tar -zxvf seqscope_starter.std.tar.gz
 ```
 
