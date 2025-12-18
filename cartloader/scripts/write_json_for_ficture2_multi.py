@@ -16,9 +16,9 @@ def parse_arguments(_args):
     parser.add_argument('--in-feature', type=str, default=None, help='Path to the feature file.')
     parser.add_argument('--in-minmax', type=str, default=None, help='Path to the minmax file.')
     parser.add_argument('--in-feature-ficture', type=str, default=None, help='(Optional) If FICTURE used a different feature file than the in-feature file, specify the path to the feature file used for FICTURE analysis.')
-    parser.add_argument('--lda-model', nargs='*', type=str, default=None, help='LDA Model information: <model_type>,<model_path>,<model_id>,<train_width>,<n_factor>,<cmap>')
-    parser.add_argument('--decode', nargs='*', type=str, default=None, help='Projection information: <model_type>,<model_id>,<projection_id>,<fit_width>,<anchor_res>')
-    parser.add_argument('--umap', nargs='*', type=str, default=None, help='UMAP information if exists. Each entry: <model_type>,<model_id>,<umap_tsv>,<umap_png>,<umap_single_factor_png>.')
+    parser.add_argument('--lda-model', nargs='*', type=str, default=None, help='LDA Model information: <model_type>,<model_id>,<train_width>,<n_factor>,<cmap>,<model_path>,<shared_fit_path>,<fit_tsv_path>,<de_tsv_path>,<info_tsv_path>. Can be provided multiple times for multiple models.')
+    parser.add_argument('--decode', nargs='*', type=str, default=None, help='Projection information: <model_type>,<model_id>,<decode_id>,<fit_width>,<anchor_res>,<decode_pixel_tsv>,<decode_pixel_png>,<decode_pseudobulk_tsv>,<decode_de_tsv>,<decode_info_tsv>. Can be provided multiple times for multiple projections.')
+    parser.add_argument('--umap', nargs='*', type=str, default=None, help='UMAP information if exists. Each entry: <model_type>,<model_id>,<umap_tsv>,<umap_png>,<umap_single_factor_png>,<sample_umap_tsv>,<sample_umap_png>,<sample_umap_single_factor_png>. Can be provided multiple times for multiple UMAPs.')
 
     if len(_args) == 0:
         parser.print_help()
@@ -101,44 +101,46 @@ def write_json_for_ficture2_multi(_args):
 
     if args.lda_model is not None:
         for model in args.lda_model:
-            model_type, model_id, train_width, n_factor, cmap, model_path, fit_tsv_path, de_tsv_path, info_tsv_path = model.split(',')
+            model_type, model_id, train_width, n_factor, cmap, model_path, shared_fit_path, fit_tsv_path, de_tsv_path, info_tsv_path = model.split(',')
             key = (model_type, model_id)
             existing = model_dict.get(key)
+            model_entry = {
+                "model_type": model_type,
+                "model_id": model_id,
+                "outsets": 2, # if 2, cartoScope should expect two sets of outputs (shared and sample-specific)
+                "train_width": int(train_width),
+                "n_factor": int(n_factor),
+                "cmap": cmap,
+                "model_path": model_path,
+                "shared_fit_path": shared_fit_path,
+                "fit_path": fit_tsv_path,
+                "de_path": de_tsv_path,
+                "info_path": info_tsv_path,
+                "decode_params": []
+            }
             if existing is None:
-                model_entry = {
-                    "model_type": model_type,
-                    "model_id": model_id,
-                    "train_width": int(train_width),
-                    "n_factor": int(n_factor),
-                    "cmap": cmap,
-                    "model_path": model_path,
-                    "fit_path": fit_tsv_path,
-                    "de_path": de_tsv_path,
-                    "info_path": info_tsv_path,
-                    "decode_params": []
-                }
                 if _needs_feature_entry(args.in_feature_ficture, sge_feature_path):
                     model_entry["feature"] = args.in_feature_ficture
                 model_dict[key] = model_entry
                 train_params.append(model_entry)
             else:
                 msg_id = f"model ({model_type}, {model_id})"
+                
+                for field, value in model_entry.items():
+                    if field in ["n_factor", "cmap", "shared_fit_path", "fit_path", "de_path", "info_path"]:
+                        reconcile_field(existing, field, value, type="override", msg_id=msg_id)
+                
                 reconcile_field(
                     existing, "train_width", int(train_width),
                     type="override",
                     msg_id=msg_id
                 )
-                reconcile_field(existing, "n_factor", int(n_factor), type="override", msg_id=msg_id)
-                reconcile_field(existing, "cmap", cmap, type="override", msg_id=msg_id)
                 reconcile_field(
                     existing, "model_path", model_path,
                     type="override",
                     msg_id=msg_id,
                     normalize=lambda p: os.path.abspath(p)
                 )
-                reconcile_field(existing, "fit_path", fit_tsv_path, type="override", msg_id=msg_id)
-                reconcile_field(existing, "de_path", de_tsv_path, type="override", msg_id=msg_id)
-                reconcile_field(existing, "info_path", info_tsv_path, type="override", msg_id=msg_id)
                 if _needs_feature_entry(args.in_feature_ficture, sge_feature_path):
                     reconcile_field(
                         existing, "feature", args.in_feature_ficture,
@@ -169,36 +171,38 @@ def write_json_for_ficture2_multi(_args):
             if existing_dec is None:
                 model_entry["decode_params"].append(decode_entry)
             else:
-                msg_id = f"model ({model_type}, {model_id}) - decode_id {decode_id}"
-                reconcile_field(existing_dec, "fit_width", int(fit_width), type="override", msg_id=msg_id)
-                reconcile_field(existing_dec, "anchor_res", int(anchor_res), type="override", msg_id=msg_id)
-                reconcile_field(existing_dec, "pixel_tsv_path", decode_pixel_tsv, type="override", msg_id=msg_id)
-                reconcile_field(existing_dec, "pixel_png_path", decode_pixel_png, type="override", msg_id=msg_id)
-                reconcile_field(existing_dec, "pseudobulk_tsv_path", decode_pseudobulk_tsv, type="override", msg_id=msg_id)
-                reconcile_field(existing_dec, "de_tsv_path", decode_de_tsv, type="override", msg_id=msg_id)
-                reconcile_field(existing_dec, "info_tsv_path", decode_info_tsv, type="override", msg_id=msg_id)
+                for field, value in decode_entry.items():
+                    reconcile_field(existing_dec, field, value, type="override", msg_id=f"model ({model_type}, {model_id}) - decode_id {decode_id}")
 
     if args.umap is not None:
         for umap in args.umap:
-            model_type, model_id, umap_tsv, umap_png, umap_single_factor_png = umap.split(',')
+            model_type, model_id, umap_tsv, umap_png, umap_single_factor_png, sample_umap_tsv, sample_umap_png, sample_umap_single_factor_png  = umap.split(',')
             model_entry = model_dict.get((model_type, model_id))
             assert model_entry is not None, f"No matching model for UMAP entry: {umap}"
 
             umap_entry = {
-                "tsv": umap_tsv,
-                "png": umap_png,
-                "ind_png": umap_single_factor_png
+                "shared":{
+                    "tsv": umap_tsv,
+                    "png": umap_png,
+                    "ind_png": umap_single_factor_png
+                },
+                "sample":{
+                    "tsv": sample_umap_tsv,
+                    "png": sample_umap_png,
+                    "ind_png": sample_umap_single_factor_png
+                }
             }
 
             if "umap" not in model_entry:
                 model_entry["umap"] = umap_entry
             else:
                 existing_umap = model_entry["umap"]
-                msg_id = f"model ({model_type}, {model_id}) - UMAP"
-                reconcile_field(existing_umap, "tsv", umap_tsv, type="override", msg_id=msg_id)
-                reconcile_field(existing_umap, "png", umap_png, type="override", msg_id=msg_id)
-                reconcile_field(existing_umap, "ind_png", umap_single_factor_png, type="override", msg_id=msg_id)
-    
+                for key in ["shared", "sample"]:
+                    existing_sub_umap = existing_umap.get(key, {})
+                    new_sub_umap = umap_entry[key]
+                    for field in ["tsv", "png", "ind_png"]:
+                        reconcile_field(existing_sub_umap, field, new_sub_umap[field], type="override", msg_id=f"model ({model_type}, {model_id}) - UMAP - {key} {field}")
+
     json_data = {
         "in_sge": sge_data,
         "train_params": train_params

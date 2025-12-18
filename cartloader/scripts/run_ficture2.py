@@ -2,8 +2,19 @@ import sys, os, gzip, argparse, logging, shutil, subprocess, inspect
 import pandas as pd
 from cartloader.utils.minimake import minimake
 from cartloader.utils.utils import cmd_separator, scheck_app, add_param_to_cmd, read_minmax, flexopen, write_dict_to_file, load_file_to_dict, execute_makefile
+from cartloader.utils.ficture2_helper import (
+    define_lda_runs,
+    define_decode_runs,
+    add_umap_targets,
+)
 
 repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+LDA_CONFIG = {
+    "default_n_factor": "12",
+    "require_init_flag": True,
+    "allow_pretrained": False,
+    "width_error_msg": "When --init-lda is ON, provide at least one train width for LDA training using --width",
+}
 
 def parse_arguments(_args):
     """Parse command-line arguments."""
@@ -94,59 +105,6 @@ def parse_arguments(_args):
         sys.exit(0)
 
     return parser.parse_args(_args)
-
-def define_lda_runs(args):
-    assert args.init_lda, "--init-lda must be ON when running define_lda_runs()"
-    assert args.width is not None, "When --init-lda is ON, provide at least one train width for LDA training using --width"
-
-    if args.n_factor is None:
-        print("Warning: --n-factor is not provided for LDA. Using default values: 12,24")
-        args.n_factor = "12,24"
-
-    train_widths = [int(x) for x in args.width.split(",")] if args.width else [] #and not (args.use_external_model and args.external_model_type == "custom") else []
-    n_factors = [int(x) for x in args.n_factor.split(",")] if args.n_factor else []  #and not (args.use_external_model and args.external_model_type == "custom") else []
-
-    train_params= [
-        {
-         "model_type": "lda",
-         "train_width": train_width,
-         "n_factor": n_factor,
-         "model_id":f"t{train_width}_f{n_factor}",
-        }
-        for train_width in train_widths
-        for n_factor in n_factors
-    ]
-    return train_params
-
-def define_training_runs(args):
-    train_params = define_lda_runs(args)
-    return train_params
-
-def define_decode_runs(args):
-    decode_runs = []
-    train_params = define_training_runs(args)
-    for train_param in train_params:
-        model_type = train_param["model_type"]
-        train_width = train_param["train_width"]
-        n_factor = train_param["n_factor"]
-        model_id = train_param["model_id"]
-        model_prefix = os.path.join(args.out_dir, model_id)
-        model_path= f"{model_prefix}.model.tsv"
-        fit_widths = [train_width] if args.fit_width is None else [int(x) for x in args.fit_width.split(",")]
-        for fit_width in fit_widths:
-            decode_id = f"{model_id}_p{fit_width}_a{args.anchor_res}"
-            cmap_path = f"{model_prefix}.cmap.tsv" #define_cmap(args, model_id)
-            decode_runs.append({
-                "model_type": model_type,
-                "model_id": model_id,
-                "model_path": model_path,
-                "decode_id": decode_id,
-                "n_factor": n_factor,
-                "fit_width": fit_width,
-                "cmap_path": cmap_path,
-                "prerequisite_path": f"{model_prefix}.done"
-            })
-    return decode_runs
 
 def run_ficture2(_args):
     """Run all functions in FICTURE by using GNU Makefile
@@ -367,7 +325,7 @@ def run_ficture2(_args):
 
     # - lda or umap
     if args.init_lda or args.umap:
-        lda_runs = define_lda_runs(args)
+        lda_runs = define_lda_runs(args, **LDA_CONFIG)
         for lda_params in lda_runs:
             # params & prefix
             train_width = lda_params["train_width"]
@@ -381,7 +339,7 @@ def run_ficture2(_args):
             hexagon = f"{args.out_dir}/hexagon.d_{train_width}.randomized.tsv"
             hexagon_meta = f"{args.out_dir}/hexagon.d_{train_width}.json"
             lda_model_matrix = f"{model_prefix}.model.tsv"
-            lda_fit_tsv = f"{model_prefix}.results.tsv"
+            lda_fit_tsv = f"{model_prefix}.results.tsv.gz"
             #lda_postcount_tsv = f"{model_prefix}.pseudobulk.tsv"
             lda_de = f"{model_prefix}.bulk_chisq.tsv"
 
@@ -417,13 +375,13 @@ def run_ficture2(_args):
                     f"--out-model {model_prefix}.model.tsv",
                     f"--reorder",
                     f"--in-tsv {model_prefix}.unsorted.results.tsv",
-                    f"--out-tsv {model_prefix}.results.tsv.gz",
+                    f"--out-tsv {lda_fit_tsv}",
                     f"--offset-model 1"
                 ])
                 cmds.append(cmd)
                 #cmds.append(f"rm -f {model_prefix}.unsorted.model.tsv {model_prefix}.unsorted.results.tsv {model_prefix}.unsorted.results.nohex.tsv")
                 cmds.append(f"rm -f {model_prefix}.unsorted.model.tsv {model_prefix}.unsorted.results.tsv")
-                cmds.append(f"[ -f {lda_fit_tsv}.gz ] && [ -f {lda_model_matrix} ] && touch {model_prefix}.done" )
+                cmds.append(f"[ -f {lda_fit_tsv} ] && [ -f {lda_model_matrix} ] && touch {model_prefix}.done" )
                 mm.add_target(f"{model_prefix}.done", [f"{args.out_dir}/transcripts.tiled.done", f"{args.out_dir}/hexagon.d_{train_width}.done", feature_plain], cmds)
 
                 # create color table
@@ -449,53 +407,20 @@ def run_ficture2(_args):
             # - umap
             if args.umap:
                 scheck_app(args.R)
-
-                create_umap_rscript=f"{repo_dir}/cartloader/r/create_umap.r"
-                draw_umap_rscript=f"{repo_dir}/cartloader/r/draw_umap.r"
-                draw_umap_single_rscript=f"{repo_dir}/cartloader/r/draw_umap_single.r"
-            
-                umap_tsv = f"{model_prefix}.umap.tsv.gz"
-                umap_png = f"{model_prefix}.umap.png"
-                umap_single_prob_png = f"{model_prefix}.umap.single.prob.png"
-
-                cmds = cmd_separator([], f"UMAP for {train_width}um and {n_factor} factors...")
-                cmd = " ".join([
-                    f"Rscript {create_umap_rscript}",
-                    f"--input {lda_fit_tsv}.gz",
-                    f"--out-prefix {model_prefix}"
-                    ])
-                cmds.append(cmd)
-                mm.add_target(umap_tsv, [f"{model_prefix}.done", color_map], cmds)
-
-                cmds = cmd_separator([], f"UMAP Visualization for {train_width}um and {n_factor} factors...")
-                cmd = " ".join([
-                    f"Rscript {draw_umap_rscript}",
-                    f"--input {umap_tsv}",
-                    f"--out-prefix {model_prefix}",
-                    f"--cmap {color_map}",
-                    f'--subtitle "{model_id}"'
-                    ])
-                cmds.append(cmd)
-                mm.add_target(umap_png, [f"{model_prefix}.done", color_map, umap_tsv], cmds)
-
-                cmds = cmd_separator([], f"UMAP Visualization (plot for individual factors; colorized by probability) for {train_width}um and {n_factor} factors...")
-                cmd = " ".join([
-                    f"Rscript {draw_umap_single_rscript}",
-                    f"--input {umap_tsv}",
-                    f"--out-prefix {model_prefix}",
-                    f"--cmap {color_map}",
-                    f'--subtitle "{model_id}"',
-                    f"--mode prob"
-                    ])
-                cmds.append(cmd)
-                mm.add_target(umap_single_prob_png, [f"{model_prefix}.done", color_map, umap_tsv], cmds)
+                add_umap_targets(
+                    mm=mm,
+                    input_tsv=f"{lda_fit_tsv}",
+                    color_map=color_map,
+                    out_prefix=model_prefix,
+                    subtitle=model_id,
+                )
 
     # - decode
     if args.decode:
         scheck_app(args.sort)
         scheck_app(args.gzip)
 
-        decode_runs = define_decode_runs(args)
+        decode_runs = define_decode_runs(args, **LDA_CONFIG)
         for decode_params in decode_runs:
             # input
             model_prefix = os.path.join(args.out_dir, decode_params["model_id"])
@@ -601,7 +526,7 @@ def run_ficture2(_args):
             if args.umap:
                 summary_aux_args_umap = ["--umap"]
             
-            train_params = define_lda_runs(args)
+            train_params = define_lda_runs(args, **LDA_CONFIG)
             for train_param in train_params:
                 train_width = train_param["train_width"]
                 n_factor = train_param["n_factor"]
@@ -626,7 +551,7 @@ def run_ficture2(_args):
         # projection & decode
         if args.decode:
             summary_aux_args_decode = ["--decode"]
-            decode_runs = define_decode_runs(args)
+            decode_runs = define_decode_runs(args, **LDA_CONFIG)
             for decode_params in decode_runs:
                 model_type = decode_params["model_type"]
                 model_id = decode_params["model_id"]
