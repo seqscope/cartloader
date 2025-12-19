@@ -4,9 +4,9 @@ suppressPackageStartupMessages({
   library(dplyr)
 })
 
-if (!requireNamespace("this.path", quietly = TRUE)) {
-    install.packages("this.path", repos = "https://cran.rstudio.com")
-}
+# if (!requireNamespace("this.path", quietly = TRUE)) {
+#     install.packages("this.path", repos = "https://cran.rstudio.com")
+# }
 
 script_dir <- this.path::this.dir()
 cartloader_root <- dirname(dirname(script_dir))

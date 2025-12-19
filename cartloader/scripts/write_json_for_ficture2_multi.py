@@ -107,7 +107,7 @@ def write_json_for_ficture2_multi(_args):
             model_entry = {
                 "model_type": model_type,
                 "model_id": model_id,
-                "outsets": 2, # if 2, cartoScope should expect two sets of outputs (shared and sample-specific)
+                "output_set": ["shared", "sample"],
                 "train_width": int(train_width),
                 "n_factor": int(n_factor),
                 "cmap": cmap,
