@@ -1,5 +1,5 @@
 import os
-from cartloader.utils.utils import flexopen, cmd_separator
+from cartloader.utils.utils import flexopen, cmd_separator, factor_id_to_name
 
 repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -131,3 +131,116 @@ def add_umap_targets(
     ])
     cmds.append(cmd)
     mm.add_target(umap_single_prob_png, [f"{out_prefix}.done", color_map, umap_tsv], cmds)
+
+## transform FICTURE parameters to FACTOR assets (new standard)
+def ficture2_params_to_factor_assets(params, skip_raster=False):
+    ## model_id
+    ## proj_params -> proj_id
+    ## proj_params -> decode_params -> decode_id
+    suffix_factormap = "-factor-map.tsv"
+    suffix_de = "-bulk-de.tsv"
+    suffix_info = "-info.tsv"
+    suffix_model = "-model.tsv"
+    suffix_post = "-pseudobulk.tsv.gz"
+    suffix_rgb = "-rgb.tsv"
+    suffix_hex_coarse = ".pmtiles"
+    suffix_raster = "-pixel-raster.pmtiles"
+    suffix_umap_tsv = "-umap.tsv.gz"
+    suffix_umap_pmtiles = "-umap.pmtiles"
+    suffix_umap_png = ".umap.png"
+    suffix_umap_ind_png = ".umap.single.prob.png"
+
+    def _create_decode_asset(decode_param):
+        if not "decode_id" in decode_param:
+            raise ValueError(f"decode_id is missing from FICTURE parameter for {model_id}")
+        decode_id = decode_param["decode_id"].replace("_", "-")
+
+        asset = {
+            "id": model_id,
+            "name": factor_id_to_name(model_id),
+            "model_id": model_id,
+            "decode_id": decode_id,
+            "de": (decode_id if is_multi_sample else model_id) + suffix_de,
+            "info": (decode_id if is_multi_sample else model_id) + suffix_info,
+            "model": model_id + suffix_model,
+            "post": decode_id + suffix_post,
+            "rgb": model_id + suffix_rgb,
+            "pmtiles": {
+                "hex_coarse": model_id + suffix_hex_coarse,
+                **({"raster": decode_id + suffix_raster} if not skip_raster else {})
+            }
+        }
+        if is_multi_sample:
+            asset["shared_de"] = model_id + suffix_de
+            asset["shared_post"] = model_id + suffix_model
+            asset["shared_info"] = model_id + suffix_info
+
+        if "factor_map" in param:
+            asset["factor_map"] = model_id + suffix_factormap
+        
+        return asset
+
+    out_assets = []
+    for param in params: ## train_params is a list of dictionaries
+        # print(param)
+        # print(param.get("umap", "NO UMAP"))
+        if not "model_id" in param:
+            raise ValueError(f"model_id is missing from FICTURE parameters")
+        model_id = param["model_id"].replace("_", "-")
+
+        len_decode_params = len(param["decode_params"])
+        umap_params = param.get("umap",{})
+        is_multi_sample = param.get("analysis") == "multi-sample"
+
+        # construct out_assets 
+        out_asset={}
+        if len_decode_params == 0: ## train_param only
+            out_asset = {
+                "id": model_id,
+                "name": factor_id_to_name(model_id),
+                "model_id": model_id,
+                "de": model_id + suffix_de,
+                "info": model_id + suffix_info,
+                "model": model_id + suffix_model,
+                "rgb": model_id + suffix_rgb,
+                "pmtiles": {
+                    "hex_coarse": model_id + suffix_hex_coarse
+                }
+            }
+            if "factor_map" in param:
+                out_asset["factor_map"] = model_id + suffix_factormap
+        elif len_decode_params == 1:
+            decode_param = param["decode_params"][0]
+            out_asset = _create_decode_asset(decode_param)
+        else: ## multiple decode_params
+            for decode_param in param["decode_params"]:
+                out_asset = _create_decode_asset(decode_param)
+        # add umap
+        if umap_params:
+            if is_multi_sample:
+                # Sample-specific UMAP
+                out_asset["umap"] = {
+                    "tsv": model_id + suffix_umap_tsv,
+                    "pmtiles": model_id + suffix_umap_pmtiles,
+                    "png": model_id + suffix_umap_png,
+                    "ind_png": model_id + suffix_umap_ind_png,
+                }
+                # Shared UMAP
+                out_asset["shared_umap"] = {
+                    "tsv": model_id + "-shared" + suffix_umap_tsv,
+                    "pmtiles": model_id + "-shared" + suffix_umap_pmtiles,
+                    "png": model_id + "-shared" + suffix_umap_png,
+                    "ind_png": model_id + "-shared" + suffix_umap_ind_png,
+                }
+            else:
+                out_asset["umap"] = {
+                    "tsv": model_id + suffix_umap_tsv,
+                    "pmtiles": model_id + suffix_umap_pmtiles,
+                    "png": model_id + suffix_umap_png,
+                    "ind_png": model_id + suffix_umap_ind_png,
+                }
+        # append
+        out_assets.append(out_asset)
+
+    return out_assets
+

@@ -3,8 +3,9 @@ import pandas as pd
 from pathlib import Path
 
 from cartloader.utils.minimake import minimake
-from cartloader.utils.utils import cmd_separator, scheck_app, create_custom_logger, load_file_to_dict, write_dict_to_file, ficture2_params_to_factor_assets, read_minmax, flexopen, execute_makefile, valid_and_touch_cmd
+from cartloader.utils.utils import cmd_separator, scheck_app, create_custom_logger, load_file_to_dict, write_dict_to_file, read_minmax, flexopen, execute_makefile, valid_and_touch_cmd
 from cartloader.utils.color_helper import normalize_rgb
+from cartloader.utils.ficture2_helper import ficture2_params_to_factor_assets
 
 def parse_arguments(_args):
     """
@@ -333,7 +334,7 @@ def run_cartload2(_args):
                 },
                 "de":{
                     "required": False,
-                    "in": train_param.get("de_path",f"{in_prefix}.bulk_chisq.tsv"),
+                    "in": train_param.get("de_path", f"{in_prefix}.bulk_chisq.tsv"),
                     "out": f"{out_prefix}-bulk-de.tsv"
                 },
                 "info":{
@@ -353,7 +354,7 @@ def run_cartload2(_args):
             # umap
             umap = train_param.get("umap", {})
             # if umap is a dict,
-            if train_param.get("output_set",[])==["shared", "sample"]:
+            if train_param.get("analysis") == "multi-sample":
                 process_umap(umap.get("shared"), mm, args, out_prefix+"-shared", model_id, fic_jsonf)
                 process_umap(umap.get("sample"), mm, args, out_prefix, model_id, fic_jsonf)
             else:
