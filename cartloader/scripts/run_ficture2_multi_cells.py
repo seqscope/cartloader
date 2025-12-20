@@ -310,17 +310,17 @@ def run_ficture2_multi_cells(_args):
                     sample_leiden_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.leiden"
                     clustf = samp2clust[sample_id]
                     logger.info(f"Reformatting existing cluster file {clustf} for sample {sample_id}...")
-                    with flexopen(clustf, "rt") as rf, flexopen(f"{sample_leiden_prefix}.tsv", "wt") as wf_sample:
+                    with flexopen(clustf, "rt") as rf, flexopen(f"{sample_leiden_prefix}.tsv.gz", "wt") as wf_sample:
                         delim = None
                         nlines = 0
                         wf_sample.write("cell_id\tcluster\n")
                         for line in rf:
                             if delim is None:
-                                if line.contains("\t"):
+                                if line.find("\t") != -1:
                                     delim = "\t"
-                                elif line.contains(","):
+                                elif line.find(",") != -1:
                                     delim = ","
-                                elif line.contains(" "):
+                                elif line.bind(" ") != -1:
                                     delim = " "
                                 else:
                                     raise ValueError(f"Cannot determine delimiter in existing cluster file based on the first line {line}.")
