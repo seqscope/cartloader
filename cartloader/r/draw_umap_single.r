@@ -3,8 +3,9 @@ suppressPackageStartupMessages({
   library(data.table)
 })
 
-script_path <- normalizePath(sub("^--file=", "", commandArgs(trailingOnly = FALSE)[grep("^--file=", commandArgs(trailingOnly = FALSE))]))
-script_dir <- dirname(script_path)
+#script_path <- normalizePath(sub("^--file=", "", commandArgs(trailingOnly = FALSE)[grep("^--file=", commandArgs(trailingOnly = FALSE))]))
+#script_dir <- dirname(script_path)
+script_dir <- this.path::this.dir()
 cartloader_root <- dirname(script_dir)
 default_cmap <- file.path(cartloader_root, "assets", "fixed_color_map_256.tsv")
 source(file.path(script_dir, "umap_utils.r"))

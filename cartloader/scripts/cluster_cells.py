@@ -1,8 +1,8 @@
 import sys, os, gzip, argparse, logging, warnings, shutil, subprocess, ast, csv, yaml, inspect
 import pandas as pd
 import numpy as np
-from scipy.stats import chi2
 import subprocess
+from cartloader.utils.minimake import minimake
 
 from cartloader.utils.utils import scheck_app, create_custom_logger, flexopen, unquote_str, smartsort, write_dict_to_file, load_file_to_dict, run_command
 
@@ -30,6 +30,7 @@ def parse_arguments(_args):
     cmd_params.add_argument('--umap', action='store_true', default=False, help='Generate UMAP manifolds based on LDA factorization')
     cmd_params.add_argument('--pseudobulk', action='store_true', default=False, help='Generate pseudobulk files based on Leiden clusters')
     cmd_params.add_argument('--heatmap', action='store_true', default=False, help='Generate heamap between LDA factors and Leiden clusters')
+    cmd_params.add_argument('--decode', action='store_true', default=False, help='Perform pixel-level decoding based on cell clusters. Onlt available when --pixel is specified.')
 
     inout_params = parser.add_argument_group("Input output parameters", "Input and output parameters")
     inout_params.add_argument('--mex-dir', type=str, help='Directory containing MEX files')
@@ -93,6 +94,10 @@ def cluster_cells(_args):
         args.tsne = True
         args.umap = True
         args.heatmap = True
+        if args.pixel is not None:
+            args.decode = True
+        else:
+            logger.warning("--pixel is not specified. --decode will be skipped.")
     
     if not args.sptsv and not args.lda and not args.leiden and not args.pseudobulk and not args.tsne and not args.umap and not args.heatmap:
         raise ValueError("At least one action must be enabled.")
@@ -231,6 +236,31 @@ def cluster_cells(_args):
         result = subprocess.run(cmd, shell=True, check=True)
         if result.returncode != 0:
             raise ValueError(f"Failed to create heatmap: {cmd}")
+        
+    if args.decode:
+        if args.pixel is None:
+            raise ValueError("--pixel must be specified when --decode is enabled.")
+        logger.info(f"Performing pixel-level decoding based on cell clusters")
+        modelf = f"{args.out}.leiden.pseudobulk.tsv.gz"
+        cmd = " ".join([
+            ficture2bin, "pixel-decode",
+            f"--model {model_path}",
+            f"--in-tsv {args.out_dir}/transcripts.tiled.tsv",
+            f"--in-index {args.out_dir}/transcripts.tiled.index",
+            f"--temp-dir {args.out_dir}/tmp/{decode_id}",
+            f"--out {decode_prefix}.tsv",
+            f"--icol-x {args.colidx_x-1}",
+            f"--icol-y {args.colidx_y-1}",
+            f"--icol-feature 2",
+            f"--icol-val 3",
+            f"--hex-grid-dist {fit_width}",
+            f"--n-moves {fit_n_move}",
+            f"--pixel-res 0.5",
+            f"--threads {args.threads}",
+            f"--seed {args.seed}",
+            f"--output-original"
+            ])
+
     logger.info("Analysis Finished")
 
 if __name__ == "__main__":
