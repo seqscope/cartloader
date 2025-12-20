@@ -75,6 +75,9 @@ def parse_arguments(_args):
     # project from external model
     aux_params.add_argument('--pretrained-model', type=str, help='Path to a pre-trained model to use for projection. If provided, LDA training will be skipped, and the provided model will be used for projection.')
     aux_params.add_argument('--list-cluster', type=str, help='Path to a existing cluster files to create pseudobulk matrix in the format of [SAMPLE_ID] [CLUSTER_FILE]. If provided, Leiden clustering will be skipped, and the provided cluster files will be used for pseudobulk generation.')
+    aux_params.add_argument('--meta-colname-cell-id', type=str, default="cell_id", help='Column name for cell IDs in the metadata file (default: cell_id)')
+    aux_params.add_argument('--meta-colname-x', type=str, default="X", help='Column name for X coordinates in the metadata file (default: X)')
+    aux_params.add_argument('--meta-colname-y', type=str, default="Y", help='Column name for Y coordinates in the metadata file (default: Y)')
 
     # AUX gene-filtering params
     aux_ftrfilter_params = parser.add_argument_group( "Feature Customizing Auxiliary Parameters", "Customize features (typically genes) used by FICTURE without altering the original feature TSV") # This ensures the original feature TSV file is retained in the output JSON file for downstream processing 
@@ -297,18 +300,21 @@ def run_ficture2_multi_cells(_args):
             with flexopen(args.list_cluster, "rt") as rf:
                 for line in rf:
                     toks = line.strip().split("\t")
-                    if len(toks) != 2:
-                        raise ValueError(f"Each line in --list-cluster must have exactly 2 columns. Found {len(toks)} columns in line: {line}")
+                    if len(toks) != 3:
+                        raise ValueError(f"Each line in --list-cluster must have exactly 3 columns containing [SAMPLE_ID] [CLUSTER_FILE] [METADTA_FILE]")
                     sample_id = toks[0]
                     cluster_file = toks[1]
+                    metadata_file = toks[2]
                     if not os.path.exists(cluster_file):
                         raise FileNotFoundError(f"File not found: {cluster_file} (from --list-cluster)")
-                    samp2clust[sample_id] = cluster_file
+                    if not os.path.exists(metadata_file):
+                        raise FileNotFoundError(f"File not found: {metadata_file} (from --list-cluster)")
+                    samp2clust[sample_id] = [cluster_file, metadata_file]
             with flexopen(f"{leiden_prefix}.tsv.gz", "wt") as wf:
                 wf.write("sample_id\tcell_id\tcluster\n")
                 for sample_id in in_samples: 
                     sample_leiden_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.leiden"
-                    clustf = samp2clust[sample_id]
+                    clustf = samp2clust[sample_id][0]
                     logger.info(f"Reformatting existing cluster file {clustf} for sample {sample_id}...")
                     with flexopen(clustf, "rt") as rf, flexopen(f"{sample_leiden_prefix}.tsv.gz", "wt") as wf_sample:
                         delim = None
@@ -320,7 +326,7 @@ def run_ficture2_multi_cells(_args):
                                     delim = "\t"
                                 elif line.find(",") != -1:
                                     delim = ","
-                                elif line.bind(" ") != -1:
+                                elif line.find(" ") != -1:
                                     delim = " "
                                 else:
                                     raise ValueError(f"Cannot determine delimiter in existing cluster file based on the first line {line}.")
@@ -333,7 +339,42 @@ def run_ficture2_multi_cells(_args):
                                 wf.write(f"{sample_id}\t{cell_id}\t{cluster_id}\n")
                                 wf_sample.write(f"{cell_id}\t{cluster_id}\n")
                             nlines += 1
-            cmds = cmd_separator([], f"Reformatting Leiden clusters...")
+            ## write per-sample metadata file
+            cmds = cmd_separator([], f"Processing existing clusters...")
+            for sample_id in in_samples:
+                logger.info(f"Processing metadata for sample {sample_id}...")
+                metaf = samp2clust[sample_id][1]
+                sample_sptsv_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.sptsv"
+                with flexopen(metaf, "rt") as rf, flexopen(f"{sample_sptsv_prefix}.cell.metadata.tsv", "wt") as wf_sample:
+                    delim = None
+                    header = None
+                    for line in rf:
+                        if delim is None:
+                            if line.find("\t") != -1:
+                                delim = "\t"
+                            elif line.find(",") != -1:
+                                delim = ","
+                            elif line.find(" ") != -1:
+                                delim = " "
+                            else:
+                                raise ValueError(f"Cannot determine delimiter in existing metadata file based on the first line {line}.")
+                        toks = line.strip().split(delim)
+                        if nlines == 0:
+                            col2idx = {colname.replace('"', ''): idx for idx, colname in enumerate(toks)}
+                            idx_cell_id = col2idx.get(args.meta_colname_cell_id, None)
+                            idx_x = col2idx.get(args.meta_colname_x, None)
+                            idx_y = col2idx.get(args.meta_colname_y, None)
+                            if idx_cell_id is None or idx_x is None or idx_y is None:
+                                raise ValueError(f"Column names {args.meta_colname_cell_id}, {args.meta_colname_x}, {args.meta_colname_y} not found in existing metadata file {metaf}.")
+                            wf_sample.write("cell_id\tX\tY\n")
+                        else:
+                            cell_id = toks[idx_cell_id].replace('"', '')
+                            x = toks[idx_x]
+                            y = toks[idx_y]
+                            wf_sample.write(f"{cell_id}\t{x}\t{y}\n")     
+                draw_manifold_rscript=f"{repo_dir}/cartloader/r/draw_manifold_clust.r"
+                cmd = f"{args.R} '{draw_manifold_rscript}' --tsv-manifold '{sample_sptsv_prefix}.cell.metadata.tsv' --tsv-clust '{sample_leiden_prefix}.tsv.gz' --tsv-colname-x X --tsv-colname-y Y --out '{sample_leiden_prefix}.xy.png' --tsv-colname-clust cluster"
+                cmds.append(cmd)
             cmds.append(f"[ -f {leiden_prefix}.tsv.gz ] && touch {leiden_prefix}.done" )
             mm.add_target(f"{leiden_prefix}.done", [f"{args.list_cluster}", f"{lda_prefix}.done"], cmds)
 
