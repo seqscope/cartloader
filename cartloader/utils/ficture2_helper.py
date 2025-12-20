@@ -215,6 +215,11 @@ def ficture2_params_to_factor_assets(params, skip_raster=False):
         else: ## multiple decode_params
             for decode_param in param["decode_params"]:
                 out_asset = _create_decode_asset(decode_param)
+        
+        # add analysis info
+        if param.get("analysis") == "multi-sample":
+            out_asset["analysis"] = "multi-sample"
+
         # add umap
         if umap_params:
             if is_multi_sample:
