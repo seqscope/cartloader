@@ -16,7 +16,7 @@ def parse_arguments(_args):
     run_params.add_argument('--restart', action='store_true', default=False, help='Ignore existing outputs and start from the beginning')
     run_params.add_argument('--threads', type=int, default=8, help='Maximum number of threads per job (default: 8)')
     run_params.add_argument('--n-jobs', type=int, default=2, help='Number of parallel jobs to run (default: 2)')
-    run_params.add_argument('--makefn', type=str, default="run_ficture2_multi_cells.mk", help='File name of Makefile to write (default: run_ficture2_multi.mk)')
+    run_params.add_argument('--makefn', type=str, help='File name of Makefile to write (default: run_ficture2_multi.mk)')
 
     cmd_params = parser.add_argument_group("Commands", "Commands to run together")
     cmd_params.add_argument('--all', action='store_true', default=False, help='Enable all actions: --cells and --boundaries')
@@ -114,6 +114,9 @@ def run_ficture2_multi_cells(_args):
     """
     # args
     args=parse_arguments(_args)
+
+    if args.makefn is None:
+        args.makefn = f"run_ficture2_multi_cells.{args.out_prefix}.mk"
 
     # input/output/other files
     # dirs
