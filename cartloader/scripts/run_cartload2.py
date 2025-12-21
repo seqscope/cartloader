@@ -341,6 +341,7 @@ def run_cartload2(_args):
                 cmd = " ".join([
                     "cartloader", "run_boundaries2pmtiles",
                     "--in-csv", cell_boundaries_f,
+                    "--in-format 10x_xenium",
                     "--in-clust", cell_clust_f,
                     "--out-prefix", f"{out_prefix}-boundaries",
                     "--threads", str(args.threads),
