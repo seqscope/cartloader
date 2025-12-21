@@ -32,7 +32,7 @@ def parse_arguments(_args):
     inout_params = parser.add_argument_group("Input/Output Parameters", "Input and output parameters for FICTURE")
     inout_params.add_argument('--out-dir', required=True, type=str, help='Output directory')
     inout_params.add_argument('--out-prefix', type=str, default="cells", help='Prefix for output files (default: cells)')
-    inout_params.add_argument('--out-json', type=str, default=None, help="Path to output JSON file to store analysis parameters (default: <out-dir>/ficture.params.json)")
+    inout_params.add_argument('--out-json', type=str, default=None, help="Path to output JSON file to store analysis parameters (default: <out-dir>/ficture.cells.params.json)")
     inout_params.add_argument('--in-dir', type=str, default=None, help='Path to input directory containing FICTURE output files. Same to out_dit if not specified')
     inout_params.add_argument('--mex-dir', type=str, help='Directory containing MEX files')
     inout_params.add_argument('--mex-bcd', type=str, default="barcodes.tsv.gz", help='Barcode files in MEX format')
@@ -75,9 +75,11 @@ def parse_arguments(_args):
     # project from external model
     aux_params.add_argument('--pretrained-model', type=str, help='Path to a pre-trained model to use for projection. If provided, LDA training will be skipped, and the provided model will be used for projection.')
     aux_params.add_argument('--list-cluster', type=str, help='Path to a existing cluster files to create pseudobulk matrix in the format of [SAMPLE_ID] [CLUSTER_FILE]. If provided, Leiden clustering will be skipped, and the provided cluster files will be used for pseudobulk generation.')
-    aux_params.add_argument('--meta-colname-cell-id', type=str, default="cell_id", help='Column name for cell IDs in the metadata file (default: cell_id)')
-    aux_params.add_argument('--meta-colname-x', type=str, default="X", help='Column name for X coordinates in the metadata file (default: X)')
-    aux_params.add_argument('--meta-colname-y', type=str, default="Y", help='Column name for Y coordinates in the metadata file (default: Y)')
+    aux_params.add_argument('--list-xy', type=str, help='Path to a existing file containing X/Y locations of each cell. If provided, X/Y locations will be read from the provided file instead of computing from pixel file.')
+    aux_params.add_argument('--list-boundaries', type=str, help='Path to a existing file containing cell boundaries. This file will simply be stored in the output JSON for future use.')
+    aux_params.add_argument('--xy-colname-cell-id', type=str, default="cell_id", help='Column name for cell IDs in the metadata file (default: cell_id)')
+    aux_params.add_argument('--xy-colname-x', type=str, default="X", help='Column name for X coordinates in the metadata file (default: X)')
+    aux_params.add_argument('--xy-colname-y', type=str, default="Y", help='Column name for Y coordinates in the metadata file (default: Y)')
 
     # AUX gene-filtering params
     aux_ftrfilter_params = parser.add_argument_group( "Feature Customizing Auxiliary Parameters", "Customize features (typically genes) used by FICTURE without altering the original feature TSV") # This ensures the original feature TSV file is retained in the output JSON file for downstream processing 
@@ -275,51 +277,38 @@ def run_ficture2_multi_cells(_args):
     if args.leiden:
         lda_prefix = os.path.join(args.out_dir, args.out_prefix) + ".lda"
         leiden_prefix = os.path.join(args.out_dir, args.out_prefix) + ".leiden"
+        cmds = cmd_separator([], f"Generating Leiden clusters...")
         if args.list_cluster is None:
-            cmds = cmd_separator([], f"Generating Leiden clusters...")
-            cmd = f"cartloader lda_leiden_cluster --offset-data 4 --tsv '{lda_prefix}.results.tsv' --out '{leiden_prefix}.tsv.gz' --resolution {args.resolution} --key-ids sample_id cell_id"
+            cmd = f"cartloader lda_leiden_cluster --offset-data 4 --tsv '{lda_prefix}.results.tsv' --out '{leiden_prefix}.tsv.gz' --resolution {args.resolution} --colname-cluster topK --key-ids sample_id cell_id"
             cmds.append(cmd)
             for sample_id in in_samples:
                 sample_lda_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.lda"
                 sample_leiden_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.leiden"
                 sample_sptsv_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.sptsv"
-                cmd = f"cartloader lda_leiden_cluster --offset-data 3 --tsv '{sample_lda_prefix}.results.tsv' --out '{sample_leiden_prefix}.tsv.gz' --resolution {args.resolution} --key-ids cell_id"
+                cmd = f"cartloader lda_leiden_cluster --offset-data 3 --tsv '{sample_lda_prefix}.results.tsv' --out '{sample_leiden_prefix}.tsv.gz' --resolution {args.resolution} --colname-cluster topK --key-ids cell_id"
                 cmds.append(cmd)
-
-                ## spatial visualization of leiden clusters per sample
-                draw_manifold_rscript=f"{repo_dir}/cartloader/r/draw_manifold_clust.r"
-                cmd = f"{args.R} '{draw_manifold_rscript}' --tsv-manifold '{sample_sptsv_prefix}.cell.metadata.tsv' --tsv-clust '{sample_leiden_prefix}.tsv.gz' --tsv-colname-x X --tsv-colname-y Y --out '{sample_leiden_prefix}.xy.png' --tsv-colname-clust cluster"
-                cmds.append(cmd)
-    
-                #cmds.append(f"[ -f '{sample_leiden_prefix}.tsv.gz' ] && touch '{sample_leiden_prefix}.done'" )
-            cmds.append(f"[ -f '{leiden_prefix}.tsv.gz' ] && touch '{leiden_prefix}.done'" )
-            mm.add_target(f"{leiden_prefix}.done", [f"{lda_prefix}.done"], cmds)
         else:
-            ## Using existing cluster
             samp2clust = {}
             with flexopen(args.list_cluster, "rt") as rf:
                 for line in rf:
                     toks = line.strip().split("\t")
-                    if len(toks) != 3:
+                    if len(toks) != 2:
                         raise ValueError(f"Each line in --list-cluster must have exactly 3 columns containing [SAMPLE_ID] [CLUSTER_FILE] [METADTA_FILE]")
                     sample_id = toks[0]
                     cluster_file = toks[1]
-                    metadata_file = toks[2]
                     if not os.path.exists(cluster_file):
                         raise FileNotFoundError(f"File not found: {cluster_file} (from --list-cluster)")
-                    if not os.path.exists(metadata_file):
-                        raise FileNotFoundError(f"File not found: {metadata_file} (from --list-cluster)")
-                    samp2clust[sample_id] = [cluster_file, metadata_file]
+                    samp2clust[sample_id] = cluster_file
             with flexopen(f"{leiden_prefix}.tsv.gz", "wt") as wf:
-                wf.write("sample_id\tcell_id\tcluster\n")
+                wf.write("sample_id\tcell_id\ttopK\n")
                 for sample_id in in_samples: 
                     sample_leiden_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.leiden"
-                    clustf = samp2clust[sample_id][0]
+                    clustf = samp2clust[sample_id]
                     logger.info(f"Reformatting existing cluster file {clustf} for sample {sample_id}...")
                     with flexopen(clustf, "rt") as rf, flexopen(f"{sample_leiden_prefix}.tsv.gz", "wt") as wf_sample:
                         delim = None
                         nlines = 0
-                        wf_sample.write("cell_id\tcluster\n")
+                        wf_sample.write("cell_id\ttopK\n")
                         for line in rf:
                             if delim is None:
                                 if line.find("\t") != -1:
@@ -340,14 +329,30 @@ def run_ficture2_multi_cells(_args):
                                 wf_sample.write(f"{cell_id}\t{cluster_id}\n")
                             nlines += 1
             ## write per-sample metadata file
-            cmds = cmd_separator([], f"Processing existing clusters...")
-            for sample_id in in_samples:
-                logger.info(f"Processing metadata for sample {sample_id}...")
-                metaf = samp2clust[sample_id][1]
+
+        ## spatial visualization of leiden clusters
+        samp2xy = {}
+        if args.list_xy is not None:
+            with flexopen(args.list_xy, "rt") as rf:
+                for line in rf:
+                    toks = line.strip().split("\t")
+                    if len(toks) != 2:
+                        raise ValueError(f"Each line in --list-xy must have exactly 2 columns containing [SAMPLE_ID] [XY_FILE]")
+                    sample_id = toks[0]
+                    xy_file = toks[1]
+                    if not os.path.exists(xy_file):
+                        raise FileNotFoundError(f"File not found: {xy_file} (from --list-xy)")
+                    samp2xy[sample_id] = xy_file
+        for sample_id in in_samples:
+            metaf = f"{sample_sptsv_prefix}.cell.metadata.tsv"
+            if sample_id in samp2xy:
+                xyf = samp2xy[sample_id]
                 sample_sptsv_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.sptsv"
-                with flexopen(metaf, "rt") as rf, flexopen(f"{sample_sptsv_prefix}.cell.metadata.tsv", "wt") as wf_sample:
+                metaf = f"{sample_sptsv_prefix}.cell.xy.tsv"
+                with flexopen(xyf, "rt") as rf, flexopen(metaf, "wt") as wf_sample:
                     delim = None
                     header = None
+                    nlines = 0
                     for line in rf:
                         if delim is None:
                             if line.find("\t") != -1:
@@ -361,23 +366,37 @@ def run_ficture2_multi_cells(_args):
                         toks = line.strip().split(delim)
                         if nlines == 0:
                             col2idx = {colname.replace('"', ''): idx for idx, colname in enumerate(toks)}
-                            idx_cell_id = col2idx.get(args.meta_colname_cell_id, None)
-                            idx_x = col2idx.get(args.meta_colname_x, None)
-                            idx_y = col2idx.get(args.meta_colname_y, None)
+                            idx_cell_id = col2idx.get(args.xy_colname_cell_id, None)
+                            idx_x = col2idx.get(args.xy_colname_x, None)
+                            idx_y = col2idx.get(args.xy_colname_y, None)
                             if idx_cell_id is None or idx_x is None or idx_y is None:
-                                raise ValueError(f"Column names {args.meta_colname_cell_id}, {args.meta_colname_x}, {args.meta_colname_y} not found in existing metadata file {metaf}.")
+                                raise ValueError(f"Column names {args.xy_colname_cell_id}, {args.xy_colname_x}, {args.xy_colname_y} not found in existing metadata file {metaf}.")
                             wf_sample.write("cell_id\tX\tY\n")
                         else:
                             cell_id = toks[idx_cell_id].replace('"', '')
                             x = toks[idx_x]
                             y = toks[idx_y]
-                            wf_sample.write(f"{cell_id}\t{x}\t{y}\n")     
-                draw_manifold_rscript=f"{repo_dir}/cartloader/r/draw_manifold_clust.r"
-                cmd = f"{args.R} '{draw_manifold_rscript}' --tsv-manifold '{sample_sptsv_prefix}.cell.metadata.tsv' --tsv-clust '{sample_leiden_prefix}.tsv.gz' --tsv-colname-x X --tsv-colname-y Y --out '{sample_leiden_prefix}.xy.png' --tsv-colname-clust cluster"
-                cmds.append(cmd)
-            cmds.append(f"[ -f {leiden_prefix}.tsv.gz ] && touch {leiden_prefix}.done" )
-            mm.add_target(f"{leiden_prefix}.done", [f"{args.list_cluster}", f"{lda_prefix}.done"], cmds)
+                            wf_sample.write(f"{cell_id}\t{x}\t{y}\n")
+                        nlines += 1
+            draw_manifold_rscript=f"{repo_dir}/cartloader/r/draw_manifold_clust.r"
+            cmd = f"{args.R} '{draw_manifold_rscript}' --tsv-manifold '{metaf}' --tsv-clust '{sample_leiden_prefix}.tsv.gz' --tsv-colname-x X --tsv-colname-y Y --out '{sample_leiden_prefix}.xy.png' --out-tsv '{sample_leiden_prefix}.xy.tsv.gz' --tsv-colname-clust topK"
+            cmds.append(cmd)
+        cmds.append(f"[ -f '{leiden_prefix}.tsv.gz' ] && touch '{leiden_prefix}.done'" )
+        mm.add_target(f"{leiden_prefix}.done", [f"{lda_prefix}.done"], cmds)
 
+        ## spatial visualization of leiden clusters
+        samp2boundaries = {}
+        if args.list_boundaries is not None:
+            with flexopen(args.list_boundaries, "rt") as rf:
+                for line in rf:
+                    toks = line.strip().split("\t")
+                    if len(toks) != 2:
+                        raise ValueError(f"Each line in --list-boundaries must have exactly 2 columns containing [SAMPLE_ID] [BOUNDARIES_FILE]")
+                    sample_id = toks[0]
+                    boundaries_file = toks[1]
+                    if not os.path.exists(boundaries_file):
+                        raise FileNotFoundError(f"File not found: {boundaries_file} (from --list-boundaries)")
+                    samp2boundaries[sample_id] = boundaries_file
     if args.tsne:
         ## generate TSNE manifolds
         lda_prefix = os.path.join(args.out_dir, args.out_prefix) + ".lda"
@@ -388,9 +407,9 @@ def run_ficture2_multi_cells(_args):
         cmds.append(cmd)
 
         draw_manifold_rscript=f"{repo_dir}/cartloader/r/draw_manifold_clust.r"
-        cmd = f"{args.R} '{draw_manifold_rscript}' --tsv-manifold '{tsne_prefix}.tsne.tsv.gz' --tsv-clust '{leiden_prefix}.tsv.gz' --tsv-colname-x TSNE1 --tsv-colname-y TSNE2 --out '{tsne_prefix}.tsne.png' --tsv-colname-clust cluster"
+        cmd = f"{args.R} '{draw_manifold_rscript}' --tsv-manifold '{tsne_prefix}.tsne.tsv.gz' --tsv-clust '{leiden_prefix}.tsv.gz' --tsv-colname-x TSNE1 --tsv-colname-y TSNE2 --out '{tsne_prefix}.tsne.png' --out-tsv '{tsne_prefix}.tsne.leiden.tsv.gz' --tsv-colname-clust topK"
         cmds.append(cmd)
-        cmds.append(f"[ -f '{tsne_prefix}.tsne.tsv.gz' ] && [ -f '{tsne_prefix}.tsne.png' ] && touch '{tsne_prefix}.tsne.multi.done'" )
+        cmds.append(f"[ -f '{tsne_prefix}.tsne.leiden.tsv.gz' ] && [ -f '{tsne_prefix}.tsne.png' ] && touch '{tsne_prefix}.tsne.multi.done'" )
         mm.add_target(f"{tsne_prefix}.tsne.multi.done", [f"{lda_prefix}.done", f"{leiden_prefix}.done"], cmds)
 
         deps = [f"{tsne_prefix}.tsne.multi.done"]
@@ -403,9 +422,9 @@ def run_ficture2_multi_cells(_args):
             cmds.append(cmd)
 
             draw_manifold_rscript=f"{repo_dir}/cartloader/r/draw_manifold_clust.r"
-            cmd = f"{args.R} '{draw_manifold_rscript}' --tsv-manifold '{sample_tsne_prefix}.tsne.tsv.gz' --tsv-clust '{sample_leiden_prefix}.tsv.gz' --tsv-colname-x TSNE1 --tsv-colname-y TSNE2 --out '{sample_tsne_prefix}.tsne.png' --tsv-colname-clust cluster"
+            cmd = f"{args.R} '{draw_manifold_rscript}' --tsv-manifold '{sample_tsne_prefix}.tsne.tsv.gz' --tsv-clust '{sample_leiden_prefix}.tsv.gz' --tsv-colname-x TSNE1 --tsv-colname-y TSNE2 --out '{sample_tsne_prefix}.tsne.png' --out-tsv '{sample_tsne_prefix}.tsne.leiden.tsv.gz' --tsv-colname-clust topK"
             cmds.append(cmd)
-            cmds.append(f"[ -f '{sample_tsne_prefix}.tsne.tsv.gz' ] && [ -f '{sample_tsne_prefix}.tsne.png' ] && touch '{sample_tsne_prefix}.tsne.done'" )
+            cmds.append(f"[ -f '{sample_tsne_prefix}.tsne.leiden.tsv.gz' ] && [ -f '{sample_tsne_prefix}.tsne.png' ] && touch '{sample_tsne_prefix}.tsne.done'" )
             mm.add_target(f"{sample_tsne_prefix}.tsne.done", [f"{sample_lda_prefix}.done", f"{leiden_prefix}.done"], cmds)
             deps.append(f"{sample_tsne_prefix}.tsne.done")
         ## final target 
@@ -425,9 +444,9 @@ def run_ficture2_multi_cells(_args):
 
         ## draw UMAP manifolds
         draw_manifold_rscript=f"{repo_dir}/cartloader/r/draw_manifold_clust.r"
-        cmd = f"{args.R} '{draw_manifold_rscript}' --tsv-manifold '{umap_prefix}.umap.tsv.gz' --tsv-clust '{leiden_prefix}.tsv.gz' --tsv-colname-x UMAP1 --tsv-colname-y UMAP2 --out '{umap_prefix}.umap.png' --tsv-colname-clust cluster"
+        cmd = f"{args.R} '{draw_manifold_rscript}' --tsv-manifold '{umap_prefix}.umap.tsv.gz' --tsv-clust '{leiden_prefix}.tsv.gz' --tsv-colname-x UMAP1 --tsv-colname-y UMAP2 --out '{umap_prefix}.umap.png' --out-tsv '{umap_prefix}.umap.leiden.tsv.gz' --tsv-colname-clust topK"
         cmds.append(cmd)
-        cmds.append(f"[ -f '{umap_prefix}.umap.tsv.gz' ] && [ -f '{umap_prefix}.umap.png' ] && touch '{umap_prefix}.umap.multi.done'" )
+        cmds.append(f"[ -f '{umap_prefix}.umap.leiden.tsv.gz' ] && [ -f '{umap_prefix}.umap.png' ] && touch '{umap_prefix}.umap.multi.done'" )
         mm.add_target(f"{umap_prefix}.umap.multi.done", [f"{lda_prefix}.done", f"{leiden_prefix}.done"], cmds)
 
         deps = [f"{umap_prefix}.umap.multi.done"]
@@ -440,9 +459,9 @@ def run_ficture2_multi_cells(_args):
             cmds.append(cmd)
 
             draw_manifold_rscript=f"{repo_dir}/cartloader/r/draw_manifold_clust.r"
-            cmd = f"{args.R} '{draw_manifold_rscript}' --tsv-manifold '{sample_umap_prefix}.umap.tsv.gz' --tsv-clust '{sample_leiden_prefix}.tsv.gz' --tsv-colname-x UMAP1 --tsv-colname-y UMAP2 --out '{sample_umap_prefix}.umap.png' --tsv-colname-clust cluster"
+            cmd = f"{args.R} '{draw_manifold_rscript}' --tsv-manifold '{sample_umap_prefix}.umap.tsv.gz' --tsv-clust '{sample_leiden_prefix}.tsv.gz' --tsv-colname-x UMAP1 --tsv-colname-y UMAP2 --out '{sample_umap_prefix}.umap.png' --out-tsv '{sample_umap_prefix}.umap.leiden.tsv.gz' --tsv-colname-clust topK"
             cmds.append(cmd)
-            cmds.append(f"[ -f '{sample_umap_prefix}.umap.tsv.gz' ] && [ -f '{sample_umap_prefix}.umap.png' ] && touch '{sample_umap_prefix}.umap.done'" )
+            cmds.append(f"[ -f '{sample_umap_prefix}.umap.leiden.tsv.gz' ] && [ -f '{sample_umap_prefix}.umap.png' ] && touch '{sample_umap_prefix}.umap.done'" )
             mm.add_target(f"{sample_umap_prefix}.umap.done", [f"{sample_lda_prefix}.done", f"{leiden_prefix}.done"], cmds)
             deps.append(f"{sample_umap_prefix}.umap.done")
         ## final target
@@ -494,7 +513,7 @@ def run_ficture2_multi_cells(_args):
 
         ## create heatmap
         heatmap_rscript=f"{repo_dir}/cartloader/r/create_heatmap.r"
-        cmd = f"{args.R} '{heatmap_rscript}' --results '{lda_prefix}.results.tsv' --clust '{leiden_prefix}.tsv.gz' --de-results '{lda_prefix}.model.de.marginal.tsv.gz' --de-clust '{pseudobulk_prefix}.de.marginal.tsv.gz' --offset-data 3 --out '{heatmap_prefix}' --colname-clust cluster --cell-clust sample_id cell_id --draw"
+        cmd = f"{args.R} '{heatmap_rscript}' --results '{lda_prefix}.results.tsv' --clust '{leiden_prefix}.tsv.gz' --de-results '{lda_prefix}.model.de.marginal.tsv.gz' --de-clust '{pseudobulk_prefix}.de.marginal.tsv.gz' --offset-data 3 --out '{heatmap_prefix}' --colname-clust topK --cell-clust sample_id cell_id --draw"
         cmds.append(cmd)
         cmds.append(f"[ -f '{heatmap_prefix}.pdf' ] && touch '{heatmap_prefix}.multi.done'" )
         mm.add_target(f"{heatmap_prefix}.multi.done", [f"{lda_prefix}.done", f"{leiden_prefix}.done", f"{pseudobulk_prefix}.done"], cmds)
@@ -515,7 +534,7 @@ def run_ficture2_multi_cells(_args):
 
             ## create heatmap
             heatmap_rscript=f"{repo_dir}/cartloader/r/create_heatmap.r"
-            cmd = f"{args.R} '{heatmap_rscript}' --results '{sample_lda_prefix}.results.tsv' --clust '{sample_leiden_prefix}.tsv.gz' --de-results '{lda_prefix}.model.de.marginal.tsv.gz' --de-clust '{sample_pseudobulk_prefix}.de.marginal.tsv.gz' --offset-data 2 --out '{sample_heatmap_prefix}' --colname-clust cluster --cell-clust cell_id --draw"
+            cmd = f"{args.R} '{heatmap_rscript}' --results '{sample_lda_prefix}.results.tsv' --clust '{sample_leiden_prefix}.tsv.gz' --de-results '{lda_prefix}.model.de.marginal.tsv.gz' --de-clust '{sample_pseudobulk_prefix}.de.marginal.tsv.gz' --offset-data 2 --out '{sample_heatmap_prefix}' --colname-clust topK --cell-clust cell_id --draw"
             cmds.append(cmd)
             cmds.append(f"[ -f '{sample_heatmap_prefix}.pdf' ] && touch '{sample_heatmap_prefix}.done'" )
             mm.add_target(f"{sample_heatmap_prefix}.done", [f"{sample_lda_prefix}.done", f"{leiden_prefix}.done", f"{sample_pseudobulk_prefix}.done", f"{heatmap_prefix}.multi.done"], cmds)
@@ -597,11 +616,11 @@ def run_ficture2_multi_cells(_args):
 
         out_manifolds = {
             "tsne": {
-                "tsv": f"{sample_prefix}.tsne.tsv.gz",
+                "tsv": f"{sample_prefix}.tsne.leiden.tsv.gz",
                 "png": f"{sample_prefix}.tsne.png"
             },
             "umap": {
-                "tsv": f"{sample_prefix}.umap.tsv.gz",
+                "tsv": f"{sample_prefix}.umap.leiden.tsv.gz",
                 "png": f"{sample_prefix}.umap.png"
             }
         }
@@ -611,17 +630,19 @@ def run_ficture2_multi_cells(_args):
             "cmap": args.cmap_file,
             "model_path": f"{lda_prefix}.model.tsv",
             "fit_path": f"{sample_prefix}.lda.results.tsv",
-            "sptsv_prefix": f"{sample_out_dir}/{sample}.{args.out_prefix}.sptsv",
-            "cell_metadata": f"{sample_out_dir}/{sample}.sptsv.cell.metadata.tsv",
+            "sptsv_prefix": f"{sample_prefix}.sptsv",
+            "cell_xy_path": f"{sample_prefix}.leiden.xy.tsv.gz",
             "cluster_path": f"{sample_prefix}.leiden.tsv.gz",
             "cluster_pseudobulk": f"{sample_prefix}.leiden.pseudobulk.tsv",
             "cluster_de": f"{sample_prefix}.leiden.pseudobulk.de.marginal.tsv.gz",
             "cluster_model_heatmap_pdf": f"{sample_prefix}.heatmap.pdf",
             "cluster_model_heatmap_tsv": f"{sample_prefix}.heatmap.counts.tsv",
-            "pixel_png_path": f"{sample_out_dir}/{sample}.{args.out_prefix}.pixel.png",
-            "pixel_tsv_path": f"{sample_out_dir}/{sample}.{args.out_prefix}.pixel.tsv.gz",
+            "pixel_png_path": f"{sample_prefix}.pixel.png",
+            "pixel_tsv_path": f"{sample_prefix}.pixel.tsv.gz",
             "manifolds": out_manifolds
         }
+        if sample in samp2boundaries:
+            out_cell_params["cell_boundaries_path"] = samp2boundaries[sample]
         out_json = { "cell_params": out_cell_params }
 
         out_json_path = sample_out_json

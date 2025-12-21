@@ -668,7 +668,7 @@ def ficture_params_to_factor_assets(params, skip_raster=False):
     return out_assets
 
 ## transform FICTURE parameters to FACTOR assets (new standard)
-def ficture2_params_to_factor_assets(params, skip_raster=False):
+def ficture2_params_to_factor_assets(params, skip_raster=False, cell_params = None):
     ## model_id
     ## proj_params -> proj_id
     ## proj_params -> decode_params -> decode_id
@@ -677,6 +677,8 @@ def ficture2_params_to_factor_assets(params, skip_raster=False):
     suffix_info = "-info.tsv"
     suffix_model = "-model.tsv"
     suffix_post = "-pseudobulk.tsv.gz"
+    suffix_cells_pmtiles = "-cells.pmtiles"
+    suffix_boundaries_pmtiles = "-boundaries.pmtiles"
     suffix_rgb = "-rgb.tsv"
     suffix_hex_coarse = ".pmtiles"
     suffix_raster = "-pixel-raster.pmtiles"
@@ -770,6 +772,39 @@ def ficture2_params_to_factor_assets(params, skip_raster=False):
         # append
         out_assets.append(out_asset)
 
+    if cell_params is not None:
+        for cell_param in cell_params:
+            model_id = cell_param["model_id"]
+            model_rgb = cell_param["cmap"]
+            cell_xy_f = cell_param["cell_xy_path"]
+            cell_boundaries_f = cell_param.get("cell_boundaries_path", None)
+            cell_clust_f = cell_param.get("cluster_path", None)
+            model_manifolds = cell_param.get("manifolds", [])
+            cell_de_tsvf = cell_param["cluster_de"]
+            cell_post_tsvf = cell_param["cluster_pseudobulk"]
+            cell_pixel_tsvf = cell_param["pixel_tsv_path"]
+            cell_pixel_pngf = cell_param["pixel_png_path"]
+            out_asset = {
+                "id": model_id,
+                "name": factor_id_to_name(model_id),
+                "model_id": model_id,
+                "decode_id": model_id,
+                "de": model_id + suffix_de,
+                "post": decode_id + suffix_post,
+                "rgb": model_id + suffix_rgb,
+                "pmtiles": {
+                    "cells": model_id + suffix_cells_pmtiles,
+                    **({"boundaries": model_id + suffix_boundaries_pmtiles} if cell_boundaries_f is not None else {}),
+                    **({"raster": model_id + suffix_raster} if not skip_raster else {})
+                }
+            }
+            if "umap" in model_manifolds:
+                out_asset["umap"] = {
+                    "tsv": model_id + suffix_umap_tsv,
+                    "pmtiles": model_id + suffix_umap_pmtiles,
+                    "png": model_id + suffix_umap_png,
+                }
+            out_assets.append(out_asset)
     return out_assets
 
 def create_symlink(A, B):

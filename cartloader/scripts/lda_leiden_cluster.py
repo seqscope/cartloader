@@ -25,6 +25,7 @@ def parse_arguments(_args):
     inout_params.add_argument('--tsv', type=str, required=True, help='Input TSV file in the LDA output')
     inout_params.add_argument('--out', type=str, required=True, help='Output CSV file containing clustering results')
     inout_params.add_argument('--offset-data', type=int, default=3, help='Offset for the results file (default: 2)')
+    inout_params.add_argument('--colname-cluster', type=str, default='cluster', help='Column name for the cluster assignments (default: cluster)')
     inout_params.add_argument('--n-neighbors', type=int, default=50, help='Number of neighbors in kNN graph (default: 50)')
     inout_params.add_argument('--random-seed', type=int, help='Random seed (default: 42)')
     inout_params.add_argument('--key-ids', type=str, nargs='+',default=['cell_id'], help='Key ID for the results file (default: cell_id)')
@@ -91,7 +92,7 @@ def lda_leiden_cluster(_args):
         weights='weight' if args.use_weighting else None,
         resolution_parameter=args.resolution
     )
-    df_out['cluster'] = np.array(partition.membership)
+    df_out[args.colname_cluster] = np.array(partition.membership)
     if args.out.endswith(".gz"):
         df_out.to_csv(args.out, sep=args.sep, index=False, compression="gzip")
     else:

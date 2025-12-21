@@ -28,6 +28,8 @@ parser$add_argument("--tsv-colname-y",       type = "character",   default = "UM
                     help = "Column name for manifold Y coordinate (default: UMAP2)")
 parser$add_argument("--out",             type = "character",   required = TRUE,
                     help = "Output file name")
+parser$add_argument("--out-tsv",             type = "character", 
+                    help = "Output joined TSV file name")
 parser$add_argument("--subtitle",               type = "character",   default = NULL,
                     help = "Optional identifier used as the subtitle for the generated plot")
 
@@ -74,6 +76,11 @@ df_clust <- fread(args$tsv_clust, sep = "\t", header = TRUE)
 
 log_message("Joining two input files")
 plot_dt <- left_join(df_manifold, df_clust, by = args$tsv_colname_ids)
+
+if (!is.null(args$out_tsv)) {
+  log_message(sprintf("Writing joined TSV to: %s", args$out_tsv))
+  fwrite(plot_dt, file = args$out_tsv, sep = "\t", quote = FALSE, na = "NA", row.names = FALSE, col.names = TRUE, compress = "auto")
+}
 
 required_cols <- c(args$tsv_colname_x, args$tsv_colname_y, args$tsv_colname_clust)
 missing_cols <- setdiff(required_cols, names(plot_dt))

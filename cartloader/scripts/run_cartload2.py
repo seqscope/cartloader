@@ -42,6 +42,7 @@ def parse_arguments(_args):
     aux_params = parser.add_argument_group("Auxiliary Parameters", "Advanced settings; defaults work for most cases")
     aux_params.add_argument('--in-sge-assets', type=str, default="sge_assets.json", help='File name of a SGE assets JSON/YAML under --sge-dir, providing paths to transcript, feature, minmax files (default: sge_assets.json)')
     aux_params.add_argument('--in-fic-params', type=str, default="ficture.params.json", help='File name of FICTURE params JSON/YAML under --fic-dir, providing FICTURE paramaters (default: ficture.params.json)')
+    aux_params.add_argument('--in-cell-params', type=str, nargs="+", default=[], help='Optional list of FICTURE cell parameter JSON/YAML files produced by run_ficture2_multi_cells')
     aux_params.add_argument('--out-fic-assets', type=str, default="ficture_assets.json", help='File name of output JSON/YAML for FICTURE asset metadata under --out-dir (default: ficture_assets.json)')
     aux_params.add_argument('--out-catalog', type=str, default="catalog.yaml", help='File name of output catalog YAML under --out-dir (default: catalog.yaml)')
     # sge scale
@@ -217,6 +218,13 @@ def run_cartload2(_args):
         cmds.append(f"[ -f {args.out_dir}/sge-mono-dark.pmtiles.done ] && [ -f {args.out_dir}/sge-mono-light.pmtiles.done ] && touch {tsv2mono_flag}")
         mm.add_target(tsv2mono_flag, [in_molecules, in_minmax], cmds)
 
+    ## load cell parameters
+    in_cell_params = []
+    for cell_param_f in args.in_cell_params:
+        assert os.path.exists(cell_param_f), f"File not found: {cell_param_f} (in-cell-params)"
+        cell_param_data = load_file_to_dict(cell_param_f)
+        in_cell_params.append(cell_param_data["cell_params"])
+
     ## 3. deploy FICTURE results
     join_pixel_tsvs = []
     join_pixel_ids = []
@@ -228,7 +236,7 @@ def run_cartload2(_args):
             logger.error(f"FICTURE 'train_params' is empty after loading {fic_jsonf} (provided by --fic-dir and --in-fic-params)")
 
         # create the output assets json
-        out_fic_assets = ficture2_params_to_factor_assets(in_fic_params, args.skip_raster)
+        out_fic_assets = ficture2_params_to_factor_assets(in_fic_params, args.skip_raster, in_cell_params)
 
         train_targets = []
 
@@ -237,6 +245,153 @@ def run_cartload2(_args):
         xmax = minmax["xmax"]
         ymin = minmax["ymin"]
         ymax = minmax["ymax"]
+
+        for cell_param in in_cell_params:
+            model_id = cell_param["model_id"]
+            model_rgb = cell_param["cmap"]
+            cell_xy_f = cell_param.get("cell_xy_path", None)
+            cell_boundaries_f = cell_param.get("cell_boundaries_path", None)
+            cell_clust_f = cell_param.get("cluster_path", None)
+            model_manifolds = cell_param.get("manifolds", [])
+            out_id = model_id.replace("_", "-")
+            out_prefix = f"{args.out_dir}/{out_id}"
+            umap_ndjson = f"{out_prefix}-umap.ndjson"
+            umap_pmtiles = f"{out_prefix}-umap.pmtiles"
+
+            if "umap" in model_manifolds:
+                cmds = cmd_separator([], f"Converting UMAP for {model_id} into PMTiles and copying relevant files..")
+                umap_tsv = model_manifolds["umap"]["tsv"]
+                umap_png = model_manifolds["umap"]["png"]
+
+                prerequisites = [umap_tsv, umap_png]
+                outfiles=[]
+
+                convert_cmd = " ".join([
+                    "cartloader", "render_umap",
+                    f"--input {umap_tsv}",
+                    f"--out {umap_ndjson}",
+                    f"--colname-factor {args.umap_colname_factor}",
+                    f"--colname-x {args.umap_colname_x}",
+                    f"--colname-y {args.umap_colname_y}"
+                ])
+                cmds.append(convert_cmd)
+
+                # 2) ndjson to pmtiles
+                tippecanoe_cmd = " ".join([
+                    f"TIPPECANOE_MAX_THREADS={args.threads}",
+                    f"'{args.tippecanoe}'",
+                    f"-t {args.tmp_dir}",
+                    f"-o {umap_pmtiles}",
+                    "-Z", str(args.umap_min_zoom),
+                    "-z", str(args.umap_max_zoom),
+                    "-l", "umap",
+                    "--force",
+                    "--drop-densest-as-needed",
+                    "--extend-zooms-if-still-dropping",
+                    "--no-duplication",
+                    f"--preserve-point-density-threshold={args.preserve_point_density_thres}",
+                    umap_ndjson
+                ])
+                cmds.append(tippecanoe_cmd)
+                if not args.keep_intermediate_files:
+                    cmds.append(f"rm -f {umap_ndjson}")
+                outfiles.append(umap_pmtiles)
+
+                cmds.append(f"cp {umap_tsv} {out_prefix}-umap.tsv.gz")
+                cmds.append(f"cp {umap_png} {out_prefix}-umap.png")
+                outfiles.append(f"{out_prefix}-umap.tsv.gz")
+                outfiles.append(f"{out_prefix}-umap.png")
+
+                touch_flag_cmd=valid_and_touch_cmd(outfiles, f"{out_prefix}-umap.done") # this only touch the flag file when all output files exist
+                cmds.append(touch_flag_cmd)
+                mm.add_target(f"{out_prefix}-umap.done", prerequisites, cmds)
+
+            if cell_xy_f is not None:
+                cmds = cmd_separator([], f"Creating cell PMTiles for {model_id}..")
+                prerequisites = [cell_xy_f]
+                outfiles=[]
+                if not os.path.exists(cell_xy_f):
+                    raise FileNotFoundError(f"Cell XY file not found: {cell_xy_f} for model {model_id} in cell parameters (provided by --in-cell-params)")
+                cmd = " ".join([
+                    "cartloader", "run_cells2pmtiles",
+                    "--in-tsv", cell_xy_f,
+                    "--out-prefix", f"{out_prefix}-cells",
+                    "--threads", str(args.threads),
+                    "--max-tile-bytes", str(args.max_tile_bytes),
+                    "--max-feature-counts", str(args.max_feature_counts),
+                    "--preserve-point-density-thres", str(args.preserve_point_density_thres),
+                    f"--tippecanoe '{args.tippecanoe}'",
+                    f"--log --log-suffix '{args.log_suffix}'" if args.log else "",
+                    f"--tmp-dir '{args.tmp_dir}'",
+                    "--keep-intermediate-files" if args.keep_intermediate_files else ""
+                ])
+                cmds.append(cmd)
+                prerequisites.append(cell_xy_f)
+                outfiles.append(f"{out_prefix}-cells.pmtiles")
+                touch_flag_cmd=valid_and_touch_cmd(outfiles, f"{out_prefix}-cells.done") # this only touch the flag file when all output files exist
+                cmds.append(touch_flag_cmd)
+                mm.add_target(f"{out_prefix}-cells.done", prerequisites, cmds)
+
+            if cell_boundaries_f is not None:
+                cmds = cmd_separator([], f"Creating boundary PMTiles for {model_id}..")
+                prerequisites = [cell_boundaries_f, cell_clust_f]
+                outfiles=[]
+                if not os.path.exists(cell_boundaries_f):
+                    raise FileNotFoundError(f"Cell boundaries file not found: {cell_boundaries_f} for model {model_id} in cell parameters (provided by --in-cell-params)")
+                cmd = " ".join([
+                    "cartloader", "run_cell_boundaries2pmtiles",
+                    "--in-csv", cell_boundaries_f,
+                    "--in-clust", cell_clust_f,
+                    "--out-prefix", f"{out_prefix}-boundaries",
+                    "--threads", str(args.threads),
+                    "--max-tile-bytes", str(args.max_tile_bytes),
+                    "--max-feature-counts", str(args.max_feature_counts),
+                    "--preserve-point-density-thres", str(args.preserve_point_density_thres),
+                    f"--tippecanoe '{args.tippecanoe}'",
+                    f"--log --log-suffix '{args.log_suffix}'" if args.log else "",
+                    f"--tmp-dir '{args.tmp_dir}'",
+                    "--keep-intermediate-files" if args.keep_intermediate_files else ""
+                ])
+                cmds.append(cmd)
+                prerequisites.append(cell_boundaries_f)
+                outfiles.append(f"{out_prefix}-boundaries.pmtiles")
+                touch_flag_cmd=valid_and_touch_cmd(outfiles, f"{out_prefix}-boundaries.done") # this only touch the flag file when all output files exist
+                cmds.append(touch_flag_cmd)
+                mm.add_target(f"{out_prefix}-boundaries.done", prerequisites, cmds)
+
+            cmds = cmd_separator([], f"Copying relevant files for {model_id}..")
+            cell_de_tsvf = cell_param["cluster_de"]
+            cell_post_tsvf = cell_param["cluster_pseudobulk"]
+            cell_pixel_tsvf = cell_param["pixel_tsv_path"]
+            cell_pixel_pngf = cell_param["pixel_png_path"]
+
+            cmds.append(f"cp {cell_de_tsvf} {out_prefix}-bulk-de.tsv")
+            cmds.append(f"cp {cell_post_tsvf} {out_prefix}-pseudobulk.tsv.gz")
+            join_pixel_tsvs.append(cell_pixel_tsvf)
+            join_pixel_ids.append(out_id)
+
+            prerequisites = [cell_de_tsvf, cell_post_tsvf]
+            outfiles=[f"{out_prefix}-bulk-de.tsv", f"{out_prefix}-pseudobulk.tsv.gz"]
+            if not args.skip_raster:
+                cmd = " ".join([
+                    "cartloader", "image_png2pmtiles",
+                    "--georeference", "--geotif2mbtiles", "--mbtiles2pmtiles",
+                    "--in-img", cell_pixel_pngf,
+                    f'--georef-bounds="{xmin},{ymin},{xmax},{ymax}"',
+                    "--out-prefix", f"{out_prefix}-pixel-raster",
+                    f"--pmtiles '{args.pmtiles}'",
+                    f"--gdal_translate '{args.gdal_translate}'",
+                    f"--gdaladdo '{args.gdaladdo}'",
+                    "--keep-intermediate-files" if args.keep_intermediate_files else ""
+                ])
+                cmds.append(cmd)
+                prerequisites.append(cell_pixel_pngf)
+                outfiles.append(f"{out_prefix}-pixel-raster.pmtiles")
+
+            touch_flag_cmd=valid_and_touch_cmd(outfiles, f"{out_prefix}.done") # this only touch the flag file when all output files exist
+            cmds.append(touch_flag_cmd)
+
+            mm.add_target(f"{out_prefix}.done", prerequisites, cmds)
 
         for train_param in in_fic_params:
             model_id = train_param["model_id"]
