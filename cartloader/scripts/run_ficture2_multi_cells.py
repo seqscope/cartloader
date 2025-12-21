@@ -594,6 +594,7 @@ def run_ficture2_multi_cells(_args):
             mm.add_target(f"{decode_prefix}.done", [modelf_done], cmds)
             sample_decode_done_files.append(f"{decode_prefix}.done")
         cmds = cmd_separator([], f"Finishing pixel-level decoding for all samples...")
+        cmd = ""
         for sample_donef in sample_decode_done_files:
             cmd += f"[ -f '{sample_donef}' ] && "
         cmd += f"touch {decode_all_prefix}.done"
