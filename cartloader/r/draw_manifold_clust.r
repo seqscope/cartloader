@@ -131,7 +131,7 @@ log_message(paste0("Plot dimension: ", plot_dim))
 
 n_clust <- length(unique(plot_prep$cmap_hex))
 max_clust_name_length <- max(nchar(as.character(unique(plot_prep$cmap_hex)))) + 3
-legend_nrow <- ceiling((max_clust_name_length * n_clust) / 200)
+legend_nrow <- ceiling((max_clust_name_length * n_clust) / 150)
 n_points <- nrow(plot_prep)
 pt_size <- 1 / log(n_points) / log(n_points) * 50
 

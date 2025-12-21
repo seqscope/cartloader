@@ -789,8 +789,9 @@ def ficture2_params_to_factor_assets(params, skip_raster=False, cell_params = No
                 "name": factor_id_to_name(model_id),
                 "model_id": model_id,
                 "decode_id": model_id,
+                "cells_id": model_id,
                 "de": model_id + suffix_de,
-                "post": decode_id + suffix_post,
+                "post": model_id + suffix_post,
                 "rgb": model_id + suffix_rgb,
                 "pmtiles": {
                     "cells": model_id + suffix_cells_pmtiles,
