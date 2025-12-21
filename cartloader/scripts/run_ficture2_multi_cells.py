@@ -257,7 +257,13 @@ def run_ficture2_multi_cells(_args):
             mm.add_target(f"{lda_prefix}.multi.done", [f"{sptsv_prefix}.done"], cmds)
         else:  ## use existing model
             cmds = cmd_separator([], f"Projecting existing LDA model...")
-            cmd = f"{ficture2bin} lda4hex --model-prior {args.pretrained_model} --projection-only --in-data {sptsv_prefix}.randomized.tsv --in-meta {sptsv_prefix}.json --out-prefix {lda_prefix} --transform --minibatch-size 500 --seed {args.seed} --n-epochs 2 --threads {args.threads}"
+            ## copy the pretrained model to lda_prefix
+            if args.pretrained_model.endswith(".gz"):
+                cmd = f"gzip -dc {args.pretrained_model} > {lda_prefix}.model.tsv"
+            else:
+                cmd = f"cp {args.pretrained_model} {lda_prefix}.model.tsv"
+            cmds.append(cmd)
+            cmd = f"{ficture2bin} lda4hex --model-prior {lda_prefix}.model.tsv --projection-only --in-data {sptsv_prefix}.randomized.tsv --in-meta {sptsv_prefix}.json --out-prefix {lda_prefix} --transform --minibatch-size 500 --seed {args.seed} --n-epochs 2 --threads {args.threads}"
             cmds.append(cmd)
             cmds.append(f"[ -f '{lda_prefix}.results.tsv' ] && touch '{lda_prefix}.multi.done'" )
             mm.add_target(f"{lda_prefix}.multi.done", [f"{sptsv_prefix}.done"], cmds)
@@ -515,7 +521,8 @@ def run_ficture2_multi_cells(_args):
         heatmap_prefix = os.path.join(args.out_dir, args.out_prefix) + ".heatmap"
 
         cmds = cmd_separator([], f"Generating heatmap between LDA factors and Leiden clusters...")
-        model_tsv = args.pretrained_model if args.pretrained_model is not None else f"{lda_prefix}.model.tsv"
+        #model_tsv = args.pretrained_model if args.pretrained_model is not None else f"{lda_prefix}.model.tsv"
+        model_tsv = f"{lda_prefix}.model.tsv"
         cmd = f"{args.spatula} diffexp-model-matrix --tsv1 '{model_tsv}' --out '{lda_prefix}.model'"
         cmds.append(cmd)
         cmds.append(f"({args.gzip} -cd {lda_prefix}.model.de.marginal.tsv.gz | head -1 | sed 's/^Feature/gene/'; {args.gzip} -cd {lda_prefix}.model.de.marginal.tsv.gz | tail -n +2 | {args.sort} -k 2,2n -k 3,3gr;) > {lda_prefix}.model.de.tsv")
@@ -551,9 +558,6 @@ def run_ficture2_multi_cells(_args):
             sample_leiden_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.leiden"
             sample_pseudobulk_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.leiden.pseudobulk"
             sample_heatmap_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.heatmap"
-            model_tsv = args.pretrained_model if args.pretrained_model is not None else f"{sample_lda_prefix}.model.tsv"
-            #cmd = f"{args.spatula} diffexp-model-matrix --tsv1 '{model_tsv}' --out '{sample_lda_prefix}.model'"
-            #cmds.append(cmd)
 
             ## perform DE test on the cell pseudobulk matrix
             cmd = f"{args.spatula} diffexp-model-matrix --tsv1 '{sample_pseudobulk_prefix}.tsv' --out '{sample_pseudobulk_prefix}'"
