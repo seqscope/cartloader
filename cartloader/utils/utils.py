@@ -779,6 +779,7 @@ def ficture2_params_to_factor_assets(params, skip_raster=False, cell_params = No
             cell_xy_f = cell_param["cell_xy_path"]
             cell_boundaries_f = cell_param.get("cell_boundaries_path", None)
             cell_clust_f = cell_param.get("cluster_path", None)
+            cell_info_f = cell_param.get("cluster_info", None)
             model_manifolds = cell_param.get("manifolds", [])
             cell_de_tsvf = cell_param["cluster_de"]
             cell_post_tsvf = cell_param["cluster_pseudobulk"]
@@ -791,6 +792,7 @@ def ficture2_params_to_factor_assets(params, skip_raster=False, cell_params = No
                 "decode_id": model_id,
                 "cells_id": model_id,
                 "de": model_id + suffix_de,
+                "info": model_id + suffix_info,
                 "post": model_id + suffix_post,
                 "rgb": model_id + suffix_rgb,
                 "pmtiles": {

@@ -362,13 +362,15 @@ def run_cartload2(_args):
 
             cmds = cmd_separator([], f"Copying relevant files for {model_id}..")
             cell_de_tsvf = cell_param["cluster_de"]
+            cell_info_tsvf = cell_param["cluster_info"]
             cell_post_tsvf = cell_param["cluster_pseudobulk"]
             cell_pixel_tsvf = cell_param["pixel_tsv_path"]
             cell_pixel_pngf = cell_param["pixel_png_path"]
             copy_rgb_tsv(model_rgb, f"{out_prefix}-rgb.tsv", restart=args.restart)
 
             cmds.append(f"cp {cell_de_tsvf} {out_prefix}-bulk-de.tsv")
-            cmds.append(f"cp {cell_post_tsvf} {out_prefix}-pseudobulk.tsv.gz")
+            cmds.append(f"cp {cell_info_tsvf} {out_prefix}-info.tsv")
+            cmds.append(f"cat {cell_post_tsvf} | gzip -c > {out_prefix}-pseudobulk.tsv.gz")
             join_pixel_tsvs.append(cell_pixel_tsvf)
             join_pixel_ids.append(out_id)
 

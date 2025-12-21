@@ -481,6 +481,10 @@ def run_ficture2_multi_cells(_args):
         cmds = cmd_separator([], f"Generating pseudobulk matrix...")
         cmd = f"{args.spatula} sptsv2model --min-count {args.min_feature_count} --tsv '{sptsv_prefix}.randomized.tsv' --clust '{leiden_prefix}.tsv.gz' --features '{sptsv_prefix}.feature.counts.tsv' --json '{sptsv_prefix}.json' --out '{pseudobulk_prefix}.tsv'"
         cmds.append(cmd)
+
+        cmd = f"head -n $(head -1 '{pseudobulk_prefix}.tsv' | wc -w) '{args.cmap_file}' > '{pseudobulk_prefix}.cmap.tsv'"
+        cmds.append(cmd)
+
         cmds.append(f"[ -f '{pseudobulk_prefix}.tsv' ] && touch '{pseudobulk_prefix}.multi.done'" )
         mm.add_target(f"{pseudobulk_prefix}.multi.done", [f"{sptsv_prefix}.done", f"{leiden_prefix}.done"], cmds)
 
@@ -523,6 +527,17 @@ def run_ficture2_multi_cells(_args):
         cmds.append(f"({args.gzip} -cd {pseudobulk_prefix}.de.marginal.tsv.gz | head -1 | sed 's/^Feature/gene/'; {args.gzip} -cd {pseudobulk_prefix}.de.marginal.tsv.gz | tail -n +2 | {args.sort} -k 2,2n -k 3,3gr;) > {pseudobulk_prefix}.de.tsv")
         cmds.append(f"rm -f '{pseudobulk_prefix}.de.marginal.tsv.gz'")
 
+        ## create factor report for cluster annotation
+        cmd = " ".join([
+            ficture2report,
+            f"--de '{pseudobulk_prefix}.de.tsv'",
+            f"--pseudobulk '{pseudobulk_prefix}.tsv'",
+            f"--feature_label Feature",
+            f"--color_table '{pseudobulk_prefix}.cmap.tsv'",
+            f"--output_pref '{pseudobulk_prefix}'",
+            ])
+        cmds.append(cmd)
+
         ## create heatmap
         heatmap_rscript=f"{repo_dir}/cartloader/r/create_heatmap.r"
         cmd = f"{args.R} '{heatmap_rscript}' --results '{lda_prefix}.results.tsv' --clust '{leiden_prefix}.tsv.gz' --de-results '{lda_prefix}.model.de.tsv' --de-clust '{pseudobulk_prefix}.de.tsv' --offset-data 3 --out '{heatmap_prefix}' --colname-clust topK --cell-clust sample_id cell_id --draw"
@@ -546,6 +561,16 @@ def run_ficture2_multi_cells(_args):
 
             cmds.append(f"({args.gzip} -cd {sample_pseudobulk_prefix}.de.marginal.tsv.gz | head -1 | sed 's/^Feature/gene/'; {args.gzip} -cd {sample_pseudobulk_prefix}.de.marginal.tsv.gz | tail -n +2 | {args.sort} -k 2,2n -k 3,3gr;) > {sample_pseudobulk_prefix}.de.tsv")
             cmds.append(f"rm -f '{sample_pseudobulk_prefix}.de.marginal.tsv.gz'")
+
+            cmd = " ".join([
+                ficture2report,
+                f"--de '{sample_pseudobulk_prefix}.de.tsv'",
+                f"--pseudobulk '{sample_pseudobulk_prefix}.tsv'",
+                f"--feature_label Feature",
+                f"--color_table '{sample_pseudobulk_prefix}.cmap.tsv'",
+                f"--output_pref '{sample_pseudobulk_prefix}'",
+                ])
+            cmds.append(cmd)
 
             ## create heatmap
             heatmap_rscript=f"{repo_dir}/cartloader/r/create_heatmap.r"
@@ -651,6 +676,7 @@ def run_ficture2_multi_cells(_args):
             "cluster_path": f"{sample_prefix}.leiden.tsv.gz",
             "cluster_pseudobulk": f"{sample_prefix}.leiden.pseudobulk.tsv",
             "cluster_de": f"{sample_prefix}.leiden.pseudobulk.de.tsv",
+            "cluster_info": f"{sample_prefix}.leiden.pseudobulk.factor.info.tsv",
             "cluster_model_heatmap_pdf": f"{sample_prefix}.heatmap.pdf",
             "cluster_model_heatmap_tsv": f"{sample_prefix}.heatmap.counts.tsv",
             "pixel_png_path": f"{sample_prefix}.pixel.png",
