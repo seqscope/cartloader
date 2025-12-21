@@ -339,7 +339,7 @@ def run_cartload2(_args):
                 if not os.path.exists(cell_boundaries_f):
                     raise FileNotFoundError(f"Cell boundaries file not found: {cell_boundaries_f} for model {model_id} in cell parameters (provided by --in-cell-params)")
                 cmd = " ".join([
-                    "cartloader", "run_cell_boundaries2pmtiles",
+                    "cartloader", "run_boundaries2pmtiles",
                     "--in-csv", cell_boundaries_f,
                     "--in-clust", cell_clust_f,
                     "--out-prefix", f"{out_prefix}-boundaries",
