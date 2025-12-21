@@ -525,7 +525,7 @@ def run_ficture2_multi_cells(_args):
 
         ## create heatmap
         heatmap_rscript=f"{repo_dir}/cartloader/r/create_heatmap.r"
-        cmd = f"{args.R} '{heatmap_rscript}' --results '{lda_prefix}.results.tsv' --clust '{leiden_prefix}.tsv.gz' --de-results '{lda_prefix}.model.de.marginal.tsv.gz' --de-clust '{pseudobulk_prefix}.de.marginal.tsv.gz' --offset-data 3 --out '{heatmap_prefix}' --colname-clust topK --cell-clust sample_id cell_id --draw"
+        cmd = f"{args.R} '{heatmap_rscript}' --results '{lda_prefix}.results.tsv' --clust '{leiden_prefix}.tsv.gz' --de-results '{lda_prefix}.model.de.tsv' --de-clust '{pseudobulk_prefix}.de.tsv' --offset-data 3 --out '{heatmap_prefix}' --colname-clust topK --cell-clust sample_id cell_id --draw"
         cmds.append(cmd)
         cmds.append(f"[ -f '{heatmap_prefix}.pdf' ] && touch '{heatmap_prefix}.multi.done'" )
         mm.add_target(f"{heatmap_prefix}.multi.done", [f"{lda_prefix}.done", f"{leiden_prefix}.done", f"{pseudobulk_prefix}.done"], cmds)
