@@ -16,7 +16,7 @@ def parse_arguments(_args):
     run_params.add_argument('--restart', action='store_true', default=False, help='Ignore existing outputs and start from the beginning')
     run_params.add_argument('--threads', type=int, default=8, help='Maximum number of threads per job (default: 8)')
     run_params.add_argument('--n-jobs', type=int, default=2, help='Number of parallel jobs to run (default: 2)')
-    run_params.add_argument('--makefn', type=str, default="run_ficture2_multi_cells.mk", help='File name of Makefile to write (default: run_ficture2_multi.mk)')
+    run_params.add_argument('--makefn', type=str, help='File name of Makefile to write (default: run_ficture2_multi.mk)')
 
     cmd_params = parser.add_argument_group("Commands", "Commands to run together")
     cmd_params.add_argument('--all', action='store_true', default=False, help='Enable all actions: --cells and --boundaries')
@@ -114,6 +114,9 @@ def run_ficture2_multi_cells(_args):
     """
     # args
     args=parse_arguments(_args)
+
+    if args.makefn is None:
+        args.makefn = f"run_ficture2_multi_cells.{args.out_prefix}.mk"
 
     # input/output/other files
     # dirs
@@ -325,8 +328,9 @@ def run_ficture2_multi_cells(_args):
                             cell_id = toks[0].replace('"', '')
                             cluster_id = toks[1].replace('"', '')
                             if nlines > 0 or cluster_id.isdigit():
-                                wf.write(f"{sample_id}\t{cell_id}\t{cluster_id}\n")
-                                wf_sample.write(f"{cell_id}\t{cluster_id}\n")
+                                int_cluster_id = int(cluster_id)-1 ## convert to 0-based
+                                wf.write(f"{sample_id}\t{cell_id}\t{int_cluster_id}\n")
+                                wf_sample.write(f"{cell_id}\t{int_cluster_id}\n")
                             nlines += 1
             ## write per-sample metadata file
 
@@ -488,6 +492,10 @@ def run_ficture2_multi_cells(_args):
             sample_pseudobulk_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.leiden.pseudobulk"
             cmd = f"{args.spatula} sptsv2model --min-count {args.min_feature_count} --tsv '{sample_sptsv_prefix}.tsv' --clust '{sample_leiden_prefix}.tsv.gz' --features '{sample_sptsv_prefix}.feature.counts.tsv' --json '{sample_sptsv_prefix}.json' --out '{sample_pseudobulk_prefix}.tsv'"
             cmds.append(cmd)
+
+            cmd = f"head -n $(head -1 '{sample_pseudobulk_prefix}.tsv' | wc -w) '{args.cmap_file}' > '{sample_pseudobulk_prefix}.cmap.tsv'"
+            cmds.append(cmd)
+
             cmds.append(f"[ -f '{sample_pseudobulk_prefix}.tsv' ] && touch '{sample_pseudobulk_prefix}.done'" )
             mm.add_target(f"{sample_pseudobulk_prefix}.done", [f"{sptsv_prefix}.done", f"{leiden_prefix}.done"], cmds)
             deps.append(f"{sample_pseudobulk_prefix}.done")
@@ -506,10 +514,14 @@ def run_ficture2_multi_cells(_args):
         model_tsv = args.pretrained_model if args.pretrained_model is not None else f"{lda_prefix}.model.tsv"
         cmd = f"{args.spatula} diffexp-model-matrix --tsv1 '{model_tsv}' --out '{lda_prefix}.model'"
         cmds.append(cmd)
+        cmds.append(f"({args.gzip} -cd {lda_prefix}.model.de.marginal.tsv.gz | head -1 | sed 's/^Feature/gene/'; {args.gzip} -cd {lda_prefix}.model.de.marginal.tsv.gz | tail -n +2 | {args.sort} -k 2,2n -k 3,3gr;) > {lda_prefix}.model.de.tsv")
+        cmds.append(f"rm -f '{lda_prefix}.model.de.marginal.tsv.gz'")
 
         ## perform DE test on the cell pseudobulk matrix
         cmd = f"{args.spatula} diffexp-model-matrix --tsv1 '{pseudobulk_prefix}.tsv' --out '{pseudobulk_prefix}'"
         cmds.append(cmd)
+        cmds.append(f"({args.gzip} -cd {pseudobulk_prefix}.de.marginal.tsv.gz | head -1 | sed 's/^Feature/gene/'; {args.gzip} -cd {pseudobulk_prefix}.de.marginal.tsv.gz | tail -n +2 | {args.sort} -k 2,2n -k 3,3gr;) > {pseudobulk_prefix}.de.tsv")
+        cmds.append(f"rm -f '{pseudobulk_prefix}.de.marginal.tsv.gz'")
 
         ## create heatmap
         heatmap_rscript=f"{repo_dir}/cartloader/r/create_heatmap.r"
@@ -532,9 +544,12 @@ def run_ficture2_multi_cells(_args):
             cmd = f"{args.spatula} diffexp-model-matrix --tsv1 '{sample_pseudobulk_prefix}.tsv' --out '{sample_pseudobulk_prefix}'"
             cmds.append(cmd)
 
+            cmds.append(f"({args.gzip} -cd {sample_pseudobulk_prefix}.de.marginal.tsv.gz | head -1 | sed 's/^Feature/gene/'; {args.gzip} -cd {sample_pseudobulk_prefix}.de.marginal.tsv.gz | tail -n +2 | {args.sort} -k 2,2n -k 3,3gr;) > {sample_pseudobulk_prefix}.de.tsv")
+            cmds.append(f"rm -f '{sample_pseudobulk_prefix}.de.marginal.tsv.gz'")
+
             ## create heatmap
             heatmap_rscript=f"{repo_dir}/cartloader/r/create_heatmap.r"
-            cmd = f"{args.R} '{heatmap_rscript}' --results '{sample_lda_prefix}.results.tsv' --clust '{sample_leiden_prefix}.tsv.gz' --de-results '{lda_prefix}.model.de.marginal.tsv.gz' --de-clust '{sample_pseudobulk_prefix}.de.marginal.tsv.gz' --offset-data 2 --out '{sample_heatmap_prefix}' --colname-clust topK --cell-clust cell_id --draw"
+            cmd = f"{args.R} '{heatmap_rscript}' --results '{sample_lda_prefix}.results.tsv' --clust '{sample_leiden_prefix}.tsv.gz' --de-results '{lda_prefix}.model.de.tsv' --de-clust '{sample_pseudobulk_prefix}.de.tsv' --offset-data 2 --out '{sample_heatmap_prefix}' --colname-clust topK --cell-clust cell_id --draw"
             cmds.append(cmd)
             cmds.append(f"[ -f '{sample_heatmap_prefix}.pdf' ] && touch '{sample_heatmap_prefix}.done'" )
             mm.add_target(f"{sample_heatmap_prefix}.done", [f"{sample_lda_prefix}.done", f"{leiden_prefix}.done", f"{sample_pseudobulk_prefix}.done", f"{heatmap_prefix}.multi.done"], cmds)
@@ -628,14 +643,14 @@ def run_ficture2_multi_cells(_args):
         out_cell_params = { 
             "model_type": "lda",
             "model_id": args.out_prefix,
-            "cmap": args.cmap_file,
+            "cmap": f"{sample_prefix}.leiden.pseudobulk.cmap.tsv",
             "model_path": f"{lda_prefix}.model.tsv",
             "fit_path": f"{sample_prefix}.lda.results.tsv",
             "sptsv_prefix": f"{sample_prefix}.sptsv",
             "cell_xy_path": f"{sample_prefix}.leiden.xy.tsv.gz",
             "cluster_path": f"{sample_prefix}.leiden.tsv.gz",
             "cluster_pseudobulk": f"{sample_prefix}.leiden.pseudobulk.tsv",
-            "cluster_de": f"{sample_prefix}.leiden.pseudobulk.de.marginal.tsv.gz",
+            "cluster_de": f"{sample_prefix}.leiden.pseudobulk.de.tsv",
             "cluster_model_heatmap_pdf": f"{sample_prefix}.heatmap.pdf",
             "cluster_model_heatmap_tsv": f"{sample_prefix}.heatmap.counts.tsv",
             "pixel_png_path": f"{sample_prefix}.pixel.png",

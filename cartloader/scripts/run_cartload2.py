@@ -298,9 +298,9 @@ def run_cartload2(_args):
                 outfiles.append(umap_pmtiles)
 
                 cmds.append(f"cp {umap_tsv} {out_prefix}-umap.tsv.gz")
-                cmds.append(f"cp {umap_png} {out_prefix}-umap.png")
+                cmds.append(f"cp {umap_png} {out_prefix}.umap.png")
                 outfiles.append(f"{out_prefix}-umap.tsv.gz")
-                outfiles.append(f"{out_prefix}-umap.png")
+                outfiles.append(f"{out_prefix}.umap.png")
 
                 touch_flag_cmd=valid_and_touch_cmd(outfiles, f"{out_prefix}-umap.done") # this only touch the flag file when all output files exist
                 cmds.append(touch_flag_cmd)
@@ -365,6 +365,7 @@ def run_cartload2(_args):
             cell_post_tsvf = cell_param["cluster_pseudobulk"]
             cell_pixel_tsvf = cell_param["pixel_tsv_path"]
             cell_pixel_pngf = cell_param["pixel_png_path"]
+            copy_rgb_tsv(model_rgb, f"{out_prefix}-rgb.tsv", restart=args.restart)
 
             cmds.append(f"cp {cell_de_tsvf} {out_prefix}-bulk-de.tsv")
             cmds.append(f"cp {cell_post_tsvf} {out_prefix}-pseudobulk.tsv.gz")
