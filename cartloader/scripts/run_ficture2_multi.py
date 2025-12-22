@@ -60,7 +60,7 @@ def parse_arguments(_args):
     #aux_params.add_argument('--min-ct-per-unit-fit', type=int, default=50, help='Minimum count per hexagon unit during model fitting (default: 20)')
     #aux_params.add_argument('--fit-plot-um-per-pixel', type=float, default=1, help='Image resolution for fit coarse plot (default: 1)')  # in Scopeflow, this is set to 2
     aux_params.add_argument('--skip-umap', action='store_true', default=False, help='Skip creating umap')
-    aux_params.add_argument('--decode-scale', type=int, default=2, help='Training epoch for LDA model (default: 2)')
+    aux_params.add_argument('--decode-scale', type=int, default=1, help='Decode scale parameter for plotting')
 
     # others parameters shared across steps
     aux_params.add_argument('--min-count-train', type=int, default=50, help='Minimum count for training (default: 50)')
@@ -102,15 +102,15 @@ def add_multisample_prepare_targets(mm, args, ficture2bin, in_samples):
     cmds = cmd_separator([], f"Creating tiled tsv from {os.path.basename(args.in_list)}...")
     cmd = " ".join([
         ficture2bin, "multisample-prepare",
-        f"--in-tsv-list {args.in_list}",
-        f"--out-dir {args.out_dir}",
+        f"--in-tsv-list '{args.in_list}'",
+        f"--out-dir '{args.out_dir}'",
         f"--out-joint-pref multi",
         f"--icol-x {args.colidx_x-1}",
         f"--icol-y {args.colidx_y-1}",
         f"--icol-feature {args.colidx_feature-1}",
         f"--icol-int {args.colidx_count-1}",
         f"--skip 1",
-        f"--temp-dir {args.out_dir}/tmp",
+        f"--temp-dir '{args.out_dir}/tmp'",
         f"--tile-size {args.tile_size}",
         f"--tile-buffer {args.tile_buffer}",
         f"--threads {args.threads}",
@@ -129,12 +129,12 @@ def add_multisample_prepare_targets(mm, args, ficture2bin, in_samples):
                     wf.write(f"{sample}\t{args.out_dir}/samples/{sample}/{sample}.features.tsv\t{args.out_dir}/samples/{sample}/{sample}.hex_{width}.txt\t{args.out_dir}/samples/{sample}/{sample}.hex_{width}.json\t-2\n")
             cmd = " ".join([
                 ficture2bin, "merge-units",
-                f"--in-list {args.out_dir}/multi.hex_{width}.list.tsv",
+                f"--in-list '{args.out_dir}/multi.hex_{width}.list.tsv'",
                 f"--min-total-count-per-sample {args.min_count_per_sample}",
                 f"--min-count-per-unit {args.min_ct_per_unit_hexagon}",
-                f"--out-pref {args.out_dir}/multi.hex_{width}",
+                f"--out-pref '{args.out_dir}/multi.hex_{width}'",
                 f"--threads {args.threads}",
-                f"--temp-dir {args.out_dir}/tmp/multi_hex_{width}"])
+                f"--temp-dir '{args.out_dir}/tmp/multi_hex_{width}'"])
             cmds.append(cmd)
 
     cmd = f"[ -f {args.out_dir}/multi.features.tsv ]" + "".join([f" && [ -f {args.out_dir}/multi.hex_{width}.txt ]" for width in widths]) + f" && touch {args.out_dir}/multi.done"
@@ -552,7 +552,7 @@ def run_ficture2_multi(_args):
                             out_prefix=sample_lda_prefix, 
                             subtitle=f"{model_id} - sample specific ({sample})")
         cmds = cmd_separator([], f"Finishing LDA projection for each sample for model {model_id}...")
-        cmds.append(f"touch {model_prefix}_each.done")
+        cmds.append(f"touch '{model_prefix}_each.done'")
         mm.add_target(f"{model_prefix}_each.done", lda_each_targets, cmds)
 
     ## step 3. multi-sample pixel-decode (perform pixel-decode for each sample)
@@ -591,7 +591,7 @@ def run_ficture2_multi(_args):
         json_each_targets.append(sample_out_json)
 
     cmds=cmd_separator([], f"Finishing writing the JSON file for each sample...")
-    cmds.append(f"touch {args.out_dir}/multi_json_each.done")
+    cmds.append(f"touch '{args.out_dir}/multi_json_each.done'")
     mm.add_target(f"{args.out_dir}/multi_json_each.done", json_each_targets, cmds)
 
     ## write makefile
