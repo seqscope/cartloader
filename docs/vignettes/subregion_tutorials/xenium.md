@@ -19,7 +19,7 @@ Follow the commands below to download the example data.
 ```bash
 work_dir=/path/to/work/directory
 cd $work_dir
-wget  https://zenodo.org/records/15786632/files/xenium_starter.raw.tar.gz 
+wget  https://zenodo.org/records/17953582/files/xenium_starter.raw.tar.gz 
 tar --strip-components=1 -zxvf xenium_starter.raw.tar.gz  
 ```
 

@@ -219,7 +219,7 @@ Upload the generated `CartLoader` outputs from above to your designated AWS S3 d
 ---
 ## Output Summary
 
-See reference details: [run_ficture2_multi](../../reference/run_ficture2_multi.md#output) and [run_cartload2_multi](../../reference/run_cartload2_multi.md#output).
+<!-- See reference details: [run_ficture2_multi](../../reference/run_ficture2_multi.md#output) and [run_cartload2_multi](../../reference/run_cartload2_multi.md#output).
 
 ### Spatial Factor Inference Per Sample
 
@@ -232,4 +232,22 @@ Below is an example of spatial factor inference results from `FICTURE`, trained 
 
 ### Packed SGE and Spatial Factor Outputs Per Sample
 
-TODO: Provide paths to these assets to serve the outputs.
+TODO: Provide paths to these assets to serve the outputs. -->
+
+
+<div class="grid cards generic" markdown>
+
+-   ![Interactive Exploration](placeholder)
+
+    ---
+
+    #### View/Explore
+
+    The output are available in both CartoScope. 
+
+    [Explore in CartoScope](http://localhost:5173/datasets?collections=human+cerebral+cortex+development%2C+gestational+week+20+%E2%80%93+occipital+cortex){ .md-button .md-button--primary .button-tight-small }
+
+</div>
+
+See more details of output at the Reference pages for [run_ficture2](../docs/reference/run_ficture2.md) and [run_cartload2](../docs/reference/run_cartload2.md).
+

@@ -90,11 +90,12 @@ In manual mode, provide inputs relative to `--space-ranger-dir`:
 - `--json-scale` or `--units-per-um`: Pixel‑to‑µm scale source
 
 ### FICTURE (with `--run-ficture2`)
-
 - `--width`: Comma‑separated hexagon widths in µm for train/projection (required)
 - `--n-factor`: Comma‑separated factor counts for training (required)
 - `--colname-feature`: Feature column name (default: `gene`)
 - `--colname-count`: Count column name (default: `count`)
+- `--fic-include-feature-regex` (str): Regex of feature names to include in FICTURE analysis.
+- `--fic-exclude-feature-regex` (str): Regex of feature names to exclude in FICTURE analysis.
 
 ### Import Cells (with `--import-cells`)
 

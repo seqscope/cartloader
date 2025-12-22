@@ -131,17 +131,28 @@ def write_catalog_for_assets(_args):
 
         if factors_list:
             normalized_factors = []
+            def _normalize_umap_value(value):
+                if isinstance(value, str):
+                    return os.path.basename(value)
+                if isinstance(value, dict):
+                    normalized_dict = {}
+                    for k, v in value.items():
+                        normalized_v = _normalize_umap_value(v)
+                        if normalized_v:
+                            normalized_dict[k] = normalized_v
+                    return normalized_dict or None
+                if isinstance(value, list):
+                    normalized_list = [nv for nv in (_normalize_umap_value(v) for v in value) if nv]
+                    return normalized_list or None
+                return None
+
             for factor_entry in factors_list:
                 umap_info = factor_entry.get("umap")
-                if isinstance(umap_info, dict):
-                    normalized = {}
-                    for key, value in umap_info.items():
-                        if isinstance(value, str):
-                            normalized[key] = os.path.basename(value)
-                    if normalized:
-                        factor_entry["umap"] = normalized
-                    else:
-                        factor_entry.pop("umap", None)
+                normalized_umap = _normalize_umap_value(umap_info)
+                if normalized_umap:
+                    factor_entry["umap"] = normalized_umap
+                else:
+                    factor_entry.pop("umap", None)
                 normalized_factors.append(factor_entry)
             factors_list = normalized_factors
 

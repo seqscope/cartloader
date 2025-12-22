@@ -3,8 +3,9 @@ import pandas as pd
 from pathlib import Path
 
 from cartloader.utils.minimake import minimake
-from cartloader.utils.utils import cmd_separator, scheck_app, create_custom_logger, load_file_to_dict, write_dict_to_file, ficture2_params_to_factor_assets, read_minmax, flexopen, execute_makefile, valid_and_touch_cmd
+from cartloader.utils.utils import cmd_separator, scheck_app, create_custom_logger, load_file_to_dict, write_dict_to_file, read_minmax, flexopen, execute_makefile, valid_and_touch_cmd
 from cartloader.utils.color_helper import normalize_rgb
+from cartloader.utils.ficture2_helper import ficture2_params_to_factor_assets
 
 def parse_arguments(_args):
     """
@@ -162,6 +163,73 @@ def copy_rgb_tsv(in_rgb, out_rgb, restart=False):
 
     with open(out_rgb, 'w') as f:
         f.write(expected_content)
+
+def process_umap(umap, mm, args, out_prefix, model_id, fic_jsonf):
+    """Add Makefile target to convert a UMAP bundle into PMTiles and copies."""
+    if not umap:
+        return None
+
+    umap_tsv = umap.get("tsv", None)
+    umap_png = umap.get("png", None)
+    umap_idv_png = umap.get("ind_png", None)
+    for f in (umap_tsv, umap_png, umap_idv_png):
+        assert f is not None, f"UMAP entry incomplete for model {model_id} in FICTURE params {fic_jsonf} (provided by --fic-dir and --in-fic-params)"
+        assert os.path.exists(f), f"UMAP file not found: {f} for model {model_id} in FICTURE params {fic_jsonf} (provided by --fic-dir and --in-fic-params)"
+
+    cmds = cmd_separator([], f"Converting UMAP for {model_id} into PMTiles and copying relevant files..")
+    prerequisites = [umap_tsv, umap_png, umap_idv_png]
+    outfiles=[]
+
+    umap_tsv_out = f"{out_prefix}-umap.tsv.gz"
+    if umap_tsv.endswith(".gz"):
+        cmds.append(f"cp {umap_tsv} {umap_tsv_out}")
+    else:
+        cmds.append(f"{args.gzip} -c '{umap_tsv}' > '{umap_tsv_out}'")
+    outfiles.append(umap_tsv_out)
+
+    cmds.append(f"cp {umap_png} {out_prefix}.umap.png")
+    outfiles.append(f"{out_prefix}.umap.png")
+
+    cmds.append(f"cp {umap_idv_png} {out_prefix}.umap.single.prob.png")
+    outfiles.append(f"{out_prefix}.umap.single.prob.png")
+
+    umap_ndjson = f"{out_prefix}-umap.ndjson"
+    umap_pmtiles = f"{out_prefix}-umap.pmtiles"
+    convert_cmd = " ".join([
+        "cartloader", "render_umap",
+        f"--input {umap_tsv_out}",
+        f"--out {umap_ndjson}",
+        f"--colname-factor {args.umap_colname_factor}",
+        f"--colname-x {args.umap_colname_x}",
+        f"--colname-y {args.umap_colname_y}"
+    ])
+    cmds.append(convert_cmd)
+
+    tippecanoe_cmd = " ".join([
+        f"TIPPECANOE_MAX_THREADS={args.threads}",
+        f"'{args.tippecanoe}'",
+        f"-t {args.tmp_dir}",
+        f"-o {umap_pmtiles}",
+        "-Z", str(args.umap_min_zoom),
+        "-z", str(args.umap_max_zoom),
+        "-l", "umap",
+        "--force",
+        "--drop-densest-as-needed",
+        "--extend-zooms-if-still-dropping",
+        "--no-duplication",
+        f"--preserve-point-density-threshold={args.preserve_point_density_thres}",
+        umap_ndjson
+    ])
+    cmds.append(tippecanoe_cmd)
+    if not args.keep_intermediate_files:
+        cmds.append(f"rm -f {umap_ndjson}")
+    outfiles.append(umap_pmtiles)
+
+    touch_flag_cmd=valid_and_touch_cmd(outfiles, f"{out_prefix}-umap.done") # this only touch the flag file when all output files exist
+    cmds.append(touch_flag_cmd)
+    target = f"{out_prefix}-umap.done"
+    mm.add_target(target, prerequisites, cmds)
+    return target
 
 def run_cartload2(_args):
     """
@@ -425,7 +493,7 @@ def run_cartload2(_args):
                 },
                 "de":{
                     "required": False,
-                    "in": train_param.get("de_path",f"{in_prefix}.bulk_chisq.tsv"),
+                    "in": train_param.get("de_path", f"{in_prefix}.bulk_chisq.tsv"),
                     "out": f"{out_prefix}-bulk-de.tsv"
                 },
                 "info":{
@@ -444,69 +512,12 @@ def run_cartload2(_args):
 
             # umap
             umap = train_param.get("umap", {})
-            if len(umap)>0:
-                umap_tsv = umap.get("tsv", None)
-                umap_png = umap.get("png", None)
-                umap_idv_png = umap.get("ind_png", None)
-                for f in (umap_tsv, umap_png, umap_idv_png):
-                    assert f is not None, f"UMAP entry incomplete for model {model_id} in FICTURE params {fic_jsonf} (provided by --fic-dir and --in-fic-params)"
-                    assert os.path.exists(f), f"UMAP file not found: {f} for model {model_id} in FICTURE params {fic_jsonf} (provided by --fic-dir and --in-fic-params)"
-
-                cmds = cmd_separator([], f"Converting UMAP for {model_id} into PMTiles and copying relevant files..")
-                prerequisites = [umap_tsv, umap_png, umap_idv_png]
-                outfiles=[]
-
-                # copy a tsv file (to support export in CartoScope)
-                umap_tsv_out = f"{out_prefix}-umap.tsv.gz"
-                if umap_tsv.endswith(".gz"):
-                    cmds.append(f"cp {umap_tsv} {umap_tsv_out}")
-                else:
-                    cmds.append(f"{args.gzip} -c '{umap_tsv}' > '{umap_tsv_out}'")
-                outfiles.append(umap_tsv_out)
-
-                cmds.append(f"cp {umap_png} {out_prefix}.umap.png")
-                outfiles.append(f"{out_prefix}.umap.png")
-
-                cmds.append(f"cp {umap_idv_png} {out_prefix}.umap.single.prob.png")
-                outfiles.append(f"{out_prefix}.umap.single.prob.png")
-
-                # tsv.gz to pmtiles
-                umap_ndjson = f"{out_prefix}-umap.ndjson"
-                umap_pmtiles = f"{out_prefix}-umap.pmtiles"
-                # 1) Use NDJSON (Newline-Delimited JSON) than JSON: 1) this file is light; 2) tippecanoe can process each line without reading all info
-                convert_cmd = " ".join([
-                    "cartloader", "render_umap",
-                    f"--input {umap_tsv_out}",
-                    f"--out {umap_ndjson}",
-                    f"--colname-factor {args.umap_colname_factor}",
-                    f"--colname-x {args.umap_colname_x}",
-                    f"--colname-y {args.umap_colname_y}"
-                ])
-                cmds.append(convert_cmd)
-                # 2) ndjson to pmtiles
-                tippecanoe_cmd = " ".join([
-                    f"TIPPECANOE_MAX_THREADS={args.threads}",
-                    f"'{args.tippecanoe}'",
-                    f"-t {args.tmp_dir}",
-                    f"-o {umap_pmtiles}",
-                    "-Z", str(args.umap_min_zoom),
-                    "-z", str(args.umap_max_zoom),
-                    "-l", "umap",
-                    "--force",
-                    "--drop-densest-as-needed",
-                    "--extend-zooms-if-still-dropping",
-                    "--no-duplication",
-                    f"--preserve-point-density-threshold={args.preserve_point_density_thres}",
-                    umap_ndjson
-                ])
-                cmds.append(tippecanoe_cmd)
-                if not args.keep_intermediate_files:
-                    cmds.append(f"rm -f {umap_ndjson}")
-                outfiles.append(umap_pmtiles)
-
-                touch_flag_cmd=valid_and_touch_cmd(outfiles, f"{out_prefix}-umap.done") # this only touch the flag file when all output files exist
-                cmds.append(touch_flag_cmd)
-                mm.add_target(f"{out_prefix}-umap.done", prerequisites, cmds)
+            # if umap is a dict,
+            if train_param.get("analysis") == "multi-sample":
+                process_umap(umap.get("shared"), mm, args, out_prefix+"-shared", model_id, fic_jsonf)
+                process_umap(umap.get("sample"), mm, args, out_prefix, model_id, fic_jsonf)
+            else:
+                process_umap(umap, mm, args, out_prefix, model_id, fic_jsonf)
                 
             cmds = cmd_separator([], f"Converting LDA-trained factors {model_id} into PMTiles and copying relevant files..")
             

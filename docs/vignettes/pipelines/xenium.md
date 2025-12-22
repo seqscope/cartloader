@@ -209,7 +209,7 @@ Below are explanations of the parameters used in the example. For the full list,
 
 
 ## Outputs
-
+<!-- 
 ### Xenium Assets JSON
 
 Example: [`includes/xenium_ranger_assets.human_lung_cancer.json`](../../../includes/xenium_ranger_assets.human_lung_cancer.json)
@@ -242,4 +242,24 @@ See more details of output at the Reference pages for [run_cartload2](../..//ref
 - SGE PMTiles (examples): `<out-dir>/cartload2/sge-mono-dark.pmtiles`, `<out-dir>/cartload2/sge-mono-light.pmtiles`
 - Factor PMTiles (examples): `<out-dir>/cartload2/t18_f24_p18_a6-results.pmtiles`, `<out-dir>/cartload2/t18_f24_p18_a6-pixel-raster.pmtiles`
 
-individual PMTiles and asset JSON files reside alongside it under `<out-dir>/cartload2/`.
+individual PMTiles and asset JSON files reside alongside it under `<out-dir>/cartload2/`. -->
+
+<div class="grid cards generic" markdown>
+
+-   ![Interactive Exploration](../../images/pipeline_vignettes/xenium_human_lung_cancer_v1.2.t18_f24_p18_a6.png)
+
+    ---
+
+    #### View/Explore
+
+    The output are available in both CartoScope.
+
+    [Explore in CartoScope](http://localhost:5173/dataset?uri=s3%2Fcartostore%2Fdata%2Fbatch%3D2025_12%2Fcartloader-pipeline-example-collection%2Fxenium_human_lung_cancer){ .md-button .md-button--primary .button-tight-small }
+
+    <!-- [Download from Zenodo](https://zenodo.org/records/17958845){ .md-button .button-tight-small } -->
+
+</div>
+
+See more details of output at the Reference pages for [run_ficture2](../docs/reference/run_ficture2.md) and [run_cartload2](../docs/reference/run_cartload2.md).
+
+

@@ -99,7 +99,7 @@ These examples show how to process real‑world ST datasets from different platf
     <figcaption class="figure-caption-vigintro-large">**10x Xenium** Pipeline Guide</figcaption>
     </figure>
 
-    [Read](./subregion_tutorials/xenium.md){ .md-button .md-button--primary .button-tight-small }
+    [Read](./pipelines/xenium.md){ .md-button .md-button--primary .button-tight-small }
 
 -   <figure markdown="span">
     ![example3](../images/pipeline_vignettes/visiumhd_3prime_mouse_brain.t18_f24_p18_a6.png){ width="100%" }

@@ -268,7 +268,8 @@ def upload_zenodo(_args):
         sys.exit(1)
     
     print(f" * Checking Zenodo capacity")
-    existing_fnames = set(existing_files)
+    # Normalize existing filenames to basenames to ensure overlap checks work reliably
+    existing_fnames = set(os.path.basename(f) for f in existing_files)
     files_after_upload = existing_fnames.union({os.path.basename(f) for f in in_files_raw})
     n_expected = len(files_after_upload)
     print(f"    - Expected total files in Zenodo bucket after upload: {n_expected}")
@@ -303,26 +304,35 @@ def upload_zenodo(_args):
                     print(f"    - Error uploading {in_file}: {e}")
         return failed_list
 
-    def process_uploading_by_list(in_files_raw, existing_files, force_upload_files=[], touch_flag=False, flag_suffix="zenodo.done", overwrite=False, dry_run=False):
+    def process_uploading_by_list(in_files_raw, existing_files, all_input_basenames, force_upload_files=[], touch_flag=False, flag_suffix="zenodo.done", overwrite=False, dry_run=False):
         if not in_files_raw:
             raise ValueError(f" * No input files found")
 
         failed_list = []
         print(f" * Checking overlapping with existing files in the Zenodo deposition (overwrite mode: {'On' if args.restart else 'Off'})")
         input_fnames = {os.path.basename(f): f for f in in_files_raw}
-        existing_only = [f for f in existing_files if f not in input_fnames]
-        input_overlap = [input_fnames[f] for f in input_fnames if f in existing_fnames]
-        input_only = [input_fnames[f] for f in input_fnames if f not in existing_fnames]
+
+        # existing_files is a list of filenames (strings) returned by list_existing_files().
+        # Compare using basenames on both sides.
+        existing_fnames = set(os.path.basename(f) for f in existing_files)
+
+        # Existing files on Zenodo that are NOT part of the whole planned upload (across all groups)
+        existing_only = [f for f in existing_fnames if f not in all_input_basenames]
+
+        # existing_fnames is a normalized set of basenames (built earlier).
+        input_overlap = [input_fnames[name] for name in input_fnames if name in existing_fnames]
+        input_only = [input_fnames[name] for name in input_fnames if name not in existing_fnames]
+
         in_files = in_files_raw if overwrite else input_only
         
         if len(force_upload_files) > 0 :
-            print(f"    - Files to upload regardless of existence. {";".join(force_upload_files)}")
+            print(f"    - Files to upload regardless of existence: {';'.join(force_upload_files)}")
             in_files.extend(force_upload_files)
 
         if len(in_files) == 0:
             print("WARNING: No files to be uploaded. Aborting upload.")
         else:
-            print(f" * Uploading (dry-run mode)") if dry_run else print(f"2) Uploading") 
+            print(f" * Uploading (dry-run mode)") if dry_run else print(f" * Uploading") 
             if input_only:
                 print(f"\n    - New input file(s) (not in deposition): N={len(input_only)}")
                 failed_list1=uploading(input_only, dry_run, touch_flag=False, flag_suffix="zenodo.done")
@@ -353,11 +363,14 @@ def upload_zenodo(_args):
 
     failed_list=[]
     if args.upload_method == "all" or args.upload_method == "files":
-        failed_sublist=process_uploading_by_list(in_files_raw, existing_files, force_upload_files=[], touch_flag=False, flag_suffix="zenodo.done", overwrite=args.restart, dry_run=args.dry_run)
+        all_input_basenames = set(os.path.basename(f) for f in in_files_raw)
+        failed_sublist=process_uploading_by_list(in_files_raw, existing_files, all_input_basenames, force_upload_files=[], touch_flag=False, flag_suffix="zenodo.done", overwrite=args.restart, dry_run=args.dry_run)
         failed_list.extend(failed_sublist)
     elif args.upload_method == "catalog":
+        # For catalog mode, define the whole planned upload as the union of all groups
+        all_input_basenames = set(os.path.basename(f) for f in (basic_files_raw + basemap_files_raw + opt_files_raw))
         print(f"\n1) Upload: tiled map data for SGE (with or without FICTURE)\n")
-        failed_sublist=process_uploading_by_list(basic_files_raw, existing_files, force_upload_files=[], touch_flag=False, flag_suffix="zenodo.done", overwrite=args.restart, dry_run=args.dry_run)
+        failed_sublist=process_uploading_by_list(basic_files_raw, existing_files, all_input_basenames, force_upload_files=[], touch_flag=False, flag_suffix="zenodo.done", overwrite=args.restart, dry_run=args.dry_run)
         failed_list.extend(failed_sublist)
         if not args.dry_run:
             cartload_flag=os.path.join(args.in_dir, "cartload.zenodo.done")
@@ -365,11 +378,11 @@ def upload_zenodo(_args):
         
         if len(basemap_files_raw) > 0:
             print(f"\n2) Upload: tiled map data for background images, such as histology images\n")
-            failed_sublist=process_uploading_by_list(basemap_files_raw, existing_files, force_upload_files=[], touch_flag=True, flag_suffix="zenodo.done", overwrite=args.restart, dry_run=args.dry_run)
+            failed_sublist=process_uploading_by_list(basemap_files_raw, existing_files, all_input_basenames, force_upload_files=[], touch_flag=True, flag_suffix="zenodo.done", overwrite=args.restart, dry_run=args.dry_run)
             failed_list.extend(failed_sublist)
         if len(opt_files_raw) > 0:
             print(f"\n3) Upload: optional files\n")
-            failed_sublist=process_uploading_by_list(opt_files_raw, existing_files, force_upload_files=[], touch_flag=True, flag_suffix="zenodo.done", overwrite=args.restart, dry_run=args.dry_run)
+            failed_sublist=process_uploading_by_list(opt_files_raw, existing_files, all_input_basenames, force_upload_files=[], touch_flag=True, flag_suffix="zenodo.done", overwrite=args.restart, dry_run=args.dry_run)
             failed_list.extend(failed_sublist)
     
     if args.publish and not args.dry_run:

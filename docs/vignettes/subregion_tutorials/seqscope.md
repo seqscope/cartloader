@@ -14,14 +14,14 @@ Actual input formats are platform-dependent. Please refer to the [Vignettes](../
 
 **Data Access**
 
-The example data is hosted on Zenodo (10.5281/zenodo.15786632).
+The example data is hosted on Zenodo (10.5281/zenodo.17953582).
 
 Follow the commands below to download the example data.
 
 ```bash
 work_dir=/path/to/work/directory
 cd $work_dir
-wget  https://zenodo.org/records/15786632/files/seqscope_starter.raw.tar.gz 
+wget  https://zenodo.org/records/17953582/files/seqscope_starter.raw.tar.gz 
 tar -zxvf seqscope_starter.raw.tar.gz 
 ```
 

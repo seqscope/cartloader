@@ -172,7 +172,9 @@ Below are the core parameters. See more details in the collapsible sections belo
     * `--csv-colname-feature-name` (str): Column name for gene name (default: `feature_name` for 10x Xenium; `geneID` for Stereo‑seq; `target` for CosMx SMI; `gene` for MERSCOPE; `geneName` for Pixel‑seq).
     * `--csv-colnames-others` (str): Column names to keep.
     * `--csv-colname-phredscore` (str): Column name for Phred‑scaled quality value estimating the probability of incorrect calls (default: `qv` for 10x Xenium).
-    * `--min-phred-score` (int): Phred‑scaled quality score cutoff (default: `20` for 10x Xenium).
+    * `--min-phred-score` (float): Minimum Q-score to retain a transcript.
+        - Default for `10x_xenium`: 20.0
+        - Default for others: 0.0
 
     **Auxiliary Output Parameters**: 
 
@@ -189,7 +191,9 @@ Below are the core parameters. See more details in the collapsible sections belo
     **Environment Parameters**  
     If the binaries are already available in your system's `PATH`, you may omit these options.
 
-    * `--gzip` (str): Path to `gzip` binary; consider `pigz -p 4` for faster processing (default: `gzip`)
+    * `--gzip` (str): Path to `gzip` binary (default: `gzip`).
+    * `--pigz` (str): Path to `pigz` binary for parallel gzip compression (default: `pigz`).
+    * `--pigz-threads` (int): Number of threads for `pigz` (default: 4).
     * `--spatula` (str): Path to `spatula` binary (default: `spatula`)
     * `--parquet-tools` (str): Path to `parquet-tools` binary (used with --in-parquet or --pos-parquet; default: `parquet-tools`)
 

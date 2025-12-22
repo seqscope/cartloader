@@ -3,9 +3,9 @@ suppressPackageStartupMessages({
   library(data.table)
   library(RcppParallel)
 })
-if (!requireNamespace("this.path", quietly = TRUE)) {
-    install.packages("this.path", repos = "https://cran.rstudio.com")
-}
+# if (!requireNamespace("this.path", quietly = TRUE)) {
+#     install.packages("this.path", repos = "https://cran.rstudio.com")
+# }
 
 #script_path <- normalizePath(sub("^--file=", "", commandArgs(trailingOnly = FALSE)[grep("^--file=", commandArgs(trailingOnly = FALSE))]))
 #script_dir <- dirname(script_path)

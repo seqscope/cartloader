@@ -43,7 +43,7 @@ The input is an mouse hippocampus SGE in a `FICTURE`-compatible format compatibl
 
 !!! warning "Input data already included"
 
-    The [example dataset](https://zenodo.org/records/15786632/files/seqscope_starter.std.tar.gz) is preloaded in the Docker image — no need to download separately.
+    The [example dataset](https://zenodo.org/records/17953582/files/seqscope_starter.std.tar.gz) is preloaded in the Docker image — no need to download separately.
 
     If needs, it is also available on Zenodo: [DOI: 10.5281/zenodo.15701393](https://doi.org/10.5281/zenodo.15701393)
 

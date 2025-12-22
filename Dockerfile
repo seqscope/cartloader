@@ -142,7 +142,7 @@ RUN wget https://github.com/protomaps/go-pmtiles/releases/download/v1.28.0/go-pm
 # Add a test dataset
 # ===============================
 RUN mkdir -p /app/data && \
-    wget https://zenodo.org/records/15786632/files/seqscope_starter.std.tar.gz && \
+    wget https://zenodo.org/records/17953582/files/seqscope_starter.std.tar.gz && \
     tar -xzf seqscope_starter.std.tar.gz -C /app/data && \
     rm seqscope_starter.std.tar.gz
 

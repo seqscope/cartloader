@@ -34,7 +34,7 @@ def collect_files_from_yaml(catalog_f):
         catalog = yaml.safe_load(catalog_file)
     catalog_pair=traverse_dict(catalog)
 
-    keys_id = {"id", "title", "name", "model_id", "proj_id", "decode_id", "cells_id", "cell_id", "square_id", "raw_pixel_col"}
+    keys_id = {"id", "title", "name", "model_id", "proj_id", "decode_id", "cells_id", "cell_id", "square_id", "raw_pixel_col", "analysis"}
     cartload_required_files = [] 
     cartload_optional_files = [] 
     basemap_files = []
@@ -85,6 +85,7 @@ def upload_aws(_args):
     key_params.add_argument('--upload-optional-only', action="store_true", default=False, help='Upload only the cartload optional files, i.e., umap, alias ')
     key_params.add_argument('--upload-basemap-only', action="store_true", default=False, help='Upload only additional basemap pmtiles, i.e., histology ')
     key_params.add_argument('--aws', type=str, default="aws", help='aws CLI executable (default: aws)')
+    key_params.add_argument('--profile', type=str, default=None, help='AWS CLI profile to use (optional)')
 
     multi_params = parser.add_argument_group(
         "Optional Collection Upload Parameters",
@@ -96,6 +97,7 @@ def upload_aws(_args):
 
     def upload_single_to_aws(in_dir, s3_dir, catalog_f, args, mm):
         s3_catalog_f = f"{s3_dir}/catalog.yaml"
+        aws_base = f"{args.aws}" + (f" --profile {args.profile}" if args.profile else "")
 
         # get the cartload output and basemaps files from catalog
         basics_files, optional_files, basemap_files = collect_files_from_yaml(catalog_f)
@@ -128,9 +130,9 @@ def upload_aws(_args):
             for filename in basics_files:
                 file_path=os.path.join(in_dir, filename)
                 s3_file_path = os.path.join(s3_dir, filename) 
-                cmds.append(f"{args.aws} s3 cp {file_path} {s3_file_path}")
+                cmds.append(f"{aws_base} s3 cp {file_path} {s3_file_path}")
             
-            cmds.append(f"{args.aws} s3 cp {catalog_f} {s3_catalog_f}")
+            cmds.append(f"{aws_base} s3 cp {catalog_f} {s3_catalog_f}")
             cartload_flag=os.path.join(in_dir, "cartload.aws.done")
             cmds.append(f"touch {cartload_flag}")
             mm.add_target(cartload_flag, basics_prerequisites, cmds)
@@ -142,7 +144,7 @@ def upload_aws(_args):
                 cmds=cmd_separator([], f"Uploading optional cartload files to AWS...")
                 file_path=os.path.join(in_dir, filename)
                 s3_file_path = os.path.join(s3_dir, filename) 
-                cmds.append(f'{args.aws} s3 cp "{file_path}" "{s3_file_path}" && {args.aws} s3 cp "{catalog_f}" "{s3_catalog_f}" && touch {file_path}.aws.done')
+                cmds.append(f'{aws_base} s3 cp "{file_path}" "{s3_file_path}" && {aws_base} s3 cp "{catalog_f}" "{s3_catalog_f}" && touch {file_path}.aws.done')
                 mm.add_target(f"{file_path}.aws.done", [file_path], cmds)
         
         # print(";".join(basemap_files)+"\n")
@@ -152,7 +154,7 @@ def upload_aws(_args):
                 cmds=cmd_separator([], f"Uploading additional basemaps to AWS: {filename}...")
                 file_path=os.path.join(in_dir, filename)
                 s3_file_path = os.path.join(s3_dir, filename) 
-                cmds.append(f'{args.aws} s3 cp "{file_path}" "{s3_file_path}" && {args.aws} s3 cp "{catalog_f}" "{s3_catalog_f}" && touch {file_path}.aws.done')
+                cmds.append(f'{aws_base} s3 cp "{file_path}" "{s3_file_path}" && {aws_base} s3 cp "{catalog_f}" "{s3_catalog_f}" && touch {file_path}.aws.done')
                 mm.add_target(f"{file_path}.aws.done", [file_path], cmds)
 
     # check aws cli
