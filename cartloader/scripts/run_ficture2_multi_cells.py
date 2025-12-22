@@ -294,7 +294,8 @@ def run_ficture2_multi_cells(_args):
                 sample_lda_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.lda"
                 sample_leiden_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.leiden"
                 sample_sptsv_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.sptsv"
-                cmd = f"cartloader lda_leiden_cluster --offset-data 3 --tsv '{sample_lda_prefix}.results.tsv' --out '{sample_leiden_prefix}.tsv.gz' --resolution {args.resolution} --colname-cluster topK --key-ids cell_id"
+                #cmd = f"cartloader lda_leiden_cluster --offset-data 3 --tsv '{sample_lda_prefix}.results.tsv' --out '{sample_leiden_prefix}.tsv.gz' --resolution {args.resolution} --colname-cluster topK --key-ids cell_id"
+                cmd = f"({args.gzip} -cd '{leiden_prefix}.tsv.gz' | head -1 | cut -f 2-; {args.gzip} -cd '{leiden_prefix}.tsv.gz' | grep -w ^{sample_id} | cut -f 2- ;) | {args.gzip} -c > '{sample_leiden_prefix}.tsv.gz'"
                 cmds.append(cmd)
         else:
             samp2clust = {}
@@ -335,6 +336,8 @@ def run_ficture2_multi_cells(_args):
                             cluster_id = toks[1].replace('"', '')
                             if nlines > 0 or cluster_id.isdigit():
                                 int_cluster_id = int(cluster_id)-1 ## convert to 0-based
+                                if int_cluster_id < 0:
+                                    raise ValueError(f"Cluster ID must be >= 1 in existing cluster file. Found {cluster_id} in line: {line}")
                                 wf.write(f"{sample_id}\t{cell_id}\t{int_cluster_id}\n")
                                 wf_sample.write(f"{cell_id}\t{int_cluster_id}\n")
                             nlines += 1
