@@ -120,9 +120,6 @@ heatmaps = lda_celltype_heatmaps(df_tsv, df_clust, args$colname_clust, args$offs
 if ( length(args$de_clust) > 0 ) {
     log_message("Loading DE results for clusters")
     clust_alias = anno_top_k_genes(args$de_clust, args$top_k)
-    ## replcate cluster to clust_alias
-    #df_clust = df_clust %>% 
-    #    mutate(cluster = factor(cluster, levels = clust_alias))
 
     #print(head(heatmaps))
     heatmaps$count$cluster = clust_alias

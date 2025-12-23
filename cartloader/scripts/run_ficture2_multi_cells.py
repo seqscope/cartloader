@@ -74,6 +74,7 @@ def parse_arguments(_args):
     aux_params.add_argument('--decode-fit-width', type=int, default=18, help='Fitting width (in microns) for decoding (default: 10)')
     # project from external model
     aux_params.add_argument('--pretrained-model', type=str, help='Path to a pre-trained model to use for projection. If provided, LDA training will be skipped, and the provided model will be used for projection.')
+    aux_params.add_argument('--list-samples', type=str, help='Path to a TSV file containing sample IDs and paths to their transcript TSV files for multi-sample analysis. If provided, the samples listed in the file will be used for analysis.')
     aux_params.add_argument('--list-cluster', type=str, help='Path to a existing cluster files to create pseudobulk matrix in the format of [SAMPLE_ID] [CLUSTER_FILE]. If provided, Leiden clustering will be skipped, and the provided cluster files will be used for pseudobulk generation.')
     aux_params.add_argument('--list-xy', type=str, help='Path to a existing file containing X/Y locations of each cell. If provided, X/Y locations will be read from the provided file instead of computing from pixel file.')
     aux_params.add_argument('--list-boundaries', type=str, help='Path to a existing file containing cell boundaries. This file will simply be stored in the output JSON for future use.')
@@ -137,19 +138,25 @@ def run_ficture2_multi_cells(_args):
 
     ## parse the input list file
     in_samples = []
-    ## list directories in args.in_dir/samples/
-    samples_dir = os.path.join(args.in_dir, "samples")
-    for entry in os.listdir(samples_dir):
-        entry_path = os.path.join(samples_dir, entry)
-        if os.path.isdir(entry_path):
-            in_samples.append(entry)
+    if args.list_samples is not None:
+        assert os.path.exists(args.list_samples), f"File not found: {args.list_samples} (--list-samples)"
+        with flexopen(args.list_samples, "rt") as f:
+            for line in f:
+                toks = line.strip().split("\t")
+                sample_id = toks[0]
+                ## make sure that the sample directory exists
+                sample_dir = os.path.join(args.in_dir, "samples", sample_id)
+                if not os.path.exists(sample_dir):
+                    raise FileNotFoundError(f"Sample directory not found: {sample_dir}. Please make sure that the sample directory exists in --in-samples")
+                in_samples.append(sample_id)
+    else:     ## list directories in args.in_dir/samples/
+        samples_dir = os.path.join(args.in_dir, "samples")
+        for entry in os.listdir(samples_dir):
+            entry_path = os.path.join(samples_dir, entry)
+            if os.path.isdir(entry_path):
+                in_samples.append(entry)
+    n_samples = len(in_samples)
     logger.info(f"Found {len(in_samples)} samples in {samples_dir}: {in_samples}")
-#   in_tsvs = []
-#    with flexopen(args.in_list, "rt") as f:
-#        for line in f:
-#            toks = line.strip().split("\t")
-#            in_samples.append(toks[0])
-#           in_tsvs.append(toks[1])
     
     # cmap
     assert os.path.exists(args.cmap_file), f"File not found: {args.cmap_file} (--cmap-file)"
@@ -416,11 +423,11 @@ def run_ficture2_multi_cells(_args):
         leiden_prefix = os.path.join(args.out_dir, args.out_prefix) + ".leiden"
         tsne_prefix = os.path.join(args.out_dir, args.out_prefix) 
         cmds = cmd_separator([], f"Generating TSNE manifolds...")
-        cmd = f"cartloader lda_tsne --offset-data 4 --tsv '{lda_prefix}.results.tsv' --out '{tsne_prefix}.tsne.tsv.gz'"
+        cmd = f"cartloader lda_tsne --offset-data 4 --tsv '{lda_prefix}.results.tsv' --out '{tsne_prefix}.tsne.tsv.gz' --key-ids sample_id cell_id"
         cmds.append(cmd)
 
         draw_manifold_rscript=f"{repo_dir}/cartloader/r/draw_manifold_clust.r"
-        cmd = f"{args.R} '{draw_manifold_rscript}' --tsv-manifold '{tsne_prefix}.tsne.tsv.gz' --tsv-clust '{leiden_prefix}.tsv.gz' --tsv-colname-x TSNE1 --tsv-colname-y TSNE2 --out '{tsne_prefix}.tsne.png' --out-tsv '{tsne_prefix}.tsne.leiden.tsv.gz' --tsv-colname-clust topK"
+        cmd = f"{args.R} '{draw_manifold_rscript}' --tsv-manifold '{tsne_prefix}.tsne.tsv.gz' --tsv-clust '{leiden_prefix}.tsv.gz' --tsv-colname-x TSNE1 --tsv-colname-y TSNE2 --out '{tsne_prefix}.tsne.png' --tsv-colname-ids sample_id cell_id --out-tsv '{tsne_prefix}.tsne.leiden.tsv.gz' --tsv-colname-clust topK"
         cmds.append(cmd)
         cmds.append(f"[ -f '{tsne_prefix}.tsne.leiden.tsv.gz' ] && [ -f '{tsne_prefix}.tsne.png' ] && touch '{tsne_prefix}.tsne.multi.done'" )
         mm.add_target(f"{tsne_prefix}.tsne.multi.done", [f"{lda_prefix}.done", f"{leiden_prefix}.done"], cmds)
@@ -431,14 +438,17 @@ def run_ficture2_multi_cells(_args):
             sample_lda_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.lda"
             sample_leiden_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.leiden"
             sample_tsne_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}"
-            cmd = f"cartloader lda_tsne --offset-data 3 --tsv '{sample_lda_prefix}.results.tsv' --out '{sample_tsne_prefix}.tsne.tsv.gz'"
+            if n_samples == 1: ## if sample size is 1, do not rerun TSNE
+                cmd = f"gzip -cd {tsne_prefix}.tsne.tsv.gz | cut -f 2- | gzip -c > '{sample_tsne_prefix}.tsne.tsv.gz'"
+            else:
+                cmd = f"cartloader lda_tsne --offset-data 3 --tsv '{sample_lda_prefix}.results.tsv' --out '{sample_tsne_prefix}.tsne.tsv.gz'"
             cmds.append(cmd)
 
             draw_manifold_rscript=f"{repo_dir}/cartloader/r/draw_manifold_clust.r"
             cmd = f"{args.R} '{draw_manifold_rscript}' --tsv-manifold '{sample_tsne_prefix}.tsne.tsv.gz' --tsv-clust '{sample_leiden_prefix}.tsv.gz' --tsv-colname-x TSNE1 --tsv-colname-y TSNE2 --out '{sample_tsne_prefix}.tsne.png' --out-tsv '{sample_tsne_prefix}.tsne.leiden.tsv.gz' --tsv-colname-clust topK"
             cmds.append(cmd)
             cmds.append(f"[ -f '{sample_tsne_prefix}.tsne.leiden.tsv.gz' ] && [ -f '{sample_tsne_prefix}.tsne.png' ] && touch '{sample_tsne_prefix}.tsne.done'" )
-            mm.add_target(f"{sample_tsne_prefix}.tsne.done", [f"{sample_lda_prefix}.done", f"{leiden_prefix}.done"], cmds)
+            mm.add_target(f"{sample_tsne_prefix}.tsne.done", [f"{sample_lda_prefix}.done", f"{leiden_prefix}.done", f"{tsne_prefix}.tsne.multi.done"], cmds)
             deps.append(f"{sample_tsne_prefix}.tsne.done")
         ## final target 
         cmds = cmd_separator([], f"Finalizing TSNE manifolds for all samples...")
@@ -457,7 +467,7 @@ def run_ficture2_multi_cells(_args):
 
         ## draw UMAP manifolds
         draw_manifold_rscript=f"{repo_dir}/cartloader/r/draw_manifold_clust.r"
-        cmd = f"{args.R} '{draw_manifold_rscript}' --tsv-manifold '{umap_prefix}.umap.tsv.gz' --tsv-clust '{leiden_prefix}.tsv.gz' --tsv-colname-x UMAP1 --tsv-colname-y UMAP2 --out '{umap_prefix}.umap.png' --out-tsv '{umap_prefix}.umap.leiden.tsv.gz' --tsv-colname-clust topK"
+        cmd = f"{args.R} '{draw_manifold_rscript}' --tsv-manifold '{umap_prefix}.umap.tsv.gz' --tsv-clust '{leiden_prefix}.tsv.gz' --tsv-colname-x UMAP1 --tsv-colname-y UMAP2 --out '{umap_prefix}.umap.png' --out-tsv '{umap_prefix}.umap.leiden.tsv.gz' --tsv-colname-ids sample_id cell_id --tsv-colname-clust topK"
         cmds.append(cmd)
         cmds.append(f"[ -f '{umap_prefix}.umap.leiden.tsv.gz' ] && [ -f '{umap_prefix}.umap.png' ] && touch '{umap_prefix}.umap.multi.done'" )
         mm.add_target(f"{umap_prefix}.umap.multi.done", [f"{lda_prefix}.done", f"{leiden_prefix}.done"], cmds)
@@ -468,14 +478,17 @@ def run_ficture2_multi_cells(_args):
             sample_lda_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.lda"
             sample_leiden_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.leiden"
             sample_umap_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}"
-            cmd = f"{args.R} '{create_umap_rscript}' --input '{sample_lda_prefix}.results.tsv' --out-prefix '{sample_umap_prefix}' --tsv-colname-meta random_key cell_id"
+            if n_samples == 1: ## if sample size is 1, do not rerun TSNE
+                cmd = f"gzip -cd {umap_prefix}.umap.tsv.gz | cut -f 1,3- | gzip -c > '{sample_umap_prefix}.umap.tsv.gz'"
+            else:
+                cmd = f"{args.R} '{create_umap_rscript}' --input '{sample_lda_prefix}.results.tsv' --out-prefix '{sample_umap_prefix}' --tsv-colname-meta random_key cell_id"
             cmds.append(cmd)
 
             draw_manifold_rscript=f"{repo_dir}/cartloader/r/draw_manifold_clust.r"
             cmd = f"{args.R} '{draw_manifold_rscript}' --tsv-manifold '{sample_umap_prefix}.umap.tsv.gz' --tsv-clust '{sample_leiden_prefix}.tsv.gz' --tsv-colname-x UMAP1 --tsv-colname-y UMAP2 --out '{sample_umap_prefix}.umap.png' --out-tsv '{sample_umap_prefix}.umap.leiden.tsv.gz' --tsv-colname-clust topK"
             cmds.append(cmd)
             cmds.append(f"[ -f '{sample_umap_prefix}.umap.leiden.tsv.gz' ] && [ -f '{sample_umap_prefix}.umap.png' ] && touch '{sample_umap_prefix}.umap.done'" )
-            mm.add_target(f"{sample_umap_prefix}.umap.done", [f"{sample_lda_prefix}.done", f"{leiden_prefix}.done"], cmds)
+            mm.add_target(f"{sample_umap_prefix}.umap.done", [f"{sample_lda_prefix}.done", f"{leiden_prefix}.done", f"{umap_prefix}.umap.multi.done"], cmds)
             deps.append(f"{sample_umap_prefix}.umap.done")
         ## final target
         cmds = cmd_separator([], f"Finalizing UMAP manifolds for all samples...")
@@ -659,17 +672,30 @@ def run_ficture2_multi_cells(_args):
         summary_aux_args = []
         prerequisities = [f"{args.out_dir}/multi.done"]
 
+        shared_prefix = os.path.join(args.out_dir, args.out_prefix)
         lda_prefix = os.path.join(args.out_dir, args.out_prefix) + ".lda"
         sample_prefix = f"{sample_out_dir}/{sample}.{args.out_prefix}"
 
         out_manifolds = {
-            "tsne": {
-                "tsv": f"{sample_prefix}.tsne.leiden.tsv.gz",
-                "png": f"{sample_prefix}.tsne.png"
+            "shared": {
+                "tsne": {
+                    "tsv": f"{shared_prefix}.tsne.leiden.tsv.gz",
+                    "png": f"{shared_prefix}.tsne.png"
+                },
+                "umap": {
+                    "tsv": f"{shared_prefix}.umap.leiden.tsv.gz",
+                    "png": f"{shared_prefix}.umap.png"
+                }
             },
-            "umap": {
-                "tsv": f"{sample_prefix}.umap.leiden.tsv.gz",
-                "png": f"{sample_prefix}.umap.png"
+            "sample": {
+                "tsne": {
+                    "tsv": f"{sample_prefix}.tsne.leiden.tsv.gz",
+                    "png": f"{sample_prefix}.tsne.png"
+                },
+                "umap": {
+                    "tsv": f"{sample_prefix}.umap.leiden.tsv.gz",
+                    "png": f"{sample_prefix}.umap.png"
+                }
             }
         }
         out_cell_params = { 
@@ -685,11 +711,18 @@ def run_ficture2_multi_cells(_args):
             "cluster_de": f"{sample_prefix}.leiden.pseudobulk.de.tsv",
             "cluster_info": f"{sample_prefix}.leiden.pseudobulk.factor.info.tsv",
             "cluster_model_heatmap_pdf": f"{sample_prefix}.heatmap.pdf",
-            "cluster_model_heatmap_tsv": f"{sample_prefix}.heatmap.counts.tsv",
+            "cluster_model_heatmap_tsv": f"{sample_prefix}.heatmap.normfrac.tsv",
+            "shared_cluster_de": f"{shared_prefix}.leiden.pseudobulk.de.tsv",
+            "shared_cluster_info": f"{shared_prefix}.leiden.pseudobulk.factor.info.tsv",
+            "shared_cluster_pseudobulk": f"{shared_prefix}.leiden.pseudobulk.tsv",
+            "shared_cluster_model_heatmap_pdf": f"{shared_prefix}.heatmap.pdf",
+            "shared_cluster_model_heatmap_tsv": f"{shared_prefix}.heatmap.normfrac.tsv",
             "pixel_png_path": f"{sample_prefix}.pixel.png",
             "pixel_tsv_path": f"{sample_prefix}.pixel.tsv.gz",
             "manifolds": out_manifolds
         }
+        if n_samples > 1:
+            out_cell_params["analysis_type"] = "multi-sample"
         if sample in samp2boundaries:
             out_cell_params["cell_boundaries_path"] = samp2boundaries[sample]
         out_json = { "cell_params": out_cell_params }

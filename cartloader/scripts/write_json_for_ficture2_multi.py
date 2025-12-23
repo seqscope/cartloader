@@ -19,6 +19,7 @@ def parse_arguments(_args):
     parser.add_argument('--lda-model', nargs='*', type=str, default=None, help='LDA Model information: <model_type>,<model_id>,<train_width>,<n_factor>,<cmap>,<model_path>,<shared_fit_path>,<fit_tsv_path>,<de_tsv_path>,<info_tsv_path>. Can be provided multiple times for multiple models.')
     parser.add_argument('--decode', nargs='*', type=str, default=None, help='Projection information: <model_type>,<model_id>,<decode_id>,<fit_width>,<anchor_res>,<decode_pixel_tsv>,<decode_pixel_png>,<decode_pseudobulk_tsv>,<decode_de_tsv>,<decode_info_tsv>. Can be provided multiple times for multiple projections.')
     parser.add_argument('--umap', nargs='*', type=str, default=None, help='UMAP information if exists. Each entry: <model_type>,<model_id>,<umap_tsv>,<umap_png>,<umap_single_factor_png>,<sample_umap_tsv>,<sample_umap_png>,<sample_umap_single_factor_png>. Can be provided multiple times for multiple UMAPs.')
+    parser.add_argument('--n-samples', type=int, default=None, help='Number of samples used in multi-sample analysis. Required if mode is write and LDA models are provided.')
 
     if len(_args) == 0:
         parser.print_help()
@@ -107,7 +108,6 @@ def write_json_for_ficture2_multi(_args):
             model_entry = {
                 "model_type": model_type,
                 "model_id": model_id,
-                "analysis": "multi-sample",
                 "train_width": int(train_width),
                 "n_factor": int(n_factor),
                 "cmap": cmap,
@@ -118,6 +118,9 @@ def write_json_for_ficture2_multi(_args):
                 "info_path": info_tsv_path,
                 "decode_params": []
             }
+            if args.n_samples != 1:
+                model_entry["analysis_type"] = "multi-sample"
+
             if existing is None:
                 if _needs_feature_entry(args.in_feature_ficture, sge_feature_path):
                     model_entry["feature"] = args.in_feature_ficture
