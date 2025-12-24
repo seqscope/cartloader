@@ -363,6 +363,7 @@ def run_ficture2_multi_cells(_args):
                     if not os.path.exists(xy_file):
                         raise FileNotFoundError(f"File not found: {xy_file} (from --list-xy)")
                     samp2xy[sample_id] = xy_file
+        merge_cmd = ""
         for sample_id in in_samples:
             metaf = f"{sample_sptsv_prefix}.cell.metadata.tsv"
             if sample_id in samp2xy:
@@ -400,8 +401,11 @@ def run_ficture2_multi_cells(_args):
                         nlines += 1
             draw_manifold_rscript=f"{repo_dir}/cartloader/r/draw_manifold_clust.r"
             cmd = f"{args.R} '{draw_manifold_rscript}' --tsv-manifold '{metaf}' --tsv-clust '{sample_leiden_prefix}.tsv.gz' --tsv-colname-x X --tsv-colname-y Y --out '{sample_leiden_prefix}.xy.png' --out-tsv '{sample_leiden_prefix}.xy.tsv.gz' --tsv-colname-clust topK"
+            cmds.append(f"[ -f '{sample_leiden_prefix}.xy.tsv.gz' ] && [ -f '{sample_leiden_prefix}.xy.png' ] && touch '{sample_leiden_prefix}.xy.done'" )
+            merge_cmd += "[ -f '{sample_leiden_prefix}.xy.done' ] && "
             cmds.append(cmd)
-        cmds.append(f"[ -f '{leiden_prefix}.tsv.gz' ] && touch '{leiden_prefix}.done'" )
+        merge_cmd += f"[ -f '{leiden_prefix}.tsv.gz' ] && touch '{leiden_prefix}.done'"
+        cmds.append(merge_cmd)
         mm.add_target(f"{leiden_prefix}.done", [f"{lda_prefix}.done"], cmds)
 
         ## spatial visualization of leiden clusters
