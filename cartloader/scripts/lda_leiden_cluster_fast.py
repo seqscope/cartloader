@@ -227,7 +227,7 @@ def lda_leiden_cluster_fast(_args):
 
     logger.info(f"Writing output to {args.out}...")
     # Polars auto-compresses if the filename ends with .gz
-    df_out.write_csv(args.out, separator=args.sep)
+    df_out.write_csv(args.out, separator=args.sep, compression="gzip" if args.out.endswith(".gz") else None)
 
     # if args.out.endswith(".gz"):
     #     import gzip
