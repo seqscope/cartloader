@@ -422,9 +422,9 @@ def run_cartload2(_args):
                         outfiles.append(shared_umap_pmtiles)
 
                         cmds.append(f"cp {umap_tsv} {out_prefix}-shared-umap.tsv.gz")
-                        cmds.append(f"cp {umap_png} {out_prefix}.shared-umap.png")
+                        cmds.append(f"cp {umap_png} {out_prefix}-shared.umap.png")
                         outfiles.append(f"{out_prefix}-shared-umap.tsv.gz")
-                        outfiles.append(f"{out_prefix}.shared-umap.png")
+                        outfiles.append(f"{out_prefix}-shared.umap.png")
 
                         touch_flag_cmd=valid_and_touch_cmd(outfiles, f"{out_prefix}-shared-umap.done") # this only touch the flag file when all output files exist
                         cmds.append(touch_flag_cmd)
