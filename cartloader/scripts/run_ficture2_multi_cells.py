@@ -365,10 +365,10 @@ def run_ficture2_multi_cells(_args):
                     samp2xy[sample_id] = xy_file
         merge_cmd = ""
         for sample_id in in_samples:
-            metaf = f"{sample_sptsv_prefix}.cell.metadata.tsv"
             sample_lda_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.lda"
             sample_leiden_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.leiden"
             sample_sptsv_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.sptsv"
+            metaf = f"{sample_sptsv_prefix}.cell.metadata.tsv"\
             if sample_id in samp2xy:
                 xyf = samp2xy[sample_id]
                 sample_sptsv_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.sptsv"
