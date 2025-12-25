@@ -295,7 +295,7 @@ def run_ficture2_multi_cells(_args):
         leiden_prefix = os.path.join(args.out_dir, args.out_prefix) + ".leiden"
         cmds = cmd_separator([], f"Generating Leiden clusters...")
         if args.list_cluster is None:
-            cmd = f"cartloader lda_leiden_cluster --offset-data 4 --tsv '{lda_prefix}.results.tsv' --out '{leiden_prefix}.tsv.gz' --resolution {args.resolution} --colname-cluster topK --key-ids sample_id cell_id"
+            cmd = f"cartloader lda_leiden_cluster_fast --offset-data 4 --tsv '{lda_prefix}.results.tsv' --out '{leiden_prefix}.tsv.gz' --resolution {args.resolution} --colname-cluster topK --key-ids sample_id cell_id"
             cmds.append(cmd)
             for sample_id in in_samples:
                 sample_lda_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.lda"
