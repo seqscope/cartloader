@@ -86,6 +86,7 @@ def parse_arguments(_args):
     aux_out_params.add_argument('--colname-y', type=str, default='Y', help='Column name for Y in the output(default: Y)')
     aux_out_params.add_argument('--colname-count', type=str, default='count', help='Comma-separated column names for count in the output (default: count)')
     aux_out_params.add_argument('--colname-feature-name', type=str, default='gene', help='Column name for gene name in the output (default: gene)')
+    aux_out_params.add_argument('--scale-xy', type=float, default=1.0, help='Micron per pixel resolution for xy.png (default: 1.0)')
     # aux_out_params.add_argument('--colname-feature-id', type=str, default=None, help='Column name for gene ID. Required only when --csv-colname-feature-id or --print-feature-id is applied') 
 
     # AUX gene-filtering params
@@ -308,6 +309,7 @@ def sge_visual(mm, transcript_f, minmax_f, xy_f, prereq, spatula):
         "--icol-cnt -1", # str(icol_cnt) if icol_cnt is not None else "-1",
         "--ullr", "$XMIN,$YMIN,$XMAX,$YMAX",
         "--auto-adjust",
+        "--coord-per-pixel {args.xy_scale}",
         "--skip-lines", "1",
     ])
     cmds.append(draw_cmd)

@@ -34,7 +34,7 @@ def parse_arguments(_args):
     inout_params.add_argument('--out-prefix', type=str, default="cells", help='Prefix for output files (default: cells)')
     inout_params.add_argument('--out-json', type=str, default=None, help="Path to output JSON file to store analysis parameters (default: <out-dir>/ficture.cells.params.json)")
     inout_params.add_argument('--in-dir', type=str, default=None, help='Path to input directory containing FICTURE output files. Same to out_dit if not specified')
-    inout_params.add_argument('--mex-dir', type=str, help='Directory containing MEX files')
+    # inout_params.add_argument('--mex-dir', type=str, help='Directory containing MEX files')
     inout_params.add_argument('--mex-bcd', type=str, default="barcodes.tsv.gz", help='Barcode files in MEX format')
     inout_params.add_argument('--mex-ftr', type=str, default="features.tsv.gz", help='Feature files in MEX format')
     inout_params.add_argument('--mex-mtx', type=str, default="matrix.mtx.gz", help='Matrix files in MEX format')
@@ -186,6 +186,12 @@ def run_ficture2_multi_cells(_args):
         args.heatmap = True
         args.decode = True
 
+    cmd_ftr_include_exclude = ""
+    if args.include_feature_regex is not None:
+        cmd_ftr_include_exclude += f" --include-feature-regex '{args.include_feature_regex}'"
+    if args.exclude_feature_regex is not None:
+        cmd_ftr_include_exclude += f" --exclude-feature-regex '{args.exclude_feature_regex}'"
+
     ## create cell-based SPTSV files
     if args.sptsv:
         if args.sptsv_prefix is not None:
@@ -194,13 +200,16 @@ def run_ficture2_multi_cells(_args):
         cmds = cmd_separator([], f"Creating cell-based SPTSV files...")
         samp2sptsv = {} ## sample ID to SPTSV file mapping
         ## if mex_dir is provided, create SPTSV from MEX files, assuming that MEX files contain cell-level data across all samples
-        if args.mex_dir is not None:
-            if args.mex_list is not None:
-                raise ValueError("When --mex-dir is provided, --mex-list should not be provided.")
-            cmd = f"{args.spatula} mex2sptsv --in-dir {args.mex_dir} --bcd {args.mex_bcd} --ftr {args.mex_ftr} --mtx {args.mex_mtx} --out {sptsv_prefix} --min-feature-count {args.min_feature_count}"
-            cmds.append(cmd)
-            ## in this case, we assume that merged SPTSV file already exists
-        elif args.mex_list is not None:
+        # if args.mex_dir is not None:
+        #     if args.mex_list is not None:
+        #         raise ValueError("When --mex-dir is provided, --mex-list should not be provided.")
+        #     cmd = f"{args.spatula} mex2sptsv --in-dir {args.mex_dir} --bcd {args.mex_bcd} --ftr {args.mex_ftr} --mtx {args.mex_mtx} --out {sptsv_prefix} --min-feature-count {args.min_feature_count} {cmd_ftr_include_exclude}"
+
+        #     cmds.append(cmd)
+        #     ## in this case, we assume that merged SPTSV file already exists
+        # elif args.mex_list is not None:
+        deps = []
+        if args.mex_list is not None:
             with flexopen(args.mex_list, 'rt') as rf:
                 for line in rf:
                     toks = line.strip().split("\t")
@@ -217,17 +226,19 @@ def run_ficture2_multi_cells(_args):
                     else:
                         raise ValueError(f"Each line in --mex-list must have 2 or 4 columns. Found {len(toks)} columns in line: {line}")
                     sample_sptsv_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.sptsv"
-                    cmd = f"{args.spatula} mex2sptsv --bcd {mex_bcd} --ftr {mex_ftr} --mtx {mex_mtx} --out {sample_sptsv_prefix} --min-feature-count {args.min_feature_count}"
+                    cmd = f"{args.spatula} mex2sptsv --bcd {mex_bcd} --ftr {mex_ftr} --mtx {mex_mtx} --out {sample_sptsv_prefix} --min-feature-count {args.min_feature_count} {cmd_ftr_include_exclude}"
                     cmds.append(cmd)
                     samp2sptsv[sample_id] = sample_sptsv_prefix
+                    deps.extend([mex_bcd, mex_ftr, mex_mtx])
         else:
             for sample_id in in_samples:
                 #sample_id = in_samples[0]  ## use the first sample's tiled file to create SPTSV
                 pixelf = f"{args.in_dir}/samples/{sample_id}/{sample_id}.tiled"
                 sample_sptsv_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.sptsv"
-                cmd = f"{args.spatula} pixel2sptsv --pixel {pixelf}.tsv --no-header --idx-col-x {args.colidx_x} --idx-col-y {args.colidx_y} --idx-col-ftr {args.colidx_feature} --idx-col-cnt {args.colidx_count} --idx-col-id {args.colidx_cell_id} --ignore-ids {args.ignore_ids} --out {sample_sptsv_prefix} --min-feature-count {args.min_feature_count}"
+                cmd = f"{args.spatula} pixel2sptsv --pixel {pixelf}.tsv --no-header --idx-col-x {args.colidx_x} --idx-col-y {args.colidx_y} --idx-col-ftr {args.colidx_feature} --idx-col-cnt {args.colidx_count} --idx-col-id {args.colidx_cell_id} --ignore-ids {args.ignore_ids} --out {sample_sptsv_prefix} --min-feature-count {args.min_feature_count} {cmd_ftr_include_exclude}"
                 cmds.append(cmd)
                 samp2sptsv[sample_id] = sample_sptsv_prefix
+                deps.append(f"{pixelf}.tsv")
         
         ## merge SPTSV files if needed
         if len(samp2sptsv) > 0:
@@ -245,7 +256,8 @@ def run_ficture2_multi_cells(_args):
         cmd = f"sort -k 1,1 {sptsv_prefix}.tsv > {sptsv_prefix}.randomized.tsv"
         cmds.append(cmd)
         cmds.append(f"[ -f {sptsv_prefix}.randomized.tsv ] && touch {sptsv_prefix}.done" )
-        mm.add_target(f"{sptsv_prefix}.done", [f"{args.mex_dir}/{args.mex_bcd}", f"{args.mex_dir}/{args.mex_ftr}", f"{args.mex_dir}/{args.mex_mtx}"] if args.mex_dir is not None else [], cmds)
+        #mm.add_target(f"{sptsv_prefix}.done", [f"{args.mex_dir}/{args.mex_bcd}", f"{args.mex_dir}/{args.mex_ftr}", f"{args.mex_dir}/{args.mex_mtx}"] if args.mex_dir is not None else [], cmds)
+        mm.add_target(f"{sptsv_prefix}.done", deps, cmds)
     elif args.sptsv_prefix is not None:
         sptsv_prefix = args.sptsv_prefix
     else:
