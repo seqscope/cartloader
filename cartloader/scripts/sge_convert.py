@@ -309,7 +309,7 @@ def sge_visual(mm, transcript_f, minmax_f, xy_f, prereq, spatula):
         "--icol-cnt -1", # str(icol_cnt) if icol_cnt is not None else "-1",
         "--ullr", "$XMIN,$YMIN,$XMAX,$YMAX",
         "--auto-adjust",
-        "--coord-per-pixel {args.xy_scale}",
+        f"--coord-per-pixel {args.xy_scale}",
         "--skip-lines", "1",
     ])
     cmds.append(draw_cmd)
