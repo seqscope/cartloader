@@ -290,7 +290,7 @@ def sge_density_filtering(mm, sge_filtering_dict):
 #
 #================================================================================================
 
-def sge_visual(mm, transcript_f, minmax_f, xy_f, prereq, spatula):
+def sge_visual(mm, transcript_f, minmax_f, xy_f, prereq, spatula, scale_xy):
     scheck_app(spatula)
     # draw xy plot for visualization
     cmds = cmd_separator([], f"Drawing XY plot for SGE: {transcript_f}")
@@ -309,7 +309,7 @@ def sge_visual(mm, transcript_f, minmax_f, xy_f, prereq, spatula):
         "--icol-cnt -1", # str(icol_cnt) if icol_cnt is not None else "-1",
         "--ullr", "$XMIN,$YMIN,$XMAX,$YMAX",
         "--auto-adjust",
-        f"--coord-per-pixel {args.xy_scale}",
+        f"--coord-per-pixel {scale_xy}",
         "--skip-lines", "1",
     ])
     cmds.append(draw_cmd)
@@ -436,7 +436,8 @@ def sge_convert(_args):
                         out_minmax_f,
                         out_xy_f,
                         [sge_convert_flag], 
-                        args.spatula)
+                        args.spatula,
+                        args.scale_xy)
         if args.north_up:
             out_xyn_f= os.path.join(args.out_dir, args.out_northup_tif)
             mm = sge_visual_northup(mm, out_xy_f, out_xyn_f, out_minmax_f, [sge_convert_flag],
@@ -481,7 +482,8 @@ def sge_convert(_args):
                             filtered_minmax_f,
                             filtered_xy_f,
                             [sge_filtered_flag],
-                            args.spatula)
+                            args.spatula,
+                            args.scale_xy)
             if args.north_up:
                 filtered_xyn_f= os.path.join(args.out_dir, f"{args.out_filtered_prefix}.{args.out_northup_tif}")
                 mm = sge_visual_northup(mm, filtered_xy_f, filtered_xyn_f, filtered_minmax_f, [sge_filtered_flag],
