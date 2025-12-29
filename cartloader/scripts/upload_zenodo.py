@@ -204,13 +204,23 @@ def upload_zenodo(_args):
         is_published = deposition_metadata.get("submitted", False)  # Or check "state" == "done"
 
         if is_published:
-            print(f"    - Detected published deposition. Creating a new version of {args.zenodo_deposition_id}")
-            draft_url = create_new_version(args.zenodo_deposition_id, ACCESS_TOKEN)
-            response = requests.get(draft_url, params={"access_token": ACCESS_TOKEN})
-            if response.status_code != 200:
-                raise RuntimeError(f"Failed to retrieve new draft: {response.status_code} - {response.text}")
-            args.zenodo_deposition_id = response.json()["id"]
-            print(f"    - New version created. New deposition ID: {args.zenodo_deposition_id }")
+            links = deposition_metadata.get("links", {})
+            latest_draft_url = links.get("latest_draft")
+            if latest_draft_url:
+                print(f"    - Detected published deposition with an existing draft. Using draft: {latest_draft_url}")
+                response = requests.get(latest_draft_url, params={"access_token": ACCESS_TOKEN})
+                if response.status_code != 200:
+                    raise RuntimeError(f"Failed to retrieve existing draft: {response.status_code} - {response.text}")
+                args.zenodo_deposition_id = response.json()["id"]
+                print(f"    - Using existing draft deposition ID: {args.zenodo_deposition_id}")
+            else:
+                print(f"    - Detected published deposition. Creating a new version of {args.zenodo_deposition_id}")
+                draft_url = create_new_version(args.zenodo_deposition_id, ACCESS_TOKEN)
+                response = requests.get(draft_url, params={"access_token": ACCESS_TOKEN})
+                if response.status_code != 200:
+                    raise RuntimeError(f"Failed to retrieve new draft: {response.status_code} - {response.text}")
+                args.zenodo_deposition_id = response.json()["id"]
+                print(f"    - New version created. New deposition ID: {args.zenodo_deposition_id }")
         else:
             print(f"    - Deposition is still a draft. Using existing deposition ID: {args.zenodo_deposition_id}")
 
