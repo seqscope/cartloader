@@ -248,11 +248,11 @@ def upload_zenodo(_args):
         catalog_f = args.catalog_yaml or os.path.join(args.in_dir, "catalog.yaml")
         assert os.path.exists(catalog_f), f"File not found: {catalog_f} (--catalog-yaml)"
         basics_files, optional_files, basemap_files = collect_files_from_yaml(catalog_f)
-        # fn_list = list(cartload_files) + basemap_files
         basic_files_raw = [os.path.join(args.in_dir, fn) for fn in list(basics_files)]
         opt_files_raw = [os.path.join(args.in_dir, fn) for fn in list(optional_files)]
         basemap_files_raw = [os.path.join(args.in_dir, fn) for fn in list(basemap_files)]
         in_files_raw = list(set(basic_files_raw + opt_files_raw + basemap_files_raw))
+        in_files_raw.append(catalog_f)
     elif args.upload_method == "files":
         in_files_raw = [fn if os.path.isabs(fn) else os.path.join(args.in_dir, fn) for fn in args.files]
     else:
