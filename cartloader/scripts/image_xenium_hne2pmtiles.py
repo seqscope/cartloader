@@ -25,6 +25,7 @@ def parse_arguments(_args):
     inout_params.add_argument('--tif', type=str, required=True, help='Path to the input H&E OME-TIFF file')
     inout_params.add_argument('--csv', type=str, required=True, help='Path to the Xenium alignment CSV file')
     inout_params.add_argument('--out-prefix', type=str, help='Prefix for naming the output files.')
+    inout_params.add_argument('--px-size-xy', type=float, default=None, help='Override pixel size in um for both X and Y dimensions. If provided, skip reading OME-TIFF metadata.')
 
     key_params = parser.add_argument_group("Key parameters")
     key_params.add_argument('--threads', type=int, default=12, help='Number of threads to use for processing (default: 12)')
@@ -35,6 +36,7 @@ def parse_arguments(_args):
     env_params.add_argument('--gdal_translate', type=str, default=f"gdal_translate", help='Path to gdal_translate binary (default: gdal_translate)')
     env_params.add_argument('--gdaladdo', type=str, default=f"gdaladdo", help='Path to gdaladdo binar (default: gdaladdo)')
     env_params.add_argument('--gdalinfo', type=str, default=f"gdalinfo", help='Path to gdalinfo binary (default: gdalinfo)')
+    env_params.add_argument('--vips', type=str, default=f"vips", help='Path to vips binary (default: vips)')
 
     aux_params = parser.add_argument_group("Auxiliary Parameters")    
     aux_params.add_argument('--log', action='store_true', default=False)
@@ -87,29 +89,34 @@ def image_xenium_hne2pmtiles(_args):
         raise ValueError("The transformation matrix seems incorrect. Please check the CSV file.")
     scale = np.sqrt(np.linalg.det(trans_mat))
 
-    # [CSV processing and metadata extraction remain the same]
-    with tifffile.TiffFile(args.tif, _multifile=False) as tif:
-        logger.info(f"Loaded OME-TIFF file {args.tif}")
-        
-        meta = tifffile.xml2dict(tif.ome_metadata) ## extract metadata
-        meta = meta['OME']['Image']['Pixels']
-        logger.info("Metadata: \n" + json.dumps(meta, indent=2))            
-        px_size_x = float(meta['PhysicalSizeX'])
-        px_size_y = float(meta['PhysicalSizeY'])
-        px_size_unit = meta.get('PhysicalSizeXUnit', 'um')
-        if px_size_unit != 'um' and px_size_unit != 'µm':
-            raise ValueError(f"Physical size unit is not in um: {px_size_unit}")
-        offset_um_x = float(meta.get('OffsetX', 0))
-        offset_um_y = float(meta.get('OffsetY', 0))
+    if args.px_size_xy is not None:
+        px_size_xy = args.px_size_xy
+        logger.info(f"Using overridden pixel size: {px_size_xy} um")
+    else:
+        logger.info("Reading OME-TIFF metadata for pixel size...")
+        # [CSV processing and metadata extraction remain the same]
+        with tifffile.TiffFile(args.tif, _multifile=False) as tif:
+            logger.info(f"Loaded OME-TIFF file {args.tif}")
+            
+            meta = tifffile.xml2dict(tif.ome_metadata) ## extract metadata
+            meta = meta['OME']['Image']['Pixels']
+            logger.info("Metadata: \n" + json.dumps(meta, indent=2))            
+            px_size_x = float(meta['PhysicalSizeX'])
+            px_size_y = float(meta['PhysicalSizeY'])
+            px_size_unit = meta.get('PhysicalSizeXUnit', 'um')
+            if px_size_unit != 'um' and px_size_unit != 'µm':
+                raise ValueError(f"Physical size unit is not in um: {px_size_unit}")
+            offset_um_x = float(meta.get('OffsetX', 0))
+            offset_um_y = float(meta.get('OffsetY', 0))
 
-        logger.info("Physical Size X: {:.4f} um".format(px_size_x))
-        logger.info("Physical Size Y: {:.4f} um".format(px_size_y))
-        logger.info("Offset X: {:.4f} um".format(offset_um_x))
-        logger.info("Offset Y: {:.4f} um".format(offset_um_y))
+            logger.info("Physical Size X: {:.4f} um".format(px_size_x))
+            logger.info("Physical Size Y: {:.4f} um".format(px_size_y))
+            logger.info("Offset X: {:.4f} um".format(offset_um_x))
+            logger.info("Offset Y: {:.4f} um".format(offset_um_y))
 
-        ## Generate affine transformation matrix
-        px_size_xy = (px_size_x + px_size_y) / 2.0
-        affine_mat = trans_mat / scale * px_size_xy
+            ## Generate affine transformation matrix
+            px_size_xy = (px_size_x + px_size_y) / 2.0
+    affine_mat = trans_mat / scale * px_size_xy
     
     logger.info("Affine Transformation Matrix (in um): \n" + str(affine_mat))
 
@@ -119,6 +126,20 @@ def image_xenium_hne2pmtiles(_args):
     if result.returncode != 0:
         logger.error("gdal_translate failed with error:\n" + result.stderr)
         raise RuntimeError("gdal_translate command failed.")
+        # fallback 
+        # logger.info("Trying vips as a fallback...")
+        # cmd = f"{args.vips} copy '{args.tif}' '{args.out_prefix}.png'"
+        # logger.info("Running vips command:\n" + cmd)
+        # result2 = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+        # if result2.returncode != 0:
+        #     logger.error("vips failed with error:\n" + result2.stderr)
+        #     raise RuntimeError("Both gdal_translate and vips commands failed.")
+        # cmd = f"GDAL_NUM_THREADS={args.threads} {args.gdal_translate} -of GTiff -a_srs EPSG:3857 -a_gt {affine_mat[0,2]} {affine_mat[0,0]} {affine_mat[0,1]} {affine_mat[1,2]} {affine_mat[1,0]} {affine_mat[1,1]} '{args.out_prefix}.png' '{args.out_prefix}.georef.tif'"
+        # logger.info("Running gdal_translate command:\n" + cmd)
+        # result2 = subprocess.run(cmd, shell=True, capture_output=True, text=True)        
+        # if result2.returncode != 0:
+        #     logger.error("gdal_translate failed with error:\n" + result2.stderr)
+        #     raise RuntimeError("gdal_translate command failed even after vips conversion.")
     
     cmd = f"GDAL_NUM_THREADS={args.threads} gdal_translate -ot Byte -of mbtiles -b 1 -b 2 -b 3 -strict -co 'ZOOM_LEVEL_STRATEGY=UPPER' -co 'RESAMPLING=cubic' -co 'BLOCKSIZE=512' -co 'QUALITY=100' -a_srs EPSG:3857 {args.out_prefix}.georef.tif {args.out_prefix}.mbtiles"
     logger.info("Running gdal_translate command:\n" + cmd)
