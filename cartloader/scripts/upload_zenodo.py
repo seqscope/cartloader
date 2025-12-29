@@ -206,21 +206,46 @@ def upload_zenodo(_args):
         if is_published:
             links = deposition_metadata.get("links", {})
             latest_draft_url = links.get("latest_draft")
+            draft_metadata = None
+
             if latest_draft_url:
-                print(f"    - Detected published deposition with an existing draft. Using draft: {latest_draft_url}")
-                response = requests.get(latest_draft_url, params={"access_token": ACCESS_TOKEN})
-                if response.status_code != 200:
-                    raise RuntimeError(f"Failed to retrieve existing draft: {response.status_code} - {response.text}")
-                args.zenodo_deposition_id = response.json()["id"]
-                print(f"    - Using existing draft deposition ID: {args.zenodo_deposition_id}")
-            else:
-                print(f"    - Detected published deposition. Creating a new version of {args.zenodo_deposition_id}")
-                draft_url = create_new_version(args.zenodo_deposition_id, ACCESS_TOKEN)
-                response = requests.get(draft_url, params={"access_token": ACCESS_TOKEN})
-                if response.status_code != 200:
-                    raise RuntimeError(f"Failed to retrieve new draft: {response.status_code} - {response.text}")
-                args.zenodo_deposition_id = response.json()["id"]
-                print(f"    - New version created. New deposition ID: {args.zenodo_deposition_id }")
+                print(f"    - Detected published deposition. Checking for existing draft: {latest_draft_url}")
+                draft_resp = requests.get(latest_draft_url, params={"access_token": ACCESS_TOKEN})
+                if draft_resp.status_code == 200:
+                    draft_metadata = draft_resp.json()
+                    if not draft_metadata.get("submitted", False):
+                        response = draft_resp
+                        args.zenodo_deposition_id = draft_metadata["id"]
+                        print(f"    - Using existing draft deposition ID: {args.zenodo_deposition_id}")
+                    else:
+                        draft_metadata = None
+                else:
+                    print(f"    - Warning: failed to retrieve latest draft: {draft_resp.status_code} - {draft_resp.text}")
+
+            if draft_metadata is None:
+                print(f"    - Creating a new version of {args.zenodo_deposition_id}")
+                try:
+                    draft_url = create_new_version(args.zenodo_deposition_id, ACCESS_TOKEN)
+                except RuntimeError as e:
+                    if latest_draft_url and "Please remove all files first." in str(e):
+                        print(f"    - Draft already exists. Retrying latest draft: {latest_draft_url}")
+                        draft_resp = requests.get(latest_draft_url, params={"access_token": ACCESS_TOKEN})
+                        if draft_resp.status_code != 200:
+                            raise RuntimeError(f"Failed to retrieve existing draft: {draft_resp.status_code} - {draft_resp.text}")
+                        draft_metadata = draft_resp.json()
+                        if draft_metadata.get("submitted", False):
+                            raise RuntimeError("Latest draft is not editable (still submitted).")
+                        response = draft_resp
+                        args.zenodo_deposition_id = draft_metadata["id"]
+                        print(f"    - Using existing draft deposition ID: {args.zenodo_deposition_id}")
+                    else:
+                        raise
+                else:
+                    response = requests.get(draft_url, params={"access_token": ACCESS_TOKEN})
+                    if response.status_code != 200:
+                        raise RuntimeError(f"Failed to retrieve new draft: {response.status_code} - {response.text}")
+                    args.zenodo_deposition_id = response.json()["id"]
+                    print(f"    - New version created. New deposition ID: {args.zenodo_deposition_id }")
         else:
             print(f"    - Deposition is still a draft. Using existing deposition ID: {args.zenodo_deposition_id}")
 
