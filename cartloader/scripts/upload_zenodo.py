@@ -250,10 +250,11 @@ def upload_zenodo(_args):
             print(f"    - Deposition is still a draft. Using existing deposition ID: {args.zenodo_deposition_id}")
 
         # update metadata to deposition
-        print(f" * Updating metadata")
-        raw_metadata=response.json().get("metadata", {})
-        metadata = build_metadata(args, existing_metadata=raw_metadata)
-        update_deposition_metadata(args.zenodo_deposition_id, ACCESS_TOKEN, metadata)
+        if args.title or args.description or args.creators:
+            print(f" * Updating metadata")
+            raw_metadata=response.json().get("metadata", {})
+            metadata = build_metadata(args, existing_metadata=raw_metadata)
+            update_deposition_metadata(args.zenodo_deposition_id, ACCESS_TOKEN, metadata)
 
         # check if any file exists in the bucket
         bucket_url = response.json()["links"]["bucket"]
@@ -283,21 +284,20 @@ def upload_zenodo(_args):
         catalog_f = args.catalog_yaml or os.path.join(args.in_dir, "catalog.yaml")
         assert os.path.exists(catalog_f), f"File not found: {catalog_f} (--catalog-yaml)"
         basics_files, optional_files, basemap_files = collect_files_from_yaml(catalog_f)
-        basic_files_raw = [os.path.join(args.in_dir, fn) for fn in list(basics_files)]
+        basic_files_raw = [os.path.join(args.in_dir, fn) for fn in list(basics_files)] + [catalog_f]
         opt_files_raw = [os.path.join(args.in_dir, fn) for fn in list(optional_files)]
         basemap_files_raw = [os.path.join(args.in_dir, fn) for fn in list(basemap_files)]
         in_files_raw = list(set(basic_files_raw + opt_files_raw + basemap_files_raw))
-        in_files_raw.append(catalog_f)
     elif args.upload_method == "files":
         in_files_raw = [fn if os.path.isabs(fn) else os.path.join(args.in_dir, fn) for fn in args.files]
     else:
         raise ValueError(f"Unsupported upload method: {args.upload_method}")
 
-    print(f" *  Checking invalid input files")
-    print(f"    -  Initially, located {len(in_files_raw)} input file(s) for upload.")
+    print(f"    - Located {len(in_files_raw)} input file(s) for upload.")
+
     in_files_invalid = [f for f in in_files_raw if not os.path.exists(f)]
     if in_files_invalid:
-        print("    - Error: The following input file(s) do not exist:")
+        print(f" *  Found invalid input files (input files that do not exist):")
         for f in in_files_invalid:
             print(f"    - {f}")
         sys.exit(1)
