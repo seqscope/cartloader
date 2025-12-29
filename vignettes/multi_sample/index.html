@@ -1,0 +1,2635 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://seqscope.github.io/cartloader/vignettes/multi_sample/">
+      
+      
+        <link rel="prev" href="../pipelines/visiumhd/">
+      
+      
+        <link rel="next" href="../../reference/intro/">
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.2">
+    
+    
+      
+        <title>Human Cortex Multi-sample Tutorial - cartloader</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.d7758b05.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+  
+  
+  
+  
+  <style>:root{--md-annotation-icon:url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M22 12a10 10 0 0 1-10 10A10 10 0 0 1 2 12 10 10 0 0 1 12 2a10 10 0 0 1 10 10M6 13h8l-3.5 3.5 1.42 1.42L17.84 12l-5.92-5.92L10.5 7.5 14 11H6z"/></svg>');}</style>
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../css/extra.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#human-cortex-multisample-spatial-factor-analysis-tutorial" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="cartloader" class="md-header__button md-logo" aria-label="cartloader" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            cartloader
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Human Cortex Multi-sample Tutorial
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7a5 5 0 0 0-5 5 5 5 0 0 0 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1M8 13h8v-2H8zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4a5 5 0 0 0 5-5 5 5 0 0 0-5-5"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_2" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 7H7a5 5 0 0 0-5 5 5 5 0 0 0 5 5h10a5 5 0 0 0 5-5 5 5 0 0 0-5-5m0 8a3 3 0 0 1-3-3 3 3 0 0 1 3-3 3 3 0 0 1 3 3 3 3 0 0 1-3 3"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="indigo"  aria-label="Switch to system preference"  type="radio" name="__palette" id="__palette_2">
+    
+      <label class="md-header__button md-icon" title="Switch to system preference" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 7H7a5 5 0 0 0-5 5 5 5 0 0 0 5 5h10a5 5 0 0 0 5-5 5 5 0 0 0-5-5M7 15a3 3 0 0 1-3-3 3 3 0 0 1 3-3 3 3 0 0 1 3 3 3 3 0 0 1-3 3"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/seqscope/cartloader" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81"/></svg>
+  </div>
+  <div class="md-source__repository">
+    seqscope/cartloader
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../.." class="md-tabs__link">
+          
+  
+    
+  
+  Home
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../quickstart/intro/" class="md-tabs__link">
+          
+  
+    
+  
+  Quick Start
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../installation/" class="md-tabs__link">
+        
+  
+    
+  
+  Installation
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../intro/" class="md-tabs__link">
+          
+  
+    
+  
+  Vignettes
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../reference/intro/" class="md-tabs__link">
+          
+  
+    
+  
+  References
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="cartloader" class="md-nav__button md-logo" aria-label="cartloader" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    cartloader
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/seqscope/cartloader" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81"/></svg>
+  </div>
+  <div class="md-source__repository">
+    seqscope/cartloader
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_1" >
+        
+          
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../.." class="md-nav__link ">
+              
+  
+  <span class="md-ellipsis">
+    Home
+    
+  </span>
+  
+
+            </a>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_1">
+            <span class="md-nav__icon md-icon"></span>
+            Home
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Quick Start
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            Quick Start
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../quickstart/intro/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../quickstart/run_in_docker/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Run with Docker
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../quickstart/run_locally/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Run Locally
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../installation/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Installation
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  <span class="md-ellipsis">
+    Vignettes
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            Vignettes
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../intro/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_2" id="__nav_4_2_label" tabindex="">
+            
+  
+  <span class="md-ellipsis">
+    Getting Started with `cartloader`
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_2">
+            <span class="md-nav__icon md-icon"></span>
+            Getting Started with `cartloader`
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../subregion_tutorials/seqscope/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    SeqScope Starter Tutorial
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../subregion_tutorials/stereoseq/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    StereoSeq Starter Tutorial
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../subregion_tutorials/visiumhd/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Visium HD Starter Tutorial
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../subregion_tutorials/pixelseq/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Pixel-Seq Starter Tutorial
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../subregion_tutorials/xenium/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Xenium Starter Tutorial
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../subregion_tutorials/merscope/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    MERSCOPE Starter Tutorial
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../subregion_tutorials/cosmxsmi/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    CosMX SMI Starter Tutorial
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_3" id="__nav_4_3_label" tabindex="">
+            
+  
+  <span class="md-ellipsis">
+    Platform Workflows
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_3">
+            <span class="md-nav__icon md-icon"></span>
+            Platform Workflows
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../pipelines/xenium/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Xenium end-to-end Tutorial
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../pipelines/visiumhd/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Visium HD end-to-end Tutorial
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4_4" id="__nav_4_4_label" tabindex="">
+            
+  
+  <span class="md-ellipsis">
+    Multi-sample Showcases
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4_4">
+            <span class="md-nav__icon md-icon"></span>
+            Multi-sample Showcases
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Human Cortex Multi-sample Tutorial
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  <span class="md-ellipsis">
+    Human Cortex Multi-sample Tutorial
+    
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      Overview
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#input-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      Input Data
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#set-up-the-environment" class="md-nav__link">
+    <span class="md-ellipsis">
+      Set Up the Environment
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sge-format-conversion" class="md-nav__link">
+    <span class="md-ellipsis">
+      SGE Format Conversion
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prepare-input-list" class="md-nav__link">
+    <span class="md-ellipsis">
+      Prepare Input List
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#multisample-ficture-analysis" class="md-nav__link">
+    <span class="md-ellipsis">
+      Multi‑Sample FICTURE Analysis
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#multisample-asset-packaging" class="md-nav__link">
+    <span class="md-ellipsis">
+      Multi‑Sample Asset Packaging
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#upload-to-aws" class="md-nav__link">
+    <span class="md-ellipsis">
+      Upload to AWS
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#output-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      Output Summary
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    References
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            References
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/intro/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_2" id="__nav_5_2_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    SGE Preparation
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_2">
+            <span class="md-nav__icon md-icon"></span>
+            SGE Preparation
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/sge_convert/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    SGE Format Conversion
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/sge_addon/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    SGE Preparation Add-ons
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_3" id="__nav_5_3_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Analysis
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3">
+            <span class="md-nav__icon md-icon"></span>
+            Analysis
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/run_ficture2/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    FICTURE Analysis
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/run_ficture2_multi/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Multi-Sample FICTURE Analysis
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/feature_customization/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Feature Customization
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_4" id="__nav_5_4_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Packaging
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_4">
+            <span class="md-nav__icon md-icon"></span>
+            Packaging
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/run_cartload2/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Asset Packaging
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/run_cartload2_multi/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Multi-Sample Asset Packaging
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/import_image/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Background Image Import
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/import_cell/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Cell Analysis Import
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/import_square/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Square Analysis Import
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_5" id="__nav_5_5_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Upload
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_5">
+            <span class="md-nav__icon md-icon"></span>
+            Upload
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/upload_aws/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    AWS Upload
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/upload_zenodo/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Zenodo Upload
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_6" id="__nav_5_6_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Platform-specific Modules
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_6">
+            <span class="md-nav__icon md-icon"></span>
+            Platform-specific Modules
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_6_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_6_1" id="__nav_5_6_1_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Xenium
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_6_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_6_1">
+            <span class="md-nav__icon md-icon"></span>
+            Xenium
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/run_xenium/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Pipeline Orchestrator
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/xenium_addon/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Pipeline Add-ons
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_6_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_6_2" id="__nav_5_6_2_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Visium HD
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_6_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_6_2">
+            <span class="md-nav__icon md-icon"></span>
+            Visium HD
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/run_visiumhd/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Pipeline Orchestrator
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/visiumhd_addon/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Pipeline Add-ons
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      Overview
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#input-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      Input Data
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#set-up-the-environment" class="md-nav__link">
+    <span class="md-ellipsis">
+      Set Up the Environment
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sge-format-conversion" class="md-nav__link">
+    <span class="md-ellipsis">
+      SGE Format Conversion
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prepare-input-list" class="md-nav__link">
+    <span class="md-ellipsis">
+      Prepare Input List
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#multisample-ficture-analysis" class="md-nav__link">
+    <span class="md-ellipsis">
+      Multi‑Sample FICTURE Analysis
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#multisample-asset-packaging" class="md-nav__link">
+    <span class="md-ellipsis">
+      Multi‑Sample Asset Packaging
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#upload-to-aws" class="md-nav__link">
+    <span class="md-ellipsis">
+      Upload to AWS
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#output-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      Output Summary
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="human-cortex-multisample-spatial-factor-analysis-tutorial">Human Cortex Multi‑Sample Spatial Factor Analysis Tutorial<a class="headerlink" href="#human-cortex-multisample-spatial-factor-analysis-tutorial" title="Permanent link">&para;</a></h1>
+<h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
+<p>This tutorial demonstrates how to run multi‑sample <abbr title="Segmentation-free method inferring latent spatial factors from SGE (Si et al., Nature Methods 2024)">FICTURE</abbr> analysis and package results using <code>run_ficture2_multi</code> and <code>run_cartload2_multi</code>.</p>
+<div class="admonition info">
+<p class="admonition-title">Why use Multi‑Sample <abbr title="Segmentation-free method inferring latent spatial factors from SGE (Si et al., Nature Methods 2024)">FICTURE</abbr> Analysis?</p>
+<p><strong><code>CartLoader</code> supports analyzing ≥2 samples in two ways</strong>:</p>
+<ul>
+<li>Multi‑sample <abbr title="Segmentation-free method inferring latent spatial factors from SGE (Si et al., Nature Methods 2024)">FICTURE</abbr> analysis (<a href="../../reference/run_ficture2_multi/"><code>run_ficture2_multi</code></a>): Jointly learns spatial factors across all samples and writes per‑sample outputs in one parallelizable run.</li>
+<li><abbr title="Spatial Digital Gene Expression">SGE</abbr> stitch + single‑sample analysis (<a href="../../reference/sge_addon/"><code>sge_stitch</code></a> → <a href="../../reference/run_ficture2/"><code>run_ficture2</code></a>): Stitch multiple SGEs into a single mosaic, then train one model on that mosaic.</li>
+</ul>
+<p><strong>What to expect</strong></p>
+<ul>
+<li>Shared factors/comparability: <code>run_ficture2_multi</code> learns a cohort‑wide latent basis and returns per‑sample decodes for direct comparison. The stitch approach yields a single model over the merged mosaic; useful when you need a unified coordinate system (e.g., tiling adjacent sections).</li>
+<li>Efficiency and scale: <code>run_ficture2_multi</code> fits once for the cohort and decodes per sample, avoiding repeated runs and post‑hoc alignment. Stitching can be simpler for mosaics but often increases I/O and memory due to very large merged files.</li>
+</ul>
+<p><strong>Recommendation:</strong></p>
+<ul>
+<li>Prefer <code>run_ficture2_multi</code> for most cohorts for clean per‑sample outputs and better computational efficiency; use stitching when a single shared coordinate frame is required.</li>
+<li>If you choose stitching, plan for higher resource usage (RAM, disk, and I/O). Large mosaics can be slow to generate and train on, and may require substantially more memory and temporary storage than per‑sample runs.</li>
+</ul>
+</div>
+<hr />
+<h2 id="input-data">Input Data<a class="headerlink" href="#input-data" title="Permanent link">&para;</a></h2>
+<p>This tutorial uses a series of four human cortex <abbr title="Spatial transcriptomics">ST</abbr> datasets from <a href="https://www.nature.com/articles/s41586-025-09010-1">Walsh et al. Nature 2025</a>, generated using <abbr title="Multiplexed Error Robust Fluorescence In Situ Hybridization">MERFISH</abbr>.</p>
+<p><strong>File Format</strong></p>
+<div class="admonition info">
+<p class="admonition-title"><code>detected_transcripts.csv.gz</code></p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span></pre></div></td><td class="code"><div><pre><span></span><code>,barcode_id,global_x,global_y,global_z,x,y,fov,gene,transcript_id,cell_id
+36,0,154.75854,8197.335,0.0,1790.1895,303.81055,0,HS3ST1,ENST00000002596,224295401131100634
+53,0,157.40007,8211.97,0.0,1814.648,439.31885,0,HS3ST1,ENST00000002596,-1
+76,0,154.28473,8230.835,0.0,1785.8022,614.0,0,HS3ST1,ENST00000002596,224295401131100700
+</code></pre></div></td></tr></table></div>
+<ul>
+<li>Column 1: Unique numeric index for each transcript within a field of view (non-consecutive, ascending).</li>
+<li><code>barcode_id</code>: Zero-based index of the transcript barcode in the codebook; forms a composite key with <code>fov</code>.</li>
+<li><code>global_x</code>: Transcript x coordinates (<abbr title="micrometer">µm</abbr>) in the experimental region; may be negative due to alignment.</li>
+<li><code>global_y</code>: Transcript y coordinates (<abbr title="micrometer">µm</abbr>) in the experimental region; may be negative due to alignment.</li>
+<li><code>global_z</code>: Zero‑based z‑position index.</li>
+<li><code>x</code>: The x-coordinate of the transcript (<abbr title="micrometer">µm</abbr>), within the coordinate space of the field of view.</li>
+<li><code>y</code>: The y-coordinate of the transcript (<abbr title="micrometer">µm</abbr>), within the coordinate space of the field of view.</li>
+<li><code>fov</code>: Zero-based field of view index; forms a composite key with <code>barcode_id</code>.</li>
+<li><code>gene</code>: Gene name.</li>
+<li><code>transcript_id</code>: Unique identifier for the transcript.</li>
+<li><code>cell_id</code>: Unique identifier for cell.</li>
+</ul>
+</div>
+<p><strong>Data Access</strong></p>
+<p>Follow the commands below to download the source data.</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nv">work_dir</span><span class="o">=</span>/path/to/work/directory
+mkdir<span class="w"> </span>-p<span class="w"> </span><span class="si">${</span><span class="nv">work_dir</span><span class="si">}</span>/raw
+<span class="nb">cd</span><span class="w"> </span><span class="si">${</span><span class="nv">work_dir</span><span class="si">}</span>/raw
+
+wget<span class="w"> </span>https://zenodo.org/records/15127709/files/FB080_O1a.zip?download<span class="o">=</span><span class="m">1</span>
+unzip<span class="w"> </span>FB080_O1a.zip
+
+wget<span class="w"> </span>https://zenodo.org/records/15127709/files/FB080_O1b.zip?download<span class="o">=</span><span class="m">1</span>
+unzip<span class="w"> </span>FB080_O1b.zip
+
+wget<span class="w"> </span>https://zenodo.org/records/15127709/files/FB080_O1c.zip?download<span class="o">=</span><span class="m">1</span>
+unzip<span class="w"> </span>FB080_O1c.zip
+
+wget<span class="w"> </span>https://zenodo.org/records/15127709/files/FB080_O1d.zip?download<span class="o">=</span><span class="m">1</span>
+unzip<span class="w"> </span>FB080_O1d.zip
+</code></pre></div></td></tr></table></div>
+<hr />
+<h2 id="set-up-the-environment">Set Up the Environment<a class="headerlink" href="#set-up-the-environment" title="Permanent link">&para;</a></h2>
+<div class="admonition warning">
+<p class="admonition-title">Pre-installed tools</p>
+<p>Please ensure you have installed all required tools (See <a href="../../installation/">Installation</a>).</p>
+</div>
+<p>Define paths to all required binaries and resources. Optionally, specify a fixed color map for consistent rendering.</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span>
+<span class="normal">22</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># ====</span>
+<span class="c1"># Replace each placeholder with the actual path on your system.  </span>
+<span class="c1"># ====</span>
+
+<span class="nv">work_dir</span><span class="o">=</span>/path/to/work/directory<span class="w">        </span><span class="c1"># path to work directory that contains the downloaded input data</span>
+<span class="nb">cd</span><span class="w"> </span><span class="nv">$work_dir</span>
+
+<span class="c1"># Define paths to required binaries and resources</span>
+<span class="nv">spatula</span><span class="o">=</span>/path/to/spatula/binary<span class="w">         </span><span class="c1"># path to spatula executable</span>
+<span class="nv">punkst</span><span class="o">=</span>/path/to/punkst/binary<span class="w">           </span><span class="c1"># path to FICTURE2 (punkst) executable</span>
+<span class="nv">tippecanoe</span><span class="o">=</span>/path/to/tippecanoe/binary<span class="w">   </span><span class="c1"># path to tippecanoe executable</span>
+<span class="nv">pmtiles</span><span class="o">=</span>/path/to/pmtiles/binary<span class="w">         </span><span class="c1"># path to pmtiles executable</span>
+<span class="nv">aws</span><span class="o">=</span>/path/to/aws/cli/binary<span class="w">             </span><span class="c1"># path to AWS CLI binary</span>
+
+<span class="c1"># (Optional) Define path to color map. </span>
+<span class="nv">cmap</span><span class="o">=</span>/path/to/color/map<span class="w">                 </span><span class="c1"># Path to fixed color map. `CartLoader` includes one at cartloader/assets/fixed_color_map_256.tsv.</span>
+
+<span class="c1"># Number of jobs</span>
+<span class="nv">n_jobs</span><span class="o">=</span><span class="m">10</span><span class="w">                               </span><span class="c1"># If not specified, the number of jobs defaults to 1.</span>
+
+<span class="c1"># Activate the bioconda environment</span>
+conda<span class="w"> </span>activate<span class="w"> </span>ENV_NAME<span class="w">                 </span><span class="c1"># replace ENV_NAME with your conda environment name</span>
+</code></pre></div></td></tr></table></div>
+<p>Define data ID and analysis parameters:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span>
+<span class="normal">6</span>
+<span class="normal">7</span>
+<span class="normal">8</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># Unique identifier for your collection</span>
+<span class="nv">COLLECTION_ID</span><span class="o">=</span><span class="s2">&quot;walsh2025-human-cortex-fb080-O1&quot;</span><span class="w"> </span><span class="c1"># change this to reflect your dataset name</span>
+<span class="nv">PLATFORM</span><span class="o">=</span><span class="s2">&quot;generic&quot;</span><span class="w">                      </span><span class="c1"># platform information</span>
+<span class="nv">SCALE</span><span class="o">=</span><span class="m">1</span><span class="w">                                 </span><span class="c1"># coordinate to micrometer scaling factor</span>
+
+<span class="c1"># LDA parameters</span>
+<span class="nv">train_width</span><span class="o">=</span><span class="m">18</span><span class="w">                           </span><span class="c1"># define LDA training hexagon width (comma-separated if multiple widths are applied)</span>
+<span class="nv">n_factor</span><span class="o">=</span><span class="m">48</span>,96<span class="w">                           </span><span class="c1"># define number of factors in LDA training (comma-separated if multiple n-factor are applied)</span>
+</code></pre></div></td></tr></table></div>
+<p>Prepare a working directory:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nv">work_dir</span><span class="o">=</span>/path/to/work/dir/<span class="si">${</span><span class="nv">COLLECTION_ID</span><span class="si">}</span>
+<span class="nb">cd</span><span class="w"> </span><span class="si">${</span><span class="nv">work_dir</span><span class="si">}</span>
+</code></pre></div></td></tr></table></div>
+<hr />
+<h2 id="sge-format-conversion"><abbr title="Spatial Digital Gene Expression">SGE</abbr> Format Conversion<a class="headerlink" href="#sge-format-conversion" title="Permanent link">&para;</a></h2>
+<p>For each sample, convert its transcript‑indexed <abbr title="Spatial Digital Gene Expression">SGE</abbr> file to be the <code>CartLoader</code> format.</p>
+<p>Below use FB080_O1a as an example.</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nv">sample_id</span><span class="o">=</span>FB080_O1a
+mkdir<span class="w"> </span>-p<span class="w"> </span>./sge/<span class="si">${</span><span class="nv">sample_id</span><span class="si">}</span>
+
+cartloader<span class="w"> </span>sge_convert<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--in-csv<span class="w"> </span>./raw/<span class="si">${</span><span class="nv">sample_id</span><span class="si">}</span>/detected_transcripts.csv.gz<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--platform<span class="w"> </span>generic<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--out-dir<span class="w"> </span>./sge/<span class="si">${</span><span class="nv">sample_id</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--csv-delim<span class="w"> </span><span class="s2">&quot;,&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--csv-colname-x<span class="w"> </span>global_x<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--csv-colname-y<span class="w"> </span>global_y<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--csv-colname-feature-name<span class="w"> </span>gene<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--csv-colnames-others<span class="w"> </span>cell_id,global_z<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--sge-visual<span class="w"> </span>
+</code></pre></div></td></tr></table></div>
+<p>Alternatively, if you don’t need <abbr title="Spatial Digital Gene Expression">SGE</abbr> visualization or density/feature‑based filtering, you can directly generate a CartLoader‑compatible <abbr title="Spatial Digital Gene Expression">SGE</abbr> with fixed column names (the raw <abbr title="Spatial Digital Gene Expression">SGE</abbr> is already in micrometers):</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nv">sample_id</span><span class="o">=</span>FB080_O1a
+mkdir<span class="w"> </span>-p<span class="w"> </span>./sge/<span class="si">${</span><span class="nv">sample_id</span><span class="si">}</span>
+
+<span class="o">(</span><span class="nb">echo</span><span class="w"> </span>-e<span class="w"> </span><span class="s2">&quot;X\tY\tgene\tcount\tcell_id\tZ&quot;</span><span class="p">;</span>gzip<span class="w"> </span>-cd<span class="w"> </span>./raw/<span class="si">${</span><span class="nv">sample_id</span><span class="si">}</span>/detected_transcripts.csv.gz<span class="w"> </span><span class="p">|</span><span class="w"> </span>tail<span class="w"> </span>-n<span class="w"> </span>+2<span class="p">|</span><span class="w"> </span>tr<span class="w"> </span>,<span class="w"> </span><span class="s1">&#39;\t&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>perl<span class="w"> </span>-lane<span class="w"> </span><span class="s1">&#39;print join(&quot;\t&quot;,$F[2],$F[3],$F[8],1,$F[10],$F[4]);&#39;</span><span class="p">;</span><span class="o">)</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>gzip<span class="w"> </span>&gt;<span class="w"> </span>./sge/<span class="si">${</span><span class="nv">sample_id</span><span class="si">}</span>/transcripts.unsorted.tsv.gz
+</code></pre></div></td></tr></table></div>
+<h2 id="prepare-input-list">Prepare Input List<a class="headerlink" href="#prepare-input-list" title="Permanent link">&para;</a></h2>
+<p>Create a tab‑separated TSV file (e.g., <code>input.tsv</code>) with one sample per line. The TSV should have no header and contain two to four columns.</p>
+<div class="admonition info">
+<p class="admonition-title">Example Input List: <code>input.tsv</code></p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span></pre></div></td><td class="code"><div><pre><span></span><code>FB080_O1a /path/to/FB080_O1a/transcripts.unsorted.tsv.gz
+FB080_O1b /path/to/FB080_O1b/transcripts.unsorted.tsv.gz
+FB080_O1c /path/to/FB080_O1c/transcripts.unsorted.tsv.gz
+FB080_O1d /path/to/FB080_O1d/transcripts.unsorted.tsv.gz
+</code></pre></div></td></tr></table></div>
+<ul>
+<li><code>1st Column</code> (required, str): Unique dataset identifier (avoid whitespace; prefer <code>-</code> to <code>_</code>).</li>
+<li><code>2nd Column</code> (required, str): Path to the transcript‑indexed <abbr title="Spatial Digital Gene Expression">SGE</abbr> file in <code>CartLoader</code> format, generated from <a href="#sge-format-conversion"><abbr title="Spatial Digital Gene Expression">SGE</abbr> Format Conversion</a>.</li>
+<li><code>3rd Column</code>  (optional, str): Dataset title. Quote the value when whitespace is involved.</li>
+<li><code>4th Column</code>  (optional, str): Dataset description. Quote the value when whitespace is involved.</li>
+</ul>
+</div>
+<h2 id="multisample-ficture-analysis">Multi‑Sample <abbr title="Segmentation-free method inferring latent spatial factors from SGE (Si et al., Nature Methods 2024)">FICTURE</abbr> Analysis<a class="headerlink" href="#multisample-ficture-analysis" title="Permanent link">&para;</a></h2>
+<p>Trains <abbr title="Latent Dirichlet Allocation">LDA</abbr> models across samples for each parameter setting (width and n‑factor), decodes per sample, and writes per‑sample JSON manifests summarizing results.</p>
+<p>Outputs are written under <code>ficture2/&lt;sample_id&gt;/</code>. See details in <a href="../../reference/run_ficture2_multi.md">run_ficture2_multi</a>.</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span></pre></div></td><td class="code"><div><pre><span></span><code>cartloader<span class="w"> </span>run_ficture2_multi<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--in-list<span class="w"> </span>./input.tsv<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--out-dir<span class="w"> </span>./ficture2<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--width<span class="w"> </span><span class="m">18</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--n-factor<span class="w"> </span><span class="m">48</span>,96<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--exclude-feature-regex<span class="w"> </span><span class="s2">&quot;^(Blank-.*</span>$<span class="s2">)&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--redo-merge-units<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--ficture2<span class="w"> </span><span class="si">${</span><span class="nv">PUNKST</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--spatula<span class="w"> </span><span class="si">${</span><span class="nv">SPATULA</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--threads<span class="w"> </span><span class="m">12</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--n-jobs<span class="w"> </span><span class="m">10</span><span class="w"> </span>
+</code></pre></div></td></tr></table></div>
+<hr />
+<h2 id="multisample-asset-packaging">Multi‑Sample Asset Packaging<a class="headerlink" href="#multisample-asset-packaging" title="Permanent link">&para;</a></h2>
+<p>Package per‑sample outputs from <code>ficture2/&lt;sample_id&gt;/</code> into web‑ready <abbr title="Single-file archive format for map tiles and web visualization">PMTiles</abbr> and catalogs.</p>
+<p>Outputs are written under <code>cartload2/&lt;sample_id&gt;/</code>. See details in <a href="../../reference/run_cartload2_multi.md">run_cartload2_multi</a>.</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span>
+<span class="normal">6</span>
+<span class="normal">7</span>
+<span class="normal">8</span></pre></div></td><td class="code"><div><pre><span></span><code>cartloader<span class="w"> </span>run_cartload2_multi<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--in-list<span class="w"> </span>./input.tsv<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--fic-dir<span class="w"> </span>./ficture2<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--out-dir<span class="w"> </span>./cartload2<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--spatula<span class="w"> </span><span class="si">${</span><span class="nv">SPATULA</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--tippecanoe<span class="w"> </span><span class="si">${</span><span class="nv">TIPPECANOE</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--threads<span class="w"> </span><span class="m">12</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--n-jobs<span class="w"> </span><span class="m">10</span><span class="w"> </span>
+</code></pre></div></td></tr></table></div>
+<hr />
+<h2 id="upload-to-aws">Upload to AWS<a class="headerlink" href="#upload-to-aws" title="Permanent link">&para;</a></h2>
+<p>Upload the generated <code>CartLoader</code> outputs from above to your designated AWS S3 directory — either the whole collection at once or each sample individually. For full details, see <a href="../../reference/upload_aws.md">upload_aws</a>.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Upload a collection</label><label for="__tabbed_1_2">Upload a single sample</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span>
+<span class="normal">6</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nv">AWS_DIR</span><span class="o">=</span>s3://your-bucket/<span class="si">${</span><span class="nv">COLLECTION_ID</span><span class="si">}</span><span class="w"> </span><span class="c1"># Recommend to use COLLECTION_ID as directory name, this will create a subdirectory for each sample</span>
+
+cartloader<span class="w"> </span>upload_aws<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--in-dir<span class="w"> </span>./cartload2<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--s3-dir<span class="w"> </span><span class="si">${</span><span class="nv">AWS_DIR</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--in-list<span class="w"> </span>./input.tsv<span class="w"> </span>
+</code></pre></div></td></tr></table></div>
+</div>
+<div class="tabbed-block">
+<p>Below use FB080_O1a as an example.</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nv">AWS_DIR</span><span class="o">=</span>s3://your-bucket/<span class="si">${</span><span class="nv">COLLECTION_ID</span><span class="si">}</span><span class="w"> </span><span class="c1"># Recommend to use COLLECTION_ID as directory name, this will create a subdirectory for each sample</span>
+
+cartloader<span class="w"> </span>upload_aws<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--in-dir<span class="w"> </span>./cartload2/FB080_O1a<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--s3-dir<span class="w"> </span><span class="si">${</span><span class="nv">AWS_DIR</span><span class="si">}</span>/fb080-01a
+</code></pre></div></td></tr></table></div>
+</div>
+</div>
+</div>
+<hr />
+<h2 id="output-summary">Output Summary<a class="headerlink" href="#output-summary" title="Permanent link">&para;</a></h2>
+<!-- See reference details: [run_ficture2_multi](../../reference/run_ficture2_multi.md#output) and [run_cartload2_multi](../../reference/run_cartload2_multi.md#output).
+
+### Spatial Factor Inference Per Sample
+
+Below is an example of spatial factor inference results from `FICTURE`, trained at width 18 with 96 factors, decoded at width 18, and anchor resolution 6.
+
+![FICTURE](../images/multisample_vigenettes/FB080_O1a.t18_f96_p18_a6.png)
+![cmap](../images/multi-sample.t18_f96.cmap.png)
+
+|   Factor | RGB         |   Weight |   PostUMI | TopGene_pval                                                                                                                           | TopGene_fc                                                                                                                                         | TopGene_weight                                                                                                                       |
+|---------:|:------------|---------:|----------:|:---------------------------------------------------------------------------------------------------------------------------------------|:---------------------------------------------------------------------------------------------------------------------------------------------------|:-------------------------------------------------------------------------------------------------------------------------------------|
+|        6 | 255,178,101 |  0.07973 |  12077552 | SYBU,NEUROD6,KLHL1,ZEB2,FOXP1,ARFGEF3,CBLN2,NEFM,SLITRK5,RSPO3,UNC5C,RAP1GAP,SPOCK1,ADAMTSL3,PPP1R14C,NECTIN3,CALN1,GPRIN3,TAFA1,SCN3B | CBLN2,UNC5C,RELN,KLHL1,FOXP1,RSPO3,SYBU,GRM7,RAP1GAP,ADAMTSL3,NECTIN3,ITPR1,SPOCK1,SLITRK5,KCNQ5,ARFGEF3,SERPINI1,GPRIN3,PPP1R14C,FOXP2            | NEUROD6,ZEB2,SYBU,SATB2,TBR1,FXYD6,NEFM,NEUROD2,ARFGEF3,SCN3B,KLHL1,FOXP1,MYT1L,SLITRK5,PPP3CA,LHX2,LINGO1,TAFA1,CALN1,RAP1GAP       |
+|        2 | 101,255,101 |  0.07794 |  11806248 | ADRA2A,SATB2,NEUROD2,KIF26B,CUX2,PRSS12,SRM,TMOD1,CAMK2B,LINGO1,GLRA2,NIPBL-DT,ELAPOR1,CUX1,KIAA0319,DISP3,KITLG,NIPBL,TRMT9B,SETD1B   | ADRA2A,KIF26B,CUX2,SATB2,PRSS12,SRM,TMOD1,NEUROD2,CAMK2B,DISP3,KIAA0319,ELAPOR1,LINGO1,GLRA2,KITLG,NIPBL-DT,CUX1,SETD1B,TRMT9B,NIPBL               | NEUROD2,SATB2,ADRA2A,KIF26B,CUX2,FXYD6,NEUROD6,NFIB,TBR1,ZEB2,LINGO1,SRM,CLASP1,INSM1,PRSS12,IGFBPL1,KDM5B,PPP3CA,SCN3B,GLRA2        |
+|        7 | 178,255,101 |  0.06178 |   9358363 | TLE4,SEMA3E,CRYM,TRPM3,FEZF2,KLHL1,SORCS1,RGS6,TBR1,PDE1A,PEX5L,VSNL1,BACH2,FOXP2,KCTD12,GABRB2,OPCML,SOX5,ETV1,SYT6                   | SEMA3E,RGS6,TRPM3,TLE4,PDE1A,SORCS1,VSNL1,CRYM,KLHL1,FOXP2,GABRG3,FEZF2,KCNH5,SLC35F2,GABRB2,PEX5L,TRMT9B,NECTIN3,BCL11B,SYT6                      | TBR1,FXYD6,NEUROD2,ZEB2,TLE4,FEZF2,NEUROD6,CRYM,BACH2,KLHL1,SEMA3E,NFIB,KCTD12,PEX5L,MYT1L,SORCS1,SCN3B,TRPM3,PPP3CA,OPCML           |
+|        0 | 255,101,101 |  0.04869 |   7374593 | FOXP1,TAFA1,NEFM,SYBU,RORB,NEUROD6,SATB2,ACTN2,ETV1,OPCML,ARFGEF3,CALN1,PTK2B,TRIM67,FBXO32,LHX2,LPL,SLITRK5,LINGO1,BACH2              | ACTN2,FOXP1,TAFA1,RORB,PTK2B,NEFM,KCNH5,FBXO32,SYBU,BEST3,RASGRF2,ETV1,LPL,GPRC5B,OPCML,KIAA0319,SLC26A4,CALN1,TRIM67,GRM7                         | NEUROD6,SATB2,SYBU,NEFM,FXYD6,NEUROD2,TAFA1,ZEB2,FOXP1,LHX2,MYT1L,ARFGEF3,BACH2,SCN3B,RORB,LINGO1,OPCML,SLITRK5,WAC,CALN1            |
+|        1 | 237,238,0   |  0.04539 |   6875880 | ACTN2,SCG2,ZEB2,B3GALT2,SLITRK5,NEUROD6,SATB2,KCNQ5,TSHZ3,FOXP1,PEX5L,CALN1,LHX2,RSPO3,NEFM,SPOCK1,LPL,ADAMTSL3,SLN,ARFGEF3            | ACTN2,SCG2,SLC26A4,SLN,KCNQ5,B3GALT2,BEST3,RSPO3,SLITRK5,TSHZ3,UNC5C,ADAMTSL3,LPL,SPOCK1,FOXP1,PMCHL2,PEX5L,GPR85,CALN1,GRM7                       | ZEB2,NEUROD6,SATB2,FXYD6,TBR1,LHX2,NEUROD2,NEFM,SYBU,B3GALT2,MYT1L,SLITRK5,ARHGAP5,BACH2,ARFGEF3,SCN3B,FOXP1,PEX5L,TSHZ3,CALN1       |
+|        3 | 101,254,255 |  0.04534 |   6868133 | IGFBPL1,CUX2,INSM1,PRSS12,NEUROD2,NFIB,DISP3,ELAPOR1,NEUROD6,ADRA2A,HS3ST1,NEUROD1,LINC01089,EMX1,TMOD1,CLASP1,WDFY3,KDM5B,ASH1L,NAB2  | DISP3,IGFBPL1,PRSS12,ELAPOR1,NEUROD1,HS3ST1,EMX1,CUX2,AP002748.4,LINC01089,INSM1,KMT2E-AS1,RCAN3,TMOD1,COL6A1,ANTXR2,PVALB,ADRA2A,NIFK-AS1,MCPH1   | NEUROD2,IGFBPL1,NEUROD6,NFIB,FXYD6,CUX2,INSM1,TBR1,SATB2,ADRA2A,CLASP1,KDM5B,WAC,MYT1L,SETD5,ASH1L,PRSS12,WDFY3,ZEB2,LHX2            |
+|       17 | 153,0,153   |  0.04419 |   6693936 | GNAL,TRPM3,SORCS1,HS3ST4,TBR1,TLE4,ADRA2A,CRYM,ZFPM2,NPR3,SLITRK5,HSPA12A,MLIP,PDE1A,KCTD12,ST18,CALN1,GABRG3,ATP2B4,TSHZ3             | TRPM3,NPR3,MLIP,ST18,GABRG3,GNAL,HSPA12A,SORCS1,ZFPM2,VSTM2L,HS3ST4,PDE1A,TLE4,HCRTR2,CRYM,SLITRK5,SERPINI1,ADRA2A,GRIK4,C8orf34                   | TBR1,FXYD6,NEUROD2,ADRA2A,HS3ST4,GNAL,TLE4,NFIB,SCN3B,CRYM,SLITRK5,KCTD12,NEUROD6,SORCS1,SATB2,ZEB2,TRPM3,MYT1L,BACH2,CALN1          |
+|        8 | 0,223,95    |  0.04272 |   6471445 | SOX2,GLI3,PAX6,MOXD1,SOX1,ITGA2,SOX9,COL4A5,YAP1,LRP4,LHX2,COL4A6,ANGPTL1,ELOVL2,GFAP,FGFBP3,AHI1,CRHR2,GPX3,NR2F1                     | COL4A6,ITGA2,COL4A5,SOX2,ANGPTL1,PAX6,YAP1,GLI3,LRP4,MOXD1,SOX1,CRHR2,HES1,E2F2,ANKFN1,IGSF11,STOX1,SOX9,CHST3,GLB1L2                              | SOX2,GLI3,FXYD6,LHX2,PAX6,SOX9,MOXD1,NFIB,SOX1,ARHGAP5,NR2F1,WAC,FGFBP3,SETD5,ELOVL2,CSPG5,GPX3,CLASP1,ITGA2,ASH1L                   |
+|       12 | 153,0,0     |  0.03605 |   5460903 | FAM107A,MOXD1,DIO2,HES5,HOPX,CHST3,SOX2,GPX3,ACSBG1,GLI3,SLC15A2,SOX9,CD9,CST3,PAX6,FGFBP3,ETV1,CSPG5,ALDOC,EEPD1                      | ACSBG1,FAM107A,CD9,ITGB5,HES5,CHST3,SLC15A2,MOXD1,DIO2,EEPD1,CCDC175,HOPX,LPAR1,RHOJ,NPNT,CST3,MT3,CXCL14,LRP4,SPARCL1                             | FAM107A,MOXD1,SOX2,GLI3,SOX9,GPX3,FXYD6,FGFBP3,LHX2,ARHGAP5,PAX6,HOPX,CSPG5,DIO2,ETV1,ELOVL2,HES5,SETD5,NFIB,CST3                    |
+|       10 | 178,101,255 |  0.0308  |   4666140 | INSM1,NFIB,NEUROD2,CUX2,PRSS12,NEUROD6,NR2F1,LHX2,HS3ST1,FBXO32,NAB2,TMOD1,KDM5B,CLASP1,KMT2E,SRM,ELAPOR1,EMX1,FAM107A,POU3F4          | INSM1,PRSS12,FBXO32,CUX2,HS3ST1,NFIB,TMOD1,NAB2,LPAR1,NR2F1,NEUROD2,EMX1,POU3F4,DIO2,ELAPOR1,LHX2,NEUROD6,SRM,KMT2E,MT3                            | INSM1,NEUROD2,NFIB,NEUROD6,SATB2,FXYD6,CUX2,TBR1,LHX2,ZEB2,KDM5B,WAC,CLASP1,NR2F1,IGFBPL1,MYT1L,ARHGAP5,PRSS12,SETD5,ASH1L           |
+|       16 | 50,50,204   |  0.03008 |   4556045 | NR4A2,CYP26A1,KCTD12,MLIP,HS3ST4,TBR1,TSHZ3,GNAL,GPRIN3,CALN1,HCRTR2,ZFPM2,NPR3,GABRA5,ST18,B3GALT2,COL25A1,VSNL1,TLE4,PCDH17          | NR4A2,CYP26A1,MLIP,HCRTR2,COL25A1,ST18,NPR3,KCTD12,GABRA5,GPRIN3,HS3ST4,TSHZ3,GNAL,ZFPM2,VSNL1,CALN1,COL24A1,PCDH17,GABRG3,SLC26A4                 | NR4A2,TBR1,KCTD12,NFIB,CYP26A1,SATB2,HS3ST4,NEUROD2,FXYD6,NEUROD6,SCN3B,TSHZ3,GNAL,CALN1,ZEB2,ADRA2A,MYT1L,B3GALT2,GPRIN3,TLE4       |
+|       18 | 153,76,0    |  0.028   |   4240845 | NRN1,SLC17A6,TTYH2,INSM1,LINC01089,BAZ2B,NR2F1,ASH1L,CLASP1,WDFY3,FXYD6,KIF26B,FBXO32,NFIB,IGFBPL1,PENK,NIPBL,PPP1R17,SMOC1,SETD5      | TTYH2,SLC17A6,NRN1,LINC01089,EML6,BAZ2B,PVALB,COL6A1,MEIS1,ANTXR2,AP000866.1,CCDC144A,INSM1,DISP3,FBXO32,POT1-AS1,POT1,FRG1,PAXBP1-AS1,THUMPD3-AS1 | FXYD6,NFIB,INSM1,TBR1,CLASP1,IGFBPL1,KIF26B,ASH1L,ZEB2,NR2F1,SETD5,NEUROD2,NRN1,WDFY3,WAC,SLC17A6,LHX2,NIPBL,ARHGAP5,BAZ2B           |
+|        4 | 101,101,255 |  0.02394 |   3626317 | SATB2,STK32B,KIF26B,TMOD1,CUX2,NEUROD2,NEFM,KIAA0319,LINGO1,PRSS12,GLRA2,CAMK2B,PPP1R14C,GRM7,PTK2B,CUX1,ITPR1,NIPBL-DT,MET,HS3ST1     | STK32B,TMOD1,GRM7,ITPR1,SATB2,KIF26B,PTK2B,KIAA0319,CUX2,MET,CAMK2B,PRSS12,VSTM2L,GLRA2,PPP1R14C,KCNJ6,CPNE8,NEFM,LINGO1,FLJ20021                  | SATB2,NEUROD2,KIF26B,FXYD6,CUX2,NEUROD6,NEFM,SCN3B,TMOD1,LINGO1,CLASP1,TBR1,IGFBPL1,WAC,LHX2,MYT1L,STK32B,GLRA2,PPP3CA,NFIB          |
+|        5 | 255,101,254 |  0.01927 |   2918965 | SYBU,TMOD1,TAFA1,NEUROD2,STK32B,NEFM,SATB2,KCNH5,CUX2,RAP1GAP,PTK2B,SLITRK5,OPCML,UNC5C,MYT1L,LPL,LHX2,PPP1R14C,ARFGEF3,GPR85          | STK32B,KCNH5,TMOD1,PTK2B,TAFA1,SYBU,UNC5C,NEFM,MET,GPR85,RAP1GAP,LPL,SAMD11,CUX2,SATB2,NEUROD2,ITPR1,SLITRK5,OPCML,PPP1R14C                        | NEUROD2,SATB2,SYBU,ZEB2,NEUROD6,NEFM,FXYD6,MYT1L,TAFA1,CUX2,LHX2,WAC,PPP3CA,TMOD1,KIF26B,ARFGEF3,BACH2,SLITRK5,CLASP1,SETD5          |
+|       32 | 51,255,178  |  0.0192  |   2907679 | TRNP1,GLRA3,PPP3CA,CNTN2,CDH13,ELMOD1,TRIM67,MET,CPNE8,LRATD2,ADAMTS5,CFTR,CBLN4,GAD2,ELAPOR1,SETD5,GRAMD2B,AGT,NEUROD4,ST7-AS1        | GLRA3,TRNP1,CFTR,MET,CBLN4,CPNE8,ADAMTS5,CDH13,GAD2,GRAMD2B,CNTN2,AGT,PMCHL2,ELMOD1,PPP3CA,AKR1C2,INPP4B,ST7-AS1,VIP,LRATD2                        | PPP3CA,TRNP1,MYT1L,NEUROD2,GLRA3,SETD5,TRIM67,ZEB2,CNTN2,ELMOD1,CDH13,LRATD2,TAFA1,SCN3B,SYBU,ELAPOR1,KDM5B,NEUROD6,CLSTN2,ELOVL2    |
+|       26 | 152,255,152 |  0.01852 |   2805945 | AQP4,GLI3,GPX3,SOX9,LRATD2,ALDOC,FSTL5,ARHGAP5,COL4A5,CRHR2,COL4A6,NHLH1,KIF26B,TTYH2,HES5,NRN1,EOMES,SAMD4A,LAMP5,STOX1               | AQP4,LAMP5,CRHR2,COL4A6,CD38,COL4A5,ALDOC,FSTL5,LRATD2,GLI3,GPX3,HES5,STOX1,FAM182B,TTYH2,SOX9,EOMES,NHLH1,ANKFN1,CA12                             | FXYD6,ARHGAP5,GLI3,SOX9,KIF26B,NFIB,GPX3,ZEB2,LHX2,KDM5B,WAC,SETD5,SOX2,TBR1,NEUROD2,LRATD2,ALDOC,NRN1,INSM1,AQP4                    |
+|       21 | 50,127,204  |  0.01769 |   2679777 | NEUROG1,NEUROG2,NEUROD4,INSM1,IGFBPL1,EOMES,PAX6,KIF26B,E2F2,SOX2,SMOC1,SOX1,GPRC5B,GLI3,PPP1R17,YAP1,LHX2,CRHR2,AHI1,TKTL1            | NEUROG1,NEUROD4,NEUROG2,E2F2,EOMES,INSM1,PAX6,IGFBPL1,CRHR2,TKTL1,SMOC1,SOX1,YAP1,GPRC5B,SOX2,KIF26B,FOXN4,ANGPTL1,NEUROD1,PPP1R17                 | IGFBPL1,INSM1,NEUROG2,NEUROG1,KIF26B,SOX2,NFIB,LHX2,PAX6,NEUROD4,FXYD6,SMOC1,EOMES,WAC,GLI3,SOX1,CLASP1,SETD5,PENK,ARHGAP5           |
+|       25 | 255,255,152 |  0.01655 |   2507606 | SYBU,TAFA1,NEUROD6,ZEB2,ARFGEF3,MYT1L,CDH13,SCN3B,TRIM67,RSPO3,ELMOD1,PPP3CA,WAC,LINGO1,GLRA2,PPP1R14C,SETD5,INPP4B,ARHGAP5,ADAMTSL3   | PMCHL2,INPP4B,PAPPA,BEST3,TAFA1,SYBU,NDST4,CDH13,AC009506.1,SLCO1C1,RSPO3,ARFGEF3,ELOVL2-AS1,GLB1L2,ADAMTS5,LGR6,ELMOD1,ITPR1,NKX2-1,TRIM67        | NEUROD6,ZEB2,SYBU,MYT1L,TAFA1,ARFGEF3,SCN3B,WAC,PPP3CA,ARHGAP5,SETD5,TBR1,LINGO1,KDM5B,TRIM67,GLRA2,NFIB,IGFBPL1,KLHL1,PPP1R14C      |
+|       34 | 229,152,255 |  0.01602 |   2426122 | SMOC1,EOMES,PPP1R17,NEUROD4,NHLH1,CA12,PENK,CPEB2,IGFBPL1,E2F2,NEUROG2,POU3F4,NEUROD1,NR2F1,CUX1,TTYH2,NPR3,NRN1,INSM1,COL4A5          | EOMES,SMOC1,PPP1R17,NEUROD4,CA12,E2F2,NHLH1,PENK,CPEB2,POU3F4,NEUROD1,NPR3,TTYH2,COL4A5,NEUROG2,CRHR2,IGFBPL1,LINC01089,NRN1,CUX1                  | SMOC1,IGFBPL1,EOMES,PPP1R17,NFIB,PENK,FXYD6,NHLH1,INSM1,NR2F1,NEUROD4,CPEB2,CA12,NEUROD2,LHX2,KDM5B,NEUROG2,CUX1,KIF26B,TBR1         |
+|       19 | 76,153,0    |  0.01579 |   2391395 | NEUROD6,SLN,ZEB2,UNC5C,B3GALT2,BACH2,SERPINI1,GPRIN3,NEFM,CALN1,MYT1L,SEMA3E,TSHZ3,PCDH17,HEY1,OPCML,KITLG,FEZF2,PPP1R14C,ARHGAP5      | SLN,UNC5C,SERPINI1,PCDH17,GPRIN3,NEUROD6,B3GALT2,HEY1,SEMA3E,KITLG,CALN1,BACH2,TSHZ3,C8orf34,NEFM,ZEB2,OPCML,PPP1R14C,B3GNT2,ANOS1                 | NEUROD6,ZEB2,MYT1L,TBR1,FXYD6,BACH2,SATB2,NEFM,NEUROD2,ARHGAP5,WAC,B3GALT2,CALN1,FEZF2,SYBU,PPP3CA,LHX2,OPCML,TSHZ3,CLASP1           |
+|       43 | 0,170,170   |  0.01493 |   2261383 | NR4A2,MYT1L,CDH13,SYBU,RORB,NEFM,MET,KITLG,NIPBL-DT,NPY,GLRA2,NECTIN3,KIAA0319,KCNH5,RSPO3,SOX9,RELN,RAP1GAP,FGFBP3,UNC5C              | NR4A2,CDH13,MET,RELN,KCNH5,NPY,KITLG,RORB,SLC26A4,MYT1L,SYBU,ITPR1,NECTIN3,KIAA0319,UNC5C,NIPBL-DT,RSPO3,SCG2,GLRA2,NEFM                           | MYT1L,NR4A2,SYBU,NEUROD6,NEFM,FXYD6,ARHGAP5,SATB2,ZEB2,CDH13,NIPBL-DT,GLRA2,RORB,SOX9,ARFGEF3,SCN3B,LHX2,PPP3CA,NEUROD2,CUX2         |
+|       33 | 152,229,255 |  0.01436 |   2175013 | SOX1,SOX2-OT,SP9,SOX2,GAD2,KITLG,ZEB2,LHX6,CLASP1,ASH1L,POU3F4,BCL11B,CUX1,ST7,TPBG,WDFY3,GPRC5B,NIPBL,KDM5B,MEIS1                     | SP9,SOX2-OT,SOX1,GAD2,TPBG,KITLG,SOX2,NKX2-1,LHX6,POU3F4,BCL11B,VIP,MEIS1,ST7,GRIK4,CUX1,ASH1L,GPRC5B,CLASP1,ZEB2                                  | ZEB2,SOX1,SOX2,FXYD6,SOX2-OT,SP9,CLASP1,ASH1L,NFIB,WAC,KDM5B,MYT1L,KITLG,SETD5,WDFY3,BACH2,CUX1,GAD2,SCN3B,ST7                       |
+|       24 | 255,152,152 |  0.01341 |   2031577 | FAM107A,HOPX,GPX3,MT3,IGFBPL1,CST3,GFAP,TAGLN2,NFIB,NHLH1,ALDOC,LHX2,TKTL1,FXYD6,LGALS1,SOX9,ARHGAP5,PPP1R17,CUX1,SLC17A6              | FAM107A,HOPX,MT3,GPX3,TAGLN2,CST3,TKTL1,LGALS1,GFAP,ALDOC,NHLH1,WDFY3-AS2,IGFBPL1,HEY1,YAP1,PPP1R17,SLC17A6,NEUROD1,LHX2,POU3F4                    | FAM107A,NFIB,FXYD6,NEUROD2,IGFBPL1,NEUROD6,GPX3,LHX2,TBR1,HOPX,ARHGAP5,ZEB2,KDM5B,WAC,SOX9,WDFY3,SOX2,CUX2,INSM1,GFAP                |
+|       30 | 255,229,152 |  0.01301 |   1971429 | ZEB2,MYT1L,TRIM67,SCN3B,TAFA1,PPP3CA,MSANTD2,ADAMTSL3,ADAMTS5,KDM5B,DACH2,CPNE8,SLCO1C1,CNTN2,AKR1C2,CBLN4,AGT,SEMA3E,INPP4B,CACNA1E   | ADAMTS5,DACH2,SLCO1C1,AKR1C2,LINC02593,INPP4B,CBLN4,CPNE8,TRIM67,AGT,ZEB2,ADAMTSL3,MSANTD2,TAFA1,MYT1L,CACNA1E,SCN3B,PPP3CA,NKX2-1,COL19A1         | ZEB2,MYT1L,SCN3B,PPP3CA,TAFA1,TRIM67,KDM5B,SYBU,ARHGAP5,WAC,MSANTD2,ADAMTSL3,HS3ST4,CNTN2,SEMA3E,SETD5,ELAPOR1,ARFGEF3,ADAMTS5,VAT1L |
+|       20 | 0,115,0     |  0.01247 |   1888266 | NHLH1,NRN1,NFIB,IGFBPL1,NEUROD1,LHX2,NEUROD2,NAB2,SLC17A6,KDM5B,WDFY3,BCL11B,NR2F1,WAC,ANTXR2,EML6,INSM1,BAZ2B,HS3ST1,ARID2            | NHLH1,NRN1,NEUROD1,EML6,ANTXR2,IGFBPL1,SLC17A6,NAB2,NFIB,BCL11B,LHX2,COL6A1,AP002748.4,TUSC7,FRG1,WDFY3,NEUROD2,SRCAP,KDM5B,BAZ2B                  | NFIB,NEUROD2,NHLH1,IGFBPL1,NRN1,LHX2,TBR1,KDM5B,WAC,FXYD6,NEUROD6,WDFY3,INSM1,NR2F1,NAB2,MYT1L,CLASP1,ZEB2,NEUROD1,SETD5             |
+|       11 | 255,153,204 |  0.01242 |   1881038 | FEZF2,NFIB,TSHZ3,HS3ST4,CRYM,SLC35F2,PEX5L,SPOCK1,KCTD12,ZFPM2,VSNL1,CYP26A1,SORCS1,LPL,SOX5,SLN,TRPM3,FOXP2,RGS6,TBR1                 | SLN,SLC35F2,FEZF2,TSHZ3,VSNL1,CYP26A1,HS3ST4,ZFPM2,SPOCK1,FOXP2,RGS6,LPL,CRYM,C8orf34,NFIB,TRPM3,SORCS1,PEX5L,FSTL5,KCNQ5                          | NFIB,FEZF2,TBR1,ZEB2,FXYD6,NEUROD2,HS3ST4,TSHZ3,KCTD12,CRYM,PEX5L,SCN3B,SOX5,BACH2,NEUROD6,PPP3CA,B3GALT2,SPOCK1,ARHGAP5,SORCS1      |
+|       22 | 127,50,204  |  0.01228 |   1860105 | TAFA1,ADAMTSL3,SYBU,ELMOD1,RORB,IGFBPL1,SCN3B,NPY,PAPPA,ARFGEF3,TRIM67,FBXO32,KCNQ5,MYT1L,CACNA1E,ELOVL2,CFTR,PPP3CA,GPR85,LINGO1      | ADAMTSL3,PAPPA,TAFA1,ELMOD1,NPY,RORB,BEST3,CACNA1E,CFTR,TPBG,SYBU,KCNQ5,CBLN4,PCCA-DT,GRAMD2B,KCNJ16,FBXO32,IGFBPL1,GPR85,SCN3B                    | TAFA1,SYBU,NEUROD2,IGFBPL1,SCN3B,SATB2,MYT1L,ADAMTSL3,ZEB2,ARFGEF3,PPP3CA,ARHGAP5,WAC,RORB,ELMOD1,KDM5B,TRIM67,LHX2,LINGO1,SETD5     |
+|       15 | 0,153,153   |  0.01176 |   1780738 | FEZF2,TSHZ3,SEMA3E,RGS6,GLRA2,PEX5L,CRYM,CALN1,SOX5,KCTD12,RORB,HS3ST4,GPRIN3,SCN3B,NFIB,CLSTN2,SLC35F2,SORCS1,FOXP2,LPL               | RGS6,FEZF2,SEMA3E,TSHZ3,GLRA2,PEX5L,SLC35F2,CRYM,RORB,HCRTR2,GPRIN3,FOXP2,SOX5,CALN1,TOX,LPL,ACTN2,KCTD12,HS3ST4,SORCS1                            | FEZF2,NEUROD2,NEUROD6,NFIB,ZEB2,GLRA2,SCN3B,TSHZ3,PEX5L,CRYM,FXYD6,KCTD12,SEMA3E,TBR1,BACH2,CALN1,SOX5,MYT1L,HS3ST4,RGS6             |
+|       36 | 255,0,255   |  0.01131 |   1713697 | HS3ST4,CRYM,SEMA3E,TBR1,KCTD12,TLE4,SORCS1,NFIB,SCN3B,CDH13,KLHL1,NR4A2,B3GNT2,GPRIN3,SYT6,CLSTN2,ATP2B4,HSPA12A,PPP3CA,GABRG3         | SEMA3E,HS3ST4,CRYM,LINC02593,CDH13,GABRG3,TLE4,KCTD12,SORCS1,GPR37L1,ST18,LGR6,B3GNT2,VSTM2L,SLC35F2,GRIK4,SYT6,NDST4,GPRIN3,HSPA12A               | TBR1,NFIB,ZEB2,HS3ST4,CRYM,KCTD12,SCN3B,NEUROD6,TLE4,SEMA3E,MYT1L,PPP3CA,WAC,ARHGAP5,KLHL1,KDM5B,SORCS1,NR4A2,CLSTN2,SETD5           |
+|       27 | 152,255,255 |  0.01125 |   1703615 | CRYM,ZFPM2,TBR1,GNAL,PDE1A,VSNL1,VAT1L,BACH2,HS3ST4,HSPA12A,ANOS1,NPNT,SYT6,NPR3,FEZF2,FOXP2,ATP2B4,TSHZ3,B3GALT2,TRPM3                | CRYM,ZFPM2,NPNT,PDE1A,VSNL1,VAT1L,NPR3,ANOS1,GNAL,HSPA12A,FOXP2,RASGRF2,SYT6,GRIK4,LINC02593,HS3ST4,ATP2B4,BACH2,TBR1,C8orf34                      | CRYM,TBR1,FXYD6,NEUROD2,ZFPM2,NEUROD6,BACH2,MYT1L,NFIB,GNAL,FEZF2,ZEB2,HS3ST4,WAC,PPP3CA,PDE1A,SATB2,KCTD12,B3GALT2,VAT1L            |
+|       37 | 0,255,255   |  0.01093 |   1656336 | HS3ST1,SLC17A6,ELAPOR1,DISP3,CLSTN2,EML6,CUX2,SOX5,LINC01089,CNTN2,KMT2E,POU3F4,BCL11B,IGFBPL1,WDFY3,NFIB,TBR1,MYT1L,SYT6,KCNJ6        | EML6,SLC17A6,HS3ST1,DISP3,ELAPOR1,LINC01089,POU3F4,CLSTN2,BCL11B,CNTN2,SOX5,KCNJ6,KPTN,CUX2,KMT2E,THUMPD3-AS1,DNM2,SYT6,FRG1-DT,PAXBP1-AS1         | TBR1,NFIB,HS3ST1,CUX2,SLC17A6,NEUROD2,MYT1L,IGFBPL1,CLSTN2,ELAPOR1,SOX5,NEUROD6,KMT2E,KDM5B,WDFY3,DISP3,CNTN2,FXYD6,CLASP1,LINC01089 |
+|       45 | 255,0,127   |  0.01029 |   1557932 | CRYAB,CCN1,CCN2,LRATD2,ITGA2,GLI3,SAMD4A,SOX9,GPX3,SOX2,TAGLN2,FGFBP3,LAMP5,PAX6,AQP4,HES1,STOX1,FBXO32,GFAP,VAT1L                     | CRYAB,CCN1,CCN2,LAMP5,ITGA2,LRATD2,TAGLN2,ITGB5,AQP4,HES1,SAMD4A,STOX1,GPX3,GLI3,FAM182B,TKTL1,SOX9,MEIS1,FGFBP3,ANKFN1                            | CRYAB,CCN1,CCN2,SOX2,GLI3,SOX9,FXYD6,ARHGAP5,GPX3,FGFBP3,LRATD2,SAMD4A,PAX6,LHX2,NFIB,ITGA2,WAC,SETD5,FEZF2,ZEB2                     |
+|       39 | 255,84,0    |  0.01013 |   1533714 | ARFGEF3,RSPO3,TRNP1,ARHGAP5,ELMOD1,NECTIN3,GLRA3,GLRA2,ELOVL2,GPR85,SCN3B,CFTR,CLSTN2,ZEB2,SOX5,FSTL5,KLHL1,SLC35F2,SAMD4A,B3GNT2      | ARFGEF3,RSPO3,TRNP1,CFTR,GLRA3,GPR85,NECTIN3,ELMOD1,ELOVL2-AS1,ARHGAP5,CACNA1E,GRM7,SLC35F2,ELOVL2,GLRA2,GRAMD2B,VIP,FSTL5,PAPPA,B3GNT2            | ARFGEF3,ZEB2,ARHGAP5,SCN3B,NEUROD6,MYT1L,NEUROD2,RSPO3,TRNP1,NFIB,WAC,GLRA2,SATB2,ELOVL2,SETD5,SYBU,CLSTN2,ELMOD1,KDM5B,KLHL1        |
+|       31 | 229,255,152 |  0.00915 |   1386115 | PENK,PPP1R17,NRN1,IGFBPL1,CBLN2,CA12,NEUROD4,TTYH2,SMOC1,NFIB,NR2F1,NEUROD1,PAX6,WDFY3,CPEB2,SLC17A6,CUX1,NHLH1,GPRC5B,EOMES           | PENK,PPP1R17,CBLN2,NRN1,CA12,NEUROD4,TTYH2,NEUROD1,IGFBPL1,SMOC1,NR2F1,SLC17A6,PAX6,CPEB2,EOMES,WDFY3,NHLH1,NFIB,GPRC5B,WDFY3-AS2                  | PENK,IGFBPL1,NFIB,PPP1R17,NRN1,NEUROD2,NEUROD6,NR2F1,TBR1,FXYD6,SMOC1,CBLN2,WDFY3,CA12,NEUROD4,PAX6,WAC,KDM5B,CLASP1,LHX2            |
+|       29 | 255,152,255 |  0.0083  |   1256851 | GABRA5,GNAL,KCTD12,HS3ST4,TSHZ3,ZFPM2,CRYM,VSNL1,HSPA12A,TBR1,SORCS1,PEX5L,TPBG,OPCML,NFIB,CAMK2B,FEZF2,SYT6,PDE1A,BACH2               | GABRA5,TPBG,GNAL,VSNL1,ZFPM2,HSPA12A,KCTD12,HS3ST4,TSHZ3,COL25A1,CRYM,SORCS1,NPR3,LGR6,CAMK2B,PDE1A,SYT6,TOX,PEX5L,OPCML                           | TBR1,KCTD12,NFIB,GNAL,NEUROD2,HS3ST4,FXYD6,GABRA5,CRYM,TSHZ3,BACH2,MYT1L,ZFPM2,FEZF2,SATB2,SCN3B,PEX5L,PPP3CA,ARHGAP5,OPCML          |
+|       13 | 153,153,0   |  0.00678 |   1026747 | KIF26B,TMOD1,NEUROD2,PRSS12,CUX2,SATB2,B3GALT2,NFIB,ADRA2A,GLRA2,WAC,LPAR1,SRM,LINGO1,NAB2,CUX1,BAZ2B,DIO2,FBXO32,FLJ20021             | KIF26B,TMOD1,LPAR1,PRSS12,FLJ20021,NEUROD2,CUX2,KMT2E-AS1,B3GALT2,TUSC7,SAMD11,SATB2,GLRA2,SRM,ADRA2A,FRG1-DT,DIO2,FBXO32,BAZ2B,NAB2               | NEUROD2,KIF26B,SATB2,NFIB,NEUROD6,CUX2,FXYD6,TMOD1,WAC,ZEB2,PRSS12,ADRA2A,SETD5,MYT1L,KDM5B,ARHGAP5,IGFBPL1,CLASP1,B3GALT2,INSM1     |
+|       50 | 170,255,0   |  0.00675 |   1022337 | SPARCL1,LGALS1,DENND2B,HOPX,RHOJ,TAGLN2,CD82,TTYH2,HES1,YAP1,B3GNT2,KITLG,PCCA,FOXP1,CPNE8,DNM2,SETD5,PRSS12,WAC,CUX1                  | SPARCL1,LGALS1,RHOJ,DENND2B,TAGLN2,CD82,HES1,HOPX,TTYH2,YAP1,CPNE8,PCCA,KITLG,B3GNT2,DNM2,SLC35F2,GRAMD2B,COL6A1,FOXP1,PCCA-DT                     | SPARCL1,WAC,SETD5,HOPX,FOXP1,FXYD6,TTYH2,PPP3CA,B3GNT2,ZEB2,TAGLN2,DENND2B,LGALS1,CLASP1,KITLG,PCCA,CUX1,ASH1L,PRSS12,YAP1           |
+|       28 | 152,152,255 |  0.00645 |    977089 | SEMA3E,OPCML,FXYD6,SCN3B,GABRB2,COL25A1,FAM3C,TRPM3,SPOCK1,GABRG3,GNAL,B3GALT2,SORCS1,CSPG5,ANOS1,VSNL1,KCNQ5,LINGO1,HSPA12A,LPL       | SEMA3E,COL25A1,OPCML,GABRG3,LGR6,GABRB2,TRPM3,RASGRF2,FAM3C,SPOCK1,GRIK4,FXYD6,ANOS1,SCN3B,KCNQ5,VSNL1,KCNJ16,SLC35F2,GNAL,NPNT                    | FXYD6,OPCML,SCN3B,SEMA3E,TBR1,FAM3C,KIF26B,NEUROD2,GABRB2,GNAL,LINGO1,SPOCK1,B3GALT2,TRPM3,CSPG5,BACH2,HS3ST4,MYT1L,ZEB2,SORCS1      |
+|       41 | 84,0,255    |  0.00618 |    936699 | HS3ST4,CALN1,GNAL,SATB2,KCTD12,KIF26B,TRIM67,NEUROD2,TSHZ3,SRM,GRM7,VSNL1,CRYM,GPRIN3,CAMK2B,STK32B,NPR3,TRPM3,ZFPM2,SYT6              | HS3ST4,CALN1,GNAL,GRM7,VSNL1,TRIM67,STK32B,TSHZ3,SATB2,KCTD12,SRM,NPR3,GPRIN3,KIF26B,CAMK2B,BCL11B,CRYM,TRPM3,SYT6,ZFPM2                           | HS3ST4,SATB2,NEUROD2,CALN1,FXYD6,ZEB2,GNAL,NFIB,KIF26B,MYT1L,KCTD12,TBR1,ARHGAP5,TRIM67,BACH2,PPP3CA,TSHZ3,CRYM,SRM,CLASP1           |
+|        9 | 101,178,255 |  0.00572 |    867146 | NEFM,TAFA1,NEUROD6,OPCML,FOXP1,GLRA2,MYT1L,LHX2,RORB,B3GALT2,FBXO32,WAC-AS1,NR2F1,FSTL5,KITLG,LPL,ELMOD1,KCNH5,VSNL1,ACTN2             | NEFM,TAFA1,OPCML,FOXP1,RASGRF2,KCNH5,WAC-AS1,FBXO32,FSTL5,ACTN2,NEUROD6,RORB,GLRA2,KITLG,PTK2B,VSNL1,SERPINI1,BEST3,B3GALT2,LPL                    | NEFM,NEUROD6,ZEB2,SATB2,MYT1L,TAFA1,FXYD6,LHX2,WAC,OPCML,FOXP1,SYBU,CLASP1,NEUROD2,BACH2,PPP3CA,NR2F1,GLRA2,ARHGAP5,B3GALT2          |
+|       51 | 84,0,0      |  0.00555 |    840301 | CSPG5,SMOC1,S100B,PCDH17,SOX2,SETD5,FXYD6,GPRC5B,CHST3,OPCML,KCNJ16,IGSF11,TMEM163,SOX2-OT,ATP2B4,SAMD4A,CD82,RAP1GAP,SUSD4,DENND2B    | S100B,CSPG5,SMOC1,KCNJ16,PCDH17,NKX2-1,CHST3,IGSF11,SOX2,LGR6,CD82,GRAMD2B,SOX2-OT,GPRC5B,DENND2B,GRIK4,SUSD4,TMEM163,EGR2,HES5                    | CSPG5,FXYD6,SMOC1,SOX2,SETD5,PCDH17,OPCML,S100B,ARHGAP5,WAC,RAP1GAP,GPRC5B,CLASP1,ATP2B4,TMEM163,SAMD4A,FGFBP3,ASH1L,KIF26B,ETV1     |
+|       14 | 0,153,0     |  0.00551 |    835032 | NPY,SATB2,RORB,KCNH5,FOXP1,SLITRK5,FBXO32,STK32B,KCNQ5,IGFBPL1,ACTN2,CAMK2B,LPL,PPP1R14C,TSHZ3,NEFM,OPCML,LINGO1,UNC5C,LHX2            | NPY,KCNH5,STK32B,RORB,ACTN2,KCNQ5,FBXO32,FOXP1,SLITRK5,AC093249.6,LPL,CAMK2B,PAPPA,UNC5C,SATB2,KCNJ6,PPP1R14C,RORB-AS1,TSHZ3,FRG1-DT               | NPY,SATB2,NEUROD2,FXYD6,IGFBPL1,SLITRK5,FOXP1,LHX2,SCN3B,SYBU,NEFM,RORB,ARHGAP5,MYT1L,NFIB,ZEB2,LINGO1,WAC,PPP3CA,ASH1L              |
+|       48 | 255,170,0   |  0.00494 |    747529 | CYP26A1,KCNJ6,HCRTR2,CDH13,GABRA5,COL19A1,B3GALT2,NPR3,OPCML,CLSTN2,GNAL,MLIP,SERPINI1,CALN1,LRATD2,COL24A1,GABRG3,RAP1GAP,ZFPM2,VSNL1 | HCRTR2,CYP26A1,KCNJ6,COL19A1,CDH13,GABRA5,NPR3,COL24A1,TPBG,MLIP,SERPINI1,GABRG3,B3GALT2,GNAL,CLSTN2,OPCML,HTR2A,STK32B,LRATD2,VSNL1               | CYP26A1,B3GALT2,FXYD6,OPCML,CLSTN2,GNAL,SCN3B,TBR1,CDH13,KCNJ6,GABRA5,CALN1,FEZF2,SYBU,HS3ST4,ADRA2A,GLRA2,NPR3,CSPG5,PPP3CA         |
+|       46 | 127,255,0   |  0.0042  |    636523 | FEZF2,NEUROD2,TLE4,SOX5,HS3ST4,SYT6,PCDH17,ELMOD1,KCTD12,KIF9-AS1,PDE1A,NIPBL,TOX,SORCS1,HSPA12A,CDH13,FOXP2,GRAMD2B,RGS6,FOXN4        | FEZF2,PCDH17,KIF9-AS1,TLE4,SYT6,SOX5,ELMOD1,GRAMD2B,PDE1A,HS3ST4,NEUROD2,TOX,FOXN4,CDH13,KCTD12,HSPA12A,CFTR,STK32B,FOXP2,VIP                      | FEZF2,NEUROD2,SATB2,ZEB2,TLE4,PPP3CA,TBR1,KCTD12,FXYD6,SOX5,SCN3B,HS3ST4,MYT1L,NEUROD6,KIF26B,NFIB,NIPBL,LHX2,PEX5L,ARHGAP5          |
+|       44 | 170,170,0   |  0.00389 |    589960 | ZEB2,GLRA3,ARHGAP5,KITLG,VIP,CDH13,MET,CBLN4,ARHGAP5-AS1,TUSC7,SOX2-OT,TRNP1,CPEB2,COL24A1,CFTR,ANTXR2,GAD2,SAMD11,GRAMD2B,KCNJ16      | ZEB2,VIP,GLRA3,TUSC7,KITLG,CBLN4,MET,ARHGAP5-AS1,COL24A1,SAMD11,ARHGAP5,CDH13,SOX2-OT,CFTR,ANTXR2,TRNP1,CPEB2,GRAMD2B,GAD2,KCNJ16                  | ZEB2,ARHGAP5,FXYD6,WAC,NEUROD6,NFIB,NEUROD2,SATB2,TBR1,GLRA3,CLASP1,PPP3CA,SETD5,KDM5B,KITLG,NIPBL-DT,MYT1L,KIF26B,TRNP1,SCN3B       |
+|       23 | 153,51,102  |  0.00386 |    584200 | SOX2,PAX6,WAC,LHX2,ARHGAP5,YAP1,E2F2,FOXN4,SETD5,AHI1,KIF26B,VAT1L,SOX1,LGALS1,TCIM,NFIB,ARID2,SOX9,NR2F1,TKTL1                        | SOX2,PAX6,E2F2,FOXN4,LGALS1,YAP1,TKTL1,SAMD11,TCIM,VAT1L,AHI1,AC093249.6,AKAP7,SOX1,ASH1L-AS1,WAC,GLB1L2,ARHGAP5,LHX2,FRG1-DT                      | SOX2,PAX6,WAC,NFIB,LHX2,ARHGAP5,SETD5,KIF26B,NR2F1,SOX9,INSM1,ZEB2,ARID2,ASH1L,GLI3,CLASP1,SOX1,CUX1,AHI1,YAP1                       |
+|       40 | 0,255,84    |  0.00374 |    567023 | MLIP,SORCS1,NPR3,GABRA5,OPCML,TRMT9B,FAM3C,ANOS1,ATP2B4,SUSD4,CRYM,KLHL1,TPBG,TRPM3,ZFPM2,SLITRK5,NPNT,HS3ST4,SPOCK1,SMOC1             | MLIP,TPBG,NPR3,GABRA5,SORCS1,TRMT9B,SUSD4,LGR6,ANOS1,NPNT,OPCML,CBLN4,SLC26A4,ATP2B4,FAM3C,COL24A1,CD38,GRIK4,TRPM3,POT1-AS1                       | OPCML,SORCS1,FXYD6,MLIP,SCN3B,CRYM,FAM3C,GABRA5,KLHL1,TBR1,TRMT9B,SLITRK5,NPR3,NFIB,HS3ST4,ATP2B4,B3GALT2,SMOC1,TRPM3,ZFPM2          |
+|       38 | 255,255,0   |  0.00374 |    566859 | TBR1,NEUROD2,ZFPM2,NFIB,VSNL1,SYT6,KCNJ6,NIPBL,LINC02593,MLIP,GPRIN3,TUSC7,LPAR1,KMT2E-AS1,ALPK1,SAMD11,FRG1,PTK2B,MCPH1               | TBR1,NEUROD2,LINC02593,ZFPM2,SAMD11,TUSC7,KMT2E-AS1,ALPK1,KCNJ6,VSNL1,LPAR1,SYT6,MLIP,NFIB,FRG1,MCPH1,NIPBL,PTK2B,GPRIN3                           | TBR1,NEUROD2,NFIB,FXYD6,SATB2,KIF26B,MYT1L,NEUROD6,CLASP1,ZFPM2,KDM5B,NIPBL,ARHGAP5,ZEB2,NEFM,TSHZ3,CUX2,SRM,SYT6,WDFY3              |
+|       58 | 84,170,0    |  0.00373 |    564966 | LHX6,SST,SP9,RASGRF2,KCNJ6,GAD2,CUX1,TSHZ3,BCL11B,ZFPM2,STK32B,COL19A1,VSTM2L,PCDH17,HTR2A,NPY,SOX2,GPRC5B,ASH1L,CLASP1                | LHX6,SST,RASGRF2,SP9,GAD2,KCNJ6,COL19A1,VSTM2L,STK32B,HTR2A,BCL11B,PCDH17,CUX1,ZFPM2,TSHZ3,GRM7,NPY,LPAR1,ASH1L-AS1,GABRG3                         | LHX6,SST,SP9,CUX1,TSHZ3,CLASP1,SOX2,ASH1L,RASGRF2,WAC,FXYD6,KCNJ6,ZEB2,WDFY3,ZFPM2,SETD5,GAD2,BCL11B,SCN3B,KCTD12                    |
+|       52 | 0,84,0      |  0.00371 |    561850 | KCTD12,SYT6,GPRIN3,TOX,TSHZ3,HS3ST4,NIPBL,SETD1B,LRATD2,TRIM67,DNM2,SPOCK1,MSL3,STK32B,KMT2E,CRYM,ALPK1,CYP26A1,SYNJ1,HSPA12A          | KCTD12,SYT6,ALPK1,GPRIN3,TOX,SETD1B,DNM2,STK32B,TSHZ3,LRATD2,MSL3,HS3ST4,SLN,FRG1-DT,NIPBL,VSTM2L,SPOCK1,AKAP7,CYP26A1,TRIM67                      | KCTD12,NEUROD2,NFIB,ZEB2,SYT6,FXYD6,HS3ST4,GPRIN3,TBR1,NIPBL,TSHZ3,ARHGAP5,PPP3CA,CRYM,SCN3B,TRIM67,KMT2E,KDM5B,ARFGEF3,SATB2        |
+|       35 | 255,204,255 |  0.00356 |    538693 | NEUROD6,NFIB,TCIM,NR2F1,KCNJ6,NEUROG2,TMOD1,MSANTD2,LPAR1,MCPH1,FRG1,ANTXR2,AC093249.6,DPP3,DACH2,AQP4,FLJ20021,COL24A1,PMCHL2,NDST4   | NEUROD6,NFIB,MCPH1,LPAR1,AC093249.6,TCIM,KCNJ6,ANTXR2,PMCHL2,FLJ20021,FRG1,MSANTD2,DACH2,COL24A1,TMOD1,NEUROG2,NDST4,EGR2,AQP4,DPP3                | NEUROD6,NFIB,NEUROD2,WAC,FXYD6,TBR1,IGFBPL1,NR2F1,SATB2,ARHGAP5,MYT1L,SETD5,CLASP1,ASH1L,ADRA2A,PPP3CA,LHX2,CUX2,WDFY3,ZEB2          |
+|       53 | 0,0,84      |  0.00332 |    502155 | GPX3,AQP4,ALDOC,FGFBP3,MOXD1,ANOS1,HES5,SLC15A2,SOX9,CSPG5,EEPD1,CD38,SOX2,HES1,LAMP5,TCIM,GLI3,ATP2B4,LRP4,VAT1L                      | GPX3,AQP4,ALDOC,CD38,HES5,LAMP5,SLC15A2,EEPD1,ANOS1,MOXD1,FGFBP3,HES1,ANKFN1,FAM182B,CSPG5,SOX9,TCIM,LRP4,ITGB5,VAT1L                              | GPX3,FGFBP3,ALDOC,MOXD1,SOX9,AQP4,CSPG5,SOX2,ANOS1,LHX2,GLI3,HES5,FXYD6,SLC15A2,ATP2B4,SETD5,NR2F1,PAX6,TCIM,VAT1L                   |
+|       47 | 0,127,255   |  0.00287 |    435467 | PEX5L,NEFM,VSNL1,GABRA5,BCL11B,GABRB2,FEZF2,OPCML,PCDH17,COL24A1,CDH13,CPNE8,VAT1L,SUSD4,ETV1,TRPM3,GLRA2,PPP1R14C,ATP2B4,UNC5C        | PEX5L,COL24A1,VSNL1,GABRA5,BCL11B,CPNE8,NEFM,RELN,SUSD4,GABRB2,PCDH17,CDH13,VAT1L,HCRTR2,C8orf34,FEZF2,OPCML,TRPM3,ETV1,UNC5C                      | PEX5L,NEFM,FEZF2,MYT1L,OPCML,VSNL1,PPP3CA,GABRB2,FXYD6,GABRA5,BCL11B,GLRA2,ZEB2,ETV1,SATB2,NFIB,WAC,NEUROD2,ARHGAP5,CLASP1           |
+|       55 | 84,170,84   |  0.00228 |    344892 | CST3,LGR6,HOPX,CSPG5,NPNT,SPARCL1,FGFBP3,CD9,LRP4,ELOVL2,SOX9,MEIS1,SOX2,ETV1,MT3,GFAP,RGS6,YAP1,ACSBG1,RHOJ                           | LGR6,CST3,CD9,NPNT,SPARCL1,HOPX,LRP4,KCNJ16,MEIS1,MT3,ACSBG1,CSPG5,RHOJ,GPR37L1,AQP4,SLC15A2,FGFBP3,YAP1,S100B,RGS6                                | CST3,CSPG5,FGFBP3,SOX2,SOX9,HOPX,ELOVL2,ETV1,LHX2,FXYD6,LRP4,SPARCL1,GFAP,NPNT,NFIB,SETD5,FAM3C,RGS6,LGR6,YAP1                       |
+|       60 | 255,101,101 |  0.00227 |    344500 | GFAP,SAMD4A,SOX9,GPX3,SOX2,ANOS1,AQP4,HES1,GLI3,CRHR2,ALDOC,FGFBP3,YAP1,LAMP5,PAX6,FBXO32,LRATD2,COL4A5,STOX1,ANKFN1                   | GFAP,LAMP5,AQP4,HES1,SAMD4A,CRHR2,ANOS1,CD38,ANKFN1,FAM182B,EEPD1,GPX3,CD9,SOX9,ALDOC,STOX1,COL4A5,YAP1,COL4A6,SOX2                                | GFAP,SOX2,SOX9,FXYD6,SAMD4A,GPX3,GLI3,ARHGAP5,LHX2,FGFBP3,NFIB,PAX6,ZEB2,KIF26B,ANOS1,CSPG5,WAC,SETD5,ATP2B4,ALDOC                   |
+|       54 | 170,84,84   |  0.00179 |    270801 | KIF26B,BACH2,GNAL,FOXP2,VAT1L,RORB,RASGRF2,CRYM,TRMT9B,TRPM3,TBR1,PPP3CA,GABRB2,VSNL1,CLASP1,NAB2,TLE4,SYNJ1,ITPR1,FLJ20021            | KIF26B,RASGRF2,BACH2,GNAL,FOXP2,FLJ20021,VAT1L,RORB,TRMT9B,TRPM3,ITPR1,NPNT,CRYM,VSNL1,AKAP7,GABRB2,SYNJ1,NAB2,STK32B,MCPH1                        | KIF26B,BACH2,TBR1,GNAL,SATB2,PPP3CA,MYT1L,NEUROD2,CLASP1,NFIB,CRYM,FOXP2,WAC,RORB,FXYD6,ASH1L,NEUROD6,ZEB2,TLE4,VAT1L                |
+|       49 | 0,255,170   |  0.0016  |    242180 | GLI3,LHX2,FGFBP3,FAM107A,SOX9,YAP1,NR2F1,FBXO32,ALDOC,GFAP,PAX6,MT3,EEPD1,TCIM,SOX2,LGALS1,SAMD4A,MEIS1,DIO2,HOPX                      | GLI3,YAP1,EEPD1,MT3,ALDOC,FBXO32,FGFBP3,FAM107A,LHX2,GFAP,LGALS1,ANKFN1,LPAR1,SOX9,NR2F1,HES1,MEIS1,PAX6,TCIM,ANGPTL1                              | GLI3,LHX2,FAM107A,FGFBP3,SOX9,NR2F1,NFIB,FXYD6,SOX2,SATB2,PAX6,KIF26B,NEUROD2,FBXO32,WAC,ALDOC,GFAP,YAP1,FEZF2,NEUROD6               |
+|       57 | 170,0,84    |  0.00134 |    203670 | CUX2,CUX1,LHX6,RASGRF2,PPP1R14C,SOX2-OT,SYT6,KDM5B,IGFBPL1,KMT2E,SETD2,AC008124.1,SETD5,MSL3,WAC,PCAT6,PPP3CA,KCNJ6,COL6A1,CBLN4       | CUX2,CUX1,LHX6,RASGRF2,PCAT6,SOX2-OT,PPP1R14C,SYT6,CBLN4,AC008124.1,MSL3,SETD2,COL6A1,KCNJ6,KMT2E,LINC00271,KDM5B,IGFBPL1,EGR2,SETD5               | CUX2,CUX1,IGFBPL1,KDM5B,LHX6,WAC,SETD5,MYT1L,PPP3CA,PPP1R14C,ZEB2,ARHGAP5,KMT2E,TBR1,NFIB,SYT6,NEUROD6,SETD2,SOX2-OT,RASGRF2         |
+|       56 | 84,84,170   |  0.00125 |    189581 | PRSS12,SCN3B,LINGO1,DISP3,CUX2,CDH13,SCG2,ADRA2A,AP002748.4,GLRA2,ELAPOR1,KIF26B,KIAA0319,TMOD1,LGR6,EGR2,GABRB2,CD82,FLJ20021,GRM7    | PRSS12,LGR6,EGR2,AP002748.4,DISP3,CDH13,SCG2,FLJ20021,LINGO1,ASH1L-AS1,KMT2E-AS1,SCN3B,ELAPOR1,CUX2,CD82,KIAA0319,TMOD1,GLRA2,GRM7,PCAT6           | PRSS12,SATB2,SCN3B,FXYD6,CUX2,LINGO1,KIF26B,NEUROD2,IGFBPL1,ADRA2A,GLRA2,NFIB,KDM5B,NEUROD6,ELAPOR1,CDH13,B3GALT2,TBR1,SETD5,DISP3   |
+|       64 | 101,101,255 |  0.00122 |    184771 | CCN2,HEY1,ANGPT2,EGR2,KITLG,TAGLN2,GPRC5B,TCIM,HES1,ATP2B4,SAMD4A,SLC35F2,SPARCL1,ITGA2,B3GNT2,LGALS1,MET,CPNE8,TTYH2,DENND2B          | CCN2,ANGPT2,HEY1,EGR2,TAGLN2,HES1,KITLG,TCIM,SPARCL1,SLC35F2,GPRC5B,CD9,LGALS1,RASGRF2,ITGA2,MET,CPNE8,DENND2B,EEPD1,SAMD4A                        | CCN2,HEY1,ANGPT2,KITLG,GPRC5B,ATP2B4,SAMD4A,ZEB2,TCIM,FAM107A,TAGLN2,WAC,KIF26B,SETD5,B3GNT2,NRN1,FOXP1,NFIB,PPP3CA,FXYD6            |
+|       65 | 255,101,254 |  0.00118 |    179039 | DIO2,SAMD4A,LPAR1,FAM107A,FBXO32,KIF26B,FGFBP3,GRIK4,NIFK-AS1,STOX1,CCDC175,FLJ20021                                                   | DIO2,SAMD4A,LPAR1,FAM107A,FBXO32,KIF26B,GRIK4,FGFBP3,STOX1,CCDC175,NIFK-AS1,FLJ20021                                                               | DIO2,SAMD4A,FAM107A,KIF26B,LPAR1,FBXO32,SATB2,NEUROD2,ZEB2,FGFBP3,FXYD6,ARHGAP5,NEUROD6,NFIB,INSM1,CUX2,TBR1,BAZ2B,IGFBPL1,ASH1L     |
+|       59 | 0,84,170    |  0.00099 |    149366 | SOX9,ETV1,SOX2,LRP4,HOPX,YAP1,S100B,CD82,EGR2,PCDH17,LHX2,ST7-AS1,MEIS1,SETD5,KCNH5,ZFPM2,RHOJ,CSPG5,DENND2B,GPR37L1                   | SOX9,ETV1,EGR2,LRP4,S100B,SOX2,YAP1,CD82,HOPX,GPR37L1,ST7-AS1,MEIS1,RHOJ,KCNH5,CBLN4,PCDH17,LGR6,DENND2B,PMCHL2,ANTXR2                             | SOX9,SOX2,ETV1,LHX2,SETD5,NFIB,HOPX,LRP4,CSPG5,YAP1,NEUROD2,FXYD6,SATB2,ZFPM2,WAC,RAP1GAP,PCDH17,KIF26B,PPP3CA,CLASP1                |
+|       62 | 101,255,101 |  0.00098 |    148264 | PENK,MEIS1,SLN,SRCAP,WDFY3-AS2,POT1-AS1,NKX2-1,FRG1-DT,AKAP7                                                                           | PENK,SLN,SRCAP,MEIS1,NKX2-1,FRG1-DT,WDFY3-AS2,POT1-AS1,AKAP7                                                                                       | PENK,FXYD6,NFIB,NEUROD6,NEUROD2,TBR1,SMOC1,ZEB2,WAC,KDM5B,B3GALT2,ASH1L,FAM3C,SATB2,IGFBPL1,CLASP1,NR2F1,ARHGAP5,TAFA1,WDFY3         |
+|       63 | 101,254,255 |  0.00092 |    139345 | NEUROG2,MT3,SRM,KMT2E-AS1,KPTN,ELOVL2-AS1,LPAR1,GLB1L2                                                                                 | NEUROG2,MT3,KMT2E-AS1,SRM,KPTN,ELOVL2-AS1,LPAR1,GLB1L2                                                                                             | NEUROG2,NEUROD2,SATB2,SRM,NFIB,FXYD6,NEUROD6,TBR1,CUX2,ZEB2,INSM1,KIF26B,LHX2,KDM5B,WAC,ADRA2A,LINGO1,PPP3CA,MYT1L,SETD5             |
+|       61 | 237,238,0   |  0.00086 |    130016 | GLRA2,NFIB,PMCHL2,AC093249.6,TPBG,CD82,THUMPD3-AS1,GRIK4                                                                               | GLRA2,PMCHL2,AC093249.6,TPBG,CD82,NFIB,THUMPD3-AS1,GRIK4                                                                                           | GLRA2,NFIB,WAC,IGFBPL1,FXYD6,ARHGAP5,NEUROD2,NEUROD6,SATB2,SCN3B,MYT1L,ZEB2,TBR1,B3GALT2,NR2F1,SETD5,CLASP1,NEFM,GABRB2,PPP3CA       |
+|       70 | 178,101,255 |  0.00083 |    125452 | CXCL14,RASGRF2,LHX6,GABRG3,GAD2,SPOCK1,SCG2,ALDOC,VSNL1,SP9,COL19A1,KCNJ6,SST,HTR2A,UNC5C,VSTM2L,PCDH17,RELN                           | CXCL14,RASGRF2,GABRG3,LHX6,GAD2,COL19A1,SCG2,HTR2A,KCNJ6,SPOCK1,SP9,SST,ALDOC,VSTM2L,VSNL1,RELN,UNC5C,PCDH17                                       | CXCL14,ZEB2,FXYD6,NEUROD2,NEUROD6,MYT1L,SATB2,SCN3B,TBR1,SETD5,WAC,PPP3CA,SPOCK1,SOX2,SYBU,RASGRF2,BACH2,KCTD12,NFIB,NEFM            |
+|       67 | 178,255,101 |  0.00071 |    107858 | CCN1,HES1,CD9,CCN2,COL4A5,FAM182B,EGR2,TAGLN2,SLC15A2,HES5,NPNT,LGALS1,RHOJ                                                            | CCN1,CD9,HES1,EGR2,FAM182B,CCN2,COL4A5,TAGLN2,SLC15A2,HES5,NPNT,LGALS1,RHOJ                                                                        | CCN1,FXYD6,ZEB2,TBR1,NFIB,NEUROD2,PPP3CA,PEX5L,HES1,ARHGAP5,WAC,SETD5,KCTD12,SYBU,CCN2,SATB2,SCN3B,SAMD4A,CLASP1,SOX2                |
+|       42 | 170,0,170   |  0.00063 |     94983 | FOXP1,TOX,TSHZ3,KCNQ5,ACTN2,PEX5L,SATB2,NEUROD6,SYBU,ARHGAP5,PTK2B,CALN1,CSPG5,SLITRK5,KCTD12,RSPO3,FSTL5,HSPA12A,ANGPT2,ASH1L         | TOX,FOXP1,TSHZ3,KCNQ5,ACTN2,TPBG,ANGPT2,PTK2B,SAMD11,PEX5L,BEST3,SLC26A4,FSTL5,HSPA12A,RSPO3,SYBU,GRM7,SATB2,CSPG5,CALN1                           | FOXP1,TSHZ3,NEUROD6,SATB2,TOX,SYBU,ARHGAP5,KCNQ5,PEX5L,FXYD6,ZEB2,NEUROD2,MYT1L,KCTD12,TBR1,ASH1L,ACTN2,SLITRK5,CALN1,LHX2           |
+|       66 | 255,178,101 |  0.0004  |     61237 | PDE1A,CBLN2,SERPINI1,SCG2,VSNL1,PPP1R14C,TCIM,TTYH2,SRCAP,RASGRF2,SUSD4,AQP4,ST18,TUSC7,GNAL,FLJ20021,GABRG3,VAT1L,SP9,CFTR            | PDE1A,CBLN2,SERPINI1,SCG2,SRCAP,VSNL1,RASGRF2,TUSC7,AQP4,TCIM,TTYH2,SUSD4,FLJ20021,PPP1R14C,NDST4,ST18,AC093249.6,GABRG3,PVALB,CFTR                | PDE1A,CBLN2,SCG2,SERPINI1,VSNL1,PPP1R14C,TCIM,FXYD6,TTYH2,TBR1,GNAL,NEUROD2,NFIB,SATB2,SUSD4,MYT1L,NEUROD6,RAP1GAP,ADRA2A,OPCML      |
+|       69 | 101,178,255 |  0.00035 |     52934 | SORCS1,CD9,LPAR1,ANGPT2                                                                                                                | SORCS1,CD9,ANGPT2,LPAR1                                                                                                                            | SORCS1,FXYD6,NEUROD2,NFIB,TBR1,SATB2,IGFBPL1,CRYM,NEUROD6,GLI3,ZEB2,SOX2,ARHGAP5,KIF26B,INSM1,WDFY3,HS3ST4,LHX2,CUX2,FAM107A         |
+|       72 | 153,0,0     |  0.00027 |     40592 | SLC15A2,PVALB                                                                                                                          | SLC15A2,PVALB                                                                                                                                      | SLC15A2,MYT1L,ZEB2,NEUROD2,NEUROD6,SATB2,FXYD6,TBR1,WAC,NFIB,PPP3CA,SCN3B,CLASP1,SETD5,B3GALT2,ARHGAP5,ASH1L,IGFBPL1,KDM5B,BACH2     |
+|       75 | 0,153,153   |  0.00027 |     40322 | S100B,MT3                                                                                                                              | S100B,MT3                                                                                                                                          | S100B,FXYD6,NEUROD6,NEUROD2,SATB2,ZEB2,TBR1,WAC,NFIB,MYT1L,SYBU,NEFM,KIF26B,ARHGAP5,PPP3CA,CLASP1,LHX2,CALN1,SETD5,KDM5B             |
+|       77 | 153,0,153   |  0.00026 |     39988 | ANGPT2,SPARCL1,TTYH2,RHOJ,DENND2B,SLC35F2,LGALS1,GPRC5B,PCCA,HEY1,CD9                                                                  | ANGPT2,SPARCL1,RHOJ,TTYH2,DENND2B,SLC35F2,LGALS1,CD9,GPRC5B,PCCA,HEY1                                                                              | ANGPT2,FXYD6,ZEB2,NEUROD6,WAC,NFIB,PPP3CA,SETD5,NEUROD2,SATB2,CLASP1,TBR1,TTYH2,NEFM,SPARCL1,KDM5B,ASH1L,PRSS12,ARHGAP5,ARFGEF3      |
+|       68 | 0,223,95    |  0.00025 |     38453 | PPP1R17,NEUROD4                                                                                                                        | PPP1R17,NEUROD4                                                                                                                                    | PPP1R17,NFIB,NEUROD4,NEUROD2,TBR1,NEUROD6,IGFBPL1,SATB2,FXYD6,ZEB2,WAC,SETD5,INSM1,NR2F1,ARHGAP5,NR4A2,LHX2,NRN1,KIF26B,CLASP1       |
+|       71 | 255,153,204 |  0.00021 |     32084 | NEUROD1,LPAR1                                                                                                                          | NEUROD1,LPAR1                                                                                                                                      | NEUROD1,NEUROD2,SATB2,TBR1,FXYD6,ZEB2,NEUROD6,BACH2,PPP3CA,NEFM,TMOD1,NFIB,SETD5,ASH1L,ETV1,LPAR1,CLASP1,WAC,SETD2,ST7               |
+|       79 | 76,153,0    |  0.00018 |     27898 | BEST3,HCRTR2,RORB-AS1,SOX2-OT                                                                                                          | BEST3,HCRTR2,RORB-AS1,SOX2-OT                                                                                                                      | HCRTR2,BEST3,NEUROD6,SATB2,NEUROD2,NFIB,FXYD6,ZEB2,ADRA2A,NR2F1,TBR1,INSM1,KDM5B,KIF26B,LHX2,ARHGAP5,IGFBPL1,WDFY3,CUX2,KMT2E        |
+|       74 | 0,153,0     |  0.00017 |     26390 | COL4A6,TAGLN2                                                                                                                          | COL4A6,TAGLN2                                                                                                                                      | COL4A6,TAGLN2,SATB2,FXYD6,NEUROD6,NEUROD2,ZEB2,TBR1,MYT1L,NEFM,LHX2,SYBU,SCN3B,PPP3CA,NFIB,WAC,ARHGAP5,BACH2,SLITRK5,ADRA2A          |
+|       76 | 50,50,204   |  0.00015 |     22393 | RELN,PAPPA,FSTL5                                                                                                                       | RELN,PAPPA,FSTL5                                                                                                                                   | PAPPA,RELN,NFIB,SATB2,NEUROD2,TBR1,FXYD6,ZEB2,NEUROD6,MYT1L,ARHGAP5,IGFBPL1,SCN3B,WAC,PPP3CA,GNAL,OPCML,BACH2,KDM5B,CUX2             |
+|       80 | 0,115,0     |  0.00013 |     20368 | INPP4B                                                                                                                                 | INPP4B                                                                                                                                             | INPP4B,SATB2,ZEB2,NEUROD2,NEFM,TBR1,FXYD6,NFIB,IGFBPL1,NEUROD6,KDM5B,SETD5,SOX2,WAC,CLASP1,PPP3CA,CUX1,FAM107A,SOX9,LHX2             |
+|       73 | 153,153,0   |  0.00013 |     19658 | GAD2,RASGRF2,VIP                                                                                                                       | GAD2,RASGRF2,VIP                                                                                                                                   | GAD2,FXYD6,NEUROD2,BACH2,RASGRF2,NFIB,ZEB2,VIP,SATB2,MYT1L,CLASP1,WAC,SCN3B,IGFBPL1,NEUROD6,VSNL1,PPP3CA,CUX2,ARHGAP5,INSM1          |
+|       78 | 153,76,0    |  0.0001  |     14514 | CD9,ZFPM2,ANGPT2                                                                                                                       | CD9,ANGPT2,ZFPM2                                                                                                                                   | CD9,FXYD6,ZFPM2,NFIB,CSPG5,CLASP1,GPRC5B,WAC,BACH2,ANGPT2,KIF26B,SORCS1,CALN1,ASH1L,RORB,WAC-AS1,PPP3CA,ELOVL2,FGFBP3,NPR3           |
+|       81 | 50,127,204  |  7e-05   |     10146 | ITGB5                                                                                                                                  | ITGB5                                                                                                                                              | ITGB5,NEUROD2,FXYD6,ZEB2,NEUROD6,SATB2,TBR1,KIF26B,WAC,MYT1L,ARHGAP5,PPP3CA,B3GALT2,OPCML,SYBU,CLASP1,WDFY3,LHX2,NEFM,BACH2          |
+
+### Packed SGE and Spatial Factor Outputs Per Sample
+
+TODO: Provide paths to these assets to serve the outputs. -->
+
+<div class="grid cards generic">
+<ul>
+<li>
+<p><img alt="Interactive Exploration" src="placeholder" /></p>
+<hr />
+<h4 id="viewexplore">View/Explore<a class="headerlink" href="#viewexplore" title="Permanent link">&para;</a></h4>
+<p>The output are available in both CartoScope. </p>
+<p><a class="md-button md-button--primary button-tight-small" href="http://localhost:5173/datasets?collections=human+cerebral+cortex+development%2C+gestational+week+20+%E2%80%93+occipital+cortex">Explore in CartoScope</a></p>
+</li>
+</ul>
+</div>
+<p>See more details of output at the Reference pages for <a href="../docs/reference/run_ficture2.md">run_ficture2</a> and <a href="../docs/reference/run_cartload2.md">run_cartload2</a>.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.tabs", "navigation.indexes", "navigation.sections", "navigation.expand", "navigation.path", "content.code.annotate", "content.code.copy", "content.tooltips", "content.grid", "content.cards", "content.footnote.tooltips", "content.tabs.link", "navigation.instant", "navigation.top"], "search": "../../assets/javascripts/workers/search.f8cc74c7.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.f13b1293.min.js"></script>
+      
+        <script src="../../js/load_tsv.js"></script>
+      
+        <script src="../../js/open_in_new_tab.js"></script>
+      
+    
+  </body>
+</html>

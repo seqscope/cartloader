@@ -1,0 +1,2802 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://seqscope.github.io/cartloader/vignettes/pipelines/visiumhd/">
+      
+      
+        <link rel="prev" href="../xenium/">
+      
+      
+        <link rel="next" href="../../multi_sample/">
+      
+      
+      <link rel="icon" href="../../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.2">
+    
+    
+      
+        <title>Visium HD end-to-end Tutorial - cartloader</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.d7758b05.min.css">
+      
+        
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+  
+  
+  
+  
+  <style>:root{--md-annotation-icon:url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M22 12a10 10 0 0 1-10 10A10 10 0 0 1 2 12 10 10 0 0 1 12 2a10 10 0 0 1 10 10M6 13h8l-3.5 3.5 1.42 1.42L17.84 12l-5.92-5.92L10.5 7.5 14 11H6z"/></svg>');}</style>
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../../css/extra.css">
+    
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#visium-hd-end-to-end-pipeline" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../../.." title="cartloader" class="md-header__button md-logo" aria-label="cartloader" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            cartloader
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Visium HD end-to-end Tutorial
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7a5 5 0 0 0-5 5 5 5 0 0 0 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1M8 13h8v-2H8zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4a5 5 0 0 0 5-5 5 5 0 0 0-5-5"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_2" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 7H7a5 5 0 0 0-5 5 5 5 0 0 0 5 5h10a5 5 0 0 0 5-5 5 5 0 0 0-5-5m0 8a3 3 0 0 1-3-3 3 3 0 0 1 3-3 3 3 0 0 1 3 3 3 3 0 0 1-3 3"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="indigo"  aria-label="Switch to system preference"  type="radio" name="__palette" id="__palette_2">
+    
+      <label class="md-header__button md-icon" title="Switch to system preference" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 7H7a5 5 0 0 0-5 5 5 5 0 0 0 5 5h10a5 5 0 0 0 5-5 5 5 0 0 0-5-5M7 15a3 3 0 0 1-3-3 3 3 0 0 1 3-3 3 3 0 0 1 3 3 3 3 0 0 1-3 3"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/seqscope/cartloader" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81"/></svg>
+  </div>
+  <div class="md-source__repository">
+    seqscope/cartloader
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../.." class="md-tabs__link">
+          
+  
+    
+  
+  Home
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../quickstart/intro/" class="md-tabs__link">
+          
+  
+    
+  
+  Quick Start
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../../installation/" class="md-tabs__link">
+        
+  
+    
+  
+  Installation
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../../intro/" class="md-tabs__link">
+          
+  
+    
+  
+  Vignettes
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../reference/intro/" class="md-tabs__link">
+          
+  
+    
+  
+  References
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../.." title="cartloader" class="md-nav__button md-logo" aria-label="cartloader" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    cartloader
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/seqscope/cartloader" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81"/></svg>
+  </div>
+  <div class="md-source__repository">
+    seqscope/cartloader
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_1" >
+        
+          
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../.." class="md-nav__link ">
+              
+  
+  <span class="md-ellipsis">
+    Home
+    
+  </span>
+  
+
+            </a>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_1">
+            <span class="md-nav__icon md-icon"></span>
+            Home
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Quick Start
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            Quick Start
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../quickstart/intro/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../quickstart/run_in_docker/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Run with Docker
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../quickstart/run_locally/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Run Locally
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../installation/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Installation
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  <span class="md-ellipsis">
+    Vignettes
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            Vignettes
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../intro/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_2" id="__nav_4_2_label" tabindex="">
+            
+  
+  <span class="md-ellipsis">
+    Getting Started with `cartloader`
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_2">
+            <span class="md-nav__icon md-icon"></span>
+            Getting Started with `cartloader`
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../subregion_tutorials/seqscope/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    SeqScope Starter Tutorial
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../subregion_tutorials/stereoseq/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    StereoSeq Starter Tutorial
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../subregion_tutorials/visiumhd/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Visium HD Starter Tutorial
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../subregion_tutorials/pixelseq/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Pixel-Seq Starter Tutorial
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../subregion_tutorials/xenium/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Xenium Starter Tutorial
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../subregion_tutorials/merscope/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    MERSCOPE Starter Tutorial
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../subregion_tutorials/cosmxsmi/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    CosMX SMI Starter Tutorial
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4_3" id="__nav_4_3_label" tabindex="">
+            
+  
+  <span class="md-ellipsis">
+    Platform Workflows
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4_3">
+            <span class="md-nav__icon md-icon"></span>
+            Platform Workflows
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../xenium/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Xenium end-to-end Tutorial
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Visium HD end-to-end Tutorial
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  <span class="md-ellipsis">
+    Visium HD end-to-end Tutorial
+    
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      Overview
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#input-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      Input Data
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#set-up-the-environment" class="md-nav__link">
+    <span class="md-ellipsis">
+      Set Up the Environment
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#run-pipelines" class="md-nav__link">
+    <span class="md-ellipsis">
+      Run Pipelines
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#outputs" class="md-nav__link">
+    <span class="md-ellipsis">
+      Outputs
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_4" id="__nav_4_4_label" tabindex="">
+            
+  
+  <span class="md-ellipsis">
+    Multi-sample Showcases
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_4">
+            <span class="md-nav__icon md-icon"></span>
+            Multi-sample Showcases
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../multi_sample/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Human Cortex Multi-sample Tutorial
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    References
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            References
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/intro/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_2" id="__nav_5_2_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    SGE Preparation
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_2">
+            <span class="md-nav__icon md-icon"></span>
+            SGE Preparation
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/sge_convert/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    SGE Format Conversion
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/sge_addon/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    SGE Preparation Add-ons
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_3" id="__nav_5_3_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Analysis
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3">
+            <span class="md-nav__icon md-icon"></span>
+            Analysis
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/run_ficture2/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    FICTURE Analysis
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/run_ficture2_multi/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Multi-Sample FICTURE Analysis
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/feature_customization/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Feature Customization
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_4" id="__nav_5_4_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Packaging
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_4">
+            <span class="md-nav__icon md-icon"></span>
+            Packaging
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/run_cartload2/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Asset Packaging
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/run_cartload2_multi/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Multi-Sample Asset Packaging
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/import_image/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Background Image Import
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/import_cell/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Cell Analysis Import
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/import_square/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Square Analysis Import
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_5" id="__nav_5_5_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Upload
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_5">
+            <span class="md-nav__icon md-icon"></span>
+            Upload
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/upload_aws/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    AWS Upload
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/upload_zenodo/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Zenodo Upload
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_6" id="__nav_5_6_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Platform-specific Modules
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_6">
+            <span class="md-nav__icon md-icon"></span>
+            Platform-specific Modules
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_6_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_6_1" id="__nav_5_6_1_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Xenium
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_6_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_6_1">
+            <span class="md-nav__icon md-icon"></span>
+            Xenium
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/run_xenium/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Pipeline Orchestrator
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/xenium_addon/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Pipeline Add-ons
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_6_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_6_2" id="__nav_5_6_2_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Visium HD
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_6_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_6_2">
+            <span class="md-nav__icon md-icon"></span>
+            Visium HD
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/run_visiumhd/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Pipeline Orchestrator
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/visiumhd_addon/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Pipeline Add-ons
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      Overview
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#input-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      Input Data
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#set-up-the-environment" class="md-nav__link">
+    <span class="md-ellipsis">
+      Set Up the Environment
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#run-pipelines" class="md-nav__link">
+    <span class="md-ellipsis">
+      Run Pipelines
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#outputs" class="md-nav__link">
+    <span class="md-ellipsis">
+      Outputs
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="visium-hd-end-to-end-pipeline">Visium HD End-to-End Pipeline<a class="headerlink" href="#visium-hd-end-to-end-pipeline" title="Permanent link">&para;</a></h1>
+<h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
+<p>This tutorial walks through end‑to‑end processing of 10x Visium HD data with <code>CartLoader</code>: converting inputs, running <abbr title="Segmentation-free method inferring latent spatial factors from SGE (Si et al., Nature Methods 2024)">FICTURE</abbr>, importing cell results and histology, packaging assets, and uploading for sharing.</p>
+<h2 id="input-data">Input Data<a class="headerlink" href="#input-data" title="Permanent link">&para;</a></h2>
+<hr />
+<p><strong>Data Structure and Format</strong></p>
+<p>See Space Ranger output details in the official documentation: <a href="https://www.10xgenomics.com/support/software/space-ranger/latest/analysis/outputs/output-overview">Space Ranger Outputs</a></p>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:3"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><input id="__tabbed_1_3" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">RAW Data Structure</label><label for="__tabbed_1_2"><abbr title="Spatial Digital Gene Expression">SGE</abbr> Format</label><label for="__tabbed_1_3">Cell Analysis Result Format</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span>
+<span class="normal">22</span>
+<span class="normal">23</span>
+<span class="normal">24</span>
+<span class="normal">25</span>
+<span class="normal">26</span>
+<span class="normal">27</span>
+<span class="normal">28</span>
+<span class="normal">29</span>
+<span class="normal">30</span>
+<span class="normal">31</span>
+<span class="normal">32</span>
+<span class="normal">33</span>
+<span class="normal">34</span>
+<span class="normal">35</span>
+<span class="normal">36</span>
+<span class="normal">37</span>
+<span class="normal">38</span>
+<span class="normal">39</span>
+<span class="normal">40</span>
+<span class="normal">41</span>
+<span class="normal">42</span>
+<span class="normal">43</span>
+<span class="normal">44</span>
+<span class="normal">45</span></pre></div></td><td class="code"><div><pre><span></span><code>├── binned_outputs
+│   ├── square_002um
+│   │   ├── filtered_feature_bc_matrix
+│   │   │   ├── barcodes.tsv.gz
+│   │   │   ├── features.tsv.gz
+│   │   │   └── matrix.mtx.gz
+│   │   ├── ...
+│   │   └── spatial
+│   │       ├── aligned_fiducials.jpg
+│   │       ├── aligned_tissue_image.jpg
+│   │       ├── cytassist_image.tiff
+│   │       ├── detected_tissue_image.jpg
+│   │       ├── scalefactors_json.json
+│   │       ├── tissue_hires_image.png
+│   │       ├── tissue_lowres_image.png
+│   │       └── tissue_positions.parquet
+│   ├── square_008um
+│   │   ├── analysis
+│   │   │   ├── clustering
+│   │   │   │   ├── gene_expression_graphclust
+│   │   │   │   │   └── clusters.csv
+│   │   │   │   └── ...
+│   │   │   ├── diffexp
+│   │   │   │   ├── gene_expression_graphclust
+│   │   │   │   │   └── differential_expression.csv
+│   │   │   │   └── ...
+│   │   │   ├── pca
+│   │   │   │   └── gene_expression_10_components
+│   │   │   │       ├── projection.csv
+│   │   │   │       ├── variance.csv
+│   │   │   │       └── ...
+│   │   │   └── umap
+│   │   │       └── gene_expression_2_components
+│   │   │           └── projection.csv
+│   │   ├── filtered_feature_bc_matrix
+│   │   │   └── ...     # Mirrors binned_outputs/square_002um/filtered_feature_bc_matrix
+│   │   ├── ...
+│   │   └── spatial
+│   │       └── ...     # Mirrors binned_outputs/square_002um/spatial
+│   └── square_016um
+│       └── ...         # Mirrors square_008um (analysis, spatial, filtered_feature_bc_matrix)
+├── segmented_outputs
+│   ├── cell_segmentations.geojson
+│   └── ...             # Mirrors binned_outputs/square_008um (analysis, spatial, filtered_feature_bc_matrix)
+└── ...
+</code></pre></div></td></tr></table></div>
+</div>
+<div class="tabbed-block">
+<p>Visium HD slides use a 2×2 <abbr title="micrometer">µm</abbr> grid of barcoded squares (<code>square_002um</code>) for high-resolution spatial gene mapping. Use <code>filtered_feature_bc_matrix</code> to only process tissue-associated signals. </p>
+<div class="admonition warning">
+<p class="admonition-title">ATTENTION</p>
+<p>The file‑format examples below use a sample Visium HD dataset. Paths, IDs, and values are illustrative and may not match the dataset used in this tutorial.</p>
+</div>
+<p><abbr title="Spatial Digital Gene Expression">SGE</abbr> comprises several key files as below: </p>
+<details>
+<summary><code>filtered_feature_bc_matrix/barcodes.tsv.gz</code> – spatial barcode for tissue locations </summary>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span></pre></div></td><td class="code"><div><pre><span></span><code>s_002um_00639_00600-1
+s_002um_00923_01639-1
+s_002um_01050_01530-1
+</code></pre></div></td></tr></table></div>
+<ul>
+<li>Column 1: Spatial barcodes corresponding to specific locations on the tissue section.</li>
+</ul>
+</details>
+<details>
+<summary><code>filtered_feature_bc_matrix/features.tsv.gz</code> – feature metadata </summary>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span></pre></div></td><td class="code"><div><pre><span></span><code>ENSMUSG00000051951  Xkr4    Gene Expression
+ENSMUSG00000025900  Rp1     Gene Expression
+ENSMUSG00000025902  Sox17   Gene Expression
+</code></pre></div></td></tr></table></div>
+<ul>
+<li>Column 1: Feature ID</li>
+<li>Column 2: Feature symbol</li>
+<li>Column 3: Feature type</li>
+</ul>
+</details>
+<details>
+<summary><code>filtered_feature_bc_matrix/matrix.mtx.gz</code> – expression count matrix </summary>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span>
+<span class="normal">6</span></pre></div></td><td class="code"><div><pre><span></span><code>%%MatrixMarket matrix coordinate integer general
+%
+19059 869411 11376563
+3606 1 1
+8957 1 1
+9733 1 1
+</code></pre></div></td></tr></table></div>
+<ul>
+<li><code>Header</code>: Initial lines form the header, declaring the matrix's adherence to the <a href="https://math.nist.gov/MatrixMarket/formats.html">Market Matrix (MTX) format</a>, outlining its traits. This may include comments (lines beginning with <code>%</code>) for extra metadata, all marked by a “%”.</li>
+<li><code>Dimensions</code>: Following the header, the first line details the matrix dimensions: the count of rows (features), columns (barcodes), and non-zero entries.</li>
+<li><code>Data Entries</code>: Post-dimensions, subsequent lines enumerate non-zero entries in seven columns: row index (feature index), column index (barcode index), and one value presenting the expression count per barcode per feature.</li>
+</ul>
+</details>
+<details>
+<summary><code>tissue_positions.parquet</code> – spatial barcode metadata </summary>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span></pre></div></td><td class="code"><div><pre><span></span><code>barcode                 in_tissue   array_row   array_col   pxl_row_in_fullres  pxl_col_in_fullres
+s_002um_00434_01637-1   1           434         1637        3396.371014         9125.919898
+</code></pre></div></td></tr></table></div>
+<ul>
+<li><code>barcode</code>: Unique spatial barcode associated with each capture spot.</li>
+<li><code>in_tissue</code>: Binary flag (1 = in tissue, 0 = background) indicating whether the spot falls within the tissue boundary.</li>
+<li><code>array_row</code>, <code>array_col</code>: Integer indices representing the position of the spot on the capture array grid.</li>
+<li><code>pxl_row_in_fullres</code>, <code>pxl_col_in_fullres</code>: Floating point coordinates locating the spot in full-resolution tissue image pixels.</li>
+</ul>
+</details>
+<details>
+<summary><code>scalefactors_json.json</code> – pixel-to-micrometer scaling factors </summary>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span>
+<span class="normal">6</span>
+<span class="normal">7</span>
+<span class="normal">8</span>
+<span class="normal">9</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;spot_diameter_fullres&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">7.303953797779634</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;bin_size_um&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">2.0</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;microns_per_pixel&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.2738242950835738</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;regist_target_img_scalef&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.2505533</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;tissue_lowres_scalef&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.02505533</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;fiducial_diameter_fullres&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">1205.1523766336395</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;tissue_hires_scalef&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.2505533</span>
+<span class="p">}</span>
+</code></pre></div></td></tr></table></div>
+<ul>
+<li><code>spot_diameter_fullres</code>: Estimated diameter of a barcoded spot in full-resolution pixels.</li>
+<li><code>bin_size_um</code>: Physical size (in micrometers) of the smallest bin, typically 2.0 <abbr title="micrometer">µm</abbr> for Visium HD.</li>
+<li><code>microns_per_pixel</code>: Resolution of the full-res image, used to convert pixel distances to micrometers.</li>
+<li><code>regist_target_img_scalef</code>: Scaling factor applied during image registration to the target image.</li>
+<li><code>tissue_lowres_scalef</code>: Downscaling factor from full-res to low-resolution tissue image.</li>
+<li><code>fiducial_diameter_fullres</code>: Diameter of fiducial markers in full-resolution pixels, useful for alignment.</li>
+<li><code>tissue_hires_scalef</code>: Downscaling factor from full-res to high-resolution tissue image.</li>
+</ul>
+</details>
+</div>
+<div class="tabbed-block">
+<div class="admonition info">
+<p class="admonition-title">Cell Segmentation Mask</p>
+<p>Location: <code>segmented_outputs/cell_segmentations.geojson</code>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span></pre></div></td><td class="code"><div><pre><span></span><code>&quot;cell_id&quot;,&quot;x_centroid&quot;,&quot;y_centroid&quot;,&quot;transcript_counts&quot;,&quot;control_probe_counts&quot;,&quot;genomic_control_counts&quot;,&quot;control_codeword_counts&quot;,&quot;unassigned_codeword_counts&quot;,&quot;deprecated_codeword_counts&quot;,&quot;total_counts&quot;,&quot;cell_area&quot;,&quot;nucleus_area&quot;,&quot;nucleus_count&quot;,&quot;segmentation_method&quot;
+&quot;aaaagkdm-1&quot;,170.85508728027344,2017.2412109375,1,0,0,0,0,0,1,46.285157930105925,NaN,0,&quot;Segmented by boundary stain (ATP1A1+CD45+E-Cadherin)&quot;
+&quot;aaaamcnn-1&quot;,141.60569763183594,2481.442138671875,341,0,0,0,0,1,342,111.5359415486455,50.484689332544804,1,&quot;Segmented by boundary stain (ATP1A1+CD45+E-Cadherin)&quot;
+</code></pre></div></td></tr></table></div></p>
+</div>
+<div class="admonition info">
+<p class="admonition-title">Cell Feature Matrix</p>
+<p>Location: <code>segmented_outputs/filtered_feature_cell_matrix</code></p>
+<p>This contains <code>barcodes.tsv.gz</code>,<code>features.tsv.gz</code>, <code>matrix.mtx.gz</code>, providing cell id, feature information, and expression count matrix, respectively.</p>
+</div>
+<div class="admonition info">
+<p class="admonition-title">Clusters</p>
+<p>Location: <code>segmented_outputs/analysis/clustering/gene_expression_graphclust/clusters.csv</code>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span></pre></div></td><td class="code"><div><pre><span></span><code>Barcode,Cluster
+cellid_000000001-1,22
+cellid_000000002-1,22
+</code></pre></div></td></tr></table></div></p>
+</div>
+<div class="admonition info">
+<p class="admonition-title">Differentially Expressed Genes</p>
+<p>Location: <code>segmented_outputs/analysis/diffexp/gene_expression_graphclust/differential_expression.csv</code>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span></pre></div></td><td class="code"><div><pre><span></span><code>Feature ID,Feature Name,Cluster 1 Mean Counts,Cluster 1 Log2 fold change,Cluster 1 Adjusted p value,Cluster 2 Mean Counts,Cluster 2 Log2 fold change,Cluster 2 Adjusted p value,Cluster 3 Mean Counts,Cluster 3 Log2 fold change,Cluster 3 Adjusted p value,Cluster 4 Mean Counts,Cluster 4 Log2 fold change,Cluster 4 Adjusted p value,Cluster 5 Mean Counts,Cluster 5 Log2 fold change,Cluster 5 Adjusted p value,Cluster 6 Mean Counts,Cluster 6 Log2 fold change,Cluster 6 Adjusted p value,Cluster 7 Mean Counts,Cluster 7 Log2 fold change,Cluster 7 Adjusted p value,Cluster 8 Mean Counts,Cluster 8 Log2 fold change,Cluster 8 Adjusted p value,Cluster 9 Mean Counts,Cluster 9 Log2 fold change,Cluster 9 Adjusted p value,Cluster 10 Mean Counts,Cluster 10 Log2 fold change,Cluster 10 Adjusted p value,Cluster 11 Mean Counts,Cluster 11 Log2 fold change,Cluster 11 Adjusted p value,Cluster 12 Mean Counts,Cluster 12 Log2 fold change,Cluster 12 Adjusted p value,Cluster 13 Mean Counts,Cluster 13 Log2 fold change,Cluster 13 Adjusted p value,Cluster 14 Mean Counts,Cluster 14 Log2 fold change,Cluster 14 Adjusted p value,Cluster 15 Mean Counts,Cluster 15 Log2 fold change,Cluster 15 Adjusted p value,Cluster 16 Mean Counts,Cluster 16 Log2 fold change,Cluster 16 Adjusted p value,Cluster 17 Mean Counts,Cluster 17 Log2 fold change,Cluster 17 Adjusted p value,Cluster 18 Mean Counts,Cluster 18 Log2 fold change,Cluster 18 Adjusted p value,Cluster 19 Mean Counts,Cluster 19 Log2 fold change,Cluster 19 Adjusted p value,Cluster 20 Mean Counts,Cluster 20 Log2 fold change,Cluster 20 Adjusted p value,Cluster 21 Mean Counts,Cluster 21 Log2 fold change,Cluster 21 Adjusted p value,Cluster 22 Mean Counts,Cluster 22 Log2 fold change,Cluster 22 Adjusted p value,Cluster 23 Mean Counts,Cluster 23 Log2 fold change,Cluster 23 Adjusted p value,Cluster 24 Mean Counts,Cluster 24 Log2 fold change,Cluster 24 Adjusted p value
+ENSMUSG00000051951,Xkr4,0.0020893375742615837,0.542453177216764,0.16305286911324085,0.0019306072327678393,0.34251290321116556,0.628624629681027,0.0009020306879791494,-0.677062452566048,0.6057595443651351,0.0008575468486789855,-0.53825692400323,1,0.0018835945742411177,0.3347722133550999,1,0.0017232930683496192,0.30174489068131116,1,0.0008765004215231041,-0.6062657172996246,1,0.0006958304617047569,-0.669599363115374,1,0.0021901445815864866,0.5424639235287998,0.6460045298567026,0,-0.513593267969263,1,0.000450562773540615,-0.8809942923847434,1,0.0006856395158652269,-0.2651228613954135,1,0.0008800111512863451,-0.49971125727530463,1,0.0026227703011305675,1.0167399161570962,1,0.002277387540951688,0.7536928538206205,1,0,-1.333742893536682,1,0.0007018464992057343,-0.23097850703201495,1,0.0005602354699616488,-0.560849410646286,1,0.0015894120085537071,0.37398251412889394,1,0,1.526558986825357,1,0,-0.5313075119163866,1,0,4.9659921506021,1,0,1.1981124565354708,1,0,1.1280527529013042,1
+ENSMUSG00000089699,Gm1992,0.00003369899313325135,2.372528175774452,0.49812531917443914,0,1.0054779159335947,1,0,2.907900048155108,1,0,3.8795955908826674,1,0,2.9741824980986316,1,0,3.8867073914024672,1,0,3.4811971239507127,1,0,4.171702890865568,1,0,2.5799386289474633,1,0,5.929350227879466,1,0,4.553633935251982,1,0,5.16950536624131,1,0,3.9181412576105927,1,0,5.104202757407435,1,0,4.56960978938165,1,0,5.109200602312047,1,0,5.203649720604709,1,0,4.873778816990438,1,0,4.791835029014791,1,0,7.969502482674086,1,0,5.911635983932342,1,0,11.408935646450828,1,0,7.641055952384198,1,0,7.570996248750033,1
+</code></pre></div></td></tr></table></div></p>
+</div>
+</div>
+</div>
+</div>
+<hr />
+<p><strong>Data Access</strong></p>
+<p>Downloaded the <abbr title="Spatial transcriptomics">ST</abbr> data from <a href="https://www.10xgenomics.com/datasets/visium-hd-three-prime-mouse-brain-fresh-frozen">10x Genomics Dataset portal</a>.</p>
+<hr />
+<h2 id="set-up-the-environment">Set Up the Environment<a class="headerlink" href="#set-up-the-environment" title="Permanent link">&para;</a></h2>
+<div class="admonition warning">
+<p class="admonition-title">Pre-installed tools</p>
+<p>Please ensure you have installed all required tools (See <a href="../../../installation/">Installation</a>).</p>
+</div>
+<p>Define paths to all required binaries and resources. Optionally, specify a fixed color map for consistent rendering.</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span>
+<span class="normal">22</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># ====</span>
+<span class="c1"># Replace each placeholder with the actual path on your system.  </span>
+<span class="c1"># ====</span>
+
+<span class="nv">work_dir</span><span class="o">=</span>/path/to/work/directory<span class="w">        </span><span class="c1"># path to work directory that contains the downloaded input data</span>
+<span class="nb">cd</span><span class="w"> </span><span class="nv">$work_dir</span>
+
+<span class="c1"># Define paths to required binaries and resources</span>
+<span class="nv">spatula</span><span class="o">=</span>/path/to/spatula/binary<span class="w">         </span><span class="c1"># path to spatula executable</span>
+<span class="nv">punkst</span><span class="o">=</span>/path/to/punkst/binary<span class="w">           </span><span class="c1"># path to FICTURE2 (punkst) executable</span>
+<span class="nv">tippecanoe</span><span class="o">=</span>/path/to/tippecanoe/binary<span class="w">   </span><span class="c1"># path to tippecanoe executable</span>
+<span class="nv">pmtiles</span><span class="o">=</span>/path/to/pmtiles/binary<span class="w">         </span><span class="c1"># path to pmtiles executable</span>
+<span class="nv">aws</span><span class="o">=</span>/path/to/aws/cli/binary<span class="w">             </span><span class="c1"># path to AWS CLI binary</span>
+
+<span class="c1"># (Optional) Define path to color map. </span>
+<span class="nv">cmap</span><span class="o">=</span>/path/to/color/map<span class="w">                 </span><span class="c1"># Path to fixed color map. `CartLoader` includes one at cartloader/assets/fixed_color_map_256.tsv.</span>
+
+<span class="c1"># Number of jobs</span>
+<span class="nv">n_jobs</span><span class="o">=</span><span class="m">10</span><span class="w">                               </span><span class="c1"># If not specified, the number of jobs defaults to 1.</span>
+
+<span class="c1"># Activate the bioconda environment</span>
+conda<span class="w"> </span>activate<span class="w"> </span>ENV_NAME<span class="w">                 </span><span class="c1"># replace ENV_NAME with your conda environment name</span>
+</code></pre></div></td></tr></table></div>
+<p>Define data ID and analysis parameters:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span>
+<span class="normal">6</span>
+<span class="normal">7</span>
+<span class="normal">8</span>
+<span class="normal">9</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># Unique identifier for your dataset</span>
+<span class="nv">DATA_ID</span><span class="o">=</span><span class="s2">&quot;visiumhd_3prime_mouse_brain&quot;</span><span class="w">    </span><span class="c1"># change this to reflect your dataset name</span>
+
+<span class="c1"># LDA parameters</span>
+<span class="nv">train_width</span><span class="o">=</span><span class="m">18</span><span class="w">                           </span><span class="c1"># define LDA training hexagon width (comma-separated if multiple widths are applied)</span>
+<span class="nv">n_factor</span><span class="o">=</span><span class="m">6</span>,12<span class="w">                            </span><span class="c1"># define number of factors in LDA training (comma-separated if multiple n-factor are applied)</span>
+
+<span class="c1"># Path to AWS S3 directory</span>
+<span class="nv">S3_DIR</span><span class="o">=</span>/s3/path/to/s3/dir<span class="w">                </span><span class="c1"># Recommend to use DATA_ID as directory name, such as s3://bucket-name/visiumhd-3prime-mouse-brain</span>
+</code></pre></div></td></tr></table></div>
+<div class="admonition info">
+<p class="admonition-title">How to define scaling for Visium HD?</p>
+<p>10x Visium HD provides <code>scalefactors_json.json</code> (pixel‑to‑<abbr title="micrometer">µm</abbr>). <code>CartLoader</code> accepts it via <code>--scale-json</code> and computes the scaling automatically, so you don’t need to manually specify <code>--units-per-um</code>.</p>
+<p>Alternatively, provide the scale directly with <code>--units-per-um</code>.</p>
+</div>
+<h2 id="run-pipelines">Run Pipelines<a class="headerlink" href="#run-pipelines" title="Permanent link">&para;</a></h2>
+<p>The example below runs all modules together. Customize actions with flags.</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span></pre></div></td><td class="code"><div><pre><span></span><code>cartloader<span class="w"> </span>run_visiumhd<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--load-space-ranger<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--sge-convert<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--run-ficture2<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--import-cells<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--import-images<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--run-cartload2<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--upload-aws<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--space-ranger-dir<span class="w"> </span>/path/to/space/ranger/output<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--out-dir<span class="w"> </span>/path/to/out/dir<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--s3-dir<span class="w"> </span><span class="si">${</span><span class="nv">S3_DIR</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--width<span class="w"> </span><span class="si">${</span><span class="nv">train_width</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--n-factor<span class="w"> </span><span class="si">${</span><span class="nv">n_factor</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--id<span class="w"> </span><span class="si">${</span><span class="nv">DATA_ID</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--spatula<span class="w"> </span><span class="si">${</span><span class="nv">spatula</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--ficture2<span class="w"> </span><span class="si">${</span><span class="nv">punkst</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--pmtiles<span class="w"> </span><span class="si">${</span><span class="nv">pmtiles</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--tippecanoe<span class="w"> </span><span class="si">${</span><span class="nv">tippecanoe</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--aws<span class="w"> </span><span class="si">${</span><span class="nv">aws</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--n-jobs<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--threads<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span>
+</code></pre></div></td></tr></table></div>
+<p><strong>Action Flags to Enable Modules</strong></p>
+<div class="admonition warning">
+<p class="admonition-title">Actions</p>
+<p><code>run_visiumhd</code> runs multiple <code>CartLoader</code> modules together; enable and combine actions with flags.</p>
+</div>
+<table>
+<thead>
+<tr>
+<th><code>CartLoader</code> Modules</th>
+<th>Flags in <code>run_visiumhd</code></th>
+<th>Actions</th>
+<th>Prerequisites</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>load_space_ranger</code></td>
+<td><code>--load-space-ranger</code></td>
+<td>Summarize Space Ranger outputs into JSON</td>
+<td>Space Ranger Output files</td>
+</tr>
+<tr>
+<td><a href="./sge_convert.md"><code>sge_convert</code></a></td>
+<td><code>--sge-convert</code></td>
+<td>Convert <abbr title="Spatial Digital Gene Expression">SGE</abbr> to <code>CartLoader</code> format; optional density filter and visuals</td>
+<td>Space Ranger assets JSON (from <code>load_space_ranger</code>) or transcript CSV/Parquet</td>
+</tr>
+<tr>
+<td><a href="./run_ficture2.md"><code>run_ficture2</code></a></td>
+<td><code>--run-ficture2</code></td>
+<td><abbr title="Segmentation-free method inferring latent spatial factors from SGE (Si et al., Nature Methods 2024)">FICTURE</abbr> analysis</td>
+<td><abbr title="Spatial Digital Gene Expression">SGE</abbr> (from <code>sge_convert</code>); <abbr title="Segmentation-free method inferring latent spatial factors from SGE (Si et al., Nature Methods 2024)">FICTURE</abbr> parameters (<code>--width</code>, <code>--n-factor</code>)</td>
+</tr>
+<tr>
+<td><a href="./import_cell.md"><code>import_space_cell</code></a></td>
+<td><code>--import-cells</code></td>
+<td>Import cell points, boundaries, cluster, de;</td>
+<td>Space Ranger assets JSON or manual CSVs; also <code>--cell-id</code></td>
+</tr>
+<tr>
+<td><a href="./import_image.md"><code>import_image</code></a></td>
+<td><code>--import-images</code></td>
+<td>Import background images (BTF-TIFF) → PNG/<abbr title="Single-file archive format for map tiles and web visualization">PMTiles</abbr>;</td>
+<td>Space Ranger assets JSON or <code>--tifs</code>; also <code>--image-ids</code>/<code>--all-images</code></td>
+</tr>
+<tr>
+<td><a href="./run_cartload2.md"><code>run_cartload2</code></a></td>
+<td><code>--run-cartload2</code></td>
+<td>Package <abbr title="Spatial Digital Gene Expression">SGE</abbr>, optional <abbr title="Segmentation-free method inferring latent spatial factors from SGE (Si et al., Nature Methods 2024)">FICTURE</abbr>/cells/images into <abbr title="Single-file archive format for map tiles and web visualization">PMTiles</abbr>; write <code>catalog.yaml</code></td>
+<td><abbr title="Spatial Digital Gene Expression">SGE</abbr>, optional <abbr title="Segmentation-free method inferring latent spatial factors from SGE (Si et al., Nature Methods 2024)">FICTURE</abbr> assets or any imported cell/image assets; <code>--id</code></td>
+</tr>
+<tr>
+<td><a href="./upload_aws.md"><code>upload_aws</code></a></td>
+<td><code>--upload-aws</code></td>
+<td>Upload catalog and <abbr title="Single-file archive format for map tiles and web visualization">PMTiles</abbr> to S3</td>
+<td><code>catalog.yaml</code> (from <code>run_cartload2</code>); <code>--s3-bucket</code>, <code>--id</code></td>
+</tr>
+<tr>
+<td><a href="./upload_zenodo.md"><code>upload_zenodo</code></a></td>
+<td><code>--upload-zenodo</code></td>
+<td>Upload catalog and <abbr title="Single-file archive format for map tiles and web visualization">PMTiles</abbr> to Zenodo</td>
+<td><code>catalog.yaml</code> (from <code>run_cartload2</code>); <code>--zenodo-token</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Parameter Requirements by Action Flag</strong></p>
+<p>Below are explanations of the parameters used in the example. For the full list, see the <a href="../../../reference/run_visiumhd/"><code>run_visiumhd</code> reference page</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Required when flags</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--space-ranger-dir</code></td>
+<td><code>--load-space-ranger</code></td>
+<td>Space Ranger output directory to scan.</td>
+</tr>
+<tr>
+<td><code>--space-ranger-assets</code></td>
+<td>optional <code>--load-space-ranger</code></td>
+<td>Output JSON manifest path (defaults under <code>--out-dir</code>).</td>
+</tr>
+<tr>
+<td><code>--width</code></td>
+<td><code>--run-ficture2</code></td>
+<td>Hexagon width(s) in <abbr title="micrometer">µm</abbr> for training/projection.</td>
+</tr>
+<tr>
+<td><code>--n-factor</code></td>
+<td><code>--run-ficture2</code></td>
+<td>Factor count(s) for <abbr title="Segmentation-free method inferring latent spatial factors from SGE (Si et al., Nature Methods 2024)">FICTURE</abbr> training.</td>
+</tr>
+<tr>
+<td><code>--cell-id</code></td>
+<td><code>--import-cells</code></td>
+<td>Asset ID/prefix for cell outputs.</td>
+</tr>
+<tr>
+<td><code>--image-ids</code> or <code>--all-images</code></td>
+<td><code>--import-images</code></td>
+<td>Choose specific image IDs or import all detected.</td>
+</tr>
+<tr>
+<td><code>--id</code></td>
+<td><code>--run-cartload2</code></td>
+<td>Catalog ID (used in catalog.yaml and outputs).</td>
+</tr>
+<tr>
+<td><code>--s3-dir</code></td>
+<td><code>--upload-aws</code></td>
+<td>Destination S3 path (e.g., <code>s3://bucket/prefix</code>).</td>
+</tr>
+<tr>
+<td><code>--out-dir</code></td>
+<td>any action</td>
+<td>Output root directory for generated artifacts.</td>
+</tr>
+<tr>
+<td><code>--dry-run</code>, <code>--restart</code></td>
+<td>optional (any)</td>
+<td>Control execution (preview or rerun ignoring existing outputs).</td>
+</tr>
+<tr>
+<td><code>--n-jobs</code>, <code>--threads</code></td>
+<td>optional (any)</td>
+<td>Parallelism for Make/GDAL/tippecanoe steps.</td>
+</tr>
+</tbody>
+</table>
+<!-- | `--in-json`                        | `--sge-convert` with `--load-space-ranger` | Use `--space-ranger-assets` for SGE inputs (JSON mode).                          |
+| `--in-mex`                         | `--sge-convert` (manual)                   | Path to `square_002um/filtered_feature_bc_matrix` (relative to `--space-ranger-dir`). |
+| `--pos-parquet`                    | `--sge-convert` (manual)                   | Path to `square_002um/spatial/tissue_positions.parquet` (relative).                   |
+| `--scale-json` or `--units-per-um` | `--sge-convert` (manual)                   | Provide pixel-to‑µm scale via `scalefactors_json.json` or numeric factor.             |
+| `--filter-by-density`              | optional with `--sge-convert`              | Enable density‑based transcript filtering.                                            |
+| `--exclude-feature-regex`          | optional with `--sge-convert`              | Regex to exclude features (e.g., controls).                                           |
+| `--csv-clust`, `--csv-diffexp`     | `--import-cells` (manual)                  | Paths to clusters/DE CSVs (relative to `--space-ranger-dir`).                         |
+| `--tifs`                       | `--import-images` (manual)                 | One or more BTF/TIFF paths (relative to `--space-ranger-dir`).                        |
+| `--title`, `--desc`                | optional with `--run-cartload2`            | Human‑readable catalog title/description.                                             | 
+| `--zenodo-token`                   | `--upload-zenodo`                          | Path to file containing Zenodo access token.                                          |-->
+
+<h2 id="outputs">Outputs<a class="headerlink" href="#outputs" title="Permanent link">&para;</a></h2>
+<!-- ### Space Ranger Assets JSON
+
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span>
+<span class="normal">22</span>
+<span class="normal">23</span>
+<span class="normal">24</span>
+<span class="normal">25</span>
+<span class="normal">26</span>
+<span class="normal">27</span>
+<span class="normal">28</span>
+<span class="normal">29</span>
+<span class="normal">30</span>
+<span class="normal">31</span>
+<span class="normal">32</span>
+<span class="normal">33</span>
+<span class="normal">34</span>
+<span class="normal">35</span>
+<span class="normal">36</span>
+<span class="normal">37</span>
+<span class="normal">38</span>
+<span class="normal">39</span>
+<span class="normal">40</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;SGE&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;TRANSCRIPT_MEX&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/example_dir/Visium_HD_3prime_Mouse_Brain/binned_outputs/square_002um/filtered_feature_bc_matrix&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;SCALE&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/example_dir/Visium_HD_3prime_Mouse_Brain/binned_outputs/square_002um/spatial/scalefactors_json.json&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;POSITION&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/example_dir/Visium_HD_3prime_Mouse_Brain/binned_outputs/square_002um/spatial/tissue_positions.parquet&quot;</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;CELLS&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;CELL_FEATURE_MEX&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/example_dir/Visium_HD_3prime_Mouse_Brain/segmented_outputs/filtered_feature_cell_matrix&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;CELL_GEOJSON&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/example_dir/Visium_HD_3prime_Mouse_Brain/segmented_outputs/cell_segmentations.geojson&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;NUCLEUS_GEOJSON&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/example_dir/Visium_HD_3prime_Mouse_Brain/segmented_outputs/nucleus_segmentations.geojson&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;CLUSTER&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/example_dir/Visium_HD_3prime_Mouse_Brain/segmented_outputs/analysis/clustering/gene_expression_graphclust/clusters.csv&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;DE&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/example_dir/Visium_HD_3prime_Mouse_Brain/segmented_outputs/analysis/diffexp/gene_expression_graphclust/differential_expression.csv&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;PCA_PROJ&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/example_dir/Visium_HD_3prime_Mouse_Brain/segmented_outputs/analysis/pca/gene_expression_10_components/projection.csv&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;PCA_VAR&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/example_dir/Visium_HD_3prime_Mouse_Brain/segmented_outputs/analysis/pca/gene_expression_10_components/variance.csv&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;UMAP_PROJ&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/example_dir/Visium_HD_3prime_Mouse_Brain/segmented_outputs/analysis/umap/gene_expression_2_components/projection.csv&quot;</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;GRID_8um&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;GRID_FEATURE_MEX&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/example_dir/Visium_HD_3prime_Mouse_Brain/binned_outputs/square_008um/filtered_feature_bc_matrix&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;SCALE&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/example_dir/Visium_HD_3prime_Mouse_Brain/binned_outputs/square_008um/spatial/scalefactors_json.json&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;POSITION&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/example_dir/Visium_HD_3prime_Mouse_Brain/binned_outputs/square_008um/spatial/tissue_positions.parquet&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;CLUSTER&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/example_dir/Visium_HD_3prime_Mouse_Brain/binned_outputs/square_008um/analysis/clustering/gene_expression_graphclust/clusters.csv&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;DE&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/example_dir/Visium_HD_3prime_Mouse_Brain/binned_outputs/square_008um/analysis/diffexp/gene_expression_graphclust/differential_expression.csv&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;PCA_PROJ&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/example_dir/Visium_HD_3prime_Mouse_Brain/binned_outputs/square_008um/analysis/pca/gene_expression_10_components/projection.csv&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;PCA_VAR&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/example_dir/Visium_HD_3prime_Mouse_Brain/binned_outputs/square_008um/analysis/pca/gene_expression_10_components/variance.csv&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;UMAP_PROJ&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/example_dir/Visium_HD_3prime_Mouse_Brain/binned_outputs/square_008um/analysis/umap/gene_expression_2_components/projection.csv&quot;</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;GRID_16um&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;GRID_FEATURE_MEX&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/example_dir/Visium_HD_3prime_Mouse_Brain/binned_outputs/square_016um/filtered_feature_bc_matrix&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;SCALE&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/example_dir/Visium_HD_3prime_Mouse_Brain/binned_outputs/square_016um/spatial/scalefactors_json.json&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;POSITION&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/example_dir/Visium_HD_3prime_Mouse_Brain/binned_outputs/square_016um/spatial/tissue_positions.parquet&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;CLUSTER&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/example_dir/Visium_HD_3prime_Mouse_Brain/binned_outputs/square_016um/analysis/clustering/gene_expression_graphclust/clusters.csv&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;DE&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/example_dir/Visium_HD_3prime_Mouse_Brain/binned_outputs/square_016um/analysis/diffexp/gene_expression_graphclust/differential_expression.csv&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;PCA_PROJ&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/example_dir/Visium_HD_3prime_Mouse_Brain/binned_outputs/square_016um/analysis/pca/gene_expression_10_components/projection.csv&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;PCA_VAR&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/example_dir/Visium_HD_3prime_Mouse_Brain/binned_outputs/square_016um/analysis/pca/gene_expression_10_components/variance.csv&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;UMAP_PROJ&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/example_dir/Visium_HD_3prime_Mouse_Brain/binned_outputs/square_016um/analysis/umap/gene_expression_2_components/projection.csv&quot;</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;IMAGES&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;HnE_BTF&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/example_dir/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_tissue_image.btf&quot;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></td></tr></table></div>
+
+### Spatial Factor Inference
+Below is an example of spatial factor inference results from `FICTURE` using a training width of 18, 12 factors, a fit width of 18, and an anchor resolution of 6. See more details of output at the Reference pages for [run_ficture2](../docs/reference/run_ficture2.md)
+
+![FICTURE](../../images/pipeline_vignettes/visiumhd_3prime_mouse_brain.t18_f24_p18_a6.png)
+![cmap](../../images/pipeline_vignettes/visiumhd_3prime_mouse_brain.t18_f24.rgb.png)
+
+|   Factor | RGB         |   Weight |   PostUMI | TopGene_pval                                                                                                                                            | TopGene_fc                                                                                                                                                                           | TopGene_weight                                                                                                                     |
+|---------:|:------------|---------:|----------:|:--------------------------------------------------------------------------------------------------------------------------------------------------------|:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|:-----------------------------------------------------------------------------------------------------------------------------------|
+|        1 | 237,238,0   |  0.16016 |  15667959 | Nrgn,Camk2n1,Atp1a1,Snap25,Mef2c,Lamp5,Olfm1,Ppp3ca,Arpp19,Tbr1,Stx1a,Chn1,Cck,Cabp1,Bbln,Calm2,Slc17a7,Ngef,Arpp21,Calm1                               | Prss16,Gm6117,ENSMUSG00000120124,Cdsn,Gm13601,Rcvrn,Gm47715,Gm56917,Myl1,Gm47415,Or4d1,Golt1a,Cd7,Mpl,Myhas,Gm32793,Samd3,4930451I11Rik,Gm14342,A730035I17Rik                        | mt-Co3,mt-Atp6,mt-Co2,mt-Co1,mt-Nd1,mt-Cytb,Camk2n1,mt-Nd4,mt-Nd2,Calm1,Nrgn,Fth1,Calm2,Snap25,Ckb,Ppia,Cox8a,mt-Nd3,Tmsb4x,Rplp1  |
+|        0 | 255,101,101 |  0.1417  |  13862133 | mt-Atp6,mt-Co3,mt-Co2,mt-Co1,mt-Cytb,mt-Nd1,mt-Nd4,mt-Nd2,mt-Nd3,Camk2a,mt-Nd5,Ddn,Slc1a2,Cst3,Camk2n1,Rplp1,Apoe,mt-Atp8,Aldoc,Cpe                     | Ppara,Gm13110,H3c4,Fcrl1,Gm45650,2810407A14Rik,0610043K17Rik,Gm45767,Gm16793,Gm14391,9130213A22Rik,Kif7,Myom3,Acr,Perm1,Adrb2,Peak1os,Cd80,Or2w1b,H2-Oa                              | mt-Co3,mt-Atp6,mt-Co2,mt-Co1,mt-Nd1,mt-Cytb,mt-Nd4,mt-Nd2,Fth1,mt-Nd3,Rplp1,Cst3,Apoe,Mbp,Cpe,Camk2n1,mt-Nd5,Cox8a,Calm1,Eef1a1    |
+|        5 | 255,101,254 |  0.09956 |   9739376 | Hcrt,Sparc,Resp18,Nap1l5,6330403K07Rik,Nnat,Calb2,Ndn,Scg2,Zcchc12,Baiap3,Ahi1,Dlk1,Ngb,Gap43,Ly6h,Hap1,Impact,Zwint,Agt                                | H2-Q10,Krt90,Brs3,Glra1,Npvf,Ano7,Cngb1,Hmx2,Pgr15l,Gm27199,Gabre,Pth2,Calcr,Lncenc1,Gm5532,Gm15609,Bsx,4930524B15Rik,Six6,Uncx                                                      | mt-Co3,mt-Atp6,mt-Co2,mt-Co1,mt-Nd1,mt-Cytb,mt-Nd4,mt-Nd2,Rplp1,Cst3,Fth1,Apoe,Ppia,Ubb,Sparc,Cpe,Eef1a1,Mbp,Rpl13a,Rps14          |
+|        7 | 178,255,101 |  0.08897 |   8703927 | Pcp4,Prkcd,Tnnt1,Adarb1,Ramp3,Pdp1,Rora,Nsmf,Ptpn4,Ntng1,Plekhg1,Cplx1,Rab37,Shox2,Pcp4l1,Gabra4,Zic1,Synpo2,Patj,Plcb4                                 | Trim40,Atp2a1,Kmo,Adamts19,Smpx,Zfp385c,Ppp1r3a,Gm36520,L1td1,Edaradd,Klk1,Pik3c2g,Scube2,9330185C12Rik,Abhd12b,Gckr,Dcstamp,Gm4035,Cfap221,Fbxo40                                   | mt-Co3,mt-Atp6,mt-Co2,mt-Co1,mt-Nd1,mt-Cytb,Pcp4,mt-Nd2,mt-Nd4,Fth1,Mbp,Ckb,Calm1,mt-Nd3,Cpe,Ppia,Cox8a,Uchl1,Ubb,Apoe             |
+|        3 | 101,254,255 |  0.08506 |   8320890 | Mbp,Plp1,Fth1,Mobp,Mal,Ptgds,Apod,Cldn11,Trf,Mag,Cnp,Qdpr,Mog,Dbndd2,Plekhb1,Bcas1,Cryab,Tspan2,Ppp1r14a,Car2                                           | Gm4524,Nkx2-9,Il23a,Gbp11,I730030J21Rik,Cyp3a13,Gm34256,Gm49042,Tex52,Gm33594,Sspo,Gm48071,A230001M10Rik,Cxcl10,A330049N07Rik,Gm16168,Nipal4,Casq1,En2,1500015L24Rik                 | Fth1,Mbp,mt-Co3,mt-Atp6,Plp1,mt-Co2,mt-Co1,Mobp,mt-Nd1,mt-Cytb,mt-Nd4,mt-Nd2,Ptgds,Rplp1,Tmsb4x,Tpt1,Cst3,Apoe,Eef1a1,mt-Nd3       |
+|        2 | 101,255,101 |  0.08369 |   8186853 | Cck,Snca,Ccn2,Uchl1,Ncald,Rtn1,Ccn3,Syn2,Tubb2a,Aldoa_v1,Vxn,Nptxr,Slc17a7,Olfm1,Enc1,Calm2,Atp6v0c,Dynll1,Ldha,Basp1                                   | 4933417O13Rik,Gm36560,A630031M04Rik,Rgs13,Clca3a1,Gpr39,Trim54,Otop2,A830031A19Rik,1700047K16Rik,Gm29483,Ucn,Sec14l3,Clrn1,Mirt1,Gm56719,4930470G03Rik,Samd15,Acp7,Gm31816           | mt-Co3,mt-Atp6,mt-Co2,mt-Co1,mt-Nd1,Calm1,Ppia,Tmsb4x,Calm2,mt-Cytb,Ubb,Uchl1,Aldoa_v1,Rtn1,mt-Nd4,Fth1,Tuba1a,Cpe,Atp6v0c,Snap25  |
+|       10 | 178,101,255 |  0.06305 |   6167813 | Ctxn3,Cbln1,Stmn1,Cbln4,Tagln3,Lypd6b,Lypd6,Plcxd2,Cd59a,Uchl1,Elavl2,Wnt4,Oxr1,Etv1,Gm2694,Tuba1a,Hlf,Stxbp6,Tubb5,Lhfpl3                              | BC037032,Gm50209,4732463B04Rik,Gm48780,Gm26672,A930016O22Rik,Prox2os,Gm26839,Ermap,Gm4211,Cuzd1,Gm56611,Msh5,Gm20878,Gm56552,A930001A20Rik,Plau,Gm56958,Rps18-ps4,Gm57047            | mt-Co3,mt-Atp6,mt-Co1,mt-Co2,mt-Nd1,mt-Cytb,mt-Nd4,mt-Nd2,Ppia,Fth1,Calm1,mt-Nd3,Uchl1,Camk2n1,Ckb,Stmn1,Cpe,Calm2,Rplp1,Ubb       |
+|        6 | 255,178,101 |  0.05438 |   5319507 | Ly6h,Tac2,Meg3,Gng14,Snhg11,Ubb,6330403K07Rik,Ndn,Cartpt,Pgrmc1,Ahi1,Avp,Tac1,Pnck,Pomc,Scg2,Resp18,Zcchc12,Itm2c,Rsrp1                                 | Lat,Radx,Ppihl,Ccdc42,1700055D18Rik,Gm12031,Gm36529,Fhl3,A730011C13Rik,Zfp97,Gm16754,Gm30938,Gm9920,Plet1os,E130006D01Rik,Gm7598,A230005M16Rik,Gng14,Gm15852,Gm56783                 | mt-Co3,mt-Atp6,mt-Co2,Ubb,Ppia,mt-Co1,Rplp1,mt-Nd1,mt-Cytb,Tmsb4x,Eef1a1,Calm2,Rps14,Uchl1,Cox8a,Tuba1a,Calm1,mt-Nd4,Ly6h,Stmn3    |
+|        4 | 101,101,255 |  0.0499  |   4881089 | Pvalb,Gad1,Atp1b1,Cplx1,Ldhb,Mdh1,Stmn3,Cox5a,Kcnc1,Atp5b,Syt2,Cox7b,Pcp4l1,Ndrg4,Ndufa4,Spp1,Gm44421,Vamp1,Snap25,Atp5g3                               | Gnb3,Tincr,Pappa,Gm26641,Lancl3,Abca6,Gm47725,Il22,Gm49312,Tmem174,Gm15816,Cd70,Rbp7,Gm13054,Nrg4,Spdl1,Gm44421,Gm42303,Gm38593,Mroh8                                                | mt-Co3,mt-Atp6,mt-Co2,mt-Nd1,mt-Co1,mt-Cytb,Ckb,Fth1,Atp1b1,mt-Nd4,Ppia,mt-Nd2,Atp5b,Stmn3,Ubb,Pvalb,Mbp,Calm1,Cox4i1,Cox8a        |
+|        9 | 101,178,255 |  0.0459  |   4489935 | Tmsb4x,Hpca,Vip,Ppp3ca,Spink8,Calm2,Fam131a,Nrgn,Cck,Itpka,Wipf3,Atp2b1,Ptk2b,Olfm1,Lefty1,Cpne6,Ppp3r1,Ncdn,Neurod6,Gabra5                             | 6330420H09Rik,Gm48898,4921539H07Rik,Cby3,B230110G15Rik,Accsl,Gm36447,3300002P13Rik,BC016579,Gm46637,Fgf16,Spink8,Nanos2,4930447N08Rik,Ccdc63,Lsmem1,Lct,2310002F09Rik,Sult5a1,Lefty1 | Tmsb4x,mt-Co3,mt-Atp6,Calm2,Fth1,mt-Co2,mt-Co1,Calm1,Ppia,Ppp3ca,mt-Nd1,Ubb,Nrgn,mt-Cytb,Rplp1,Cox8a,Cck,Atp1b1,Hpca,Ywhah         |
+|       11 | 255,153,204 |  0.03965 |   3878520 | Penk,Gpr88,Ppp1r1b,Pde10a,Adora2a,Arpp21,Gng7,Pde1b,Rgs9,Tac1,Scn4b,Ppp3ca,Lrrc10b,Drd1,Adcy5,Drd2,Hpca,Tmem158,Pcp4,Gpr6                               | Gdnf,Clec12a,Ptprv,Cd4,Sh3rf2,Gm36737,Ido1,Fgf3,Adora2a,Ikzf3,Gm17660,Or2y1g,A330035P11Rik,Gm44593,Dlx5,A730036I17Rik,BB031773,Upk3bl,Serpina9,Gm32151                               | mt-Co3,mt-Atp6,mt-Co2,mt-Co1,mt-Nd1,mt-Cytb,mt-Nd4,mt-Nd2,mt-Nd3,Fth1,Ckb,Penk,Calm1,Rplp1,Calm2,Camk2n1,Pcp4,Tmsb4x,Ppp3ca,Mbp    |
+|        8 | 0,223,95    |  0.03091 |   3023765 | Apoe,Cst3,Aldoc,Slc1a3,Agt,Mt1,Clu,Gpr37l1,Htra1,Plpp3,Oxt,Gja1,Mfge8,Atp1a2,Sparcl1,Fgfr3,Mt2,Bcan,Id3,Dbi                                             | Oxt,Tlr4,B230104I21Rik,Pdgfrl,Gm17745,5033426O07Rik,Gm56503,Gm10644,C430049B03Rik,Slc2a10,Sctr,Gm4632,Or10ad1c,Gm27239,Aurkb,Calr4,Gm31115,Slc36a2,Themis2,Tshr                      | mt-Co3,mt-Atp6,Apoe,mt-Co2,mt-Co1,Cst3,mt-Cytb,mt-Nd1,mt-Nd4,Aldoc,Ckb,mt-Nd2,Sparcl1,Fth1,Mt1,Clu,Cpe,Dbi,Rplp1,Atp1a2            |
+|       14 | 0,153,0     |  0.02671 |   2612807 | Sst,Npy,Gad1,Crhbp,Cort,Gad2,Serpini1,Rab3b,Cnr1,Slc6a1,Slc32a1,Dlx1as,Kit,Reln,Crh,Synpr,Slc17a8,Erbb4,Atp1b1,Rbp4                                     | Gna14,Hpse,Gm15535,Agtr1a,Potegl,Wnt10b,Agtr2,A230060F14Rik,Grhl3,Sst,Npy,Rbm41,Ucn3,Tagap,Gm56798,A230083G16Rik,C030010L15Rik,Crhbp,Ccdc78,Cort                                     | mt-Co3,mt-Atp6,Sst,mt-Co2,mt-Co1,mt-Nd1,Npy,mt-Cytb,mt-Nd4,mt-Nd2,Fth1,Tmsb4x,Calm1,Atp1b1,Ppia,Gad1,Rplp1,Ubb,mt-Nd3,Cox8a        |
+|       13 | 153,153,0   |  0.01681 |   1644196 | Ptgds,Acta2,Mgp,Cldn5,Vtn,Tagln,Itm2a,Ly6c1,Rgs5,Myl9,Slc6a20a,Dcn,Ly6a,Igfbp7,Pltp,Crip1,Slco1a4,Tm4sf1,Slc2a1,Fn1                                     | Prg4,Foxc2,Or51e1,4833403J16Rik,Prdm6,Slc22a6,Omd,Foxf1,Slc6a12,Slc47a1,Aoc3,Fcgr4,Cytl1,Frk,Fam180a,Col3a1,Myh11,Asgr1,Tbx18,C1qtnf7                                                | mt-Co3,Ptgds,mt-Atp6,mt-Co2,mt-Co1,mt-Cytb,mt-Nd1,mt-Nd4,Apoe,mt-Nd2,Cst3,Fth1,Rplp1,Tmsb4x,Cpe,mt-Nd3,Sparcl1,Eef1a1,Apod,Bsg     |
+|       15 | 0,153,153   |  0.00697 |    681678 | Ttr,Enpp2,Ecrg4,Clic6,Kl,Folr1,Igfbp2,2900040C04Rik,Calml4,F5,Kcnj13,Prr32,Kcne2,Wfdc2,Aqp1,Sostdc1,Lbp,Cldn2,Slc4a5,Steap1                             | 2900040C04Rik,Ttr,Frmpd1os,Slc4a5,Tmem72,Prr32,Kcne2,Ins2,Cldn2,Ecrg4,Steap1,Defb11,Kcnj13,F5,Folr1,Wfdc2,Slc16a8,Wdr86,Aqp1,Gm32468                                                 | Ttr,Enpp2,mt-Co3,mt-Atp6,mt-Co2,mt-Nd1,Fth1,mt-Co1,mt-Cytb,Apoe,mt-Nd2,mt-Nd4,Igfbp2,Bsg,Eef1a1,Psap,Clu,Cst3,Dbi,mt-Nd3           |
+|       16 | 50,50,204   |  0.00261 |    255069 | Hexb,C1qa,C1qc,P2ry12,Ctss,Tmem119,C1qb,Selplg,Csf1r,P2ry13,Cx3cr1,Cst3,Gpr34,Ccr5,Trem2,Laptm5,Slc2a5,Gm2629,Susd3,Gpr183                              | Siglece,Milr1,Ptafr,Tlr13,Gm2629,Gpr183,Hmga2-ps1,Nlrp3,Ccl24,Tmem273,Cdk2,Csf2rb,Mlph,Snx29,Pik3r5,BC035044,Cd300a,Cysltr1,Arl11,5930403N24Rik                                      | mt-Co3,Cst3,mt-Atp6,mt-Co2,mt-Co1,mt-Nd1,mt-Cytb,Hexb,mt-Nd4,Fth1,Tmsb4x,C1qa,mt-Nd2,Ctsd,C1qc,Ctss,C1qb,Mbp,Rplp1,mt-Nd3          |
+|       18 | 153,76,0    |  0.0021  |    205743 | Pmch,Cartpt,Parpbp,Resp18,Tacr3,Mup6,Maged2,Fkbp11,Ly6h,Chodl,Tent5a,Ndn,Gpx3,Dmrtb1,Rcn1,Klhl13,Parm1,Upk3a,Ssr4,Adra2a                                | Pmch,Parpbp,Mup6,Cartpt,Tacr3,Upk3a,Slc2a9,Otop3,Dmrtb1,Chodl,Fkbp11,Saa1,Gm32815,Defb25,Asic3,Ifit1bl2,Aldob,Scgn,Rflna,A730046J19Rik                                               | Pmch,mt-Co3,Cartpt,mt-Atp6,mt-Co2,mt-Co1,mt-Nd1,mt-Cytb,Resp18,Ubb,mt-Nd4,Uchl1,Tuba1a,Ppia,Fth1,mt-Nd2,Rplp1,Cst3,Ly6h,Tmsb4x     |
+|       12 | 153,0,0     |  0.00164 |    160651 | Agrp,Dsp,Sash3,Neurog2,Rin3,Zfhx2os,Gm49864,Rps14,Rplp1,A4galt,Gm35339,Pbk,C330011M18Rik,Rps21,C1ql2,Pla2g2f,Pde6h,Rpl9,Rps23,Gm44257                   | Gm44257,A4galt,5031425F14Rik,Neurog2,C330011M18Rik,Zfhx2os,Dsp,Agrp,Pla2g2f,Pde6h,Sash3,Rin3,Gm57320,Gm35339,Gm57273,Gm49864,Col4a6,Trp53cor1,A030005L19Rik,9030624G23Rik            | mt-Co3,Rplp1,Rps14,mt-Atp6,Tmsb4x,Rps21,Rpl13a,Ppia,Eef1a1,Rps23,Rpl13,Rpl9,mt-Co2,Ubb,Rps15,Cox4i1,mt-Nd1,Rpl41,Rpl11,Rps27a      |
+|       17 | 153,0,153   |  0.00018 |     17298 | Tmem212,Ccdc153,1700024G13Rik,Dynlrb2,Dnah10,Cfap141,Lrrc23,Fam166b,Odf3b,Zfp474,Meig1,Crocc2,Cfap126,3300002A11Rik,Dnali1,Cdhr4,Mia,Cfap91,Rd3,Ppp1r36 | Crocc2,Zfp474,Cpn1,1700024G13Rik,Styxl1,Dnah10,Myb,Gm43579,Cfap53,Tmem212,Dnaaf1,Rsph14,Nek5,Fam166b,Cfap91,Iqca,Fndc3c1,Sntn,Hc,Slc6a19                                             | mt-Co3,Dbi,mt-Atp6,Nnat,mt-Co2,mt-Co1,Tmem212,Ccdc153,Fth1,Mt1,Mt3,mt-Nd1,Apoe,Cpe,Rarres2,Rplp1,Dynlrb2,Cst3,mt-Cytb,Cfap141      |
+|       21 | 50,127,204  |  3e-05   |      3249 | Hcrt,Upk3bl,Scg2,Gm34121,Bard1,Nusap1,Ankrd2,Gast,Zfp935,Gm45902,Bend7,Reep4,Snx20,Chrna1os,Gprc5c,Plagl1,Celf6,Rad54l2,Vat1,Gm2694                     | Hcrt,Upk3bl,Gm34121,Bard1,Nusap1,Ankrd2,Gast,Zfp935,Gm45902,Bend7,Reep4,Snx20,Chrna1os,Gprc5c,Plagl1,Rad54l2,Celf6,Gm2694,Ccdc130,Ripk2                                              | Hcrt,mt-Co3,Scg2,mt-Atp6,mt-Co2,mt-Cytb,mt-Nd1,mt-Co1,6330403K07Rik,Fth1,Gnas,mt-Nd4,Mbp,mt-Nd2,Cox8a,Bex2,Ubb,mt-Nd3,Calm2,Rpl3   |
+|       19 | 76,153,0    |  2e-05   |      2351 | Hbb-bs,Hba-a1,Hba-a2,Hbb-bt,Rasal3,Fam167b,Gm15408,Ifit1bl2,Alas2,Tubb6,Bdkrb2,Myh15,1700095J03Rik,Jaml,Dchs2,Gm16283,6430550D23Rik,Fadd,Gm41396,Kifc1  | Gm15408,Ifit1bl2,Fam167b,Rasal3,Dchs2,Bdkrb2,Tubb6,1700095J03Rik,Jaml,Alas2,Gm16283,Gm41396,Myh15,Kifc1,6430550D23Rik,Hbb-bt,Itgb7,Hba-a2,Fam228a,Hba-a1                             | Hbb-bs,Hba-a1,Hba-a2,mt-Co3,Hbb-bt,mt-Atp6,mt-Co1,mt-Co2,mt-Nd1,mt-Cytb,mt-Nd4,mt-Nd2,Fth1,Rplp1,Cst3,mt-Nd3,Apoe,Rpl13,Mbp,Ptgds  |
+|       20 | 0,115,0     |  1e-05   |       532 | Vip,B3gnt5,Ccl12,Zfp78,Il21r,Gm56686,Gm35725,Tmem255b,Myo1f,Gbp6,Myo1g,H2-DMb2,Gm57367,Asf1b,Tac2,Gm6569,Gm56779,Gm9748,Pimreg,Mir142hg                 | B3gnt5,Il21r,Gm35725,Ccl12,Gm56686,Zfp78,Tmem255b,Myo1g,H2-DMb2,Gbp6,Myo1f,Asf1b,Gm57367,Gm6569,Gm56779,Gm9748,Mir142hg,Pimreg,Vip,Cd72                                              | Vip,mt-Co3,mt-Atp6,mt-Co2,mt-Co1,Tac2,Cck,mt-Cytb,mt-Nd4,mt-Nd1,Cnr1,mt-Nd2,Ccl12,Tmsb4x,Zfp78,B3gnt5,Trim36,Myo1f,Rpl13a,Tmem255b |
+|       22 | 127,50,204  |  0       |        34 | Gm29107,Gdpd3,Gpc6,Glb1l,Cd180,Zc3h12a,Zmynd12,Catsper2,Gm56658,Slc16a9,Stox1,B230319C09Rik,Pgghg,Nmb,Eogt,M6pr,Ccz1,Rps24,Cox6a1,Plp1                  | Gm29107,Gdpd3,Gpc6,Cd180,Glb1l,Zc3h12a,Zmynd12,Catsper2,Slc16a9,Stox1,Pgghg,Nmb,Eogt,Ccz1,M6pr,Rps24,Cox6a1,Plp1,Calm1,Gm56658                                                       | Gdpd3,mt-Co3,Gm29107,Glb1l,mt-Nd1,Gpc6,M6pr,Pgghg,Catsper2,Calm1,Slc16a9,Eogt,Nmb,Rps24,Zc3h12a,Cd180,Ccz1,Plp1,mt-Cytb,Zmynd12    |
+
+### SGE/FICTURE/Cell/Images assets
+
+See more details of output at the Reference pages for [run_cartload2](../..//reference/run_cartload2.md), [import_xenium_cell](../..//reference/import_cell.md), and [import_image](../../reference/import_image.md).
+
+Individual PMTiles and asset JSON files reside alongside it under `<out-dir>/cartload2/`.
+- Catalog to serve: `<out-dir>/cartload2/catalog.yaml`
+- SGE PMTiles (examples): `<out-dir>/cartload2/sge-mono-dark.pmtiles`, `<out-dir>/cartload2/sge-mono-light.pmtiles`
+- Factor PMTiles (examples): `<out-dir>/cartload2/t18_f24_p18_a6-results.pmtiles`, `<out-dir>/cartload2/t18_f24_p18_a6-pixel-raster.pmtiles`
+- Cells and Boundaries PMTiles: `<out-dir>/cartload2/spaceranger-cells.pmtiles`, `<out-dir>/cartload2/spaceranger-boundaries.pmtiles` -->
+
+<div class="grid cards generic">
+<ul>
+<li>
+<p><img alt="Interactive Exploration" src="../../../images/pipeline_vignettes/visiumhd_3prime_mouse_brain.t18_f24_p18_a6.png" /></p>
+<hr />
+<h4 id="viewexplore">View/Explore<a class="headerlink" href="#viewexplore" title="Permanent link">&para;</a></h4>
+<p>The output are available in both CartoScope. </p>
+<p><a class="md-button md-button--primary button-tight-small" href="http://localhost:5173/dataset?uri=s3%2Fcartostore%2Fdata%2Fbatch%3D2025_12%2Fcartloader-pipeline-example-collection%2Fvisiumhd_3prime_mouse_brain">Explore in CartoScope</a></p>
+<!-- [Download from Zenodo](https://zenodo.org/records/17958847){ .md-button .button-tight-small } -->
+</li>
+</ul>
+</div>
+<p>See more details of output at the Reference pages for <a href="../docs/reference/run_ficture2.md">run_ficture2</a> and <a href="../docs/reference/run_cartload2.md">run_cartload2</a>.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "../../..", "features": ["navigation.tabs", "navigation.indexes", "navigation.sections", "navigation.expand", "navigation.path", "content.code.annotate", "content.code.copy", "content.tooltips", "content.grid", "content.cards", "content.footnote.tooltips", "content.tabs.link", "navigation.instant", "navigation.top"], "search": "../../../assets/javascripts/workers/search.f8cc74c7.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    
+    
+      <script src="../../../assets/javascripts/bundle.f13b1293.min.js"></script>
+      
+        <script src="../../../js/load_tsv.js"></script>
+      
+        <script src="../../../js/open_in_new_tab.js"></script>
+      
+    
+  </body>
+</html>

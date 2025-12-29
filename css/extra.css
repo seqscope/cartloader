@@ -6,17 +6,17 @@
 /* ==================GRID & CARDS=================== */
 
 /* single card alignment and fixed size */
-.grid.cards.single-left {
+/* .grid.cards.single-left {
   justify-content: flex-start !important;
   place-items: start !important;
 }
 
 .grid.cards.single-left > ul > li {
-  width: 300px;         /* Set desired width */
-  height: auto;         /* Or: auto for more flexible height */
-  padding: 0.5rem;
+  width: 360px;                   
+  height: auto;                   
+  padding: 0.2rem;
   box-sizing: border-box;
-}
+} */
 
 /* .grid.cards.generic > ul > li,
 .grid.cards.single-left > ul > li {
@@ -43,7 +43,7 @@
 }
 
 .grid.cards.generic > ul > li {
-  width: 300px;                      /* Fixed card width */
+  width: 320px;                      /* Fixed card width */
   height: auto;                      /* Let height expand with content */
   flex: 0 0 auto;                    /* Prevent growing/shrinking */
   padding: 0.5rem 0.5rem 0.2rem 0.5rem;  /* smaller bottom padding */
@@ -99,6 +99,63 @@ figure {
   font-size: 0.6rem;
   padding: 0;
   margin: 0, 0, 0, 0 !important;
+}
+
+.grid.cards.forref > ul {
+  display: flex;                     /* Use Flexbox to layout list items */
+  flex-wrap: wrap;                   /* Allow items to wrap to the next line */
+  gap: 0.5rem;                       /* Add space between cards */
+  justify-content: flex-start;       /* Align cards to the left */
+  padding: 0.5rem;                   /* Remove default padding on the list */
+  margin: 0;                         /* Remove default margin */
+}
+
+.grid.cards.forref > ul > li {
+  width: 360px;                      /* Card width */
+  min-height: 200px;                 /* Baseline height; grows with content */
+  flex: 0 0 auto;                    /* Prevent growing/shrinking */
+  padding: 0.5rem 0.5rem 0.2rem 0.5rem;  /* smaller bottom padding */
+  gap: 0;                            /* Spacing inside card's flex layout */
+  box-sizing: border-box;            /* Include padding in the total width/height */
+  display: flex;                     /* Layout internal card content with Flexbox */
+  flex-direction: column;            /* Stack elements vertically */
+  justify-content: flex-start;       /* Align card content to the top */
+  overflow: visible;                 /* Ensure CTA remains visible */
+}
+
+/* Force two cards per row for quickstart intro (responsive) */
+.grid.cards.forref.two-up > ul > li {
+  width: auto;                                 /* override fixed width */
+  flex: 1 1 calc(50% - 0.5rem);                /* two columns with gap */
+  max-width: calc(50% - 0.5rem);
+  min-width: 300px;                             /* avoid overly narrow cards */
+}
+
+@media (max-width: 680px) {
+  .grid.cards.forref.two-up > ul > li {
+    flex-basis: 100%;
+    max-width: 100%;                            /* stack to single column on very small screens */
+  }
+}
+
+/* Pin the bottom call-to-action in generic and forref cards */
+.grid.cards.generic > ul > li > p:last-child,
+.grid.cards.forref > ul > li > p:last-child { margin-top: auto; }
+.grid.cards.generic > ul > li > a.md-button,
+.grid.cards.forref > ul > li > a.md-button { margin-top: auto; align-self: flex-start; display: inline-block; }
+
+/* Tighter CTA buttons on cards */
+.md-button.button-tight-small {
+  padding: 0.35rem 0.6rem;
+  font-size: 0.8rem;
+  line-height: 1.1;
+}
+
+/* Reduce top margin for headings inside cards */
+.grid.cards.forref h4,
+.grid.cards.generic h4 {
+  margin-top: 0.2rem;
+  margin-bottom: 0.2rem;
 }
 
 /* ==================TABLE=================== */
@@ -174,4 +231,19 @@ figure {
   height: 20px;
   border: 1px solid #ccc;
   border-radius: 4px;
+}
+
+/* ==================FIGURES=================== */
+
+.figure-caption-vigintro-large {
+  font-size: 0.9rem;
+  color: var(--md-default-fg-color--light);
+  text-align: center;
+  margin-top: 0.25rem;
+}
+
+/* ==================CODE=================== */
+
+.md-typeset pre > code {
+  border-radius: 6px;
 }
