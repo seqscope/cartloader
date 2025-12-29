@@ -86,6 +86,7 @@ def parse_arguments(_args):
     aux_out_params.add_argument('--colname-y', type=str, default='Y', help='Column name for Y in the output(default: Y)')
     aux_out_params.add_argument('--colname-count', type=str, default='count', help='Comma-separated column names for count in the output (default: count)')
     aux_out_params.add_argument('--colname-feature-name', type=str, default='gene', help='Column name for gene name in the output (default: gene)')
+    aux_out_params.add_argument('--scale-xy', type=float, default=1.0, help='Micron per pixel resolution for xy.png (default: 1.0)')
     # aux_out_params.add_argument('--colname-feature-id', type=str, default=None, help='Column name for gene ID. Required only when --csv-colname-feature-id or --print-feature-id is applied') 
 
     # AUX gene-filtering params
@@ -289,7 +290,7 @@ def sge_density_filtering(mm, sge_filtering_dict):
 #
 #================================================================================================
 
-def sge_visual(mm, transcript_f, minmax_f, xy_f, prereq, spatula):
+def sge_visual(mm, transcript_f, minmax_f, xy_f, prereq, spatula, scale_xy):
     scheck_app(spatula)
     # draw xy plot for visualization
     cmds = cmd_separator([], f"Drawing XY plot for SGE: {transcript_f}")
@@ -308,6 +309,7 @@ def sge_visual(mm, transcript_f, minmax_f, xy_f, prereq, spatula):
         "--icol-cnt -1", # str(icol_cnt) if icol_cnt is not None else "-1",
         "--ullr", "$XMIN,$YMIN,$XMAX,$YMAX",
         "--auto-adjust",
+        f"--coord-per-pixel {scale_xy}",
         "--skip-lines", "1",
     ])
     cmds.append(draw_cmd)
@@ -434,7 +436,8 @@ def sge_convert(_args):
                         out_minmax_f,
                         out_xy_f,
                         [sge_convert_flag], 
-                        args.spatula)
+                        args.spatula,
+                        args.scale_xy)
         if args.north_up:
             out_xyn_f= os.path.join(args.out_dir, args.out_northup_tif)
             mm = sge_visual_northup(mm, out_xy_f, out_xyn_f, out_minmax_f, [sge_convert_flag],
@@ -479,7 +482,8 @@ def sge_convert(_args):
                             filtered_minmax_f,
                             filtered_xy_f,
                             [sge_filtered_flag],
-                            args.spatula)
+                            args.spatula,
+                            args.scale_xy)
             if args.north_up:
                 filtered_xyn_f= os.path.join(args.out_dir, f"{args.out_filtered_prefix}.{args.out_northup_tif}")
                 mm = sge_visual_northup(mm, filtered_xy_f, filtered_xyn_f, filtered_minmax_f, [sge_filtered_flag],

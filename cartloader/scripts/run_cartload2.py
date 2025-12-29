@@ -320,59 +320,115 @@ def run_cartload2(_args):
             cell_xy_f = cell_param.get("cell_xy_path", None)
             cell_boundaries_f = cell_param.get("cell_boundaries_path", None)
             cell_clust_f = cell_param.get("cluster_path", None)
-            model_manifolds = cell_param.get("manifolds", [])
+            model_manifolds = cell_param.get("manifolds", {})
             out_id = model_id.replace("_", "-")
             out_prefix = f"{args.out_dir}/{out_id}"
-            umap_ndjson = f"{out_prefix}-umap.ndjson"
-            umap_pmtiles = f"{out_prefix}-umap.pmtiles"
+            sample_umap_ndjson = f"{out_prefix}-umap.ndjson"
+            sample_umap_pmtiles = f"{out_prefix}-umap.pmtiles"
+            shared_umap_ndjson = f"{out_prefix}-shared-umap.ndjson"
+            shared_umap_pmtiles = f"{out_prefix}-shared-umap.pmtiles"
 
-            if "umap" in model_manifolds:
-                cmds = cmd_separator([], f"Converting UMAP for {model_id} into PMTiles and copying relevant files..")
-                umap_tsv = model_manifolds["umap"]["tsv"]
-                umap_png = model_manifolds["umap"]["png"]
 
-                prerequisites = [umap_tsv, umap_png]
-                outfiles=[]
+            if "sample" in model_manifolds:
+                sample_manifold = model_manifolds["sample"]
+                if "umap" in sample_manifold:
+                    cmds = cmd_separator([], f"Converting sample UMAP for {model_id} into PMTiles and copying relevant files..")
+                    umap_tsv = sample_manifold["umap"]["tsv"]
+                    umap_png = sample_manifold["umap"]["png"]
 
-                convert_cmd = " ".join([
-                    "cartloader", "render_umap",
-                    f"--input {umap_tsv}",
-                    f"--out {umap_ndjson}",
-                    f"--colname-factor {args.umap_colname_factor}",
-                    f"--colname-x {args.umap_colname_x}",
-                    f"--colname-y {args.umap_colname_y}"
-                ])
-                cmds.append(convert_cmd)
+                    prerequisites = [umap_tsv, umap_png]
+                    outfiles=[]
 
-                # 2) ndjson to pmtiles
-                tippecanoe_cmd = " ".join([
-                    f"TIPPECANOE_MAX_THREADS={args.threads}",
-                    f"'{args.tippecanoe}'",
-                    f"-t {args.tmp_dir}",
-                    f"-o {umap_pmtiles}",
-                    "-Z", str(args.umap_min_zoom),
-                    "-z", str(args.umap_max_zoom),
-                    "-l", "umap",
-                    "--force",
-                    "--drop-densest-as-needed",
-                    "--extend-zooms-if-still-dropping",
-                    "--no-duplication",
-                    f"--preserve-point-density-threshold={args.preserve_point_density_thres}",
-                    umap_ndjson
-                ])
-                cmds.append(tippecanoe_cmd)
-                if not args.keep_intermediate_files:
-                    cmds.append(f"rm -f {umap_ndjson}")
-                outfiles.append(umap_pmtiles)
+                    convert_cmd = " ".join([
+                        "cartloader", "render_umap",
+                        f"--input {umap_tsv}",
+                        f"--out {sample_umap_ndjson}",
+                        f"--colname-factor {args.umap_colname_factor}",
+                        f"--colname-x {args.umap_colname_x}",
+                        f"--colname-y {args.umap_colname_y}"
+                    ])
+                    cmds.append(convert_cmd)
 
-                cmds.append(f"cp {umap_tsv} {out_prefix}-umap.tsv.gz")
-                cmds.append(f"cp {umap_png} {out_prefix}.umap.png")
-                outfiles.append(f"{out_prefix}-umap.tsv.gz")
-                outfiles.append(f"{out_prefix}.umap.png")
+                    # 2) ndjson to pmtiles
+                    tippecanoe_cmd = " ".join([
+                        f"TIPPECANOE_MAX_THREADS={args.threads}",
+                        f"'{args.tippecanoe}'",
+                        f"-t {args.tmp_dir}",
+                        f"-o {sample_umap_pmtiles}",
+                        "-Z", str(args.umap_min_zoom),
+                        "-z", str(args.umap_max_zoom),
+                        "-l", "umap",
+                        "--force",
+                        "--drop-densest-as-needed",
+                        "--extend-zooms-if-still-dropping",
+                        "--no-duplication",
+                        f"--preserve-point-density-threshold={args.preserve_point_density_thres}",
+                        sample_umap_ndjson
+                    ])
+                    cmds.append(tippecanoe_cmd)
+                    if not args.keep_intermediate_files:
+                        cmds.append(f"rm -f {sample_umap_ndjson}")
+                    outfiles.append(sample_umap_pmtiles)
 
-                touch_flag_cmd=valid_and_touch_cmd(outfiles, f"{out_prefix}-umap.done") # this only touch the flag file when all output files exist
-                cmds.append(touch_flag_cmd)
-                mm.add_target(f"{out_prefix}-umap.done", prerequisites, cmds)
+                    cmds.append(f"cp {umap_tsv} {out_prefix}-umap.tsv.gz")
+                    cmds.append(f"cp {umap_png} {out_prefix}.umap.png")
+                    outfiles.append(f"{out_prefix}-umap.tsv.gz")
+                    outfiles.append(f"{out_prefix}.umap.png")
+
+                    touch_flag_cmd=valid_and_touch_cmd(outfiles, f"{out_prefix}-umap.done") # this only touch the flag file when all output files exist
+                    cmds.append(touch_flag_cmd)
+                    mm.add_target(f"{out_prefix}-umap.done", prerequisites, cmds)
+
+            if "shared" in model_manifolds:
+                if "analysis_type" in cell_param and cell_param["analysis_type"] == "multi-sample":
+                    shared_manifold = model_manifolds["shared"]
+                    if "umap" in sample_manifold:
+                        cmds = cmd_separator([], f"Converting shared UMAP for {model_id} into PMTiles and copying relevant files..")
+                        umap_tsv = shared_manifold["umap"]["tsv"]
+                        umap_png = shared_manifold["umap"]["png"]
+
+                        prerequisites = [umap_tsv, umap_png]
+                        outfiles=[]
+
+                        convert_cmd = " ".join([
+                            "cartloader", "render_umap",
+                            f"--input {umap_tsv}",
+                            f"--out {shared_umap_ndjson}",
+                            f"--colname-factor {args.umap_colname_factor}",
+                            f"--colname-x {args.umap_colname_x}",
+                            f"--colname-y {args.umap_colname_y}"
+                        ])
+                        cmds.append(convert_cmd)
+
+                        # 2) ndjson to pmtiles
+                        tippecanoe_cmd = " ".join([
+                            f"TIPPECANOE_MAX_THREADS={args.threads}",
+                            f"'{args.tippecanoe}'",
+                            f"-t {args.tmp_dir}",
+                            f"-o {shared_umap_pmtiles}",
+                            "-Z", str(args.umap_min_zoom),
+                            "-z", str(args.umap_max_zoom),
+                            "-l", "umap",
+                            "--force",
+                            "--drop-densest-as-needed",
+                            "--extend-zooms-if-still-dropping",
+                            "--no-duplication",
+                            f"--preserve-point-density-threshold={args.preserve_point_density_thres}",
+                            shared_umap_ndjson
+                        ])
+                        cmds.append(tippecanoe_cmd)
+                        if not args.keep_intermediate_files:
+                            cmds.append(f"rm -f {shared_umap_ndjson}")
+                        outfiles.append(shared_umap_pmtiles)
+
+                        cmds.append(f"cp {umap_tsv} {out_prefix}-shared-umap.tsv.gz")
+                        cmds.append(f"cp {umap_png} {out_prefix}-shared.umap.png")
+                        outfiles.append(f"{out_prefix}-shared-umap.tsv.gz")
+                        outfiles.append(f"{out_prefix}-shared.umap.png")
+
+                        touch_flag_cmd=valid_and_touch_cmd(outfiles, f"{out_prefix}-shared-umap.done") # this only touch the flag file when all output files exist
+                        cmds.append(touch_flag_cmd)
+                        mm.add_target(f"{out_prefix}-shared-umap.done", prerequisites, cmds)
 
             if cell_xy_f is not None:
                 cmds = cmd_separator([], f"Creating cell PMTiles for {model_id}..")
@@ -432,18 +488,40 @@ def run_cartload2(_args):
             cell_de_tsvf = cell_param["cluster_de"]
             cell_info_tsvf = cell_param["cluster_info"]
             cell_post_tsvf = cell_param["cluster_pseudobulk"]
+            cell_heatmap_pdf = cell_param["cluster_model_heatmap_pdf"]
+            cell_heatmap_tsv = cell_param["cluster_model_heatmap_tsv"]
             cell_pixel_tsvf = cell_param["pixel_tsv_path"]
             cell_pixel_pngf = cell_param["pixel_png_path"]
             copy_rgb_tsv(model_rgb, f"{out_prefix}-rgb.tsv", restart=args.restart)
 
             cmds.append(f"cp {cell_de_tsvf} {out_prefix}-bulk-de.tsv")
             cmds.append(f"cp {cell_info_tsvf} {out_prefix}-info.tsv")
+            cmds.append(f"cp {cell_heatmap_pdf} {out_prefix}-heatmap.pdf")
+            cmds.append(f"cp {cell_heatmap_tsv} {out_prefix}-heatmap.tsv")
             cmds.append(f"cat {cell_post_tsvf} | gzip -c > {out_prefix}-pseudobulk.tsv.gz")
+
+            prerequisites = [cell_de_tsvf, cell_info_tsvf, cell_post_tsvf, cell_heatmap_pdf, cell_heatmap_tsv]
+            outfiles=[f"{out_prefix}-bulk-de.tsv", f"{out_prefix}-info.tsv", f"{out_prefix}-pseudobulk.tsv.gz", f"{out_prefix}-heatmap.pdf", f"{out_prefix}-heatmap.tsv"]
+
+            if "analysis_type" in cell_param and cell_param["analysis_type"] == "multi-sample":
+                # for multi-sample cell analysis, copy additional files
+                shared_cell_de_tsvf = cell_param["shared_cluster_de"]
+                shared_cell_info_tsvf = cell_param["shared_cluster_info"]
+                shared_cell_post_tsvf = cell_param["shared_cluster_pseudobulk"]
+                shared_cell_cluster_model_heatmap_pdf = cell_param["shared_cluster_model_heatmap_pdf"]
+                shared_cell_cluster_model_heatmap_tsv = cell_param["shared_cluster_model_heatmap_tsv"]
+                cmds.append(f"cp {shared_cell_de_tsvf} {out_prefix}-shared-bulk-de.tsv")
+                cmds.append(f"cp {shared_cell_info_tsvf} {out_prefix}-shared-info.tsv")
+                cmds.append(f"cat {shared_cell_post_tsvf} | gzip -c > {out_prefix}-shared-pseudobulk.tsv.gz")
+                cmds.append(f"cp {shared_cell_cluster_model_heatmap_pdf} {out_prefix}-shared-heatmap.pdf")
+                cmds.append(f"cp {shared_cell_cluster_model_heatmap_tsv} {out_prefix}-shared-heatmap.tsv")
+
+                prerequisites += [shared_cell_de_tsvf, shared_cell_info_tsvf, shared_cell_post_tsvf, shared_cell_cluster_model_heatmap_pdf, shared_cell_cluster_model_heatmap_tsv]
+                outfiles += [f"{out_prefix}-shared-bulk-de.tsv", f"{out_prefix}-shared-info.tsv", f"{out_prefix}-shared-pseudobulk.tsv.gz", f"{out_prefix}-shared-heatmap.pdf", f"{out_prefix}-shared-heatmap.tsv"]
+
             join_pixel_tsvs.append(cell_pixel_tsvf)
             join_pixel_ids.append(out_id)
 
-            prerequisites = [cell_de_tsvf, cell_post_tsvf]
-            outfiles=[f"{out_prefix}-bulk-de.tsv", f"{out_prefix}-pseudobulk.tsv.gz"]
             if not args.skip_raster:
                 cmd = " ".join([
                     "cartloader", "image_png2pmtiles",
@@ -513,8 +591,10 @@ def run_cartload2(_args):
             # umap
             umap = train_param.get("umap", {})
             # if umap is a dict,
-            if train_param.get("analysis") == "multi-sample":
+            if train_param.get("analysis_type") == "multi-sample":
                 process_umap(umap.get("shared"), mm, args, out_prefix+"-shared", model_id, fic_jsonf)
+                process_umap(umap.get("sample"), mm, args, out_prefix, model_id, fic_jsonf)
+            elif "sample" in umap:
                 process_umap(umap.get("sample"), mm, args, out_prefix, model_id, fic_jsonf)
             else:
                 process_umap(umap, mm, args, out_prefix, model_id, fic_jsonf)

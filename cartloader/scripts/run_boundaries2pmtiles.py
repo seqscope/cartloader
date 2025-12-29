@@ -14,11 +14,14 @@ def parse_arguments(_args):
 
     inout_params = parser.add_argument_group("Input/Output Parameters", "Input/output directory/files.")
     inout_params.add_argument('--in-csv', type=str, help='Input CSV file to be containing cell boundaries')
-    inout_params.add_argument('--in-parquet', type=str, help='Input Parquet file to be containing cell boundaries')
+#   inout_params.add_argument('--in-parquet', type=str, help='Input Parquet file to be containing cell boundaries')
     inout_params.add_argument('--in-clust', type=str, required=True, help='Input CSV/TSV file containing cluster information per cell')
     inout_params.add_argument('--out-prefix', required= True, type=str, help='The output prefix. New directory will be created if needed')  
     inout_params.add_argument('--out-colname-clust', type=str, default='topK', help='Column name to be used for cluster information in the output pmtiles. Default: topK')
     inout_params.add_argument('--in-format', type=str, choices=['10x_xenium', 'cosmx_smi', 'vizgen_merscope', 'generic'], default='generic', help='Input format type. Default: generic')
+    inout_params.add_argument('--colname-cell-id', type=str, default='cell_id', help='Column name for cell ID in the input CSV/Parquet file. Default: cell_id')
+    inout_params.add_argument('--colname-x', type=str, default='vertex_x', help='Column name for vertex X coordinate in the input CSV/Parquet file. Default: vertex_x')
+    inout_params.add_argument('--colname-y', type=str, default='vertex_y', help='Column name for vertex Y coordinate in the input CSV/Parquet file. Default: vertex_y')
 
     key_params = parser.add_argument_group("Key Parameters", "Key parameters frequently used by users")
     key_params.add_argument('--chunk-size', type=int, default=1000000, help='Number of rows to read at a time. Default is 1000000')
@@ -101,9 +104,12 @@ def run_boundaries2pmtiles(_args):
 
         ## read the cell CSV files
         bound_out=f"{args.out_prefix}.geojson"
-        col_id = "cell_id"
-        col_x = "vertex_x"
-        col_y = "vertex_y"
+        # col_id = "cell_id"
+        # col_x = "vertex_x"
+        # col_y = "vertex_y"
+        col_id = args.colname_cell_id
+        col_x = args.colname_x
+        col_y = args.colname_y
         with flexopen(args.in_csv, "rt") as f, flexopen(bound_out, "wt") as wf:
             reader = csv.DictReader(f)
             hdrs = reader.fieldnames
