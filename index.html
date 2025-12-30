@@ -1941,9 +1941,18 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#core-modules" class="md-nav__link">
+  <a href="#ecosystem-overview" class="md-nav__link">
     <span class="md-ellipsis">
-      Core Modules
+      Ecosystem Overview
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#core-module-details" class="md-nav__link">
+    <span class="md-ellipsis">
+      Core Module Details
     </span>
   </a>
   
@@ -1982,14 +1991,29 @@
 <p>Spatial transcriptomics (<abbr title="Spatial transcriptomics">ST</abbr>) technologies have revolutionized our ability to map molecular features with remarkable resolution—down to cellular and subcellular levels. The rapid development of sequencing-based platforms (e.g., <a href="https://www.nature.com/articles/s41596-024-01065-0">Seq-Scope</a>, <a href="https://www.bgi.com/global/service/spatial-transcriptome-stereo-seq">Stereo-seq</a>, <a href="https://www.cell.com/cell/fulltext/S0092-8674(22)01367-8">Pixel-seq</a>, <a href="https://www.10xgenomics.com/platforms/visium">10x Visium HD</a>) and imaging-based platforms (e.g., <a href="https://www.10xgenomics.com/platforms/xenium">10x Xenium</a>, <a href="https://vizgen.com/merscope-ultra/">Vizgen MERSCOPE</a>, <a href="https://nanostring.com/products/cosmx-spatial-molecular-imager">CosMx SMI</a>) has led to an explosion in the production of <abbr title="Spatial transcriptomics">ST</abbr> datasets across diverse tissues and species.</p>
 <p>However, the rapid diversification of spatial transcriptomics platforms has led to heterogeneous data formats, inconsistent metadata schemas, and platform-specific analysis pipelines. Moreover, existing tools often lack the scalability to visualize gigapixel-scale data without downsampling.</p>
 <p>To address this challenge, we introduce a scalable, harmonized, and cloud-friendly CartoScope ecosystem for spatial omics data across platforms.</p>
-<h2 id="core-modules">Core Modules<a class="headerlink" href="#core-modules" title="Permanent link">&para;</a></h2>
-<p>CartoScope ecosystem is composed of three modules:</p>
-<div class="admonition info">
-<p class="admonition-title"><a href="https://seqscope.github.io/cartloader"><strong>CartLoader</strong></a> – a harmonized, scalable pipeline for data processing.</p>
-<p>This document introduces <code>CartLoader</code>, the core engine of our ecosystem. It provides a modular, reproducible tool to harmonize, integrate, analyze, and visualize raw high-resolution <abbr title="Spatial transcriptomics">ST</abbr> data across platforms. Usage examples are provided in the <a href="vignettes/intro/">Vignettes</a>. A detailed description (action, inputs, outputs, and parameters) is provided for each module in the <a href="reference/intro/">Reference Pages</a>.</p>
-<p><strong>Key Features</strong></p>
+<h2 id="ecosystem-overview">Ecosystem Overview<a class="headerlink" href="#ecosystem-overview" title="Permanent link">&para;</a></h2>
+<p>The CartoScope ecosystem is structures as illustrated below:</p>
+<p><img alt="flowchart" src="images/flowchart.png" /></p>
+<p>Together, they provide a unified solution for working with raw pixel-level spatial omics data — whether from our repository or your own lab — without sacrificing resolution or reproducibility.</p>
+<h2 id="core-module-details">Core Module Details<a class="headerlink" href="#core-module-details" title="Permanent link">&para;</a></h2>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:3"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><input id="__tabbed_1_3" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1"><a href="https://seqscope.github.io/cartloader"><strong><code>CartLoader</code></strong></a></label><label for="__tabbed_1_2"><a href="https://github.com/seqscope/cartostore"><strong><code>CartoStore</code></strong></a></label><label for="__tabbed_1_3"><a href="./"><strong><code>CartoScope</code></strong></a></label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<p><strong>CartLoader</strong> is the backend pipeline that prepares data for CartoScope. It provides a modular, reproducible tool to harmonize, integrate, analyze, and visualize raw high-resolution <abbr title="Spatial transcriptomics">ST</abbr> data across platforms. </p>
+<div class="admonition abstract">
+<p class="admonition-title">Table of Contents</p>
+<p>The current document includes:</p>
 <ul>
-<li><strong>Cross-Platform Format Conversion</strong>: Converts raw <abbr title="Spatial Digital Gene Expression">SGE</abbr> data from diverse <abbr title="Spatial transcriptomics">ST</abbr> platforms into a unified format, enabling consistent downstream processing.</li>
+<li><a href="vignettes/quickstart/intro/"><strong>Quick Start</strong></a> section for getting started with <code>cartloader</code>.</li>
+<li><a href="installation/"><strong>Installation</strong></a> section for installation.</li>
+<li><a href="vignettes/intro/"><strong>Vignettes</strong></a> section for usage examples.</li>
+<li><a href="reference/intro/"><strong>Reference</strong></a> section for detailed descriptions (action, inputs, outputs, and parameters).</li>
+</ul>
+</div>
+<div class="admonition info">
+<p class="admonition-title">Key Features</p>
+<ul>
+<li><strong>Cross-Platform Format Conversion</strong>: Converts raw <abbr title="Spatial Digital Gene Expression">SGE</abbr> data from diverse <abbr title="Spatial transcriptomics">ST</abbr> platforms (public or your own) into a unified format, enabling consistent downstream processing.</li>
 <li><strong>Spatial Factor Inference</strong>: Applies <a href="https://www.nature.com/articles/s41592-024-02415-2"><abbr title="Segmentation-free method inferring latent spatial factors from SGE (Si et al., Nature Methods 2024)">FICTURE</abbr></a> to infer spatial factors directly from pixel-level data, capturing biological patterns without requiring cell segmentation.</li>
 <li><strong>Multi-Modal Alignment</strong>: Aligns and overlays histology images with <abbr title="Spatial Digital Gene Expression">SGE</abbr> data so all layers share a common coordinate system for pixel-accurate comparisons.</li>
 <li><strong>Cloud-Friendly Outputs</strong>: Produces compact, geospatially-indexed data formats suitable for web visualization and cloud storage.</li>
@@ -1997,36 +2021,48 @@
 <li><strong>Modular and Reproducible Workflow</strong>: Orchestrates all steps through a Makefile-based system to ensure scalability, transparency, and reproducibility.</li>
 </ul>
 </div>
-<details class="info">
-<summary><a href="https://github.com/seqscope/cartostore"><strong>CartoStore</strong></a> – an open-access, cloud-hosted repository for dataset sharing.</summary>
-<p><strong>CartoStore</strong> acts as the data repository, hosting datasets processed by CartLoader and making them accessible to CartoScope. </p>
-<p>Core Features:</p>
+</div>
+<div class="tabbed-block">
+<p><strong>CartoStore</strong> acts as the data repository, hosting datasets processed by CartLoader and making them accessible to CartoScope. Visit the <a href="https://github.com/seqscope/cartostore">CartoStore Repository</a> to access public datasets.</p>
+<div class="admonition info">
+<p class="admonition-title">Key Features</p>
 <ul>
-<li><strong>Ready-to-use Datasets</strong>: Access processed, high-resolution datasets of which have <abbr title="Segmentation-free method inferring latent spatial factors from SGE (Si et al., Nature Methods 2024)">FICTURE</abbr> analysis results, morphology images, cell analysis results, etc., immediately for interactive exploration.</li>
+<li><strong>Ready-to-use Datasets</strong>: Access processed, high-resolution datasets featuring <abbr title="Segmentation-free method inferring latent spatial factors from SGE (Si et al., Nature Methods 2024)">FICTURE</abbr> analysis results, morphology images, and cell analysis results, ready for immediate interactive exploration.</li>
 <li><strong>Broad Coverage</strong>: Spans diverse species, tissues, and disease models for a wide range of research needs.</li>
 <li><strong>Growing Repository</strong>: Continuously updated with new datasets as they are processed and added.</li>
 </ul>
-<p>Visit the <a href="https://github.com/seqscope/cartostore">CartoStore Repository</a> to access public datasets.</p>
-</details>
-<details class="info">
-<summary><a href="./"><strong>CartoScope</strong></a> – a web-based App for interactive exploration at original resolution.</summary>
-<p><strong>CartoScope</strong> is the frontend of our ecosystem, enabling interactive, pixel-level exploration of spatial omics data without requiring programming expertise. </p>
-<p>Core Capabilities:</p>
+</div>
+</div>
+<div class="tabbed-block">
+<p><strong>CartoScope</strong> is the frontend web-based App of our ecosystem, which enables interactive, pixel-level exploration of spatial omics data without requiring programming expertise. Visit the <a href="https://seqscope.github.io/cartoscope3o/">CartoScope Documentation</a> for more details</p>
+<div class="admonition tips">
+<p class="admonition-title">Flexible Data Exploration</p>
 <ul>
-<li><strong>Ultra-high-resolution data at scale</strong>: Seamless web exploration for submicron-resolution spatial transcriptomics data with hundreds of millions of spatial pixels, tens of thousands of genes, and billions of transcripts.</li>
-<li><strong>Molecular-level Inference with <abbr title="Segmentation-free method inferring latent spatial factors from SGE (Si et al., Nature Methods 2024)">FICTURE</abbr></strong>: Powered by <a href="https://www.nature.com/articles/s41592-024-02415-2"><abbr title="Segmentation-free method inferring latent spatial factors from SGE (Si et al., Nature Methods 2024)">FICTURE</abbr></a> analysis to preserve spatial accuracy and complexity, breaking the barrier of histology-based segmentation bias.</li>
+<li><strong>Explore Public Atlas</strong>: Access our ready-to-use collection of high-resolution spatial datasets.</li>
+<li><strong>Bring Your Own Data</strong>: Load, visualize, and interactively analyze your own custom datasets using our system.</li>
+</ul>
+</div>
+<div class="admonition info">
+<p class="admonition-title">Key Features</p>
+<ul>
+<li><strong>Ultra-high-resolution data at scale</strong>: Seamless web exploration for submicron-resolution <abbr title="Spatial transcriptomics">ST</abbr> data with hundreds of millions of spatial pixels, tens of thousands of genes, and billions of transcripts.</li>
+<li><strong>Molecular-level Inference with <abbr title="Segmentation-free method inferring latent spatial factors from SGE (Si et al., Nature Methods 2024)">FICTURE</abbr></strong>: Powered by the latest version of <a href="https://www.nature.com/articles/s41592-024-02415-2"><abbr title="Segmentation-free method inferring latent spatial factors from SGE (Si et al., Nature Methods 2024)">FICTURE</abbr></a> analysis, it helps interpret the spatial factors while preserving spatial accuracy and complexity. This method breaks the barrier of histology-based segmentation bias.</li>
 <li><strong>Dynamic Multi-layer Exploration</strong>: Interactive multi-layer maps with aligned multimodal datasets—including morphology images, cell-level analysis, molecular inference, and spot summaries—enabling exploration with rich, end-to-end spatial context.</li>
-<li><strong>Seamless Integration with Morphology Images</strong>: Support for various morphology images (H&amp;E, <abbr title="Fluorescent DNA stain that labels cell nuclei">DAPI</abbr>, fluorescence reporters) in diverse formats, seamlessly integrated with omics data.</li>
+<li><strong>Seamless Integration with Morphology Images</strong>: Support for diverse morphology image formats (H&amp;E, <abbr title="Fluorescent DNA stain that labels cell nuclei">DAPI</abbr>, fluorescence reporters), seamlessly integrated with omics data.</li>
 <li><strong>Interactive ROI Analysis</strong>: Interactively define regions of interest, extract spatial features, and run differential expression analysis.</li>
 <li><strong>Save &amp; Share Workspace</strong>: One-click save for your workspace (layers, styling, ROIs) and instant sharing with collaborators via unique links.</li>
+<li><strong>Scale-Up Your Own Data</strong>: Fully supports custom datasets—upload your own processing results to visualize and analyze your specific samples with the same powerful tools used for public data.</li>
 <li><strong>Open Access</strong>: Upload, screen, and share datasets worldwide at no cost.</li>
 </ul>
-<p>Visit the <a href="placeholder">CartoScope</a> to learn more details.</p>
-</details>
-<p>Together, this system provides a unified solution for working with raw pixel-level spatial omics data—without sacrificing resolution or reproducibility.</p>
+</div>
+</div>
+</div>
+</div>
 <hr />
 <h2 id="citations">Citations<a class="headerlink" href="#citations" title="Permanent link">&para;</a></h2>
+<p>If you use CartoScope in your research, please cite:</p>
 <ul>
+<li>CartoScope: <a href="placeholder">placeholder</a></li>
 <li><abbr title="Segmentation-free method inferring latent spatial factors from SGE (Si et al., Nature Methods 2024)">FICTURE</abbr>: <a href="https://www.nature.com/articles/s41592-024-02415-2">doi.org/10.1038/s41592-024-02415-2</a></li>
 </ul>
 
