@@ -25,7 +25,8 @@ Together, they provide a unified solution for working with raw pixel-level spati
 
     !!! abstract "Table of Contents"
         The current document includes:
-        - [**Quick Start](./vignettes/quickstart/intro.md) section for getting started with `cartloader`.
+
+        - [**Quick Start**](./vignettes/quickstart/intro.md) section for getting started with `cartloader`.
         - [**Installation**](./installation.md) section for installation.
         - [**Vignettes**](./vignettes/intro.md) section for usage examples.
         - [**Reference**](./reference/intro.md) section for detailed descriptions (action, inputs, outputs, and parameters).
