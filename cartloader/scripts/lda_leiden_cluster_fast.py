@@ -146,7 +146,7 @@ def lda_leiden_cluster_fast(_args):
     logger.info(f"Reading results file {args.tsv} (Polars)...")
 
     # Polars can read .gz directly
-    df = pl.read_csv(args.tsv, separator="\t")
+    df = pl.read_csv(args.tsv, separator="\t", schema_overrides={key: pl.String for key in args.key_ids})
 
     n_rows, n_cols = df.shape
     logger.info(f"Loaded table: {n_rows} rows x {n_cols} cols")
