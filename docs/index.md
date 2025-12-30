@@ -19,9 +19,16 @@ Together, they provide a unified solution for working with raw pixel-level spati
 
 ## Core Module Details
 
-=== "[**`CartLoader`**](https://seqscope.github.io/cartloader)" 
+=== "[**`CartLoader`**](https://seqscope.github.io/cartloader)"
 
-    **CartLoader** is the backend pipeline that prepares data for CartoScope. Visit the [CartLoader Documentation](https://seqscope.github.io/cartloader) for more details.
+    **CartLoader** is the backend pipeline that prepares data for CartoScope. It provides a modular, reproducible tool to harmonize, integrate, analyze, and visualize raw high-resolution ST data across platforms. 
+
+    !!! abstract "Table of Contents"
+        The current document includes:
+        - [**Quick Start](./vignettes/quickstart/intro.md) section for getting started with `cartloader`.
+        - [**Installation**](./installation.md) section for installation.
+        - [**Vignettes**](./vignettes/intro.md) section for usage examples.
+        - [**Reference**](./reference/intro.md) section for detailed descriptions (action, inputs, outputs, and parameters).
 
     !!! info "Key Features"
 
@@ -47,15 +54,8 @@ Together, they provide a unified solution for working with raw pixel-level spati
 
 === "[**`CartoScope`**](index.md)"
 
-    **CartoScope** is the frontend web-based App of our ecosystem, which enables interactive, pixel-level exploration of spatial omics data without requiring programming expertise. 
+    **CartoScope** is the frontend web-based App of our ecosystem, which enables interactive, pixel-level exploration of spatial omics data without requiring programming expertise. Visit the [CartoScope Documentation](https://seqscope.github.io/cartoscope3o/) for more details
         
-    !!! abstract "Table of Contents"
-        The current document includes:
-    
-        - [**User Manual**](./manual/overview.md) section for learning how to navigate the interface.
-        - [**How-to**](./how-to/index.md) section for learning how to use the app.
-        - [**FAQ**](./reference/faq.md) section for frequently asked questions.
-
     !!! tips "Flexible Data Exploration"
         - **Explore Public Atlas**: Access our ready-to-use collection of high-resolution spatial datasets.
         - **Bring Your Own Data**: Load, visualize, and interactively analyze your own custom datasets using our system.
