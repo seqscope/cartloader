@@ -10,7 +10,7 @@
 
     [Explore in CartoScope](http://localhost:5173/dataset?uri=s3%2Fcartostore%2Fdata%2Fbatch%3D2025_12%2Fmouse-brain-test-collection%2Fsubdata_merscope_s2r1){ .md-button .md-button--primary .button-tight-small }
 
-    [Download from Zenodo](https://zenodo.org/records/17955224){ .md-button .button-tight-small }
+    [Download from Zenodo](https://zenodo.org/records/18090864){ .md-button .button-tight-small }
 
 </div>
 
