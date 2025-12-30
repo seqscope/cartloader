@@ -9,55 +9,75 @@ However, the rapid diversification of spatial transcriptomics platforms has led 
 
 To address this challenge, we introduce a scalable, harmonized, and cloud-friendly CartoScope ecosystem for spatial omics data across platforms.
 
-## Core Modules 
+## Ecosystem Overview
 
-CartoScope ecosystem is composed of three modules:
+The CartoScope ecosystem is structures as illustrated below:
 
-!!! info "[**CartLoader**](https://seqscope.github.io/cartloader) – a harmonized, scalable pipeline for data processing."
+![flowchart](./images/flowchart.png)
 
-    This document introduces `CartLoader`, the core engine of our ecosystem. It provides a modular, reproducible tool to harmonize, integrate, analyze, and visualize raw high-resolution ST data across platforms. Usage examples are provided in the [Vignettes](./vignettes/intro.md). A detailed description (action, inputs, outputs, and parameters) is provided for each module in the [Reference Pages](./reference/intro.md).
+Together, they provide a unified solution for working with raw pixel-level spatial omics data — whether from our repository or your own lab — without sacrificing resolution or reproducibility.
 
-    **Key Features**
+## Core Module Details
 
-    - **Cross-Platform Format Conversion**: Converts raw SGE data from diverse ST platforms into a unified format, enabling consistent downstream processing.
-    - **Spatial Factor Inference**: Applies [FICTURE](https://www.nature.com/articles/s41592-024-02415-2) to infer spatial factors directly from pixel-level data, capturing biological patterns without requiring cell segmentation.
-    - **Multi-Modal Alignment**: Aligns and overlays histology images with SGE data so all layers share a common coordinate system for pixel-accurate comparisons.
-    - **Cloud-Friendly Outputs**: Produces compact, geospatially-indexed data formats suitable for web visualization and cloud storage.
-    - **Batch Integration and Sample Stitching**: Supports joint analysis and SGE stitching across samples or platforms to reveal shared or differential features across tissues.
-    - **Modular and Reproducible Workflow**: Orchestrates all steps through a Makefile-based system to ensure scalability, transparency, and reproducibility.
+=== "[**`CartLoader`**](https://seqscope.github.io/cartloader)" 
 
-??? info "[**CartoStore**](https://github.com/seqscope/cartostore) – an open-access, cloud-hosted repository for dataset sharing."
-   
-    **CartoStore** acts as the data repository, hosting datasets processed by CartLoader and making them accessible to CartoScope. 
+    **CartLoader** is the backend pipeline that prepares data for CartoScope. Visit the [CartLoader Documentation](https://seqscope.github.io/cartloader) for more details.
+
+    !!! info "Key Features"
+
+        - **Cross-Platform Format Conversion**: Converts raw SGE data from diverse ST platforms (public or your own) into a unified format, enabling consistent downstream processing.
+        - **Spatial Factor Inference**: Applies [FICTURE](https://www.nature.com/articles/s41592-024-02415-2) to infer spatial factors directly from pixel-level data, capturing biological patterns without requiring cell segmentation.
+        - **Multi-Modal Alignment**: Aligns and overlays histology images with SGE data so all layers share a common coordinate system for pixel-accurate comparisons.
+        - **Cloud-Friendly Outputs**: Produces compact, geospatially-indexed data formats suitable for web visualization and cloud storage.
+        - **Batch Integration and Sample Stitching**: Supports joint analysis and SGE stitching across samples or platforms to reveal shared or differential features across tissues.
+        - **Modular and Reproducible Workflow**: Orchestrates all steps through a Makefile-based system to ensure scalability, transparency, and reproducibility.
+
     
-    Core Features:
 
-    - **Ready-to-use Datasets**: Access processed, high-resolution datasets of which have FICTURE analysis results, morphology images, cell analysis results, etc., immediately for interactive exploration.
-    - **Broad Coverage**: Spans diverse species, tissues, and disease models for a wide range of research needs.
-    - **Growing Repository**: Continuously updated with new datasets as they are processed and added.
+=== "[**`CartoStore`**](https://github.com/seqscope/cartostore)" 
+   
+    **CartoStore** acts as the data repository, hosting datasets processed by CartLoader and making them accessible to CartoScope. Visit the [CartoStore Repository](https://github.com/seqscope/cartostore) to access public datasets.
 
-    Visit the [CartoStore Repository](https://github.com/seqscope/cartostore) to access public datasets.
+    !!! info "Key Features"
 
-??? info "[**CartoScope**](index.md) – a web-based App for interactive exploration at original resolution."
+        - **Ready-to-use Datasets**: Access processed, high-resolution datasets featuring FICTURE analysis results, morphology images, and cell analysis results, ready for immediate interactive exploration.
+        - **Broad Coverage**: Spans diverse species, tissues, and disease models for a wide range of research needs.
+        - **Growing Repository**: Continuously updated with new datasets as they are processed and added.
 
-    **CartoScope** is the frontend of our ecosystem, enabling interactive, pixel-level exploration of spatial omics data without requiring programming expertise. 
 
-    Core Capabilities:
+=== "[**`CartoScope`**](index.md)"
 
-    - **Ultra-high-resolution data at scale**: Seamless web exploration for submicron-resolution spatial transcriptomics data with hundreds of millions of spatial pixels, tens of thousands of genes, and billions of transcripts.
-    - **Molecular-level Inference with FICTURE**: Powered by [FICTURE](https://www.nature.com/articles/s41592-024-02415-2) analysis to preserve spatial accuracy and complexity, breaking the barrier of histology-based segmentation bias.
-    - **Dynamic Multi-layer Exploration**: Interactive multi-layer maps with aligned multimodal datasets—including morphology images, cell-level analysis, molecular inference, and spot summaries—enabling exploration with rich, end-to-end spatial context.
-    - **Seamless Integration with Morphology Images**: Support for various morphology images (H&E, DAPI, fluorescence reporters) in diverse formats, seamlessly integrated with omics data.
-    - **Interactive ROI Analysis**: Interactively define regions of interest, extract spatial features, and run differential expression analysis.
-    - **Save & Share Workspace**: One-click save for your workspace (layers, styling, ROIs) and instant sharing with collaborators via unique links.
-    - **Open Access**: Upload, screen, and share datasets worldwide at no cost.
+    **CartoScope** is the frontend web-based App of our ecosystem, which enables interactive, pixel-level exploration of spatial omics data without requiring programming expertise. 
+        
+    !!! abstract "Table of Contents"
+        The current document includes:
+    
+        - [**User Manual**](./manual/overview.md) section for learning how to navigate the interface.
+        - [**How-to**](./how-to/index.md) section for learning how to use the app.
+        - [**FAQ**](./reference/faq.md) section for frequently asked questions.
 
-    Visit the [CartoScope](placeholder) to learn more details.
+    !!! tips "Flexible Data Exploration"
+        - **Explore Public Atlas**: Access our ready-to-use collection of high-resolution spatial datasets.
+        - **Bring Your Own Data**: Load, visualize, and interactively analyze your own custom datasets using our system.
 
-Together, this system provides a unified solution for working with raw pixel-level spatial omics data—without sacrificing resolution or reproducibility.
+    !!! info "Key Features"
+
+        - **Ultra-high-resolution data at scale**: Seamless web exploration for submicron-resolution ST data with hundreds of millions of spatial pixels, tens of thousands of genes, and billions of transcripts.
+        - **Molecular-level Inference with FICTURE**: Powered by the latest version of [FICTURE](https://www.nature.com/articles/s41592-024-02415-2) analysis, it helps interpret the spatial factors while preserving spatial accuracy and complexity. This method breaks the barrier of histology-based segmentation bias.
+        - **Dynamic Multi-layer Exploration**: Interactive multi-layer maps with aligned multimodal datasets—including morphology images, cell-level analysis, molecular inference, and spot summaries—enabling exploration with rich, end-to-end spatial context.
+        - **Seamless Integration with Morphology Images**: Support for diverse morphology image formats (H&E, DAPI, fluorescence reporters), seamlessly integrated with omics data.
+        - **Interactive ROI Analysis**: Interactively define regions of interest, extract spatial features, and run differential expression analysis.
+        - **Save & Share Workspace**: One-click save for your workspace (layers, styling, ROIs) and instant sharing with collaborators via unique links.
+        - **Scale-Up Your Own Data**: Fully supports custom datasets—upload your own processing results to visualize and analyze your specific samples with the same powerful tools used for public data.
+        - **Open Access**: Upload, screen, and share datasets worldwide at no cost.
+
 
 ---
 
 ## Citations
 
+If you use CartoScope in your research, please cite:
+
+* CartoScope: [placeholder](placeholder)
 * FICTURE: [doi.org/10.1038/s41592-024-02415-2](https://www.nature.com/articles/s41592-024-02415-2)
+
