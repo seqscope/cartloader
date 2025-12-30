@@ -67,7 +67,7 @@ Below are the core arguments you’ll typically set. Flag names and behavior fol
 
 - `--n-factor` (str): Comma‑separated factor counts for training (e.g., `12,24`).
 - `--anchor-res` (int): Anchor resolution used in decode IDs (see outputs).
-- `--cmap-file` (str, defaults to [fixed_color_map_256.tsv](../../assets/fixed_color_map_256.tsv)): Colormap TSV used to colorize factors.
+- `--cmap-file` (str, defaults to [fixed_color_map_256.tsv](https://github.com/seqscope/cartloader/blob/main/assets/fixed_color_map_256.tsv): Colormap TSV used to colorize factors.
 - `--umap` (flag): Generate UMAP embeddings/plots for each LDA model (on by default).
 - `--skip-umap` (flag): Skip UMAP generation (overrides `--umap`).
 
