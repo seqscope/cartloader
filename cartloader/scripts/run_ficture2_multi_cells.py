@@ -278,7 +278,7 @@ def run_ficture2_multi_cells(_args):
             cmds = cmd_separator([], f"Projecting existing LDA model...")
             ## copy the pretrained model to lda_prefix
             if args.pretrained_model.endswith(".gz"):
-                cmd = f"gzip -dc {args.pretrained_model} > {lda_prefix}.model.tsv"
+                cmd = f"{args.gzip} -dc {args.pretrained_model} > {lda_prefix}.model.tsv"
             else:
                 cmd = f"cp {args.pretrained_model} {lda_prefix}.model.tsv"
             cmds.append(cmd)
@@ -458,7 +458,7 @@ def run_ficture2_multi_cells(_args):
             sample_leiden_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.leiden"
             sample_tsne_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}"
             if n_samples == 1: ## if sample size is 1, do not rerun TSNE
-                cmd = f"gzip -cd {tsne_prefix}.tsne.tsv.gz | cut -f 2- | gzip -c > '{sample_tsne_prefix}.tsne.tsv.gz'"
+                cmd = f"{args.gzip} -cd {tsne_prefix}.tsne.tsv.gz | cut -f 2- | {args.gzip} -c > '{sample_tsne_prefix}.tsne.tsv.gz'"
             else:
                 cmd = f"cartloader lda_tsne --offset-data 3 --tsv '{sample_lda_prefix}.results.tsv' --out '{sample_tsne_prefix}.tsne.tsv.gz'"
             cmds.append(cmd)
@@ -498,7 +498,7 @@ def run_ficture2_multi_cells(_args):
             sample_leiden_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.leiden"
             sample_umap_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}"
             if n_samples == 1: ## if sample size is 1, do not rerun TSNE
-                cmd = f"gzip -cd {umap_prefix}.umap.tsv.gz | cut -f 1,3- | gzip -c > '{sample_umap_prefix}.umap.tsv.gz'"
+                cmd = f"{args.gzip} -cd {umap_prefix}.umap.tsv.gz | cut -f 1,3- | {args.gzip} -c > '{sample_umap_prefix}.umap.tsv.gz'"
             else:
                 cmd = f"{args.R} '{create_umap_rscript}' --input '{sample_lda_prefix}.results.tsv' --out-prefix '{sample_umap_prefix}' --tsv-colname-meta random_key cell_id"
             cmds.append(cmd)
@@ -634,7 +634,7 @@ def run_ficture2_multi_cells(_args):
             sample_prefix = f"{args.in_dir}/samples/{sample_id}/{sample_id}.tiled"
             decode_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.pixel"
             fit_width = args.decode_fit_width  ## e.g., 10um
-            fit_n_move = fit_width // 2 + 1
+            fit_n_move = fit_width // {args.anchor_res} + 1
             decode_id = f"p{fit_width}_a{args.anchor_res}"
             model_path= modelf
             cmd = " ".join([
@@ -666,7 +666,7 @@ def run_ficture2_multi_cells(_args):
                 f"--range '{sample_prefix}.coord_range.tsv'"
                 ])
             cmds.append(cmd)
-            cmd = f"gzip -f '{decode_prefix}.tsv'"
+            cmd = f"{args.gzip} -f '{decode_prefix}.tsv'"
             cmds.append(cmd)
             cmd = f"[ -f '{decode_prefix}.tsv.gz' ] && touch '{decode_prefix}.done'"
             cmds.append(cmd)
