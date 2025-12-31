@@ -634,7 +634,7 @@ def run_ficture2_multi_cells(_args):
             sample_prefix = f"{args.in_dir}/samples/{sample_id}/{sample_id}.tiled"
             decode_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.pixel"
             fit_width = args.decode_fit_width  ## e.g., 10um
-            fit_n_move = fit_width // {args.anchor_res} + 1
+            fit_n_move = fit_width // args.anchor_res + 1
             decode_id = f"p{fit_width}_a{args.anchor_res}"
             model_path= modelf
             cmd = " ".join([
