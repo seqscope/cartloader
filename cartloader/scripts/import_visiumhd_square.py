@@ -278,7 +278,9 @@ def import_visiumhd_square(_args):
     if args.update_catalog:
         ## read the input catalog.yaml file
         if args.catalog_yaml is None:
-            args.catalog_yaml = os.path.join(args.in_dir, "catalog.yaml")
+            out_dir = os.path.dirname(args.outprefix)
+            args.catalog_yaml = os.path.join(out_dir, "catalog.yaml")
+#            args.catalog_yaml = os.path.join(args.in_dir, "catalog.yaml")
         
         logger.info(f"Updating catalog YAML file: {args.catalog_yaml}")
 
