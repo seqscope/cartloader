@@ -294,10 +294,12 @@ def import_visiumhd_square(_args):
             raise ValueError("No factors found in the catalog.yaml file. Check if the file is correct.")
         catalog["assets"]["factors"].append(new_factor)
 
-        out_yaml = f"{args.outprefix}-catalog.yaml"
+        #out_yaml = f"{args.outprefix}-catalog.yaml"
+        out_yaml = args.out_catalog_yaml if args.out_catalog_yaml is not None else args.catalog_yaml
         with open(out_yaml, 'w') as f:
             yaml.dump(catalog, f, Dumper=yaml.SafeDumper, default_flow_style=False, sort_keys=False)
         logger.info(f"Successfully wrote the catalog.yaml file: {out_yaml}")
+
 
     ## clean the temp files
     if not args.keep_intermediate_files:
