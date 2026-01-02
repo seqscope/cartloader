@@ -280,7 +280,7 @@ def parse_arguments(_args):
     aux_inout_params.add_argument('--csv-boundaries', type=str, default="cell_boundaries.csv.gz", help='Location of CSV containing cell boundary coordinates under --in-dir (default: cell_boundaries.csv.gz)')
     aux_inout_params.add_argument('--csv-clust', type=str, default="analysis/clustering/gene_expression_graphclust/clusters.csv", help='Location of CSV with cell cluster assignments under --in-dir (default: analysis/clustering/gene_expression_graphclust/clusters.csv)')
     aux_inout_params.add_argument('--csv-diffexp', type=str, default="analysis/diffexp/gene_expression_graphclust/differential_expression.csv", help='Location of CSV with differential expression results under --in-dir (default: analysis/diffexp/gene_expression_graphclust/differential_expression.csv)')
-    aux_inout_params.add_argument('--csv-umap', type=str, default="analysis/pca/gene_expression_10_components/projection.csv", help='Location of CSV with UMAP results under --in-dir (default: analysis/pca/gene_expression_10_components/projection.csv')
+    aux_inout_params.add_argument('--csv-umap', type=str, default="analysis/umap/gene_expression_2_components/projection.csv", help='Location of CSV with UMAP results under --in-dir (default: analysis/pca/gene_expression_10_components/projection.csv')
 
     aux_conv_params = parser.add_argument_group("Auxiliary PMTiles Conversion Parameters")
     aux_conv_params.add_argument('--min-zoom', type=int, default=10, help='Minimum zoom level for cells and boundaries (default: 10)')

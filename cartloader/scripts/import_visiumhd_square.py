@@ -48,7 +48,7 @@ def parse_arguments(_args):
     aux_inout_params.add_argument('--scale-json', type=str, default="spatial/scalefactors_json.json", help=f'Location of scale JSON under --in-dir. If set, defaults --units-per-um from microns_per_pixel in this JSON file (default: spatial/scalefactors_json.json")')
     aux_inout_params.add_argument('--units-per-um', type=float, default=1, help='Coordinate units per µm in inputs (default: 1).')
     # - UMAP
-    aux_inout_params.add_argument('--csv-umap', type=str, default="analysis/pca/gene_expression_10_components/projection.csv", help='Location of CSV with UMAP results under --in-dir (default: analysis/pca/gene_expression_10_components/projection.csv')
+    aux_inout_params.add_argument('--csv-umap', type=str, default="analysis/umap/gene_expression_2_components/projection.csv", help='Location of CSV with UMAP results under --in-dir (default: analysis/pca/gene_expression_10_components/projection.csv')
 
     aux_colnames_params = parser.add_argument_group("Auxiliary Colname Parameters", "Override column names for input files")
     aux_colnames_params.add_argument('--pos-colname-barcode', type=str, default='barcode', help='Column name for bin barcode in --pos-parquet (default: barcode)')
