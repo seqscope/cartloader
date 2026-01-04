@@ -360,6 +360,7 @@ def sge_convert(_args):
             print(f"Resolved input: --pos-parquet {args.pos_parquet}")
             args.scale_json = raw_sge.get("SCALE", None)
             print(f"Resolved input: --scale-json {args.scale_json}")
+            args.scale_xy = 2.0
     
     in_raw_filelist=input_by_platform(args)
 

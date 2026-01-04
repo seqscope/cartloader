@@ -10,7 +10,7 @@ from cartloader.utils.color_helper import normalize_rgb, rgb_to_hex
 
 repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-def process_cluster_csv(clust_csv, barcode_col="Barcode", cluster_col="Cluster"):
+def process_cluster_csv(clust_csv, barcode_col="Barcode", cluster_col="Cluster", output_filename=None):
     bcd2cluster = {}
     cluster2cnt = {}
     with flexopen(clust_csv, "rt") as f:
@@ -24,6 +24,13 @@ def process_cluster_csv(clust_csv, barcode_col="Barcode", cluster_col="Cluster")
     sorted_clusters = sorted(cluster2cnt.keys(), key=lambda x: cluster2cnt[x], reverse=True)
     cluster2idx = {cluster: idx for idx, cluster in enumerate(sorted_clusters)}
     bcd2clusteridx = {bcd: cluster2idx[clust] for bcd, clust in bcd2cluster.items()}
+
+    if output_filename is not None:
+        with flexopen(output_filename, "wt") as wf:
+            wf.write("cell_id\tcluster\n")
+            for bcd, clustidx in bcd2clusteridx.items():
+                wf.write(f"{bcd}\t{clustidx}\n")
+                
     return sorted_clusters, cluster2idx, bcd2clusteridx
 
 def process_cells_csv(cells_csv, out_csv, bcd2clusteridx, cell_id_col="cell_id", x_col="x_centroid", y_col="y_centroid", count_col="transcript_counts"):
@@ -182,8 +189,8 @@ def umap_tsv2pmtiles(umap_tsv_out, umap_pmtiles, args):
     tippecanoe_cmd = " ".join([
         f"TIPPECANOE_MAX_THREADS={args.threads}",
         f"'{args.tippecanoe}'",
-        f"-t {args.tmp_dir}",
-        f"-o {umap_pmtiles}",
+        f"-t '{args.tmp_dir}'",
+        f"-o '{umap_pmtiles}'",
         "-Z", str(args.umap_min_zoom),
         "-z", str(args.umap_max_zoom),
         "-l", "umap",
@@ -200,10 +207,10 @@ def umap_tsv2png(umap_tsv, model_prefix, color_map, title="Cell Segmentation"):
     draw_umap_rscript=f"{repo_dir}/cartloader/r/draw_umap.r"
 
     plot_cmd = " ".join([
-        f"Rscript {draw_umap_rscript}",
-        f"--input {umap_tsv}",
-        f"--out-prefix {model_prefix}",
-        f"--cmap {color_map}",
+        f"Rscript '{draw_umap_rscript}'",
+        f"--input '{umap_tsv}'",
+        f"--out-prefix '{model_prefix}'",
+        f"--cmap '{color_map}'",
         f'--subtitle \"{title}\"',
         ])
     run_command(plot_cmd)
@@ -212,16 +219,16 @@ def umap_tsv2indpng(umap_tsv, model_prefix, color_map, mode="binary", title="Cel
     draw_umap_single_rscript=f"{repo_dir}/cartloader/r/draw_umap_single.r"
 
     plot_cmd = " ".join([
-        f"Rscript {draw_umap_single_rscript}",
-        f"--input {umap_tsv}",
-        f"--out-prefix {model_prefix}",
-        f"--cmap {color_map}",
+        f"Rscript '{draw_umap_single_rscript}'",
+        f"--input '{umap_tsv}'",
+        f"--out-prefix '{model_prefix}'",
+        f"--cmap '{color_map}'",
         f'--subtitle  \"{title}\"',
         f"--mode {mode}"
         ])
     run_command(plot_cmd)
 
-def make_factor_dict(factor_id, factor_name, outprefix, factor_type, pmtiles_keys=[], umap_src=False):
+def make_factor_dict(factor_id, factor_name, outprefix, factor_type, pmtiles_keys=[], umap_src=False, pseudobulk_src=False):
     assert factor_type in ["cells", "square"], "Currently only support cells and square type..."
     pmtiles={}
     for key in pmtiles_keys:
@@ -236,9 +243,11 @@ def make_factor_dict(factor_id, factor_name, outprefix, factor_type, pmtiles_key
         model_label: factor_id,
         "rgb": f"{outprefix}-rgb.tsv",
         "de": f"{outprefix}-cells-bulk-de.tsv" if factor_type=="cells" else f"{outprefix}-bulk-de.tsv",
-        "raw_pixel_col": None,
+        "raw_pixel_col": "false",
         "pmtiles": pmtiles,
     }
+    if pseudobulk_src:
+        factor_dict["post"] = f"{outprefix}-pseudobulk.tsv.gz"
     if umap_src:
         factor_dict["umap"] = {
             "tsv": f"{outprefix}-umap.tsv.gz",
