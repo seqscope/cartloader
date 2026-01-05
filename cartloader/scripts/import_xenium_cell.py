@@ -243,7 +243,7 @@ def make_factor_dict(factor_id, factor_name, outprefix, factor_type, pmtiles_key
         model_label: factor_id,
         "rgb": f"{outprefix}-rgb.tsv",
         "de": f"{outprefix}-cells-bulk-de.tsv" if factor_type=="cells" else f"{outprefix}-bulk-de.tsv",
-        "raw_pixel_col": "false",
+        "raw_pixel_col": False,
         "pmtiles": pmtiles,
     }
     if pseudobulk_src:
