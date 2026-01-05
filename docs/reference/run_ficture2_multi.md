@@ -13,6 +13,16 @@ Use this when processing multiple samples together to learn shared spatial facto
 - FICTURE2 repository with `bin/punkst` and Python utilities (e.g., `ext/py/factor_report.py`)
 - Pre-installed tools: `gzip`, `python`, `punkst`, `spatula`
 ---
+## Actions
+
+All actions run by default (UMAPs can be skipped with `--skip-umap`):
+
+- Multisample prepare: tiles inputs, builds joint hex grids at requested `--width` values
+- LDA training: trains LDA models for each `(width, n-factor)` pair
+- Decode: applies trained models per sample; produces pixel‑level factors and summaries
+- Write per‑sample JSON: consolidates paths and metadata for downstream consumption
+
+---
 ## Example Usage
 
 ```bash
@@ -29,16 +39,6 @@ cartloader run_ficture2_multi \
   --threads 8 \
   --n-jobs 4
 ```
-
----
-## Actions
-
-All actions run by default (UMAPs can be skipped with `--skip-umap`):
-
-- Multisample prepare: tiles inputs, builds joint hex grids at requested `--width` values
-- LDA training: trains LDA models for each `(width, n-factor)` pair
-- Decode: applies trained models per sample; produces pixel‑level factors and summaries
-- Write per‑sample JSON: consolidates paths and metadata for downstream consumption
 
 ---
 ## Parameters
@@ -108,8 +108,5 @@ Outputs are written under `--out-dir`.
 
 - Per‑sample JSONs
     - `samples/<sample>/ficture.params.json`: Consolidates sample feature paths, LDA and decode outputs for downstream steps.
-
----
-## See Also
-
-- Reference: `run_ficture2.md` — Single‑sample FICTURE2 runner and file formats
+ 
+See `run_ficture2.md` for single‑sample formats and file details.
