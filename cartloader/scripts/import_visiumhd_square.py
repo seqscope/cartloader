@@ -44,11 +44,16 @@ def parse_arguments(_args):
     aux_inout_params.add_argument('--parquet', type=str, default="spatial/tissue_positions.parquet", help='Location of parquet files containing the location of bins')
     aux_inout_params.add_argument('--csv-clust', type=str, default="analysis/clustering/gene_expression_graphclust/clusters.csv", help='Location of CSV with cell cluster assignments under --in-dir (default: analysis/clustering/gene_expression_graphclust/clusters.csv)')
     aux_inout_params.add_argument('--csv-diffexp', type=str, default="analysis/diffexp/gene_expression_graphclust/differential_expression.csv", help='Location of CSV with differential expression results under --in-dir (default: analysis/diffexp/gene_expression_graphclust/differential_expression.csv)')
+    # - Bin-level Spatial Gene Expression Matrix
+    aux_inout_params.add_argument('--mex-dir', type=str, default="filtered_feature_bc_matrix", help='Directory location of 10x Genomic MatrixMarket files under --in-dir (default: analysis/filtered_feature_bc_matrix)')
+    aux_inout_params.add_argument('--mex-bcd', type=str, default="barcodes.tsv.gz", help='Filename for barcodes in the MatrixMarket directory (default: barcodes.tsv.gz)')
+    aux_inout_params.add_argument('--mex-ftr', type=str, default="features.tsv.gz", help='Filename for features in the MatrixMarket directory (default: features.tsv.gz)')
+    aux_inout_params.add_argument('--mex-mtx', type=str, default="matrix.mtx.gz", help='Filename for matrix in the MatrixMarket directory (default: matrix.mtx.gz)')
     # - scaling
     aux_inout_params.add_argument('--scale-json', type=str, default="spatial/scalefactors_json.json", help=f'Location of scale JSON under --in-dir. If set, defaults --units-per-um from microns_per_pixel in this JSON file (default: spatial/scalefactors_json.json")')
     aux_inout_params.add_argument('--units-per-um', type=float, default=1, help='Coordinate units per µm in inputs (default: 1).')
     # - UMAP
-    aux_inout_params.add_argument('--csv-umap', type=str, default="analysis/pca/gene_expression_10_components/projection.csv", help='Location of CSV with UMAP results under --in-dir (default: analysis/pca/gene_expression_10_components/projection.csv')
+    aux_inout_params.add_argument('--csv-umap', type=str, default="analysis/umap/gene_expression_2_components/projection.csv", help='Location of CSV with UMAP results under --in-dir (default: analysis/umap/gene_expression_2_components/projection.csv')
 
     aux_colnames_params = parser.add_argument_group("Auxiliary Colname Parameters", "Override column names for input files")
     aux_colnames_params.add_argument('--pos-colname-barcode', type=str, default='barcode', help='Column name for bin barcode in --pos-parquet (default: barcode)')
@@ -70,18 +75,23 @@ def parse_arguments(_args):
     aux_conv_params.add_argument('--preserve-point-density-thres', type=int, default=1024, help='Threshold for preserving point density in PMTiles (default: 1024)')
 
     aux_params = parser.add_argument_group("Auxiliary Parameters", "Advanced settings; defaults work for most cases")    
+    aux_params.add_argument('--skip-mex-diffexp', action='store_true', default=False, help='Skip computing differential expression from the MatrixMarket files. Use files from --csv-diffexp instead.') 
+    aux_params.add_argument('--skip-mex-pseudobulk', action='store_true', default=False, help='Skip generating pseudobulk files from the MatrixMarket files.')
     aux_params.add_argument('--use-parquet-tools', action='store_true', help='Use parquet-tools instead of polars/pigz for parquet to csv conversion (default: False). parquet-tools may be slower for large files.')
     aux_params.add_argument('--tsv-cmap', type=str, default=f"{repo_dir}/assets/fixed_color_map_60.tsv", help=f'Location of TSV with color mappings for clusters (default: {repo_dir}/assets/fixed_color_map_60.tsv)')
     aux_params.add_argument('--de-max-pval', type=float, default=0.01, help='Maximum p-value for differential expression (default: 0.01)')
     aux_params.add_argument('--de-min-fc', type=float, default=1.2, help='Minimum fold change for differential expression (default: 1.2)')
     aux_params.add_argument('--catalog-yaml', type=str, help='Path to catalog.yaml to update (used with --update-catalog; default: <in-dir>/catalog.yaml)')
+    aux_params.add_argument('--out-catalog-yaml', type=str, help='Path to save the updated catalog.yaml as a new file instead of overwriting the input (--catalog-yaml). Defaults to the same path as --catalog-yaml (used with --update-catalog)')
     aux_params.add_argument('--keep-intermediate-files', action='store_true', default=False, help='Keep intermediate output files')
     aux_params.add_argument('--tmp-dir', type=str, help='Temporary directory for intermediate files (default: out-dir/tmp or /tmp if specified)')
 
     env_params = parser.add_argument_group("Env Parameters", "Tool paths (override defaults if needed)")
     env_params.add_argument('--tippecanoe', type=str, default=f"{repo_dir}/submodules/tippecanoe/tippecanoe", help='Path to tippecanoe binary (default: <cartloader_dir>/submodules/tippecanoe/tippecanoe)')
+    env_params.add_argument('--spatula', type=str, default=f"{repo_dir}/submodules/spatula/bin/spatula", help='Path to spatula binary (default: <cartloader_dir>/submodules/spatula/bin/spatula)')
     env_params.add_argument('--parquet-tools', type=str, default="parquet-tools", help='Path to parquet-tools binary. Required if a Parquet file is provided. (default: parquet-tools)')
     env_params.add_argument('--gzip', type=str, default="gzip", help='Path to gzip binary (default: gzip)')
+    env_params.add_argument('--sort', type=str, default="sort", help='Path to sort binary. For faster processing, you may add arguments like "sort -T /path/to/new/tmpdir --parallel=20 -S 10G"')
     env_params.add_argument('--pigz', type=str, default="pigz", help='Path to pigz binary (default: pigz)')
     env_params.add_argument('--pigz-threads', type=int, default=4, help='Number of threads for pigz (default: 4)')
     env_params.add_argument('--R', type=str, default="R", help='Path to R binary (default: R).')
@@ -143,7 +153,10 @@ def import_visiumhd_square(_args):
             "POSITION": os.path.join(args.in_dir, args.parquet),
             "CLUSTER": os.path.join(args.in_dir, args.csv_clust),
             "DE": os.path.join(args.in_dir, args.csv_diffexp),
-            "UMAP_PROJ": f"{args.in_dir}/{args.csv_umap}"
+            "UMAP_PROJ": f"{args.in_dir}/{args.csv_umap}",
+            "MEX_BCD": os.path.join(args.in_dir, args.mex_dir, args.mex_bcd),
+            "MEX_FTR": os.path.join(args.in_dir, args.mex_dir, args.mex_ftr),
+            "MEX_MTX": os.path.join(args.in_dir, args.mex_dir, args.mex_mtx),
         }
 
     if scale_json is not None:
@@ -168,7 +181,27 @@ def import_visiumhd_square(_args):
         logger.error(f"Command {par2csv_cmd}\nfailed with error: {result.stderr.decode()}")
         sys.exit(1)
 
-    ## Import cluster/DE
+    if not args.skip_mex_pseudobulk or not args.skip_mex_diffexp:
+        ## generate pseudobulk files from MEX
+        mex_bcd = bin_data.get("MEX_BCD", None)
+        mex_ftr = bin_data.get("MEX_FTR", None)
+        mex_mtx = bin_data.get("MEX_MTX", None)
+
+        assert mex_bcd is not None and os.path.exists(mex_bcd), (f'Path not provided or file not found: "MEX_BCD" in --in-json' if args.in_json is not None else f'Path not provided or file not found: --mex-bcd')
+        assert mex_ftr is not None and os.path.exists(mex_ftr), (f'Path not provided or file not found: "MEX_FTR" in --in-json' if args.in_json is not None else f'Path not provided or file not found: --mex-ftr')
+        assert mex_mtx is not None and os.path.exists(mex_mtx), (f'Path not provided or file not found: "MEX_MTX" in --in-json' if args.in_json is not None else f'Path not provided or file not found: --mex-mtx')
+
+        logger.info(f"  * Generating spTSV from MEX files")
+        cmd = f"'{args.spatula}' mex2sptsv --bcd '{mex_bcd}' --ftr '{mex_ftr}' --mtx '{mex_mtx}' --out '{args.outprefix}.sptsv'"
+        result = subprocess.run(cmd, shell=True, capture_output=True)
+        if result.returncode != 0:
+            logger.error(f"Command {cmd}\nfailed with error: {result.stderr.decode()}")
+            sys.exit(1)
+        temp_fs.append(f"{args.outprefix}.sptsv.tsv")
+        temp_fs.append(f"{args.outprefix}.sptsv.json")
+        temp_fs.append(f"{args.outprefix}.sptsv.feature.counts.tsv")
+
+    ## Import cluster
     clust_in = bin_data.get("CLUSTER", None)
     assert clust_in is not None, ('Path not provided: "CLUSTER" in --in-json' if args.in_json is not None else 'Path not provided: --csv-clust')
     assert os.path.exists(clust_in), (f'File not found: {clust_in} ("CLUSTER" in --in-json)' if args.in_json is not None else f'File not found: {clust_in} (--csv-clust)')
@@ -177,22 +210,56 @@ def import_visiumhd_square(_args):
     sorted_clusters, cluster2idx, bcd2clusteridx = process_cluster_csv(
         clust_in,
         barcode_col=args.clust_colname_barcode,
-        cluster_col=args.clust_colname_cluster
+        cluster_col=args.clust_colname_cluster,
+        output_filename=f"{args.outprefix}-clust.tsv.gz"   
     )
     logger.info(f"  * Loaded {len(bcd2clusteridx)} barcodes with {len(sorted_clusters)} clusters (min: {sorted_clusters[0]}, max: {sorted_clusters[-1]})")
-        
+    temp_fs.append(f"{args.outprefix}-clust.tsv.gz")
+
+    ## Create pseudobulk DE results from MEX
+    if not args.skip_mex_pseudobulk:
+        logger.info(f"  * Generating pseudobulk expression matrix for {len(sorted_clusters)} clusters from MEX files")
+        pseudobulk_out = f"{args.outprefix}-pseudobulk.tsv.gz"
+
+        cmd = f"'{args.spatula}' sptsv2model --tsv '{args.outprefix}.sptsv.tsv' --clust '{args.outprefix}-clust.tsv.gz' --json '{args.outprefix}.sptsv.json' --out '{pseudobulk_out}'"
+        result = subprocess.run(cmd, shell=True, capture_output=True)
+        if result.returncode != 0:
+            logger.error(f"Command {cmd}\nfailed with error: {result.stderr.decode()}")
+            sys.exit(1)
+
     ## read/write DE results
-    de_in = bin_data.get("DE", None)
-    assert de_in is not None, ('Path not provided: "DE" in --in-json' if args.in_json is not None else 'Path not provided: --csv-diffexp')
-    assert os.path.exists(de_in), (f'File not found: {de_in} ("DE" in --in-json)' if args.in_json is not None else f'File not found: {de_in} (--csv-diffexp)')        
+    if args.skip_mex_diffexp:
+        de_in = bin_data.get("DE", None)
+        assert de_in is not None, ('Path not provided: "DE" in --in-json' if args.in_json is not None else 'Path not provided: --csv-diffexp')
+        assert os.path.exists(de_in), (f'File not found: {de_in} ("DE" in --in-json)' if args.in_json is not None else f'File not found: {de_in} (--csv-diffexp)')        
 
-    logger.info(f"  * Reading DE results from {de_in}")
-    clust2genes=read_de_csv(de_in, cluster2idx, args.de_min_fc, args.de_max_pval)
+        logger.info(f"  * Reading DE results from {de_in}")
+        clust2genes=read_de_csv(de_in, cluster2idx, args.de_min_fc, args.de_max_pval)
 
-    ## write DE results
-    de_out=f"{args.outprefix}-bulk-de.tsv"
-    logger.info(f"  * Writing DE results for {len(clust2genes)} clusters) to {de_out}")
-    write_de_tsv(clust2genes, de_out, sorted_clusters)
+        ## write DE results
+        de_out=f"{args.outprefix}-bulk-de.tsv"
+        logger.info(f"  * Writing DE results for {len(clust2genes)} clusters) to {de_out}")
+        write_de_tsv(clust2genes, de_out, sorted_clusters)
+    else:
+        logger.info(f"  * Generating DE results from MEX files")
+        if args.skip_mex_pseudobulk:
+            raise ValueError("Cannot perform MEX DE generation when pseudobulk generation from MEX is skipped (--skip-mex-pseudobulk)")
+        ## Generate DE from pseudobulk
+        cmd = f"'{args.spatula}' diffexp-model-matrix --tsv1 '{args.outprefix}-pseudobulk.tsv.gz' --out '{args.outprefix}-pseudobulk' --min-fc {args.de_min_fc} --max-pval {args.de_max_pval}"
+        result = subprocess.run(cmd, shell=True, capture_output=True)
+        if result.returncode != 0:
+            logger.error(f"Command {cmd}\nfailed with error: {result.stderr.decode()}")
+            sys.exit(1)
+        pseudobulk_prefix = f"{args.outprefix}-pseudobulk"
+        de_out=f"{args.outprefix}-bulk-de.tsv"
+        cmd = f"('{args.gzip}' -cd '{pseudobulk_prefix}.de.marginal.tsv.gz' | head -1 | sed 's/^Feature/gene/'; '{args.gzip}' -cd '{pseudobulk_prefix}.de.marginal.tsv.gz' | tail -n +2 | '{args.sort}' -k 2,2n -k 3,3gr;) > '{de_out}'"
+        result = subprocess.run(cmd, shell=True, capture_output=True)
+        if result.returncode != 0:
+            logger.error(f"Command {cmd}\nfailed with error: {result.stderr.decode()}")
+            sys.exit(1)
+        logger.info(f"  * Wrote differential expression results to {de_out}")
+        temp_fs.append(f"{args.outprefix}-pseudobulk.de.marginal.tsv.gz")
+
 
     ## write the color map
     assert os.path.exists(args.tsv_cmap), f"File not found: {args.tsv_cmap} (--tsv-cmap)"        
@@ -272,13 +339,15 @@ def import_visiumhd_square(_args):
     print(pmtiles_keys)
     out_assets_f=f"{args.outprefix}_assets.json"
     logger.info(f"Summarizing assets information into {out_assets_f}")
-    new_factor = make_factor_dict(factor_id, factor_name, args.outprefix, factor_type="square", pmtiles_keys=pmtiles_keys, umap_src=umap_src)
+    new_factor = make_factor_dict(factor_id, factor_name, args.outprefix, factor_type="square", pmtiles_keys=pmtiles_keys, umap_src=umap_src, pseudobulk_src=args.skip_mex_pseudobulk==False)
     write_dict_to_file(new_factor, out_assets_f, check_equal=True)
 
     if args.update_catalog:
         ## read the input catalog.yaml file
         if args.catalog_yaml is None:
-            args.catalog_yaml = os.path.join(args.in_dir, "catalog.yaml")
+            out_dir = os.path.dirname(args.outprefix)
+            args.catalog_yaml = os.path.join(out_dir, "catalog.yaml")
+#            args.catalog_yaml = os.path.join(args.in_dir, "catalog.yaml")
         
         logger.info(f"Updating catalog YAML file: {args.catalog_yaml}")
 
@@ -287,12 +356,13 @@ def import_visiumhd_square(_args):
             catalog = yaml.load(f, Loader=yaml.FullLoader)  # Preserves order
 
         ## add files to the catalog
-        new_factor = make_factor_dict(factor_id, factor_name, out_base, factor_type="square", pmtiles_keys=pmtiles_keys, umap_src=umap_src)
+        new_factor = make_factor_dict(factor_id, factor_name, out_base, factor_type="square", pmtiles_keys=pmtiles_keys, umap_src=umap_src, pseudobulk_src=args.skip_mex_pseudobulk==False)
         if "factors" not in catalog["assets"]:
             raise ValueError("No factors found in the catalog.yaml file. Check if the file is correct.")
         catalog["assets"]["factors"].append(new_factor)
 
-        out_yaml = f"{args.outprefix}-catalog.yaml"
+        #out_yaml = f"{args.outprefix}-catalog.yaml"
+        out_yaml = args.out_catalog_yaml if args.out_catalog_yaml is not None else args.catalog_yaml
         with open(out_yaml, 'w') as f:
             yaml.dump(catalog, f, Dumper=yaml.SafeDumper, default_flow_style=False, sort_keys=False)
         logger.info(f"Successfully wrote the catalog.yaml file: {out_yaml}")

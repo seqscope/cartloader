@@ -1,6 +1,7 @@
 import io
 import logging, os, shutil, sys, importlib, csv, shlex, subprocess, json, yaml, re, gzip
 from collections import Counter
+#import shapely.wkb
 
 def get_func(name):
     """
@@ -10,6 +11,13 @@ def get_func(name):
     module = importlib.import_module(f"cartloader.scripts.{name}")
     return getattr(module,name)
 
+# def wkb_to_wkt(binary_data):
+#     if binary_data is None: return None
+#     try:
+#         # Converts binary bytes -> Geometry Object -> WKT String
+#         return shapely.wkb.loads(binary_data).wkt
+#     except Exception:
+#         return None
 # ====
 # cmd
 # ====
@@ -837,6 +845,13 @@ def parquet_to_csv_with_polars_pigz(
             pl.col(c).cast(pl.String)
             for c in binary_cols
         ])
+
+    # if binary_cols:
+    #     print(f"Decoding binary WKB columns to WKT text: {binary_cols}")
+    #     lf = lf.with_columns([
+    #         pl.col(c).map_elements(wkb_to_wkt, return_dtype=pl.String).alias(c)
+    #         for c in binary_cols
+    # ])
     # ---------------------------------------------------------
 
     # Ensure output directory exists
