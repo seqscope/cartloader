@@ -248,6 +248,7 @@ def make_factor_dict(factor_id, factor_name, outprefix, factor_type, pmtiles_key
     }
     if pseudobulk_src:
         factor_dict["post"] = f"{outprefix}-pseudobulk.tsv.gz"
+        factor_dict["info"] = f"{outprefix}-info.tsv"
     if umap_src:
         factor_dict["umap"] = {
             "tsv": f"{outprefix}-umap.tsv.gz",
@@ -340,6 +341,7 @@ def parse_arguments(_args):
     env_params.add_argument('--tippecanoe', type=str, default=f"{repo_dir}/submodules/tippecanoe/tippecanoe", help='Path to tippecanoe binary (default: <cartloader_dir>/submodules/tippecanoe/tippecanoe)')
     env_params.add_argument('--spatula', type=str, default=f"{repo_dir}/submodules/spatula/bin/spatula", help='Path to spatula binary (default: <cartloader_dir>/submodules/spatula/bin/spatula)')
     env_params.add_argument('--python', type=str, default="python3",  help='Python3 binary')
+    env_params.add_argument('--ficture2', type=str, default=os.path.join(repo_dir, "submodules", "punkst"), help='Path to punkst (ficture2) repository (default: <cartloader_dir>/submodules/punkst)')
     env_params.add_argument('--parquet-tools', type=str, default="parquet-tools", help='Path to parquet-tools binary. Required if a Parquet file is provided to --csv-cells (default: parquet-tools)')
     env_params.add_argument('--gzip', type=str, default="gzip", help='Path to gzip binary (default: gzip)')
     env_params.add_argument('--sort', type=str, default="sort", help='Path to sort binary. For faster processing, you may add arguments like "sort -T /path/to/new/tmpdir --parallel=20 -S 10G"')
