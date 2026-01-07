@@ -502,7 +502,7 @@ def import_xenium_cell(_args):
                     logger.error(f"Command {cmd}\nfailed with error: {result.stderr.decode()}")
                     sys.exit(1)
                 pseudobulk_prefix = f"{args.outprefix}-pseudobulk"
-                de_out=f"{args.outprefix}-bulk-de.tsv"
+                de_out=f"{args.outprefix}-cells-bulk-de.tsv"
                 cmd = f"('{args.gzip}' -cd '{pseudobulk_prefix}.de.marginal.tsv.gz' | head -1 | sed 's/^Feature/gene/'; '{args.gzip}' -cd '{pseudobulk_prefix}.de.marginal.tsv.gz' | tail -n +2 | '{args.sort}' -k 2,2n -k 3,3gr;) > '{de_out}'"
                 result = subprocess.run(cmd, shell=True, capture_output=True)
                 if result.returncode != 0:
