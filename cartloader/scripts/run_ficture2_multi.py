@@ -159,14 +159,17 @@ def add_lda_training_target(mm, args, ficture2bin, n_factor, train_width, model_
         model_prior_arg = f"--model-prior {args.pretrained_model}"
         projection_only_arg = ""  
         n_topics_arg = ""
+        sort_topics_arg = ""
     elif args.pretrained_model is not None and not args.retrain:
         model_prior_arg = f"--model-prior {unsorted_prefix}.model.tsv"
         projection_only_arg = "--projection-only"  
         n_topics_arg = ""
+        sort_topics_arg = ""
     else:
         model_prior_arg = ""
         projection_only_arg = ""
         n_topics_arg = f"--n-topics {n_factor}"
+        sort_topics_arg = "--sort-topics"
     
     # 1) train LDA
     train_cmd = " ".join([
@@ -177,6 +180,7 @@ def add_lda_training_target(mm, args, ficture2bin, n_factor, train_width, model_
         model_prior_arg,
         projection_only_arg,
         n_topics_arg,
+        sort_topics_arg,
         "--transform",
         f"--minibatch-size {args.minibatch_size}",
         f"--seed {args.seed}",
@@ -191,12 +195,13 @@ def add_lda_training_target(mm, args, ficture2bin, n_factor, train_width, model_
         f"--in-model '{unsorted_prefix}.model.tsv'",
         f"--in-json '{hex_prefix}.json'",
         f"--out-model '{lda_model_matrix}'",
-        "--reorder",
+#        "--reorder",
         f"--in-tsv '{unsorted_prefix}.results.tsv'",
         f"--out-tsv '{lda_fit_tsv}'",
         "--offset-model 1"
     ])
     cmds.append(append_cmd)
+    cmds.append(f"cp '{unsorted_prefix}.model.tsv' '{lda_model_matrix}'")
     cmds.append(f"rm -f '{unsorted_prefix}.model.tsv' '{unsorted_prefix}.results.tsv'")
     cmds.append(f"[ -f '{lda_fit_tsv}' ] && [ -f '{lda_model_matrix}' ] && touch '{model_prefix}.done'")
     mm.add_target(f"{model_prefix}.done", [f"{args.out_dir}/multi.done"], cmds)
