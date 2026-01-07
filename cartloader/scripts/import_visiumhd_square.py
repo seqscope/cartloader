@@ -78,7 +78,7 @@ def parse_arguments(_args):
     aux_params.add_argument('--skip-mex-diffexp', action='store_true', default=False, help='Skip computing differential expression from the MatrixMarket files. Use files from --csv-diffexp instead.') 
     aux_params.add_argument('--skip-mex-pseudobulk', action='store_true', default=False, help='Skip generating pseudobulk files from the MatrixMarket files.')
     aux_params.add_argument('--use-parquet-tools', action='store_true', help='Use parquet-tools instead of polars/pigz for parquet to csv conversion (default: False). parquet-tools may be slower for large files.')
-    aux_params.add_argument('--tsv-cmap', type=str, default=f"{repo_dir}/assets/fixed_color_map_60.tsv", help=f'Location of TSV with color mappings for clusters (default: {repo_dir}/assets/fixed_color_map_60.tsv)')
+    aux_params.add_argument('--tsv-cmap', type=str, default=f"{repo_dir}/assets/fixed_color_map_256.tsv", help=f'Location of TSV with color mappings for clusters (default: {repo_dir}/assets/fixed_color_map_60.tsv)')
     aux_params.add_argument('--de-max-pval', type=float, default=0.01, help='Maximum p-value for differential expression (default: 0.01)')
     aux_params.add_argument('--de-min-fc', type=float, default=1.2, help='Minimum fold change for differential expression (default: 1.2)')
     aux_params.add_argument('--catalog-yaml', type=str, help='Path to catalog.yaml to update (used with --update-catalog; default: <in-dir>/catalog.yaml)')

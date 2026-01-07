@@ -314,7 +314,7 @@ def parse_arguments(_args):
     aux_params = parser.add_argument_group("Auxiliary Parameters", "Auxiliary parameters (using default is recommended)")
     aux_params.add_argument('--skip-redo-diffexp', action='store_true', default=False, help='Skip computing differential expression from the MatrixMarket files. Use files from --csv-diffexp instead.') 
     aux_params.add_argument('--skip-redo-pseudobulk', action='store_true', default=False, help='Skip generating pseudobulk files from the MatrixMarket files.')
-    aux_params.add_argument('--tsv-cmap', type=str, default=f"{repo_dir}/assets/fixed_color_map_60.tsv", help=f'Location of TSV with color mappings for clusters under --in-dir (default: {repo_dir}/assets/fixed_color_map_60.tsv)')
+    aux_params.add_argument('--tsv-cmap', type=str, default=f"{repo_dir}/assets/fixed_color_map_256.tsv", help=f'Location of TSV with color mappings for clusters under --in-dir (default: {repo_dir}/assets/fixed_color_map_60.tsv)')
     aux_params.add_argument('--de-max-pval', type=float, default=0.01, help='Maximum p-value for differential expression (default: 0.01)')
     aux_params.add_argument('--de-min-fc', type=float, default=1.2, help='Minimum fold change for differential expression (default: 1.2)')
     aux_params.add_argument('--catalog-yaml', type=str, help='Path to catalog.yaml to update (used with --update-catalog; default: <out_dir>/catalog.yaml)')
@@ -339,6 +339,7 @@ def parse_arguments(_args):
     env_params = parser.add_argument_group("ENV Parameters", "Environment parameters for the tools")
     env_params.add_argument('--tippecanoe', type=str, default=f"{repo_dir}/submodules/tippecanoe/tippecanoe", help='Path to tippecanoe binary (default: <cartloader_dir>/submodules/tippecanoe/tippecanoe)')
     env_params.add_argument('--spatula', type=str, default=f"{repo_dir}/submodules/spatula/bin/spatula", help='Path to spatula binary (default: <cartloader_dir>/submodules/spatula/bin/spatula)')
+    env_params.add_argument('--python', type=str, default="python3",  help='Python3 binary')
     env_params.add_argument('--parquet-tools', type=str, default="parquet-tools", help='Path to parquet-tools binary. Required if a Parquet file is provided to --csv-cells (default: parquet-tools)')
     env_params.add_argument('--gzip', type=str, default="gzip", help='Path to gzip binary (default: gzip)')
     env_params.add_argument('--sort', type=str, default="sort", help='Path to sort binary. For faster processing, you may add arguments like "sort -T /path/to/new/tmpdir --parallel=20 -S 10G"')
@@ -509,7 +510,46 @@ def import_xenium_cell(_args):
                     logger.error(f"Command {cmd}\nfailed with error: {result.stderr.decode()}")
                     sys.exit(1)
                 logger.info(f"  * Wrote differential expression results to {de_out}")
+
+                ## create factor reporting files
+                ficture2report = args.python + " " + os.path.join(args.ficture2, "ext/py/factor_report.py")                        
+                cmd = f"'{args.gzip}' -c '{pseudobulk_prefix}.tsv.gz' > '{pseudobulk_prefix}.tsv'"
+                result = subprocess.run(cmd, shell=True, capture_output=True)
+                if result.returncode != 0:
+                    logger.error(f"Command {cmd}\nfailed with error: {result.stderr.decode()}")
+                    sys.exit(1)                
+
+                cmd = f"head -n $(head -1 '{pseudobulk_prefix}.tsv' | wc -w) '{args.tsv_cmap}' > '{pseudobulk_prefix}.cmap.tsv'"
+                result = subprocess.run(cmd, shell=True, capture_output=True)
+                if result.returncode != 0:
+                    logger.error(f"Command {cmd}\nfailed with error: {result.stderr.decode()}")
+                    sys.exit(1)
+
+                cmd = " ".join([
+                    ficture2report,
+                    f"--de '{de_out}'",
+                    f"--pseudobulk '{pseudobulk_prefix}.tsv'",
+                    f"--feature_label Feature",
+                    f"--color_table '{pseudobulk_prefix}.cmap.tsv'",
+                    f"--output_pref '{pseudobulk_prefix}'",
+                    ])
+                result = subprocess.run(cmd, shell=True, capture_output=True)
+                if result.returncode != 0:
+                    logger.error(f"Command {cmd}\nfailed with error: {result.stderr.decode()}")
+                    sys.exit(1)
+
+                cmd = f"cp '{pseudobulk_prefix}.factor.info.tsv' '{args.outprefix}-info.tsv'"
+                result = subprocess.run(cmd, shell=True, capture_output=True)
+                if result.returncode != 0:
+                    logger.error(f"Command {cmd}\nfailed with error: {result.stderr.decode()}")
+                    sys.exit(1)
+                logger.info(f"  * Wrote factor info to {args.outprefix}-info.tsv")
+
                 temp_fs.append(f"{args.outprefix}-pseudobulk.de.marginal.tsv.gz")
+                temp_fs.append(f"{args.outprefix}-pseudobulk.tsv")
+                temp_fs.append(f"{args.outprefix}-pseudobulk.cmap.tsv")
+                temp_fs.append(f"{args.outprefix}-pseudobulk.factor.info.tsv")
+
                 
     # Process segmented calls 
     if args.cells:
