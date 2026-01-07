@@ -515,7 +515,7 @@ def import_xenium_cell(_args):
 
                 ## create factor reporting files
                 ficture2report = args.python + " " + os.path.join(args.ficture2, "ext/py/factor_report.py")                        
-                cmd = f"'{args.gzip}' -c '{pseudobulk_prefix}.tsv.gz' > '{pseudobulk_prefix}.tsv'"
+                cmd = f"'{args.gzip}' -dc '{pseudobulk_prefix}.tsv.gz' > '{pseudobulk_prefix}.tsv'"
                 result = subprocess.run(cmd, shell=True, capture_output=True)
                 if result.returncode != 0:
                     logger.error(f"Command {cmd}\nfailed with error: {result.stderr.decode()}")
