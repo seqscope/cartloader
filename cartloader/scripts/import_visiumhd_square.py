@@ -88,6 +88,8 @@ def parse_arguments(_args):
 
     env_params = parser.add_argument_group("Env Parameters", "Tool paths (override defaults if needed)")
     env_params.add_argument('--tippecanoe', type=str, default=f"{repo_dir}/submodules/tippecanoe/tippecanoe", help='Path to tippecanoe binary (default: <cartloader_dir>/submodules/tippecanoe/tippecanoe)')
+    env_params.add_argument('--python', type=str, default="python3",  help='Python3 binary')
+    env_params.add_argument('--ficture2', type=str, default=os.path.join(repo_dir, "submodules", "punkst"), help='Path to punkst (ficture2) repository (default: <cartloader_dir>/submodules/punkst)')
     env_params.add_argument('--spatula', type=str, default=f"{repo_dir}/submodules/spatula/bin/spatula", help='Path to spatula binary (default: <cartloader_dir>/submodules/spatula/bin/spatula)')
     env_params.add_argument('--parquet-tools', type=str, default="parquet-tools", help='Path to parquet-tools binary. Required if a Parquet file is provided. (default: parquet-tools)')
     env_params.add_argument('--gzip', type=str, default="gzip", help='Path to gzip binary (default: gzip)')
@@ -258,7 +260,45 @@ def import_visiumhd_square(_args):
             logger.error(f"Command {cmd}\nfailed with error: {result.stderr.decode()}")
             sys.exit(1)
         logger.info(f"  * Wrote differential expression results to {de_out}")
+
+        ## create factor reporting files
+        ficture2report = args.python + " " + os.path.join(args.ficture2, "ext/py/factor_report.py")                        
+        cmd = f"'{args.gzip}' -dc '{pseudobulk_prefix}.tsv.gz' > '{pseudobulk_prefix}.tsv'"
+        result = subprocess.run(cmd, shell=True, capture_output=True)
+        if result.returncode != 0:
+            logger.error(f"Command {cmd}\nfailed with error: {result.stderr.decode()}")
+            sys.exit(1)                
+
+        cmd = f"head -n $(head -1 '{pseudobulk_prefix}.tsv' | wc -w) '{args.tsv_cmap}' > '{pseudobulk_prefix}.cmap.tsv'"
+        result = subprocess.run(cmd, shell=True, capture_output=True)
+        if result.returncode != 0:
+            logger.error(f"Command {cmd}\nfailed with error: {result.stderr.decode()}")
+            sys.exit(1)
+
+        cmd = " ".join([
+            ficture2report,
+            f"--de '{de_out}'",
+            f"--pseudobulk '{pseudobulk_prefix}.tsv'",
+            f"--feature_label Feature",
+            f"--color_table '{pseudobulk_prefix}.cmap.tsv'",
+            f"--output_pref '{pseudobulk_prefix}'",
+            ])
+        result = subprocess.run(cmd, shell=True, capture_output=True)
+        if result.returncode != 0:
+            logger.error(f"Command {cmd}\nfailed with error: {result.stderr.decode()}")
+            sys.exit(1)
+
+        cmd = f"cp '{pseudobulk_prefix}.factor.info.tsv' '{args.outprefix}-info.tsv'"
+        result = subprocess.run(cmd, shell=True, capture_output=True)
+        if result.returncode != 0:
+            logger.error(f"Command {cmd}\nfailed with error: {result.stderr.decode()}")
+            sys.exit(1)
+        logger.info(f"  * Wrote factor info to {args.outprefix}-info.tsv")
+
         temp_fs.append(f"{args.outprefix}-pseudobulk.de.marginal.tsv.gz")
+        temp_fs.append(f"{args.outprefix}-pseudobulk.tsv")
+        temp_fs.append(f"{args.outprefix}-pseudobulk.cmap.tsv")
+        temp_fs.append(f"{args.outprefix}-pseudobulk.factor.info.tsv")
 
 
     ## write the color map
