@@ -94,10 +94,10 @@ def _resolve_bounds_from_args(args, *, in_img: str) -> Optional[Dict[str, float]
     if georef_bounds:
         ulx, uly, lrx, lry = georef_bounds.split(",")
         return {
-            "ulx": float(ulx),
-            "uly": float(uly),
-            "lrx": float(lrx),
-            "lry": float(lry),
+            "ulx": float(ulx) + args.georef_offset_x,
+            "uly": float(uly) + args.georef_offset_y,
+            "lrx": float(lrx) + args.georef_offset_x,
+            "lry": float(lry) + args.georef_offset_y,
         }
 
     if georef_bounds_tsv:
@@ -105,10 +105,10 @@ def _resolve_bounds_from_args(args, *, in_img: str) -> Optional[Dict[str, float]
             line = handle.readline()
         ulx, uly, lrx, lry = line.strip().lower().split(",")
         return {
-            "ulx": float(ulx),
-            "uly": float(uly),
-            "lrx": float(lrx),
-            "lry": float(lry),
+            "ulx": float(ulx) + args.georef_offset_x,
+            "uly": float(uly) + args.georef_offset_y,
+            "lrx": float(lrx) + args.georef_offset_x,
+            "lry": float(lry) + args.georef_offset_y,
         }
 
     if georef_pixel_tsv:
@@ -119,10 +119,10 @@ def _resolve_bounds_from_args(args, *, in_img: str) -> Optional[Dict[str, float]
             token.split("=")[0]: token.split("=")[1]
             for token in line.strip().replace("##", "").split(";")
         }
-        ulx = float(ann2val["OFFSET_X"])
-        uly = float(ann2val["OFFSET_Y"])
-        lrx = float(ann2val["SIZE_X"]) + 1 + ulx
-        lry = float(ann2val["SIZE_Y"]) + 1 + uly
+        ulx = float(ann2val["OFFSET_X"]) + args.georef_offset_x
+        uly = float(ann2val["OFFSET_Y"]) + args.georef_offset_y
+        lrx = float(ann2val["SIZE_X"]) + 1 + ulx + args.georef_offset_x
+        lry = float(ann2val["SIZE_Y"]) + 1 + uly + args.georef_offset_y
         return {"ulx": ulx, "uly": uly, "lrx": lrx, "lry": lry}
 
     if georef_detect:
