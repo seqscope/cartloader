@@ -140,10 +140,10 @@ def _resolve_bounds_from_args(args, *, in_img: str) -> Optional[Dict[str, float]
                 raise ValueError(
                     f"Physical size unit is not supported for --georef-detect=ome: {px_size_unit}"
                 )
-            ulx = float(meta.get("OffsetX", 0))
-            uly = float(meta.get("OffsetY", 0))
-            lrx = ulx + float(physical_size_x) * int(size_x)
-            lry = uly + float(physical_size_y) * int(size_y)
+            ulx = float(meta.get("OffsetX", 0)) + args.georef_offset_x
+            uly = float(meta.get("OffsetY", 0)) + args.georef_offset_y
+            lrx = ulx + float(physical_size_x) * int(size_x) + args.georef_offset_x
+            lry = uly + float(physical_size_y) * int(size_y) + args.georef_offset_y
             return {"ulx": ulx, "uly": uly, "lrx": lrx, "lry": lry}
 
     return None
