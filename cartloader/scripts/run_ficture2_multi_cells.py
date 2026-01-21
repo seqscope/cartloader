@@ -43,8 +43,8 @@ def parse_arguments(_args):
 
     key_params = parser.add_argument_group("Key Parameters", "Key parameters that requires user's attention")
     key_params.add_argument('--n-factor', type=int, help='Number of factors for LDA training.')
-    key_params.add_argument('--resolution', type=float, default=1.0, help='Resolution for Leiden clustering (default: 1.0)')
-    key_params.add_argument('--anchor-res', type=int, default=6, help='Anchor resolution for decoding (default: 6)')
+    key_params.add_argument('--leiden-resolution', type=float, default=1.0, help='Resolution for Leiden clustering (default: 1.0)')
+    key_params.add_argument('--anchor-resolution', type=int, default=6, help='Anchor resolution for decoding (default: 6)')
     key_params.add_argument('--cmap-file', type=str, default=os.path.join(repo_dir, "assets", "fixed_color_map_256.tsv"), help='Path to fixed color map TSV (default: <cartloader_dir>/assets/fixed_color_map_256.tsv)')
 
     # aux params
@@ -307,13 +307,13 @@ def run_ficture2_multi_cells(_args):
         leiden_prefix = os.path.join(args.out_dir, args.out_prefix) + ".leiden"
         cmds = cmd_separator([], f"Generating Leiden clusters...")
         if args.list_cluster is None:
-            cmd = f"cartloader lda_leiden_cluster_fast --offset-data 4 --tsv '{lda_prefix}.results.tsv' --out '{leiden_prefix}.tsv.gz' --resolution {args.resolution} --colname-cluster topK --key-ids sample_id cell_id"
+            cmd = f"cartloader lda_leiden_cluster_fast --offset-data 4 --tsv '{lda_prefix}.results.tsv' --out '{leiden_prefix}.tsv.gz' --resolution {args.leiden_resolution} --colname-cluster topK --key-ids sample_id cell_id"
             cmds.append(cmd)
             for sample_id in in_samples:
                 sample_lda_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.lda"
                 sample_leiden_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.leiden"
                 sample_sptsv_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.sptsv"
-                #cmd = f"cartloader lda_leiden_cluster --offset-data 3 --tsv '{sample_lda_prefix}.results.tsv' --out '{sample_leiden_prefix}.tsv.gz' --resolution {args.resolution} --colname-cluster topK --key-ids cell_id"
+                #cmd = f"cartloader lda_leiden_cluster --offset-data 3 --tsv '{sample_lda_prefix}.results.tsv' --out '{sample_leiden_prefix}.tsv.gz' --resolution {args.leiden_resolution} --colname-cluster topK --key-ids cell_id"
                 cmd = f"({args.gzip} -cd '{leiden_prefix}.tsv.gz' | head -1 | cut -f 2-; {args.gzip} -cd '{leiden_prefix}.tsv.gz' | grep -w ^{sample_id} | cut -f 2- ;) | {args.gzip} -c > '{sample_leiden_prefix}.tsv.gz'"
                 cmds.append(cmd)
         else:
@@ -634,8 +634,8 @@ def run_ficture2_multi_cells(_args):
             sample_prefix = f"{args.in_dir}/samples/{sample_id}/{sample_id}.tiled"
             decode_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.pixel"
             fit_width = args.decode_fit_width  ## e.g., 10um
-            fit_n_move = fit_width // args.anchor_res + 1
-            decode_id = f"p{fit_width}_a{args.anchor_res}"
+            fit_n_move = fit_width // args.anchor_resolution + 1
+            decode_id = f"p{fit_width}_a{args.anchor_resolution}"
             model_path= modelf
             cmd = " ".join([
                 ficture2bin, "pixel-decode",
