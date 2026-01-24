@@ -244,29 +244,44 @@ def image_ome2png(_args):
             histogram = Counter()
             total_count = 0
             if args.high_memory:
-                segments = [image_array_highmem]
-            else:
-                segments = page.segments()
-
-            for i, segment in enumerate(segments):
-                if i % 100 == 0:
-                    logger.info(f"Processing segment {i+1}/{n_chunks}...")
-                data = np.squeeze(segment[0])
+                #segments = [image_array_highmem]
+                data = image_array_highmem
                 flat = data.ravel()
                 histogram.update(flat.tolist())
                 total_count += flat.size
-            
-            if args.upper_thres_quantile is not None:
-                #args.upper_thres_intensity = np.quantile(pixel_values, args.upper_thres_quantile)
-                args.upper_thres_intensity = compute_quantiles_from_histogram(histogram, total_count, args.upper_thres_quantile)
-                logger.info(f"Upper threshold for quantile {args.upper_thres_quantile} is set to {args.upper_thres_intensity}")
+
+                if args.upper_thres_quantile is not None:
+                    #args.upper_thres_intensity = np.quantile(pixel_values, args.upper_thres_quantile)
+                    args.upper_thres_intensity = compute_quantiles_from_histogram(histogram, total_count, args.upper_thres_quantile)
+                    logger.info(f"Upper threshold for quantile {args.upper_thres_quantile} is set to {args.upper_thres_intensity}")
+                    
+                if args.lower_thres_quantile is not None:
+                    #args.lower_thres_intensity = np.quantile(pixel_values, args.lower_thres_quantile)
+                    args.lower_thres_intensity = compute_quantiles_from_histogram(histogram, total_count, args.lower_thres_quantile)
+                    logger.info(f"Lower threshold for quantile {args.lower_thres_quantile} is set to {args.lower_thres_intensity}")
+                del histogram
+                gc.collect()
+            else:
+                segments = page.segments()
+                for i, segment in enumerate(segments):
+                    if i % 100 == 0:
+                        logger.info(f"Processing segment {i+1}/{n_chunks}...")
+                    data = np.squeeze(segment[0])
+                    flat = data.ravel()
+                    histogram.update(flat.tolist())
+                    total_count += flat.size
                 
-            if args.lower_thres_quantile is not None:
-                #args.lower_thres_intensity = np.quantile(pixel_values, args.lower_thres_quantile)
-                args.lower_thres_intensity = compute_quantiles_from_histogram(histogram, total_count, args.lower_thres_quantile)
-                logger.info(f"Lower threshold for quantile {args.lower_thres_quantile} is set to {args.lower_thres_intensity}")
-            del histogram
-            gc.collect()
+                if args.upper_thres_quantile is not None:
+                    #args.upper_thres_intensity = np.quantile(pixel_values, args.upper_thres_quantile)
+                    args.upper_thres_intensity = compute_quantiles_from_histogram(histogram, total_count, args.upper_thres_quantile)
+                    logger.info(f"Upper threshold for quantile {args.upper_thres_quantile} is set to {args.upper_thres_intensity}")
+                    
+                if args.lower_thres_quantile is not None:
+                    #args.lower_thres_intensity = np.quantile(pixel_values, args.lower_thres_quantile)
+                    args.lower_thres_intensity = compute_quantiles_from_histogram(histogram, total_count, args.lower_thres_quantile)
+                    logger.info(f"Lower threshold for quantile {args.lower_thres_quantile} is set to {args.lower_thres_intensity}")
+                del histogram
+                gc.collect()
     
         # Create memory-mapped output file
         output = np.memmap(f"{args.out_prefix}_output.npy", dtype=output_dtype, mode='w+', shape=output_shape)
@@ -277,44 +292,48 @@ def image_ome2png(_args):
             r, g, b = hex_to_rgb255(args.colorize)
 
         if args.high_memory:
-            segments = [image_array_highmem]
-        else:
-            segments = page.segments()
-            
-        for i, segment in enumerate(segments):
-            if i % 100 == 0:
-                current_memory = get_memory_usage()
-                logger.info(f"Processing segment {i+1}/{n_chunks}, using {current_memory:.2f} GB memory...")
-
-            # [Segment processing code remains the same]
-            (data, offset, bytecount) = segment
-            offset_y, offset_x = offset[-3], offset[-2]
-            
-            ## determine height and length
-            if offset_y + chunk_height > page.imagelength:
-                height = page.imagelength - offset_y
-            else:
-                height = chunk_height
-                
-            if offset_x + chunk_width > page.imagewidth:
-                width = page.imagewidth - offset_x
-            else:
-                width = chunk_width
-
-            data = np.squeeze(data)
+            #segments = [image_array_highmem]
+            data = image_array_highmem
             processed = process_image_chunk(data, args, r, g, b)
-            
-            #print(f"Chunk {i}: shape: {data.shape}, {processed.shape}, {offset_x}, {offset_y}, {width}, {height}, {page.imagewidth}, {page.imagelength}")
-                
-            # Write to output
-            if len(output_shape) > 2:
-                output[offset_y:(offset_y+height), offset_x:(offset_x+width), :] = processed[0:height, 0:width, :]
-            else:
-                output[offset_y:(offset_y+height), offset_x:(offset_x+width)] = processed[0:height, 0:width]
-            
-            del data, processed, segment
+            output[:, :, :] = processed[:, :, :]
+            del data, processed
             #gc.collect()
-            #output.flush()            
+        else:
+            segments = page.segments()            
+            for i, segment in enumerate(segments):
+                if i % 100 == 0:
+                    current_memory = get_memory_usage()
+                    logger.info(f"Processing segment {i+1}/{n_chunks}, using {current_memory:.2f} GB memory...")
+
+                # [Segment processing code remains the same]
+                (data, offset, bytecount) = segment
+                offset_y, offset_x = offset[-3], offset[-2]
+                
+                ## determine height and length
+                if offset_y + chunk_height > page.imagelength:
+                    height = page.imagelength - offset_y
+                else:
+                    height = chunk_height
+                    
+                if offset_x + chunk_width > page.imagewidth:
+                    width = page.imagewidth - offset_x
+                else:
+                    width = chunk_width
+
+                data = np.squeeze(data)
+                processed = process_image_chunk(data, args, r, g, b)
+                
+                #print(f"Chunk {i}: shape: {data.shape}, {processed.shape}, {offset_x}, {offset_y}, {width}, {height}, {page.imagewidth}, {page.imagelength}")
+                    
+                # Write to output
+                if len(output_shape) > 2:
+                    output[offset_y:(offset_y+height), offset_x:(offset_x+width), :] = processed[0:height, 0:width, :]
+                else:
+                    output[offset_y:(offset_y+height), offset_x:(offset_x+width)] = processed[0:height, 0:width]
+                
+                del data, processed, segment
+                #gc.collect()
+                #output.flush()            
                 
         # Save final image
         output.flush()
