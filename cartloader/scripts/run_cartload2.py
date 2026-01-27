@@ -76,6 +76,7 @@ def parse_arguments(_args):
     aux_params.add_argument('--transparent-below', type=int, help='Set pixels below this value to transparent for dark background (range: 0~255)')
     aux_params.add_argument('--transparent-above', type=int, help='Set pixels above this value to transparent for light background (range: 0~255)')
     aux_params.add_argument('--sge-scale', type=int, default=1, help='scales input coordinates to pixels in the output image (default: 1)')
+    aux_params.add_argument('--hex-thres-prob', type=float, default=0.01, help='Minimum probability threshold for storing per-factor probability in hex PMTiles')
 
     env_params = parser.add_argument_group("Env Parameters", "Tool paths (override defaults if needed)")
     # aux_params.add_argument('--magick', type=str, default=f"magick", help='Path to ImageMagick binary') # Disable this function. The user need to add the path to the ImageMagick binary directory to the PATH environment variable
@@ -610,12 +611,13 @@ def run_cartload2(_args):
             in_fit_tsvf = train_param.get("fit_path", f"{in_prefix}.results.tsv.gz")
             if os.path.exists(in_fit_tsvf):
                 cmd = " ".join([
-                    "cartloader", "run_hex2pmtiles",
+                    "cartloader", "run_hex2pmtiles_compact",
                     "--in-tsv", in_fit_tsvf,
                     "--out-prefix", out_prefix,
                     f"--hex-width {train_width}",
                     "--rename-column", args.rename_x, args.rename_y,
                     "--threads", str(args.threads),
+                    "--thres-prob", str(args.hex_thres_prob),
                     "--max-tile-bytes", str(args.max_polygon_tile_bytes),
                     "--max-feature-counts", str(args.max_polygon_feature_counts),
                     "--preserve-point-density-thres", str(args.preserve_point_density_thres),
