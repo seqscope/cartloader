@@ -215,8 +215,8 @@ def import_image(_args):
             f"--out-prefix {img_prefix}",
             # params
             f"--color-mode-record {color_mode}" if color_mode else "",
-            f"--mono {args.mono}" if args.mono and not color_mode else "",
-            f"--rgba {args.rgba}" if args.rgba and not color_mode else "",
+            f"--mono" if args.mono and not color_mode else "",
+            f"--rgba" if args.rgba and not color_mode else "",
             f"--georef-detect {args.georef_detect}" if args.georef_detect else "",
             f"--gdal_translate {args.gdal_translate}" if args.gdal_translate else "",
             f"--georef-offset-x {args.georef_offset_x}",
