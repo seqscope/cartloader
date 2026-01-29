@@ -25,11 +25,16 @@ def parse_arguments(_args):
     inout_params.add_argument("--level", type=int, default=0, help='Specify the level to extract (default: 0)')
     inout_params.add_argument("--series", type=int, default=0, help='Specify the index of series (default: 0)')
     inout_params.add_argument("--upper-thres-quantile", type=float, help='Quantile-based capped value')
+    inout_params.add_argument("--min-upper-thres-intensity", type=float, help="Minimum allowed upper threshold intensity to prevent quantile-based thresholding from being too low")
     inout_params.add_argument("--upper-thres-intensity", type=float, default=255, help='Intensity-based capped value (default: 255)')
     inout_params.add_argument("--lower-thres-quantile", type=float, help='Quantile-based floored value')
     inout_params.add_argument("--lower-thres-intensity", type=float, default=0, help='Intensity-based floored value (default: 0)')
     inout_params.add_argument("--transparent-below", type=int, default=0, help='Set pixels below this value to transparent (0-255; default:0)')
     inout_params.add_argument("--colorize", type=str, help='Colorize using RGB code as max value')
+    inout_params.add_argument("--px-per-um-x", type=float, help="Pixels per micrometer for X")
+    inout_params.add_argument("--px-per-um-y", type=float, help="Pixels per micrometer for Y")
+    inout_params.add_argument("--offset-px-x", type=float, help="Offset in pixels for X")
+    inout_params.add_argument("--offset-px-y", type=float, help="Offset in pixels for Y")
 
     # inout_params.add_argument('--flip-horizontal', action='store_true', default=False)
     # inout_params.add_argument('--flip-vertical', action='store_true', default=False)
@@ -146,6 +151,12 @@ def image_ome2png(_args):
             offset_px_y = float(tok1s[2])
             if float(tok0s[1]) != 0.0 or float(tok1s[0]) != 0.0:
                 raise ValueError(f"The CSV file {args.csv} contains non-zero values at off-diagonal elements")
+    elif args.px_per_um_x is not None and args.px_per_um_y is not None:
+        is_ome = False
+        px_per_um_x = args.px_per_um_x
+        px_per_um_y = args.px_per_um_y
+        offset_px_x = args.offset_px_x if args.offset_px_x is not None else 0
+        offset_px_y = args.offset_px_y if args.offset_px_y is not None else 0
 
     # [CSV processing and metadata extraction remain the same]
     with tifffile.TiffFile(args.tif, _multifile=False) as tif:
@@ -181,7 +192,7 @@ def image_ome2png(_args):
         else:
             is_mono = True
 
-        if is_ome:
+        if is_ome and tif.ome_metadata is not None:
             meta = tifffile.xml2dict(tif.ome_metadata) ## extract metadata
             meta = meta['OME']['Image']['Pixels']
             logger.info("Metadata: \n" + json.dumps(meta, indent=2))            
@@ -253,6 +264,9 @@ def image_ome2png(_args):
                 if args.upper_thres_quantile is not None:
                     #args.upper_thres_intensity = np.quantile(pixel_values, args.upper_thres_quantile)
                     args.upper_thres_intensity = compute_quantiles_from_histogram(histogram, total_count, args.upper_thres_quantile)
+                    logger.info(f"Upper threshold for quantile {args.upper_thres_quantile} is estimated to {args.upper_thres_intensity}")
+                    if args.min_upper_thres_intensity is not None:
+                        args.upper_thres_intensity = max(args.upper_thres_intensity, args.min_upper_thres_intensity)
                     logger.info(f"Upper threshold for quantile {args.upper_thres_quantile} is set to {args.upper_thres_intensity}")
                     
                 if args.lower_thres_quantile is not None:
@@ -270,10 +284,18 @@ def image_ome2png(_args):
                     flat = data.ravel()
                     histogram.update(flat.tolist())
                     total_count += flat.size
+
+                logger.info(f"Total pixel count: {total_count}")
+                logger.info(f"Histograms:")
+                for key in sorted(histogram.keys()):
+                    logger.info(f"  Value {key}: Count {histogram[key]}")
                 
                 if args.upper_thres_quantile is not None:
                     #args.upper_thres_intensity = np.quantile(pixel_values, args.upper_thres_quantile)
                     args.upper_thres_intensity = compute_quantiles_from_histogram(histogram, total_count, args.upper_thres_quantile)
+                    logger.info(f"Upper threshold for quantile {args.upper_thres_quantile} is estimated to {args.upper_thres_intensity}")
+                    if args.min_upper_thres_intensity is not None:
+                        args.upper_thres_intensity = max(args.upper_thres_intensity, args.min_upper_thres_intensity)
                     logger.info(f"Upper threshold for quantile {args.upper_thres_quantile} is set to {args.upper_thres_intensity}")
                     
                 if args.lower_thres_quantile is not None:
@@ -295,7 +317,10 @@ def image_ome2png(_args):
             #segments = [image_array_highmem]
             data = image_array_highmem
             processed = process_image_chunk(data, args, r, g, b)
-            output[:, :, :] = processed[:, :, :]
+            if is_mono:
+                output[:, :] = processed[:, :]
+            else:
+                output[:, :, :] = processed[:, :, :]
             del data, processed
             #gc.collect()
         else:
