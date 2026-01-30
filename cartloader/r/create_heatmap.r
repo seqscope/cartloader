@@ -111,7 +111,7 @@ df_tsv = load_lda_results(args$results, args$de_results, args$offset_data, args$
 ## load the clustering results
 log_message("Loading clustering results")
 df_clust = fread(args$clust)
- ## remove the leading '#' in the first column name if exists
+## remove the leading '#' in the first column name if exists
 setnames(df_clust, 1, sub("^#", "", names(df_clust)[1]))
 
 #print(head(df_clust)) 
