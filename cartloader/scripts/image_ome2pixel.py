@@ -60,7 +60,7 @@ def chunk2triplets(chunk: np.ndarray, args, max_count: int) -> np.ndarray:
     # Clip and normalize
     # chunk = (((np.clip(chunk, a_min=args.lower_thres_intensity, a_max=args.upper_thres_intensity) 
     #          - args.lower_thres_intensity) / (args.upper_thres_intensity - args.lower_thres_intensity)) * max_count).astype(np.uint8)   
-    chunk = np.ceil(
+    chunk = np.floor(
             ((np.clip(chunk, a_min=args.lower_thres_intensity, a_max=args.upper_thres_intensity) 
             - args.lower_thres_intensity) / (args.upper_thres_intensity - args.lower_thres_intensity)) 
             * max_count
