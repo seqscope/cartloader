@@ -340,7 +340,7 @@ def image_ome2pixel(_args):
                     if ( nnz - tmp_triplets[0].shape[0] ) // 1000000 != nnz // 1000000:
                         logger.info(f"Written {nnz} non-zero pixels so far... across {i+1} segments")
                     for j in range(tmp_triplets[0].shape[0]):
-                        f.write(f"{(tmp_triplets[1][j]+offset_px_x+offset_x)/px_per_um_x:.3f}\t{(tmp_triplets[0][j]+offset_px_y+offset_y)/px_per_um_y:.3f}\t{args.gene}\t{tmp_triplets[2][i]}\n")    
+                        f.write(f"{(tmp_triplets[1][j]+offset_px_x+offset_x)/px_per_um_x:.3f}\t{(tmp_triplets[0][j]+offset_px_y+offset_y)/px_per_um_y:.3f}\t{args.gene}\t{tmp_triplets[2][j]}\n")    
 
                     # triplets[0] = np.concatenate( (triplets[0], tmp_triplets[0] + offset_y ) )
                     # triplets[1] = np.concatenate( (triplets[1], tmp_triplets[1] + offset_x ) )
