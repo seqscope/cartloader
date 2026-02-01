@@ -116,7 +116,16 @@ def image_xenium_hne2pmtiles(_args):
 
             ## Generate affine transformation matrix
             px_size_xy = (px_size_x + px_size_y) / 2.0
-    affine_mat = trans_mat / scale * px_size_xy
+
+    res_ratio = scale / px_size_xy
+    affine_mat = trans_mat * res_ratio
+
+    vec_x = affine_mat[0:2, 0]
+    vec_y = affine_mat[0:2, 1]
+
+    affine_mat[0, 2] -= 0.5 * (vec_x[0] + vec_y[0])
+    affine_mat[1, 2] -= 0.5 * (vec_x[1] + vec_y[1])
+    #affine_mat = trans_mat / scale * px_size_xy
     
     logger.info("Affine Transformation Matrix (in um): \n" + str(affine_mat))
 
