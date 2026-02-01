@@ -145,7 +145,7 @@ def image_xenium_hne2pmtiles(_args):
     affine_mat[0:2, 1] = R_ortho[:, 1] * px_size_y
 
     affine_mat[0, 2] = (t[0] / scale_source) * px_size_x + offset_um_x
-affine_mat[1, 2] = (t[1] / scale_source) * px_size_y + offset_um_y
+    affine_mat[1, 2] = (t[1] / scale_source) * px_size_y + offset_um_y
 
     # scale_factor_x = px_size_x / scale_source
     # scale_factor_y = px_size_y / scale_source
