@@ -141,6 +141,8 @@ def image_xenium_hne2pmtiles(_args):
     logger.info(f"SVD Scale (Source um/px): {scale_source:.6f}")
     logger.info("SVD Rotation Matrix (Ortho): \n" + str(R_ortho))
 
+    affine_mat = np.eye(3, dtype=np.float64)
+
     affine_mat[0:2, 0] = R_ortho[:, 0] * px_size_x
     affine_mat[0:2, 1] = R_ortho[:, 1] * px_size_y
 
