@@ -117,17 +117,75 @@ def image_xenium_hne2pmtiles(_args):
             ## Generate affine transformation matrix
             px_size_xy = (px_size_x + px_size_y) / 2.0
 
-    res_ratio = scale / px_size_xy
-    affine_mat = trans_mat * res_ratio
+    # --- Robust similarity extraction (rotation/reflection + uniform scale) ---
+    R = trans_mat[0:2, 0:2]
+    t = trans_mat[0:2, 2]
 
-    vec_x = affine_mat[0:2, 0]
-    vec_y = affine_mat[0:2, 1]
+    # Project R onto the closest rotation/reflection matrix (removes tiny shear)
+    U, Svals, Vt = np.linalg.svd(R)
+    R_ortho = U @ Vt
 
-    affine_mat[0, 2] -= 0.5 * (vec_x[0] + vec_y[0])
-    affine_mat[1, 2] -= 0.5 * (vec_x[1] + vec_y[1])
+    # Preserve reflection if present (det can be -1 for reflection)
+    if np.linalg.det(R_ortho) < 0:
+        U[:, -1] *= -1
+        R_ortho = U @ Vt
+
+    # Uniform scale estimate (should be equal in both singular values for a true similarity transform)
+    #scale = float(Svals.mean())
+    scale_source = np.mean(Svals)
+
+    logger.info(f"SVD Scale (Source um/px): {scale_source:.6f}")
+    logger.info("SVD Rotation Matrix (Ortho): \n" + str(R_ortho))
+
+    scale_factor_x = px_size_x / scale_source
+    scale_factor_y = px_size_y / scale_source
+
+    affine_mat = np.eye(3, dtype=np.float64)
+    affine_mat[0:2, 0] = R_ortho[:, 0] * scale_factor_x
+    affine_mat[0:2, 1] = R_ortho[:, 1] * scale_factor_y
+    affine_mat[0:2, 2] = trans_mat[0:2, 2]
+
+    # # --- 5. Half-Pixel Shift (Correctness) ---
+    # # Shifts origin from Pixel Center (Alignment) to Pixel Corner (GDAL).
+    # # Even if subtle, this is theoretically required for 0.0px accuracy.
+    # vec_x = affine_mat[0:2, 0]
+    # vec_y = affine_mat[0:2, 1]
+    
+    # shift_correction = 0.5 * (vec_x + vec_y)
+    # affine_mat[0:2, 2] -= shift_correction
+
+    # Rebuild a "clean" similarity transform (prevents drift from tiny numeric shear)
+    # trans_clean = np.eye(3, dtype=np.float64)
+    # trans_clean[0:2, 0:2] = R_ortho * scale
+    # trans_clean[0:2, 2] = t
+
+    # --- Convert pixel-units into microns using your existing logic ---
+    # (equivalent to your current trans_mat / scale * px_size_xy, but with robust scale + shear removal)
+    # um_per_fixed_px = px_size_xy / scale
+    # affine_mat = trans_clean * um_per_fixed_px
+
+    #logger.info(f"Similarity scale (pixels): {scale_source}")
+    logger.info("Affine Transformation Matrix (in um): \n" + str(affine_mat))
+
+    # # --- Optional: pixel-center -> pixel-corner correction (half-pixel shift) ---
+    # if getattr(args, "pixel_origin", "corner") == "center":
+    #     vec_x = affine_mat[0:2, 0]  # world delta for +1 in image X
+    #     vec_y = affine_mat[0:2, 1]  # world delta for +1 in image Y
+    #     affine_mat[0, 2] -= 0.5 * (vec_x[0] + vec_y[0])
+    #     affine_mat[1, 2] -= 0.5 * (vec_x[1] + vec_y[1])
+    #     logger.info("Applied half-pixel (center->corner) correction to translation.")
+
+    # res_ratio = scale / px_size_xy
+    # affine_mat = trans_mat * res_ratio
+
+    # vec_x = affine_mat[0:2, 0]
+    # vec_y = affine_mat[0:2, 1]
+
+    # affine_mat[0, 2] -= 0.5 * (vec_x[0] + vec_y[0])
+    # affine_mat[1, 2] -= 0.5 * (vec_x[1] + vec_y[1])
     #affine_mat = trans_mat / scale * px_size_xy
     
-    logger.info("Affine Transformation Matrix (in um): \n" + str(affine_mat))
+    #logger.info("Affine Transformation Matrix (in um): \n" + str(affine_mat))
 
     cmd = f"GDAL_NUM_THREADS={args.threads} {args.gdal_translate} -of GTiff -a_srs EPSG:3857 -a_gt {affine_mat[0,2]} {affine_mat[0,0]} {affine_mat[0,1]} {affine_mat[1,2]} {affine_mat[1,0]} {affine_mat[1,1]} '{args.tif}' '{args.out_prefix}.georef.tif'"
     logger.info("Running gdal_translate command:\n" + cmd)
