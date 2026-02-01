@@ -87,7 +87,7 @@ def image_xenium_hne2pmtiles(_args):
     logger.info("Transformation Matrix: \n" + str(trans_mat))
     if trans_mat[1,0] > 0 or trans_mat[0,1] < 0:
         raise ValueError("The transformation matrix seems incorrect. Please check the CSV file.")
-    scale = np.sqrt(np.linalg.det(trans_mat))
+    #scale = np.sqrt(np.linalg.det(trans_mat))
 
     if args.px_size_xy is not None:
         px_size_xy = args.px_size_xy
@@ -132,18 +132,28 @@ def image_xenium_hne2pmtiles(_args):
 
     # Uniform scale estimate (should be equal in both singular values for a true similarity transform)
     #scale = float(Svals.mean())
-    scale_source = np.mean(Svals)
+    #scale_source = np.mean(Svals)
+
+    scale_source = float(Svals.mean())  # fixed_px per he_px (or similar)
+    if not np.isfinite(scale_source) or scale_source <= 0:
+        raise ValueError(f"Bad scale derived from CSV matrix: {scale_source}")
 
     logger.info(f"SVD Scale (Source um/px): {scale_source:.6f}")
     logger.info("SVD Rotation Matrix (Ortho): \n" + str(R_ortho))
 
-    scale_factor_x = px_size_x / scale_source
-    scale_factor_y = px_size_y / scale_source
+    affine_mat[0:2, 0] = R_ortho[:, 0] * px_size_x
+    affine_mat[0:2, 1] = R_ortho[:, 1] * px_size_y
 
-    affine_mat = np.eye(3, dtype=np.float64)
-    affine_mat[0:2, 0] = R_ortho[:, 0] * scale_factor_x
-    affine_mat[0:2, 1] = R_ortho[:, 1] * scale_factor_y
-    affine_mat[0:2, 2] = trans_mat[0:2, 2]
+    affine_mat[0, 2] = (t[0] / scale_source) * px_size_x + offset_um_x
+affine_mat[1, 2] = (t[1] / scale_source) * px_size_y + offset_um_y
+
+    # scale_factor_x = px_size_x / scale_source
+    # scale_factor_y = px_size_y / scale_source
+
+    # affine_mat = np.eye(3, dtype=np.float64)
+    # affine_mat[0:2, 0] = R_ortho[:, 0] * scale_factor_x
+    # affine_mat[0:2, 1] = R_ortho[:, 1] * scale_factor_y
+    # affine_mat[0:2, 2] = trans_mat[0:2, 2]
 
     # # --- 5. Half-Pixel Shift (Correctness) ---
     # # Shifts origin from Pixel Center (Alignment) to Pixel Corner (GDAL).
