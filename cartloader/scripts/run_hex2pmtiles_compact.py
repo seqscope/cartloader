@@ -182,6 +182,8 @@ def _write_hexagon_features(chunk, geojson_handle, args, feature_state):
                 properties[key] = lon
             elif key == args.lat_column:
                 properties[key] = lat
+            elif key == 'topK' or key == 'topP':
+                properties[key] = value
             elif not pd.isna(value) and float(value) >= args.thres_prob:
                 properties[key] = value
             # else:
