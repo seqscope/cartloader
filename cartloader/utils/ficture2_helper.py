@@ -170,7 +170,8 @@ def ficture2_params_to_factor_assets(params, skip_raster=False, cell_params = No
             "post": decode_id + suffix_post,
             "rgb": model_id + suffix_rgb,
             "pmtiles": {
-                "hex_coarse": model_id + suffix_hex_coarse,
+                #"hex_coarse": model_id + suffix_hex_coarse,
+                "hex": model_id + suffix_hex_coarse,
                 **({"raster": decode_id + suffix_raster} if not skip_raster else {})
             }
         }
@@ -208,7 +209,8 @@ def ficture2_params_to_factor_assets(params, skip_raster=False, cell_params = No
                 "model": model_id + suffix_model,
                 "rgb": model_id + suffix_rgb,
                 "pmtiles": {
-                    "hex_coarse": model_id + suffix_hex_coarse
+                    #"hex_coarse": model_id + suffix_hex_coarse
+                    "hex": model_id + suffix_hex_coarse
                 }
             }
             if "factor_map" in param:

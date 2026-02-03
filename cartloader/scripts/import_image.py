@@ -67,7 +67,9 @@ def parse_arguments(_args):
     aux_params3.add_argument('--georef-pixel-tsv', type=str, default=None, help='Bounds source: *.pixel.sorted.tsv.gz from run_ficture2. Skip it if --ome2png is enabled')
     aux_params3.add_argument('--georef-bounds-tsv', type=str, default=None, help='Bounds source TSV with one line: <ulx>,<uly>,<lrx>,<lry>. Skip it if --ome2png is enabled')
     aux_params3.add_argument('--georef-bounds', type=str, default=None, help='Bounds string: "<ulx>,<uly>,<lrx>,<lry>". Skip it if --ome2png is enabled')
-    aux_params2.add_argument('--georef-detect', type=str, default=None, help="Used the detect bounds from image metadata (e.g., 'OME'). Extracted bounds will automatically be applied to png2pmtiles")
+    aux_params3.add_argument('--georef-detect', type=str, default=None, help="Used the detect bounds from image metadata (e.g., 'OME'). Extracted bounds will automatically be applied to png2pmtiles")
+    aux_params3.add_argument('--georef-offset-x', type=float, default=0.0, help='Offset to add to X coordinates of georeference bounds (default: 0.0)')
+    aux_params3.add_argument('--georef-offset-y', type=float, default=0.0, help='Offset to add to Y coordinates of georeference bounds (default: 0.0)')
 
     env_params = parser.add_argument_group("Env Parameters", "Environment parameters, e.g., tools.")
     env_params.add_argument('--pmtiles', type=str, default=f"pmtiles", help='Path to pmtiles binary from go-pmtiles (default: pmtiles)')
@@ -213,10 +215,12 @@ def import_image(_args):
             f"--out-prefix {img_prefix}",
             # params
             f"--color-mode-record {color_mode}" if color_mode else "",
-            f"--mono {args.mono}" if args.mono and not color_mode else "",
-            f"--rgba {args.rgba}" if args.rgba and not color_mode else "",
+            f"--mono" if args.mono and not color_mode else "",
+            f"--rgba" if args.rgba and not color_mode else "",
             f"--georef-detect {args.georef_detect}" if args.georef_detect else "",
             f"--gdal_translate {args.gdal_translate}" if args.gdal_translate else "",
+            f"--georef-offset-x {args.georef_offset_x}",
+            f"--georef-offset-y {args.georef_offset_y}",
         ])
         cmd = add_param_to_cmd(cmd, args, list(set(aux_image_arg["png2pmtiles"] + aux_image_arg["georeference"])))
         cmd = add_param_to_cmd(cmd, args, ["restart", "n_jobs"])

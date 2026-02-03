@@ -6,10 +6,11 @@ from PIL import Image
 import psutil
 from typing import Tuple
 from collections import Counter
+from scipy.sparse import coo_matrix
 import gc
 
 from cartloader.utils.minimake import minimake
-from cartloader.utils.utils import cmd_separator, scheck_app, create_custom_logger, read_minmax
+from cartloader.utils.utils import cmd_separator, scheck_app, create_custom_logger, read_minmax, flexopen
 from cartloader.utils.color_helper import hex_to_rgb255
 
 def parse_arguments(_args):
@@ -19,6 +20,7 @@ def parse_arguments(_args):
     # Add existing arguments
     inout_params = parser.add_argument_group("Input/Output Parameters")
     inout_params.add_argument('--tif', type=str, required=True, help='Path to the input OME-TIFF file')
+    inout_params.add_argument('--gene', type=str, help='Gene name to include in the output TSV file')
     inout_params.add_argument('--csv', type=str, help='(Vizgen only) Path to the input CSV file containing conversion parameters')
     inout_params.add_argument('--out-prefix', type=str, required=True, help='Output file prefix')
     inout_params.add_argument("--page", type=int, help='For 3D (X/Y/Z) OME file, specify the z-value')
@@ -29,23 +31,12 @@ def parse_arguments(_args):
     inout_params.add_argument("--upper-thres-intensity", type=float, default=255, help='Intensity-based capped value (default: 255)')
     inout_params.add_argument("--lower-thres-quantile", type=float, help='Quantile-based floored value')
     inout_params.add_argument("--lower-thres-intensity", type=float, default=0, help='Intensity-based floored value (default: 0)')
-    inout_params.add_argument("--transparent-below", type=int, default=0, help='Set pixels below this value to transparent (0-255; default:0)')
-    inout_params.add_argument("--colorize", type=str, help='Colorize using RGB code as max value')
+    inout_params.add_argument("--max-count", type=int, default=4, help="Maximum value per pixel, corresponding to the upper bound of the input")
     inout_params.add_argument("--px-per-um-x", type=float, help="Pixels per micrometer for X")
     inout_params.add_argument("--px-per-um-y", type=float, help="Pixels per micrometer for Y")
     inout_params.add_argument("--offset-px-x", type=float, help="Offset in pixels for X")
     inout_params.add_argument("--offset-px-y", type=float, help="Offset in pixels for Y")
-
-    # inout_params.add_argument('--flip-horizontal', action='store_true', default=False)
-    # inout_params.add_argument('--flip-vertical', action='store_true', default=False)
-    # inout_params.add_argument('--rotate-clockwise', action='store_true', default=False)
-    # inout_params.add_argument('--rotate-counter', action='store_true', default=False)
     inout_params.add_argument('--high-memory', action='store_true', default=False)
-    inout_params.add_argument('--write-color-mode', action='store_true', default=False,  help='Save the color mode into a file (<out_prefix>.color.csv). This argument is specifically designed for "cartloader import_image"')
-
-    # memory_params = parser.add_argument_group("Memory Management")
-    # memory_params.add_argument('--max-memory-gb', type=float, default=4.0,
-    #                          help='Maximum memory usage in gigabytes')
 
     aux_params = parser.add_argument_group("Auxiliary Parameters")    
     aux_params.add_argument('--log', action='store_true', default=False)
@@ -57,11 +48,6 @@ def parse_arguments(_args):
 
     args = parser.parse_args(_args)
 
-    # Validate transparent range
-    if args.transparent_below is not None:
-        if not (0 <= args.transparent_below <= 255):
-            parser.error("--transparent-below must be between 0 and 255 inclusive")
-
     return args
 
 def get_memory_usage():
@@ -69,29 +55,22 @@ def get_memory_usage():
     process = psutil.Process()
     return process.memory_info().rss / (1024 * 1024 * 1024)
 
-def process_image_chunk(chunk: np.ndarray, args, r=None, g=None, b=None) -> np.ndarray:
+def chunk2triplets(chunk: np.ndarray, args, max_count: int) -> np.ndarray:
     """Process a chunk of the image with the specified transformations"""
     # Clip and normalize
-    chunk = ((np.clip(chunk, a_min=args.lower_thres_intensity, a_max=args.upper_thres_intensity) 
-             - args.lower_thres_intensity) / (args.upper_thres_intensity - args.lower_thres_intensity))
+    # chunk = (((np.clip(chunk, a_min=args.lower_thres_intensity, a_max=args.upper_thres_intensity) 
+    #          - args.lower_thres_intensity) / (args.upper_thres_intensity - args.lower_thres_intensity)) * max_count).astype(np.uint8)   
+    chunk = np.floor(
+            ((np.clip(chunk, a_min=args.lower_thres_intensity, a_max=args.upper_thres_intensity) 
+            - args.lower_thres_intensity) / (args.upper_thres_intensity - args.lower_thres_intensity)) 
+            * max_count
+        ).astype(np.uint8)
+    #print(chunk.sum())
+    ## convert 0-1 scaled values to a sparse matrix
+    lr, lc = np.nonzero(chunk)
+    #print(lr.shape[0])
+    return ( lr, lc, chunk[lr, lc] )
     
-    # Colorize if needed
-    if args.transparent_below > 0:
-        mask = (chunk < args.transparent_below/255)
-    if args.colorize is not None:
-        if args.transparent_below > 0:
-            chunk = np.stack([chunk * r, chunk * g, chunk * b, chunk * 255], axis=-1)
-            chunk[mask, 3] = 0 ## make it transparent
-        else:
-            chunk = np.stack([chunk * r, chunk * g, chunk * b], axis=-1)
-    else:
-        if args.transparent_below > 0:
-            chunk = np.stack([chunk * 255, chunk * 255, chunk * 255, chunk * 255], axis=-1)
-            chunk[mask, 3] = 0 ## make it transparent
-        else:
-            chunk = chunk * 255.0
-    
-    return chunk.astype(np.uint8)
 
 def compute_quantiles_from_histogram(histogram, total_count, quantile):
     """
@@ -125,7 +104,7 @@ def compute_quantiles_from_histogram(histogram, total_count, quantile):
     # The corresponding integer value is:
     return sorted_keys[idx]
 
-def image_ome2png(_args):
+def image_ome2pixel(_args):
     args = parse_arguments(_args)
     logger = create_custom_logger(__name__, args.out_prefix + args.log_suffix if args.log else None)
     logger.info("Analysis Started")
@@ -157,6 +136,11 @@ def image_ome2png(_args):
         px_per_um_y = args.px_per_um_y
         offset_px_x = args.offset_px_x if args.offset_px_x is not None else 0
         offset_px_y = args.offset_px_y if args.offset_px_y is not None else 0
+    else:
+        offset_px_x = 0
+        offset_px_y = 0
+        px_per_um_x = 1
+        px_per_um_y = 1
 
     # [CSV processing and metadata extraction remain the same]
     with tifffile.TiffFile(args.tif, _multifile=False) as tif:
@@ -184,13 +168,16 @@ def image_ome2png(_args):
                 logger.error("The colored image is not in RGB format")
                 sys.exit(1)
             is_mono = False
-            if args.colorize:
-                logger.error("Cannot colorize already RGB-colored image")
-                sys.exit(1)
-        elif args.colorize is not None:
-            is_mono = False
+            # if args.colorize:
+            #     logger.error("Cannot colorize already RGB-colored image")
+            #     sys.exit(1)
+        # elif args.colorize is not None:
+        #     is_mono = False
         else:
             is_mono = True
+
+        if not is_mono:
+            raise ValueError("Currently only monochrome images are supported")
 
         if is_ome and tif.ome_metadata is not None:
             meta = tifffile.xml2dict(tif.ome_metadata) ## extract metadata
@@ -243,8 +230,8 @@ def image_ome2png(_args):
         #pixel_bytes = 4 if args.colorize else 1  # Account for RGB vs grayscale
             
         # Prepare output file
-        output_shape = (*page.shape[:2], 4) if args.transparent_below > 0 else ((*page.shape[:2], 3) if args.colorize else page.shape[:2])
-        output_dtype = np.uint8
+        #output_shape = (*page.shape[:2], 4) if args.transparent_below > 0 else ((*page.shape[:2], 3) if args.colorize else page.shape[:2])
+        #output_dtype = np.uint8
         
         if args.high_memory:
             image_array_highmem = page.asarray()
@@ -286,9 +273,9 @@ def image_ome2png(_args):
                     total_count += flat.size
 
                 logger.info(f"Total pixel count: {total_count}")
-                logger.info(f"Histograms:")
-                for key in sorted(histogram.keys()):
-                    logger.info(f"  Value {key}: Count {histogram[key]}")
+                # logger.info(f"Histograms:")
+                # for key in sorted(histogram.keys()):
+                #     logger.info(f"  Value {key}: Count {histogram[key]}")
                 
                 if args.upper_thres_quantile is not None:
                     #args.upper_thres_intensity = np.quantile(pixel_values, args.upper_thres_quantile)
@@ -306,83 +293,76 @@ def image_ome2png(_args):
                 gc.collect()
     
         # Create memory-mapped output file
-        output = np.memmap(f"{args.out_prefix}_output.npy", dtype=output_dtype, mode='w+', shape=output_shape)
-    
-        # Process color information
-        r, g, b = None, None, None
-        if args.colorize:
-            r, g, b = hex_to_rgb255(args.colorize)
-
-        if args.high_memory:
-            #segments = [image_array_highmem]
-            data = image_array_highmem
-            processed = process_image_chunk(data, args, r, g, b)
-            if is_mono:
-                output[:, :] = processed[:, :]
-            else:
-                output[:, :, :] = processed[:, :, :]
-            del data, processed
-            #gc.collect()
-        else:
-            segments = page.segments()            
-            for i, segment in enumerate(segments):
-                if i % 100 == 0:
-                    current_memory = get_memory_usage()
-                    logger.info(f"Processing segment {i+1}/{n_chunks}, using {current_memory:.2f} GB memory...")
-
-                # [Segment processing code remains the same]
-                (data, offset, bytecount) = segment
-                offset_y, offset_x = offset[-3], offset[-2]
-                
-                ## determine height and length
-                if offset_y + chunk_height > page.imagelength:
-                    height = page.imagelength - offset_y
-                else:
-                    height = chunk_height
-                    
-                if offset_x + chunk_width > page.imagewidth:
-                    width = page.imagewidth - offset_x
-                else:
-                    width = chunk_width
-
-                data = np.squeeze(data)
-                processed = process_image_chunk(data, args, r, g, b)
-                
-                #print(f"Chunk {i}: shape: {data.shape}, {processed.shape}, {offset_x}, {offset_y}, {width}, {height}, {page.imagewidth}, {page.imagelength}")
-                    
-                # Write to output
-                if len(output_shape) > 2:
-                    output[offset_y:(offset_y+height), offset_x:(offset_x+width), :] = processed[0:height, 0:width, :]
-                else:
-                    output[offset_y:(offset_y+height), offset_x:(offset_x+width)] = processed[0:height, 0:width]
-                
-                del data, processed, segment
+        #output = np.memmap(f"{args.out_prefix}_output.npy", dtype=output_dtype, mode='w+', shape=output_shape)
+        logger.info(f"Writing non-zero pixels to the final image...")
+        with flexopen(f"{args.out_prefix}.tsv.gz", "wt") as f:
+            # for i in range(triplets[0].shape[0]):
+            #     f.write(f"{(triplets[1][i]+offset_px_x)/px_per_um_x:.3f}\t{(triplets[0][i]+offset_px_y)/px_per_um_y:.3f}\t{triplets[2][i]}\n")    
+            if args.high_memory:
+                #segments = [image_array_highmem]
+                data = image_array_highmem
+                #processed = process_image_chunk(data, args, args.max_count)
+                triplets = chunk2triplets(data, args, args.max_count)
+                #output[:, :] = processed[:, :]
+                del data
                 #gc.collect()
-                #output.flush()            
+                for i in range(triplets[0].shape[0]):
+                    f.write(f"{(triplets[1][i]+offset_px_x)/px_per_um_x:.3f}\t{(triplets[0][i]+offset_px_y)/px_per_um_y:.3f}\t{args.gene}\t{triplets[2][i]}\n")    
+            else:
+                segments = page.segments()            
+                #triplets = [np.array([], dtype=np.int64), np.array([], dtype=np.int64), np.array([], dtype=np.uint8) ]
+                nnz = 0
+                for i, segment in enumerate(segments):
+                    if i % 100 == 0:
+                        current_memory = get_memory_usage()
+                        logger.info(f"Processing segment {i+1}/{n_chunks}, using {current_memory:.2f} GB memory...")
+
+                    # [Segment processing code remains the same]
+                    (data, offset, bytecount) = segment
+                    offset_y, offset_x = offset[-3], offset[-2]
+                    
+                    ## determine height and length
+                    if offset_y + chunk_height > page.imagelength:
+                        height = page.imagelength - offset_y
+                    else:
+                        height = chunk_height
+                        
+                    if offset_x + chunk_width > page.imagewidth:
+                        width = page.imagewidth - offset_x
+                    else:
+                        width = chunk_width
+
+                    data = np.squeeze(data)
+                    #processed = process_image_chunk(data, args, args.max_count)
+                    tmp_triplets = chunk2triplets(data, args, args.max_count)
+                    nnz += tmp_triplets[0].shape[0]
+                    #logger.info(f"Writing {tmp_triplets[0].shape[0]} non-zero pixels to the final image...")
+                    if ( nnz - tmp_triplets[0].shape[0] ) // 1000000 != nnz // 1000000:
+                        logger.info(f"Written {nnz} non-zero pixels so far... across {i+1} segments")
+                    for j in range(tmp_triplets[0].shape[0]):
+                        f.write(f"{(tmp_triplets[1][j]+offset_px_x+offset_x)/px_per_um_x:.3f}\t{(tmp_triplets[0][j]+offset_px_y+offset_y)/px_per_um_y:.3f}\t{args.gene}\t{tmp_triplets[2][j]}\n")    
+
+                    # triplets[0] = np.concatenate( (triplets[0], tmp_triplets[0] + offset_y ) )
+                    # triplets[1] = np.concatenate( (triplets[1], tmp_triplets[1] + offset_x ) )
+                    # triplets[2] = np.concatenate( (triplets[2], tmp_triplets[2] ) )
+                    
+                    #print(f"Chunk {i}: shape: {data.shape}, {processed.shape}, {offset_x}, {offset_y}, {width}, {height}, {page.imagewidth}, {page.imagelength}")
+                        
+                    #output[offset_y:(offset_y+height), offset_x:(offset_x+width)] = processed[0:height, 0:width]
+                    
+                    del data, segment, tmp_triplets
+                    #gc.collect()
+                    #output.flush()            
+                logger.info(f"Total non-zero pixels written: {nnz}")
                 
         # Save final image
-        output.flush()
-        logger.info("Saving final image...")
-        Image.fromarray(output).save(f"{args.out_prefix}.png")
-        
+        #output.flush()
+        #logger.info("Saving final image...")
+        #mage.fromarray(output).save(f"{args.out_prefix}.png")
+
         # save the bounds
         with open(f"{args.out_prefix}.bounds.csv", 'w') as f:
             f.write(f"{ul[0]},{ul[1]},{lr[0]},{lr[1]}\n")
-
-        # save the color mode 
-        if args.write_color_mode:
-            color_mode = "rgb"
-            if args.transparent_below > 0:
-                color_mode = "rgba"
-            elif is_mono:
-                color_mode = "mono"
-            with open(f"{args.out_prefix}.color.csv", 'w') as f:
-                f.write(f"{color_mode}\n")
-
-        # Clean up temporary files
-        os.remove(f"{args.out_prefix}_output.npy")
-        if os.path.exists(f"{args.out_prefix}_transformed.npy"):
-            os.remove(f"{args.out_prefix}_transformed.npy")
 
     logger.info("Analysis Completed")
 

@@ -37,6 +37,8 @@ def parse_arguments(_args):
     key_params.add_argument('--georef-bounds-tsv', type=str, default=None, help='If --georeference is required, provide the bounds via a tsv file. This TSV should include 1 line with <ulx>,<uly>,<lrx>,<lry> ')
     key_params.add_argument('--georef-bounds', type=str, default=None, help='If --georeference is required, provide the bounds in the format of "<ulx>,<uly>,<lrx>,<lry>", which represents upper-left X, upper-left Y, lower-right X, lower-right Y.')
     key_params.add_argument('--georef-detect', type=str, default=None, help='If --georeference is required, detect the bounds from the image metadata. Supported formats: ome')
+    key_params.add_argument('--georef-offset-x', type=float, default=0.0, help='Offset to add to X coordinates of georeference bounds (default: 0.0)')
+    key_params.add_argument('--georef-offset-y', type=float, default=0.0, help='Offset to add to Y coordinates of georeference bounds (default: 0.0)')
     key_params.add_argument('--srs', type=str, default='EPSG:3857', help='For --georeference and --geotif2mbtiles, define the spatial reference system (default: EPSG:3857)')
     key_params.add_argument('--mono', action='store_true', default=False, help='Define if the input image is black-and-white and single-banded. Omit this if using --color-mode-record')
     key_params.add_argument('--rgba', action='store_true', default=False, help='RGBA, 4-banded image. Omit this if using --color-mode-record')

@@ -47,6 +47,8 @@ log_message("Analysis started")
 log_message(sprintf("Reading Input: %s", args$input))
 
 df_lda <- fread(args$input, sep = "\t", header = TRUE)
+## remove the leading '#' in the first column name if exists
+setnames(df_lda, 1, sub("^#", "", names(df_lda)[1]))
 log_message(sprintf("Metadata columns: %s", paste(args$tsv_colname_meta, collapse = ", ")))
 
 matrix_info <- prepare_topic_matrix(df_lda, args$tsv_colname_meta, sqrt_transform = args$sqrt_transform)

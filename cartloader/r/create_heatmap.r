@@ -52,7 +52,10 @@ anno_top_k_genes <- function(chisqf, top_k) {
 
 load_lda_results <- function(tsvf, chisqf, offset_data, top_k, min_count, colnames_cell_clust) {
     ## read the results TSV file
-    df_tsv = fread(tsvf, header = TRUE, sep = '\t') %>% select(-any_of(c("random_key", "topK", "topP")))
+    df_tsv = fread(tsvf, header = TRUE, sep = '\t') 
+    ## remove the leading '#' in the first column name if exists
+    setnames(df_tsv, 1, sub("^#", "", names(df_tsv)[1]))
+    df_tsv = df_tsv %>% select(-any_of(c("random_key", "topK", "topP")))
 
     ibeg = offset_data
 
@@ -108,6 +111,9 @@ df_tsv = load_lda_results(args$results, args$de_results, args$offset_data, args$
 ## load the clustering results
 log_message("Loading clustering results")
 df_clust = fread(args$clust)
+## remove the leading '#' in the first column name if exists
+setnames(df_clust, 1, sub("^#", "", names(df_clust)[1]))
+
 #print(head(df_clust)) 
 df_clust = df_clust %>% select(all_of(args$cell_clust), cluster = !!args$colname_clust)
 print(head(df_clust)) 

@@ -70,9 +70,14 @@ if (!file.exists(args$tsv_clust)) {
 log_message("Rendering UMAP plot")
 log_message(sprintf("Reading Input: %s", args$tsv_manifold))
 df_manifold <- fread(args$tsv_manifold, sep = "\t", header = TRUE)
+## remove the leading '#' in the first column name if exists
+setnames(df_manifold, 1, sub("^#", "", names(df_manifold)[1]))
+
 
 log_message(sprintf("Reading Input: %s", args$tsv_clust))
 df_clust <- fread(args$tsv_clust, sep = "\t", header = TRUE)
+## remove the leading '#' in the first column name if exists
+setnames(df_clust, 1, sub("^#", "", names(df_clust)[1]))
 
 log_message("Joining two input files")
 plot_dt <- left_join(df_manifold, df_clust, by = args$tsv_colname_ids)

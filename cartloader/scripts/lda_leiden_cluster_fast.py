@@ -176,7 +176,23 @@ def lda_leiden_cluster_fast(_args):
     # Convert to float32 numpy and apply sqrt in-place
     X = df.select(feature_cols).to_numpy()
     X = np.asarray(X, dtype=np.float32, order="C")
-    np.sqrt(X, out=X)
+    #np.sqrt(X + 1e-10, out=X)
+
+    # if np.isinf(X.data if hasattr(X, "data") else X).any():
+    #     print("Error: X contains Infinity values!")
+
+    # # Check for NaNs correctly
+    if np.isnan(X).any():
+        print("Error: X contains actual NaNs!")
+        nan_indices = np.argwhere(np.isnan(X))
+        if len(nan_indices) > 0:
+            row, col = nan_indices[0]
+            print(f"FOUND NaN at Row: {row}, Col: {col}")
+        else:
+            print("No NaNs found.")
+
+    # if X.min() < 0:
+    #     raise ValueError("Negative values found in normalized data; cosine distance may behave unexpectedly.")
 
     # Normalize for cosine distance to behave well and often speed ANN
     normalize(X, norm="l2", axis=1, copy=False)

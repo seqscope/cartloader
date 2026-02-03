@@ -71,6 +71,9 @@ log_message("Rendering per-factor UMAP plots")
 log_message(sprintf("Reading Input: %s", args$input))
 
 plot_dt <- fread(args$input, sep = "\t", header = TRUE)
+## remove the leading '#' in the first column name if exists
+setnames(plot_dt, 1, sub("^#", "", names(plot_dt)[1]))
+
 required_cols <- c(args$tsv_colname_umap1, args$tsv_colname_umap2, args$tsv_colname_factor)
 missing_cols <- setdiff(required_cols, names(plot_dt))
 if (length(missing_cols) > 0) {

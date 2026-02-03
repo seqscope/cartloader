@@ -90,6 +90,9 @@ load_colormap <- function(
   }
 
   cmap_dt <- fread(resolved_path, sep = "\t", header = TRUE)
+  ## remove the leading '#' in the first column name if exists
+  setnames(cmap_dt, 1, sub("^#", "", names(cmap_dt)[1]))
+
   required_cols <- c(name_col, hex_col)
   if (!all(required_cols %in% names(cmap_dt))) {
     stop(sprintf(

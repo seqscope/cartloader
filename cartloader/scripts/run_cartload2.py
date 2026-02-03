@@ -57,8 +57,10 @@ def parse_arguments(_args):
     aux_params.add_argument('--max-join-dist-um', type=float, default=0.1, help='Max distance (in µm) to associate molecules with decoded pixels (default: 0.1)')
     aux_params.add_argument('--join-tile-size', type=float, default=500, help='Tile size (in µm) when joining molecules with decoded pixels (default: 500)')
     aux_params.add_argument('--bin-count', type=int, default=50, help='Number of bins when splitting input molecules (default: 50)')
-    aux_params.add_argument('--max-tile-bytes', type=int, default=5000000, help='Maximum tile size in bytes for tippecanoe/PMTiles (default: 5000000)')
-    aux_params.add_argument('--max-feature-counts', type=int, default=500000, help='Maximum features per tile for tippecanoe/PMTiles (default: 500000)')
+    aux_params.add_argument('--max-point-tile-bytes', type=int, default=5000000, help='Maximum tile size of points in bytes for tippecanoe/PMTiles (default: 5000000)')
+    aux_params.add_argument('--max-point-feature-counts', type=int, default=500000, help='Maximum features of points per tile for tippecanoe/PMTiles (default: 500000)')
+    aux_params.add_argument('--max-polygon-tile-bytes', type=int, default=50000000, help='Maximum tile size of polygons in bytes for tippecanoe/PMTiles (default: 50000000)')
+    aux_params.add_argument('--max-polygon-feature-counts', type=int, default=5000000, help='Maximum features of polygons per tile for tippecanoe/PMTiles (default: 5000000)')
     aux_params.add_argument('--preserve-point-density-thres', type=int, default=1024, help='Tippecanoe point-density preservation threshold (default: 1024)')
     aux_params.add_argument('--umap-colname-factor', type=str, default='topK', help='Column name encoding the dominant factor assignment in a UMAP TSV (default: topK)')
     aux_params.add_argument('--umap-colname-x', type=str, default='UMAP1', help='Column name for the UMAP X coordinate (default: UMAP1)')
@@ -74,6 +76,7 @@ def parse_arguments(_args):
     aux_params.add_argument('--transparent-below', type=int, help='Set pixels below this value to transparent for dark background (range: 0~255)')
     aux_params.add_argument('--transparent-above', type=int, help='Set pixels above this value to transparent for light background (range: 0~255)')
     aux_params.add_argument('--sge-scale', type=int, default=1, help='scales input coordinates to pixels in the output image (default: 1)')
+    aux_params.add_argument('--hex-thres-prob', type=float, default=0.01, help='Minimum probability threshold for storing per-factor probability in hex PMTiles')
 
     env_params = parser.add_argument_group("Env Parameters", "Tool paths (override defaults if needed)")
     # aux_params.add_argument('--magick', type=str, default=f"magick", help='Path to ImageMagick binary') # Disable this function. The user need to add the path to the ImageMagick binary directory to the PATH environment variable
@@ -441,8 +444,8 @@ def run_cartload2(_args):
                     "--in-tsv", cell_xy_f,
                     "--out-prefix", f"{out_prefix}-cells",
                     "--threads", str(args.threads),
-                    "--max-tile-bytes", str(args.max_tile_bytes),
-                    "--max-feature-counts", str(args.max_feature_counts),
+                    "--max-tile-bytes", str(args.max_polygon_tile_bytes),
+                    "--max-feature-counts", str(args.max_polygon_feature_counts),
                     "--preserve-point-density-thres", str(args.preserve_point_density_thres),
                     f"--tippecanoe '{args.tippecanoe}'",
                     f"--log --log-suffix '{args.log_suffix}'" if args.log else "",
@@ -469,8 +472,8 @@ def run_cartload2(_args):
                     "--in-clust", cell_clust_f,
                     "--out-prefix", f"{out_prefix}-boundaries",
                     "--threads", str(args.threads),
-                    "--max-tile-bytes", str(args.max_tile_bytes),
-                    "--max-feature-counts", str(args.max_feature_counts),
+                    "--max-tile-bytes", str(args.max_polygon_tile_bytes),
+                    "--max-feature-counts", str(args.max_polygon_feature_counts),
                     "--preserve-point-density-thres", str(args.preserve_point_density_thres),
                     f"--tippecanoe '{args.tippecanoe}'",
                     f"--log --log-suffix '{args.log_suffix}'" if args.log else "",
@@ -608,14 +611,15 @@ def run_cartload2(_args):
             in_fit_tsvf = train_param.get("fit_path", f"{in_prefix}.results.tsv.gz")
             if os.path.exists(in_fit_tsvf):
                 cmd = " ".join([
-                    "cartloader", "run_hex2pmtiles",
+                    "cartloader", "run_hex2pmtiles_compact",
                     "--in-tsv", in_fit_tsvf,
                     "--out-prefix", out_prefix,
                     f"--hex-width {train_width}",
                     "--rename-column", args.rename_x, args.rename_y,
                     "--threads", str(args.threads),
-                    "--max-tile-bytes", str(args.max_tile_bytes),
-                    "--max-feature-counts", str(args.max_feature_counts),
+                    "--thres-prob", str(args.hex_thres_prob),
+                    "--max-tile-bytes", str(args.max_polygon_tile_bytes),
+                    "--max-feature-counts", str(args.max_polygon_feature_counts),
                     "--preserve-point-density-thres", str(args.preserve_point_density_thres),
                     f"--tippecanoe '{args.tippecanoe}'",
                     f"--log --log-suffix '{args.log_suffix}'" if args.log else "",
@@ -743,8 +747,8 @@ def run_cartload2(_args):
         "--col-rename", args.rename_x, args.rename_y, f"feature:{args.colname_feature}", f"ct:{args.colname_count}",
         "--colname-feature", args.colname_feature,
         "--colname-count", args.colname_count,
-        "--max-tile-bytes", str(args.max_tile_bytes),
-        "--max-feature-counts", str(args.max_feature_counts),
+        "--max-tile-bytes", str(args.max_point_tile_bytes),
+        "--max-feature-counts", str(args.max_point_feature_counts),
         "--preserve-point-density-thres", str(args.preserve_point_density_thres),
         "--bin-count", str(args.bin_count),
         "--all",

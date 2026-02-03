@@ -243,11 +243,12 @@ def make_factor_dict(factor_id, factor_name, outprefix, factor_type, pmtiles_key
         model_label: factor_id,
         "rgb": f"{outprefix}-rgb.tsv",
         "de": f"{outprefix}-cells-bulk-de.tsv" if factor_type=="cells" else f"{outprefix}-bulk-de.tsv",
-        "raw_pixel_col": "false",
+        "raw_pixel_col": False,
         "pmtiles": pmtiles,
     }
     if pseudobulk_src:
         factor_dict["post"] = f"{outprefix}-pseudobulk.tsv.gz"
+        factor_dict["info"] = f"{outprefix}-info.tsv"
     if umap_src:
         factor_dict["umap"] = {
             "tsv": f"{outprefix}-umap.tsv.gz",
@@ -289,6 +290,17 @@ def parse_arguments(_args):
     aux_inout_params.add_argument('--csv-boundaries', type=str, default="cell_boundaries.csv.gz", help='Location of CSV containing cell boundary coordinates under --in-dir (default: cell_boundaries.csv.gz)')
     aux_inout_params.add_argument('--csv-clust', type=str, default="analysis/clustering/gene_expression_graphclust/clusters.csv", help='Location of CSV with cell cluster assignments under --in-dir (default: analysis/clustering/gene_expression_graphclust/clusters.csv)')
     aux_inout_params.add_argument('--csv-diffexp', type=str, default="analysis/diffexp/gene_expression_graphclust/differential_expression.csv", help='Location of CSV with differential expression results under --in-dir (default: analysis/diffexp/gene_expression_graphclust/differential_expression.csv)')
+    ## cell-level MEX format files
+    aux_inout_params.add_argument('--mex-dir', type=str, default="cell_feature_matrix", help='Directory location of 10x Genomic MatrixMarket files under --in-dir (default: analysis/filtered_feature_bc_matrix)')
+    aux_inout_params.add_argument('--mex-bcd', type=str, default="barcodes.tsv.gz", help='Filename for barcodes in the MatrixMarket directory (default: barcodes.tsv.gz)')
+    aux_inout_params.add_argument('--mex-ftr', type=str, default="features.tsv.gz", help='Filename for features in the MatrixMarket directory (default: features.tsv.gz)')
+    aux_inout_params.add_argument('--mex-mtx', type=str, default="matrix.mtx.gz", help='Filename for matrix in the MatrixMarket directory (default: matrix.mtx.gz)')
+    ## pixel-level TSV file with cell_id
+    aux_inout_params.add_argument('--pixel', type=str, help='Location of pixel-level TSV file with cell_id under --in-dir')
+    aux_inout_params.add_argument('--pixel-colname-cell-id', type=str, default='cell_id', help='Column name for cell ID in --pixel (default: cell_id)')
+    aux_inout_params.add_argument('--pixel-colname-gene', type=str, default='gene', help='Column name for gene in --pixel (default: gene)')
+    aux_inout_params.add_argument('--pixel-colname-count', type=str, default='count', help='Column name for count in --pixel (default: count)')
+    ## UMAP
     aux_inout_params.add_argument('--csv-umap', type=str, default="analysis/umap/gene_expression_2_components/projection.csv", help='Location of CSV with UMAP results under --in-dir (default: analysis/umap/gene_expression_2_components/projection.csv')
 
     aux_conv_params = parser.add_argument_group("Auxiliary PMTiles Conversion Parameters")
@@ -301,14 +313,15 @@ def parse_arguments(_args):
     aux_conv_params.add_argument('--preserve-point-density-thres', type=int, default=1024, help='Threshold for preserving point density in PMTiles (default: 1024)')
 
     aux_params = parser.add_argument_group("Auxiliary Parameters", "Auxiliary parameters (using default is recommended)")
-    aux_params.add_argument('--tsv-cmap', type=str, default=f"{repo_dir}/assets/fixed_color_map_60.tsv", help=f'Location of TSV with color mappings for clusters under --in-dir (default: {repo_dir}/assets/fixed_color_map_60.tsv)')
+    aux_params.add_argument('--skip-redo-diffexp', action='store_true', default=False, help='Skip computing differential expression from the MatrixMarket files. Use files from --csv-diffexp instead.') 
+    aux_params.add_argument('--skip-redo-pseudobulk', action='store_true', default=False, help='Skip generating pseudobulk files from the MatrixMarket files.')
+    aux_params.add_argument('--tsv-cmap', type=str, default=f"{repo_dir}/assets/fixed_color_map_256.tsv", help=f'Location of TSV with color mappings for clusters under --in-dir (default: {repo_dir}/assets/fixed_color_map_60.tsv)')
     aux_params.add_argument('--de-max-pval', type=float, default=0.01, help='Maximum p-value for differential expression (default: 0.01)')
     aux_params.add_argument('--de-min-fc', type=float, default=1.2, help='Minimum fold change for differential expression (default: 1.2)')
     aux_params.add_argument('--catalog-yaml', type=str, help='Path to catalog.yaml to update (used with --update-catalog; default: <out_dir>/catalog.yaml)')
     aux_params.add_argument('--out-catalog-yaml', type=str, help='Path to save the updated catalog.yaml as a new file instead of overwriting the input (--catalog-yaml). Defaults to the same path as --catalog-yaml (used with --update-catalog)')
-    #aux_params.add_argument('--keep-intermediate-files', action='store_true', default=False, help='Keep intermediate output files')
+    aux_params.add_argument('--keep-intermediate-files', action='store_true', default=False, help='Keep intermediate output files')
     aux_params.add_argument('--tmp-dir', type=str, help='Temporary directory for intermediate files (default: out-dir/tmp or /tmp if specified)')
-
 
     aux_colnames_params = parser.add_argument_group("Auxiliary Colname Parameters", "Override column names for input files")
     aux_colnames_params.add_argument('--cells-colname-cell-id', type=str, default='cell_id', help='Column name for cell ID in --csv-cells (default: cell_id)')
@@ -326,7 +339,12 @@ def parse_arguments(_args):
 
     env_params = parser.add_argument_group("ENV Parameters", "Environment parameters for the tools")
     env_params.add_argument('--tippecanoe', type=str, default=f"{repo_dir}/submodules/tippecanoe/tippecanoe", help='Path to tippecanoe binary (default: <cartloader_dir>/submodules/tippecanoe/tippecanoe)')
+    env_params.add_argument('--spatula', type=str, default=f"{repo_dir}/submodules/spatula/bin/spatula", help='Path to spatula binary (default: <cartloader_dir>/submodules/spatula/bin/spatula)')
+    env_params.add_argument('--python', type=str, default="python3",  help='Python3 binary')
+    env_params.add_argument('--ficture2', type=str, default=os.path.join(repo_dir, "submodules", "punkst"), help='Path to punkst (ficture2) repository (default: <cartloader_dir>/submodules/punkst)')
     env_params.add_argument('--parquet-tools', type=str, default="parquet-tools", help='Path to parquet-tools binary. Required if a Parquet file is provided to --csv-cells (default: parquet-tools)')
+    env_params.add_argument('--gzip', type=str, default="gzip", help='Path to gzip binary (default: gzip)')
+    env_params.add_argument('--sort', type=str, default="sort", help='Path to sort binary. For faster processing, you may add arguments like "sort -T /path/to/new/tmpdir --parallel=20 -S 10G"')
     env_params.add_argument('--R', type=str, default="Rscript", help='Path to Rscript binary (default: Rscript)')
     
     if len(_args) == 0:
@@ -371,7 +389,7 @@ def import_xenium_cell(_args):
         if not os.path.exists(args.tmp_dir):
             os.makedirs(args.tmp_dir, exist_ok=True)
 
-    #temp_fs=[]
+    temp_fs=[]
 
     # read in_json if provided 
     if args.in_json is not None:
@@ -384,11 +402,50 @@ def import_xenium_cell(_args):
             "BOUNDARY": f"{args.in_dir}/{args.csv_boundaries}",
             "CLUSTER": f"{args.in_dir}/{args.csv_clust}",
             "DE": f"{args.in_dir}/{args.csv_diffexp}",
-            "UMAP_PROJ": f"{args.in_dir}/{args.csv_umap}"
+            "UMAP_PROJ": f"{args.in_dir}/{args.csv_umap}",
+            "MEX_BCD": os.path.join(args.in_dir, args.mex_dir, args.mex_bcd),
+            "MEX_FTR": os.path.join(args.in_dir, args.mex_dir, args.mex_ftr),
+            "MEX_MTX": os.path.join(args.in_dir, args.mex_dir, args.mex_mtx),
         }
+        if args.pixel is not None:
+            cell_data["PIXEL"] = args.pixel
+
+    # Convert pixel-level TSV data into sptsv format
+    if not args.skip_redo_pseudobulk or not args.skip_redo_diffexp:
+        ## if pixel file is provided, convert to sptsv
+        if args.pixel is not None:
+            logger.info(f"  * Generating spTSV from pixel TSV file")
+            pixelf = cell_data.get("PIXEL", None)
+            cmd = f"{args.spatula} pixel2sptsv --pixel {pixelf} --out {args.outprefix}.sptsv --in-col-id {args.pixel_colname_cell_id} --in-col-gene {args.pixel_colname_gene} --in-col-count {args.pixel_colname_count} --gzip {args.gzip} --sort {args.sort}"
+            result = subprocess.run(cmd, shell=True, capture_output=True)
+            if result.returncode != 0:
+                logger.error(f"Command {cmd}\nfailed with error: {result.stderr.decode()}")
+                sys.exit(1)
+            temp_fs.append(f"{args.outprefix}.sptsv.tsv")
+            temp_fs.append(f"{args.outprefix}.sptsv.json")
+            temp_fs.append(f"{args.outprefix}.sptsv.feature.counts.tsv")
+        else:
+            mex_bcd = cell_data.get("MEX_BCD", None)
+            mex_ftr = cell_data.get("MEX_FTR", None)
+            mex_mtx = cell_data.get("MEX_MTX", None)
+
+            assert mex_bcd is not None and os.path.exists(mex_bcd), (f'Path not provided or file not found: "MEX_BCD" in --in-json' if args.in_json is not None else f'Path not provided or file not found: --mex-bcd')
+            assert mex_ftr is not None and os.path.exists(mex_ftr), (f'Path not provided or file not found: "MEX_FTR" in --in-json' if args.in_json is not None else f'Path not provided or file not found: --mex-ftr')
+            assert mex_mtx is not None and os.path.exists(mex_mtx), (f'Path not provided or file not found: "MEX_MTX" in --in-json' if args.in_json is not None else f'Path not provided or file not found: --mex-mtx')
+
+            logger.info(f"  * Generating spTSV from MEX files")
+            cmd = f"'{args.spatula}' mex2sptsv --bcd '{mex_bcd}' --ftr '{mex_ftr}' --mtx '{mex_mtx}' --out '{args.outprefix}.sptsv'"
+            result = subprocess.run(cmd, shell=True, capture_output=True)
+            if result.returncode != 0:
+                logger.error(f"Command {cmd}\nfailed with error: {result.stderr.decode()}")
+                sys.exit(1)
+            temp_fs.append(f"{args.outprefix}.sptsv.tsv")
+            temp_fs.append(f"{args.outprefix}.sptsv.json")
+            temp_fs.append(f"{args.outprefix}.sptsv.feature.counts.tsv")
 
     # Cluster/DE
     if args.cells or args.boundaries or args.umap:
+        ## import cluster
         clust_in = cell_data.get("CLUSTER", None)
         # presence and existence for cluster file
         assert clust_in is not None, ('Path not provided: "CLUSTER" in --in-json' if args.in_json is not None else 'Path not provided: --csv-clust')
@@ -398,10 +455,23 @@ def import_xenium_cell(_args):
         sorted_clusters, cluster2idx, bcd2clusteridx = process_cluster_csv(
             clust_in,
             barcode_col=args.clust_colname_barcode,
-            cluster_col=args.clust_colname_cluster
+            cluster_col=args.clust_colname_cluster,
+            output_filename=f"{args.outprefix}-clust.tsv.gz"   
         )
         logger.info(f"  * Loaded {len(bcd2clusteridx)} cells")
-        
+        temp_fs.append(f"{args.outprefix}-clust.tsv.gz")
+
+        ## Create pseudobulk DE results from MEX
+        if not args.skip_redo_pseudobulk:
+            logger.info(f"  * Generating pseudobulk expression matrix for {len(sorted_clusters)} clusters from MEX files")
+            pseudobulk_out = f"{args.outprefix}-pseudobulk.tsv.gz"
+
+            cmd = f"'{args.spatula}' sptsv2model --tsv '{args.outprefix}.sptsv.tsv' --clust '{args.outprefix}-clust.tsv.gz' --json '{args.outprefix}.sptsv.json' --out '{pseudobulk_out}'"
+            result = subprocess.run(cmd, shell=True, capture_output=True)
+            if result.returncode != 0:
+                logger.error(f"Command {cmd}\nfailed with error: {result.stderr.decode()}")
+                sys.exit(1)
+
         ## write the color map
         cmap_out=f"{args.outprefix}-rgb.tsv"
         assert os.path.exists(args.tsv_cmap), f"File not found: {args.tsv_cmap} (--tsv-cmap)"        
@@ -409,21 +479,80 @@ def import_xenium_cell(_args):
         logger.info(f"  * Writing color map from {args.tsv_cmap} to {cmap_out}")
         write_cmap_tsv(cmap_out, args.tsv_cmap, sorted_clusters)
 
-    if args.cells or args.boundaries:
-        ## read/write DE results
-        de_in = cell_data.get("DE", None)
-        # presence and existence for differential expression file
-        assert de_in is not None, ('Path not provided: "DE" in --in-json' if args.in_json is not None else 'Path not provided: --csv-diffexp')
-        assert os.path.exists(de_in), (f'File not found: {de_in} ("DE" in --in-json)' if args.in_json is not None else f'File not found: {de_in} (--csv-diffexp)')        
+        if args.cells or args.boundaries:
+            if args.skip_redo_diffexp:
+                ## read/write DE results
+                de_in = cell_data.get("DE", None)
+                # presence and existence for differential expression file
+                assert de_in is not None, ('Path not provided: "DE" in --in-json' if args.in_json is not None else 'Path not provided: --csv-diffexp')
+                assert os.path.exists(de_in), (f'File not found: {de_in} ("DE" in --in-json)' if args.in_json is not None else f'File not found: {de_in} (--csv-diffexp)')        
 
-        logger.info(f"  * Reading DE results from {de_in}")
-        clust2genes=read_de_csv(de_in, cluster2idx, args.de_min_fc, args.de_max_pval)
+                logger.info(f"  * Reading DE results from {de_in}")
+                clust2genes=read_de_csv(de_in, cluster2idx, args.de_min_fc, args.de_max_pval)
 
-        ## write DE results
-        de_out=f"{args.outprefix}-cells-bulk-de.tsv"
-        logger.info(f"  * Writing DE results for {len(clust2genes)} clusters) to {de_out}")
-        write_de_tsv(clust2genes, de_out, sorted_clusters)
+                ## write DE results
+                de_out=f"{args.outprefix}-cells-bulk-de.tsv"
+                logger.info(f"  * Writing DE results for {len(clust2genes)} clusters) to {de_out}")
+                write_de_tsv(clust2genes, de_out, sorted_clusters)
+            else:
+                logger.info(f"  * Generating DE results from Pseudobulk files")
+                if args.skip_redo_pseudobulk:
+                    raise ValueError("Cannot perform MEX DE generation when pseudobulk generation from MEX is skipped (--skip-mex-pseudobulk)")
+                ## Generate DE from pseudobulk
+                cmd = f"'{args.spatula}' diffexp-model-matrix --tsv1 '{args.outprefix}-pseudobulk.tsv.gz' --out '{args.outprefix}-pseudobulk' --min-fc {args.de_min_fc} --max-pval {args.de_max_pval}"
+                result = subprocess.run(cmd, shell=True, capture_output=True)
+                if result.returncode != 0:
+                    logger.error(f"Command {cmd}\nfailed with error: {result.stderr.decode()}")
+                    sys.exit(1)
+                pseudobulk_prefix = f"{args.outprefix}-pseudobulk"
+                de_out=f"{args.outprefix}-cells-bulk-de.tsv"
+                cmd = f"('{args.gzip}' -cd '{pseudobulk_prefix}.de.marginal.tsv.gz' | head -1 | sed 's/^Feature/gene/'; '{args.gzip}' -cd '{pseudobulk_prefix}.de.marginal.tsv.gz' | tail -n +2 | '{args.sort}' -k 2,2n -k 3,3gr;) > '{de_out}'"
+                result = subprocess.run(cmd, shell=True, capture_output=True)
+                if result.returncode != 0:
+                    logger.error(f"Command {cmd}\nfailed with error: {result.stderr.decode()}")
+                    sys.exit(1)
+                logger.info(f"  * Wrote differential expression results to {de_out}")
 
+                ## create factor reporting files
+                ficture2report = args.python + " " + os.path.join(args.ficture2, "ext/py/factor_report.py")                        
+                cmd = f"'{args.gzip}' -dc '{pseudobulk_prefix}.tsv.gz' > '{pseudobulk_prefix}.tsv'"
+                result = subprocess.run(cmd, shell=True, capture_output=True)
+                if result.returncode != 0:
+                    logger.error(f"Command {cmd}\nfailed with error: {result.stderr.decode()}")
+                    sys.exit(1)                
+
+                cmd = f"head -n $(head -1 '{pseudobulk_prefix}.tsv' | wc -w) '{args.tsv_cmap}' > '{pseudobulk_prefix}.cmap.tsv'"
+                result = subprocess.run(cmd, shell=True, capture_output=True)
+                if result.returncode != 0:
+                    logger.error(f"Command {cmd}\nfailed with error: {result.stderr.decode()}")
+                    sys.exit(1)
+
+                cmd = " ".join([
+                    ficture2report,
+                    f"--de '{de_out}'",
+                    f"--pseudobulk '{pseudobulk_prefix}.tsv'",
+                    f"--feature_label Feature",
+                    f"--color_table '{pseudobulk_prefix}.cmap.tsv'",
+                    f"--output_pref '{pseudobulk_prefix}'",
+                    ])
+                result = subprocess.run(cmd, shell=True, capture_output=True)
+                if result.returncode != 0:
+                    logger.error(f"Command {cmd}\nfailed with error: {result.stderr.decode()}")
+                    sys.exit(1)
+
+                cmd = f"cp '{pseudobulk_prefix}.factor.info.tsv' '{args.outprefix}-info.tsv'"
+                result = subprocess.run(cmd, shell=True, capture_output=True)
+                if result.returncode != 0:
+                    logger.error(f"Command {cmd}\nfailed with error: {result.stderr.decode()}")
+                    sys.exit(1)
+                logger.info(f"  * Wrote factor info to {args.outprefix}-info.tsv")
+
+                temp_fs.append(f"{args.outprefix}-pseudobulk.de.marginal.tsv.gz")
+                temp_fs.append(f"{args.outprefix}-pseudobulk.tsv")
+                temp_fs.append(f"{args.outprefix}-pseudobulk.cmap.tsv")
+                temp_fs.append(f"{args.outprefix}-pseudobulk.factor.info.tsv")
+
+                
     # Process segmented calls 
     if args.cells:
         cells_in = cell_data.get("CELL", None)
@@ -557,7 +686,7 @@ def import_xenium_cell(_args):
 
     out_assets_f=f"{args.outprefix}_assets.json"
     logger.info(f"Summarizing assets information into {out_assets_f}")
-    new_factor = make_factor_dict(factor_id, factor_name, args.outprefix, factor_type="cells", pmtiles_keys=pmtiles_keys, umap_src=umap_src)
+    new_factor = make_factor_dict(factor_id, factor_name, args.outprefix, factor_type="cells", pmtiles_keys=pmtiles_keys, umap_src=umap_src, pseudobulk_src=args.skip_redo_pseudobulk==False)
     write_dict_to_file(new_factor, out_assets_f, check_equal=True)
 
     if args.update_catalog:
@@ -572,7 +701,7 @@ def import_xenium_cell(_args):
             catalog = yaml.load(f, Loader=yaml.FullLoader)  # Preserves order
 
         ## add files to the catalog
-        new_factor = make_factor_dict(factor_id, factor_name, out_base, factor_type="cells", pmtiles_keys=pmtiles_keys, umap_src=umap_src)
+        new_factor = make_factor_dict(factor_id, factor_name, out_base, factor_type="cells", pmtiles_keys=pmtiles_keys, umap_src=umap_src, pseudobulk_src=args.skip_redo_pseudobulk==False)
         print(new_factor)
         if "factors" not in catalog["assets"]:
             catalog["assets"]["factors"] = [new_factor]
@@ -589,12 +718,12 @@ def import_xenium_cell(_args):
         logger.info(f"Successfully wrote the catalog.yaml file: {out_yaml}")
 
     ## clean the temp files
-    # if not args.keep_intermediate_files:
-    #     logger.info(f"Cleaning intermediate files")
-    #     if len(temp_fs) >0:
-    #         for temp_f in temp_fs:
-    #             if os.path.exists(temp_f):
-    #                 os.remove(temp_f)
+    if not args.keep_intermediate_files:
+        logger.info(f"Cleaning intermediate files")
+        if len(temp_fs) >0:
+            for temp_f in temp_fs:
+                if os.path.exists(temp_f):
+                    os.remove(temp_f)
 
 
     logger.info("Analysis Finished")
