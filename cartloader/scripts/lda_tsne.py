@@ -48,7 +48,7 @@ def lda_tsne(_args):
     # parse argument
     args=parse_arguments(_args)
 
-    logger = create_custom_logger(__name__, args.outprefix + "_lda_leiden_cluster" + args.log_suffix if args.log else None)
+    logger = create_custom_logger(__name__, args.outprefix + "_lda_tsne" + args.log_suffix if args.log else None)
     logger.info("Analysis Started")
 
     ## Read the results file
