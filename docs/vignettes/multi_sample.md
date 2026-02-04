@@ -88,8 +88,8 @@ PLATFORM="generic"                      # platform information
 SCALE=1                                 # coordinate to micrometer scaling factor
 
 # LDA parameters
-train_width=18                           # define LDA training hexagon width (comma-separated if multiple widths are applied)
-n_factor=48,96                           # define number of factors in LDA training (comma-separated if multiple n-factor are applied)
+train_width=24                           # define LDA training hexagon width (comma-separated if multiple widths are applied)
+n_factor=96,192                          # define number of factors in LDA training (comma-separated if multiple n-factor are applied)
 ```
 
 Prepare a working directory:
@@ -159,8 +159,8 @@ Outputs are written under `ficture2/<sample_id>/`. See details in [run_ficture2_
 cartloader run_ficture2_multi \
   --in-list ./input.tsv \
   --out-dir ./ficture2 \
-  --width 18 \
-  --n-factor 48,96 \
+  --width $train_width \
+  --n-factor $n_factor \
   --exclude-feature-regex "^(Blank-.*$)" \
   --redo-merge-units \
   --ficture2 ${PUNKST} \
@@ -245,7 +245,7 @@ TODO: Provide paths to these assets to serve the outputs. -->
 
     The output are available in both CartoScope. 
 
-    [Explore in CartoScope](http://localhost:5173/datasets?collections=human+cerebral+cortex+development%2C+gestational+week+20+%E2%80%93+occipital+cortex){ .md-button .md-button--primary .button-tight-small }
+    [Explore in CartoScope](https://v3o-main.carto-scope.org/datasets?collections=multi-sample+analysis+of+human+occipital+cortex+%28gw20%29+development){ .md-button .md-button--primary .button-tight-small }
 
 </div>
 

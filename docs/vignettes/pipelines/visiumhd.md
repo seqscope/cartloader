@@ -236,7 +236,7 @@ Individual PMTiles and asset JSON files reside alongside it under `<out-dir>/car
 
     The output are available in both CartoScope. 
 
-    [Explore in CartoScope](http://localhost:5173/dataset?uri=s3%2Fcartostore%2Fdata%2Fbatch%3D2025_12%2Fcartloader-pipeline-example-collection%2Fvisiumhd_3prime_mouse_brain){ .md-button .md-button--primary .button-tight-small }
+    [Explore in CartoScope](https://v3o-test.carto-scope.org/dataset?uri=s3%2Fcartostore%2Fdata%2Fbatch%3D2025_12%2Fcartloader-pipeline-example-collection%2Fvisiumhd_3prime_mouse_brain){ .md-button .md-button--primary .button-tight-small }
 
     <!-- [Download from Zenodo](https://zenodo.org/records/17958847){ .md-button .button-tight-small } -->
 
