@@ -168,6 +168,9 @@ def import_image(_args):
             f"--rotate-counter" if args.rotate == "270" else "",
             # f"--flip-vertical" if args.flip_vertical else "",
             # f"--flip-horizontal" if args.flip_horizontal else "",
+            f"--page {args.page}" if args.page is not None else "",
+            f"--level {args.level}" if args.level is not None else "",
+            f"--series {args.series}" if args.series is not None else "",
             f"--write-color-mode"
         ])
         cmd = add_param_to_cmd(cmd, args, aux_image_arg["ome2png"])
