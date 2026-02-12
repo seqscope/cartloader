@@ -236,14 +236,14 @@ def image_ome2png(_args):
             (chunk_height, chunk_width) = page.shape[:2]
             n_chunks = 1
         else:
-            (chunk_height, chunk_width) = page.chunks
+            (chunk_height, chunk_width) = page.chunks[:2]
             n_chunks = ((page.imagelength + chunk_height - 1) // chunk_height) * ((page.imagewidth + chunk_width - 1) // chunk_width)
         logger.info(f"Processing in chunks of {chunk_height}x{chunk_width} pixels")
 
         #pixel_bytes = 4 if args.colorize else 1  # Account for RGB vs grayscale
             
         # Prepare output file
-        output_shape = (*page.shape[:2], 4) if args.transparent_below > 0 else ((*page.shape[:2], 3) if args.colorize else page.shape[:2])
+        output_shape = (*page.shape[:2], 4) if args.transparent_below > 0 else ((*page.shape[:2], 3) if args.colorize else page.shape)
         output_dtype = np.uint8
         
         if args.high_memory:
