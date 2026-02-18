@@ -40,6 +40,7 @@ def parse_arguments(_args):
     # inout_params.add_argument('--flip-vertical', action='store_true', default=False)
     # inout_params.add_argument('--rotate-clockwise', action='store_true', default=False)
     # inout_params.add_argument('--rotate-counter', action='store_true', default=False)
+    inout_params.add_argument('--shrink-factor', type=float, default=None, help='Downsample the image by this factor in both dimensions before processing (e.g., 2.0 = half resolution). Reduces memory when used with --high-memory.')
     inout_params.add_argument('--high-memory', action='store_true', default=False)
     inout_params.add_argument('--write-color-mode', action='store_true', default=False,  help='Save the color mode into a file (<out_prefix>.color.csv). This argument is specifically designed for "cartloader import_image"')
 
@@ -221,6 +222,12 @@ def image_ome2png(_args):
         ul = [offset_um_x, offset_um_y]
         lr = [offset_um_x + px_size_x * page.shape[1], offset_um_y + px_size_y * page.shape[0]]
 
+        # When shrinking, each output pixel covers more micrometers.
+        # ul/lr are already correct (same physical extent), only px_size changes.
+        if args.shrink_factor is not None and args.shrink_factor != 1.0:
+            px_size_x *= args.shrink_factor
+            px_size_y *= args.shrink_factor
+
         logger.info(f"OME-TIFF mode: {is_ome}")        
         logger.info(f"Number of pages: {n_pages}")
         logger.info(f"Number of series: {n_series}")
@@ -235,19 +242,33 @@ def image_ome2png(_args):
         if args.high_memory:
             (chunk_height, chunk_width) = page.shape[:2]
             n_chunks = 1
+            image_array_highmem = page.asarray()
+            if args.shrink_factor is not None and args.shrink_factor != 1.0:
+                new_h = int(round(image_array_highmem.shape[0] / args.shrink_factor))
+                new_w = int(round(image_array_highmem.shape[1] / args.shrink_factor))
+                logger.info(f"Shrinking image from {image_array_highmem.shape[:2]} to ({new_h}, {new_w}) using factor {args.shrink_factor}...")
+                orig_dtype = image_array_highmem.dtype
+                if image_array_highmem.ndim == 2:
+                    img_pil = Image.fromarray(image_array_highmem.astype(np.float32), mode='F')
+                    img_pil = img_pil.resize((new_w, new_h), Image.LANCZOS)
+                    image_array_highmem = np.array(img_pil).astype(orig_dtype)
+                else:  # RGB (3-channel uint8, validated earlier)
+                    img_pil = Image.fromarray(image_array_highmem)
+                    img_pil = img_pil.resize((new_w, new_h), Image.LANCZOS)
+                    image_array_highmem = np.array(img_pil)
+                logger.info(f"Image shrunk to {image_array_highmem.shape}")
+            effective_shape = image_array_highmem.shape
         else:
             (chunk_height, chunk_width) = page.chunks[:2]
             n_chunks = ((page.imagelength + chunk_height - 1) // chunk_height) * ((page.imagewidth + chunk_width - 1) // chunk_width)
+            effective_shape = page.shape  # full size; tiled mode shrinks only at save time
         logger.info(f"Processing in chunks of {chunk_height}x{chunk_width} pixels")
 
         #pixel_bytes = 4 if args.colorize else 1  # Account for RGB vs grayscale
-            
+
         # Prepare output file
-        output_shape = (*page.shape[:2], 4) if args.transparent_below > 0 else ((*page.shape[:2], 3) if args.colorize else page.shape)
+        output_shape = (*effective_shape[:2], 4) if args.transparent_below > 0 else ((*effective_shape[:2], 3) if args.colorize else effective_shape)
         output_dtype = np.uint8
-        
-        if args.high_memory:
-            image_array_highmem = page.asarray()
         
         ## if needed, get the overall distribution of pixel values for quantile-based thresholding
         if args.upper_thres_quantile is not None or args.lower_thres_quantile is not None:
@@ -363,7 +384,15 @@ def image_ome2png(_args):
         # Save final image
         output.flush()
         logger.info("Saving final image...")
-        Image.fromarray(output).save(f"{args.out_prefix}.png")
+        if not args.high_memory and args.shrink_factor is not None and args.shrink_factor != 1.0:
+            # Tiled mode: output is full-size; shrink before saving.
+            # Note: this does not save memory during tile processing, only reduces output size.
+            new_h = int(round(output.shape[0] / args.shrink_factor))
+            new_w = int(round(output.shape[1] / args.shrink_factor))
+            logger.info(f"Shrinking tiled output from {output.shape[:2]} to ({new_h}, {new_w}) using factor {args.shrink_factor}...")
+            Image.fromarray(output).resize((new_w, new_h), Image.LANCZOS).save(f"{args.out_prefix}.png")
+        else:
+            Image.fromarray(output).save(f"{args.out_prefix}.png")
         
         # save the bounds
         with open(f"{args.out_prefix}.bounds.csv", 'w') as f:
