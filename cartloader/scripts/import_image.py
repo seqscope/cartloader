@@ -45,6 +45,7 @@ def parse_arguments(_args):
 
     aux_params1 = parser.add_argument_group("Auxiliary parameters for --ome2png")
     aux_params1.add_argument('--micron2pixel-csv', type=str, help='CSV file containing transformation parameters from microns to mosaic pixels (platform: Vizgen; typical: micron_to_mosaic_pixel_transform.csv)')
+    aux_params1.add_argument("--shrink-factor", type=float, default=None, help='Downsample the image by this factor in both dimensions before processing (e.g., 2.0 = half resolution). Reduces memory when used with --high-memory.')
     aux_params1.add_argument("--page", type=int, help='Z-slice index to extract from multi-page OME-TIFF (3D)')
     aux_params1.add_argument("--level", type=int, help='Resolution level index to extract from OME-TIFF')
     aux_params1.add_argument("--series", type=int, help='Series index to extract from OME-TIFF')
@@ -89,7 +90,7 @@ def parse_arguments(_args):
     return args 
 
 aux_image_arg={
-    "ome2png": ["page", "level", "series", "upper_thres_quantile", "upper_thres_intensity", "lower_thres_quantile", "lower_thres_intensity", "transparent_below", "colorize", "high_memory"],
+    "ome2png": ["page", "level", "series", "upper_thres_quantile", "upper_thres_intensity", "lower_thres_quantile", "lower_thres_intensity", "transparent_below", "colorize", "high_memory", "shrink_factor"],
     "png2pmtiles": ["srs", "mono", "rgba", "resample", "blocksize", "pmtiles", "gdaladdo"],
     "georeference": ["georef_pixel_tsv", "georef_bounds_tsv", "georef_bounds", "srs"],
     "orientate": ["gdalinfo"]
