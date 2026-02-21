@@ -1,4 +1,5 @@
 import argparse, os, sys, gzip, json, re, logging, inspect, time
+from venv import logger
 import requests
 import pandas as pd
 from typing import Dict, List, Optional, Tuple
@@ -336,7 +337,8 @@ def annotate_factors(
     api_type: str,
     model_name: str,
     request_timeout: int,
-    max_retries: int
+    max_retries: int,
+    logger: logging.Logger
 ) -> Dict[str, List[Tuple[int, str]]]:
     """
     Returns dict keyed by engine name -> list of (factor_index, alias)
@@ -347,6 +349,7 @@ def annotate_factors(
     alias2cnts = {}
 
     for idx in sorted(factor2genes.keys()):
+        logger.info(f"Annotating factor {idx} with {api_type} API...")
         genes = factor2genes[idx]
         prompt = _make_prompt(tissue=tissue, organism=organism, genes=genes)
 
@@ -367,6 +370,7 @@ def annotate_factors(
         alias2cnts[alias] = alias2cnts.get(alias, 0) + 1
 
     ## rename duplicate factors
+    logger.info(f"Resolving duplicate aliases...")
     alias2iter = {}
     for i in range(len(results)):
         idx, alias = results[i]
@@ -438,7 +442,8 @@ def annotate_bulk_de_with_ai(_args):
         api_type=args.api_type,
         model_name=args.model_name,
         request_timeout=args.request_timeout,
-        max_retries=args.max_retries
+        max_retries=args.max_retries,
+        logger=logger
     )
 
     logger.info(f"Writing results to {args.out}")
