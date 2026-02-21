@@ -343,6 +343,9 @@ def annotate_factors(
     """
     results: List[Tuple[int, str]] = []
 
+    ## keep track of duplicates
+    alias2cnts = {}
+
     for idx in sorted(factor2genes.keys()):
         genes = factor2genes[idx]
         prompt = _make_prompt(tissue=tissue, organism=organism, genes=genes)
@@ -350,17 +353,26 @@ def annotate_factors(
         if api_type == "openai":
             text = call_openai(prompt, model_name, request_timeout, max_retries)
             alias = _extract_json_alias(text)
-            results.append((idx, alias))
+            results.append([idx, alias])
         elif api_type == "google":
             text = call_google(prompt, model_name, request_timeout, max_retries)
             alias = _extract_json_alias(text)
-            results.append((idx, alias))
+            results.append([idx, alias])
         elif api_type == "claude":
             text = call_claude(prompt, model_name, request_timeout, max_retries)
             alias = _extract_json_alias(text)
-            results.append((idx, alias))
+            results.append([idx, alias])
         else:
             raise ValueError(f"Unknown API type: {api_type}")
+        alias2cnts[alias] = alias2cnts.get(alias, 0) + 1
+
+    ## rename duplicate factors
+    alias2iter = {}
+    for i in range(len(results)):
+        idx, alias = results[i]
+        if alias2cnts[alias] > 1:
+            alias2iter[alias] = alias2iter.get(alias,0) + 1
+            results[i][1] = f"{alias}_{alias2iter[alias]}"
 
     return results
 
