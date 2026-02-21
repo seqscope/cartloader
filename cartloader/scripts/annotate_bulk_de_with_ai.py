@@ -1,4 +1,4 @@
-import argparse, os, sys, gzip, json, re, logging, inspect, time
+import argparse, os, sys, gzip, json, re, logging, inspect, time, base64
 from venv import logger
 import requests
 import pandas as pd
@@ -74,23 +74,38 @@ def _normalize_alias(raw: str) -> str:
     return s if s else "Unknown"
 
 
-def _make_prompt(tissue: str, organism: str, genes: List[str]) -> str:
+def _make_prompt(tissue: str, organism: str, genes: List[str], has_thumbnail: bool) -> str:
     """
     Ask for a single most likely cell type. Force JSON output with alias only.
+    If has_thumbnail=True, the model will also receive a tissue thumbnail image
+    representing spatial gene expression across ALL factors.
     """
     gene_list = ", ".join(genes)
+
+    thumbnail_block = ""
+    if has_thumbnail:
+        thumbnail_block = (
+            "\nAdditional input:\n"
+            "- A thumbnail image is attached. It is a tissue overview showing spatial gene-expression patterns "
+            "for all factors (composite/overview). Use it ONLY as supporting evidence to disambiguate the cell type "
+            "suggested by the marker genes.\n"
+            "- Prioritize marker genes first; use spatial pattern second.\n"
+        )
+
     return (
         "You are annotating latent factors from bulk differential expression.\n"
         "Task: Identify the single most likely cell type represented by these ordered, top marker genes.\n\n"
         f"Organism: {organism}\n"
         f"Tissue: {tissue}\n"
-        f"Top marker genes (comma-separated): {gene_list}\n\n"
+        f"Top marker genes (comma-separated): {gene_list}\n"
+        f"{thumbnail_block}\n"
         "Return ONLY a JSON object with this exact schema:\n"
         "{\"alias\": \"UpperCamelCaseCellType\"}\n\n"
         "Rules:\n"
         "- alias must be terse and singular.\n"
         "- Use informative shorthand when appropriate (e.g., CD4+T, CD8+T, NKCell, BCell, PlasmaCell).\n"
         "- Avoid long phrases, parentheses, or multi-sentence explanations.\n"
+        "- Do not include any extra keys besides 'alias'.\n"
     )
 
 
@@ -126,11 +141,36 @@ def _extract_json_alias(text: str) -> str:
 
     # Fallback: treat whole text as alias
     return _normalize_alias(t)
+  
+def _load_thumbnail_b64(path: Optional[str]) -> Optional[Tuple[str, str]]:
+    """
+    Returns (mime_type, base64_string) for an image file, or None if no path.
+    Currently expects PNG/JPG/JPEG by extension.
+    """
+    if not path:
+        return None
+
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"--thumbnail not found: {path}")
+
+    ext = os.path.splitext(path)[1].lower()
+    if ext == ".png":
+        mime = "image/png"
+    elif ext in (".jpg", ".jpeg"):
+        mime = "image/jpeg"
+    else:
+        raise ValueError(f"--thumbnail must be .png/.jpg/.jpeg (got {ext})")
+
+    with open(path, "rb") as f:
+        b = f.read()
+
+    b64 = base64.b64encode(b).decode("utf-8")
+    return mime, b64
 
 # -----------------------------
 # API Calls
 # -----------------------------
-def call_openai(prompt: str, model_name: str, request_timeout: int, max_retries: int) -> str:
+def call_openai(prompt: str, thumbnail: Optional[Tuple[str, str]], model_name: str, request_timeout: int, max_retries: int) -> str:
     """
     OpenAI Responses API via REST.
     Env: OPENAI_API_KEY, optional OPENAI_MODEL
@@ -144,16 +184,23 @@ def call_openai(prompt: str, model_name: str, request_timeout: int, max_retries:
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
     }
+    content = [{"type": "input_text", "text": prompt}]
+    if thumbnail is not None:
+        mime, b64 = thumbnail
+        content.append({
+            "type": "input_image",
+            "image_url": f"data:{mime};base64,{b64}",
+        })
+
     payload = {
         "model": model,
-        "input": [  # 'messages' is now 'input'
+        "input": [
             {
-                "role": "user", 
-                "content": [{"type": "input_text", "text": prompt}] # Itemized content
+                "role": "user",
+                "content": content
             }
         ],
-        # REMOVED: temperature, top_p, etc.
-        "reasoning": { "effort": "medium" } # Optional: Controls thinking depth
+        "reasoning": { "effort": "medium" }
     }
 
     for attempt in range(max_retries):
@@ -184,30 +231,35 @@ def call_openai(prompt: str, model_name: str, request_timeout: int, max_retries:
         return ""
 
 
-def call_google(prompt: str, model_name: str, request_timeout: int, max_retries: int) -> str:
+def call_google(prompt: str, thumbnail: Optional[Tuple[str, str]], model_name: str, request_timeout: int, max_retries: int) -> str:
     """
     Google Gemini 3 SDK call.
     Env: GEMINI_API_KEY, optional GOOGLE_MODEL
     """
     # The SDK automatically looks for the GEMINI_API_KEY environment variable
     client = genai.Client()
-    
     model_id = os.environ.get(GOOGLE_MODEL_ENV, DEFAULT_GOOGLE_MODEL) if model_name is None else model_name
-    
-    # Configure Gemini 3 reasoning behavior
-    # Options for thinking_level: LOW, MEDIUM, HIGH, or MINIMAL (Flash only)
+
     config = types.GenerateContentConfig(
-        thinking_config=types.ThinkingConfig(
-            thinking_level=types.ThinkingLevel.HIGH 
-        ),
-        # temperature=1.0 # Recommended to leave at default for Gemini 3
+        thinking_config=types.ThinkingConfig(thinking_level=types.ThinkingLevel.HIGH),
     )
+
+    # Build multimodal contents
+    if thumbnail is None:
+        contents = prompt
+    else:
+        mime, b64 = thumbnail
+        img_bytes = base64.b64decode(b64)
+        contents = [
+            prompt,
+            types.Part.from_bytes(data=img_bytes, mime_type=mime),
+        ]
 
     for attempt in range(max_retries):
         try:
             response = client.models.generate_content(
                 model=model_id,
-                contents=prompt,
+                contents=contents,
                 config=config
             )
             return response.text.strip()
@@ -218,7 +270,7 @@ def call_google(prompt: str, model_name: str, request_timeout: int, max_retries:
     return ""
 
 
-def call_claude(prompt: str, model_name: str, request_timeout: int, max_retries: int) -> str:
+def call_claude(prompt: str, thumbnail: Optional[Tuple[str, str]], model_name: str, request_timeout: int, max_retries: int) -> str:
     """
     Anthropic Messages API via REST.
     Env: ANTHROPIC_API_KEY, optional ANTHROPIC_MODEL
@@ -232,11 +284,24 @@ def call_claude(prompt: str, model_name: str, request_timeout: int, max_retries:
         "anthropic-version": "2023-06-01",
         "content-type": "application/json",
     }
+    content_blocks = []
+    if thumbnail is not None:
+        mime, b64 = thumbnail
+        content_blocks.append({
+            "type": "image",
+            "source": {
+                "type": "base64",
+                "media_type": mime,
+                "data": b64
+            }
+        })
+    content_blocks.append({"type": "text", "text": prompt})
+
     payload = {
         "model": model,
         "max_tokens": 256,
         "temperature": 0.2,
-        "messages": [{"role": "user", "content": prompt}],
+        "messages": [{"role": "user", "content": content_blocks}],
     }
 
     for attempt in range(max_retries):
@@ -338,6 +403,7 @@ def annotate_factors(
     model_name: str,
     request_timeout: int,
     max_retries: int,
+    thumbnail: Optional[Tuple[str, str]],
     logger: logging.Logger
 ) -> Dict[str, List[Tuple[int, str]]]:
     """
@@ -351,18 +417,18 @@ def annotate_factors(
     for idx in sorted(factor2genes.keys()):
         logger.info(f"Annotating factor {idx} with {api_type} API...")
         genes = factor2genes[idx]
-        prompt = _make_prompt(tissue=tissue, organism=organism, genes=genes)
+        prompt = _make_prompt(tissue=tissue, organism=organism, genes=genes, has_thumbnail=(thumbnail is not None))
 
         if api_type == "openai":
-            text = call_openai(prompt, model_name, request_timeout, max_retries)
+            text = call_openai(prompt, thumbnail, model_name, request_timeout, max_retries)
             alias = _extract_json_alias(text)
             results.append([idx, alias])
         elif api_type == "google":
-            text = call_google(prompt, model_name, request_timeout, max_retries)
+            text = call_google(prompt, thumbnail, model_name, request_timeout, max_retries)
             alias = _extract_json_alias(text)
             results.append([idx, alias])
         elif api_type == "claude":
-            text = call_claude(prompt, model_name, request_timeout, max_retries)
+            text = call_claude(prompt, thumbnail, model_name, request_timeout, max_retries)
             alias = _extract_json_alias(text)
             results.append([idx, alias])
         else:
@@ -397,6 +463,7 @@ def annotate_bulk_de_with_ai(_args):
     inout_params.add_argument('--tissue', type=str, required=True, help='Tissue name used in the prompt')
     inout_params.add_argument('--organism', default="human", help='Organism name for gene interpretation (e.g., human, mouse)')
     inout_params.add_argument('--api-type', type=str, required=True, choices=['openai', 'google', 'claude'], help='API for generative AI model')
+    inout_params.add_argument('--thumbnail', type=str, default=None, help='Optional PNG/JPG thumbnail file location of tissue overview with gene expression of all factors; will be included in the prompt as an image')
 
     aux_params = parser.add_argument_group("Auxiliary Parameters", "Other parameters")
     aux_params.add_argument('--primary-rank', type=str, default="Chi2", help='Primary ranking column name in the input TSV (e.g., Chi2)')
@@ -407,6 +474,8 @@ def annotate_bulk_de_with_ai(_args):
     aux_params.add_argument('--max-retries', type=int, default=3, help='Maximum number of retries for failed requests (default: 3)')
 
     args = parser.parse_args(_args)
+    
+    thumbnail = _load_thumbnail_b64(args.thumbnail)
 
     log_format = "[%(asctime)s - %(levelname)s - %(message)s]"
     date_format = "[%Y-%m-%d %H:%M:%S]"  # Clean timestamp without milliseconds
@@ -443,6 +512,7 @@ def annotate_bulk_de_with_ai(_args):
         model_name=args.model_name,
         request_timeout=args.request_timeout,
         max_retries=args.max_retries,
+        thumbnail=thumbnail,
         logger=logger
     )
 
