@@ -261,6 +261,7 @@ def run_xenium(_args):
             f"--tippecanoe {args.tippecanoe}" if args.tippecanoe else "",
             f"--threads {args.threads}" if args.threads else "",
             f"--spatula {args.spatula}" if args.spatula else "",
+            f"--ficture2 {args.ficture2}" if args.ficture2 else "",
         ])
 
         if os.path.exists(cell_assets) and not args.restart:
