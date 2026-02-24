@@ -45,7 +45,7 @@ def parse_arguments(_args):
     aux_inout_params.add_argument('--csv-clust', type=str, default="analysis/clustering/gene_expression_graphclust/clusters.csv", help='Location of CSV with cell cluster assignments under --in-dir (default: analysis/clustering/gene_expression_graphclust/clusters.csv)')
     aux_inout_params.add_argument('--csv-diffexp', type=str, default="analysis/diffexp/gene_expression_graphclust/differential_expression.csv", help='Location of CSV with differential expression results under --in-dir (default: analysis/diffexp/gene_expression_graphclust/differential_expression.csv)')
     # - Bin-level Spatial Gene Expression Matrix
-    aux_inout_params.add_argument('--mex-dir', type=str, default="filtered_feature_bc_matrix", help='Directory location of 10x Genomic MatrixMarket files under --in-dir (default: analysis/filtered_feature_bc_matrix)')
+    aux_inout_params.add_argument('--mex-dir', type=str, default="filtered_feature_bc_matrix", help='Directory location of 10x Genomic MatrixMarket files under --in-dir (default: filtered_feature_bc_matrix)')
     aux_inout_params.add_argument('--mex-bcd', type=str, default="barcodes.tsv.gz", help='Filename for barcodes in the MatrixMarket directory (default: barcodes.tsv.gz)')
     aux_inout_params.add_argument('--mex-ftr', type=str, default="features.tsv.gz", help='Filename for features in the MatrixMarket directory (default: features.tsv.gz)')
     aux_inout_params.add_argument('--mex-mtx', type=str, default="matrix.mtx.gz", help='Filename for matrix in the MatrixMarket directory (default: matrix.mtx.gz)')
@@ -156,10 +156,14 @@ def import_visiumhd_square(_args):
             "CLUSTER": os.path.join(args.in_dir, args.csv_clust),
             "DE": os.path.join(args.in_dir, args.csv_diffexp),
             "UMAP_PROJ": f"{args.in_dir}/{args.csv_umap}",
-            "MEX_BCD": os.path.join(args.in_dir, args.mex_dir, args.mex_bcd),
-            "MEX_FTR": os.path.join(args.in_dir, args.mex_dir, args.mex_ftr),
-            "MEX_MTX": os.path.join(args.in_dir, args.mex_dir, args.mex_mtx),
+            "GRID_FEATURE_MEX": os.path.join(args.in_dir, args.mex_dir)
+
         }
+
+    if bin_data.get("GRID_FEATURE_MEX") is not None:
+        bin_data["MEX_BCD"] = os.path.join(bin_data["GRID_FEATURE_MEX"], args.mex_bcd)
+        bin_data["MEX_FTR"] = os.path.join(bin_data["GRID_FEATURE_MEX"], args.mex_ftr)
+        bin_data["MEX_MTX"] = os.path.join(bin_data["GRID_FEATURE_MEX"], args.mex_mtx)
 
     if scale_json is not None:
         assert os.path.exists(scale_json), f"File not found: {scale_json} (--scale-json)"
