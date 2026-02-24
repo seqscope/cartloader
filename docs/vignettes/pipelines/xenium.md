@@ -252,7 +252,7 @@ individual PMTiles and asset JSON files reside alongside it under `<out-dir>/car
 
     #### View/Explore
 
-    The output are available in both CartoScope.
+    The output are available in CartoScope.
 
     [Explore in CartoScope](https://v3o-test.carto-scope.org/dataset?uri=s3%2Fcartostore%2Fdata%2Fbatch%3D2025_12%2Fcartloader-pipeline-example-collection%2Fxenium_human_lung_cancer){ .md-button .md-button--primary .button-tight-small }
 
