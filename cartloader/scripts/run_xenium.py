@@ -260,6 +260,7 @@ def run_xenium(_args):
             f"--tsv-cmap {args.tsv_cmap}" if args.tsv_cmap else "",
             f"--tippecanoe {args.tippecanoe}" if args.tippecanoe else "",
             f"--threads {args.threads}" if args.threads else "",
+            f"--spatula {args.spatula}" if args.spatula else "",
         ])
 
         if os.path.exists(cell_assets) and not args.restart:
