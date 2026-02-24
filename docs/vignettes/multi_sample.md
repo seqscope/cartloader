@@ -250,4 +250,3 @@ TODO: Provide paths to these assets to serve the outputs. -->
 </div>
 
 See more details of output at the Reference pages for [run_ficture2](../docs/reference/run_ficture2.md) and [run_cartload2](../docs/reference/run_cartload2.md).
-
