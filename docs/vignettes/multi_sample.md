@@ -237,13 +237,13 @@ TODO: Provide paths to these assets to serve the outputs. -->
 
 <div class="grid cards generic" markdown>
 
--   ![Interactive Exploration](placeholder)
+-   ![Interactive Exploration](../images/multisample_vigenettes/multi-sample_results.png)
 
     ---
 
     #### View/Explore
 
-    The output are available in both CartoScope. 
+    The output are available in CartoScope.
 
     [Explore in CartoScope](https://v3o-main.carto-scope.org/datasets?collections=multi-sample+analysis+of+human+occipital+cortex+%28gw20%29+development){ .md-button .md-button--primary .button-tight-small }
 

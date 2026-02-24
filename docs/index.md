@@ -72,13 +72,22 @@ Together, they provide a unified solution for working with raw pixel-level spati
         - **Scale-Up Your Own Data**: Fully supports custom datasets—upload your own processing results to visualize and analyze your specific samples with the same powerful tools used for public data.
         - **Open Access**: Upload, screen, and share datasets worldwide at no cost.
 
-
 ---
 
 ## Citations
 
-If you use CartoScope in your research, please cite:
+!!! info "Citations"
 
-* CartoScope: [placeholder](placeholder)
-* FICTURE: [doi.org/10.1038/s41592-024-02415-2](https://www.nature.com/articles/s41592-024-02415-2)
+    If you use CartoScope in your research, please cite:
 
+    * CartoScope: [10.5281/zenodo.18739064]([placeholder](https://doi.org/10.5281/zenodo.18739064))
+    * FICTURE: [doi.org/10.1038/s41592-024-02415-2](https://www.nature.com/articles/s41592-024-02415-2)
+
+--- 
+
+## Contact Us
+
+!!! info "Contact Us"
+    To report issues or ask questions, please submit your questions or report issues via:
+
+    {% include-markdown "../includes/contact-us.md" %}

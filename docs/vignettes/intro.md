@@ -113,7 +113,12 @@ These examples show how to process real‑world ST datasets from different platf
 
 ## Multi‑Sample Analysis
 
-!!! warning
-    This section is under active development.
+<div class="grid cards generic" markdown>
+-   <figure markdown="span">
+    ![example4](../images/multisample_vigenettes/multi-sample_results.png){ width="100%" }
+    <figcaption class="figure-caption-vigintro-large">**Multi-sample** Analysis</figcaption>
+    </figure>
 
-Upcoming content will cover how to process **multiple samples** in a single batch, including cross‑sample analysis.
+    [Read](./multi_sample.md){ .md-button .md-button--primary .button-tight-small }
+
+</div>
