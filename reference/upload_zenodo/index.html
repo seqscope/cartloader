@@ -1687,15 +1687,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#action" class="md-nav__link">
-    <span class="md-ellipsis">
-      Action
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#requirements" class="md-nav__link">
     <span class="md-ellipsis">
       Requirements
@@ -1705,9 +1696,9 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#behavior-highlights" class="md-nav__link">
+  <a href="#actions" class="md-nav__link">
     <span class="md-ellipsis">
-      Behavior Highlights
+      Actions
     </span>
   </a>
   
@@ -1770,6 +1761,15 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#output" class="md-nav__link">
+    <span class="md-ellipsis">
+      Output
+    </span>
+  </a>
   
 </li>
       
@@ -2095,15 +2095,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#action" class="md-nav__link">
-    <span class="md-ellipsis">
-      Action
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#requirements" class="md-nav__link">
     <span class="md-ellipsis">
       Requirements
@@ -2113,9 +2104,9 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#behavior-highlights" class="md-nav__link">
+  <a href="#actions" class="md-nav__link">
     <span class="md-ellipsis">
-      Behavior Highlights
+      Actions
     </span>
   </a>
   
@@ -2181,6 +2172,15 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#output" class="md-nav__link">
+    <span class="md-ellipsis">
+      Output
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -2204,9 +2204,6 @@
 <h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
 <p>Use <code>upload_zenodo</code> to publish <code>CartLoader</code> outputs — including <abbr title="Single-file archive format for map tiles and web visualization">PMTiles</abbr>, decoded spatial factors, and the catalog — to a Zenodo deposition, either an existing one or a newly created draft. In catalog mode, files are pulled from <code>catalog.yaml</code> and grouped into cartload basics, cartload optional files (e.g., <abbr title="Uniform Manifold Approximation and Projection; nonlinear dimensionality reduction">UMAP</abbr>, alias), and additional basemaps (non-<abbr title="Spatial Digital Gene Expression">SGE</abbr> <abbr title="Single-file archive format for map tiles and web visualization">PMTiles</abbr>).</p>
 <hr />
-<h2 id="action">Action<a class="headerlink" href="#action" title="Permanent link">&para;</a></h2>
-<p>Upload selected files to a Zenodo deposition (existing or new) using <code>all</code>, <code>catalog</code>, or <code>files</code> selection modes.</p>
-<hr />
 <h2 id="requirements">Requirements<a class="headerlink" href="#requirements" title="Permanent link">&para;</a></h2>
 <ul>
 <li>A completed run of <a href="../run_cartload2/"><code>run_cartload2</code></a>, which produces:<ul>
@@ -2220,14 +2217,6 @@
 </li>
 <li>A Zenodo access token saved in a file (for API authentication).</li>
 <li>(Optional) A Zenodo deposition ID to upload to an existing deposition.</li>
-</ul>
-<hr />
-<h2 id="behavior-highlights">Behavior Highlights<a class="headerlink" href="#behavior-highlights" title="Permanent link">&para;</a></h2>
-<ul>
-<li>If <code>--zenodo-deposition-id</code> points to a published record, a new draft version is created automatically before upload; drafts are reused as-is.</li>
-<li>When a deposition already has metadata, provided flags override specific fields and the metadata is updated before uploading files.</li>
-<li><code>--upload-method catalog</code> uploads cartload basics first, then basemaps, then optional files. A <code>cartload.zenodo.done</code> marker is written after basics succeed.</li>
-<li>Existing files are skipped by default; add <code>--restart</code> to re-upload overlapping files. <code>--dry-run</code> lists actions without uploading. Upload aborts if the expected total file count exceeds Zenodo’s limit (100).</li>
 </ul>
 <div class="admonition info">
 <p class="admonition-title">What are the Zenodo token and deposition ID, and how do you get them?</p>
@@ -2251,28 +2240,17 @@ If you’ve already created a deposition, you can find its ID at the end of the 
                             This is the deposition ID
 </code></pre></div></td></tr></table></div></p>
 </div>
+<h2 id="actions">Actions<a class="headerlink" href="#actions" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Upload files to a Zenodo deposition. </li>
+<li>(Optional) Create a new deposition if no <code>--zenodo-deposition-id</code> is provided or <code>--zenodo-deposition-id</code> points to a published record.</li>
+<li>(Optional) Fullfill or update metadata.</li>
+</ul>
 <hr />
 <h2 id="example-usage">Example Usage<a class="headerlink" href="#example-usage" title="Permanent link">&para;</a></h2>
-<div class="tabbed-set tabbed-alternate" data-tabs="1:3"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><input id="__tabbed_1_3" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Upload to an existing deposition</label><label for="__tabbed_1_2">Create a new deposition to upload</label><label for="__tabbed_1_3">Upload explicit files</label></div>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:3"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><input id="__tabbed_1_3" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Create a new deposition to upload</label><label for="__tabbed_1_2">Upload to an existing deposition</label><label for="__tabbed_1_3">Upload explicit files</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span>
-<span class="normal">5</span>
-<span class="normal">6</span>
-<span class="normal">7</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nv">zenodo_deposition_id</span><span class="o">=</span>DEPOSITION_ID<span class="w">                </span><span class="c1"># replace with your deposition ID (published IDs get a new draft automatically)</span>
-
-cartloader<span class="w"> </span>upload_zenodo<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--upload-method<span class="w"> </span>catalog<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--in-dir<span class="w"> </span>/path/to/run_cartload2/output/directory<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--zenodo-token<span class="w"> </span>/path/to/zenodo_token.txt<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--zenodo-deposition-id<span class="w"> </span><span class="si">${</span><span class="nv">zenodo_deposition_id</span><span class="si">}</span>
-</code></pre></div></td></tr></table></div>
-</div>
-<div class="tabbed-block">
-<p>Recommended: provide metadata.</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
 <span class="normal">3</span>
@@ -2287,9 +2265,30 @@ cartloader<span class="w"> </span>upload_zenodo<span class="w"> </span><span cla
 <span class="w">  </span>--creators<span class="w"> </span><span class="s2">&quot;Creator Name&quot;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--description<span class="w"> </span><span class="s2">&quot;Description Info&quot;</span>
 </code></pre></div></td></tr></table></div>
+<ul>
+<li><code>--upload-method catalog</code>: Upload files defined in the catalog.</li>
+<li>(Recommended) Provide metadata via <code>--title</code>, <code>--creators</code>, and <code>--description</code>.</li>
+</ul>
 </div>
 <div class="tabbed-block">
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<p><div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span>
+<span class="normal">6</span>
+<span class="normal">7</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nv">zenodo_deposition_id</span><span class="o">=</span>DEPOSITION_ID<span class="w">                </span><span class="c1"># replace with your deposition ID (published IDs get a new draft automatically)</span>
+
+cartloader<span class="w"> </span>upload_zenodo<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--upload-method<span class="w"> </span>catalog<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--in-dir<span class="w"> </span>/path/to/run_cartload2/output/directory<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--zenodo-token<span class="w"> </span>/path/to/zenodo_token.txt<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--zenodo-deposition-id<span class="w"> </span><span class="si">${</span><span class="nv">zenodo_deposition_id</span><span class="si">}</span>
+</code></pre></div></td></tr></table></div>
+- <code>--upload-method catalog</code>: Upload files defined in the catalog.</p>
+</div>
+<div class="tabbed-block">
+<p><div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
 <span class="normal">3</span>
 <span class="normal">4</span>
@@ -2301,6 +2300,7 @@ cartloader<span class="w"> </span>upload_zenodo<span class="w"> </span><span cla
 <span class="w">  </span>--zenodo-token<span class="w"> </span>/path/to/zenodo_token.txt<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--zenodo-deposition-id<span class="w"> </span><span class="si">${</span><span class="nv">zenodo_deposition_id</span><span class="si">}</span>
 </code></pre></div></td></tr></table></div>
+- <code>--upload-method files</code>: Upload files defined in <code>--files</code>.</p>
 </div>
 </div>
 </div>
@@ -2310,7 +2310,7 @@ cartloader<span class="w"> </span>upload_zenodo<span class="w"> </span><span cla
 <ul>
 <li><code>--in-dir</code> (str): Path to the directory containing <code>run_cartload2</code> outputs.</li>
 <li>
-<p><code>--upload-method</code> (str, default: <code>all</code>): Which files to upload. </p>
+<p><code>--upload-method</code> (str, default: <code>all</code>): Which files to upload.</p>
 <div class="admonition info">
 <p class="admonition-title"><code>--upload-method</code> Options</p>
 <ul>
@@ -2341,6 +2341,12 @@ cartloader<span class="w"> </span>upload_zenodo<span class="w"> </span><span cla
 <ul>
 <li><code>--dry-run</code> (flag): Simulate and print operations; do not execute uploads.</li>
 <li><code>--restart</code> (flag): Re-upload overlapping files instead of skipping existing ones.</li>
+</ul>
+<hr />
+<h2 id="output">Output<a class="headerlink" href="#output" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Files uploaded to the Zenodo deposition (existing or newly created draft).</li>
+<li>A <code>cartload.zenodo.done</code> marker file when <code>--upload-method catalog</code> completes the basics stage.</li>
 </ul>
 
 

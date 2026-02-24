@@ -1407,6 +1407,24 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      Requirements
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#actions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Actions
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#example-usage" class="md-nav__link">
     <span class="md-ellipsis">
       Example Usage
@@ -1458,15 +1476,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#actions" class="md-nav__link">
-    <span class="md-ellipsis">
-      Actions
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#parameters" class="md-nav__link">
     <span class="md-ellipsis">
       Parameters
@@ -1500,9 +1509,9 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#outputs" class="md-nav__link">
+  <a href="#output" class="md-nav__link">
     <span class="md-ellipsis">
-      Outputs
+      Output
     </span>
   </a>
   
@@ -2110,6 +2119,24 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      Requirements
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#actions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Actions
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#example-usage" class="md-nav__link">
     <span class="md-ellipsis">
       Example Usage
@@ -2161,15 +2188,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#actions" class="md-nav__link">
-    <span class="md-ellipsis">
-      Actions
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#parameters" class="md-nav__link">
     <span class="md-ellipsis">
       Parameters
@@ -2203,9 +2221,9 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#outputs" class="md-nav__link">
+  <a href="#output" class="md-nav__link">
     <span class="md-ellipsis">
-      Outputs
+      Output
     </span>
   </a>
   
@@ -2235,6 +2253,24 @@
 <p><code>CartLoader</code> provides an add-on module, named <code>feature_filtering</code>, to filter features (e.g., genes) from a CSV/TSV using explicit lists, substrings, regex patterns, or a type reference file.</p>
 <p>The curated feature file can then be used downstream, including <abbr title="Segmentation-free method inferring latent spatial factors from SGE (Si et al., Nature Methods 2024)">FICTURE</abbr> analysis.</p>
 <hr />
+<h2 id="requirements">Requirements<a class="headerlink" href="#requirements" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Input feature CSV/TSV (plain text or gzipped).</li>
+<li>Optional reference file for feature types (CSV/TSV) when using <code>--include-feature-type-regex</code>.</li>
+</ul>
+<hr />
+<h2 id="actions">Actions<a class="headerlink" href="#actions" title="Permanent link">&para;</a></h2>
+<div class="admonition warning">
+<p class="admonition-title">Action Specifications</p>
+<p>No action runs by default. Activate at least one filter criterion via the <a href="#filters-parameters">filter parameters</a>.</p>
+</div>
+<p>Include or exclude features by using explicit lists, substrings, regex patterns of feature name or types.
+Please note that:</p>
+<ul>
+<li>Include criteria are restrictive (a feature must satisfy all provided include constraints).</li>
+<li>Exclude criteria are subtractive (a feature matching any exclude constraint is removed).</li>
+</ul>
+<hr />
 <h2 id="example-usage">Example Usage<a class="headerlink" href="#example-usage" title="Permanent link">&para;</a></h2>
 <h3 id="1-filter-by-regex">1) Filter by Regex<a class="headerlink" href="#1-filter-by-regex" title="Permanent link">&para;</a></h3>
 <p>This example demonstrates an exclude-only pattern with <code>--exclude-feature-regex</code>; conversely, you could keep only matching features using <code>--include-feature-regex</code>.</p>
@@ -2255,13 +2291,13 @@
 <span class="normal">5</span>
 <span class="normal">6</span>
 <span class="normal">7</span>
-<span class="normal">8</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nv">include_list</span><span class="o">=</span>/path/to/input_keep_genes.txt<span class="w"> </span>
+<span class="normal">8</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nv">include_list</span><span class="o">=</span>/path/to/input_keep_genes.txt
 cartloader<span class="w"> </span>feature_filtering<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--in-csv<span class="w"> </span>/path/to/sge/feature.clean.tsv.gz<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--out-csv<span class="w"> </span>/path/to/sge/feature.filtered.tsv.gz<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--out-record<span class="w"> </span>/path/to/sge/feature.filter_record.tsv<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--csv-colname-feature-name<span class="w"> </span>gene<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--include-feature-list<span class="w"> </span><span class="si">${</span><span class="nv">include_list</span><span class="si">}</span><span class="se">\</span>
+<span class="w">  </span>--include-feature-list<span class="w"> </span><span class="si">${</span><span class="nv">include_list</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--log
 </code></pre></div></td></tr></table></div>
 <h3 id="3-filter-by-substrings">3) Filter by Substrings<a class="headerlink" href="#3-filter-by-substrings" title="Permanent link">&para;</a></h3>
@@ -2315,7 +2351,7 @@ cartloader<span class="w"> </span>feature_filtering<span class="w"> </span><span
 
 <span class="c1"># Example 4B includes `lncRNA` features using column indices (0-based) and a CSV reference file:</span>
 
-<span class="nv">ref_csv</span><span class="o">=</span>/path/to/refs/gene_types.csv<span class="w"> </span>
+<span class="nv">ref_csv</span><span class="o">=</span>/path/to/refs/gene_types.csv
 
 cartloader<span class="w"> </span>feature_filtering<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--in-csv<span class="w"> </span>/path/to/sge/feature.clean.tsv.gz<span class="w"> </span><span class="se">\</span>
@@ -2326,18 +2362,6 @@ cartloader<span class="w"> </span>feature_filtering<span class="w"> </span><span
 <span class="w">  </span>--feature-type-ref-colidx-name<span class="w"> </span><span class="m">0</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--feature-type-ref-colidx-type<span class="w"> </span><span class="m">2</span>
 </code></pre></div></td></tr></table></div>
-<hr />
-<h2 id="actions">Actions<a class="headerlink" href="#actions" title="Permanent link">&para;</a></h2>
-<div class="admonition warning">
-<p class="admonition-title">Action Specifications</p>
-<p>No action runs by default. Activate at least one using filtering criteria the <a href="#filters-parameters">filter parameters</a>.</p>
-</div>
-<p>Include or exclude features by using explicit lists, substrings, regex patterns of feature name or types.
-Please note that:</p>
-<ul>
-<li>Include criteria are restrictive (a feature must satisfy all provided include constraints).</li>
-<li>Exclude criteria are subtractive (a feature matching any exclude constraint is removed).</li>
-</ul>
 <hr />
 <h2 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">&para;</a></h2>
 <h3 id="inputoutput-parameters">Input/Output Parameters<a class="headerlink" href="#inputoutput-parameters" title="Permanent link">&para;</a></h3>
@@ -2381,8 +2405,8 @@ Please note that:</p>
 <li><code>--feature-type-ref-colidx-type</code> (int): 0-based column index for feature type.</li>
 </ul>
 <hr />
-<h2 id="outputs">Outputs<a class="headerlink" href="#outputs" title="Permanent link">&para;</a></h2>
-<p>A CSV/TSV file contains the remaining features. </p>
+<h2 id="output">Output<a class="headerlink" href="#output" title="Permanent link">&para;</a></h2>
+<p>A CSV/TSV file contains the remaining features.</p>
 <p>If <code>--out-record</code> is set, a TSV mapping each feature to a <code>filtering</code> reason; empty when a feature is kept.</p>
 
 

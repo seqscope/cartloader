@@ -1583,18 +1583,18 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#action" class="md-nav__link">
+  <a href="#requirements" class="md-nav__link">
     <span class="md-ellipsis">
-      Action
+      Requirements
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#requirements" class="md-nav__link">
+  <a href="#actions" class="md-nav__link">
     <span class="md-ellipsis">
-      Requirements
+      Actions
     </span>
   </a>
   
@@ -1652,9 +1652,9 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#outputs" class="md-nav__link">
+  <a href="#output" class="md-nav__link">
     <span class="md-ellipsis">
-      Outputs
+      Output
     </span>
   </a>
   
@@ -2086,18 +2086,18 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#action" class="md-nav__link">
+  <a href="#requirements" class="md-nav__link">
     <span class="md-ellipsis">
-      Action
+      Requirements
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#requirements" class="md-nav__link">
+  <a href="#actions" class="md-nav__link">
     <span class="md-ellipsis">
-      Requirements
+      Actions
     </span>
   </a>
   
@@ -2155,9 +2155,9 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#outputs" class="md-nav__link">
+  <a href="#output" class="md-nav__link">
     <span class="md-ellipsis">
-      Outputs
+      Output
     </span>
   </a>
   
@@ -2186,9 +2186,6 @@
 <h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
 <p><code>import_visiumhd_square</code> packages Space Ranger square-bin analysis outputs (clusters, <abbr title="Differential Expression; comparing groups to find significantly changed genes">DE</abbr>, and optional <abbr title="Uniform Manifold Approximation and Projection; nonlinear dimensionality reduction">UMAP</abbr> coordinates) into <abbr title="Single-file archive format for map tiles and web visualization">PMTiles</abbr> and a square assets JSON for CartLoader. Use it directly, or via <code>run_visiumhd --import-squares</code> to fold square-bin layers into your catalog.</p>
 <hr />
-<h2 id="action">Action<a class="headerlink" href="#action" title="Permanent link">&para;</a></h2>
-<p>Convert one bin size of Visium HD square results into <abbr title="Single-file archive format for map tiles and web visualization">PMTiles</abbr>, write <code>&lt;square-id&gt;-sqXXX_assets.json</code>, and optionally update an existing <code>catalog.yaml</code>.</p>
-<hr />
 <h2 id="requirements">Requirements<a class="headerlink" href="#requirements" title="Permanent link">&para;</a></h2>
 <ul>
 <li>Space Ranger square-bin outputs for a given bin size (8 <abbr title="micrometer">µm</abbr> or 16 <abbr title="micrometer">µm</abbr> are common):</li>
@@ -2199,6 +2196,9 @@
 <li>Scale factors JSON (<code>spatial/scalefactors_json.json</code>) to derive units-per-<abbr title="micrometer">µm</abbr>, or provide <code>--units-per-um</code>.</li>
 <li>Tippecanoe and <abbr title="Columnar storage format for large tabular datasets">parquet</abbr>-tools (or pigz/polars) available on PATH.</li>
 </ul>
+<hr />
+<h2 id="actions">Actions<a class="headerlink" href="#actions" title="Permanent link">&para;</a></h2>
+<p>Convert one bin size of Visium HD square results into <abbr title="Single-file archive format for map tiles and web visualization">PMTiles</abbr>, write <code>&lt;square-id&gt;-sqXXX_assets.json</code>, and optionally update an existing <code>catalog.yaml</code>.</p>
 <hr />
 <h2 id="example-usage">Example Usage<a class="headerlink" href="#example-usage" title="Permanent link">&para;</a></h2>
 <div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">JSON mode (preferred; auto paths)</label><label for="__tabbed_1_2">Manual mode (explicit files)</label></div>
@@ -2297,7 +2297,7 @@
 * <code>--gzip</code> (str): Path to <code>gzip</code> (default: <code>gzip</code>).</p>
 </details>
 <hr />
-<h2 id="outputs">Outputs<a class="headerlink" href="#outputs" title="Permanent link">&para;</a></h2>
+<h2 id="output">Output<a class="headerlink" href="#output" title="Permanent link">&para;</a></h2>
 <p>Written next to <code>--outprefix</code>:</p>
 <ul>
 <li><code>&lt;outprefix&gt;.pmtiles</code>: Square-bin clusters as tiles (one layer per bin size).</li>

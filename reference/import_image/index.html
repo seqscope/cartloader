@@ -1548,39 +1548,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#example-usage" class="md-nav__link">
-    <span class="md-ellipsis">
-      Example Usage
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Example Usage">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#1-ometiff-png-pmtiles-auto-georeference" class="md-nav__link">
-    <span class="md-ellipsis">
-      1) OME‑TIFF → PNG → PMTiles (auto georeference)
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#2-png-pmtiles-manual-georeference-via-bounds" class="md-nav__link">
-    <span class="md-ellipsis">
-      2) PNG → PMTiles (manual georeference via bounds)
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#actions" class="md-nav__link">
     <span class="md-ellipsis">
       Actions
@@ -1630,6 +1597,39 @@
   <a href="#catalog-update-step-update-catalog" class="md-nav__link">
     <span class="md-ellipsis">
       Catalog Update Step (--update-catalog)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#example-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Example Usage
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Example Usage">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-ometiff-png-pmtiles-auto-georeference" class="md-nav__link">
+    <span class="md-ellipsis">
+      1) OME‑TIFF → PNG → PMTiles (auto georeference)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-png-pmtiles-manual-georeference-via-bounds" class="md-nav__link">
+    <span class="md-ellipsis">
+      2) PNG → PMTiles (manual georeference via bounds)
     </span>
   </a>
   
@@ -2161,39 +2161,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#example-usage" class="md-nav__link">
-    <span class="md-ellipsis">
-      Example Usage
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Example Usage">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#1-ometiff-png-pmtiles-auto-georeference" class="md-nav__link">
-    <span class="md-ellipsis">
-      1) OME‑TIFF → PNG → PMTiles (auto georeference)
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#2-png-pmtiles-manual-georeference-via-bounds" class="md-nav__link">
-    <span class="md-ellipsis">
-      2) PNG → PMTiles (manual georeference via bounds)
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#actions" class="md-nav__link">
     <span class="md-ellipsis">
       Actions
@@ -2243,6 +2210,39 @@
   <a href="#catalog-update-step-update-catalog" class="md-nav__link">
     <span class="md-ellipsis">
       Catalog Update Step (--update-catalog)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#example-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Example Usage
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Example Usage">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-ometiff-png-pmtiles-auto-georeference" class="md-nav__link">
+    <span class="md-ellipsis">
+      1) OME‑TIFF → PNG → PMTiles (auto georeference)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-png-pmtiles-manual-georeference-via-bounds" class="md-nav__link">
+    <span class="md-ellipsis">
+      2) PNG → PMTiles (manual georeference via bounds)
     </span>
   </a>
   
@@ -2326,6 +2326,23 @@ It supports <abbr title="Microscopy TIFF format from OME with rich metadata and 
 <li>Pre-installed CLI tools: <code>pmtiles</code>, <code>gdal_translate</code>, <code>gdaladdo</code>, <code>gdalinfo</code>.</li>
 </ul>
 <hr />
+<h2 id="actions">Actions<a class="headerlink" href="#actions" title="Permanent link">&para;</a></h2>
+<div class="admonition warning">
+<p class="admonition-title">Action Specifications</p>
+<p>No action runs by default. Activate at least one using the <a href="#action-parameters">action parameters</a>.</p>
+</div>
+<h3 id="georeference-step-georeference">Georeference Step (<code>--georeference</code>)<a class="headerlink" href="#georeference-step-georeference" title="Permanent link">&para;</a></h3>
+<p>If input is OME-TIFF, extracts a PNG and bounds from the <abbr title="Microscopy TIFF format from OME with rich metadata and pyramids">OME‑TIFF</abbr> and georeferencing is applied automatically.</p>
+<p>If <code>--georeference</code> is applied with <code>--georef-*</code>, georeferencing is applied with bounds provided via one of <code>--georef-*</code>.</p>
+<h3 id="orientation-step-rotate-flip-vertical-flip-horizontal">Orientation Step (<code>--rotate</code>, <code>--flip-vertical</code>, <code>--flip-horizontal</code>)<a class="headerlink" href="#orientation-step-rotate-flip-vertical-flip-horizontal" title="Permanent link">&para;</a></h3>
+<p>If any of <code>--rotate</code>, <code>--flip-vertical</code>, <code>--flip-horizontal</code> is set, rotation and flips can be applied accordingly prior to tiling. It supports rotate the image clockwise by 90/180/270 degrees. Rotation is applied before flips.</p>
+<h3 id="ometiff-to-png-step-ome2png"><abbr title="Microscopy TIFF format from OME with rich metadata and pyramids">OME‑TIFF</abbr> to PNG Step (<code>--ome2png</code>)<a class="headerlink" href="#ometiff-to-png-step-ome2png" title="Permanent link">&para;</a></h3>
+<p>Converts an <abbr title="Microscopy TIFF format from OME with rich metadata and pyramids">OME‑TIFF</abbr> to PNG, reads bounds from OME metadata, and records color mode when applicable.</p>
+<h3 id="png-to-pmtiles-step-png2pmtiles">PNG to <abbr title="Single-file archive format for map tiles and web visualization">PMTiles</abbr> Step (<code>--png2pmtiles</code>)<a class="headerlink" href="#png-to-pmtiles-step-png2pmtiles" title="Permanent link">&para;</a></h3>
+<p>Converts the PNG to <abbr title="TIFF image with embedded geospatial referencing">GeoTIFF</abbr> and then to <abbr title="Single-file archive format for map tiles and web visualization">PMTiles</abbr>. An asset JSON is written during conversion.</p>
+<h3 id="catalog-update-step-update-catalog">Catalog Update Step (<code>--update-catalog</code>)<a class="headerlink" href="#catalog-update-step-update-catalog" title="Permanent link">&para;</a></h3>
+<p>Appends the generated <code>&lt;img-id&gt;.pmtiles</code> to <code>catalog.yaml</code> as a basemap layer. This only applies if <code>catalog.yaml</code> exists.</p>
+<hr />
 <h2 id="example-usage">Example Usage<a class="headerlink" href="#example-usage" title="Permanent link">&para;</a></h2>
 <h3 id="1-ometiff-png-pmtiles-auto-georeference">1) <abbr title="Microscopy TIFF format from OME with rich metadata and pyramids">OME‑TIFF</abbr> → PNG → <abbr title="Single-file archive format for map tiles and web visualization">PMTiles</abbr> (auto <abbr title="Assign image pixels to spatial coordinates or a reference system">georeference</abbr>)<a class="headerlink" href="#1-ometiff-png-pmtiles-auto-georeference" title="Permanent link">&para;</a></h3>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
@@ -2400,7 +2417,7 @@ cartloader<span class="w"> </span>import_image<span class="w"> </span><span clas
 <span class="w">  </span>--out-dir<span class="w"> </span>/path/to/out<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--img-id<span class="w"> </span><span class="si">${</span><span class="nv">IMAGE_ID</span><span class="si">}</span>
 </code></pre></div></td></tr></table></div>
-<p>If your input image requires to orientate, you can apply <code>--rotate</code>, <code>--flip-horizontal</code> <code>--flip-vertical</code>. For example:</p>
+<p>If your input image needs orientation, apply <code>--rotate</code>, <code>--flip-horizontal</code>, and/or <code>--flip-vertical</code>. For example:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
 <span class="normal">3</span>
@@ -2415,23 +2432,6 @@ cartloader<span class="w"> </span>import_image<span class="w"> </span><span clas
 <span class="w">  </span>--out-dir<span class="w"> </span>/path/to/out<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--img-id<span class="w"> </span><span class="si">${</span><span class="nv">IMAGE_ID</span><span class="si">}</span>
 </code></pre></div></td></tr></table></div>
-<hr />
-<h2 id="actions">Actions<a class="headerlink" href="#actions" title="Permanent link">&para;</a></h2>
-<div class="admonition warning">
-<p class="admonition-title">Action Specifications</p>
-<p>No action runs by default. Activate at least one using the <a href="#action-parameters">action parameters</a>.</p>
-</div>
-<h3 id="georeference-step-georeference">Georeference Step (<code>--georeference</code>)<a class="headerlink" href="#georeference-step-georeference" title="Permanent link">&para;</a></h3>
-<p>If input is OME-TIFF, extracts a PNG and bounds from the <abbr title="Microscopy TIFF format from OME with rich metadata and pyramids">OME‑TIFF</abbr> and georeferencing is applied automatically.</p>
-<p>If <code>--georeference</code> is applied with <code>--georef-*</code>, georeferencing is applied with bounds provided via one of <code>--georef-*</code>.</p>
-<h3 id="orientation-step-rotate-flip-vertical-flip-horizontal">Orientation Step (<code>--rotate</code>, <code>--flip-vertical</code>, <code>--flip-horizontal</code>)<a class="headerlink" href="#orientation-step-rotate-flip-vertical-flip-horizontal" title="Permanent link">&para;</a></h3>
-<p>If any of <code>--rotate</code>, <code>--flip-vertical</code>, <code>--flip-horizontal</code> is set, rotation and flips can be applied accordingly prior to tiling. It supports rotate the image clockwise by 90/180/270 degrees. Rotation is applied before flips.</p>
-<h3 id="ometiff-to-png-step-ome2png"><abbr title="Microscopy TIFF format from OME with rich metadata and pyramids">OME‑TIFF</abbr> to PNG Step (<code>--ome2png</code>)<a class="headerlink" href="#ometiff-to-png-step-ome2png" title="Permanent link">&para;</a></h3>
-<p>Converts an <abbr title="Microscopy TIFF format from OME with rich metadata and pyramids">OME‑TIFF</abbr> to PNG, reads bounds from OME metadata, and records color mode when applicable.</p>
-<h3 id="png-to-pmtiles-step-png2pmtiles">PNG to <abbr title="Single-file archive format for map tiles and web visualization">PMTiles</abbr> Step (<code>--png2pmtiles</code>)<a class="headerlink" href="#png-to-pmtiles-step-png2pmtiles" title="Permanent link">&para;</a></h3>
-<p>Converts the PNG to <abbr title="TIFF image with embedded geospatial referencing">GeoTIFF</abbr> and then to <abbr title="Single-file archive format for map tiles and web visualization">PMTiles</abbr>. An asset JSON is written during conversion.</p>
-<h3 id="catalog-update-step-update-catalog">Catalog Update Step (<code>--update-catalog</code>)<a class="headerlink" href="#catalog-update-step-update-catalog" title="Permanent link">&para;</a></h3>
-<p>Appends the generated <code>&lt;img-id&gt;.pmtiles</code> to <code>catalog.yaml</code> as a basemap layer. This only applies if <code>catalog.yaml</code> exists.</p>
 <hr />
 <h2 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">&para;</a></h2>
 <p>Below are the core arguments you’ll typically set. For all other options, expand the collapsible "Auxiliary Parameters" section.</p>

@@ -1372,15 +1372,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#example-usage" class="md-nav__link">
-    <span class="md-ellipsis">
-      Example Usage
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#actions" class="md-nav__link">
     <span class="md-ellipsis">
       Actions
@@ -1446,6 +1437,15 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#example-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Example Usage
+    </span>
+  </a>
   
 </li>
       
@@ -2182,15 +2182,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#example-usage" class="md-nav__link">
-    <span class="md-ellipsis">
-      Example Usage
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#actions" class="md-nav__link">
     <span class="md-ellipsis">
       Actions
@@ -2256,6 +2247,15 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#example-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Example Usage
+    </span>
+  </a>
   
 </li>
       
@@ -2375,6 +2375,23 @@
 <li>An <abbr title="Spatial Digital Gene Expression">SGE</abbr> in the unified format (from <a href="../sge_convert/"><abbr title="Spatial Digital Gene Expression">SGE</abbr> format conversion</a>)</li>
 <li>Pre-installed tools: <code>spatula</code>, <code>punkst</code>, <code>gzip</code>, <code>sort</code>, <code>python</code></li>
 </ul>
+<h2 id="actions">Actions<a class="headerlink" href="#actions" title="Permanent link">&para;</a></h2>
+<div class="admonition warning">
+<p class="admonition-title">Action Specifications</p>
+<p>No action runs by default. Activate at least one using the <a href="#action-parameters">action parameters</a>.</p>
+</div>
+<h3 id="tiling-step-tile">Tiling Step (<code>--tile</code>)<a class="headerlink" href="#tiling-step-tile" title="Permanent link">&para;</a></h3>
+<p>The tiling step takes the standardized <abbr title="Spatial Digital Gene Expression">SGE</abbr> (from <a href="../sge_convert/"><abbr title="Spatial Digital Gene Expression">SGE</abbr> format conversion</a>) as input. It reorganizes input coordinate data into non‑overlapping square tiles in a plain TSV format and generates an index file with tile offsets to enable efficient random access.</p>
+<h3 id="segmentation-step-segment">Segmentation Step (<code>--segment</code>)<a class="headerlink" href="#segmentation-step-segment" title="Permanent link">&para;</a></h3>
+<p>The segmentation step starts from the tiled <abbr title="Spatial Digital Gene Expression">SGE</abbr>, using the plain TSV file from <a href="#tiling-step---tile">tiling step</a> as input. It aggregates tiled pixel data into non-overlapping hexagons in a TSV file for spot-level analysis, outputting a tab-delimited file of hexagon records and associated metadata in JSON format.</p>
+<h3 id="lda-training-step-init-lda"><abbr title="Latent Dirichlet Allocation">LDA</abbr> Training Step (<code>--init-lda</code>)<a class="headerlink" href="#lda-training-step-init-lda" title="Permanent link">&para;</a></h3>
+<p>The <abbr title="Latent Dirichlet Allocation">LDA</abbr> training step uses the hexagon TSV and JSON file from <a href="#segmentation-step---segment">segmentation step</a> as input, trains a Latent Dirichlet Allocation (<abbr title="Latent Dirichlet Allocation">LDA</abbr>) model on sparse gene count data from hexagon units, using metadata to interpret input structure and optionally filter or weight features, producing a factorized topic model in TSV.</p>
+<h3 id="decoding-step-decode">Decoding Step (<code>--decode</code>)<a class="headerlink" href="#decoding-step-decode" title="Permanent link">&para;</a></h3>
+<p>The decoding step applies a trained <abbr title="Latent Dirichlet Allocation">LDA</abbr> model from <a href="#lda-training-step---init-lda"><abbr title="Latent Dirichlet Allocation">LDA</abbr> training step</a> to tiled pixel-level transcript data from <a href="#tiling-step---tile">tiling step</a> to infer the top spatial factors and their posterior probabilities for each pixel, enabling fine-grained spatial mapping of gene expression. It outputs a pixel-level annotation file in TSV format with coordinates and factor assignments, along with a pseudobulk gene-by-factor matrix in TSV format.</p>
+<h3 id="umap-visualization-step-umap"><abbr title="Uniform Manifold Approximation and Projection; nonlinear dimensionality reduction">UMAP</abbr> Visualization Step (<code>--umap</code>)<a class="headerlink" href="#umap-visualization-step-umap" title="Permanent link">&para;</a></h3>
+<p>The <abbr title="Uniform Manifold Approximation and Projection; nonlinear dimensionality reduction">UMAP</abbr> visualization step generates <abbr title="Uniform Manifold Approximation and Projection; nonlinear dimensionality reduction">UMAP</abbr> embeddings of factors learned in <a href="#lda-training-step---init-lda"><abbr title="Latent Dirichlet Allocation">LDA</abbr> training</a>, writing both coordinates and plots for reuse downstream.</p>
+<h3 id="10x-segmentation-step-segment-10x">10x Segmentation Step (<code>--segment-10x</code>)<a class="headerlink" href="#10x-segmentation-step-segment-10x" title="Permanent link">&para;</a></h3>
+<p>The 10x segmentation step aggregates tiled pixel data into 10x Genomics-compatible hexagonal bin formats (<abbr title="Matrix Exchange (10x sparse matrix format)">MEX</abbr> matrix). This allows the data to be used with tools designed for 10x Visium data.</p>
 <hr />
 <h2 id="example-usage">Example Usage<a class="headerlink" href="#example-usage" title="Permanent link">&para;</a></h2>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
@@ -2402,32 +2419,14 @@
 <span class="w">    </span>--width<span class="w"> </span><span class="m">18</span><span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>--n-factor<span class="w"> </span><span class="m">24</span><span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>--spatula<span class="w"> </span>/path/to/spatula/binary<span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>--ficture2<span class="w"> </span>/path/to/punkst/directory<span class="w"> </span><span class="se">\ </span><span class="w"> </span>
-<span class="w">    </span>--exclude-feature-regex<span class="w"> </span><span class="s1">&#39;^(mt-|Gm\d+$)&#39;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--ficture2<span class="w"> </span>/path/to/punkst/directory<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--exclude-feature-regex<span class="w"> </span><span class="s1">&#39;^(mt-|Gm\\d+$)&#39;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>--n-jobs<span class="w"> </span><span class="m">20</span><span class="w">  </span><span class="se">\</span>
-<span class="w">    </span>--threads<span class="w"> </span><span class="m">20</span><span class="w"> </span>
+<span class="w">    </span>--threads<span class="w"> </span><span class="m">20</span>
 </code></pre></div></td></tr></table></div>
 <hr />
-<h2 id="actions">Actions<a class="headerlink" href="#actions" title="Permanent link">&para;</a></h2>
-<div class="admonition warning">
-<p class="admonition-title">Action Specifications</p>
-<p>No action runs by default. Activate at least one using the <a href="#action-parameters">action parameters</a>.</p>
-</div>
-<h3 id="tiling-step-tile">Tiling Step (<code>--tile</code>)<a class="headerlink" href="#tiling-step-tile" title="Permanent link">&para;</a></h3>
-<p>The tiling step takes the standardized <abbr title="Spatial Digital Gene Expression">SGE</abbr> (from <a href="../sge_convert/"><abbr title="Spatial Digital Gene Expression">SGE</abbr> format conversion</a>) as input. It reorganizes input coordinate data into non‑overlapping square tiles in a plain TSV format and generates an index file with tile offsets to enable efficient random access.</p>
-<h3 id="segmentation-step-segment">Segmentation Step (<code>--segment</code>)<a class="headerlink" href="#segmentation-step-segment" title="Permanent link">&para;</a></h3>
-<p>The segmentation step starts from the tiled <abbr title="Spatial Digital Gene Expression">SGE</abbr>, using the plain TSV file from <a href="#tiling-step---tile">tiling step</a> as input. It aggregates tiled pixel data into non-overlapping hexagons in a TSV file for spot-level analysis, outputting a tab-delimited file of hexagon records and associated metadata in JSON format.</p>
-<h3 id="lda-training-step-init-lda"><abbr title="Latent Dirichlet Allocation">LDA</abbr> Training Step (<code>--init-lda</code>)<a class="headerlink" href="#lda-training-step-init-lda" title="Permanent link">&para;</a></h3>
-<p>The <abbr title="Latent Dirichlet Allocation">LDA</abbr> training step uses the hexagon TSV and JSON file from <a href="#segmentation-step---segment">segmentation step</a> as input, trains a Latent Dirichlet Allocation (<abbr title="Latent Dirichlet Allocation">LDA</abbr>) model on sparse gene count data from hexagon units, using metadata to interpret input structure and optionally filter or weight features, producing a factorized topic model in TSV.</p>
-<h3 id="decoding-step-decode">Decoding Step (<code>--decode</code>)<a class="headerlink" href="#decoding-step-decode" title="Permanent link">&para;</a></h3>
-<p>The decoding step applies a trained <abbr title="Latent Dirichlet Allocation">LDA</abbr> model from <a href="#lda-training-step---init-lda"><abbr title="Latent Dirichlet Allocation">LDA</abbr> training step</a> to tiled pixel-level transcript data from <a href="#tiling-step---tile">tiling step</a> to infer the top spatial factors and their posterior probabilities for each pixel, enabling fine-grained spatial mapping of gene expression. It outputs a pixel-level annotation file in TSV format with coordinates and factor assignments, along with a pseudobulk gene-by-factor matrix in TSV format.</p>
-<h3 id="umap-visualization-step-umap"><abbr title="Uniform Manifold Approximation and Projection; nonlinear dimensionality reduction">UMAP</abbr> Visualization Step (<code>--umap</code>)<a class="headerlink" href="#umap-visualization-step-umap" title="Permanent link">&para;</a></h3>
-<p>The <abbr title="Uniform Manifold Approximation and Projection; nonlinear dimensionality reduction">UMAP</abbr> visualization step generates <abbr title="Uniform Manifold Approximation and Projection; nonlinear dimensionality reduction">UMAP</abbr> embeddings of factors learned in <a href="#lda-training-step---init-lda"><abbr title="Latent Dirichlet Allocation">LDA</abbr> training</a>, writing both coordinates and plots for reuse downstream.</p>
-<h3 id="10x-segmentation-step-segment-10x">10x Segmentation Step (<code>--segment-10x</code>)<a class="headerlink" href="#10x-segmentation-step-segment-10x" title="Permanent link">&para;</a></h3>
-<p>The 10x segmentation step aggregates tiled pixel data into 10x Genomics-compatible hexagonal bin formats (<abbr title="Matrix Exchange (10x sparse matrix format)">MEX</abbr> matrix). This allows the data to be used with tools designed for 10x Visium data.</p>
-<hr />
 <h2 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">&para;</a></h2>
-<p>Below are the core parameters. See more details in the collapsible section ("Auxiliary Paramaters") below.</p>
+<p>Below are the core parameters. See more details in the collapsible section ("Auxiliary Parameters") below.</p>
 <h4 id="action-parameters">Action Parameters<a class="headerlink" href="#action-parameters" title="Permanent link">&para;</a></h4>
 <ul>
 <li><code>--main</code>: Run all of the following five actions.</li>
@@ -2456,7 +2455,7 @@
 <li><code>--segment-width-10x</code> (str): Comma-separated hexagon flat-to-flat widths (<abbr title="micrometer">µm</abbr>) in 10x format (required if <code>--segment-10x</code>).</li>
 </ul>
 <details class="note">
-<summary>Auxiliary Paramaters</summary>
+<summary>Auxiliary Parameters</summary>
 <p><strong>Auxiliary Input Parameters</strong></p>
 <ul>
 <li><code>--in-feature-ficture</code> (str): (Optional) A separate feature file applied to <abbr title="Segmentation-free method inferring latent spatial factors from SGE (Si et al., Nature Methods 2024)">FICTURE</abbr> analysis. Alternative to customizing via auxiliary parameters.</li>
@@ -2491,7 +2490,7 @@
 <li><code>--decode-scale</code> (int): Scales input coordinates to pixels in the output image (Default: 1)</li>
 </ul>
 </li>
-<li>Shared paramaters across steps:<ul>
+<li>Shared parameters across steps:<ul>
 <li><code>--seed</code> (int): Random seed for reproducibility (Default: 1).</li>
 <li><code>--min-ct-per-feature</code> (int): Minimum count per feature for <abbr title="Latent Dirichlet Allocation">LDA</abbr> and decoding (Default: 20).</li>
 <li><code>--de-max-pval</code> (float): p-value cutoff for differential expression (Default: 1e-3).</li>
@@ -2515,7 +2514,7 @@ For tools that require specifying the path to their executable binaries, you may
 <li><code>--python</code> (str): Path to Python 3 binary (Default: <code>python3</code>).</li>
 <li><code>--R</code> (str): Path to <code>R</code> binary for <abbr title="Uniform Manifold Approximation and Projection; nonlinear dimensionality reduction">UMAP</abbr> generation (default: <code>R</code>).</li>
 </ul>
-<p><strong> Run Parameters</strong>:</p>
+<p><strong>Run Parameters</strong>:</p>
 <ul>
 <li><code>--dry-run</code> (flag): Generate the Makefile; do not execute.</li>
 <li><code>--restart</code> (flag): Ignore existing outputs and rerun all steps.</li>
@@ -2765,7 +2764,7 @@ Neu4     648.5156  0.0000  0.9999  0.0000  0.0000  2.1425  1316.2651  0.0000  0.
 </ul>
 <h3 id="summarization-output">Summarization Output<a class="headerlink" href="#summarization-output" title="Permanent link">&para;</a></h3>
 <ul>
-<li><code>ficture.params.json</code>: A JSON file to summarize the path to input, output, and paramaters.
+<li><code>ficture.params.json</code>: A JSON file summarizing input and output paths and parameters.
     <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>

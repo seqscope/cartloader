@@ -1526,18 +1526,18 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#example-usage" class="md-nav__link">
+  <a href="#actions" class="md-nav__link">
     <span class="md-ellipsis">
-      Example Usage
+      Actions
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#actions" class="md-nav__link">
+  <a href="#example-usage" class="md-nav__link">
     <span class="md-ellipsis">
-      Actions
+      Example Usage
     </span>
   </a>
   
@@ -1571,15 +1571,6 @@
   <a href="#output" class="md-nav__link">
     <span class="md-ellipsis">
       Output
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#see-also" class="md-nav__link">
-    <span class="md-ellipsis">
-      See Also
     </span>
   </a>
   
@@ -2086,18 +2077,18 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#example-usage" class="md-nav__link">
+  <a href="#actions" class="md-nav__link">
     <span class="md-ellipsis">
-      Example Usage
+      Actions
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#actions" class="md-nav__link">
+  <a href="#example-usage" class="md-nav__link">
     <span class="md-ellipsis">
-      Actions
+      Example Usage
     </span>
   </a>
   
@@ -2131,15 +2122,6 @@
   <a href="#output" class="md-nav__link">
     <span class="md-ellipsis">
       Output
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#see-also" class="md-nav__link">
-    <span class="md-ellipsis">
-      See Also
     </span>
   </a>
   
@@ -2183,6 +2165,15 @@ To include all assets, run <code>run_cartload2</code> per sample or pair <code>r
 <li>CLI tools used by CartLoad2: <code>tippecanoe</code>, <code>gdal</code>, <code>pmtiles</code>, <code>gzip</code>/<code>pigz</code>, <code>spatula</code>.</li>
 </ul>
 <hr />
+<h2 id="actions">Actions<a class="headerlink" href="#actions" title="Permanent link">&para;</a></h2>
+<p>For each row in <code>--in-list</code>, apply:</p>
+<ul>
+<li>Locate per‑sample <abbr title="Segmentation-free method inferring latent spatial factors from SGE (Si et al., Nature Methods 2024)">FICTURE</abbr> assets at <code>--fic-dir/samples/&lt;id&gt;/ficture.params.json</code>.</li>
+<li>Run <code>cartloader run_cartload2</code> with <code>--fic-dir</code> set to the sample subfolder and <code>--id</code> normalized from <code>&lt;id&gt;</code> (lowercase, <code>_</code> → <code>-</code>), and save output to <code>&lt;out-dir&gt;/&lt;id&gt;/</code>.</li>
+<li>Write a per‑sample <code>catalog.yaml</code> (or <code>--out-catalog</code> name) and <abbr title="Single-file archive format for map tiles and web visualization">PMTiles</abbr> under <code>&lt;out-dir&gt;/&lt;id&gt;/</code>.</li>
+<li>Emit a top‑level Makefile to run samples in parallel.</li>
+</ul>
+<hr />
 <h2 id="example-usage">Example Usage<a class="headerlink" href="#example-usage" title="Permanent link">&para;</a></h2>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
@@ -2202,15 +2193,6 @@ To include all assets, run <code>run_cartload2</code> per sample or pair <code>r
 <span class="w">  </span>--n-jobs<span class="w"> </span><span class="m">10</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--threads<span class="w"> </span><span class="m">10</span>
 </code></pre></div></td></tr></table></div>
-<hr />
-<h2 id="actions">Actions<a class="headerlink" href="#actions" title="Permanent link">&para;</a></h2>
-<p>For each row in <code>--in-list</code>, apply:</p>
-<ul>
-<li>Locate per‑sample <abbr title="Segmentation-free method inferring latent spatial factors from SGE (Si et al., Nature Methods 2024)">FICTURE</abbr> assets at <code>--fic-dir/samples/&lt;id&gt;/ficture.params.json</code>.</li>
-<li>Run <code>cartloader run_cartload2</code> with <code>--fic-dir</code> set to the sample subfolder and <code>--id</code> normalized from <code>&lt;id&gt;</code> (lowercase, <code>_</code> → <code>-</code>), and save output to <code>&lt;out-dir&gt;/&lt;id&gt;/</code>.</li>
-<li>Write a per‑sample <code>catalog.yaml</code> (or <code>--out-catalog</code> name) and <abbr title="Single-file archive format for map tiles and web visualization">PMTiles</abbr> under <code>&lt;out-dir&gt;/&lt;id&gt;/</code>.</li>
-<li>Emit a top‑level Makefile to run samples in parallel.</li>
-</ul>
 <hr />
 <h2 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">&para;</a></h2>
 <p>Below lists the most common parameters. Additional flags are forwarded to per‑sample <code>run_cartload2</code>.</p>
@@ -2279,13 +2261,7 @@ To include all assets, run <code>run_cartload2</code> per sample or pair <code>r
 <li>Per‑sample <abbr title="Single-file archive format for map tiles and web visualization">PMTiles</abbr> and asset JSONs produced by <code>run_cartload2</code> under <code>&lt;out-dir&gt;/&lt;id&gt;/</code>.</li>
 <li>Makefile: <code>&lt;out-dir&gt;/&lt;makefn&gt;</code> capturing all per‑sample targets.</li>
 </ul>
-<p>See <code>run_cartload2.md</code> for detailed CartLoad2 output formats (<abbr title="Spatial Digital Gene Expression">SGE</abbr> rasters, factor <abbr title="Single-file archive format for map tiles and web visualization">PMTiles</abbr>, joined molecule <abbr title="Single-file archive format for map tiles and web visualization">PMTiles</abbr>, summaries).</p>
-<hr />
-<h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
-<ul>
-<li>Reference: <code>run_cartload2.md</code> — Single‑sample packaging and outputs</li>
-<li>Reference: <code>run_ficture2_multi.md</code> — Multi‑sample <abbr title="Segmentation-free method inferring latent spatial factors from SGE (Si et al., Nature Methods 2024)">FICTURE</abbr> pipeline</li>
-</ul>
+<p>See <code>run_cartload2.md</code> for detailed CartLoad2 output formats (<abbr title="Spatial Digital Gene Expression">SGE</abbr> rasters, factor <abbr title="Single-file archive format for map tiles and web visualization">PMTiles</abbr>, joined molecule <abbr title="Single-file archive format for map tiles and web visualization">PMTiles</abbr>, summaries). For the upstream pipeline, see <code>run_ficture2_multi.md</code>.</p>
 
 
 

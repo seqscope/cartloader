@@ -1827,18 +1827,18 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#example-usages" class="md-nav__link">
+  <a href="#actions" class="md-nav__link">
     <span class="md-ellipsis">
-      Example Usages
+      Actions
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#action" class="md-nav__link">
+  <a href="#example-usage" class="md-nav__link">
     <span class="md-ellipsis">
-      Action
+      Example Usage
     </span>
   </a>
   
@@ -2149,18 +2149,18 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#example-usages" class="md-nav__link">
+  <a href="#actions" class="md-nav__link">
     <span class="md-ellipsis">
-      Example Usages
+      Actions
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#action" class="md-nav__link">
+  <a href="#example-usage" class="md-nav__link">
     <span class="md-ellipsis">
-      Action
+      Example Usage
     </span>
   </a>
   
@@ -2300,7 +2300,25 @@
 <li>Pre-installed tools depending on the actions: <code>spatula</code>, <code>punkst</code>, <code>gzip</code>, <code>sort</code>, <code>python</code>, <code>go-pmtiles</code>, <code>gdal</code>, <code>tippecanoe</code>, <code>parquet-tools</code>, <code>aws</code></li>
 </ul>
 <hr />
-<h2 id="example-usages">Example Usages<a class="headerlink" href="#example-usages" title="Permanent link">&para;</a></h2>
+<h2 id="actions">Actions<a class="headerlink" href="#actions" title="Permanent link">&para;</a></h2>
+<div class="admonition warning">
+<p class="admonition-title">Action Specifications</p>
+<p><code>run_xenium</code> orchestrates multiple <code>CartLoader</code> modules; enable and combine actions with flags.</p>
+<p>No action runs by default. Activate at least one action flag.</p>
+</div>
+<p>Click to see action details per flag:</p>
+<ul>
+<li><a href="./load_xenium_ranger.md#actions"><code>--load-xenium-ranger</code></a></li>
+<li><a href="../sge_convert/#actions"><code>--sge-convert</code></a></li>
+<li><a href="../run_ficture2/#actions"><code>--run-ficture2</code></a></li>
+<li><a href="../import_cell/#actions"><code>--import-cells</code></a></li>
+<li><a href="../import_image/#actions"><code>--import-images</code></a></li>
+<li><a href="../run_cartload2/#actions"><code>--run-cartload2</code></a></li>
+<li><a href="../upload_aws/#actions"><code>--upload-aws</code></a></li>
+<li><a href="../upload_zenodo/#actions"><code>--upload-zenodo</code></a></li>
+</ul>
+<hr />
+<h2 id="example-usage">Example Usage<a class="headerlink" href="#example-usage" title="Permanent link">&para;</a></h2>
 <div class="admonition warning">
 <p class="admonition-title">Replace placeholders</p>
 <p>Replace placeholder paths (e.g., <code>/path/to/xenium/ranger/output</code>) or example values (e.g., <code>example-id</code> and <code>12</code>) before execution.</p>
@@ -2346,7 +2364,7 @@
 <span class="w">  </span>--id<span class="w"> </span>example-id<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--image-ids<span class="w"> </span>OME_DAPI<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--spatula<span class="w"> </span>/path/to/spatula/binary<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--ficture2<span class="w"> </span>/path/to/punkst/directory<span class="w"> </span><span class="se">\ </span><span class="w"> </span>
+<span class="w">  </span>--ficture2<span class="w"> </span>/path/to/punkst/directory<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--pmtiles<span class="w"> </span>/path/to/pmtiles/binary<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--tippecanoe<span class="w"> </span>/path/to/tippecanoe/binary<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--aws<span class="w"> </span>/path/to/aws/cli/binary<span class="w"> </span><span class="se">\</span>
@@ -2386,7 +2404,7 @@
 <span class="w">  </span>--n-factor<span class="w"> </span><span class="m">12</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--id<span class="w"> </span>example-id<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--spatula<span class="w"> </span>/path/to/spatula/binary<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--ficture2<span class="w"> </span>/path/to/punkst/directory<span class="w"> </span><span class="se">\ </span><span class="w"> </span>
+<span class="w">  </span>--ficture2<span class="w"> </span>/path/to/punkst/directory<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--pmtiles<span class="w"> </span>/path/to/pmtiles/binary<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--tippecanoe<span class="w"> </span>/path/to/tippecanoe/binary<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--aws<span class="w"> </span>/path/to/aws/cli/binary<span class="w"> </span><span class="se">\</span>
@@ -2458,27 +2476,9 @@
     ``` -->
 
 <hr />
-<h2 id="action">Action<a class="headerlink" href="#action" title="Permanent link">&para;</a></h2>
-<div class="admonition warning">
-<p class="admonition-title">Action Specifications</p>
-<p><code>run_xenium</code> orchestrates multiple <code>CartLoader</code> modules; enable and combine actions with flags.</p>
-<p>No action runs by default. Activate at least one action flag.</p>
-</div>
-<p>Click to see action details per flag:</p>
-<ul>
-<li><a href="./load_xenium_ranger.md#actions"><code>--load-xenium-ranger</code></a></li>
-<li><a href="../sge_convert/#actions"><code>--sge-convert</code></a></li>
-<li><a href="../run_ficture2/#actions"><code>--run-ficture2</code></a></li>
-<li><a href="../import_cell/#actions"><code>--import-cells</code></a></li>
-<li><a href="../import_image/#actions"><code>--import-images</code></a></li>
-<li><a href="../run_cartload2/#actions"><code>--run-cartload2</code></a></li>
-<li><a href="../upload_aws/#actions"><code>--upload-aws</code></a></li>
-<li><a href="../upload_zenodo/#actions"><code>--upload-zenodo</code></a></li>
-</ul>
-<hr />
 <h2 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">&para;</a></h2>
 <h3 id="action-parameters">Action Parameters<a class="headerlink" href="#action-parameters" title="Permanent link">&para;</a></h3>
-<p>See <a href="#action">Action</a>.</p>
+<p>See <a href="#actions">Actions</a>.</p>
 <h3 id="inputoutput-parameters">Input/Output Parameters<a class="headerlink" href="#inputoutput-parameters" title="Permanent link">&para;</a></h3>
 <ul>
 <li><code>--xenium-ranger-dir</code>: Xenium Ranger output directory (required for manual mode or with <code>--load-xenium-ranger</code>)</li>
@@ -2564,7 +2564,7 @@
 <li><code>--load-xenium-ranger</code>: A Xenium assets JSON summarizing detected inputs (path: <code>--xenium-ranger-assets</code>). See example structure in the Xenium pipeline vignette.</li>
 <li><code>--sge-convert</code>: Unified <abbr title="Spatial Digital Gene Expression">SGE</abbr> files and an assets manifest (<code>sge_assets.json</code>). See details in <a href="../sge_convert/#output">sge_convert reference</a></li>
 <li><code>--run-ficture2</code> or <code>--import-ext-ficture2</code>: Generates <abbr title="Segmentation-free method inferring latent spatial factors from SGE (Si et al., Nature Methods 2024)">FICTURE</abbr> analysis artifacts (factor models, decoded maps, <abbr title="Single-file archive format for map tiles and web visualization">PMTiles</abbr>, summaries). See details in <a href="../run_ficture2/#output">run_ficture2 reference</a></li>
-<li><code>--import-cells</code>: Cells <abbr title="Single-file archive format for map tiles and web visualization">PMTiles</abbr>, boundaries <abbr title="JSON-based format for vector geospatial features">GeoJSON</abbr>, and summaries under <code>cartload2/</code>. See details in <a href="../import_cell/#outputs">import_cells reference</a>.</li>
+<li><code>--import-cells</code>: Cells <abbr title="Single-file archive format for map tiles and web visualization">PMTiles</abbr>, boundaries <abbr title="JSON-based format for vector geospatial features">GeoJSON</abbr>, and summaries under <code>cartload2/</code>. See details in <a href="../import_cell/#output">import_cells reference</a>.</li>
 <li><code>--import-images</code>: Background image <abbr title="Single-file archive format for map tiles and web visualization">PMTiles</abbr> (and intermediates) under <code>cartload2/</code>. See details in <a href="../import_image/#output">import_images reference</a>.</li>
 <li><code>--run-cartload2</code>: Sources packaged into <abbr title="Single-file archive format for map tiles and web visualization">PMTiles</abbr> and a <code>catalog.yaml</code>. See details in <a href="../run_cartload2/#output">run_cartload2 reference</a>.</li>
 <li><code>--upload-aws</code>: Uploads generated assets and <code>catalog.yaml</code> to the specified S3 path.</li>

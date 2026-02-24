@@ -1928,18 +1928,18 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#example-usage" class="md-nav__link">
+  <a href="#actions" class="md-nav__link">
     <span class="md-ellipsis">
-      Example Usage
+      Actions
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#actions" class="md-nav__link">
+  <a href="#example-usage" class="md-nav__link">
     <span class="md-ellipsis">
-      Actions
+      Example Usage
     </span>
   </a>
   
@@ -2149,18 +2149,18 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#example-usage" class="md-nav__link">
+  <a href="#actions" class="md-nav__link">
     <span class="md-ellipsis">
-      Example Usage
+      Actions
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#actions" class="md-nav__link">
+  <a href="#example-usage" class="md-nav__link">
     <span class="md-ellipsis">
-      Actions
+      Example Usage
     </span>
   </a>
   
@@ -2300,6 +2300,25 @@
 <li>Pre-installed tools depending on the actions: <code>spatula</code>, <code>punkst</code>, <code>gzip</code>, <code>sort</code>, <code>python</code>, <code>go-pmtiles</code>, <code>gdal</code>, <code>tippecanoe</code>, <code>parquet-tools</code>, <code>aws</code></li>
 </ul>
 <hr />
+<h2 id="actions">Actions<a class="headerlink" href="#actions" title="Permanent link">&para;</a></h2>
+<div class="admonition info">
+<p class="admonition-title">Action Specifications</p>
+<p><code>run_visiumhd</code> orchestrates multiple <code>CartLoader</code> modules; enable and combine actions with flags.</p>
+<p>No action runs by default. Activate at least one action flag.</p>
+</div>
+<p>See details for each flag:</p>
+<ul>
+<li><a href="./load_space_ranger.md#actions"><code>--load-space-ranger</code></a></li>
+<li><a href="../sge_convert/#actions"><code>--sge-convert</code></a></li>
+<li><a href="../run_ficture2/#actions"><code>--run-ficture2</code></a></li>
+<li><a href="../import_cell/#actions"><code>--import-cells</code></a></li>
+<li><code>--import-squares</code>: Import Space Ranger square bins (multi-resolution) including optional <abbr title="Uniform Manifold Approximation and Projection; nonlinear dimensionality reduction">UMAP</abbr> coordinates per bin size; writes square assets JSONs and updates <code>catalog.yaml</code>.</li>
+<li><a href="../import_image/#actions"><code>--import-images</code></a></li>
+<li><a href="../run_cartload2/#actions"><code>--run-cartload2</code></a></li>
+<li><a href="../upload_aws/#actions"><code>--upload-aws</code></a></li>
+<li><a href="../upload_zenodo/#actions"><code>--upload-zenodo</code></a></li>
+</ul>
+<hr />
 <h2 id="example-usage">Example Usage<a class="headerlink" href="#example-usage" title="Permanent link">&para;</a></h2>
 <div class="tabbed-set tabbed-alternate" data-tabs="1:1"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Run all modules together</label></div>
 <div class="tabbed-content">
@@ -2339,7 +2358,7 @@
 <span class="w">  </span>--n-factor<span class="w"> </span><span class="m">12</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--id<span class="w"> </span>example-id<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--spatula<span class="w"> </span>/path/to/spatula/binary<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--ficture2<span class="w"> </span>/path/to/punkst/directory<span class="w"> </span><span class="se">\ </span><span class="w"> </span>
+<span class="w">  </span>--ficture2<span class="w"> </span>/path/to/punkst/directory<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--pmtiles<span class="w"> </span>/path/to/pmtiles/binary<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--tippecanoe<span class="w"> </span>/path/to/tippecanoe/binary<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--aws<span class="w"> </span>/path/to/aws/cli/binary<span class="w"> </span><span class="se">\</span>
@@ -2350,29 +2369,10 @@
 </div>
 </div>
 <hr />
-<h2 id="actions">Actions<a class="headerlink" href="#actions" title="Permanent link">&para;</a></h2>
-<div class="admonition info">
-<p class="admonition-title">Action Specifications</p>
-<p><code>run_visiumhd</code> orchestrates multiple <code>CartLoader</code> modules; enable and combine actions with flags.</p>
-<p>No action runs by default. Activate at least one action flag.</p>
-</div>
-<p>See details for each flag:</p>
-<ul>
-<li><a href="./load_space_ranger.md#actions"><code>--load-space-ranger</code></a></li>
-<li><a href="../sge_convert/#actions"><code>--sge-convert</code></a></li>
-<li><a href="../run_ficture2/#actions"><code>--run-ficture2</code></a></li>
-<li><a href="../import_cell/#actions"><code>--import-cells</code></a></li>
-<li><code>--import-squares</code>: Import Space Ranger square bins (multi-resolution) including optional <abbr title="Uniform Manifold Approximation and Projection; nonlinear dimensionality reduction">UMAP</abbr> coordinates per bin size; writes square assets JSONs and updates <code>catalog.yaml</code>.</li>
-<li><a href="../import_image/#actions"><code>--import-images</code></a></li>
-<li><a href="../run_cartload2/#actions"><code>--run-cartload2</code></a></li>
-<li><a href="../upload_aws/#actions"><code>--upload-aws</code></a></li>
-<li><a href="../upload_zenodo/#actions"><code>--upload-zenodo</code></a></li>
-</ul>
-<hr />
 <h2 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">&para;</a></h2>
 <p>Below are the core arguments you’ll typically set. For all other options, expand the collapsible "Auxiliary Parameters" section.</p>
 <h3 id="action-parameters">Action Parameters<a class="headerlink" href="#action-parameters" title="Permanent link">&para;</a></h3>
-<p>See <a href="#action">Action</a>.</p>
+<p>See <a href="#actions">Actions</a>.</p>
 <h3 id="inputoutput-parameters">Input/Output Parameters<a class="headerlink" href="#inputoutput-parameters" title="Permanent link">&para;</a></h3>
 <ul>
 <li><code>--space-ranger-dir</code>: Space Ranger output directory (required for manual mode or with <code>--load-space-ranger</code>)</li>
@@ -2466,7 +2466,7 @@ In manual mode, provide inputs relative to <code>--space-ranger-dir</code>:
 <li><code>--load-space-ranger</code>: A Space Ranger assets JSON summarizing detected inputs (path: <code>--space-ranger-assets</code>). See an example in the Visium HD pipeline vignette.</li>
 <li><code>--sge-convert</code>: Unified <abbr title="Spatial Digital Gene Expression">SGE</abbr> files and an assets manifest (<code>sge_assets.json</code>). See details in <a href="../sge_convert/#output">sge_convert reference</a></li>
 <li><code>--run-ficture2</code> or <code>--import-ext-ficture2</code>: Generates <abbr title="Segmentation-free method inferring latent spatial factors from SGE (Si et al., Nature Methods 2024)">FICTURE</abbr> analysis artifacts (factor models, decoded maps, <abbr title="Single-file archive format for map tiles and web visualization">PMTiles</abbr>, summaries). See details in <a href="../run_ficture2/#output">run_ficture2 reference</a></li>
-<li><code>--import-cells</code>: Cells <abbr title="Single-file archive format for map tiles and web visualization">PMTiles</abbr>, boundaries <abbr title="JSON-based format for vector geospatial features">GeoJSON</abbr>, and summaries under <code>cartload2/</code>. See details in <a href="../import_cell/#outputs">import_cells reference</a>.</li>
+<li><code>--import-cells</code>: Cells <abbr title="Single-file archive format for map tiles and web visualization">PMTiles</abbr>, boundaries <abbr title="JSON-based format for vector geospatial features">GeoJSON</abbr>, and summaries under <code>cartload2/</code>. See details in <a href="../import_cell/#output">import_cells reference</a>.</li>
 <li><code>--import-squares</code>: Square-bin <abbr title="Single-file archive format for map tiles and web visualization">PMTiles</abbr> plus assets JSONs per bin size (e.g., <code>&lt;square-id&gt;-sq050_assets.json</code>), including optional <abbr title="Uniform Manifold Approximation and Projection; nonlinear dimensionality reduction">UMAP</abbr> TSVs when provided.</li>
 <li><code>--import-images</code>: Background image <abbr title="Single-file archive format for map tiles and web visualization">PMTiles</abbr> (and intermediates) under <code>cartload2/</code>. See details in <a href="../import_image/#output">import_images reference</a>.</li>
 <li><code>--run-cartload2</code>: Sources packaged into <abbr title="Single-file archive format for map tiles and web visualization">PMTiles</abbr> and a <code>catalog.yaml</code>. See details in <a href="../run_cartload2/#output">run_cartload2 reference</a>.</li>

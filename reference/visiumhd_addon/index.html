@@ -1939,25 +1939,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#add-on-modules" class="md-nav__link">
-    <span class="md-ellipsis">
-      Add-on Modules
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Add-on Modules">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#introduction" class="md-nav__link">
-    <span class="md-ellipsis">
-      Introduction
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#requirements" class="md-nav__link">
     <span class="md-ellipsis">
       Requirements
@@ -1965,29 +1946,21 @@
   </a>
   
 </li>
-        
-          <li class="md-nav__item">
-  <a href="#example-usage" class="md-nav__link">
-    <span class="md-ellipsis">
-      Example Usage
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
+      
+        <li class="md-nav__item">
   <a href="#actions" class="md-nav__link">
     <span class="md-ellipsis">
       Actions
     </span>
   </a>
   
-</li>
+    <nav class="md-nav" aria-label="Actions">
+      <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#parameters" class="md-nav__link">
+  <a href="#load-space-ranger-load_space_ranger" class="md-nav__link">
     <span class="md-ellipsis">
-      Parameters
+      Load Space Ranger (load_space_ranger)
     </span>
   </a>
   
@@ -1995,6 +1968,24 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#example-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Example Usage
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      Parameters
+    </span>
+  </a>
   
 </li>
       
@@ -2075,25 +2066,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#add-on-modules" class="md-nav__link">
-    <span class="md-ellipsis">
-      Add-on Modules
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Add-on Modules">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#introduction" class="md-nav__link">
-    <span class="md-ellipsis">
-      Introduction
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#requirements" class="md-nav__link">
     <span class="md-ellipsis">
       Requirements
@@ -2101,29 +2073,21 @@
   </a>
   
 </li>
-        
-          <li class="md-nav__item">
-  <a href="#example-usage" class="md-nav__link">
-    <span class="md-ellipsis">
-      Example Usage
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
+      
+        <li class="md-nav__item">
   <a href="#actions" class="md-nav__link">
     <span class="md-ellipsis">
       Actions
     </span>
   </a>
   
-</li>
+    <nav class="md-nav" aria-label="Actions">
+      <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#parameters" class="md-nav__link">
+  <a href="#load-space-ranger-load_space_ranger" class="md-nav__link">
     <span class="md-ellipsis">
-      Parameters
+      Load Space Ranger (load_space_ranger)
     </span>
   </a>
   
@@ -2131,6 +2095,24 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#example-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Example Usage
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      Parameters
+    </span>
+  </a>
   
 </li>
       
@@ -2168,29 +2150,17 @@
 <ul>
 <li><code>load_space_ranger</code> scans a 10x Visium HD Space Ranger output directory and writes a JSON manifest of detected assets.</li>
 </ul>
-<h2 id="add-on-modules">Add-on Modules<a class="headerlink" href="#add-on-modules" title="Permanent link">&para;</a></h2>
-<div class="tabbed-set tabbed-alternate" data-tabs="1:1"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Load Space Ranger</label></div>
-<div class="tabbed-content">
-<div class="tabbed-block">
-<h3 id="introduction">Introduction<a class="headerlink" href="#introduction" title="Permanent link">&para;</a></h3>
-<p>Create a manifest consolidates locations for <abbr title="Spatial Digital Gene Expression">SGE</abbr> inputs (binned features and spatial metadata), segmented cell analysis outputs, hex-binned analysis at 8 <abbr title="micrometer">µm</abbr> and 16 <abbr title="micrometer">µm</abbr>, and optional tissue images. </p>
-<p>Typical next steps use this manifest as input for <code>sge_convert</code>, <code>import_cell</code>, <code>import_image</code>, or an end‑to‑end pipeline.</p>
 <hr />
-<h3 id="requirements">Requirements<a class="headerlink" href="#requirements" title="Permanent link">&para;</a></h3>
+<h2 id="requirements">Requirements<a class="headerlink" href="#requirements" title="Permanent link">&para;</a></h2>
 <ul>
 <li>Space Ranger output directory (unpacked) containing standard files and subfolders.</li>
 <li>Optional: a writable directory for temporary archive extraction when using <code>--unzip-dir</code>.</li>
 </ul>
 <hr />
-<h3 id="example-usage">Example Usage<a class="headerlink" href="#example-usage" title="Permanent link">&para;</a></h3>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span></pre></div></td><td class="code"><div><pre><span></span><code>cartloader<span class="w"> </span>load_space_ranger<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--in-dir<span class="w"> </span>/path/to/SpaceRanger_*_outs<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--out-json<span class="w"> </span>/path/to/out/visiumhd_space_ranger_assets.json<span class="w"> </span>
-</code></pre></div></td></tr></table></div>
-<hr />
-<h3 id="actions">Actions<a class="headerlink" href="#actions" title="Permanent link">&para;</a></h3>
+<h2 id="actions">Actions<a class="headerlink" href="#actions" title="Permanent link">&para;</a></h2>
+<h3 id="load-space-ranger-load_space_ranger">Load Space Ranger (<code>load_space_ranger</code>)<a class="headerlink" href="#load-space-ranger-load_space_ranger" title="Permanent link">&para;</a></h3>
+<p>Create a manifest that consolidates locations for <abbr title="Spatial Digital Gene Expression">SGE</abbr> inputs (binned features and spatial metadata), segmented cell analysis outputs, hex-binned analysis at 8 <abbr title="micrometer">µm</abbr> and 16 <abbr title="micrometer">µm</abbr>, and optional tissue images.</p>
+<p>Typical next steps use this manifest as input for <code>sge_convert</code>, <code>import_cell</code>, <code>import_image</code>, or an end‑to‑end pipeline.</p>
 <p>Detect standard Space Ranger assets under <code>--in-dir</code> and build a structured JSON manifest. Paths are resolved from files and supported archives (via <code>--unzip-dir</code>); only present items are included.</p>
 <ul>
 <li>
@@ -2236,7 +2206,15 @@
 </ul>
 <p>Note: Exact availability varies by dataset and pipeline options. Missing entries are omitted.</p>
 <hr />
-<h3 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">&para;</a></h3>
+<h2 id="example-usage">Example Usage<a class="headerlink" href="#example-usage" title="Permanent link">&para;</a></h2>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span></pre></div></td><td class="code"><div><pre><span></span><code>cartloader<span class="w"> </span>load_space_ranger<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--in-dir<span class="w"> </span>/path/to/SpaceRanger_*_outs<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--out-json<span class="w"> </span>/path/to/out/visiumhd_space_ranger_assets.json
+</code></pre></div></td></tr></table></div>
+<hr />
+<h2 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">&para;</a></h2>
 <ul>
 <li><code>--in-dir</code> (str, required): Space Ranger output directory to scan.</li>
 <li><code>--out-json</code> (str, required): Path to write the generated assets JSON.</li>
@@ -2327,9 +2305,6 @@
 <span class="w">    </span><span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div></td></tr></table></div>
-</div>
-</div>
-</div>
 
 
 

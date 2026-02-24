@@ -1266,39 +1266,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#example-usage" class="md-nav__link">
-    <span class="md-ellipsis">
-      Example Usage
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Example Usage">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#1-input-sge-in-mex-format" class="md-nav__link">
-    <span class="md-ellipsis">
-      1) Input SGE in MEX Format
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#2-input-sge-in-tsvcsv-format" class="md-nav__link">
-    <span class="md-ellipsis">
-      2) Input SGE in TSV/CSV Format
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#actions" class="md-nav__link">
     <span class="md-ellipsis">
       Actions
@@ -1330,6 +1297,39 @@
   <a href="#sge-visualization-sge-visual" class="md-nav__link">
     <span class="md-ellipsis">
       SGE Visualization (--sge-visual)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#example-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Example Usage
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Example Usage">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-input-sge-in-mex-format" class="md-nav__link">
+    <span class="md-ellipsis">
+      1) Input SGE in MEX Format
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-input-sge-in-tsvcsv-format" class="md-nav__link">
+    <span class="md-ellipsis">
+      2) Input SGE in TSV/CSV Format
     </span>
   </a>
   
@@ -2176,39 +2176,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#example-usage" class="md-nav__link">
-    <span class="md-ellipsis">
-      Example Usage
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Example Usage">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#1-input-sge-in-mex-format" class="md-nav__link">
-    <span class="md-ellipsis">
-      1) Input SGE in MEX Format
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#2-input-sge-in-tsvcsv-format" class="md-nav__link">
-    <span class="md-ellipsis">
-      2) Input SGE in TSV/CSV Format
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#actions" class="md-nav__link">
     <span class="md-ellipsis">
       Actions
@@ -2240,6 +2207,39 @@
   <a href="#sge-visualization-sge-visual" class="md-nav__link">
     <span class="md-ellipsis">
       SGE Visualization (--sge-visual)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#example-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Example Usage
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Example Usage">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-input-sge-in-mex-format" class="md-nav__link">
+    <span class="md-ellipsis">
+      1) Input SGE in MEX Format
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-input-sge-in-tsvcsv-format" class="md-nav__link">
+    <span class="md-ellipsis">
+      2) Input SGE in TSV/CSV Format
     </span>
   </a>
   
@@ -2349,15 +2349,12 @@
 <p><abbr title="Spatial Digital Gene Expression">SGE</abbr> datasets vary widely in format and resolution across platforms. Since <code>FICTURE</code> requires <abbr title="Spatial Digital Gene Expression">SGE</abbr> in a specific format, <code>CartLoader</code> toolkit provides the <code>sge_convert</code> module to standardize raw, platform-specific <abbr title="Spatial Digital Gene Expression">SGE</abbr> into a <abbr title="Segmentation-free method inferring latent spatial factors from SGE (Si et al., Nature Methods 2024)">FICTURE</abbr>-compatible format.</p>
 <hr />
 <h2 id="requirements">Requirements<a class="headerlink" href="#requirements" title="Permanent link">&para;</a></h2>
-<div class="admonition info">
-<p class="admonition-title">Input Data Requirements</p>
 <p>Ensure the input data (raw, platform‑specific <abbr title="Spatial Digital Gene Expression">SGE</abbr>) is transcript‑indexed and contains at least the following fields:</p>
 <ul>
 <li>Spatial coordinates (X, Y)</li>
 <li>Feature metadata (such as gene symbols)</li>
 <li>Expression counts</li>
 </ul>
-</div>
 <div class="admonition info">
 <p class="admonition-title">Platform Compatibility</p>
 <p>The current <code>sge_convert</code> supports standardizing <abbr title="Spatial Digital Gene Expression">SGE</abbr> from the following platforms:</p>
@@ -2428,6 +2425,18 @@
 </ul>
 </div>
 <hr />
+<h2 id="actions">Actions<a class="headerlink" href="#actions" title="Permanent link">&para;</a></h2>
+<div class="admonition warning">
+<p class="admonition-title">Action Specifications</p>
+<p><abbr title="Spatial Digital Gene Expression">SGE</abbr> conversion runs by default. If needed, activate other options: <code>--filter-by-density</code> and <code>--sge-visual</code>.</p>
+</div>
+<h3 id="sge-conversion-always-runs"><abbr title="Spatial Digital Gene Expression">SGE</abbr> Conversion (always runs)<a class="headerlink" href="#sge-conversion-always-runs" title="Permanent link">&para;</a></h3>
+<p>Converting <abbr title="Spatial Digital Gene Expression">SGE</abbr> into a <abbr title="Segmentation-free method inferring latent spatial factors from SGE (Si et al., Nature Methods 2024)">FICTURE</abbr>-compatible TSV format. During conversion, <abbr title="Spatial Digital Gene Expression">SGE</abbr> coordinates are rescaled to micrometer units based on the pixel resolution specified in the input. It's also available to apply feature (typically, genes) filtering.</p>
+<h3 id="density-based-filtering-filter-by-density">Density-based Filtering (<code>--filter-by-density</code>)<a class="headerlink" href="#density-based-filtering-filter-by-density" title="Permanent link">&para;</a></h3>
+<p>If <code>--filter-by-density</code> is set, automatically identify and retain high-quality tissue regions based on transcript density and spatial structure. This step takes the format-standardized <abbr title="Spatial Digital Gene Expression">SGE</abbr> as input and generate a density-based filtered <abbr title="Spatial Digital Gene Expression">SGE</abbr>.</p>
+<h3 id="sge-visualization-sge-visual"><abbr title="Spatial Digital Gene Expression">SGE</abbr> Visualization (<code>--sge-visual</code>)<a class="headerlink" href="#sge-visualization-sge-visual" title="Permanent link">&para;</a></h3>
+<p>If <code>--sge-visual</code> is set, draws an image of 2D points provided as an input. In this step, it is optional to enable the <code>--north-up</code> option to ensuring correct spatial orientation (i.e., Y-axis increases upward/north and X-axis increases to the right/east).</p>
+<hr />
 <h2 id="example-usage">Example Usage<a class="headerlink" href="#example-usage" title="Permanent link">&para;</a></h2>
 <h3 id="1-input-sge-in-mex-format">1) Input <abbr title="Spatial Digital Gene Expression">SGE</abbr> in <abbr title="Matrix Exchange (10x sparse matrix format)">MEX</abbr> Format<a class="headerlink" href="#1-input-sge-in-mex-format" title="Permanent link">&para;</a></h3>
 <h4 id="11-seq-scope">1.1) Seq-Scope<a class="headerlink" href="#11-seq-scope" title="Permanent link">&para;</a></h4>
@@ -2477,7 +2486,7 @@
 <span class="w">    </span>--sge-visual<span class="w"> </span>
 </code></pre></div></td></tr></table></div>
 <h3 id="2-input-sge-in-tsvcsv-format">2) Input <abbr title="Spatial Digital Gene Expression">SGE</abbr> in TSV/CSV Format<a class="headerlink" href="#2-input-sge-in-tsvcsv-format" title="Permanent link">&para;</a></h3>
-<p>This applies to input <abbr title="Spatial Digital Gene Expression">SGE</abbr> in TSV/CSV format from platforms. Below is an example converting <abbr title="Spatial Digital Gene Expression">SGE</abbr> from Stere-seq.</p>
+<p>This applies to input <abbr title="Spatial Digital Gene Expression">SGE</abbr> in TSV/CSV format from platforms. Below is an example converting <abbr title="Spatial Digital Gene Expression">SGE</abbr> from Stereo‑seq.</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -2576,18 +2585,6 @@ Below summarizes the default values for key parameters per supported platform:</
 <p><sub><sup>2</sup> 10x Xenium: Besides the above default settings, for 10x Xenium data, <code>sge_convert</code> also applies <code>--csv-colname-phredscore qv</code> and <code>--min-phred-score 20</code>.</p>
 </div>
 <hr />
-<h2 id="actions">Actions<a class="headerlink" href="#actions" title="Permanent link">&para;</a></h2>
-<div class="admonition warning">
-<p class="admonition-title">Action Specifications</p>
-<p><abbr title="Spatial Digital Gene Expression">SGE</abbr> conversion runs by default. If needed, activate other options: <code>--filter-by-density</code> and <code>--sge-visual</code>.</p>
-</div>
-<h3 id="sge-conversion-always-runs"><abbr title="Spatial Digital Gene Expression">SGE</abbr> Conversion (always runs)<a class="headerlink" href="#sge-conversion-always-runs" title="Permanent link">&para;</a></h3>
-<p>Converting <abbr title="Spatial Digital Gene Expression">SGE</abbr> into a <abbr title="Segmentation-free method inferring latent spatial factors from SGE (Si et al., Nature Methods 2024)">FICTURE</abbr>-compatible TSV format. During conversion, <abbr title="Spatial Digital Gene Expression">SGE</abbr> coordinates are rescaled to micrometer units based on the pixel resolution specified in the input. It's also available to apply feature (typically, genes) filtering.</p>
-<h3 id="density-based-filtering-filter-by-density">Density-based Filtering (<code>--filter-by-density</code>)<a class="headerlink" href="#density-based-filtering-filter-by-density" title="Permanent link">&para;</a></h3>
-<p>If <code>--filter-by-density</code> is set, automatically identify and retain high-quality tissue regions based on transcript density and spatial structure. This step takes the format-standardized <abbr title="Spatial Digital Gene Expression">SGE</abbr> as input and generate a density-based filtered <abbr title="Spatial Digital Gene Expression">SGE</abbr>.</p>
-<h3 id="sge-visualization-sge-visual"><abbr title="Spatial Digital Gene Expression">SGE</abbr> Visualization (<code>--sge-visual</code>)<a class="headerlink" href="#sge-visualization-sge-visual" title="Permanent link">&para;</a></h3>
-<p>If <code>--sge-visual</code> is set, draws an image of 2D points provided as an input. In this step, it is optional to enable the <code>--north-up</code> option to ensuring correct spatial orientation (i.e., Y-axis increases upward/north and X-axis increases to the right/east).</p>
-<hr />
 <h2 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">&para;</a></h2>
 <p>Below are the core parameters. See more details in the collapsible sections below.</p>
 <h3 id="sge-conversion"><abbr title="Spatial Digital Gene Expression">SGE</abbr> Conversion<a class="headerlink" href="#sge-conversion" title="Permanent link">&para;</a></h3>
@@ -2609,14 +2606,14 @@ Below summarizes the default values for key parameters per supported platform:</
 * `--csv-colname-feature-type`: If `--include-feature-type-regex`, column name in the input TSV/CSV that contains gene type information.
 * `--feature-type-ref`, `--feature-type-ref-delim`, `--feature-type-ref-colidx-name`, and `--feature-type-ref-colidx-type`: If `--include-feature-type-regex`, define the file path, delimiter, and column indices for gene names and types of an additional reference file to provide gene type information. -->
 <details class="note">
-<summary>Auxiliary <abbr title="Spatial Digital Gene Expression">SGE</abbr> Conversion Paramaters</summary>
+<summary>Auxiliary <abbr title="Spatial Digital Gene Expression">SGE</abbr> Conversion Parameters</summary>
 <p>Recommend to use the default values; override only if needed. See more details by running:
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code>CartLoadersge_convert<span class="w"> </span>--help
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code>cartloader<span class="w"> </span>sge_convert<span class="w"> </span>--help
 </code></pre></div></td></tr></table></div></p>
 <p><strong>Auxiliary Input <abbr title="Matrix Exchange (10x sparse matrix format)">MEX</abbr> Parameters</strong>:</p>
 <ul>
-<li><code>--icols-mtx</code> (int or comma-spearated list): Comma-separated, 1-based indices of the target genomic features among the count columns in the input matrix file (default: 1)</li>
-<li><code>--colnames-count</code> (string or comma-spearated list): Comma-separated output column names for the specified genomic features (default: count). The number of names specified by <code>--colnames-count</code> must match the number of indices provided in <code>--icols-mtx</code>.</li>
+<li><code>--icols-mtx</code> (int or comma-separated list): Comma-separated, 1-based indices of the target genomic features among the count columns in the input matrix file (default: 1)</li>
+<li><code>--colnames-count</code> (string or comma-separated list): Comma-separated output column names for the specified genomic features (default: count). The number of names specified by <code>--colnames-count</code> must match the number of indices provided in <code>--icols-mtx</code>.</li>
 </ul>
 <p><strong>Auxiliary Input CSV/TSV Parameters</strong>:</p>
 <ul>

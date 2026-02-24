@@ -2310,8 +2310,8 @@ conda<span class="w"> </span>activate<span class="w"> </span>ENV_NAME<span class
 <span class="nv">SCALE</span><span class="o">=</span><span class="m">1</span><span class="w">                                 </span><span class="c1"># coordinate to micrometer scaling factor</span>
 
 <span class="c1"># LDA parameters</span>
-<span class="nv">train_width</span><span class="o">=</span><span class="m">18</span><span class="w">                           </span><span class="c1"># define LDA training hexagon width (comma-separated if multiple widths are applied)</span>
-<span class="nv">n_factor</span><span class="o">=</span><span class="m">48</span>,96<span class="w">                           </span><span class="c1"># define number of factors in LDA training (comma-separated if multiple n-factor are applied)</span>
+<span class="nv">train_width</span><span class="o">=</span><span class="m">24</span><span class="w">                           </span><span class="c1"># define LDA training hexagon width (comma-separated if multiple widths are applied)</span>
+<span class="nv">n_factor</span><span class="o">=</span><span class="m">96</span>,192<span class="w">                          </span><span class="c1"># define number of factors in LDA training (comma-separated if multiple n-factor are applied)</span>
 </code></pre></div></td></tr></table></div>
 <p>Prepare a working directory:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
@@ -2392,8 +2392,8 @@ FB080_O1d /path/to/FB080_O1d/transcripts.unsorted.tsv.gz
 <span class="normal">11</span></pre></div></td><td class="code"><div><pre><span></span><code>cartloader<span class="w"> </span>run_ficture2_multi<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--in-list<span class="w"> </span>./input.tsv<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--out-dir<span class="w"> </span>./ficture2<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--width<span class="w"> </span><span class="m">18</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--n-factor<span class="w"> </span><span class="m">48</span>,96<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--width<span class="w"> </span><span class="nv">$train_width</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--n-factor<span class="w"> </span><span class="nv">$n_factor</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--exclude-feature-regex<span class="w"> </span><span class="s2">&quot;^(Blank-.*</span>$<span class="s2">)&quot;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--redo-merge-units<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--ficture2<span class="w"> </span><span class="si">${</span><span class="nv">PUNKST</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
@@ -2562,7 +2562,7 @@ TODO: Provide paths to these assets to serve the outputs. -->
 <hr />
 <h4 id="viewexplore">View/Explore<a class="headerlink" href="#viewexplore" title="Permanent link">&para;</a></h4>
 <p>The output are available in both CartoScope. </p>
-<p><a class="md-button md-button--primary button-tight-small" href="http://localhost:5173/datasets?collections=human+cerebral+cortex+development%2C+gestational+week+20+%E2%80%93+occipital+cortex">Explore in CartoScope</a></p>
+<p><a class="md-button md-button--primary button-tight-small" href="https://v3o-main.carto-scope.org/datasets?collections=multi-sample+analysis+of+human+occipital+cortex+%28gw20%29+development">Explore in CartoScope</a></p>
 </li>
 </ul>
 </div>

@@ -1394,18 +1394,18 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#example-usage" class="md-nav__link">
+  <a href="#actions" class="md-nav__link">
     <span class="md-ellipsis">
-      Example Usage
+      Actions
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#actions" class="md-nav__link">
+  <a href="#example-usage" class="md-nav__link">
     <span class="md-ellipsis">
-      Actions
+      Example Usage
     </span>
   </a>
   
@@ -1475,15 +1475,6 @@
   <a href="#output" class="md-nav__link">
     <span class="md-ellipsis">
       Output
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#see-also" class="md-nav__link">
-    <span class="md-ellipsis">
-      See Also
     </span>
   </a>
   
@@ -2122,18 +2113,18 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#example-usage" class="md-nav__link">
+  <a href="#actions" class="md-nav__link">
     <span class="md-ellipsis">
-      Example Usage
+      Actions
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#actions" class="md-nav__link">
+  <a href="#example-usage" class="md-nav__link">
     <span class="md-ellipsis">
-      Actions
+      Example Usage
     </span>
   </a>
   
@@ -2208,15 +2199,6 @@
   
 </li>
       
-        <li class="md-nav__item">
-  <a href="#see-also" class="md-nav__link">
-    <span class="md-ellipsis">
-      See Also
-    </span>
-  </a>
-  
-</li>
-      
     </ul>
   
 </nav>
@@ -2248,6 +2230,15 @@
 <li>Pre-installed tools: <code>gzip</code>, <code>python</code>, <code>punkst</code>, <code>spatula</code></li>
 </ul>
 <hr />
+<h2 id="actions">Actions<a class="headerlink" href="#actions" title="Permanent link">&para;</a></h2>
+<p>All actions run by default (UMAPs can be skipped with <code>--skip-umap</code>):</p>
+<ul>
+<li>Multisample prepare: tiles inputs, builds joint hex grids at requested <code>--width</code> values</li>
+<li><abbr title="Latent Dirichlet Allocation">LDA</abbr> training: trains <abbr title="Latent Dirichlet Allocation">LDA</abbr> models for each <code>(width, n-factor)</code> pair</li>
+<li>Decode: applies trained models per sample; produces pixel‑level factors and summaries</li>
+<li>Write per‑sample JSON: consolidates paths and metadata for downstream consumption</li>
+</ul>
+<hr />
 <h2 id="example-usage">Example Usage<a class="headerlink" href="#example-usage" title="Permanent link">&para;</a></h2>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
@@ -2273,15 +2264,6 @@
 <span class="w">  </span>--threads<span class="w"> </span><span class="m">8</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--n-jobs<span class="w"> </span><span class="m">4</span>
 </code></pre></div></td></tr></table></div>
-<hr />
-<h2 id="actions">Actions<a class="headerlink" href="#actions" title="Permanent link">&para;</a></h2>
-<p>All actions run by default (UMAPs can be skipped with <code>--skip-umap</code>):</p>
-<ul>
-<li>Multisample prepare: tiles inputs, builds joint hex grids at requested <code>--width</code> values</li>
-<li><abbr title="Latent Dirichlet Allocation">LDA</abbr> training: trains <abbr title="Latent Dirichlet Allocation">LDA</abbr> models for each <code>(width, n-factor)</code> pair</li>
-<li>Decode: applies trained models per sample; produces pixel‑level factors and summaries</li>
-<li>Write per‑sample JSON: consolidates paths and metadata for downstream consumption</li>
-</ul>
 <hr />
 <h2 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">&para;</a></h2>
 <p>Below are the core arguments you’ll typically set. Flag names and behavior follow <code>run_ficture2_multi.py</code>.</p>
@@ -2361,11 +2343,7 @@
 </ul>
 </li>
 </ul>
-<hr />
-<h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
-<ul>
-<li>Reference: <code>run_ficture2.md</code> — Single‑sample FICTURE2 runner and file formats</li>
-</ul>
+<p>See <code>run_ficture2.md</code> for single‑sample formats and file details.</p>
 
 
 

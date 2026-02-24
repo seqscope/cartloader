@@ -1504,15 +1504,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#example-usage" class="md-nav__link">
-    <span class="md-ellipsis">
-      Example Usage
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#actions" class="md-nav__link">
     <span class="md-ellipsis">
       Actions
@@ -1560,6 +1551,15 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#example-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Example Usage
+    </span>
+  </a>
   
 </li>
       
@@ -2179,15 +2179,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#example-usage" class="md-nav__link">
-    <span class="md-ellipsis">
-      Example Usage
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#actions" class="md-nav__link">
     <span class="md-ellipsis">
       Actions
@@ -2235,6 +2226,15 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#example-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Example Usage
+    </span>
+  </a>
   
 </li>
       
@@ -2363,6 +2363,23 @@
 <li>Pre-installed CLI tools: <code>tippecanoe</code>, <code>gdal_translate</code>, <code>gdaladdo</code>, <code>pmtiles</code>, <code>spatula</code>, <code>gzip</code>.</li>
 </ul>
 <hr />
+<h2 id="actions">Actions<a class="headerlink" href="#actions" title="Permanent link">&para;</a></h2>
+<div class="admonition warning">
+<p class="admonition-title">Action Specifications</p>
+<p><abbr title="Spatial Digital Gene Expression">SGE</abbr> packaging and catalog preparation run by default. Enable optional integration actions using <a href="#inputoutput-parameters">input/output parameters</a>.</p>
+</div>
+<h3 id="sge-packaging"><abbr title="Spatial Digital Gene Expression">SGE</abbr> Packaging<a class="headerlink" href="#sge-packaging" title="Permanent link">&para;</a></h3>
+<p>Converts transcript‑level <abbr title="Spatial Digital Gene Expression">SGE</abbr> to raster <abbr title="Single-file archive format for map tiles and web visualization">PMTiles</abbr>, including light and dark modes.</p>
+<h3 id="ficture-integration-fic-dir"><abbr title="Segmentation-free method inferring latent spatial factors from SGE (Si et al., Nature Methods 2024)">FICTURE</abbr> Integration (<code>--fic-dir</code>)<a class="headerlink" href="#ficture-integration-fic-dir" title="Permanent link">&para;</a></h3>
+<p>If <abbr title="Segmentation-free method inferring latent spatial factors from SGE (Si et al., Nature Methods 2024)">FICTURE</abbr> results are provided via <code>--fic-dir</code>:
+  - Converts topic proportions (<code>*.results.tsv.gz</code>) into vector <abbr title="Single-file archive format for map tiles and web visualization">PMTiles</abbr> for spatial factors.
+  - Generates raster overlays from decoded pixel‑level outputs.
+  - Builds a joined molecule–factor matrix by associating decoded pixels with molecules based on spatial proximity, then converts it into multi‑feature <abbr title="Single-file archive format for map tiles and web visualization">PMTiles</abbr>.</p>
+<h3 id="additional-assets-integration-cell-assets-or-background-assets">Additional Assets Integration (<code>--cell-assets</code> or <code>--background-assets</code>)<a class="headerlink" href="#additional-assets-integration-cell-assets-or-background-assets" title="Permanent link">&para;</a></h3>
+<p>Includes provided cell assets and background/basemap <abbr title="Single-file archive format for map tiles and web visualization">PMTiles</abbr> in <code>catalog.yaml</code>; copies asset files into the output directory when they reside elsewhere.</p>
+<h3 id="catalog-and-metadata-preparation">Catalog and Metadata Preparation<a class="headerlink" href="#catalog-and-metadata-preparation" title="Permanent link">&para;</a></h3>
+<p>Writes a <abbr title="Segmentation-free method inferring latent spatial factors from SGE (Si et al., Nature Methods 2024)">FICTURE</abbr> assets JSON (when <abbr title="Segmentation-free method inferring latent spatial factors from SGE (Si et al., Nature Methods 2024)">FICTURE</abbr> integration is set) and a final <code>catalog.yaml</code> listing all layers.</p>
+<hr />
 <h2 id="example-usage">Example Usage<a class="headerlink" href="#example-usage" title="Permanent link">&para;</a></h2>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
@@ -2391,25 +2408,8 @@ cartloader<span class="w"> </span>run_cartload2<span class="w"> </span><span cla
 <span class="w">    </span>--tippecanoe<span class="w"> </span>/path/to/tippecanoe/binary
 </code></pre></div></td></tr></table></div>
 <hr />
-<h2 id="actions">Actions<a class="headerlink" href="#actions" title="Permanent link">&para;</a></h2>
-<div class="admonition warning">
-<p class="admonition-title">Action Specifications</p>
-<p><abbr title="Spatial Digital Gene Expression">SGE</abbr> packaging and catalog preparation run by default. Enable optional integration actions using <a href="#inputoutput-parameters">input/output parameters</a>.</p>
-</div>
-<h3 id="sge-packaging"><abbr title="Spatial Digital Gene Expression">SGE</abbr> Packaging<a class="headerlink" href="#sge-packaging" title="Permanent link">&para;</a></h3>
-<p>Converts transcript‑level <abbr title="Spatial Digital Gene Expression">SGE</abbr> to raster <abbr title="Single-file archive format for map tiles and web visualization">PMTiles</abbr>, including light and dark modes.</p>
-<h3 id="ficture-integration-fic-dir"><abbr title="Segmentation-free method inferring latent spatial factors from SGE (Si et al., Nature Methods 2024)">FICTURE</abbr> Integration (<code>--fic-dir</code>)<a class="headerlink" href="#ficture-integration-fic-dir" title="Permanent link">&para;</a></h3>
-<p>If <abbr title="Segmentation-free method inferring latent spatial factors from SGE (Si et al., Nature Methods 2024)">FICTURE</abbr> results is provided via <code>--fic-dir</code>:
-  - Converts topic proportions (<code>*.results.tsv.gz</code>) into vector <abbr title="Single-file archive format for map tiles and web visualization">PMTiles</abbr> for spatial factors.
-  - Generates raster overlays from decoded pixel‑level outputs.
-  - Builds a joined molecule–factor matrix by associating decoded pixels with molecules based on spatial proximity, then converts it into multi‑feature <abbr title="Single-file archive format for map tiles and web visualization">PMTiles</abbr>.</p>
-<h3 id="additional-assets-integration-cell-assets-or-background-assets">Additional Assets Integration (<code>--cell-assets</code> or <code>--background-assets</code>)<a class="headerlink" href="#additional-assets-integration-cell-assets-or-background-assets" title="Permanent link">&para;</a></h3>
-<p>Includes provided cell assets and background/basemap <abbr title="Single-file archive format for map tiles and web visualization">PMTiles</abbr> in <code>catalog.yaml</code>; copies asset files into the output directory when they reside elsewhere.</p>
-<h3 id="catalog-and-metadata-preparation">Catalog and Metadata Preparation<a class="headerlink" href="#catalog-and-metadata-preparation" title="Permanent link">&para;</a></h3>
-<p>Writes a <abbr title="Segmentation-free method inferring latent spatial factors from SGE (Si et al., Nature Methods 2024)">FICTURE</abbr> assets JSON (when <abbr title="Segmentation-free method inferring latent spatial factors from SGE (Si et al., Nature Methods 2024)">FICTURE</abbr> integration is set) and a final <code>catalog.yaml</code> listing all layers.</p>
-<hr />
 <h2 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">&para;</a></h2>
-<p>Below are the core parameters. See more details in the collapsible "Auxiliary Paramaters" section.</p>
+<p>Below are the core parameters. See more details in the collapsible "Auxiliary Parameters" section.</p>
 <h3 id="inputoutput-parameters">Input/Output Parameters<a class="headerlink" href="#inputoutput-parameters" title="Permanent link">&para;</a></h3>
 <p>Must use <code>--sge-dir</code> or <code>--fic-dir</code> to provide <abbr title="Spatial Digital Gene Expression">SGE</abbr> data.</p>
 <ul>

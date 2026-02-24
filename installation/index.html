@@ -2300,7 +2300,7 @@
 <p>This document walks through the environment setup and installation steps required for <code>CartLoader</code>.</p>
 <hr />
 <h2 id="1-dependencies">1. Dependencies<a class="headerlink" href="#1-dependencies" title="Permanent link">&para;</a></h2>
-<p>Before installing <code>CartLoader</code>, make sure the tools below are present on your system.</p>
+<p>Below listed all required tools and packages for <code>CartLoader</code>. Instruction of how to install those tools and packages are provided in the section <a href="#2-setting-up-the-environment-using-conda">2</a> and <a href="#4-installing-cartloader">4</a>.</p>
 <h3 id="11-required-system-utilities"><strong>1.1 Required System Utilities</strong><a class="headerlink" href="#11-required-system-utilities" title="Permanent link">&para;</a></h3>
 <p>Confirm that these command-line programs are installed:</p>
 <ul>
@@ -2308,6 +2308,8 @@
 <li><code>sort</code></li>
 <li><code>bgzip</code></li>
 <li><code>tabix</code></li>
+<li><code>bc</code></li>
+<li><code>perl</code></li>
 </ul>
 <h3 id="12-external-tools-and-utilities"><strong>1.2 External Tools and Utilities</strong><a class="headerlink" href="#12-external-tools-and-utilities" title="Permanent link">&para;</a></h3>
 <p>These packages support spatial data handling and file conversion. Several are bundled as git submodules.</p>
@@ -2355,8 +2357,14 @@ bash<span class="w"> </span>Miniconda3-latest-Linux-x86_64.sh
 <h3 id="22-creating-an-environment">2.2 Creating an Environment<a class="headerlink" href="#22-creating-an-environment" title="Permanent link">&para;</a></h3>
 <p>Set up a fresh environment for <code>CartLoader</code>:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span></pre></div></td><td class="code"><div><pre><span></span><code>conda<span class="w"> </span>create<span class="w"> </span>-n<span class="w"> </span>ENV_NAME<span class="w"> </span><span class="nv">python</span><span class="o">=</span><span class="m">3</span>.13.1<span class="w">   </span><span class="c1"># choose the environment name and Python version that suits your workflow</span>
-conda<span class="w"> </span>activate<span class="w"> </span>ENV_NAME
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nv">ENV_NAME</span><span class="o">=</span><span class="s2">&quot;cart_env&quot;</span><span class="w">   </span><span class="c1"># define your environment name</span>
+<span class="nv">PY_VERSION</span><span class="o">=</span><span class="s2">&quot;3.13.1&quot;</span><span class="w">   </span><span class="c1"># define your python version</span>
+
+conda<span class="w"> </span>create<span class="w"> </span>-n<span class="w"> </span><span class="si">${</span><span class="nv">ENV_NAME</span><span class="si">}</span><span class="w"> </span><span class="nv">python</span><span class="o">=</span><span class="si">${</span><span class="nv">PY_VERSION</span><span class="si">}</span>
+conda<span class="w"> </span>activate<span class="w"> </span><span class="si">${</span><span class="nv">ENV_NAME</span><span class="si">}</span>
 </code></pre></div></td></tr></table></div>
 <h3 id="23-install-core-dependencies">2.3 Install Core Dependencies<a class="headerlink" href="#23-install-core-dependencies" title="Permanent link">&para;</a></h3>
 <p>Install the core dependencies once the environment is active:</p>
@@ -2380,10 +2388,10 @@ git<span class="w"> </span>clone<span class="w"> </span>git@github.com:seqscope/
 <span class="nb">cd</span><span class="w"> </span>cartloader
 
 <span class="c1"># Install python requirements:</span>
-pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>./requirements.txt
+pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>./installation/requirements.txt
 
 <span class="c1"># Install R packages:</span>
-Rscript<span class="w"> </span>./install_r_packages.R
+Rscript<span class="w"> </span>./installation/install_r_packages.R
 
 pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span>./
 </code></pre></div></td></tr></table></div>
@@ -2465,8 +2473,24 @@ make<span class="w"> </span>install<span class="w"> </span>
 </code></pre></div></td></tr></table></div>
 <hr />
 <h2 id="5-verifying-the-installation">5. Verifying the Installation<a class="headerlink" href="#5-verifying-the-installation" title="Permanent link">&para;</a></h2>
-<p>Run the following command to verify that the package loads correctly:</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;import cartloader; print(&#39;cartloader installed successfully!&#39;)&quot;</span>
+<p>Run the following command to verify cartloader and all dependecies</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span>
+<span class="normal">6</span>
+<span class="normal">7</span>
+<span class="normal">8</span>
+<span class="normal">9</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># activate your environment if you did not</span>
+<span class="c1"># replace the $ENV_NAME with your environment name if you did not define it before</span>
+conda<span class="w"> </span>activate<span class="w"> </span><span class="si">${</span><span class="nv">ENV_NAME</span><span class="si">}</span><span class="w"> </span>
+
+<span class="c1"># verify the installation of cartloader</span>
+python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;import cartloader; print(&#39;cartloader installed successfully!&#39;)&quot;</span>
+
+<span class="c1"># verify all dependencies</span>
+python<span class="w"> </span>./installation/check_dependencies.py
 </code></pre></div></td></tr></table></div>
 
 

@@ -1665,18 +1665,18 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#action" class="md-nav__link">
+  <a href="#requirements" class="md-nav__link">
     <span class="md-ellipsis">
-      Action
+      Requirements
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#requirements" class="md-nav__link">
+  <a href="#actions" class="md-nav__link">
     <span class="md-ellipsis">
-      Requirements
+      Actions
     </span>
   </a>
   
@@ -1739,6 +1739,15 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#output" class="md-nav__link">
+    <span class="md-ellipsis">
+      Output
+    </span>
+  </a>
   
 </li>
       
@@ -2086,18 +2095,18 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#action" class="md-nav__link">
+  <a href="#requirements" class="md-nav__link">
     <span class="md-ellipsis">
-      Action
+      Requirements
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#requirements" class="md-nav__link">
+  <a href="#actions" class="md-nav__link">
     <span class="md-ellipsis">
-      Requirements
+      Actions
     </span>
   </a>
   
@@ -2163,6 +2172,15 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#output" class="md-nav__link">
+    <span class="md-ellipsis">
+      Output
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -2186,9 +2204,6 @@
 <h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
 <p>Use <code>upload_aws</code> to publish <code>CartLoader</code> outputs (<abbr title="Single-file archive format for map tiles and web visualization">PMTiles</abbr>, decoded spatial factors, and the catalog) to Amazon S3 for sharing or deployment. Supports single‑dataset uploads and collection uploads (multiple datasets via <code>--in-list</code>). File lists are taken from <code>catalog.yaml</code> and split into cartload basics (required outputs), cartload optional files (e.g., <abbr title="Uniform Manifold Approximation and Projection; nonlinear dimensionality reduction">UMAP</abbr>, alias), and additional basemaps (non-<abbr title="Spatial Digital Gene Expression">SGE</abbr> <abbr title="Single-file archive format for map tiles and web visualization">PMTiles</abbr>).</p>
 <hr />
-<h2 id="action">Action<a class="headerlink" href="#action" title="Permanent link">&para;</a></h2>
-<p>Upload <code>CartLoader</code> outputs (including <code>catalog.yaml</code>) to a specified S3 path for a single dataset or a collection (<code>--in-list</code>).</p>
-<hr />
 <h2 id="requirements">Requirements<a class="headerlink" href="#requirements" title="Permanent link">&para;</a></h2>
 <ul>
 <li>A completed run of <a href="../run_cartload2/"><code>run_cartload2</code></a> or <a href="../run_cartload2_multi/"><code>run_cartload2_multi</code></a>, which include:<ul>
@@ -2202,6 +2217,9 @@
 </li>
 <li>AWS CLI installed and configured (e.g., <code>aws configure</code>).</li>
 </ul>
+<hr />
+<h2 id="actions">Actions<a class="headerlink" href="#actions" title="Permanent link">&para;</a></h2>
+<p>Upload <code>CartLoader</code> outputs (including <code>catalog.yaml</code>) to a specified S3 path for a single dataset or a collection (<code>--in-list</code>).</p>
 <hr />
 <h2 id="example-usage">Example Usage<a class="headerlink" href="#example-usage" title="Permanent link">&para;</a></h2>
 <div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Single Dataset Upload</label><label for="__tabbed_1_2">Collection Upload (Multiple Datasets)</label></div>
@@ -2329,6 +2347,12 @@ cartloader<span class="w"> </span>upload_aws<span class="w"> </span><span class=
 <li><code>--restart</code> (flag): Ignore existing outputs and rerun from scratch.</li>
 <li><code>--n-jobs</code> (int): Number of parallel jobs (default: 2).</li>
 <li><code>--makefn</code> (str): Name of the generated Makefile (default: <code>upload_aws.mk</code>, written inside <code>--in-dir</code>).</li>
+</ul>
+<hr />
+<h2 id="output">Output<a class="headerlink" href="#output" title="Permanent link">&para;</a></h2>
+<ul>
+<li>S3 uploads under <code>--s3-dir</code>, with per‑dataset subdirectories in collection mode.</li>
+<li>An optional Makefile (<code>--makefn</code>) when running in dry-run mode.</li>
 </ul>
 
 

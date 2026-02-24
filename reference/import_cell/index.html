@@ -1570,15 +1570,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#example-usages" class="md-nav__link">
-    <span class="md-ellipsis">
-      Example Usages
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#actions" class="md-nav__link">
     <span class="md-ellipsis">
       Actions
@@ -1630,6 +1621,15 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#example-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Example Usage
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#parameters" class="md-nav__link">
     <span class="md-ellipsis">
       Parameters
@@ -1663,9 +1663,9 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#outputs" class="md-nav__link">
+  <a href="#output" class="md-nav__link">
     <span class="md-ellipsis">
-      Outputs
+      Output
     </span>
   </a>
   
@@ -2128,15 +2128,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#example-usages" class="md-nav__link">
-    <span class="md-ellipsis">
-      Example Usages
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#actions" class="md-nav__link">
     <span class="md-ellipsis">
       Actions
@@ -2188,6 +2179,15 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#example-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Example Usage
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#parameters" class="md-nav__link">
     <span class="md-ellipsis">
       Parameters
@@ -2221,9 +2221,9 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#outputs" class="md-nav__link">
+  <a href="#output" class="md-nav__link">
     <span class="md-ellipsis">
-      Outputs
+      Output
     </span>
   </a>
   
@@ -2259,7 +2259,21 @@
 <li>Optional catalog update: an existing <code>catalog.yaml</code> from <a href="../run_cartload2/">Asset Packaging</a>.</li>
 </ul>
 <hr />
-<h2 id="example-usages">Example Usages<a class="headerlink" href="#example-usages" title="Permanent link">&para;</a></h2>
+<h2 id="actions">Actions<a class="headerlink" href="#actions" title="Permanent link">&para;</a></h2>
+<div class="admonition warning">
+<p class="admonition-title">Action Specifications</p>
+<p>No action runs by default. Activate at least one using the <a href="#action-parameters">action parameters</a>.</p>
+</div>
+<h3 id="cell-conversion-step-cells">Cell Conversion Step (<code>--cells</code>)<a class="headerlink" href="#cell-conversion-step-cells" title="Permanent link">&para;</a></h3>
+<p>Convert cell points/centroids, clusters, and differential expression results to <abbr title="Single-file archive format for map tiles and web visualization">PMTiles</abbr> with counts and top cluster index (topK). A JSON summary of inputs/outputs and basic stats will be written.</p>
+<h3 id="cell-boundary-conversion-step-boundaries">Cell Boundary Conversion Step (<code>--boundaries</code>)<a class="headerlink" href="#cell-boundary-conversion-step-boundaries" title="Permanent link">&para;</a></h3>
+<p>Convert cell polygons to <abbr title="JSON-based format for vector geospatial features">GeoJSON</abbr> with <code>cell_id</code> and <code>topK</code> attributes. A JSON summary of inputs/outputs and basic stats will be written.</p>
+<h3 id="catalog-update-update-catalog">Catalog Update (<code>--update-catalog</code>)<a class="headerlink" href="#catalog-update-update-catalog" title="Permanent link">&para;</a></h3>
+<p>Append generated layers to an existing <code>catalog.yaml</code>.</p>
+<h3 id="umap-conversion-step-umap"><abbr title="Uniform Manifold Approximation and Projection; nonlinear dimensionality reduction">UMAP</abbr> Conversion Step (<code>--umap</code>)<a class="headerlink" href="#umap-conversion-step-umap" title="Permanent link">&para;</a></h3>
+<p>Convert <abbr title="Uniform Manifold Approximation and Projection; nonlinear dimensionality reduction">UMAP</abbr> embeddings to <abbr title="Single-file archive format for map tiles and web visualization">PMTiles</abbr>.</p>
+<hr />
+<h2 id="example-usage">Example Usage<a class="headerlink" href="#example-usage" title="Permanent link">&para;</a></h2>
 <div class="admonition warning">
 <p class="admonition-title">Two Input Modes</p>
 <p><code>CartLoader</code> accepts two input modes for each platform:</p>
@@ -2344,20 +2358,6 @@ cartloader<span class="w"> </span>import_visiumhd_cell<span class="w"> </span><s
 </div>
 </div>
 </div>
-<hr />
-<h2 id="actions">Actions<a class="headerlink" href="#actions" title="Permanent link">&para;</a></h2>
-<div class="admonition warning">
-<p class="admonition-title">Action Specifications</p>
-<p>No action runs by default. Activate at least one using the <a href="#action-parameters">action parameters</a>.</p>
-</div>
-<h3 id="cell-conversion-step-cells">Cell Conversion Step (<code>--cells</code>)<a class="headerlink" href="#cell-conversion-step-cells" title="Permanent link">&para;</a></h3>
-<p>Convert cell points/centroids, clusters, and differential expression results to <abbr title="Single-file archive format for map tiles and web visualization">PMTiles</abbr> with counts and top cluster index (topK). A JSON summary of inputs/outputs and basic stats will be written.</p>
-<h3 id="cell-boundary-conversion-step-boundaries">Cell Boundary Conversion Step (<code>--boundaries</code>)<a class="headerlink" href="#cell-boundary-conversion-step-boundaries" title="Permanent link">&para;</a></h3>
-<p>Convert cell polygons to <abbr title="JSON-based format for vector geospatial features">GeoJSON</abbr> with <code>cell_id</code> and <code>topK</code> attributes. A JSON summary of inputs/outputs and basic stats will be written.</p>
-<h3 id="catalog-update-update-catalog">Catalog Update (<code>--update-catalog</code>)<a class="headerlink" href="#catalog-update-update-catalog" title="Permanent link">&para;</a></h3>
-<p>Append generated layers to an existing <code>catalog.yaml</code>.</p>
-<h3 id="umap-conversion-step-umap"><abbr title="Uniform Manifold Approximation and Projection; nonlinear dimensionality reduction">UMAP</abbr> Conversion Step (<code>--umap</code>)<a class="headerlink" href="#umap-conversion-step-umap" title="Permanent link">&para;</a></h3>
-<p>Convert <abbr title="Uniform Manifold Approximation and Projection; nonlinear dimensionality reduction">UMAP</abbr> embeddings to <abbr title="Single-file archive format for map tiles and web visualization">PMTiles</abbr>.</p>
 <hr />
 <h2 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">&para;</a></h2>
 <h3 id="action-parameters">Action Parameters<a class="headerlink" href="#action-parameters" title="Permanent link">&para;</a></h3>
@@ -2444,7 +2444,7 @@ cartloader<span class="w"> </span>import_visiumhd_cell<span class="w"> </span><s
   - <code>--log-suffix</code> (str): Log file suffix.</p>
 </details>
 <hr />
-<h2 id="outputs">Outputs<a class="headerlink" href="#outputs" title="Permanent link">&para;</a></h2>
+<h2 id="output">Output<a class="headerlink" href="#output" title="Permanent link">&para;</a></h2>
 <ul>
 <li>Cells <abbr title="Single-file archive format for map tiles and web visualization">PMTiles</abbr> (<code>*.cells.pmtiles</code>): cell centroids/points with attributes <code>cell_id</code>, <code>count</code>, <code>topK</code>.</li>
 <li>Boundaries <abbr title="JSON-based format for vector geospatial features">GeoJSON</abbr> (<code>*.boundaries.geojson</code>): cell polygons with <code>cell_id</code>, <code>topK</code>.</li>
