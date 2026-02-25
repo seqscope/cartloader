@@ -1,54 +1,67 @@
 # Installation Guide
 
-This is an instruction to set up the required environment, install necessary dependencies, and install `cartloader`.
+This document walks through the environment setup and installation steps required for `CartLoader`.
 
 ---
 
 ## 1. Dependencies
 
-To ensure full functionality of `cartloader`, the following dependencies must be installed:
+Below listed all required tools and packages for `CartLoader`. Instruction of how to install those tools and packages are provided in the section [2](#2-setting-up-the-environment-using-conda) and [4](#4-installing-cartloader).
 
-### **1.1 System Dependencies**  
-Ensure the following command-line tools are available on your system:  
-- `gzip`  
-- `sort`  
-- `bgzip`  
-- `tabix`  
+### **1.1 Required System Utilities**
 
-### **1.2 External Tools & Utilities**  
-The following external tools and utilities are required for handling spatial data and file processing. Some of these are included as submodules within the repository.
+Confirm that these command-line programs are installed:
 
-**Python & Related Packages:**
-- [`python`](https://www.python.org/) (`cartloader` has been tested for compatibility with Python v3.10, and v3.13.1)
+- `gzip`
+- `sort`
+- `bgzip`
+- `tabix`
+- `bc`
+- `perl`
+
+### **1.2 External Tools and Utilities**
+
+These packages support spatial data handling and file conversion. Several are bundled as git submodules.
+
+**Python & Related Tooling**
+
+- [`python`](https://www.python.org/) (verified with versions *3.10* and *3.13.1*)
 - [`parquet-tools`](https://github.com/apache/parquet-mr/tree/master/parquet-tools)
 
-**External Tools** (Included in submodules)
-- [`punkst`](https://github.com/Yichen-Si/punkst) ((the latest and more efficient implementation of [FICTURE](https://github.com/seqscope/ficture))
+**R & related Packages:**
+
+- [`R` from CRAN](https://cran.r-project.org/)(verified with versions *4.5.1*)
+ 
+**External Tools** (included as submodules)
+
+- [`punkst`](https://github.com/Yichen-Si/punkst) (the latest and more efficient implementation of [FICTURE](https://github.com/seqscope/ficture))
 - [`spatula`](https://github.com/seqscope/spatula)
 - [`tippecanoe`](https://github.com/mapbox/tippecanoe)
 - [`magick`](https://imagemagick.org/)
 - [`go-pmtiles`](https://github.com/protomaps/go-pmtiles)
 
-**Geospatial Data Handling:**
+**Geospatial Utilities**
+
 - [`gdal`](https://gdal.org/)
 
-**Cloud & CLI Tools:**
+**Cloud & CLI Utilities**
+
 - [`aws-cli`](https://aws.amazon.com/cli/)
 
 ---
 
 ## 2. Setting Up the Environment using `conda`
 
-We recommended to use `conda` to manage dependencies efficiently and avoid conflicts.
+We recommend isolating the project in a `conda` environment to avoid dependency conflicts.
 
 ### 2.1 Installing `conda`
 
-If `conda` is not installed, download and install [Miniconda](https://docs.conda.io/en/latest/miniconda.html) or [Anaconda](https://www.anaconda.com/products/distribution).
+If `conda` is not already available, download and install [Miniconda](https://docs.conda.io/en/latest/miniconda.html) or [Anaconda](https://www.anaconda.com/products/distribution).
 
-Here is an example to install `Miniconda3` on Linux.
+Example installation of `Miniconda3` on Linux:
 
 ```bash
-env_dir=/path/to/your/directory/hosting/tools/      ## replace `/path/to/your/directory/hosting/tools/` by the path to your tool directory
+env_dir=/path/to/your/directory/hosting/tools/      ## replace `/path/to/your/directory/hosting/tools/` with your preferred tools directory
 cd $env_dir
 
 wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
@@ -57,88 +70,111 @@ bash Miniconda3-latest-Linux-x86_64.sh
 
 ### 2.2 Creating an Environment
 
-Create a dedicated Conda environment for `cartloader`:
+Set up a fresh environment for `CartLoader`:
 
 ```bash
-conda_env=cartenv               # replace cartenv with the name of your conda environment
-python_version=3.13.1           # replace 3.13.1 with the version you prefer
+ENV_NAME="cart_env"   # define your environment name
+PY_VERSION="3.13.1"   # define your python version
 
-conda create -n cartenv python=$python_version
-conda activate cartenv
+conda create -n ${ENV_NAME} python=${PY_VERSION}
+conda activate ${ENV_NAME}
 ```
 
-### 2.3 Installing Dependencies
+### 2.3 Install Core Dependencies
 
-Once inside the environment, install the required dependencies:
+Install the core dependencies once the environment is active:
 
 ```bash
-conda install -c conda-forge gdal aws-cli imagemagick parquet-tools
+conda install -c conda-forge gdal aws-cli imagemagick parquet-tools r-base
 ```
 
 ---
 
-## 3. Installing `cartloader`
+## 3. Installing `CartLoader`
 
-Clone the repository and install it:
+Clone the repository and install required Python and R packages:
 
 ```bash
 cd $env_dir
 git clone git@github.com:seqscope/cartloader.git
 cd cartloader
-pip install -e ./                                   # (TODO) Install in editable mode for developmentartloader
 
-# Install its requirements:
-pip install -r ./requirements.txt
+# Install python requirements:
+pip install -r ./installation/requirements.txt
+
+# Install R packages:
+Rscript ./installation/install_r_packages.R
+
+pip install -e ./
 ```
 
 ---
 
-## 4. Installing Submodules
+## 4. Initializing Submodules
+
+```bash
+cd $env_dir/cartloader
+git submodule update --init --recursive
+```
 
 ### 4.1 Installing `spatula`
 
 Install `spatula` with its dependencies from the submodules directory:
 
 ```bash
-cd ${env_dir}/cartloader/submodules
+cd ${env_dir}/cartloader/submodules/spatula
+
+cd submodules
 bash -x build.sh
 cd ..
+
+## build spatula
+mkdir build
+cd build
+cmake ..
+make
 ```
 
 ### 4.2 Installing `punkst`
 
-Install [`punkst`](https://github.com/Yichen-Si/punkst) toolkit to use [`FICTURE` (Si et al., Nature Methods 2024)](https://www.nature.com/articles/s41592-024-02415-2).
+Install the [`punkst`](https://github.com/Yichen-Si/punkst) toolkit to use [`FICTURE` (Si et al., Nature Methods 2024)](https://www.nature.com/articles/s41592-024-02415-2).
 
-[`FICTURE`](https://www.nature.com/articles/s41592-024-02415-2) is a segmentation-free method that infers latent spatial factors—coherent spatial patterns of gene activity—that correspond to underlying transcriptional programs or tissue structures. These factors can then be projected back to the pixel level. Although `FICTURE` is built on a Latent Dirichlet Allocation (LDA) framework by default, it is also compatible with clustering outputs from external tools like `Seurat` for pixel-level projection.
+Please follow the [`punkst` installation guide](https://yichen-si.github.io/punkst/install/).
 
-The [`punkst`](https://github.com/Yichen-Si/punkst) toolkit is a streamlined implementation of the [`FICTURE`](https://www.nature.com/articles/s41592-024-02415-2), designed for improved computational efficiency and scalability while producing results equivalent to the original [`FICTURE`](https://www.nature.com/articles/s41592-024-02415-2).
+!!! info "What are `FICTURE` and `punkst`?"
 
-Please following the [`punkst` installation guide](https://yichen-si.github.io/punkst/install/) to install [`punkst`](https://github.com/Yichen-Si/punkst)
+    [`FICTURE`](https://www.nature.com/articles/s41592-024-02415-2) is a segmentation-free method that infers latent spatial factors—coherent spatial patterns of gene activity—that correspond to underlying transcriptional programs or tissue structures. These factors can then be projected back to the pixel level. Although `FICTURE` is built on a Latent Dirichlet Allocation (LDA) framework by default, it is also compatible with clustering outputs from external tools like `Seurat` for pixel-level projection.
+
+    The [`punkst`](https://github.com/Yichen-Si/punkst) toolkit is a streamlined implementation of [`FICTURE`](https://www.nature.com/articles/s41592-024-02415-2), designed for improved computational efficiency and scalability while producing results equivalent to the original.
 
 ### 4.3 Installing `tippecanoe`
 
 ```bash
 cd ${env_dir}/cartloader/submodules/tippecanoe
 make -j
-make install  # Requires root access. 
-              # Alternatively, run `make install PREFIX=${env_dir}/cartloader/submodules/tippecanoe/` to specify a custom installation directory.
+
+## Choose one of the following installation options:
+# (1) System-wide installation (requires root access):
+make install
+
+# (2) Local installation (no root access): specify a custom PREFIX
+make install PREFIX=${env_dir}/cartloader/submodules/tippecanoe/  # Replace with your desired installation path
 ```
 
 ### 4.4 Installing `go-pmtiles`
-An easy way to install `go-pmtiles` is to download a release from [the official website](https://github.com/protomaps/go-pmtiles/releases) and decompress it.
-This will return a `pmtiles` bin file ready for use.
+An easy way to install `go-pmtiles` is to download a release from [the official website](https://github.com/protomaps/go-pmtiles/releases) and decompress it. This provides a `pmtiles` binary ready for use.
 
 Here is an example of its installation:
 
 ```bash
 cd ${env_dir}
-wget https://github.com/protomaps/go-pmtiles/releases/download/v1.28.0/go-pmtiles_1.28.0_Linux_x86_64.tar.gz ./
-tar zxvf ./go-pmtiles_1.28.0_Linux_x86_64.tar.gz
+wget https://github.com/protomaps/go-pmtiles/releases/download/v1.28.0/go-pmtiles_1.28.0_Linux_x86_64.tar.gz
+tar -zxvf go-pmtiles_1.28.0_Linux_x86_64.tar.gz
 ```
 
-### 4.5 Installing ImageMagic
+### 4.5 Installing ImageMagick
 
-If you have already installed ImageMagic when [setting conda environment](#23-installing-dependencies), skip this step.
+Skip this step if ImageMagick was already installed via `conda` in [Section 2.3](#23-install-core-dependencies).
 
 ```bash
 cd ${env_dir}/cartloader/submodules/ImageMagick
@@ -151,8 +187,17 @@ make install
 
 ## 5. Verifying the Installation
 
-To confirm the package is installed correctly, run:
+Run the following command to verify cartloader and all dependecies
 
 ```bash
+# activate your environment if you did not
+# replace the $ENV_NAME with your environment name if you did not define it before
+conda activate ${ENV_NAME} 
+
+# verify the installation of cartloader
 python -c "import cartloader; print('cartloader installed successfully!')"
+
+# verify all dependencies
+python ./installation/check_dependencies.py
 ```
+

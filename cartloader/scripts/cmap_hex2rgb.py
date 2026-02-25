@@ -1,20 +1,16 @@
 import pandas as pd
 import argparse
-import sys, os, gzip, argparse, logging, warnings, shutil
+import sys, os, gzip, argparse, logging, warnings, shutil, inspect
 import pandas as pd
 
-def hex_to_rgb(hex_code):
-    """Convert HEX color code to normalized RGB values."""
-    hex_code = hex_code.lstrip('#')
-    r, g, b = [int(hex_code[i:i+2], 16) / 255.0 for i in (0, 2, 4)]
-    return r, g, b
+from cartloader.utils.color_helper import hex_to_rgb01
 
 def cmap_hex2rgb(_args):
-    parser = argparse.ArgumentParser(description="Convert HEX codes to RGB in a TSV file.")
+    parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", description="Convert HEX codes to RGB in a TSV file.")
     parser.add_argument("--input", help="Path to the input file")
     parser.add_argument("--col-hex", default="Hex_Code", help="Name of the column containing HEX codes")
     parser.add_argument("--col-index", default="Color_Index", help="Name of the column containing color index values")
-    parser.add_argument("--output", default="output.tsv", help="Path to save the output TSV file (default: output.tsv)")
+    parser.add_argument("--output", default="output.tsv", help="Path to save the output TSV file (default: ./output.tsv)")
     
     args = parser.parse_args(_args)
     
@@ -28,7 +24,7 @@ def cmap_hex2rgb(_args):
         raise ValueError("Input file must be in TSV or CSV format.")
     
     # Convert HEX to RGB
-    df['R'], df['G'], df['B'] = zip(*df[args.col_hex].apply(hex_to_rgb))
+    df['R'], df['G'], df['B'] = zip(*df[args.col_hex].apply(hex_to_rgb01))
 
     # color index column
     if args.col_index != 'Color_index':
@@ -46,9 +42,6 @@ def cmap_hex2rgb(_args):
     print(f"Converted data saved to {args.output}")
 
 if __name__ == "__main__":
-    # Get the path to the cartloader repository
-    cartloader_repo=os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-
     # Get the base file name without extension
     script_name = os.path.splitext(os.path.basename(__file__))[0]
 
@@ -57,4 +50,3 @@ if __name__ == "__main__":
 
     # Call the function with command line arguments
     func(sys.argv[1:])
-

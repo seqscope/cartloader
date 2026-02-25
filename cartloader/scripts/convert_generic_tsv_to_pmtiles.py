@@ -1,4 +1,4 @@
-import sys, os, re, gzip, logging, argparse, inspect, subprocess, gzip
+import sys, os, re, gzip, logging, argparse, inspect, subprocess
 import pandas as pd
 import numpy as np
 
@@ -9,15 +9,15 @@ def convert_generic_tsv_to_pmtiles(_args):
     """
     Convert a generic TSV file into PMTiles format
     """
-    repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+    repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
     parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", description="Convert a generic TSV file into PMTiles format that can be converted to pmtiles")
     inout_params = parser.add_argument_group("Input/Output Parameters", "Input/output directory/files.")
-    inout_params.add_argument('--in-tsv', type=str, required=True, help='Genetic TSV file to convert to PMTiles. Typically named as ....tsv.gz, and should have spatial coordinates')
+    inout_params.add_argument('--in-tsv', type=str, required=True, help='Generic TSV file to convert to PMTiles. Typically named as *.tsv.gz, and must include spatial coordinates.')
     inout_params.add_argument('--out-prefix', type=str, required=True, help='Prefix of output files. New directory will be created if needed')
 
     ## columns to add, remove, or rename
-    iocol_params = parser.add_argument_group("Input/Output Columns Parameters", "Input/output column parameters .")
+    iocol_params = parser.add_argument_group("Input/Output Columns Parameters", "Input/output column parameters.")
     iocol_params.add_argument('--remove-column', type=str, nargs='+', help='List of column names to remove')
     iocol_params.add_argument('--rename-column', type=str, nargs='+', help='List of columns to rename in the format of [old_name1:new_name1] [old_name2:new_name2] .... Note that lon/lat must exist in the output columns')
 
@@ -121,7 +121,7 @@ def convert_generic_tsv_to_pmtiles(_args):
 
     if ( args.rename_column and len(args.rename_column) != n_renamed ):
         ## identify columns that are not found
-        missing_cols = dict_cols_to_rename - set(dict_cols_to_rename.keys())
+        missing_cols = set(dict_cols_to_rename.keys()) - set(hdr_cols_input)
         logger.error(f"Error in renaming columns. The following columns are missing {missing_cols}")
         sys.exit(1)
         

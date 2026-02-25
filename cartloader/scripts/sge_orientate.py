@@ -2,30 +2,22 @@ import sys, os, gzip, argparse, logging, warnings, shutil, re, copy, time, pickl
 import pandas as pd
 from collections import defaultdict
 import math
-from cartloader.utils.image_helper import update_orient, orient2axisorder
-
-"""
-cartloader sge_orientate --in-transcript /net/1000g/hmkang/weiqiuc/cart/visiumhd-mouse-brain-filtered/sge/transcripts.unsorted.tsv.gz \
-        --out-transcript /net/1000g/hmkang/weiqiuc/sandbox/cartloader_sge_ori/transcripts.test.tsv.gz \
-        --in-minmax /net/1000g/hmkang/weiqiuc/cart/visiumhd-mouse-brain-filtered/sge/coordinate_minmax.tsv \
-        --out-minmax /net/1000g/hmkang/weiqiuc/sandbox/cartloader_sge_ori/coordinate_minmax.test.tsv \
-        --rotate 270
-"""
+from cartloader.utils.orient_helper import update_orient, orient2axisorder
 
 def parse_arguments(_args):
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", 
                                     description="""Orientate SGE""")
-    parser.add_argument("--in-transcript", type=str, help="Input file.", required=True)
-    parser.add_argument("--out-transcript", type=str, help="Output file.", required=True)
-    parser.add_argument("--in-feature", type=str, help="Input feature file.", required=True)
-    parser.add_argument("--out-feature", type=str, help="Output feature file.", required=True)
-    parser.add_argument("--in-minmax", type=str, help="Input minmax file.", required=True)
-    parser.add_argument("--out-minmax", type=str, help="Output minmax file.", required=True)
-    parser.add_argument("--chunk-size", type=int, default=10**6, help="Chunk size for processing (default: 10^6).")
+    parser.add_argument("--in-transcript", type=str, help="Path to input file.", required=True)
+    parser.add_argument("--in-feature", type=str, help="Path to input feature file.", required=True)
+    parser.add_argument("--in-minmax", type=str, help="Path to input minmax file.", required=True)
+    parser.add_argument("--out-transcript", type=str, help="Path to output file.", required=True)
+    parser.add_argument("--out-feature", type=str, help="Path to output feature file.", required=True)
+    parser.add_argument("--out-minmax", type=str, help="Path to output minmax file.", required=True)
     parser.add_argument('--rotate', type=str, default=None, choices=["90", "180", "270"],  help='Rotate by 90, 180, or 270 degrees clockwise. Rotate precedes flip.')
     parser.add_argument('--flip-vertical', action='store_true', default=False, help='Flip vertically (flipped along Y-axis). Rotate precedes flip.')
     parser.add_argument('--flip-horizontal', action='store_true', default=False, help='Flip horizontally (flipped along X-axis). Rotate precedes flip.')
+    parser.add_argument("--chunk-size", type=int, default=10**6, help="Chunk size for processing (default: 10^6).")
 
     if len(_args) == 0:
         parser.print_help()
@@ -82,8 +74,8 @@ def orient_transcript_chunk(df_chunk, minmax, axis_order):
 def sge_orientate(_args):
     args = parse_arguments(_args)
 
-    assert os.path.exists(args.in_transcript), f"Input file {args.in_transcript} does not exist."
-    assert os.path.exists(args.in_minmax), f"Input minmax file {args.in_minmax} does not exist."
+    assert os.path.exists(args.in_transcript), f"File not found: {args.in_transcript} (--in-transcript)"
+    assert os.path.exists(args.in_minmax), f"File not found: {args.in_minmax} (--in-minmax)"
 
     rotate, flip_vertical, flip_horizontal = update_orient (args.rotate, args.flip_vertical, args.flip_horizontal, f"sge:{args.in_transcript}")
     axis_order = orient2axisorder.get((rotate, flip_vertical, flip_horizontal))
@@ -121,10 +113,6 @@ def sge_orientate(_args):
     print(f"Orientated transcript file saved to {args.out_transcript}")
 
 if __name__ == "__main__":
-    # get the cartloader path
-    global cartloader_repo
-    cartloader_repo=os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-    
     # Get the base file name without extension
     script_name = os.path.splitext(os.path.basename(__file__))[0]
 

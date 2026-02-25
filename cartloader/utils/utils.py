@@ -1,6 +1,7 @@
+import io
 import logging, os, shutil, sys, importlib, csv, shlex, subprocess, json, yaml, re, gzip
-import os
 from collections import Counter
+#import shapely.wkb
 
 def get_func(name):
     """
@@ -10,6 +11,13 @@ def get_func(name):
     module = importlib.import_module(f"cartloader.scripts.{name}")
     return getattr(module,name)
 
+# def wkb_to_wkt(binary_data):
+#     if binary_data is None: return None
+#     try:
+#         # Converts binary bytes -> Geometry Object -> WKT String
+#         return shapely.wkb.loads(binary_data).wkt
+#     except Exception:
+#         return None
 # ====
 # cmd
 # ====
@@ -44,21 +52,10 @@ def add_param_to_cmd(cmd, args, aux_argset, underscore2dash=True):
                     cmd += f" --{arg_name} {value}"
     return cmd
 
-# def run_bash_command(command):
-#     try:
-#         result = subprocess.run(command, 
-#                   shell=True, 
-#                   stdout=subprocess.PIPE, 
-#                   stderr=subprocess.PIPE, 
-#                   text=True, 
-#                   check=True)
-#         return result.stdout
-#     except subprocess.CalledProcessError as e:
-#         print(f"Command failed with error:\n\t{command}\n\t{e.stderr}\n")
-#         raise
 
 def run_command(command, use_bash=False):
     executable_shell = "/bin/bash" if use_bash else "/bin/sh"
+    print(f"Running: {command}")
     try:
         result = subprocess.run(
             command, 
@@ -71,19 +68,73 @@ def run_command(command, use_bash=False):
         )
         return result.stdout
     except subprocess.CalledProcessError as e:
-        print(f"Command failed with error:\n{e.stderr}")
+        print(f"Error in executing:\n{e.stderr}")
         raise
+
+def run_command_w_preq(cmd, prerequisites=[], dry_run=False, flush=False):
+    print(f"\n{cmd}\n", flush=flush)
+    if not dry_run:
+        # first check if the prerequisites exist
+        if prerequisites:
+            for prereq in prerequisites:
+                if not os.path.exists(prereq):
+                    print(f"Found missing prerequisite: {prereq}.", flush=flush)
+                    sys.exit(1)
+        # execute the command
+        result = subprocess.run(cmd, shell=True)
+        if result.returncode != 0:
+            print(f"Error in executing: {cmd}", flush=flush)
+            sys.exit(1)
+
+
+def execute_makefile(make_f, dry_run, restart, n_jobs):
+    exe_cmd=f"make -f {make_f} {'-B' if restart else ''}"
+    if dry_run:
+        os.system(f"{exe_cmd} -n")
+        print(f"To execute the pipeline, run the following command:\n{exe_cmd}")
+    else:
+        exe_cmd = f"{exe_cmd} -j {n_jobs}"
+        result = subprocess.run(exe_cmd, shell=True)
+        if result.returncode != 0:
+            print(f"Error in executing: {exe_cmd}")
+            print(f"Error message:")
+            if result.stderr:
+                print("Error message:")
+                print(result.stderr)
+            else:
+                print("Process was terminated (possibly OOM-killed)")
+            sys.exit(1)
+        # * The reason to disable is that this will not print anything
+        # result = subprocess.run(exe_cmd, shell=True, capture_output=True, text=True)
+        # if result.returncode != 0:
+        #     print(f"Error in executing: {exe_cmd}")
+        #     print("Error message:")
+        #     print(result.stderr)
+        #     sys.exit(1)
+        # else:
+        #     print(result.stdout)
+    
+def valid_and_touch_cmd(input_files, output_file):
+    if not input_files:
+        raise ValueError("Input file list cannot be empty.")
+    checks = " && ".join([f'[ -f "{inp}" ]' for inp in input_files])
+    touch_cmd = f'{checks} && touch "{output_file}"'
+    return touch_cmd
 
 # ====
 # sanity check
 # ====
 def scheck_app(app_cmd):
     """
-    Check if the specified application is available
+    Check if the specified application is available.
+    Accepts either a bare executable name or a command string with flags.
     """
-    #if not shutil.which(app_cmd.split(" ")[0]):
-    if not shutil.which(app_cmd):
-        logging.error(f"Cannot find {app_cmd}. Please make sure that the path to specify {app_cmd} is correct")
+    # Only check the executable part when flags are included
+    exe = app_cmd.split()[0] if isinstance(app_cmd, str) else app_cmd
+    if not shutil.which(exe):
+        logging.error(
+            f"Cannot find executable '{exe}' (from '{app_cmd}'). Please verify your PATH or provide a correct path."
+        )
         sys.exit(1)
 
 def scheck_file(file_path):
@@ -92,6 +143,11 @@ def scheck_file(file_path):
         sys.exit(1)
     else:
         print(f"Checked: {file_path}")
+
+def scheck_actions(args, arg_names, context=""):
+    if not any(getattr(args, name.lstrip('-').replace('-', '_')) for name in arg_names):
+        readable = ', '.join(arg_names)
+        raise ValueError(f"At least one of [{readable}] must be enabled{f' for {context}' if context else ''}.")
 
 # ====
 # logging
@@ -249,6 +305,36 @@ def read_minmax(filename, format):
 # file - dict
 #======
 
+def reconcile_field(obj, key, new_val, type="override", msg_id=None, normalize=None):
+    """
+      - If old value is None, take new_val
+      - If new_val is None, keep old
+      - If both exist, ensure consistency (after optional normalize)
+    """
+    assert type in ["strict", "override"], "Unknown reconcile type. Supported types: 1) strict -- raise error if both exist and differ; 2) override -- always take new_val if both exist."
+    old_val = obj.get(key)
+
+    # No new value provided → keep old
+    if new_val is None:
+        return
+
+    # No existing old value → fill it
+    if old_val is None:
+        obj[key] = new_val
+        return
+
+    # Both exist 
+    v_old = normalize(old_val) if normalize else old_val
+    v_new = normalize(new_val) if normalize else new_val
+
+    if type == "override":
+        if v_old != v_new:
+            print(f"Warning: Inconsistent field '{key}' value for {msg_id}. Overriding from '{v_old}' to '{v_new}'.")
+        obj[key] = new_val
+        return
+    else:
+        assert v_old == v_new, f"Inconsistent field '{key}' value for {msg_id}: existing '{v_old}' vs new '{v_new}'."
+
 ## code suggested by ChatGPT
 def load_file_to_dict(file_path, file_type=None):
     """
@@ -278,7 +364,68 @@ def load_file_to_dict(file_path, file_type=None):
         raise ValueError("Unsupported file type. Please provide 'json' or 'yaml'/'yml' as file_type.")
 
 ## code suggested by ChatGPT
-def write_dict_to_file(data, file_path, file_type=None, check_equal=True):
+# def write_dict_to_file(data, file_path, file_type=None, check_equal=True, key_order=[]):
+#     """
+#     Write a dictionary to a JSON or YAML file.
+
+#     Parameters:
+#     data (dict): The dictionary to write to the file.
+#     file_path (str): Path to the output file.
+#     file_type (str, optional): The type of the file ('json' or 'yaml'). If None, the type is inferred from the file extension.
+#     check_equal (bool): If True, compare with existing file and skip writing if content is equal.
+
+#     Raises:
+#     ValueError: If the file type is unsupported.
+#     """
+#     if file_type is None:
+#         _, file_extension = os.path.splitext(file_path)
+#         file_type = file_extension.lower()[1:]  # Strip the dot and use the extension
+
+#     def load_existing():
+#         if not os.path.exists(file_path):
+#             return None
+#         with open(file_path, 'r') as file:
+#             if file_type == 'json':
+#                 return json.load(file)
+#             elif file_type in ['yaml', 'yml']:
+#                 return yaml.safe_load(file)
+#         return None
+
+#     def are_equal(a, b):
+#         if isinstance(a, dict) and isinstance(b, dict):
+#             return a == b
+#         elif isinstance(a, list) and isinstance(b, list):
+#             try:
+#                 a_serialized = Counter(json.dumps(i, sort_keys=True) for i in a)
+#                 b_serialized = Counter(json.dumps(i, sort_keys=True) for i in b)
+#                 return a_serialized == b_serialized
+#             except TypeError:
+#                 return sorted(a) == sorted(b)
+#         return a == b
+
+#     # Skip writing if it has an equal file
+#     existing = load_existing() if check_equal else None
+#     if check_equal and are_equal(data, existing):
+#         return  
+
+#     if len(key_order)>0:
+#         data = {key: data[key] for key in key_order if key in data}
+
+#     if file_type == 'json':
+#         with open(file_path, 'w') as file:
+#             json.dump(data, file, indent=4)
+#     elif file_type in ['yaml', 'yml']:
+#         with open(file_path, 'w') as file:
+#             yaml.safe_dump(data, file, default_flow_style=False)
+#     else:
+#         raise ValueError("Unsupported file type. Please provide 'json' or 'yaml'/'yml' as file_type.")
+
+def write_json(data, filename):
+    """Write the given data to a JSON file."""
+    with open(filename, 'w') as file:
+        json.dump(data, file, indent=4, sort_keys=False)
+
+def write_dict_to_file(data, file_path, file_type=None, check_equal=True, default_flow_style=False, sort_keys=False):
     """
     Write a dictionary to a JSON or YAML file.
 
@@ -317,18 +464,17 @@ def write_dict_to_file(data, file_path, file_type=None, check_equal=True):
                 return sorted(a) == sorted(b)
         return a == b
 
-    
     # Skip writing if it has an equal file
     existing = load_existing() if check_equal else None
     if check_equal and are_equal(data, existing):
-        return  
+        return
 
     if file_type == 'json':
         with open(file_path, 'w') as file:
-            json.dump(data, file, indent=4)
+            json.dump(data, file, indent=4,)
     elif file_type in ['yaml', 'yml']:
         with open(file_path, 'w') as file:
-            yaml.safe_dump(data, file, default_flow_style=False)
+            yaml.safe_dump(data, file, default_flow_style=default_flow_style, sort_keys=sort_keys)
     else:
         raise ValueError("Unsupported file type. Please provide 'json' or 'yaml'/'yml' as file_type.")
 
@@ -353,16 +499,7 @@ def factor_id_to_name(factor_id):
             return factor_id
     else:
         return factor_id
-    
-def hex_to_rgb(hex_code):
-    """
-    Parse an RGB hex code (e.g., "#FFA500") to three integer values (R, G, B).
-    """
-    hex_code = hex_code.lstrip('#')  # Remove the '#' character if present
-    r = int(hex_code[0:2], 16)  # First two characters -> Red
-    g = int(hex_code[2:4], 16)  # Next two characters -> Green
-    b = int(hex_code[4:6], 16)  # Last two characters -> Blue
-    return r, g, b
+
 
 ## transform FICTURE parameters to FACTOR assets (new standard)
 def ficture_params_to_factor_assets(params, skip_raster=False):
@@ -538,94 +675,6 @@ def ficture_params_to_factor_assets(params, skip_raster=False):
                         out_assets.append(out_asset)
     return out_assets
 
-## transform FICTURE parameters to FACTOR assets (new standard)
-def ficture2_params_to_factor_assets(params, skip_raster=False):
-    ## model_id
-    ## proj_params -> proj_id
-    ## proj_params -> decode_params -> decode_id
-    suffix_factormap = "-factor-map.tsv"
-    suffix_de = "-bulk-de.tsv"
-    suffix_info = "-info.tsv"
-    suffix_model = "-model.tsv"
-    suffix_post = "-pseudobulk.tsv"
-    suffix_rgb = "-rgb.tsv"
-    suffix_hex_coarse = ".pmtiles"
-    suffix_raster = "-pixel-raster.pmtiles"
-
-    out_assets = []
-    for param in params: ## train_params is a list of dictionaries
-        if not "model_id" in param:
-            raise ValueError(f"model_id is missing from FICTURE parameters")
-        model_id = param["model_id"].replace("_", "-")
-
-        len_decode_params = len(param["decode_params"])
-
-        if len_decode_params == 0: ## train_param only
-            out_asset = {
-                "id": model_id,
-                "name": factor_id_to_name(model_id),
-                "model_id": model_id,
-                "de": model_id + suffix_de,
-                "info": model_id + suffix_info,
-                "model": model_id + suffix_model,
-                "rgb": model_id + suffix_rgb,
-                "pmtiles": {
-                    "hex_coarse": model_id + suffix_hex_coarse
-                }
-            }
-            if "factor_map" in param:
-                out_asset["factor_map"] = model_id + suffix_factormap
-            out_assets.append(out_asset)
-        elif len_decode_params == 1:
-            decode_param = param["decode_params"][0]
-            if not "decode_id" in decode_param:
-                raise ValueError(f"decode_id is missing from FICTURE parameter for {model_id}")
-            decode_id = decode_param["decode_id"].replace("_", "-")
-
-            out_asset = {
-                "id": model_id,
-                "name": factor_id_to_name(model_id),
-                "model_id": model_id,
-                "decode_id": decode_id,
-                "de": model_id + suffix_de,
-                "info": model_id + suffix_info,
-                "model": model_id + suffix_model,
-                "post": decode_id + suffix_post,
-                "rgb": model_id + suffix_rgb,
-                "pmtiles": {
-                    "hex_coarse": model_id + suffix_hex_coarse,
-                    **({"raster": decode_id + suffix_raster} if not skip_raster else {})
-                }
-            }
-            if "factor_map" in param:
-                out_asset["factor_map"] = model_id + suffix_factormap
-            out_assets.append(out_asset)
-        else: ## multiple decode_params
-            for decode_param in param["decode_params"]:
-                if not "decode_id" in decode_param:
-                    raise ValueError(f"decode_id is missing from FICTURE parameter for {model_id}")
-                decode_id = decode_param["decode_id"].replace("_", "-")
-
-                out_asset = {
-                    "id": model_id,
-                    "name": factor_id_to_name(model_id),
-                    "model_id": model_id,
-                    "decode_id": decode_id,
-                    "de": model_id + suffix_de,
-                    "info": model_id + suffix_info,
-                    "model": model_id + suffix_model,
-                    "post": decode_id + suffix_post,
-                    "rgb": model_id + suffix_rgb,
-                    "pmtiles": {
-                        "hex_coarse": model_id + suffix_hex_coarse,
-                        **({"raster": decode_id + suffix_raster} if not skip_raster else {})
-                    }
-                }
-                if "factor_map" in param:
-                    out_asset["factor_map"] = model_id + suffix_factormap
-                out_assets.append(out_asset)
-    return out_assets
-
 def create_symlink(A, B):
     # Purpose: Create a soft link from A to B
 
@@ -690,3 +739,190 @@ def smartsort(strings):
     order_mapping = {s: idx for idx, s in enumerate(sorted_strings)}
 
     return sorted_strings, order_mapping
+
+# check if a value is a path or a filename
+def is_path_like(value):
+    return (
+        isinstance(value, str) and (
+            os.path.sep in value or
+            value.startswith((".", "/", "~")) or
+            os.path.dirname(value) != ''
+        )
+    )
+
+def update_and_copy_paths(data, out_dir, skip_keys=[], exe_copy=False):
+    def process_dict(d):
+        for key, value in d.items():
+            if key in skip_keys:
+                continue
+
+            if isinstance(value, dict):
+                process_dict(value)
+            elif is_path_like(value):
+                file_dir = os.path.dirname(os.path.abspath(value))
+                file_name = os.path.basename(value)
+                dest_path = os.path.join(out_dir, file_name)
+
+                # Copy only if source and target directories are different
+                if os.path.abspath(file_dir) != os.path.abspath(out_dir):
+                    if exe_copy:
+                        if not os.path.exists(value):
+                            raise FileNotFoundError(f"File {value} does not exist.")
+                        os.makedirs(out_dir, exist_ok=True)
+                        shutil.copy2(value, dest_path)
+                    else:
+                        print(f"cp {value} {dest_path}")
+
+                # Update value to filename
+                d[key] = file_name
+            # if it is none, skip this key:value pair
+            elif value is None:
+                continue
+            else:
+                raise ValueError("Failed at update_and_copy_paths. The value in the dictionary should be either path or a dictionary.")
+
+    process_dict(data)
+    return data
+
+#== 
+def assert_unique(seq, label, normalize=None):
+    """Assert all elements in seq are unique.
+    - label: used in error messages (e.g., "--image-ids")
+    - normalize: optional callable to normalize values before uniqueness check
+    """
+    if seq is None:
+        return
+    vals = list(seq)
+    norm = [normalize(v) for v in vals] if normalize else vals
+    seen = set()
+    dups = []
+    for v in norm:
+        if v in seen:
+            dups.append(v)
+        else:
+            seen.add(v)
+    assert not dups, f"Duplicate values detected for {label}; please ensure each value is unique. Duplicates: {sorted(set(dups))}"
+
+def parquet_to_csv_with_polars_pigz(
+    parquet_file: str,
+    out_path: str = "out.csv.gz",
+    batch_size: int = 131_072,
+    compress_level: int = 6,
+    pigz_path: str = "pigz",
+    pigz_threads: int = None,  # Changed default to None to handle logic inside
+):
+    """
+    Streams a Parquet file to a compressed CSV using Polars and Pigz.
+    Automatically converts Binary columns to UTF-8 Strings to prevent CSV write errors.
+    """
+    import polars as pl
+    
+    # Build the lazy frame
+    lf = pl.scan_parquet(parquet_file)
+
+    # ---------------------------------------------------------
+    # FIX: Detect Binary columns and cast to String (UTF-8)
+    # ---------------------------------------------------------
+    # Get schema to identify column types (lazy, does not read data)
+    try:
+        # Polars >= 0.20.0
+        schema = lf.collect_schema()
+    except AttributeError:
+        # Older Polars versions
+        schema = lf.schema
+
+    binary_cols = []
+    for col_name, dtype in schema.items():
+        if dtype == pl.Binary:
+            binary_cols.append(col_name)
+
+    if binary_cols:
+        print(f"Converting binary columns to UTF-8 string: {binary_cols}")
+        # FIX: Use .cast(pl.String) instead of .bin.decode("utf-8")
+        # .bin.decode("utf-8") is not supported in older Polars versions (only hex/base64).
+        # .cast(pl.String) assumes the binary data is valid UTF-8.
+        lf = lf.with_columns([
+            pl.col(c).cast(pl.String)
+            for c in binary_cols
+        ])
+
+    # if binary_cols:
+    #     print(f"Decoding binary WKB columns to WKT text: {binary_cols}")
+    #     lf = lf.with_columns([
+    #         pl.col(c).map_elements(wkb_to_wkt, return_dtype=pl.String).alias(c)
+    #         for c in binary_cols
+    # ])
+    # ---------------------------------------------------------
+
+    # Ensure output directory exists
+    os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
+
+    # Open output file handle (pigz writes its stdout here)
+    with open(out_path, "wb") as fout:
+        # Compose pigz command: read from stdin, write compressed to stdout
+        cmd = [pigz_path, f"-{compress_level}", "-c"]
+        
+        # specific logic for threads
+        if pigz_threads is None:
+            pigz_threads = os.cpu_count() or 1
+        cmd.extend(["-p", str(pigz_threads)])
+
+        # Start pigz process
+        proc = subprocess.Popen(
+            cmd,
+            stdin=subprocess.PIPE,   # we'll stream text CSV into pigz's stdin
+            stdout=fout,             # pigz writes compressed bytes here
+            stderr=subprocess.PIPE
+        )
+        
+        try:
+            # Wrap pigz's binary stdin with a text writer for CSV
+            text_in = io.TextIOWrapper(
+                proc.stdin, 
+                encoding="utf-8", 
+                newline="", 
+                write_through=True
+            )
+            
+            try:
+                lf.sink_csv(text_in, include_header=True, batch_size=batch_size)
+                text_in.flush()
+            finally:
+                # Close wrapper and underlying pipe, then prevent communicate() from touching it
+                text_in.close()
+                proc.stdin = None
+
+            # Now it's safe to collect stderr
+            _, stderr = proc.communicate()
+            if proc.returncode != 0:
+                raise RuntimeError(
+                    f"pigz exited with code {proc.returncode}.\nStderr:\n{stderr.decode('utf-8', 'ignore')}"
+                )
+        except Exception:
+            # Make sure the process is torn down on error
+            if proc.poll() is None:
+                proc.kill()
+            raise
+
+def merge_config(base_config, args, keys, prefix=None):
+    """
+    Merges parameters from a base configuration dictionary and command-line arguments.
+    Args:
+        base_config (dict): Dictionary containing default values.
+        args (argparse.Namespace): Parsed command-line arguments.
+        keys (list): Keys to be merged from args and base_config.
+        prefix (str, optional): Prefix to be added to keys in args.
+    Returns:
+        SimpleNamespace: Merged configuration.
+    """
+    from types import SimpleNamespace
+
+    config = base_config.get(prefix, {}).copy() if prefix else base_config.copy()
+    for key in keys:
+        val = getattr(args, f"{prefix}_{key}" if prefix else key, None)
+        #print(f"{prefix}_{key}" if prefix else key)
+        if isinstance(val, str) and val is not None:
+            config[key] = val
+        elif isinstance(val, list) and len(val) > 0:
+            config[key] = val
+    return SimpleNamespace(**config)

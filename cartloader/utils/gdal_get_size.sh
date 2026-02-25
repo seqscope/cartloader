@@ -1,15 +1,16 @@
 #!/bin/bash
 
-if [[ $# -ne 2 ]]; then
-    echo "Usage: $0 <input_geotiff> <output_dimensions_file>"
+if [[ $# -ne 3 ]]; then
+    echo "Usage: $0 <input_geotiff> <output_dimensions_file> <path_to_gdalinfo_binary_file>"
     exit 1
 fi
 
 INPUT_GEOTIFF="$1"
 OUTPUT_DIMENSIONS_FILE="$2"
+GDALINFO="$3"
 
 # Use gdalinfo to extract dimensions
-INFO=$(gdalinfo "$INPUT_GEOTIFF" 2>/dev/null)
+INFO=$("$GDALINFO" "$INPUT_GEOTIFF" 2>/dev/null)
 if [[ $INFO =~ Size\ is\ ([0-9]+),\ ([0-9]+) ]]; then
     WIDTH=${BASH_REMATCH[1]}
     HEIGHT=${BASH_REMATCH[2]}

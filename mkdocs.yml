@@ -10,34 +10,44 @@ repo_url: https://github.com/seqscope/cartloader
 theme:
   name: material
   features:
-  - navigation.tabs
-  - navigation.indexes
-  - navigation.sections
-  - navigation.expand
-  - navigation.path
-  - content.code.annotate
+    - navigation.tabs
+    - navigation.indexes
+    - navigation.sections
+    - navigation.expand
+    - navigation.path
+    - content.code.annotate
+    - content.code.copy
+    - content.tooltips
+    - content.grid
+    - content.cards
+    - content.footnote.tooltips
+    - content.tabs.link
+    - navigation.instant
+    - navigation.top
   palette:
-  - media: "(prefers-color-scheme)"
-    toggle:
-      icon: material/link
-      name: Switch to light mode
-  - media: "(prefers-color-scheme: light)"
-    scheme: default
-    primary: indigo
-    accent: indigo
-    toggle:
-      icon: material/toggle-switch
-      name: Switch to dark mode
-  - media: "(prefers-color-scheme: dark)"
-    scheme: slate
-    primary: black
-    accent: indigo
-    toggle:
-      icon: material/toggle-switch-off
-      name: Switch to system preference
+    - media: "(prefers-color-scheme)"
+      toggle:
+        icon: material/link
+        name: Switch to light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/toggle-switch
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: black
+      accent: indigo
+      toggle:
+        icon: material/toggle-switch-off
+        name: Switch to system preference
   font:
     text: 'Roboto'
     code: 'Roboto Mono'
+  icon:
+    annotation: material/arrow-right-circle
 #  icon:
 #    admonition:
 #      <type>: <icon>
@@ -46,45 +56,105 @@ theme:
 nav:
   - Home: 
       - Introduction: index.md
-      - Installation: installation.md
-  - Get Started:
-      - A Quick Start: showcase/exampledat.md
-      # - Docker Example: quickstart/docker.md
-      # - Singularity Example: quickstart/singularity.md
-      # - Running with Your Own Data: quickstart/custom.md
-  - Step-by-Step Guide:
-      - SGE Harmonization: step_by_step/sge_harmonization.md
-      - FICTURE Analysis: step_by_step/run_ficture2.md
-      - cartloader Compilation: step_by_step/run_cartload2.md
+  - Quick Start: 
+      - Overview: vignettes/quickstart/intro.md
+      - Run with Docker: vignettes/quickstart/run_in_docker.md
+      - Run Locally: vignettes/quickstart/run_locally.md
+  - Installation: installation.md
+  - Vignettes:
+      - Overview: vignettes/intro.md
+      #- Quick Start: vignettes/quickstart/run_locally.md
+      - Getting Started with `cartloader`:
+        - SeqScope Starter Tutorial: vignettes/subregion_tutorials/seqscope.md
+        - StereoSeq Starter Tutorial: vignettes/subregion_tutorials/stereoseq.md
+        - Visium HD Starter Tutorial: vignettes/subregion_tutorials/visiumhd.md
+        - Pixel-Seq Starter Tutorial: vignettes/subregion_tutorials/pixelseq.md
+        - Xenium Starter Tutorial: vignettes/subregion_tutorials/xenium.md
+        - MERSCOPE Starter Tutorial: vignettes/subregion_tutorials/merscope.md
+        - CosMX SMI Starter Tutorial: vignettes/subregion_tutorials/cosmxsmi.md
+      # Real‑world end‑to‑end workflows by platform
+      # (Rename or expand as needed; examples below.)
+      - Platform Workflows:
+        - Xenium end-to-end Tutorial: vignettes/pipelines/xenium.md
+        - Visium HD end-to-end Tutorial: vignettes/pipelines/visiumhd.md
+      - Multi-sample Showcases:
+        - Human Cortex Multi-sample Tutorial: vignettes/multi_sample.md
+        # - CosMX SMI Pipeline: vignettes/pipelines/cosmxsmi.md   # example placeholder
+        # - MERSCOPE Pipeline: vignettes/pipelines/merscope.md     # example placeholder
+  - References:
+      - Overview: reference/intro.md
+      - SGE Preparation:
+          - SGE Format Conversion: reference/sge_convert.md
+          - SGE Preparation Add-ons: reference/sge_addon.md
+      - Analysis:
+          - FICTURE Analysis: reference/run_ficture2.md
+          - Multi-Sample FICTURE Analysis: reference/run_ficture2_multi.md
+          - Feature Customization: reference/feature_customization.md
+      - Packaging:
+          - Asset Packaging: reference/run_cartload2.md
+          - Multi-Sample Asset Packaging: reference/run_cartload2_multi.md
+          - Background Image Import: reference/import_image.md
+          - Cell Analysis Import: reference/import_cell.md
+          - Square Analysis Import: reference/import_square.md
+      - Upload:
+          - AWS Upload: reference/upload_aws.md
+          - Zenodo Upload: reference/upload_zenodo.md
+      - Platform-specific Modules:
+          - Xenium:
+              - Pipeline Orchestrator : reference/run_xenium.md
+              - Pipeline Add-ons: reference/xenium_addon.md
+          - Visium HD:
+              - Pipeline Orchestrator: reference/run_visiumhd.md
+              - Pipeline Add-ons: reference/visiumhd_addon.md
+      
+
+# Watch for changes
+watch:
+  - includes
+
 # Markdown Extensions
 markdown_extensions:
+  # Ensure glossary is appended before abbreviation parsing
+  - pymdownx.snippets:
+      base_path: .
+      auto_append:
+        - includes/glossary.md
+      check_paths: True
   - abbr
+  - tables
   - footnotes
   - admonition
-  - pymdownx.details
-  - pymdownx.superfences
-#  - codehilite:
-#      guess_lang: false 
+  - attr_list
+  - md_in_html
+  - codehilite:
+      guess_lang: false 
   - toc:
       permalink: true
       toc_depth: 3
-  - attr_list
-  - md_in_html
+  - pymdownx.details
+  - pymdownx.tabbed:
+      alternate_style: true
   - pymdownx.highlight:
       linenums: true
       css_class: 'highlight'
   - pymdownx.superfences
-  - pymdownx.snippets:
-      auto_append:
-        - docs/includes/glossary.md
-      check_paths: True
 # - pymdownx.inlinehilite
-
+  - pymdownx.blocks.caption
 
 plugins:
   - search
   - open-in-new-tab
+  - include-markdown:
+      allowed_paths:
+        - assets
+        - includes
+  - table-reader
+  # - macros
 
 # Extra CSS
 extra_css:
-  - css/custom.css
+  - css/extra.css
+  #- css/neoteroi-mkdocs.css
+
+extra_javascript:
+  - js/load_tsv.js

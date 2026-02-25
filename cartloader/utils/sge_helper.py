@@ -6,7 +6,7 @@ import numpy as np
 aux_sge_args = {
     "out": [
         'units_per_um', 'precision_um',
-        'colname_x', 'colname_y', 'colnames_count',
+        'colname_x', 'colname_y', #'colname_count',
         'colname_feature_name' #, 'colname_feature_id'
     ],
     "inbcd": [
@@ -23,7 +23,7 @@ aux_sge_args = {
     ],
     "incsv": [
         'csv_comment', 'csv_delim', 'csv_colname_x', 'csv_colname_y', 'csv_colname_feature_name',
-        'csv_colnames_count',  'csv_colnames_others', # 'csv_colname_feature_id',
+        'csv_colname_count',  'csv_colnames_others', # 'csv_colname_feature_id',
         'csv_colname_phredscore', 'min_phred_score' #, 'add_molecule_id'
     ],
     "spatula": [
@@ -44,7 +44,7 @@ def input_by_platform(args):
             "mex_bcd": os.path.join(args.in_mex, args.mex_bcd),
             "mex_ftr": os.path.join(args.in_mex, args.mex_ftr),
             "mex_mtx": os.path.join(args.in_mex, args.mex_mtx),
-            "in_parquet": args.in_parquet,
+            "pos_parquet": args.pos_parquet,
         }
     elif args.platform == "seqscope":
         in_dict = {
@@ -53,9 +53,16 @@ def input_by_platform(args):
             "mex_mtx": os.path.join(args.in_mex, args.mex_mtx),
         }
     elif args.platform in ["10x_xenium", "cosmx_smi", "bgi_stereoseq", "vizgen_merscope", "pixel_seq", "nova_st", "generic"]:
-        in_dict={
-            "in_csv": args.in_csv
-        }
+        if args.in_csv is not None:
+            in_dict={
+                "in_csv": args.in_csv
+            }
+        elif args.in_parquet is not None:
+            in_dict={
+                "in_parquet": args.in_parquet
+            }
+        else:
+            raise ValueError(f"Provide --in-csv or --in-parquet for {args.platform}")
     else:
         raise ValueError(f"Unsupported platform: {args.platform}")
 
@@ -140,8 +147,8 @@ def update_csvformat_by_platform(args):
         args.csv_colname_y = platform_settings["y"]
     if args.csv_colname_feature_name is None:
         args.csv_colname_feature_name = platform_settings["feature_name"]
-    if args.csv_colnames_count is None:
-        args.csv_colnames_count = platform_settings["count"]
+    if args.csv_colname_count is None:
+        args.csv_colname_count = platform_settings["count"]
     if args.csv_delim is None:
         args.csv_delim = platform_settings["delim"]
     if args.csv_comment is False:

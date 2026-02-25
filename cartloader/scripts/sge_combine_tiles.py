@@ -10,21 +10,22 @@ def sge_combine_tiles(_args):
         prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}",
         description="Combine SGE data by layout. Note the transcript/feature/minmax files should be in the same resolution.",
     )
-    parser.add_argument("--in-tiles", type=str, nargs='*', default=[], help="List of input information in a specific format: <transcript_path>,<feature_path>,<minmax_path>,<row>,<col>.")
-    parser.add_argument('--in-tile-minmax', type=str, default=None, help="Path to the input offsets file, in which the following columns are required: row, col, x_offset_unit, y_offset_unit, global_xmin_um, global_xmax_um, global_ymin_um, global_ymax_um")
+    parser.add_argument("--in-tiles", type=str, nargs='*', default=[], required=True, help="List of input SGE tiles, each in the format: <transcript_path>,<feature_path>,<minmax_path>,<row>,<col>. "
+                                                                            "These are referred to as SGE tiles to distinguish them from the combined output SGE. ")
+    parser.add_argument('--in-tile-minmax', type=str, default=None, help="Path to an input offsets file, in which the following columns are required: row, col, x_offset_unit, y_offset_unit, global_xmin_um, global_xmax_um, global_ymin_um, global_ymax_um")
     parser.add_argument("--out-dir", type=str, help="Output directory.")
-    parser.add_argument('--out-transcript', type=str, default="transcripts.unsorted.tsv.gz", help='Output file name for the compressed transcript-indexed SGE file in TSV format (default: transcripts.unsorted.tsv.gz).')
-    parser.add_argument('--out-minmax', type=str, default="coordinate_minmax.tsv", help='Output minmax file name for the coordinate minmax TSV file (default: coordinate_minmax.tsv).')
-    parser.add_argument('--out-feature', type=str, default="feature.clean.tsv.gz", help='Output feature file name for the compressed UMI count per gene TSV file (default: feature.clean.tsv.gz).')
-    parser.add_argument('--out-subset', type=str, default="subset_minmax.tsv", help='Output subset file name for the coordinate minmax and offset TSV file (default: subset_minmax.tsv).')
-    parser.add_argument("--colnames-count", type=str, nargs='*', help="Columns to sum (default: count).", default=['count'])
+    parser.add_argument('--out-transcript', type=str, default="transcripts.unsorted.tsv.gz", help='File name of output compressed transcript-indexed SGE file in TSV format (default: transcripts.unsorted.tsv.gz).')
+    parser.add_argument('--out-minmax', type=str, default="coordinate_minmax.tsv", help='File name of output the coordinate minmax TSV file (default: coordinate_minmax.tsv).')
+    parser.add_argument('--out-feature', type=str, default="feature.clean.tsv.gz", help='File name of output compressed UMI count per gene TSV file (default: feature.clean.tsv.gz).')
+    parser.add_argument('--out-subset', type=str, default="subset_minmax.tsv", help='File name of output coordinate minmax and offset TSV file (default: subset_minmax.tsv).')
+    parser.add_argument("--colname-count", type=str, default='count', help="Columns to sum (default: count).")
     parser.add_argument('--colname-feature-name', type=str, default='gene', help='Feature name column (default: gene)')
-    parser.add_argument('--colname-feature-id', type=str, default=None, help='Feature ID column (default: None)')
+    parser.add_argument('--colname-feature-id', type=str, default=None, help='Feature ID column')
     parser.add_argument('--colname-x', type=str, default="X", help='X column name (default: X)')
     parser.add_argument('--colname-y', type=str, default="Y", help='Y column name (default: Y)')
-    parser.add_argument('--colnames-others', nargs='*', default=[], help='Columns names to keep (e.g., cell_id, overlaps_nucleus) (default: None)')
-    parser.add_argument("--units-per-um", type=float, default=1.0, help="Define the scaling factor for unit conversion from coordinate to um (default: 1.0)")
-    parser.add_argument("--precision", type=int, default=2, help="Precision for the output minmax and transcript files (default: 2)")
+    parser.add_argument('--colnames-others', nargs='*', default=[], help='Optional list of column names to retain (e.g., --colnames-others "cell_id" "overlaps_nucleus") (defaults to an empty list)')
+    parser.add_argument("--units-per-um", type=float, default=1.0, help="Scaling factor for unit conversion from coordinate to um (default: 1.0)")
+    parser.add_argument("--precision", type=int, default=2, help="Precision for output minmax and transcript files (default: 2)")
     parser.add_argument('--debug', action='store_true', help='Test mode.')
     parser.add_argument('--log', action='store_true', default=False, help='Write log to file')
 
@@ -44,7 +45,7 @@ def sge_combine_tiles(_args):
     # 1. output cols
     out_cols=[args.colname_x, args.colname_y]
     out_cols.extend([args.colname_feature_name]) if args.colname_feature_id is None else out_cols.extend([args.colname_feature_name, args.colname_feature_id])
-    out_cols.extend(args.colnames_count)
+    out_cols.append(args.colname_count)
     out_cols.extend(args.colnames_others)
     logger.info(f"  - Output columns: {out_cols}")
 
@@ -111,7 +112,7 @@ def sge_combine_tiles(_args):
 
     out_ftr = os.path.join(args.out_dir, args.out_feature)
     in_ftrs = df["feature_path"].tolist()
-    df_ftr_combined = combine_ftr_across_sge(in_ftrs, args.colnames_count, args.colname_feature_name, args.colname_feature_id, debug=args.debug)
+    df_ftr_combined = combine_ftr_across_sge(in_ftrs, [args.colname_count], args.colname_feature_name, args.colname_feature_id, debug=args.debug)
     df_ftr_combined.to_csv(out_ftr, sep="\t", index=False, compression="gzip")
     logger.info(f"  - Feature file written to {out_ftr}")
 
@@ -138,8 +139,10 @@ def sge_combine_tiles(_args):
                             chunk[col_x] += float(x_offset)
                             chunk[col_y] += float(y_offset)
                             chunk[[col_x, col_y]] = (chunk[[col_x, col_y]] / units_per_um).round(precision)
-                            chunk = chunk[chunk[count_cols].sum(axis=1) > 0]  # Drop zero-count rows
-                            assert all(col in chunk.columns for col in out_cols), f"Output columns not found in the chunk(cols: {chunk.columns}) "
+                            # Drop zero-count transcript
+                            chunk = chunk[chunk[count_cols].sum(axis=1) > 0]  
+                            if chunk_gidx ==0:
+                                assert all(col in chunk.columns for col in out_cols), f"Output columns not found in the chunk(cols: {chunk.columns}) "
                             chunk[out_cols].to_csv(out_file, sep="\t", index=False, header=(chunk_gidx == 0))
                             chunk_gidx += 1
                     if debug:
@@ -150,7 +153,7 @@ def sge_combine_tiles(_args):
 
     out_transcript = os.path.join(args.out_dir, args.out_transcript)
     combine_transcript_across_sge(df, out_transcript, 
-                                args.colname_x, args.colname_y, args.colnames_count, out_cols=out_cols, 
+                                args.colname_x, args.colname_y, [args.colname_count], out_cols=out_cols, 
                                 units_per_um=args.units_per_um,  precision=args.precision,
                                 debug=args.debug)
     logger.info(f"Transcript file written to {out_transcript}")

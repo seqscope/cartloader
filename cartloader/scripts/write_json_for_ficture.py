@@ -7,8 +7,7 @@ def parse_arguments(_args):
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", 
                                      description="Write a JSON file to summarize the parameters.")
-    parser.add_argument('--out-dir', required=True, type=str, help='Output directory')
-    parser.add_argument('--out-json', type=str, default=None, help='Path to the output JSON file. Default: <out-dir>/ficture.params.json')
+    parser.add_argument('--out-json', type=str, required=True, help='Path to the output JSON file.')
     parser.add_argument('--in-cstranscript', type=str, default=None, help='Path to the transcript file.')
     parser.add_argument('--in-feature', type=str, default=None, help='Path to the feature file.')
     parser.add_argument('--in-minmax', type=str, default=None, help='Path to the minmax file.')
@@ -75,9 +74,10 @@ def write_json_for_ficture(_args):
     args = parse_arguments(_args)
     if args.overwrite and args.merge:
         raise ValueError("Cannot use both --overwrite and --merge options.")
-    if args.out_json is None:
-      args.out_json = os.path.join(args.out_dir, "ficture.params.json")
     
+    out_dir = os.path.dirname(args.out_json)
+    os.makedirs(out_dir, exist_ok=True)
+
     # Input SGE data
     sge_data={
         "in_cstranscript": args.in_cstranscript,
@@ -180,10 +180,6 @@ def write_json_for_ficture(_args):
     print(f'Data has been written to {args.out_json}')
 
 if __name__ == "__main__":
-    # get the cartloader path
-    global cartloader_repo
-    cartloader_repo=os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-    
     # Get the base file name without extension
     script_name = os.path.splitext(os.path.basename(__file__))[0]
 
