@@ -124,7 +124,7 @@ def write_catalog_for_assets(_args):
             logger.info(f"Updating Factor layer with the square assets from {args.square_assets}")
             for square_assets_f in args.square_assets:
                 square_assets = load_file_to_dict(square_assets_f)
-                square_assets = update_and_copy_paths(square_assets, out_dir, skip_keys=["id", "name", "square_id"], exe_copy=True)
+                square_assets = update_and_copy_paths(square_assets, out_dir, skip_keys=["id", "name", "square_id", "raw_pixel_col"], exe_copy=True)
                 factors_list = [item for item in factors_list if item.get('id') != square_assets.get('id')]
                 factors_list.append(square_assets)
                 flags.append(f"{square_assets_f}.done")
