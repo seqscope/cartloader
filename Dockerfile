@@ -40,6 +40,7 @@ RUN apt-get update && apt-get install -y \
     libopencv-dev \
     gdal-bin \
     imagemagick \
+    r-base \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 
@@ -73,7 +74,7 @@ WORKDIR /app/cartloader
 RUN git submodule update --init submodules/punkst submodules/spatula submodules/tippecanoe
 
 # Install Python dependencies
-RUN python3 -m pip install --no-cache-dir -r requirements.txt
+RUN python3 -m pip install --no-cache-dir -r installation/requirements.txt
 
 # Install Python dependencies from ficture 
 # * Add this step due to missing python packages
@@ -81,6 +82,9 @@ RUN cd assets && \
     wget https://raw.githubusercontent.com/seqscope/ficture/refs/heads/main/requirements.txt --output-document ./ficture_requirements.txt && \
     grep -v '^importlib' ficture_requirements.txt > ficture_requirements.fixed.txt && \
     python3 -m pip install -r ./ficture_requirements.fixed.txt
+
+# Install R dependencies
+RUN Rscript installation/install_r_packages.R
 
 # Install cartloader itself
 RUN python3 -m pip install -e ./
