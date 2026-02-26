@@ -232,6 +232,12 @@ def import_visiumhd_cell(_args):
             "UMAP_PROJ": f"{args.in_dir}/{args.csv_umap}"
         }
 
+    if cell_data.get("CELL_FEATURE_MEX") is not None:
+        mex_ftr_dir = cell_data["CELL_FEATURE_MEX"]
+        cell_data["MEX_BCD"] = os.path.join(mex_ftr_dir, args.mex_bcd)
+        cell_data["MEX_FTR"] = os.path.join(mex_ftr_dir, args.mex_ftr)
+        cell_data["MEX_MTX"] = os.path.join(mex_ftr_dir, args.mex_mtx)
+
     # set units_per_um if scale_json is provided
     if scale_json is not None:
         assert os.path.exists(scale_json), f"File not found: {scale_json} (--scale-json)"
@@ -268,13 +274,13 @@ def import_visiumhd_cell(_args):
         ## generate pseudobulk files from MEX
         cell_ftr_mex = cell_data.get("CELL_FEATURE_MEX", None)
         assert cell_ftr_mex is not None, ('Path not provided: CELL_FEATURE_MEX in --in-json' if args.in_json is not None else 'Path not provided: --mtx-cells')
-        mex_bcd = os.path.join(cell_ftr_mex, args.mex_bcd)
-        mex_ftr = os.path.join(cell_ftr_mex, args.mex_ftr)
-        mex_mtx = os.path.join(cell_ftr_mex, args.mex_mtx)
-
-        assert mex_bcd is not None and os.path.exists(mex_bcd), (f'Path not provided or file not found: "MEX_BCD" in --in-json' if args.in_json is not None else f'Path not provided or file not found: --mex-bcd')
-        assert mex_ftr is not None and os.path.exists(mex_ftr), (f'Path not provided or file not found: "MEX_FTR" in --in-json' if args.in_json is not None else f'Path not provided or file not found: --mex-ftr')
-        assert mex_mtx is not None and os.path.exists(mex_mtx), (f'Path not provided or file not found: "MEX_MTX" in --in-json' if args.in_json is not None else f'Path not provided or file not found: --mex-mtx')
+        mex_bcd = cell_data.get("MEX_BCD", None)
+        mex_ftr = cell_data.get("MEX_FTR", None)
+        mex_mtx = cell_data.get("MEX_MTX", None)
+        
+        assert mex_bcd is not None and os.path.exists(mex_bcd), (f'Path not provided or file not found: "MEX_BCD" in --in-json. Current value: {mex_bcd}' if args.in_json is not None else f'Path not provided or file not found: --mex-bcd. Current value: {mex_bcd}')
+        assert mex_ftr is not None and os.path.exists(mex_ftr), (f'Path not provided or file not found: "MEX_FTR" in --in-json. Current value: {mex_ftr}' if args.in_json is not None else f'Path not provided or file not found: --mex-ftr. Current value: {mex_ftr}')
+        assert mex_mtx is not None and os.path.exists(mex_mtx), (f'Path not provided or file not found: "MEX_MTX" in --in-json. Current value: {mex_mtx}' if args.in_json is not None else f'Path not provided or file not found: --mex-mtx. Current value: {mex_mtx}')
 
         logger.info(f"  * Generating spTSV from MEX files")
         cmd = f"'{args.spatula}' mex2sptsv --bcd '{mex_bcd}' --ftr '{mex_ftr}' --mtx '{mex_mtx}' --out '{args.outprefix}.sptsv'"

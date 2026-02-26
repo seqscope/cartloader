@@ -5,11 +5,6 @@
 `import_visiumhd_square` packages Space Ranger square-bin analysis outputs (clusters, DE, and optional UMAP coordinates) into PMTiles and a square assets JSON for CartLoader. Use it directly, or via `run_visiumhd --import-squares` to fold square-bin layers into your catalog.
 
 ---
-## Action
-
-Convert one bin size of Visium HD square results into PMTiles, write `<square-id>-sqXXX_assets.json`, and optionally update an existing `catalog.yaml`.
-
----
 ## Requirements
 
 - Space Ranger square-bin outputs for a given bin size (8 µm or 16 µm are common):
@@ -19,6 +14,11 @@ Convert one bin size of Visium HD square results into PMTiles, write `<square-id
   - (Optional) UMAP CSV (`analysis/pca/gene_expression_10_components/projection.csv`)
 - Scale factors JSON (`spatial/scalefactors_json.json`) to derive units-per-µm, or provide `--units-per-um`.
 - Tippecanoe and parquet-tools (or pigz/polars) available on PATH.
+
+---
+## Actions
+
+Convert one bin size of Visium HD square results into PMTiles, write `<square-id>-sqXXX_assets.json`, and optionally update an existing `catalog.yaml`.
 
 ---
 ## Example Usage
@@ -109,7 +109,7 @@ Convert one bin size of Visium HD square results into PMTiles, write `<square-id
     * `--gzip` (str): Path to `gzip` (default: `gzip`).
 
 ---
-## Outputs
+## Output
 
 Written next to `--outprefix`:
 

@@ -12,7 +12,25 @@ Import platform‑specific cell analysis outputs (cells, boundaries, clusters/DE
 - Optional catalog update: an existing `catalog.yaml` from [Asset Packaging](./run_cartload2.md).
 
 ---
-## Example Usages
+## Actions
+
+!!! warning "Action Specifications"
+    No action runs by default. Activate at least one using the [action parameters](#action-parameters).
+
+### Cell Conversion Step (`--cells`)
+Convert cell points/centroids, clusters, and differential expression results to PMTiles with counts and top cluster index (topK). A JSON summary of inputs/outputs and basic stats will be written.
+
+### Cell Boundary Conversion Step (`--boundaries`)
+Convert cell polygons to GeoJSON with `cell_id` and `topK` attributes. A JSON summary of inputs/outputs and basic stats will be written.
+
+### Catalog Update (`--update-catalog`)
+Append generated layers to an existing `catalog.yaml`.
+
+### UMAP Conversion Step (`--umap`)
+Convert UMAP embeddings to PMTiles.
+
+--- 
+## Example Usage
 !!! warning "Two Input Modes"
 
     `CartLoader` accepts two input modes for each platform:
@@ -65,24 +83,6 @@ Import platform‑specific cell analysis outputs (cells, boundaries, clusters/DE
     ```
 
 ---
-## Actions
-
-!!! warning "Action Specifications"
-    No action runs by default. Activate at least one using the [action parameters](#action-parameters).
-
-### Cell Conversion Step (`--cells`)
-Convert cell points/centroids, clusters, and differential expression results to PMTiles with counts and top cluster index (topK). A JSON summary of inputs/outputs and basic stats will be written.
-
-### Cell Boundary Conversion Step (`--boundaries`)
-Convert cell polygons to GeoJSON with `cell_id` and `topK` attributes. A JSON summary of inputs/outputs and basic stats will be written.
-
-### Catalog Update (`--update-catalog`)
-Append generated layers to an existing `catalog.yaml`.
-
-### UMAP Conversion Step (`--umap`)
-Convert UMAP embeddings to PMTiles.
-
---- 
 
 ## Parameters
 
@@ -172,7 +172,7 @@ Convert UMAP embeddings to PMTiles.
       - `--log-suffix` (str): Log file suffix.
 
 ---
-## Outputs
+## Output
 
 - Cells PMTiles (`*.cells.pmtiles`): cell centroids/points with attributes `cell_id`, `count`, `topK`.
 - Boundaries GeoJSON (`*.boundaries.geojson`): cell polygons with `cell_id`, `topK`.

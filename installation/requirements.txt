@@ -1,0 +1,13 @@
+numpy
+pandas
+ficture
+tifffile
+imagecodecs
+Pillow
+psutil
+rasterio
+requests
+setuptools
+PyYAML
+parquet-tools
+polars

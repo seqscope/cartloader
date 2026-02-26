@@ -7,12 +7,11 @@ SGE datasets vary widely in format and resolution across platforms. Since `FICTU
 ---
 ## Requirements
 
-!!! info "Input Data Requirements"
-    Ensure the input data (raw, platform‑specific SGE) is transcript‑indexed and contains at least the following fields:
+Ensure the input data (raw, platform‑specific SGE) is transcript‑indexed and contains at least the following fields:
 
-    * Spatial coordinates (X, Y)
-    * Feature metadata (such as gene symbols)
-    * Expression counts
+* Spatial coordinates (X, Y)
+* Feature metadata (such as gene symbols)
+* Expression counts
 
 !!! info "Platform Compatibility"
 
@@ -36,6 +35,22 @@ SGE datasets vary widely in format and resolution across platforms. Since `FICTU
     * `gzip` (or pigz)
     * `spatula` (required if `--sge-visual` is set)
     * `gdal_translate`, `gdalwarp` (required if `--sge-visual` is set with `--north-up`)
+
+---
+
+## Actions
+
+!!! warning "Action Specifications"
+    SGE conversion runs by default. If needed, activate other options: `--filter-by-density` and `--sge-visual`.
+
+### SGE Conversion (always runs)
+Converting SGE into a FICTURE-compatible TSV format. During conversion, SGE coordinates are rescaled to micrometer units based on the pixel resolution specified in the input. It's also available to apply feature (typically, genes) filtering.
+
+### Density-based Filtering (`--filter-by-density`)
+If `--filter-by-density` is set, automatically identify and retain high-quality tissue regions based on transcript density and spatial structure. This step takes the format-standardized SGE as input and generate a density-based filtered SGE.
+
+### SGE Visualization (`--sge-visual`)
+If `--sge-visual` is set, draws an image of 2D points provided as an input. In this step, it is optional to enable the `--north-up` option to ensuring correct spatial orientation (i.e., Y-axis increases upward/north and X-axis increases to the right/east).
 
 ---
 ## Example Usage
@@ -74,7 +89,7 @@ cartloader sge_convert \
 
 ### 2) Input SGE in TSV/CSV Format
 
-This applies to input SGE in TSV/CSV format from platforms. Below is an example converting SGE from Stere-seq.
+This applies to input SGE in TSV/CSV format from platforms. Below is an example converting SGE from Stereo‑seq.
 
 ```bash
 cartloader sge_convert \
@@ -112,22 +127,6 @@ cartloader sge_convert \
 
     <sub><sup>2</sup> 10x Xenium: Besides the above default settings, for 10x Xenium data, `sge_convert` also applies `--csv-colname-phredscore qv ` and `--min-phred-score 20`.
 
-
----
-## Actions
-
-!!! warning "Action Specifications"
-    SGE conversion runs by default. If needed, activate other options: `--filter-by-density` and `--sge-visual`.
-
-### SGE Conversion (always runs)
-Converting SGE into a FICTURE-compatible TSV format. During conversion, SGE coordinates are rescaled to micrometer units based on the pixel resolution specified in the input. It's also available to apply feature (typically, genes) filtering.
-
-### Density-based Filtering (`--filter-by-density`)
-If `--filter-by-density` is set, automatically identify and retain high-quality tissue regions based on transcript density and spatial structure. This step takes the format-standardized SGE as input and generate a density-based filtered SGE.
-
-### SGE Visualization (`--sge-visual`)
-If `--sge-visual` is set, draws an image of 2D points provided as an input. In this step, it is optional to enable the `--north-up` option to ensuring correct spatial orientation (i.e., Y-axis increases upward/north and X-axis increases to the right/east).
-
 ---
 ## Parameters
 
@@ -150,17 +149,17 @@ Below are the core parameters. See more details in the collapsible sections belo
 * `--include-feature-type-regex`: A regex pattern of feature/gene type to be included.
 * `--csv-colname-feature-type`: If `--include-feature-type-regex`, column name in the input TSV/CSV that contains gene type information.
 * `--feature-type-ref`, `--feature-type-ref-delim`, `--feature-type-ref-colidx-name`, and `--feature-type-ref-colidx-type`: If `--include-feature-type-regex`, define the file path, delimiter, and column indices for gene names and types of an additional reference file to provide gene type information. -->
-??? note "Auxiliary SGE Conversion Paramaters"
+??? note "Auxiliary SGE Conversion Parameters"
 
     Recommend to use the default values; override only if needed. See more details by running:
     ```bash
-    CartLoadersge_convert --help
+    cartloader sge_convert --help
     ```
 
     **Auxiliary Input MEX Parameters**:
 
-    * `--icols-mtx` (int or comma-spearated list): Comma-separated, 1-based indices of the target genomic features among the count columns in the input matrix file (default: 1)
-    * `--colnames-count` (string or comma-spearated list): Comma-separated output column names for the specified genomic features (default: count). The number of names specified by `--colnames-count` must match the number of indices provided in `--icols-mtx`.
+    * `--icols-mtx` (int or comma-separated list): Comma-separated, 1-based indices of the target genomic features among the count columns in the input matrix file (default: 1)
+    * `--colnames-count` (string or comma-separated list): Comma-separated output column names for the specified genomic features (default: count). The number of names specified by `--colnames-count` must match the number of indices provided in `--icols-mtx`.
 
     **Auxiliary Input CSV/TSV Parameters**:
 

@@ -11,7 +11,26 @@ An end‑to‑end workflow for 10x Xenium data using `CartLoader` to run steps (
 - Pre-installed tools depending on the actions: `spatula`, `punkst`, `gzip`, `sort`, `python`, `go-pmtiles`, `gdal`, `tippecanoe`, `parquet-tools`, `aws`
 
 ---
-## Example Usages
+## Actions
+
+!!! warning "Action Specifications"
+    `run_xenium` orchestrates multiple `CartLoader` modules; enable and combine actions with flags.
+    
+    No action runs by default. Activate at least one action flag.
+
+Click to see action details per flag:
+
+* [`--load-xenium-ranger`](./load_xenium_ranger.md#actions)
+* [`--sge-convert`](./sge_convert.md#actions)
+* [`--run-ficture2`](./run_ficture2.md#actions)
+* [`--import-cells`](./import_cell.md#actions)
+* [`--import-images`](./import_image.md#actions)
+* [`--run-cartload2`](./run_cartload2.md#actions)
+* [`--upload-aws`](./upload_aws.md#actions)
+* [`--upload-zenodo`](./upload_zenodo.md#actions)
+
+---
+## Example Usage
 
 !!! warning "Replace placeholders"
 
@@ -38,7 +57,7 @@ An end‑to‑end workflow for 10x Xenium data using `CartLoader` to run steps (
       --id example-id \
       --image-ids OME_DAPI \
       --spatula /path/to/spatula/binary \
-      --ficture2 /path/to/punkst/directory \  
+      --ficture2 /path/to/punkst/directory \
       --pmtiles /path/to/pmtiles/binary \
       --tippecanoe /path/to/tippecanoe/binary \
       --aws /path/to/aws/cli/binary \
@@ -62,7 +81,7 @@ An end‑to‑end workflow for 10x Xenium data using `CartLoader` to run steps (
       --n-factor 12 \
       --id example-id \
       --spatula /path/to/spatula/binary \
-      --ficture2 /path/to/punkst/directory \  
+      --ficture2 /path/to/punkst/directory \
       --pmtiles /path/to/pmtiles/binary \
       --tippecanoe /path/to/tippecanoe/binary \
       --aws /path/to/aws/cli/binary \
@@ -117,31 +136,12 @@ An end‑to‑end workflow for 10x Xenium data using `CartLoader` to run steps (
     ``` -->
 
 ---
-## Action
-
-!!! warning "Action Specifications"
-    `run_xenium` orchestrates multiple `CartLoader` modules; enable and combine actions with flags.
-    
-    No action runs by default. Activate at least one action flag.
-
-Click to see action details per flag:
-
-* [`--load-xenium-ranger`](./load_xenium_ranger.md#actions)
-* [`--sge-convert`](./sge_convert.md#actions)
-* [`--run-ficture2`](./run_ficture2.md#actions)
-* [`--import-cells`](./import_cell.md#actions)
-* [`--import-images`](./import_image.md#actions)
-* [`--run-cartload2`](./run_cartload2.md#actions)
-* [`--upload-aws`](./upload_aws.md#actions)
-* [`--upload-zenodo`](./upload_zenodo.md#actions)
-
----
 
 ## Parameters
 
 ### Action Parameters
 
-See [Action](#action).
+See [Actions](#actions).
 
 ### Input/Output Parameters
 
@@ -228,7 +228,7 @@ Outputs depend on the enabled action flags. Refer to each module page for full o
 - `--load-xenium-ranger`: A Xenium assets JSON summarizing detected inputs (path: `--xenium-ranger-assets`). See example structure in the Xenium pipeline vignette.
 - `--sge-convert`: Unified SGE files and an assets manifest (`sge_assets.json`). See details in [sge_convert reference](./sge_convert.md#output)
 - `--run-ficture2` or `--import-ext-ficture2`: Generates FICTURE analysis artifacts (factor models, decoded maps, PMTiles, summaries). See details in [run_ficture2 reference](./run_ficture2.md#output)
-- `--import-cells`: Cells PMTiles, boundaries GeoJSON, and summaries under `cartload2/`. See details in [import_cells reference](./import_cell.md#outputs).
+- `--import-cells`: Cells PMTiles, boundaries GeoJSON, and summaries under `cartload2/`. See details in [import_cells reference](./import_cell.md#output).
 - `--import-images`: Background image PMTiles (and intermediates) under `cartload2/`. See details in [import_images reference](./import_image.md#output).
 - `--run-cartload2`: Sources packaged into PMTiles and a `catalog.yaml`. See details in [run_cartload2 reference](./run_cartload2.md#output).
 - `--upload-aws`: Uploads generated assets and `catalog.yaml` to the specified S3 path.

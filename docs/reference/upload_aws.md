@@ -5,11 +5,6 @@
 Use `upload_aws` to publish `CartLoader` outputs (PMTiles, decoded spatial factors, and the catalog) to Amazon S3 for sharing or deployment. Supports single‑dataset uploads and collection uploads (multiple datasets via `--in-list`). File lists are taken from `catalog.yaml` and split into cartload basics (required outputs), cartload optional files (e.g., UMAP, alias), and additional basemaps (non-SGE PMTiles).
 
 ---
-## Action
-
-Upload `CartLoader` outputs (including `catalog.yaml`) to a specified S3 path for a single dataset or a collection (`--in-list`).
-
----
 ## Requirements
 
 - A completed run of [`run_cartload2`](./run_cartload2.md) or [`run_cartload2_multi`](./run_cartload2_multi.md), which include:
@@ -20,6 +15,11 @@ Upload `CartLoader` outputs (including `catalog.yaml`) to a specified S3 path fo
     - (Optional) Background assets, such as histology
     - A catalog file (`catalog.yaml`) summarizing the output structure and metadata
 - AWS CLI installed and configured (e.g., `aws configure`).
+
+---
+## Actions
+
+Upload `CartLoader` outputs (including `catalog.yaml`) to a specified S3 path for a single dataset or a collection (`--in-list`).
 
 ---
 ## Example Usage
@@ -92,7 +92,9 @@ Upload `CartLoader` outputs (including `catalog.yaml`) to a specified S3 path fo
         └── sample-004      # SAMPLE 4
            └── ...   
         ```
+
 ---
+
 ## Parameters
 
 ### Input/Output
@@ -114,3 +116,9 @@ Upload `CartLoader` outputs (including `catalog.yaml`) to a specified S3 path fo
 - `--restart` (flag): Ignore existing outputs and rerun from scratch.
 - `--n-jobs` (int): Number of parallel jobs (default: 2).
 - `--makefn` (str): Name of the generated Makefile (default: `upload_aws.mk`, written inside `--in-dir`).
+
+---
+## Output
+
+- S3 uploads under `--s3-dir`, with per‑dataset subdirectories in collection mode.
+- An optional Makefile (`--makefn`) when running in dry-run mode.

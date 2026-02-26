@@ -22,28 +22,6 @@ Following format conversion, `CartLoader` provides the **`run_ficture2`** module
 - An SGE in the unified format (from [SGE format conversion](./sge_convert.md))
 - Pre-installed tools: `spatula`, `punkst`, `gzip`, `sort`, `python`
 
----
-## Example Usage
-
-```bash
-cartloader run_ficture2 \
-    --main \
-    --in-transcript /path/to/converted/transcripts/tsv/file \
-    --in-feature /path/to/converted/feature/tsv/file \
-    --in-minmax /path/to/converted/coordinates/minmax/tsv/file \
-    --cmap-file /path/to/cartloader/assets/fixed_color_map_256.tsv \
-    --colname-count count \
-    --out-dir /path/to/output/directory \
-    --width 18 \
-    --n-factor 24 \
-    --spatula /path/to/spatula/binary \
-    --ficture2 /path/to/punkst/directory \  
-    --exclude-feature-regex '^(mt-|Gm\d+$)' \
-    --n-jobs 20  \
-    --threads 20 
-```
-
----
 ## Actions
 
 !!! warning "Action Specifications"
@@ -70,9 +48,30 @@ The UMAP visualization step generates UMAP embeddings of factors learned in [LDA
 The 10x segmentation step aggregates tiled pixel data into 10x Genomics-compatible hexagonal bin formats (MEX matrix). This allows the data to be used with tools designed for 10x Visium data.
 
 ---
+## Example Usage
+
+```bash
+cartloader run_ficture2 \
+    --main \
+    --in-transcript /path/to/converted/transcripts/tsv/file \
+    --in-feature /path/to/converted/feature/tsv/file \
+    --in-minmax /path/to/converted/coordinates/minmax/tsv/file \
+    --cmap-file /path/to/cartloader/assets/fixed_color_map_256.tsv \
+    --colname-count count \
+    --out-dir /path/to/output/directory \
+    --width 18 \
+    --n-factor 24 \
+    --spatula /path/to/spatula/binary \
+    --ficture2 /path/to/punkst/directory \
+    --exclude-feature-regex '^(mt-|Gm\\d+$)' \
+    --n-jobs 20  \
+    --threads 20
+```
+
+---
 ## Parameters
 
-Below are the core parameters. See more details in the collapsible section ("Auxiliary Paramaters") below.
+Below are the core parameters. See more details in the collapsible section ("Auxiliary Parameters") below.
 
 #### Action Parameters
 
@@ -102,7 +101,7 @@ Below are the core parameters. See more details in the collapsible section ("Aux
 * `--cmap-file` (str): (Optional) Path to fixed color map TSV file. If not provided, FICTURE will generate a color map.
 * `--segment-width-10x` (str): Comma-separated hexagon flat-to-flat widths (µm) in 10x format (required if `--segment-10x`).
 
-??? note "Auxiliary Paramaters"
+??? note "Auxiliary Parameters"
 
     **Auxiliary Input Parameters**
 
@@ -130,7 +129,7 @@ Below are the core parameters. See more details in the collapsible section ("Aux
         * `--radius-buffer` (int): Buffer added to anchor resolution for decoding (Default: 1).
         <!-- * `--fit-plot-um-per-pixel` (int): Image resolution for fit coarse plots (Default: 1). -->
         * `--decode-scale` (int): Scales input coordinates to pixels in the output image (Default: 1)
-    * Shared paramaters across steps:
+    * Shared parameters across steps:
         * `--seed` (int): Random seed for reproducibility (Default: 1).
         * `--min-ct-per-feature` (int): Minimum count per feature for LDA and decoding (Default: 20).
         * `--de-max-pval` (float): p-value cutoff for differential expression (Default: 1e-3).
@@ -152,7 +151,7 @@ Below are the core parameters. See more details in the collapsible section ("Aux
     * `--python` (str): Path to Python 3 binary (Default: `python3`).
     * `--R` (str): Path to `R` binary for UMAP generation (default: `R`).
 
-    ** Run Parameters**:
+    **Run Parameters**:
 
     * `--dry-run` (flag): Generate the Makefile; do not execute.
     * `--restart` (flag): Ignore existing outputs and rerun all steps.
@@ -338,7 +337,7 @@ Below are the core parameters. See more details in the collapsible section ("Aux
 
 ### Summarization Output
 
-* `ficture.params.json`: A JSON file to summarize the path to input, output, and paramaters.
+* `ficture.params.json`: A JSON file summarizing input and output paths and parameters.
     ```json
     {
     "in_sge": {

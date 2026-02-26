@@ -262,7 +262,12 @@ def stage_import_squares(cart_dir, args, square_plans, update_catalog=False):
             f"--update-catalog" if update_catalog else "",
             f"--threads {args.threads}" if args.threads else "",
             f"--use-parquet-tools" if args.use_parquet_tools else "",
+            f"--parquet-tools" if args.use_parquet_tools and args.parquet_tools else "",
+            f"--pigz {args.pigz}" if args.pigz else "",
+            f"--pigz-threads {args.pigz_threads}" if args.pigz and args.pigz_threads else "",
         ]))
+
+        import_square_cmd = add_param_to_cmd(import_square_cmd, args, ["tippecanoe", "python", "spatula", "ficture2", "gzip", "sort", "R"])
 
         prereq = spec.get("prereq", [])
         if os.path.exists(square_assets) and not args.restart:

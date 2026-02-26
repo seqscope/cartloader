@@ -94,7 +94,11 @@ def parse_arguments(_args):
     env_params.add_argument('--tippecanoe', type=str, help='Path to tippecanoe binary (default: <cartloader_dir>/submodules/tippecanoe/tippecanoe)')
     env_params.add_argument('--spatula', type=str, help='Path to spatula binary (default: spatula)')
     env_params.add_argument('--parquet-tools', type=str, dest='parquet_tools', help='Path to parquet-tools binary (default: parquet-tools)')
-    env_params.add_argument('--ficture2', type=str, default=os.path.join(repo_dir, "submodules", "punkst"),  help='Path to punkst(ficture2) repository (default: <cartloader_dir>/submodules/punkst)')
+    env_params.add_argument('--ficture2', type=str, help='Path to punkst(ficture2) repository (default: <cartloader_dir>/submodules/punkst)')
+    env_params.add_argument('--R', type=str, help='Path to R binary (default: R).')
+    env_params.add_argument('--gzip', type=str, help='Path to gzip binary (default: gzip)')
+    env_params.add_argument('--sort', type=str, help='Path to sort binary. For faster processing, you may add arguments like "sort -T /path/to/new/tmpdir --parallel=20 -S 10G"')
+    env_params.add_argument('--python', type=str, help='Python3 binary')
     env_params.add_argument('--aws', type=str, default="aws", help='Path to aws CLI (default: aws)')
 
     if len(_args) == 0:
@@ -258,9 +262,11 @@ def run_xenium(_args):
             f"--id {args.cell_id}",
             f"--name {args.cell_name}" if args.cell_name else "",
             f"--tsv-cmap {args.tsv_cmap}" if args.tsv_cmap else "",
-            f"--tippecanoe {args.tippecanoe}" if args.tippecanoe else "",
             f"--threads {args.threads}" if args.threads else "",
+            f"--parquet-tools {args.parquet_tools}" if args.parquet_tools else "",
         ])
+
+        import_cell_cmd = add_param_to_cmd(import_cell_cmd, args, ["tippecanoe", "python", "spatula", "ficture2", "gzip", "sort", "R"])
 
         if os.path.exists(cell_assets) and not args.restart:
             print(f" * Skip --import-cells since the Xenium Ranger cell assets file ({cell_assets}) already exists. You can use --restart to force execution of this step.", flush=True)

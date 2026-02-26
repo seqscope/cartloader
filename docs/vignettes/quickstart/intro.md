@@ -4,7 +4,7 @@ Get started with `CartLoader` using a small mouse hippocampus dataset. Choose on
 
 ## Options
 
-<div class="grid cards forref two-up" markdown>
+<div class="grid cards forref two-up quickstart" markdown>
 
 -   <ul>
       <li>

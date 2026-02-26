@@ -13,6 +13,27 @@ Following spatial factor inference via FICTURE analysis, `CartLoader` provides t
 - Pre-installed CLI tools: `tippecanoe`, `gdal_translate`, `gdaladdo`, `pmtiles`, `spatula`, `gzip`.
 
 ---
+## Actions
+
+!!! warning "Action Specifications"
+    SGE packaging and catalog preparation run by default. Enable optional integration actions using [input/output parameters](#inputoutput-parameters).
+
+### SGE Packaging
+Converts transcript‑level SGE to raster PMTiles, including light and dark modes.
+
+### FICTURE Integration (`--fic-dir`)
+If FICTURE results are provided via `--fic-dir`:
+  - Converts topic proportions (`*.results.tsv.gz`) into vector PMTiles for spatial factors.
+  - Generates raster overlays from decoded pixel‑level outputs.
+  - Builds a joined molecule–factor matrix by associating decoded pixels with molecules based on spatial proximity, then converts it into multi‑feature PMTiles.
+
+### Additional Assets Integration (`--cell-assets` or `--background-assets`)
+Includes provided cell assets and background/basemap PMTiles in `catalog.yaml`; copies asset files into the output directory when they reside elsewhere.
+
+### Catalog and Metadata Preparation
+Writes a FICTURE assets JSON (when FICTURE integration is set) and a final `catalog.yaml` listing all layers.
+
+---
 ## Example Usage
 
 ```bash
@@ -32,30 +53,9 @@ cartloader run_cartload2 \
 ```
 
 ---
-## Actions
-
-!!! warning "Action Specifications"
-    SGE packaging and catalog preparation run by default. Enable optional integration actions using [input/output parameters](#inputoutput-parameters).
-
-### SGE Packaging
-Converts transcript‑level SGE to raster PMTiles, including light and dark modes.
-
-### FICTURE Integration (`--fic-dir`)
-If FICTURE results is provided via `--fic-dir`:
-  - Converts topic proportions (`*.results.tsv.gz`) into vector PMTiles for spatial factors.
-  - Generates raster overlays from decoded pixel‑level outputs.
-  - Builds a joined molecule–factor matrix by associating decoded pixels with molecules based on spatial proximity, then converts it into multi‑feature PMTiles.
-
-### Additional Assets Integration (`--cell-assets` or `--background-assets`)
-Includes provided cell assets and background/basemap PMTiles in `catalog.yaml`; copies asset files into the output directory when they reside elsewhere.
-
-### Catalog and Metadata Preparation
-Writes a FICTURE assets JSON (when FICTURE integration is set) and a final `catalog.yaml` listing all layers.
-
----
 ## Parameters
 
-Below are the core parameters. See more details in the collapsible "Auxiliary Paramaters" section.
+Below are the core parameters. See more details in the collapsible "Auxiliary Parameters" section.
 
 ### Input/Output Parameters
 Must use `--sge-dir` or `--fic-dir` to provide SGE data.
