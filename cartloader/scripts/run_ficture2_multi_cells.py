@@ -572,6 +572,7 @@ def run_ficture2_multi_cells(_args):
         ## create factor report for cluster annotation
         cmd = " ".join([
             ficture2report,
+            f"--factor_label factor",
             f"--de '{pseudobulk_prefix}.de.tsv'",
             f"--pseudobulk '{pseudobulk_prefix}.tsv'",
             f"--feature_label Feature",
@@ -603,6 +604,7 @@ def run_ficture2_multi_cells(_args):
 
             cmd = " ".join([
                 ficture2report,
+                f"--factor_label factor",
                 f"--de '{sample_pseudobulk_prefix}.de.tsv'",
                 f"--pseudobulk '{sample_pseudobulk_prefix}.tsv'",
                 f"--feature_label Feature",

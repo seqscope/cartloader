@@ -169,7 +169,7 @@ def run_ficture2(_args):
     ficture2bin = os.path.join(args.ficture2, "bin/punkst")
     assert os.path.exists(ficture2bin), f"File not found: {ficture2bin}. FICTURE2 Directory should include bin/punkst (--ficture2)"
     
-    ficture2de = args.python + " " + os.path.join(args.ficture2, "ext/py/de_bulk.py")
+    #ficture2de = args.python + " " + os.path.join(args.ficture2, "ext/py/de_bulk.py")
     ficture2report = args.python + " " + os.path.join(args.ficture2, "ext/py/factor_report.py")
 
     # start mm
@@ -391,9 +391,13 @@ def run_ficture2(_args):
 
                 # 2) DE
                 cmds = cmd_separator([], f" LDA DE/report for {train_width}um and {n_factor} factors...")
-                cmds.append(f"{ficture2de} --input {lda_model_matrix} --output {lda_de} --feature_label Feature --min_ct_per_feature {args.min_ct_per_feature} --max_pval_output {args.de_max_pval} --min_fold_output {args.de_min_fold}")
+                cmds.append(f"'{args.spatula}' diffexp-model-matrix --tsv1 '{lda_model_matrix}' --out '{lda_de}' --min-count {args.de_min_ct_per_feature} --max-pval {args.de_max_pval} --min-fc {args.de_min_fold}")
+                cmds.append(f"('{args.gzip}' -cd '{lda_de}.de.marginal.tsv.gz' | head -1 | sed 's/^Feature/gene/'; '{args.gzip}' -cd '{lda_de}.de.marginal.tsv.gz' | tail -n +2 | sort -k 2,2n -k 3,3gr;) > '{lda_de}'")
+                cmds.append(f"rm -f '{lda_de}.de.marginal.tsv.gz'")
+                # cmds.append(f"{ficture2de} --input {lda_model_matrix} --output {lda_de} --feature_label Feature --min_ct_per_feature {args.min_ct_per_feature} --max_pval_output {args.de_max_pval} --min_fold_output {args.de_min_fold}")
                 cmd = " ".join([
                     ficture2report,
+                    f"--factor_label factor",
                     f"--de {lda_de}",
                     f"--pseudobulk {lda_model_matrix}",
                     f"--feature_label Feature",
@@ -475,19 +479,24 @@ def run_ficture2(_args):
             # 3) DE/report
             cmds=cmd_separator([], f"Decode DE and report, ID: {decode_id}")
             # - transform-DE
-            cmd = " ".join([
-                ficture2de,
-                f"--input {decode_postcount}.gz", ## TBC can this use .gz file?
-                f"--output {decode_de}",
-                f"--min_ct_per_feature {args.min_ct_per_feature}",
-                f"--max_pval_output {args.de_max_pval}",
-                f"--min_fold_output {args.de_min_fold}",
-                f"--feature_label Feature"
-                ])
+            # cmd = " ".join([
+            #     ficture2de,
+            #     f"--input {decode_postcount}.gz", ## TBC can this use .gz file?
+            #     f"--output {decode_de}",
+            #     f"--min_ct_per_feature {args.min_ct_per_feature}",
+            #     f"--max_pval_output {args.de_max_pval}",
+            #     f"--min_fold_output {args.de_min_fold}",
+            #     f"--feature_label Feature"
+            #     ])
+            cmds.append(f"'{args.spatula}' diffexp-model-matrix --tsv1 '{decode_postcount}' --out '{decode_de}' --min-count {args.de_min_ct_per_feature} --max-pval {args.de_max_pval} --min-fc {args.de_min_fold}")
+            cmds.append(f"('{args.gzip}' -cd '{decode_de}.de.marginal.tsv.gz' | head -1 | sed 's/^Feature/gene/'; '{args.gzip}' -cd '{decode_de}.de.marginal.tsv.gz' | tail -n +2 | sort -k 2,2n -k 3,3gr;) > '{decode_de}'")
+            cmds.append(f"rm -f '{decode_de}.de.marginal.tsv.gz'")
+
             cmds.append(cmd)
             # - transform-report
             cmd = " ".join([
                 ficture2report,
+                f"--factor_label factor",
                 f"--de {decode_de}",
                 f"--pseudobulk {decode_postcount}.gz",
                 f"--feature_label Feature",
