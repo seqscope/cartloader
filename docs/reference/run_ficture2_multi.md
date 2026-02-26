@@ -13,6 +13,16 @@ Use this when processing multiple samples together to learn shared spatial facto
 - FICTURE2 repository with `bin/punkst` and Python utilities (e.g., `ext/py/factor_report.py`)
 - Pre-installed tools: `gzip`, `python`, `punkst`, `spatula`
 ---
+## Actions
+
+All actions run by default (UMAPs can be skipped with `--skip-umap`):
+
+- Multisample prepare: tiles inputs, builds joint hex grids at requested `--width` values
+- LDA training: trains LDA models for each `(width, n-factor)` pair
+- Decode: applies trained models per sample; produces pixel‑level factors and summaries
+- Write per‑sample JSON: consolidates paths and metadata for downstream consumption
+
+---
 ## Example Usage
 
 ```bash
@@ -29,16 +39,6 @@ cartloader run_ficture2_multi \
   --threads 8 \
   --n-jobs 4
 ```
-
----
-## Actions
-
-All actions run by default (UMAPs can be skipped with `--skip-umap`):
-
-- Multisample prepare: tiles inputs, builds joint hex grids at requested `--width` values
-- LDA training: trains LDA models for each `(width, n-factor)` pair
-- Decode: applies trained models per sample; produces pixel‑level factors and summaries
-- Write per‑sample JSON: consolidates paths and metadata for downstream consumption
 
 ---
 ## Parameters
@@ -67,7 +67,7 @@ Below are the core arguments you’ll typically set. Flag names and behavior fol
 
 - `--n-factor` (str): Comma‑separated factor counts for training (e.g., `12,24`).
 - `--anchor-res` (int): Anchor resolution used in decode IDs (see outputs).
-- `--cmap-file` (str, defaults to [fixed_color_map_256.tsv](../../assets/fixed_color_map_256.tsv)): Colormap TSV used to colorize factors.
+- `--cmap-file` (str, defaults to [fixed_color_map_256.tsv](https://github.com/seqscope/cartloader/blob/main/assets/fixed_color_map_256.tsv): Colormap TSV used to colorize factors.
 - `--umap` (flag): Generate UMAP embeddings/plots for each LDA model (on by default).
 - `--skip-umap` (flag): Skip UMAP generation (overrides `--umap`).
 
@@ -108,8 +108,5 @@ Outputs are written under `--out-dir`.
 
 - Per‑sample JSONs
     - `samples/<sample>/ficture.params.json`: Consolidates sample feature paths, LDA and decode outputs for downstream steps.
-
----
-## See Also
-
-- Reference: `run_ficture2.md` — Single‑sample FICTURE2 runner and file formats
+ 
+See `run_ficture2.md` for single‑sample formats and file details.

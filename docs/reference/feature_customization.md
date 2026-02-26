@@ -7,6 +7,24 @@
 The curated feature file can then be used downstream, including FICTURE analysis.
 
 ---
+## Requirements
+
+- Input feature CSV/TSV (plain text or gzipped).
+- Optional reference file for feature types (CSV/TSV) when using `--include-feature-type-regex`.
+
+---
+## Actions
+
+!!! warning "Action Specifications"
+    No action runs by default. Activate at least one filter criterion via the [filter parameters](#filters-parameters).
+
+Include or exclude features by using explicit lists, substrings, regex patterns of feature name or types.
+Please note that:
+
+- Include criteria are restrictive (a feature must satisfy all provided include constraints).
+- Exclude criteria are subtractive (a feature matching any exclude constraint is removed).
+
+---
 ## Example Usage
 
 ### 1) Filter by Regex
@@ -25,13 +43,13 @@ cartloader feature_filtering \
 `CartLoader` supports include-only and exclude-only list-based filtering; pick the one that fits your use case (or combine them). Below is an example using `--include-feature-list`.
 
 ```bash
-include_list=/path/to/input_keep_genes.txt 
+include_list=/path/to/input_keep_genes.txt
 cartloader feature_filtering \
   --in-csv /path/to/sge/feature.clean.tsv.gz \
   --out-csv /path/to/sge/feature.filtered.tsv.gz \
   --out-record /path/to/sge/feature.filter_record.tsv \
   --csv-colname-feature-name gene \
-  --include-feature-list ${include_list}\
+  --include-feature-list ${include_list} \
   --log
 ```
 
@@ -66,7 +84,7 @@ cartloader feature_filtering \
 
 # Example 4B includes `lncRNA` features using column indices (0-based) and a CSV reference file:
 
-ref_csv=/path/to/refs/gene_types.csv 
+ref_csv=/path/to/refs/gene_types.csv
 
 cartloader feature_filtering \
   --in-csv /path/to/sge/feature.clean.tsv.gz \
@@ -77,18 +95,6 @@ cartloader feature_filtering \
   --feature-type-ref-colidx-name 0 \
   --feature-type-ref-colidx-type 2
 ```
-
----
-## Actions
-
-!!! warning "Action Specifications"
-    No action runs by default. Activate at least one using filtering criteria the [filter parameters](#filters-parameters).
-
-Include or exclude features by using explicit lists, substrings, regex patterns of feature name or types.
-Please note that:
-
-- Include criteria are restrictive (a feature must satisfy all provided include constraints).
-- Exclude criteria are subtractive (a feature matching any exclude constraint is removed).
 
 ---
 ## Parameters
@@ -128,8 +134,8 @@ Please note that:
 - `--feature-type-ref-colidx-type` (int): 0-based column index for feature type.
 
 ---
-## Outputs
+## Output
 
-A CSV/TSV file contains the remaining features. 
+A CSV/TSV file contains the remaining features.
 
 If `--out-record` is set, a TSV mapping each feature to a `filtering` reason; empty when a feature is kept.

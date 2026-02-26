@@ -12,35 +12,6 @@ An end‑to‑end workflow for 10x Visium HD data using `CartLoader` to run step
 - Pre-installed tools depending on the actions: `spatula`, `punkst`, `gzip`, `sort`, `python`, `go-pmtiles`, `gdal`, `tippecanoe`, `parquet-tools`, `aws`
 
 ---
-## Example Usage
-
-=== "Run all modules together"
-
-    ```bash
-    cartloader run_visiumhd \
-      --load-space-ranger \
-      --sge-convert \
-      --run-ficture2 \
-      --import-cells \
-      --import-images \
-      --run-cartload2 \
-      --upload-aws \
-      --space-ranger-dir /path/to/space/ranger/output \
-      --out-dir /path/to/out/dir \
-      --s3-dir s3://example_bucket/example-id \
-      --width 12 \
-      --n-factor 12 \
-      --id example-id \
-      --spatula /path/to/spatula/binary \
-      --ficture2 /path/to/punkst/directory \  
-      --pmtiles /path/to/pmtiles/binary \
-      --tippecanoe /path/to/tippecanoe/binary \
-      --aws /path/to/aws/cli/binary \
-      --n-jobs 10 \
-      --threads 10
-    ```
-
----
 ## Actions
 
 !!! info "Action Specifications"
@@ -62,13 +33,42 @@ See details for each flag:
 - [`--upload-zenodo`](./upload_zenodo.md#actions)
 
 ---
+## Example Usage
+
+=== "Run all modules together"
+
+    ```bash
+    cartloader run_visiumhd \
+      --load-space-ranger \
+      --sge-convert \
+      --run-ficture2 \
+      --import-cells \
+      --import-images \
+      --run-cartload2 \
+      --upload-aws \
+      --space-ranger-dir /path/to/space/ranger/output \
+      --out-dir /path/to/out/dir \
+      --s3-dir s3://example_bucket/example-id \
+      --width 12 \
+      --n-factor 12 \
+      --id example-id \
+      --spatula /path/to/spatula/binary \
+      --ficture2 /path/to/punkst/directory \
+      --pmtiles /path/to/pmtiles/binary \
+      --tippecanoe /path/to/tippecanoe/binary \
+      --aws /path/to/aws/cli/binary \
+      --n-jobs 10 \
+      --threads 10
+    ```
+
+---
 ## Parameters
 
 Below are the core arguments you’ll typically set. For all other options, expand the collapsible "Auxiliary Parameters" section.
 
 ### Action Parameters
 
-See [Action](#action).
+See [Actions](#actions).
 
 ### Input/Output Parameters
 
@@ -165,7 +165,7 @@ Outputs depend on the enabled action flags. Refer to each module page for full o
 - `--load-space-ranger`: A Space Ranger assets JSON summarizing detected inputs (path: `--space-ranger-assets`). See an example in the Visium HD pipeline vignette.
 - `--sge-convert`: Unified SGE files and an assets manifest (`sge_assets.json`). See details in [sge_convert reference](./sge_convert.md#output)
 - `--run-ficture2` or `--import-ext-ficture2`: Generates FICTURE analysis artifacts (factor models, decoded maps, PMTiles, summaries). See details in [run_ficture2 reference](./run_ficture2.md#output)
-- `--import-cells`: Cells PMTiles, boundaries GeoJSON, and summaries under `cartload2/`. See details in [import_cells reference](./import_cell.md#outputs).
+- `--import-cells`: Cells PMTiles, boundaries GeoJSON, and summaries under `cartload2/`. See details in [import_cells reference](./import_cell.md#output).
 - `--import-squares`: Square-bin PMTiles plus assets JSONs per bin size (e.g., `<square-id>-sq050_assets.json`), including optional UMAP TSVs when provided.
 - `--import-images`: Background image PMTiles (and intermediates) under `cartload2/`. See details in [import_images reference](./import_image.md#output).
 - `--run-cartload2`: Sources packaged into PMTiles and a `catalog.yaml`. See details in [run_cartload2 reference](./run_cartload2.md#output).

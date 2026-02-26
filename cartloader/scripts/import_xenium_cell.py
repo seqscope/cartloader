@@ -291,7 +291,7 @@ def parse_arguments(_args):
     aux_inout_params.add_argument('--csv-clust', type=str, default="analysis/clustering/gene_expression_graphclust/clusters.csv", help='Location of CSV with cell cluster assignments under --in-dir (default: analysis/clustering/gene_expression_graphclust/clusters.csv)')
     aux_inout_params.add_argument('--csv-diffexp', type=str, default="analysis/diffexp/gene_expression_graphclust/differential_expression.csv", help='Location of CSV with differential expression results under --in-dir (default: analysis/diffexp/gene_expression_graphclust/differential_expression.csv)')
     ## cell-level MEX format files
-    aux_inout_params.add_argument('--mex-dir', type=str, default="cell_feature_matrix", help='Directory location of 10x Genomic MatrixMarket files under --in-dir (default: analysis/filtered_feature_bc_matrix)')
+    aux_inout_params.add_argument('--mex-dir', type=str, default="cell_feature_matrix", help='Directory location of 10x Genomic MatrixMarket files under --in-dir (default: cell_feature_matrix)')
     aux_inout_params.add_argument('--mex-bcd', type=str, default="barcodes.tsv.gz", help='Filename for barcodes in the MatrixMarket directory (default: barcodes.tsv.gz)')
     aux_inout_params.add_argument('--mex-ftr', type=str, default="features.tsv.gz", help='Filename for features in the MatrixMarket directory (default: features.tsv.gz)')
     aux_inout_params.add_argument('--mex-mtx', type=str, default="matrix.mtx.gz", help='Filename for matrix in the MatrixMarket directory (default: matrix.mtx.gz)')
@@ -403,12 +403,19 @@ def import_xenium_cell(_args):
             "CLUSTER": f"{args.in_dir}/{args.csv_clust}",
             "DE": f"{args.in_dir}/{args.csv_diffexp}",
             "UMAP_PROJ": f"{args.in_dir}/{args.csv_umap}",
-            "MEX_BCD": os.path.join(args.in_dir, args.mex_dir, args.mex_bcd),
-            "MEX_FTR": os.path.join(args.in_dir, args.mex_dir, args.mex_ftr),
-            "MEX_MTX": os.path.join(args.in_dir, args.mex_dir, args.mex_mtx),
+            "CELL_FEATURE_MEX": f"{args.in_dir}/{args.mex_dir}",
+            # "MEX_BCD": os.path.join(args.in_dir, args.mex_dir, args.mex_bcd),
+            # "MEX_FTR": os.path.join(args.in_dir, args.mex_dir, args.mex_ftr),
+            # "MEX_MTX": os.path.join(args.in_dir, args.mex_dir, args.mex_mtx),
         }
         if args.pixel is not None:
             cell_data["PIXEL"] = args.pixel
+
+    if cell_data.get("CELL_FEATURE_MEX") is not None:
+        mex_ftr_dir = cell_data["CELL_FEATURE_MEX"]
+        cell_data["MEX_BCD"] = os.path.join(mex_ftr_dir, args.mex_bcd)
+        cell_data["MEX_FTR"] = os.path.join(mex_ftr_dir, args.mex_ftr)
+        cell_data["MEX_MTX"] = os.path.join(mex_ftr_dir, args.mex_mtx)
 
     # Convert pixel-level TSV data into sptsv format
     if not args.skip_redo_pseudobulk or not args.skip_redo_diffexp:

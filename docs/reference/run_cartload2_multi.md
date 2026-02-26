@@ -19,6 +19,16 @@ For each sample, it invokes `run_cartload2` to package SGE and optional FICTURE 
 - CLI tools used by CartLoad2: `tippecanoe`, `gdal`, `pmtiles`, `gzip`/`pigz`, `spatula`.
 
 ---
+## Actions
+
+For each row in `--in-list`, apply:
+
+- Locate per‑sample FICTURE assets at `--fic-dir/samples/<id>/ficture.params.json`.
+- Run `cartloader run_cartload2` with `--fic-dir` set to the sample subfolder and `--id` normalized from `<id>` (lowercase, `_` → `-`), and save output to `<out-dir>/<id>/`.
+- Write a per‑sample `catalog.yaml` (or `--out-catalog` name) and PMTiles under `<out-dir>/<id>/`.
+- Emit a top‑level Makefile to run samples in parallel.
+
+---
 ## Example Usage
 
 ```bash
@@ -32,16 +42,6 @@ cartloader run_cartload2_multi \
   --n-jobs 10 \
   --threads 10
 ```
-
----
-## Actions
-
-For each row in `--in-list`, apply:
-
-- Locate per‑sample FICTURE assets at `--fic-dir/samples/<id>/ficture.params.json`.
-- Run `cartloader run_cartload2` with `--fic-dir` set to the sample subfolder and `--id` normalized from `<id>` (lowercase, `_` → `-`), and save output to `<out-dir>/<id>/`.
-- Write a per‑sample `catalog.yaml` (or `--out-catalog` name) and PMTiles under `<out-dir>/<id>/`.
-- Emit a top‑level Makefile to run samples in parallel.
 
 ---
 ## Parameters
@@ -114,10 +114,4 @@ Outputs are written under `--out-dir`:
 - Per‑sample PMTiles and asset JSONs produced by `run_cartload2` under `<out-dir>/<id>/`.
 - Makefile: `<out-dir>/<makefn>` capturing all per‑sample targets.
 
-See `run_cartload2.md` for detailed CartLoad2 output formats (SGE rasters, factor PMTiles, joined molecule PMTiles, summaries).
-
----
-## See Also
-
-- Reference: `run_cartload2.md` — Single‑sample packaging and outputs
-- Reference: `run_ficture2_multi.md` — Multi‑sample FICTURE pipeline
+See `run_cartload2.md` for detailed CartLoad2 output formats (SGE rasters, factor PMTiles, joined molecule PMTiles, summaries). For the upstream pipeline, see `run_ficture2_multi.md`.

@@ -34,25 +34,29 @@
 } */
 
 .grid.cards.generic > ul {
-  display: flex;                     /* Use Flexbox to layout list items */
-  flex-wrap: wrap;                   /* Allow items to wrap to the next line */
-  gap: 0.5rem;                       /* Add space between cards */
-  justify-content: flex-start;       /* Align cards to the left */
-  padding: 0.5rem;                   /* Remove default padding on the list */
-  margin: 0;                         /* Remove default margin */
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 0.75rem;
+  align-items: stretch;
+  padding: 0.5rem;
+  margin: 0;
+}
+
+.grid.cards.generic.single-left > ul {
+  grid-template-columns: minmax(0, 320px);
+  justify-content: start;
 }
 
 .grid.cards.generic > ul > li {
-  width: 320px;                      /* Fixed card width */
-  height: auto;                      /* Let height expand with content */
-  flex: 0 0 auto;                    /* Prevent growing/shrinking */
-  padding: 0.5rem 0.5rem 0.2rem 0.5rem;  /* smaller bottom padding */
-  gap: 0;                            /* Spacing inside card's flex layout (for children) ? 0.05rem */
-  box-sizing: border-box;            /* Include padding in the total width/height */
-  display: flex;                     /* Layout internal card content with Flexbox */
-  flex-direction: column;            /* Stack elements vertically */
-  justify-content: flex-start;       /* Align card content to the top */
-  overflow: hidden;                  /* Prevent overflow from breaking layout */
+  width: 320px;
+  height: auto;
+  padding: 0.75rem 0.75rem 0.5rem 0.75rem;
+  gap: 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  overflow: hidden;
 }
 
 .grid.cards.generic figure {
@@ -102,39 +106,33 @@ figure {
 }
 
 .grid.cards.forref > ul {
-  display: flex;                     /* Use Flexbox to layout list items */
-  flex-wrap: wrap;                   /* Allow items to wrap to the next line */
-  gap: 0.5rem;                       /* Add space between cards */
-  justify-content: flex-start;       /* Align cards to the left */
-  padding: 0.5rem;                   /* Remove default padding on the list */
-  margin: 0;                         /* Remove default margin */
+  display: grid;                   /* Grid yields more consistent columns than flex */
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 0.75rem;
+  align-items: stretch;
+  padding: 0.5rem;
+  margin: 0;
 }
 
 .grid.cards.forref > ul > li {
-  width: 360px;                      /* Card width */
-  min-height: 200px;                 /* Baseline height; grows with content */
-  flex: 0 0 auto;                    /* Prevent growing/shrinking */
-  padding: 0.5rem 0.5rem 0.2rem 0.5rem;  /* smaller bottom padding */
-  gap: 0;                            /* Spacing inside card's flex layout */
-  box-sizing: border-box;            /* Include padding in the total width/height */
-  display: flex;                     /* Layout internal card content with Flexbox */
-  flex-direction: column;            /* Stack elements vertically */
-  justify-content: flex-start;       /* Align card content to the top */
-  overflow: visible;                 /* Ensure CTA remains visible */
+  min-height: 180px;               /* Baseline height; grows with content */
+  padding: 0.75rem 0.75rem 0.5rem 0.75rem;
+  gap: 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  overflow: visible;               /* Ensure CTA remains visible */
 }
 
 /* Force two cards per row for quickstart intro (responsive) */
-.grid.cards.forref.two-up > ul > li {
-  width: auto;                                 /* override fixed width */
-  flex: 1 1 calc(50% - 0.5rem);                /* two columns with gap */
-  max-width: calc(50% - 0.5rem);
-  min-width: 300px;                             /* avoid overly narrow cards */
+.grid.cards.forref.two-up > ul {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-@media (max-width: 680px) {
-  .grid.cards.forref.two-up > ul > li {
-    flex-basis: 100%;
-    max-width: 100%;                            /* stack to single column on very small screens */
+@media (max-width: 720px) {
+  .grid.cards.forref.two-up > ul {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -156,6 +154,15 @@ figure {
 .grid.cards.generic h4 {
   margin-top: 0.2rem;
   margin-bottom: 0.2rem;
+}
+
+.grid.cards.forref.quickstart > ul > li {
+  padding-top: 0.5rem;
+}
+
+.grid.cards.forref.quickstart > ul > li h3 {
+  margin-top: 0;
+  margin-bottom: 0.3rem;
 }
 
 /* ==================TABLE=================== */

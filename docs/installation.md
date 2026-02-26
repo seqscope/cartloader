@@ -6,7 +6,7 @@ This document walks through the environment setup and installation steps require
 
 ## 1. Dependencies
 
-Before installing `CartLoader`, make sure the tools below are present on your system.
+Below listed all required tools and packages for `CartLoader`. Instruction of how to install those tools and packages are provided in the section [2](#2-setting-up-the-environment-using-conda) and [4](#4-installing-cartloader).
 
 ### **1.1 Required System Utilities**
 
@@ -16,6 +16,8 @@ Confirm that these command-line programs are installed:
 - `sort`
 - `bgzip`
 - `tabix`
+- `bc`
+- `perl`
 
 ### **1.2 External Tools and Utilities**
 
@@ -37,7 +39,6 @@ These packages support spatial data handling and file conversion. Several are bu
 - [`tippecanoe`](https://github.com/mapbox/tippecanoe)
 - [`magick`](https://imagemagick.org/)
 - [`go-pmtiles`](https://github.com/protomaps/go-pmtiles)
-
 
 **Geospatial Utilities**
 
@@ -69,12 +70,14 @@ bash Miniconda3-latest-Linux-x86_64.sh
 
 ### 2.2 Creating an Environment
 
-
 Set up a fresh environment for `CartLoader`:
 
 ```bash
-conda create -n ENV_NAME python=3.13.1   # choose the environment name and Python version that suits your workflow
-conda activate ENV_NAME
+ENV_NAME="cart_env"   # define your environment name
+PY_VERSION="3.13.1"   # define your python version
+
+conda create -n ${ENV_NAME} python=${PY_VERSION}
+conda activate ${ENV_NAME}
 ```
 
 ### 2.3 Install Core Dependencies
@@ -97,10 +100,10 @@ git clone git@github.com:seqscope/cartloader.git
 cd cartloader
 
 # Install python requirements:
-pip install -r ./requirements.txt
+pip install -r ./installation/requirements.txt
 
 # Install R packages:
-Rscript ./install_r_packages.R
+Rscript ./installation/install_r_packages.R
 
 pip install -e ./
 ```
@@ -108,6 +111,7 @@ pip install -e ./
 ---
 
 ## 4. Initializing Submodules
+
 ```bash
 cd $env_dir/cartloader
 git submodule update --init --recursive
@@ -183,8 +187,17 @@ make install
 
 ## 5. Verifying the Installation
 
-Run the following command to verify that the package loads correctly:
+Run the following command to verify cartloader and all dependecies
 
 ```bash
+# activate your environment if you did not
+# replace the $ENV_NAME with your environment name if you did not define it before
+conda activate ${ENV_NAME} 
+
+# verify the installation of cartloader
 python -c "import cartloader; print('cartloader installed successfully!')"
+
+# verify all dependencies
+python ./installation/check_dependencies.py
 ```
+

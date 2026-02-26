@@ -12,6 +12,28 @@ It supports OME‑TIFF/TIFF/PNG inputs and offers optional orientation transform
 - Pre-installed CLI tools: `pmtiles`, `gdal_translate`, `gdaladdo`, `gdalinfo`.
 
 ---
+## Actions
+!!! warning "Action Specifications"
+    No action runs by default. Activate at least one using the [action parameters](#action-parameters).
+
+### Georeference Step (`--georeference`)
+If input is OME-TIFF, extracts a PNG and bounds from the OME‑TIFF and georeferencing is applied automatically.
+
+If `--georeference` is applied with `--georef-*`, georeferencing is applied with bounds provided via one of `--georef-*`.
+
+### Orientation Step (`--rotate`, `--flip-vertical`, `--flip-horizontal`)
+If any of `--rotate`, `--flip-vertical`, `--flip-horizontal` is set, rotation and flips can be applied accordingly prior to tiling. It supports rotate the image clockwise by 90/180/270 degrees. Rotation is applied before flips.
+
+### OME‑TIFF to PNG Step (`--ome2png`)
+Converts an OME‑TIFF to PNG, reads bounds from OME metadata, and records color mode when applicable.
+
+### PNG to PMTiles Step (`--png2pmtiles`)
+Converts the PNG to GeoTIFF and then to PMTiles. An asset JSON is written during conversion.
+
+### Catalog Update Step (`--update-catalog`)
+Appends the generated `<img-id>.pmtiles` to `catalog.yaml` as a basemap layer. This only applies if `catalog.yaml` exists.
+
+---
 ## Example Usage
 
 ### 1) OME‑TIFF → PNG → PMTiles (auto georeference)
@@ -61,7 +83,7 @@ cartloader import_image \
   --img-id ${IMAGE_ID}
 ```
 
-If your input image requires to orientate, you can apply `--rotate`, `--flip-horizontal` `--flip-vertical`. For example:
+If your input image needs orientation, apply `--rotate`, `--flip-horizontal`, and/or `--flip-vertical`. For example:
 
 ```bash
 cartloader import_image \
@@ -72,28 +94,6 @@ cartloader import_image \
   --out-dir /path/to/out \
   --img-id ${IMAGE_ID}
 ```
-
----
-## Actions
-!!! warning "Action Specifications"
-    No action runs by default. Activate at least one using the [action parameters](#action-parameters).
-
-### Georeference Step (`--georeference`)
-If input is OME-TIFF, extracts a PNG and bounds from the OME‑TIFF and georeferencing is applied automatically.
-
-If `--georeference` is applied with `--georef-*`, georeferencing is applied with bounds provided via one of `--georef-*`.
-
-### Orientation Step (`--rotate`, `--flip-vertical`, `--flip-horizontal`)
-If any of `--rotate`, `--flip-vertical`, `--flip-horizontal` is set, rotation and flips can be applied accordingly prior to tiling. It supports rotate the image clockwise by 90/180/270 degrees. Rotation is applied before flips.
-
-### OME‑TIFF to PNG Step (`--ome2png`)
-Converts an OME‑TIFF to PNG, reads bounds from OME metadata, and records color mode when applicable.
-
-### PNG to PMTiles Step (`--png2pmtiles`)
-Converts the PNG to GeoTIFF and then to PMTiles. An asset JSON is written during conversion.
-
-### Catalog Update Step (`--update-catalog`)
-Appends the generated `<img-id>.pmtiles` to `catalog.yaml` as a basemap layer. This only applies if `catalog.yaml` exists.
 
 ---
 ## Parameters
