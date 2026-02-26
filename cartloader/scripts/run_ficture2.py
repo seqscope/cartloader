@@ -510,17 +510,18 @@ def run_ficture2(_args):
 
             # 7) visualization
             cmds=cmd_separator([], f"Decode visualization, ID: {decode_id}")
+            cmds.append(f"{args.gzip} -dc '{decode_fit_tsv}.gz' > '{decode_fit_tsv}'")
             cmd = " ".join([
-                f"{args.gzip} -dc {decode_fit_tsv}.gz |",
-                ficture2bin, "draw-pixel-factors",
-                f"--in-tsv /dev/stdin",
-                f"--header-json {decode_prefix}.json",
+                f"'{ficture2bin}'", "draw-pixel-factors",
+                f"--in-tsv '{decode_fit_tsv}'",
+                f"--header-json '{decode_prefix}.json'",
                 f"--in-color {color_map}",
                 f"--out {decode_prefix}.png",
                 f"--scale {args.decode_scale}",
                 f"--range {args.in_minmax}"
                 ])
             cmds.append(cmd)
+            cmds.append(f"rm -f '{decode_fit_tsv}'")
             mm.add_target(f"{decode_prefix}.png", [decode_summary_flag, color_map, minmax_prereq], cmds)
 
     # - summary (update: always run)
