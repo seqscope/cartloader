@@ -219,6 +219,7 @@ def add_lda_training_target(mm, args, ficture2bin, n_factor, train_width, model_
     #cmds.append(f"{ficture2de} --input {lda_model_matrix} --output {lda_de} --feature_label Feature --min_ct_per_feature {args.min_ct_per_feature} --max_pval_output {args.de_max_pval} --min_fold_output {args.de_min_fold}")
     cmd = " ".join([
         f"{ficture2report}",
+        f"--factor_label factor",
         f"--de '{lda_de}'",
         f"--pseudobulk '{lda_model_matrix}'",
         f"--feature_label Feature",
@@ -319,6 +320,7 @@ def add_pixel_decode_target_per_sample(mm, args, ficture2bin, ficture2report, mo
 
     cmd = " ".join([
         f"{ficture2report}",
+        f"--factor_label factor",
         f"--de '{decode_de}'",
         f"--pseudobulk '{decode_postcount}.gz'",
         f"--feature_label Feature",
