@@ -227,7 +227,7 @@ def add_lda_training_target(mm, args, ficture2bin, n_factor, train_width, model_
         f"--output_pref '{model_prefix}'"
         ])
     cmds.append(cmd)
-    cmds.append(f"[ -f '{lda_de}' ] && [ -f '{model_prefix}.factor.info.html' ] && touch '{model_prefix}_summary.done'")
+    cmds.append(f"[ -f '{lda_de}' ] && [ -f '{model_prefix}.html' ] && touch '{model_prefix}_summary.done'")
     mm.add_target(f"{model_prefix}_summary.done", [f"{model_prefix}.done", color_map], cmds)
 
 def add_projection_target_per_sample(mm, args, ficture2bin, model_prefix, model_id, sample, train_width):
@@ -341,7 +341,7 @@ def add_pixel_decode_target_per_sample(mm, args, ficture2bin, ficture2report, mo
     ])
     cmds.append(cmd)
 
-    cmds.append(f"[ -f '{decode_de}' ] && [ -f '{decode_prefix}.factor.info.html' ] && [ -f '{decode_prefix}.png' ] && touch '{decode_prefix}.done'")
+    cmds.append(f"[ -f '{decode_de}' ] && [ -f '{decode_prefix}.html' ] && [ -f '{decode_prefix}.png' ] && touch '{decode_prefix}.done'")
     mm.add_target(f"{decode_prefix}.done", [cmap_path, f"{decode_prefix}.tsv.done", f"{args.out_dir}/multi.done", f"{model_prefix}.done"], cmds)
 
     return f"{decode_prefix}.done"
@@ -386,7 +386,7 @@ def add_sample_json_target(mm, args, sample, sample_transcript, n_samples):
             f"{model_prefix}.results.tsv.gz",  # shared fit
             f"{sample_prefix}.results.tsv.gz", # sample specific fit 
             f"{model_prefix}.bulk_chisq.tsv",
-            f"{model_prefix}.factor.info.tsv"
+            f"{model_prefix}.info.tsv"
         ])
         summary_aux_args_models.append(model_arg)
         prerequisities.append(f"{model_prefix}.done")
@@ -424,7 +424,7 @@ def add_sample_json_target(mm, args, sample, sample_transcript, n_samples):
             f"{decode_prefix}.png",
             f"{decode_prefix}.pseudobulk.tsv.gz",
             f"{decode_prefix}.bulk_chisq.tsv",
-            f"{decode_prefix}.factor.info.tsv"
+            f"{decode_prefix}.info.tsv"
         ])
         summary_aux_args_decodes.append(decode_arg)
         prerequisities.append(f"{decode_prefix}.done")

@@ -579,7 +579,7 @@ def run_cartload2(_args):
                 },
                 "info":{
                     "required": False,
-                    "in": train_param.get("info_path", f"{in_prefix}.factor.info.tsv"),
+                    "in": train_param.get("info_path", f"{in_prefix}.info.tsv"),
                     "out": f"{out_prefix}-info.tsv"
                 }
             }
@@ -657,7 +657,7 @@ def run_cartload2(_args):
                 in_pixel_png = decode_param.get("pixel_png_path", f"{in_prefix}.png")
                 in_de_tsvf  = decode_param.get("de_tsv_path", f"{in_prefix}.bulk_chisq.tsv")
                 in_post_tsvf = decode_param.get("pseudobulk_tsv_path", f"{in_prefix}.pseudobulk.tsv.gz")
-                in_info_tsvf = decode_param.get("info_tsv_path", f"{in_prefix}.factor.info.tsv")
+                in_info_tsvf = decode_param.get("info_tsv_path", f"{in_prefix}.info.tsv")
 
                 out_id = in_id.replace("_", "-")
                 out_prefix = os.path.join(args.out_dir, out_id)

@@ -391,7 +391,7 @@ def run_ficture2(_args):
 
                 # 2) DE
                 cmds = cmd_separator([], f" LDA DE/report for {train_width}um and {n_factor} factors...")
-                cmds.append(f"'{args.spatula}' diffexp-model-matrix --tsv1 '{lda_model_matrix}' --out '{lda_de}' --min-count {args.de_min_ct_per_feature} --max-pval {args.de_max_pval} --min-fc {args.de_min_fold}")
+                cmds.append(f"'{args.spatula}' diffexp-model-matrix --tsv1 '{lda_model_matrix}' --out '{lda_de}' --min-count {args.min_ct_per_feature} --max-pval {args.de_max_pval} --min-fc {args.de_min_fold}")
                 cmds.append(f"('{args.gzip}' -cd '{lda_de}.de.marginal.tsv.gz' | head -1 | sed 's/^Feature/gene/'; '{args.gzip}' -cd '{lda_de}.de.marginal.tsv.gz' | tail -n +2 | sort -k 2,2n -k 3,3gr;) > '{lda_de}'")
                 cmds.append(f"rm -f '{lda_de}.de.marginal.tsv.gz'")
                 # cmds.append(f"{ficture2de} --input {lda_model_matrix} --output {lda_de} --feature_label Feature --min_ct_per_feature {args.min_ct_per_feature} --max_pval_output {args.de_max_pval} --min_fold_output {args.de_min_fold}")
@@ -405,7 +405,7 @@ def run_ficture2(_args):
                     f"--output_pref {model_prefix}"
                     ])
                 cmds.append(cmd)
-                cmds.append(f"[ -f {lda_de} ] && [ -f {model_prefix}.factor.info.html ] && touch {model_prefix}_summary.done")
+                cmds.append(f"[ -f {lda_de} ] && [ -f {model_prefix}.html ] && touch {model_prefix}_summary.done")
                 mm.add_target(f"{model_prefix}_summary.done", [f"{model_prefix}.done", color_map], cmds)
 
             # - umap
@@ -445,7 +445,7 @@ def run_ficture2(_args):
             decode_flag = f"{decode_prefix}.done"
 
             decode_de = f"{decode_prefix}.bulk_chisq.tsv"
-            decode_report = f"{decode_prefix}.factor.info.html"
+            decode_report = f"{decode_prefix}.html"
             decode_summary_flag=f"{decode_prefix}_summary.done"
 
             #1) transform/fit
@@ -488,7 +488,7 @@ def run_ficture2(_args):
             #     f"--min_fold_output {args.de_min_fold}",
             #     f"--feature_label Feature"
             #     ])
-            cmds.append(f"'{args.spatula}' diffexp-model-matrix --tsv1 '{decode_postcount}' --out '{decode_de}' --min-count {args.de_min_ct_per_feature} --max-pval {args.de_max_pval} --min-fc {args.de_min_fold}")
+            cmds.append(f"'{args.spatula}' diffexp-model-matrix --tsv1 '{decode_postcount}.gz' --out '{decode_de}' --min-count {args.min_ct_per_feature} --max-pval {args.de_max_pval} --min-fc {args.de_min_fold}")
             cmds.append(f"('{args.gzip}' -cd '{decode_de}.de.marginal.tsv.gz' | head -1 | sed 's/^Feature/gene/'; '{args.gzip}' -cd '{decode_de}.de.marginal.tsv.gz' | tail -n +2 | sort -k 2,2n -k 3,3gr;) > '{decode_de}'")
             cmds.append(f"rm -f '{decode_de}.de.marginal.tsv.gz'")
 
