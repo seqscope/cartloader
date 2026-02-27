@@ -48,8 +48,9 @@ def parse_arguments(_args):
     aux_params.add_argument('--out-catalog', type=str, default="catalog.yaml", help='The YAML file containing the output catalog')
     aux_params.add_argument('--background-assets', type=str, nargs="+", help='The JSON/YAML file containing background assets in the form of [id:file] or [id1:id2:file]')
     aux_params.add_argument('--major-axis', type=str, default="X", choices=['X', 'Y', 'auto'], help='Axis where transcripts.tsv.gz are sorted. Options: X, Y, auto. If "auto", it will be automatically defined by the longer axis. Default: X')
-    aux_params.add_argument('--rename-x', type=str, default='X:lon', help='tippecanoe parameters to rename the X axis')  
-    aux_params.add_argument('--rename-y', type=str, default='Y:lat', help='tippecanoe parameters to rename the Y axis')  
+    ## Disabled rename x y arguments given two cmd use "x:lon" "y:lat" with lowercase while one cmd uses "X:lon" "Y:lat".
+    # aux_params.add_argument('--rename-x', type=str, default='X:lon', help='tippecanoe parameters to rename the X axis')  
+    # aux_params.add_argument('--rename-y', type=str, default='Y:lat', help='tippecanoe parameters to rename the Y axis')  
     aux_params.add_argument('--colname-feature', type=str, default='gene', help='Input/output Column name for gene name (default: gene)')
     aux_params.add_argument('--colname-count', type=str, default='count', help='Column name for feature counts')
     aux_params.add_argument('--out-molecules-id', type=str, default='genes', help='Prefix of output molecules PMTiles files. No directory path should be included')
@@ -374,7 +375,7 @@ def run_cartload_join(_args):
         "--threads", str(args.threads),
         "--colname-feature", args.colname_feature,
         "--colname-count", args.colname_count,
-        "--col-rename", "X:lon", "Y:lat",
+        "--col-rename", "X:lon", "Y:lat", # f"{args.rename_x}", f"{args.rename_y}",
         "--max-tile-bytes", str(args.max_tile_bytes),
         "--max-feature-counts", str(args.max_feature_counts),
         "--preserve-point-density-thres", str(args.preserve_point_density_thres),

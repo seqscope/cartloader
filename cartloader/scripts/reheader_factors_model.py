@@ -10,7 +10,7 @@ def parse_arguments(_args):
     parser.add_argument('--out', required=True, type=str, help='Prefix for the output TSV files')
     parser.add_argument('--model-suffix', type=str, default='.model_matrix.tsv.gz', help='Suffix for the output model_matrix TSV file')
     parser.add_argument('--factormap-suffix', type=str, default='.factormap.tsv', help='Suffix for the output factormap TSV file')
-    parser.add_argument('--gzip', type=str, default='gzip', help='Path to gzip binary. May be replaced, e.g. to "pigz -p 10", for faster compression')
+    # parser.add_argument('--gzip', type=str, default='gzip', help='Path to gzip binary. May be replaced, e.g. to "pigz -p 10", for faster compression')
     parser.add_argument('--log', action='store_true', default=False, help='Write log to file')
     parser.add_argument('--log-suffix', type=str, default=".reheader.log", help='The suffix for the log file (appended to the output directory). Default: .log')
 
