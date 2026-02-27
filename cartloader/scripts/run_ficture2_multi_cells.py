@@ -63,7 +63,7 @@ def parse_arguments(_args):
     aux_params.add_argument('--seed', type=int, default=1, help='Random seed for random number generation (default: 1)')
 
     # others parameters shared across steps
-    #aux_params.add_argument('--min-feature-count', type=int, default=20, help='Minimum feature count for LDA factorization')
+    aux_params.add_argument('--min-feature-count', type=int, default=20, help='Minimum feature count for LDA factorization')
     #aux_params.add_argument('--min-cell-count', type=int, default=50, help='Minimum cell count for LDA factorization')
     aux_params.add_argument('--de-min-ct-per-feature', type=int, default=20, help='Minimum count per feature for differential expression (default: 20)')
     aux_params.add_argument('--de-max-pval', type=float, default=1e-3, help='P-value cutoff for differential expression (default: 1e-3)')
