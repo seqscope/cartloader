@@ -67,7 +67,7 @@ def parse_arguments(_args):
 
     # others parameters shared across steps
     aux_params.add_argument('--min-feature-count', type=int, default=20, help='Minimum feature count for LDA factorization')
-    aux_params.add_argument('--min-cell-count', type=int, default=50, help='Minimum cell count for LDA factorization')
+    aux_params.add_argument('--min-cell-count', type=int, default=50, help='Minimum cell count for LDA factorization (not in effect with --mex-dir option)')
     aux_params.add_argument('--de-min-ct-per-feature', type=int, default=20, help='Minimum count per feature for differential expression (default: 20)')
     aux_params.add_argument('--de-max-pval', type=float, default=1e-3, help='P-value cutoff for differential expression (default: 1e-3)')
     aux_params.add_argument('--de-min-fold', type=float, default=1.5, help='Fold-change cutoff for differential expression (default: 1.5)')
@@ -238,7 +238,7 @@ def run_ficture2_multi_cells(_args):
                 #sample_id = in_samples[0]  ## use the first sample's tiled file to create SPTSV
                 pixelf = f"{args.in_dir}/samples/{sample_id}/{sample_id}.tiled"
                 sample_sptsv_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.sptsv"
-                cmd = f"{args.spatula} pixel2sptsv --pixel {pixelf}.tsv --no-header --idx-col-x {args.colidx_x} --idx-col-y {args.colidx_y} --idx-col-ftr {args.colidx_feature} --idx-col-cnt {args.colidx_count} --idx-col-id {args.colidx_cell_id} --ignore-ids {args.ignore_ids} --out {sample_sptsv_prefix} --min-feature-count {args.min_feature_count} {cmd_ftr_include_exclude}"
+                cmd = f"{args.spatula} pixel2sptsv --min-cell-count {args.min_cell_count} --pixel {pixelf}.tsv --no-header --idx-col-x {args.colidx_x} --idx-col-y {args.colidx_y} --idx-col-ftr {args.colidx_feature} --idx-col-cnt {args.colidx_count} --idx-col-id {args.colidx_cell_id} --ignore-ids {args.ignore_ids} --out {sample_sptsv_prefix} --min-feature-count {args.min_feature_count} {cmd_ftr_include_exclude}"
                 cmds.append(cmd)
                 samp2sptsv[sample_id] = sample_sptsv_prefix
                 deps.append(f"{pixelf}.tsv")
