@@ -9,9 +9,12 @@ def parse_arguments(_args):
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", 
                                      description="Write a JSON file to summarize the parameters.")
-    # parser.add_argument('--out-dir', required=True, type=str, help='Output directory') # disabled given lack of use.
-    parser.add_argument('--out-json', required=True, type=str, help='Path to the output JSON file. Default: <out-dir>/ficture.params.json')
-    parser.add_argument('--mode', type=str, default="write", choices=["write", "append"], help='Write mode for the output JSON. Default: write. If write, a new file will be created based on the arguments provided. If append, the new parameters will be merged into the existing JSON file if it exists.')
+    parser.add_argument('--mode', type=str, default="write", choices=["write", "append"], help='Write mode. In "write" mode, --in-transcript/--in-feature/--in-minmax are required. In "append" mode, they are optional if present in existing JSON.')
+    parser.add_argument('--out-json', required=True, type=str, help='Path to the output JSON file')
+    parser.add_argument('--in-transcript', type=str, default=None, help='(Optional) Path to transcript TSV/GZ. Required in --mode write; optional in --mode append when existing JSON already has in_sge.in_transcript.')
+    parser.add_argument('--in-feature', type=str, default=None, help='(Optional) Path to feature TSV/GZ. Required in --mode write; optional in --mode append when existing JSON already has in_sge.in_feature.')
+    parser.add_argument('--in-minmax', type=str, default=None, help='(Optional) Path to minmax TSV. Required in --mode write; optional in --mode append when existing JSON already has in_sge.in_minmax.')
+    parser.add_argument('--in-feature-ficture', type=str, default=None, help='(Optional) Feature file used by FICTURE if different from --in-feature.')
     parser.add_argument('--lda-model', nargs='*', type=str, default=None, help='LDA Model information: <model_type>,<model_path>,<model_id>,<train_width>,<n_factor>,<cmap>')
     parser.add_argument('--decode', nargs='*', type=str, default=None, help='Projection information: <model_type>,<model_id>,<projection_id>,<fit_width>,<anchor_res>')
     parser.add_argument('--umap', nargs='*', type=str, default=None, help='UMAP information if exists. Each entry: <model_type>,<model_id>,<umap_tsv>,<umap_png>,<umap_single_factor_png>.')
