@@ -30,7 +30,7 @@ def parse_arguments(_args):
     inout_params = parser.add_argument_group("Input/Output Parameters", "Input and output parameters for FICTURE")
     inout_params.add_argument('--out-dir', required=True, type=str, help='Output directory')
     inout_params.add_argument('--out-json', type=str, default=None, help="Path to output JSON file to store analysis parameters (default: <out-dir>/ficture.params.json)")
-    inout_params.add_argument('--in-list', type=str, default=None, help='Path to input TSV with one row per sample: sample id and transcript file path')
+    inout_params.add_argument('--in-list', required=True, type=str, default=None, help='Path to input TSV with one row per sample: sample id and transcript file path')
 
     key_params = parser.add_argument_group("Key Parameters", "Key parameters that requires user's attention")
     key_params.add_argument('--width', type=str, required=True, help='Comma-separated hexagon flat-to-flat widths (in um) for LDA training')
