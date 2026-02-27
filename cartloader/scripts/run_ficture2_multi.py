@@ -26,7 +26,6 @@ def parse_arguments(_args):
     run_params.add_argument('--threads', type=int, default=8, help='Maximum number of threads per job (default: 8)')
     run_params.add_argument('--n-jobs', type=int, default=2, help='Number of parallel jobs to run (default: 2)')
     run_params.add_argument('--makefn', type=str, default="run_ficture2_multi.mk", help='File name of Makefile to write (default: run_ficture2_multi.mk)')
-    run_params.add_argument('--umap', action='store_true', default=False, help='Create UMAP plots for each LDA model')
 
     inout_params = parser.add_argument_group("Input/Output Parameters", "Input and output parameters for FICTURE")
     inout_params.add_argument('--out-dir', required=True, type=str, help='Output directory')
