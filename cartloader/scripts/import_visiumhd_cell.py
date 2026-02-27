@@ -322,8 +322,10 @@ def import_visiumhd_cell(_args):
                     sys.exit(1)
                 logger.info(f"  * Wrote differential expression results to {de_out}")
 
-                ## create factor reporting files
-                ficture2report = args.python + " " + os.path.join(args.ficture2, "ext/py/factor_report.py")                        
+                ## create factor reporting files                
+                ficture2report = os.path.join(args.ficture2, "ext/py/factor_report.py")                        
+                assert os.path.exists(ficture2report), f"File not found: {ficture2report}. Please check the path to punkst/ficture2 provided by --ficture2"
+
                 cmd = f"'{args.gzip}' -dc '{pseudobulk_prefix}.tsv.gz' > '{pseudobulk_prefix}.tsv'"
                 result = subprocess.run(cmd, shell=True, capture_output=True)
                 if result.returncode != 0:
@@ -337,9 +339,11 @@ def import_visiumhd_cell(_args):
                     sys.exit(1)
 
                 cmd = " ".join([
+                    args.python,
                     ficture2report,
                     f"--de '{de_out}'",
                     f"--pseudobulk '{pseudobulk_prefix}.tsv'",
+                    f"--factor_label factor",
                     f"--feature_label Feature",
                     f"--color_table '{pseudobulk_prefix}.cmap.tsv'",
                     f"--output_pref '{pseudobulk_prefix}'",
@@ -349,7 +353,7 @@ def import_visiumhd_cell(_args):
                     logger.error(f"Command {cmd}\nfailed with error: {result.stderr.decode()}")
                     sys.exit(1)
 
-                cmd = f"cp '{pseudobulk_prefix}.factor.info.tsv' '{args.outprefix}-info.tsv'"
+                cmd = f"cp '{pseudobulk_prefix}.info.tsv' '{args.outprefix}-info.tsv'"
                 result = subprocess.run(cmd, shell=True, capture_output=True)
                 if result.returncode != 0:
                     logger.error(f"Command {cmd}\nfailed with error: {result.stderr.decode()}")
@@ -359,7 +363,7 @@ def import_visiumhd_cell(_args):
                 temp_fs.append(f"{args.outprefix}-pseudobulk.de.marginal.tsv.gz")
                 temp_fs.append(f"{args.outprefix}-pseudobulk.tsv")
                 temp_fs.append(f"{args.outprefix}-pseudobulk.cmap.tsv")
-                temp_fs.append(f"{args.outprefix}-pseudobulk.factor.info.tsv")
+                temp_fs.append(f"{args.outprefix}-pseudobulk.info.tsv")
 
 
     if args.cells or args.boundaries:
