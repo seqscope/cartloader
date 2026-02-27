@@ -305,6 +305,7 @@ def run_ficture2_multi_cells(_args):
         cmds.append(f"touch {lda_prefix}.done")
         mm.add_target(f"{lda_prefix}.done", deps, cmds);
 
+    samp2boundaries = {}
     if args.leiden:
         lda_prefix = os.path.join(args.out_dir, args.out_prefix) + ".lda"
         leiden_prefix = os.path.join(args.out_dir, args.out_prefix) + ".leiden"
@@ -427,7 +428,6 @@ def run_ficture2_multi_cells(_args):
         mm.add_target(f"{leiden_prefix}.done", [f"{lda_prefix}.done"], cmds)
 
         ## spatial visualization of leiden clusters
-        samp2boundaries = {}
         if args.list_boundaries is not None:
             with flexopen(args.list_boundaries, "rt") as rf:
                 for line in rf:
