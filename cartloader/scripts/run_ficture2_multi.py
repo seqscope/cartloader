@@ -43,12 +43,12 @@ def parse_arguments(_args):
     # input column indexes
     aux_params.add_argument('--colidx-x',  type=int, default=1, help='Column index for X-axis in the --in-transcript (default: 1)')
     aux_params.add_argument('--colidx-y',  type=int, default=2, help='Column index for Y-axis in the --in-transcript (default: 2)')
-    aux_params.add_argument('--colidx-feature',  type=int, default=3, help='Column index for Y-axis in the --in-transcript (default: 3)')
+    aux_params.add_argument('--colidx-feature',  type=int, default=3, help='Column index for feature in the --in-transcript (default: 3)')
     aux_params.add_argument('--colidx-count',  type=int, default=4, help='Column index for intensity in the --in-transcript (default: 4)')
     # tile
     aux_params.add_argument('--tile-size', type=int, default=500, help='Tile size for tiling (default: 500)')
     aux_params.add_argument('--tile-buffer', type=int, default=1000, help='Tile buffer for tiling (default: 1000)')
-    aux_params.add_argument('--seed', type=int, default=1, help='Random seed for random number generation (default: 0)')
+    aux_params.add_argument('--seed', type=int, default=1, help='Random seed for random number generation (default: 1)')
     # segmentation - ficture
     aux_params.add_argument('--min-count-per-sample', type=int, default=50, help='Minimum count per sample in the tiled SGE (default: 50)')
     aux_params.add_argument('--min-ct-per-unit-hexagon', type=int, default=50, help='Minimum count per hexagon in hexagon segmentation in FICTURE compatible format (default: 50)')
@@ -62,7 +62,7 @@ def parse_arguments(_args):
     aux_params.add_argument('--decode-scale', type=int, default=1, help='Decode scale parameter for plotting')
 
     # others parameters shared across steps
-    aux_params.add_argument('--min-count-train', type=int, default=50, help='Minimum count for training (default: 50)')
+    # aux_params.add_argument('--min-count-train', type=int, default=50, help='Minimum count for training (default: 50)') ## disabled due to lack of use
     aux_params.add_argument('--de-min-ct-per-feature', type=int, default=20, help='Minimum count per feature for differential expression (default: 20)')
     aux_params.add_argument('--de-max-pval', type=float, default=1e-3, help='P-value cutoff for differential expression (default: 1e-3)')
     aux_params.add_argument('--de-min-fold', type=float, default=1.5, help='Fold-change cutoff for differential expression (default: 1.5)')
@@ -81,7 +81,7 @@ def parse_arguments(_args):
     env_params = parser.add_argument_group("ENV Parameters", "Environment parameters, e.g., tools.")
     env_params.add_argument('--gzip', type=str, default="gzip", help='Path to gzip binary. For faster processing, use "pigz -p 4"')
     env_params.add_argument('--sort', type=str, default="sort", help='Path to sort binary. For faster processing, you may add arguments like "sort -T /path/to/new/tmpdir --parallel=20 -S 10G"')
-    env_params.add_argument('--sort-mem', type=str, default="1G", help='Memory size for each process (default: 1G)')
+    # env_params.add_argument('--sort-mem', type=str, default="1G", help='Memory size for each process (default: 1G)') ## disabled due to lack of use
     env_params.add_argument('--spatula', type=str, default=f"spatula",  help='Path to spatula binary (default: "spatula" in the system PATH)') # default=f"{repo_dir}/submodules/spatula/bin/spatula",
     env_params.add_argument('--ficture2', type=str, default=os.path.join(repo_dir, "submodules", "punkst"), help='Path to punkst (ficture2) repository (default: <cartloader_dir>/submodules/punkst)')
     env_params.add_argument('--python', type=str, default="python3",  help='Python3 binary')
