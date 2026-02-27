@@ -214,7 +214,7 @@ def add_lda_training_target(mm, args, ficture2bin, n_factor, train_width, model_
     # 4) DE
     cmds = cmd_separator([], f" LDA DE/report for {train_width}um and {n_factor} factors...")
     cmds.append(f"'{args.spatula}' diffexp-model-matrix --tsv1 '{lda_model_matrix}' --out '{lda_de}' --min-count {args.de_min_ct_per_feature} --max-pval {args.de_max_pval} --min-fc {args.de_min_fold}")
-    cmds.append(f"('{args.gzip}' -cd '{lda_de}.de.marginal.tsv.gz' | head -1 | sed 's/^Feature/gene/'; '{args.gzip}' -cd '{lda_de}.de.marginal.tsv.gz' | tail -n +2 | sort -k 2,2n -k 3,3gr;) > '{lda_de}'")
+    cmds.append(f"({args.gzip} -cd '{lda_de}.de.marginal.tsv.gz' | head -1 | sed 's/^Feature/gene/'; {args.gzip} -cd '{lda_de}.de.marginal.tsv.gz' | tail -n +2 | sort -k 2,2n -k 3,3gr;) > '{lda_de}'")
     cmds.append(f"rm -f '{lda_de}.de.marginal.tsv.gz'")
     #cmds.append(f"{ficture2de} --input {lda_model_matrix} --output {lda_de} --feature_label Feature --min_ct_per_feature {args.min_ct_per_feature} --max_pval_output {args.de_max_pval} --min_fold_output {args.de_min_fold}")
     cmd = " ".join([
@@ -224,7 +224,7 @@ def add_lda_training_target(mm, args, ficture2bin, n_factor, train_width, model_
         f"--pseudobulk '{lda_model_matrix}'",
         f"--feature_label Feature",
         f"--color_table '{color_map}'",
-        f"--output_pref '{model_prefix}'"
+        f"--output_pref '{model_prefix}.factor.info'"
         ])
     cmds.append(cmd)
     cmds.append(f"[ -f '{lda_de}' ] && [ -f '{model_prefix}.factor.info.html' ] && touch '{model_prefix}_summary.done'")
@@ -325,7 +325,7 @@ def add_pixel_decode_target_per_sample(mm, args, ficture2bin, ficture2report, mo
         f"--pseudobulk '{decode_postcount}.gz'",
         f"--feature_label Feature",
         f"--color_table '{cmap_path}'",
-        f"--output_pref '{decode_prefix}'"
+        f"--output_pref '{decode_prefix}.factor.info'"
     ])
     cmds.append(cmd)
 
