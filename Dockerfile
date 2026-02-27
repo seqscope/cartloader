@@ -20,6 +20,7 @@ RUN apt-get update && apt-get install -y \
     wget \
     curl \
     gzip \
+    perl \
     tabix \
     bc \
     python3 \
@@ -58,14 +59,14 @@ WORKDIR /app
 # Clone the cartloader repository 
 # * submodules: 
 #   - Only clone the submodules of punkst, spatula and tippecanoe (skip the rest)
-#   - spatula uses docker-dev branch
+#   - spatula uses main branch
 #   - the following submodules are not installed:
 #       - ficture
 #       - ImageMagick: (installed in the step apt-get install step)
 #       - factor_viz 
 #       - go_pmtiles: (download from the release directly)
 
-RUN git clone https://github.com/seqscope/cartloader.git 
+RUN git clone --branch main --single-branch https://github.com/seqscope/cartloader.git 
 
 # Set working directory to the cloned repository
 WORKDIR /app/cartloader
@@ -93,7 +94,7 @@ RUN python3 -m pip install -e ./
 # Install submodules
 # ===============================
 RUN cd submodules/spatula && \
-    git checkout docker-dev && \
+    git checkout main && \
     git submodule update --init --recursive submodules/htslib submodules/qgenlib  
 
 # Build submodule: htslib
