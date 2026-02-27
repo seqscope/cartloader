@@ -182,14 +182,14 @@ def run_ficture2(_args):
         cmds = cmd_separator([], f"Creating tiled tsv from {os.path.basename(args.in_transcript)}...")
         cmd = " ".join([
             ficture2bin, "pts2tiles",
-            f"--in-tsv {args.in_transcript}",
-            f"--out-prefix {args.out_dir}/transcripts.tiled",
+            f"--in-tsv '{args.in_transcript}'",
+            f"--out-prefix '{args.out_dir}/transcripts.tiled'",
             f"--icol-x {args.colidx_x-1}",
             f"--icol-y {args.colidx_y-1}",
             f"--icol-feature 2",
             f"--icol-int 3",
             f"--skip 1",
-            f"--temp-dir {args.out_dir}/tmp",
+            f"--temp-dir '{args.out_dir}/tmp'",
             f"--tile-size {args.tile_size}",
             f"--tile-buffer {args.tile_buffer}",
             f"--threads {args.threads}"
@@ -264,15 +264,15 @@ def run_ficture2(_args):
             cmds = cmd_separator([], f"Creating hexagon-indexed SGE in FICTURE-compatible format for {hexagon_width}um...")
             cmd = " ".join([
                 ficture2bin, "tiles2hex",
-                f"--in-tsv {args.out_dir}/transcripts.tiled.tsv",
-                f"--in-index {args.out_dir}/transcripts.tiled.index",  
-                f"--feature-dict {feature_nohdr}",
+                f"--in-tsv '{args.out_dir}/transcripts.tiled.tsv'",
+                f"--in-index '{args.out_dir}/transcripts.tiled.index'",  
+                f"--feature-dict '{feature_nohdr}'",
                 f"--icol-x {args.colidx_x-1}",
                 f"--icol-y {args.colidx_y-1}",
                 f"--icol-feature 2",
                 f"--icol-int 3",
-                f"--out {hexagon_prefix}.tsv",
-                f"--temp-dir {args.out_dir}/tmp/{hexagon_width}",
+                f"--out '{hexagon_prefix}.tsv'",
+                f"--temp-dir '{args.out_dir}/tmp/{hexagon_width}'",
                 f"--threads {args.threads}",
                 f"--hex-grid-dist {hexagon_width}",
                 f"--min-count {args.min_ct_per_unit_hexagon}"
@@ -294,15 +294,15 @@ def run_ficture2(_args):
             cmds = cmd_separator([], f"Creating hexagon-indexed SGE in 10x MEX format for {hexagon_width}um...")
             cmd = " ".join([
                 ficture2bin, "tiles2hex",
-                f"--in-tsv {args.out_dir}/transcripts.tiled.tsv",
-                f"--in-index {args.out_dir}/transcripts.tiled.index",  
-                f"--feature-dict {feature_nohdr}",
+                f"--in-tsv '{args.out_dir}/transcripts.tiled.tsv'",
+                f"--in-index '{args.out_dir}/transcripts.tiled.index'",  
+                f"--feature-dict '{feature_nohdr}'",
                 f"--icol-x {args.colidx_x-1}",
                 f"--icol-y {args.colidx_y-1}",
                 f"--icol-feature 2",
                 f"--icol-int 3",
-                f"--out {hexagon_10x_prefix}.tsv",
-                f"--temp-dir {args.out_dir}/tmp/{hexagon_width}",
+                f"--out '{hexagon_10x_prefix}.tsv'",
+                f"--temp-dir '{args.out_dir}/tmp/{hexagon_width}'",
                 f"--threads {args.threads}",
                 f"--hex-grid-dist {hexagon_width}",
                 f"--min-count 1"
@@ -315,9 +315,9 @@ def run_ficture2(_args):
             
             cmd = " ".join([
                 f"{args.spatula} sptsv2mex",
-                f"--tsv {hexagon_10x_prefix}.randomized.tsv",
-                f"--json {hexagon_10x_prefix}.json",
-                f"--out-dir {hexagon_10x_dir}"])
+                f"--tsv '{hexagon_10x_prefix}.randomized.tsv'",
+                f"--json '{hexagon_10x_prefix}.json'",
+                f"--out-dir '{hexagon_10x_dir}'"])
             cmds.append(cmd)
             cmds.append(f'if [ -f {hexagon_10x_dir}/barcodes.tsv.gz ] && [ -f {hexagon_10x_dir}/features.tsv.gz ]  && [ -f {hexagon_10x_dir}/matrix.mtx.gz ] && [ -f {hexagon_10x_prefix}.randomized.tsv ]; then rm {hexagon_10x_prefix}.randomized.tsv {hexagon_10x_prefix}.tsv; fi')
             cmds.append(f"[ -f {hexagon_10x_dir}/barcodes.tsv.gz ] && [ -f {hexagon_10x_dir}/features.tsv.gz ]  && [ -f {hexagon_10x_dir}/matrix.mtx.gz ] && touch {hexagon_10x_dir}/hexagon_10x.done" )
@@ -350,14 +350,14 @@ def run_ficture2(_args):
                 cmds = cmd_separator([], f"LDA training for {train_width}um and {n_factor} factors...")
                 cmd = " ".join([
                     ficture2bin, "lda4hex",
-                    f"--in-data {hexagon}",
-                    f"--in-meta {hexagon_meta}",
-                    f"--out-prefix {model_prefix}.unsorted",
+                    f"--in-data '{hexagon}'",
+                    f"--in-meta '{hexagon_meta}'",
+                    f"--out-prefix '{model_prefix}.unsorted'",
                     f"--n-topics {n_factor}",
                     f"--transform",
                     f"--min-count-train {args.min_ct_per_unit_train}",
                     f"--min-count-per-feature {args.min_ct_per_feature}",
-                    f"--features {feature_nohdr}",
+                    f"--features '{feature_nohdr}'",
                     f"--include-feature-regex '{args.include_feature_regex}'" if args.include_feature_regex is not None else "",
                     f"--exclude-feature-regex '{args.exclude_feature_regex}'" if args.exclude_feature_regex is not None else "",
                     f"--minibatch-size {args.minibatch_size}",
@@ -370,12 +370,12 @@ def run_ficture2(_args):
                 #cmds.append(cmd)
                 cmd = " ".join([
                     args.spatula, "append-topk-tsv",
-                    f"--in-model {model_prefix}.unsorted.model.tsv",
-                    f"--in-json {hexagon_meta}",
-                    f"--out-model {model_prefix}.model.tsv",
+                    f"--in-model '{model_prefix}.unsorted.model.tsv'",
+                    f"--in-json '{hexagon_meta}'",
+                    f"--out-model '{model_prefix}.model.tsv'",
                     f"--reorder",
-                    f"--in-tsv {model_prefix}.unsorted.results.tsv",
-                    f"--out-tsv {lda_fit_tsv}",
+                    f"--in-tsv '{model_prefix}.unsorted.results.tsv'",
+                    f"--out-tsv '{lda_fit_tsv}'",
                     f"--offset-model 1"
                 ])
                 cmds.append(cmd)
@@ -392,20 +392,20 @@ def run_ficture2(_args):
                 # 2) DE
                 cmds = cmd_separator([], f" LDA DE/report for {train_width}um and {n_factor} factors...")
                 cmds.append(f"'{args.spatula}' diffexp-model-matrix --tsv1 '{lda_model_matrix}' --out '{lda_de}' --min-count {args.min_ct_per_feature} --max-pval {args.de_max_pval} --min-fc {args.de_min_fold}")
-                cmds.append(f"('{args.gzip}' -cd '{lda_de}.de.marginal.tsv.gz' | head -1 | sed 's/^Feature/gene/'; '{args.gzip}' -cd '{lda_de}.de.marginal.tsv.gz' | tail -n +2 | sort -k 2,2n -k 3,3gr;) > '{lda_de}'")
+                cmds.append(f"({args.gzip} -cd '{lda_de}.de.marginal.tsv.gz' | head -1 | sed 's/^Feature/gene/'; {args.gzip} -cd '{lda_de}.de.marginal.tsv.gz' | tail -n +2 | sort -k 2,2n -k 3,3gr;) > '{lda_de}'")
                 cmds.append(f"rm -f '{lda_de}.de.marginal.tsv.gz'")
                 # cmds.append(f"{ficture2de} --input {lda_model_matrix} --output {lda_de} --feature_label Feature --min_ct_per_feature {args.min_ct_per_feature} --max_pval_output {args.de_max_pval} --min_fold_output {args.de_min_fold}")
                 cmd = " ".join([
                     ficture2report,
                     f"--factor_label factor",
-                    f"--de {lda_de}",
-                    f"--pseudobulk {lda_model_matrix}",
+                    f"--de '{lda_de}'",
+                    f"--pseudobulk '{lda_model_matrix}'",
                     f"--feature_label Feature",
-                    f"--color_table {color_map}",
-                    f"--output_pref {model_prefix}"
+                    f"--color_table '{color_map}'",
+                    f"--output_pref '{model_prefix}.factor.info'"
                     ])
                 cmds.append(cmd)
-                cmds.append(f"[ -f {lda_de} ] && [ -f {model_prefix}.html ] && touch {model_prefix}_summary.done")
+                cmds.append(f"[ -f {lda_de} ] && [ -f {model_prefix}.factor.info.html ] && touch {model_prefix}_summary.done")
                 mm.add_target(f"{model_prefix}_summary.done", [f"{model_prefix}.done", color_map], cmds)
 
             # - umap
@@ -445,18 +445,18 @@ def run_ficture2(_args):
             decode_flag = f"{decode_prefix}.done"
 
             decode_de = f"{decode_prefix}.bulk_chisq.tsv"
-            decode_report = f"{decode_prefix}.html"
+            decode_report = f"{decode_prefix}.factor.info.html"
             decode_summary_flag=f"{decode_prefix}_summary.done"
 
             #1) transform/fit
             cmds=cmd_separator([], f"Creating decode, ID: {decode_id}")
             cmd = " ".join([
                 ficture2bin, "pixel-decode",
-                f"--model {model_path}",
-                f"--in-tsv {args.out_dir}/transcripts.tiled.tsv",
-                f"--in-index {args.out_dir}/transcripts.tiled.index",
-                f"--temp-dir {args.out_dir}/tmp/{decode_id}",
-                f"--out {decode_prefix}.tsv",
+                f"--model ' {model_path}'",
+                f"--in-tsv '{args.out_dir}/transcripts.tiled.tsv'",
+                f"--in-index '{args.out_dir}/transcripts.tiled.index'",
+                f"--temp-dir '{args.out_dir}/tmp/{decode_id}'",
+                f"--out '{decode_prefix}.tsv'",
                 f"--icol-x {args.colidx_x-1}",
                 f"--icol-y {args.colidx_y-1}",
                 f"--icol-feature 2",
@@ -489,7 +489,7 @@ def run_ficture2(_args):
             #     f"--feature_label Feature"
             #     ])
             cmds.append(f"'{args.spatula}' diffexp-model-matrix --tsv1 '{decode_postcount}.gz' --out '{decode_de}' --min-count {args.min_ct_per_feature} --max-pval {args.de_max_pval} --min-fc {args.de_min_fold}")
-            cmds.append(f"('{args.gzip}' -cd '{decode_de}.de.marginal.tsv.gz' | head -1 | sed 's/^Feature/gene/'; '{args.gzip}' -cd '{decode_de}.de.marginal.tsv.gz' | tail -n +2 | sort -k 2,2n -k 3,3gr;) > '{decode_de}'")
+            cmds.append(f"({args.gzip} -cd '{decode_de}.de.marginal.tsv.gz' | head -1 | sed 's/^Feature/gene/'; {args.gzip} -cd '{decode_de}.de.marginal.tsv.gz' | tail -n +2 | sort -k 2,2n -k 3,3gr;) > '{decode_de}'")
             cmds.append(f"rm -f '{decode_de}.de.marginal.tsv.gz'")
 
             cmds.append(cmd)
@@ -497,11 +497,11 @@ def run_ficture2(_args):
             cmd = " ".join([
                 ficture2report,
                 f"--factor_label factor",
-                f"--de {decode_de}",
-                f"--pseudobulk {decode_postcount}.gz",
+                f"--de '{decode_de}'",
+                f"--pseudobulk '{decode_postcount}.gz'",
                 f"--feature_label Feature",
-                f"--color_table {color_map}",
-                f"--output_pref {decode_prefix}"
+                f"--color_table '{color_map}'",
+                f"--output_pref '{decode_prefix}.factor.info'"
                 ])
             cmds.append(cmd)
             # - done & target
@@ -510,17 +510,18 @@ def run_ficture2(_args):
 
             # 7) visualization
             cmds=cmd_separator([], f"Decode visualization, ID: {decode_id}")
+            cmds.append(f"{args.gzip} -dc '{decode_fit_tsv}.gz' > '{decode_fit_tsv}'")
             cmd = " ".join([
-                f"{args.gzip} -dc {decode_fit_tsv}.gz |",
-                ficture2bin, "draw-pixel-factors",
-                f"--in-tsv /dev/stdin",
-                f"--header-json {decode_prefix}.json",
-                f"--in-color {color_map}",
-                f"--out {decode_prefix}.png",
+                f"'{ficture2bin}'", "draw-pixel-factors",
+                f"--in-tsv '{decode_fit_tsv}'",
+                f"--header-json '{decode_prefix}.json'",
+                f"--in-color '{color_map}'",
+                f"--out '{decode_prefix}.png'",
                 f"--scale {args.decode_scale}",
                 f"--range {args.in_minmax}"
                 ])
             cmds.append(cmd)
+            cmds.append(f"rm -f '{decode_fit_tsv}'")
             mm.add_target(f"{decode_prefix}.png", [decode_summary_flag, color_map, minmax_prereq], cmds)
 
     # - summary (update: always run)
@@ -580,10 +581,10 @@ def run_ficture2(_args):
         summary_cmd_parts = [
             "cartloader", "write_json_for_ficture2",
             "--mode append",
-            f"--in-transcript {args.in_transcript}",
-            f"--in-feature {args.in_feature}", # use the original feature file for SGE
-            f"--in-minmax {args.in_minmax}",
-            f"--out-json {args.out_json}",
+            f"--in-transcript '{args.in_transcript}'",
+            f"--in-feature '{args.in_feature}'", # use the original feature file for SGE
+            f"--in-minmax '{args.in_minmax}'",
+            f"--out-json '{args.out_json}'",
         ]
         if feature_plain:
             summary_cmd_parts.append(f"--in-feature-ficture {feature_plain}")

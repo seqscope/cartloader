@@ -214,7 +214,7 @@ def add_lda_training_target(mm, args, ficture2bin, n_factor, train_width, model_
     # 4) DE
     cmds = cmd_separator([], f" LDA DE/report for {train_width}um and {n_factor} factors...")
     cmds.append(f"'{args.spatula}' diffexp-model-matrix --tsv1 '{lda_model_matrix}' --out '{lda_de}' --min-count {args.de_min_ct_per_feature} --max-pval {args.de_max_pval} --min-fc {args.de_min_fold}")
-    cmds.append(f"('{args.gzip}' -cd '{lda_de}.de.marginal.tsv.gz' | head -1 | sed 's/^Feature/gene/'; '{args.gzip}' -cd '{lda_de}.de.marginal.tsv.gz' | tail -n +2 | sort -k 2,2n -k 3,3gr;) > '{lda_de}'")
+    cmds.append(f"({args.gzip} -cd '{lda_de}.de.marginal.tsv.gz' | head -1 | sed 's/^Feature/gene/'; {args.gzip} -cd '{lda_de}.de.marginal.tsv.gz' | tail -n +2 | sort -k 2,2n -k 3,3gr;) > '{lda_de}'")
     cmds.append(f"rm -f '{lda_de}.de.marginal.tsv.gz'")
     #cmds.append(f"{ficture2de} --input {lda_model_matrix} --output {lda_de} --feature_label Feature --min_ct_per_feature {args.min_ct_per_feature} --max_pval_output {args.de_max_pval} --min_fold_output {args.de_min_fold}")
     cmd = " ".join([
@@ -224,10 +224,10 @@ def add_lda_training_target(mm, args, ficture2bin, n_factor, train_width, model_
         f"--pseudobulk '{lda_model_matrix}'",
         f"--feature_label Feature",
         f"--color_table '{color_map}'",
-        f"--output_pref '{model_prefix}'"
+        f"--output_pref '{model_prefix}.factor.info'"
         ])
     cmds.append(cmd)
-    cmds.append(f"[ -f '{lda_de}' ] && [ -f '{model_prefix}.html' ] && touch '{model_prefix}_summary.done'")
+    cmds.append(f"[ -f '{lda_de}' ] && [ -f '{model_prefix}.factor.info.html' ] && touch '{model_prefix}_summary.done'")
     mm.add_target(f"{model_prefix}_summary.done", [f"{model_prefix}.done", color_map], cmds)
 
 def add_projection_target_per_sample(mm, args, ficture2bin, model_prefix, model_id, sample, train_width):
@@ -325,14 +325,14 @@ def add_pixel_decode_target_per_sample(mm, args, ficture2bin, ficture2report, mo
         f"--pseudobulk '{decode_postcount}.gz'",
         f"--feature_label Feature",
         f"--color_table '{cmap_path}'",
-        f"--output_pref '{decode_prefix}'"
+        f"--output_pref '{decode_prefix}.factor.info'"
     ])
     cmds.append(cmd)
 
+    cmds.append(f"{args.gzip} -dc '{decode_fit_tsv}.gz' > '{decode_fit_tsv}'")
     cmd = " ".join([
-        f"{args.gzip} -dc '{decode_fit_tsv}.gz' |",
         f"'{ficture2bin}'", "draw-pixel-factors",
-        f"--in-tsv /dev/stdin",
+        f"--in-tsv '{decode_fit_tsv}'",
         f"--header-json '{decode_prefix}.json'",
         f"--in-color '{cmap_path}'",
         f"--out '{decode_prefix}.png'",
@@ -340,8 +340,9 @@ def add_pixel_decode_target_per_sample(mm, args, ficture2bin, ficture2report, mo
         f"--range '{args.out_dir}/samples/{sample}/{sample}.tiled.coord_range.tsv'"
     ])
     cmds.append(cmd)
+    cmds.append(f"rm -f '{decode_fit_tsv}'")
 
-    cmds.append(f"[ -f '{decode_de}' ] && [ -f '{decode_prefix}.html' ] && [ -f '{decode_prefix}.png' ] && touch '{decode_prefix}.done'")
+    cmds.append(f"[ -f '{decode_de}' ] && [ -f '{decode_prefix}.factor.info.html' ] && [ -f '{decode_prefix}.png' ] && touch '{decode_prefix}.done'")
     mm.add_target(f"{decode_prefix}.done", [cmap_path, f"{decode_prefix}.tsv.done", f"{args.out_dir}/multi.done", f"{model_prefix}.done"], cmds)
 
     return f"{decode_prefix}.done"
@@ -386,7 +387,7 @@ def add_sample_json_target(mm, args, sample, sample_transcript, n_samples):
             f"{model_prefix}.results.tsv.gz",  # shared fit
             f"{sample_prefix}.results.tsv.gz", # sample specific fit 
             f"{model_prefix}.bulk_chisq.tsv",
-            f"{model_prefix}.info.tsv"
+            f"{model_prefix}.factor.info.tsv"
         ])
         summary_aux_args_models.append(model_arg)
         prerequisities.append(f"{model_prefix}.done")
@@ -424,7 +425,7 @@ def add_sample_json_target(mm, args, sample, sample_transcript, n_samples):
             f"{decode_prefix}.png",
             f"{decode_prefix}.pseudobulk.tsv.gz",
             f"{decode_prefix}.bulk_chisq.tsv",
-            f"{decode_prefix}.info.tsv"
+            f"{decode_prefix}.factor.info.tsv"
         ])
         summary_aux_args_decodes.append(decode_arg)
         prerequisities.append(f"{decode_prefix}.done")

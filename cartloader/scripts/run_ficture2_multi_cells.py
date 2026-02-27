@@ -577,7 +577,7 @@ def run_ficture2_multi_cells(_args):
             f"--pseudobulk '{pseudobulk_prefix}.tsv'",
             f"--feature_label Feature",
             f"--color_table '{pseudobulk_prefix}.cmap.tsv'",
-            f"--output_pref '{pseudobulk_prefix}'",
+            f"--output_pref '{pseudobulk_prefix}.factor.info'",
             ])
         cmds.append(cmd)
 
@@ -609,7 +609,7 @@ def run_ficture2_multi_cells(_args):
                 f"--pseudobulk '{sample_pseudobulk_prefix}.tsv'",
                 f"--feature_label Feature",
                 f"--color_table '{sample_pseudobulk_prefix}.cmap.tsv'",
-                f"--output_pref '{sample_pseudobulk_prefix}'",
+                f"--output_pref '{sample_pseudobulk_prefix}.factor.info'",
                 ])
             cmds.append(cmd)
 
@@ -730,11 +730,11 @@ def run_ficture2_multi_cells(_args):
             "cluster_path": f"{sample_prefix}.leiden.tsv.gz",
             "cluster_pseudobulk": f"{sample_prefix}.leiden.pseudobulk.tsv",
             "cluster_de": f"{sample_prefix}.leiden.pseudobulk.de.tsv",
-            "cluster_info": f"{sample_prefix}.leiden.pseudobulk.info.tsv",
+            "cluster_info": f"{sample_prefix}.leiden.pseudobulk.factor.info.tsv",
             "cluster_model_heatmap_pdf": f"{sample_prefix}.heatmap.pdf",
             "cluster_model_heatmap_tsv": f"{sample_prefix}.heatmap.normfrac.tsv",
             "shared_cluster_de": f"{shared_prefix}.leiden.pseudobulk.de.tsv",
-            "shared_cluster_info": f"{shared_prefix}.leiden.pseudobulk.info.tsv",
+            "shared_cluster_info": f"{shared_prefix}.leiden.pseudobulk.factor.info.tsv",
             "shared_cluster_pseudobulk": f"{shared_prefix}.leiden.pseudobulk.tsv",
             "shared_cluster_model_heatmap_pdf": f"{shared_prefix}.heatmap.pdf",
             "shared_cluster_model_heatmap_tsv": f"{shared_prefix}.heatmap.normfrac.tsv",
