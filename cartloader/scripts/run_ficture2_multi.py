@@ -82,7 +82,7 @@ def parse_arguments(_args):
     env_params = parser.add_argument_group("ENV Parameters", "Environment parameters, e.g., tools.")
     env_params.add_argument('--gzip', type=str, default="gzip", help='Path to gzip binary. For faster processing, use "pigz -p 4"')
     env_params.add_argument('--sort', type=str, default="sort", help='Path to sort binary. For faster processing, you may add arguments like "sort -T /path/to/new/tmpdir --parallel=20 -S 10G"')
-    env_params.add_argument('--sort-mem', type=str, default="1G", help='Memory size for each process (default: 1G)')
+    #env_params.add_argument('--sort-mem', type=str, default="1G", help='Memory size for each process (default: 1G)')
     env_params.add_argument('--spatula', type=str, default=f"spatula",  help='Path to spatula binary (default: "spatula" in the system PATH)') # default=f"{repo_dir}/submodules/spatula/bin/spatula",
     env_params.add_argument('--ficture2', type=str, default=os.path.join(repo_dir, "submodules", "punkst"), help='Path to punkst (ficture2) repository (default: <cartloader_dir>/submodules/punkst)')
     env_params.add_argument('--python', type=str, default="python3",  help='Python3 binary')

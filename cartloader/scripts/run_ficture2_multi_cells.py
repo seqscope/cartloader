@@ -27,7 +27,7 @@ def parse_arguments(_args):
     cmd_params.add_argument('--umap', action='store_true', default=False, help='Generate UMAP manifolds based on LDA factorization')
     cmd_params.add_argument('--pseudobulk', action='store_true', default=False, help='Generate pseudobulk files based on Leiden clusters')
     cmd_params.add_argument('--heatmap', action='store_true', default=False, help='Generate heamap between LDA factors and Leiden clusters')
-    cmd_params.add_argument('--decode', action='store_true', default=False, help='Perform pixel-level decoding based on cell clusters. Onlt available when --pixel is specified.')
+    cmd_params.add_argument('--decode', action='store_true', default=False, help='Perform pixel-level decoding based on cell clusters.')
 
     inout_params = parser.add_argument_group("Input/Output Parameters", "Input and output parameters for FICTURE")
     inout_params.add_argument('--out-dir', required=True, type=str, help='Output directory')
@@ -52,26 +52,23 @@ def parse_arguments(_args):
     # input column indexes
     aux_params.add_argument('--colidx-x',  type=int, default=1, help='Column index for X-axis in the --in-transcript (default: 1)')
     aux_params.add_argument('--colidx-y',  type=int, default=2, help='Column index for Y-axis in the --in-transcript (default: 2)')
-    aux_params.add_argument('--colidx-feature',  type=int, default=3, help='Column index for Y-axis in the --in-transcript (default: 3)')
+    aux_params.add_argument('--colidx-feature',  type=int, default=3, help='Column index for feature in the --in-transcript (default: 3)')
     aux_params.add_argument('--colidx-count',  type=int, default=4, help='Column index for intensity in the --in-transcript (default: 4)')
     aux_params.add_argument('--colidx-cell-id', type=int, default=5, help='Column index for cell ID in the --in-transcript (default: 5)')
     aux_params.add_argument('--ignore-ids', type=str, default="UNASSIGNED,NA,0,-1", help='IDs to ignore in pixel file')
-    # segmentation - ficture
-    aux_params.add_argument('--min-count-per-sample', type=int, default=50, help='Minimum count per sample in the tiled SGE (default: 50)')
-    aux_params.add_argument('--min-ct-per-cell', type=int, default=50, help='Minimum count per hexagon in hexagon segmentation in FICTURE compatible format (default: 50)')
     # train
     aux_params.add_argument('--train-epoch', type=int, default=2, help='Training epoch for LDA model (default: 2)')
-    aux_params.add_argument('--skip-umap', action='store_true', default=False, help='Skip creating umap')
+    #aux_params.add_argument('--skip-umap', action='store_true', default=False, help='Skip creating umap')
     aux_params.add_argument('--decode-scale', type=int, default=1, help='Decode scale (default: 1)')
-    aux_params.add_argument('--seed', type=int, default=1, help='Random seed for random number generation (default: 0)')
+    aux_params.add_argument('--seed', type=int, default=1, help='Random seed for random number generation (default: 1)')
 
     # others parameters shared across steps
-    aux_params.add_argument('--min-feature-count', type=int, default=20, help='Minimum feature count for LDA factorization')
-    aux_params.add_argument('--min-cell-count', type=int, default=50, help='Minimum cell count for LDA factorization')
+    #aux_params.add_argument('--min-feature-count', type=int, default=20, help='Minimum feature count for LDA factorization')
+    #aux_params.add_argument('--min-cell-count', type=int, default=50, help='Minimum cell count for LDA factorization')
     aux_params.add_argument('--de-min-ct-per-feature', type=int, default=20, help='Minimum count per feature for differential expression (default: 20)')
     aux_params.add_argument('--de-max-pval', type=float, default=1e-3, help='P-value cutoff for differential expression (default: 1e-3)')
     aux_params.add_argument('--de-min-fold', type=float, default=1.5, help='Fold-change cutoff for differential expression (default: 1.5)')
-    aux_params.add_argument('--decode-fit-width', type=int, default=18, help='Fitting width (in microns) for decoding (default: 10)')
+    aux_params.add_argument('--decode-fit-width', type=int, default=18, help='Fitting width (in microns) for decoding (default: 18)')
     # project from external model
     aux_params.add_argument('--pretrained-model', type=str, help='Path to a pre-trained model to use for projection. If provided, LDA training will be skipped, and the provided model will be used for projection.')
     aux_params.add_argument('--list-samples', type=str, help='Path to a TSV file containing sample IDs and paths to their transcript TSV files for multi-sample analysis. If provided, the samples listed in the file will be used for analysis.')
@@ -91,11 +88,11 @@ def parse_arguments(_args):
     env_params = parser.add_argument_group("ENV Parameters", "Environment parameters, e.g., tools.")
     env_params.add_argument('--gzip', type=str, default="gzip", help='Path to gzip binary. For faster processing, use "pigz -p 4"')
     env_params.add_argument('--sort', type=str, default="sort", help='Path to sort binary. For faster processing, you may add arguments like "sort -T /path/to/new/tmpdir --parallel=20 -S 10G"')
-    env_params.add_argument('--sort-mem', type=str, default="1G", help='Memory size for each process (default: 1G)')
+    #env_params.add_argument('--sort-mem', type=str, default="1G", help='Memory size for each process (default: 1G)')
     env_params.add_argument('--spatula', type=str, default=f"spatula",  help='Path to spatula binary (default: "spatula" in the system PATH)') # default=f"{repo_dir}/submodules/spatula/bin/spatula",
     env_params.add_argument('--ficture2', type=str, default=os.path.join(repo_dir, "submodules", "punkst"), help='Path to punkst (ficture2) repository (default: <cartloader_dir>/submodules/punkst)')
     env_params.add_argument('--python', type=str, default="python3",  help='Python3 binary')
-    env_params.add_argument('--R', type=str, default="Rscript", help='Path to R binary for UMAP generation (default: R)')
+    env_params.add_argument('--R', type=str, default="Rscript", help='Path to R binary for UMAP generation (default: Rscript)')
 
 
     if len(_args) == 0:
@@ -270,7 +267,7 @@ def run_ficture2_multi_cells(_args):
             cmds = cmd_separator([], f"Performing LDA training/projection...")
             if args.n_factor is None:
                 raise ValueError("--n-factor must be specified when --model is not specified with --lda ON.")
-            cmd = f"{ficture2bin} lda4hex --in-data {sptsv_prefix}.randomized.tsv --in-meta {sptsv_prefix}.json --out-prefix {lda_prefix} --sort-topics --n-topics {args.n_factor} --transform --minibatch-size 500 --seed {args.seed} --n-epochs 2 --threads {args.threads}"
+            cmd = f"{ficture2bin} lda4hex --seed {args.seed} --in-data {sptsv_prefix}.randomized.tsv --in-meta {sptsv_prefix}.json --out-prefix {lda_prefix} --sort-topics --n-topics {args.n_factor} --transform --minibatch-size 500 --seed {args.seed} --n-epochs {args.train_epoch} --threads {args.threads}"
             cmds.append(cmd)
             cmds.append(f"[ -f {lda_prefix}.model.tsv ] && [ -f {lda_prefix}.results.tsv ] && touch {lda_prefix}.multi.done" )
             mm.add_target(f"{lda_prefix}.multi.done", [f"{sptsv_prefix}.done"], cmds)
@@ -282,7 +279,7 @@ def run_ficture2_multi_cells(_args):
             else:
                 cmd = f"cp {args.pretrained_model} {lda_prefix}.model.tsv"
             cmds.append(cmd)
-            cmd = f"{ficture2bin} lda4hex --model-prior {lda_prefix}.model.tsv --projection-only --in-data {sptsv_prefix}.randomized.tsv --in-meta {sptsv_prefix}.json --out-prefix {lda_prefix} --transform --minibatch-size 500 --seed {args.seed} --n-epochs 2 --threads {args.threads}"
+            cmd = f"{ficture2bin} lda4hex --seed {args.seed} --model-prior {lda_prefix}.model.tsv --projection-only --in-data {sptsv_prefix}.randomized.tsv --in-meta {sptsv_prefix}.json --out-prefix {lda_prefix} --transform --minibatch-size 500 --seed {args.seed} --n-epochs {args.train_epoch} --threads {args.threads}"
             cmds.append(cmd)
             cmds.append(f"[ -f '{lda_prefix}.results.tsv' ] && touch '{lda_prefix}.multi.done'" )
             mm.add_target(f"{lda_prefix}.multi.done", [f"{sptsv_prefix}.done"], cmds)
@@ -292,7 +289,7 @@ def run_ficture2_multi_cells(_args):
             cmds = cmd_separator([], f"Performing LDA projection for {sample_id}...")
             sample_lda_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.lda"
             sample_sptsv_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.sptsv"
-            cmd = f"{ficture2bin} lda4hex --model-prior {lda_prefix}.model.tsv --projection-only --in-data {sample_sptsv_prefix}.tsv --in-meta {sample_sptsv_prefix}.json --out-prefix {sample_lda_prefix} --transform --minibatch-size 500 --seed {args.seed} --n-epochs 2 --threads {args.threads}"
+            cmd = f"{ficture2bin} lda4hex --seed {args.seed} --model-prior {lda_prefix}.model.tsv --projection-only --in-data {sample_sptsv_prefix}.tsv --in-meta {sample_sptsv_prefix}.json --out-prefix {sample_lda_prefix} --transform --minibatch-size 500 --seed {args.seed} --n-epochs {args.train_epoch} --threads {args.threads}"
             cmds.append(cmd)
             cmds.append(f"[ -f {sample_lda_prefix}.results.tsv ] && touch {sample_lda_prefix}.done" )
             mm.add_target(f"{sample_lda_prefix}.done", [f"{lda_prefix}.multi.done"], cmds)
@@ -558,13 +555,13 @@ def run_ficture2_multi_cells(_args):
         cmds = cmd_separator([], f"Generating heatmap between LDA factors and Leiden clusters...")
         #model_tsv = args.pretrained_model if args.pretrained_model is not None else f"{lda_prefix}.model.tsv"
         model_tsv = f"{lda_prefix}.model.tsv"
-        cmd = f"{args.spatula} diffexp-model-matrix --tsv1 '{model_tsv}' --out '{lda_prefix}.model'"
+        cmd = f"{args.spatula} diffexp-model-matrix --tsv1 '{model_tsv}' --out '{lda_prefix}.model' --min-count {args.de_min_ct_per_feature} --max-pval {args.de_max_pval} --min-fc {args.de_min_fold}"
         cmds.append(cmd)
         cmds.append(f"({args.gzip} -cd {lda_prefix}.model.de.marginal.tsv.gz | head -1 | sed 's/^Feature/gene/'; {args.gzip} -cd {lda_prefix}.model.de.marginal.tsv.gz | tail -n +2 | {args.sort} -k 2,2n -k 3,3gr;) > {lda_prefix}.model.de.tsv")
         cmds.append(f"rm -f '{lda_prefix}.model.de.marginal.tsv.gz'")
 
         ## perform DE test on the cell pseudobulk matrix
-        cmd = f"{args.spatula} diffexp-model-matrix --tsv1 '{pseudobulk_prefix}.tsv' --out '{pseudobulk_prefix}'"
+        cmd = f"{args.spatula} diffexp-model-matrix --tsv1 '{pseudobulk_prefix}.tsv' --out '{pseudobulk_prefix}' --min-count {args.de_min_ct_per_feature} --max-pval {args.de_max_pval} --min-fc {args.de_min_fold}"
         cmds.append(cmd)
         cmds.append(f"({args.gzip} -cd {pseudobulk_prefix}.de.marginal.tsv.gz | head -1 | sed 's/^Feature/gene/'; {args.gzip} -cd {pseudobulk_prefix}.de.marginal.tsv.gz | tail -n +2 | {args.sort} -k 2,2n -k 3,3gr;) > {pseudobulk_prefix}.de.tsv")
         cmds.append(f"rm -f '{pseudobulk_prefix}.de.marginal.tsv.gz'")
@@ -596,7 +593,7 @@ def run_ficture2_multi_cells(_args):
             sample_heatmap_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.heatmap"
 
             ## perform DE test on the cell pseudobulk matrix
-            cmd = f"{args.spatula} diffexp-model-matrix --tsv1 '{sample_pseudobulk_prefix}.tsv' --out '{sample_pseudobulk_prefix}'"
+            cmd = f"{args.spatula} diffexp-model-matrix --tsv1 '{sample_pseudobulk_prefix}.tsv' --out '{sample_pseudobulk_prefix}' --min-count {args.de_min_ct_per_feature} --max-pval {args.de_max_pval} --min-fc {args.de_min_fold}"
             cmds.append(cmd)
 
             cmds.append(f"({args.gzip} -cd {sample_pseudobulk_prefix}.de.marginal.tsv.gz | head -1 | sed 's/^Feature/gene/'; {args.gzip} -cd {sample_pseudobulk_prefix}.de.marginal.tsv.gz | tail -n +2 | {args.sort} -k 2,2n -k 3,3gr;) > {sample_pseudobulk_prefix}.de.tsv")
@@ -635,7 +632,7 @@ def run_ficture2_multi_cells(_args):
             cmds = cmd_separator([], f"Performing pixel-level decoding for sample {sample_id}...")
             sample_prefix = f"{args.in_dir}/samples/{sample_id}/{sample_id}.tiled"
             decode_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.pixel"
-            fit_width = args.decode_fit_width  ## e.g., 10um
+            fit_width = args.decode_fit_width  ## e.g., 18um
             fit_n_move = fit_width // args.anchor_resolution + 1
             decode_id = f"p{fit_width}_a{args.anchor_resolution}"
             model_path= modelf
