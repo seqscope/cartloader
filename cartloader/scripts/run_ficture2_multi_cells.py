@@ -698,50 +698,66 @@ def run_ficture2_multi_cells(_args):
         sample_prefix = f"{sample_out_dir}/{sample}.{args.out_prefix}"
 
         out_manifolds = {
-            "shared": {
-                "tsne": {
-                    "tsv": f"{shared_prefix}.tsne.leiden.tsv.gz",
-                    "png": f"{shared_prefix}.tsne.png"
-                },
-                "umap": {
-                    "tsv": f"{shared_prefix}.umap.leiden.tsv.gz",
-                    "png": f"{shared_prefix}.umap.png"
-                }
-            },
-            "sample": {
-                "tsne": {
-                    "tsv": f"{sample_prefix}.tsne.leiden.tsv.gz",
-                    "png": f"{sample_prefix}.tsne.png"
-                },
-                "umap": {
-                    "tsv": f"{sample_prefix}.umap.leiden.tsv.gz",
-                    "png": f"{sample_prefix}.umap.png"
-                }
-            }
+            "shared": {},
+            "sample": {}
         }
+        if args.tsne:
+            out_manifolds["shared"]["tsne"] = {
+                "tsv": f"{shared_prefix}.tsne.leiden.tsv.gz",
+                "png": f"{shared_prefix}.tsne.png"
+            }
+            out_manifolds["sample"]["tsne"] = {
+                "tsv": f"{sample_prefix}.tsne.leiden.tsv.gz",
+                "png": f"{sample_prefix}.tsne.png"
+            }
+        
+        if args.umap:
+            out_manifolds["shared"]["umap"] = {
+                "tsv": f"{shared_prefix}.umap.leiden.tsv.gz",
+                "png": f"{shared_prefix}.umap.png"
+            }
+            out_manifolds["sample"]["umap"] = {
+                "tsv": f"{sample_prefix}.umap.leiden.tsv.gz",
+                "png": f"{sample_prefix}.umap.png"
+            }
+
         out_cell_params = { 
             "model_type": "lda",
             "model_id": args.out_prefix,
-            "cmap": f"{sample_prefix}.leiden.pseudobulk.cmap.tsv",
-            "model_path": f"{lda_prefix}.model.tsv",
-            "fit_path": f"{sample_prefix}.lda.results.tsv",
-            "sptsv_prefix": f"{sample_prefix}.sptsv",
-            "cell_xy_path": f"{sample_prefix}.leiden.xy.tsv.gz",
-            "cluster_path": f"{sample_prefix}.leiden.tsv.gz",
-            "cluster_pseudobulk": f"{sample_prefix}.leiden.pseudobulk.tsv",
-            "cluster_de": f"{sample_prefix}.leiden.pseudobulk.de.tsv",
-            "cluster_info": f"{sample_prefix}.leiden.pseudobulk.factor.info.tsv",
-            "cluster_model_heatmap_pdf": f"{sample_prefix}.heatmap.pdf",
-            "cluster_model_heatmap_tsv": f"{sample_prefix}.heatmap.normfrac.tsv",
-            "shared_cluster_de": f"{shared_prefix}.leiden.pseudobulk.de.tsv",
-            "shared_cluster_info": f"{shared_prefix}.leiden.pseudobulk.factor.info.tsv",
-            "shared_cluster_pseudobulk": f"{shared_prefix}.leiden.pseudobulk.tsv",
-            "shared_cluster_model_heatmap_pdf": f"{shared_prefix}.heatmap.pdf",
-            "shared_cluster_model_heatmap_tsv": f"{shared_prefix}.heatmap.normfrac.tsv",
-            "pixel_png_path": f"{sample_prefix}.pixel.png",
-            "pixel_tsv_path": f"{sample_prefix}.pixel.tsv.gz",
-            "manifolds": out_manifolds
         }
+        
+        if args.pseudobulk:
+            out_cell_params["cmap"] = f"{sample_prefix}.leiden.pseudobulk.cmap.tsv"
+            out_cell_params["cluster_pseudobulk"] = f"{sample_prefix}.leiden.pseudobulk.tsv"
+            out_cell_params["cluster_de"] = f"{sample_prefix}.leiden.pseudobulk.de.tsv"
+            out_cell_params["cluster_info"] = f"{sample_prefix}.leiden.pseudobulk.factor.info.tsv"
+            out_cell_params["shared_cluster_pseudobulk"] = f"{shared_prefix}.leiden.pseudobulk.tsv"
+            out_cell_params["shared_cluster_de"] = f"{shared_prefix}.leiden.pseudobulk.de.tsv"
+            out_cell_params["shared_cluster_info"] = f"{shared_prefix}.leiden.pseudobulk.factor.info.tsv"
+            
+        if args.lda:
+            out_cell_params["model_path"] = f"{lda_prefix}.model.tsv"
+            out_cell_params["fit_path"] = f"{sample_prefix}.lda.results.tsv"
+            
+        if args.sptsv:
+            out_cell_params["sptsv_prefix"] = f"{sample_prefix}.sptsv"
+            
+        if args.leiden:
+            out_cell_params["cell_xy_path"] = f"{sample_prefix}.leiden.xy.tsv.gz"
+            out_cell_params["cluster_path"] = f"{sample_prefix}.leiden.tsv.gz"
+            
+        if args.heatmap:
+            out_cell_params["cluster_model_heatmap_pdf"] = f"{sample_prefix}.heatmap.pdf"
+            out_cell_params["cluster_model_heatmap_tsv"] = f"{sample_prefix}.heatmap.normfrac.tsv"
+            out_cell_params["shared_cluster_model_heatmap_pdf"] = f"{shared_prefix}.heatmap.pdf"
+            out_cell_params["shared_cluster_model_heatmap_tsv"] = f"{shared_prefix}.heatmap.normfrac.tsv"
+            
+        if args.decode:
+            out_cell_params["pixel_png_path"] = f"{sample_prefix}.pixel.png"
+            out_cell_params["pixel_tsv_path"] = f"{sample_prefix}.pixel.tsv.gz"
+
+        if args.tsne or args.umap:
+            out_cell_params["manifolds"] = out_manifolds
         if n_samples > 1:
             out_cell_params["analysis_type"] = "multi-sample"
         if sample in samp2boundaries:
