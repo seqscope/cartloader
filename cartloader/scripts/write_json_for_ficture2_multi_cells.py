@@ -9,7 +9,7 @@ def parse_arguments(_args):
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", 
                                      description="Write a JSON file to summarize the parameters.")
-    parser.add_argument('--out-dir', required=True, type=str, help='Output directory')
+    # parser.add_argument('--out-dir', required=True, type=str, help='Output directory') # disabled given lack of use.
     parser.add_argument('--out-json', required=True, type=str, help='Path to the output JSON file. Default: <out-dir>/ficture.params.json')
     parser.add_argument('--mode', type=str, default="write", choices=["write", "append"], help='Write mode for the output JSON. Default: write. If write, a new file will be created based on the arguments provided. If append, the new parameters will be merged into the existing JSON file if it exists.')
     parser.add_argument('--lda-model', nargs='*', type=str, default=None, help='LDA Model information: <model_type>,<model_path>,<model_id>,<train_width>,<n_factor>,<cmap>')
