@@ -556,11 +556,12 @@ def run_ficture2_multi(_args):
             lda_each_targets.append(target)
 
             # 4) Sample-specific UMAP
-            add_umap_targets(mm=mm, 
-                            input_tsv=f"{sample_lda_prefix}.results.tsv.gz", 
-                            color_map=color_map, 
-                            out_prefix=sample_lda_prefix, 
-                            subtitle=f"{model_id} - sample specific ({sample})")
+            if not args.skip_umap:
+                add_umap_targets(mm=mm, 
+                                input_tsv=f"{sample_lda_prefix}.results.tsv.gz", 
+                                color_map=color_map, 
+                                out_prefix=sample_lda_prefix, 
+                                subtitle=f"{model_id} - sample specific ({sample})")
         cmds = cmd_separator([], f"Finishing LDA projection for each sample for model {model_id}...")
         cmds.append(f"touch '{model_prefix}_each.done'")
         mm.add_target(f"{model_prefix}_each.done", lda_each_targets, cmds)
