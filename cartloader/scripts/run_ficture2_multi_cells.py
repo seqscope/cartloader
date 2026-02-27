@@ -577,7 +577,7 @@ def run_ficture2_multi_cells(_args):
             f"--pseudobulk '{pseudobulk_prefix}.tsv'",
             f"--feature_label Feature",
             f"--color_table '{pseudobulk_prefix}.cmap.tsv'",
-            f"--output_pref '{pseudobulk_prefix}.factor.info'",
+            f"--output_pref '{pseudobulk_prefix}.factor'",
             ])
         cmds.append(cmd)
 
@@ -609,7 +609,7 @@ def run_ficture2_multi_cells(_args):
                 f"--pseudobulk '{sample_pseudobulk_prefix}.tsv'",
                 f"--feature_label Feature",
                 f"--color_table '{sample_pseudobulk_prefix}.cmap.tsv'",
-                f"--output_pref '{sample_pseudobulk_prefix}.factor.info'",
+                f"--output_pref '{sample_pseudobulk_prefix}.factor'",
                 ])
             cmds.append(cmd)
 

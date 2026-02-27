@@ -402,10 +402,10 @@ def run_ficture2(_args):
                     f"--pseudobulk '{lda_model_matrix}'",
                     f"--feature_label Feature",
                     f"--color_table '{color_map}'",
-                    f"--output_pref '{model_prefix}.factor.info'"
+                    f"--output_pref '{model_prefix}.factor'"
                     ])
                 cmds.append(cmd)
-                cmds.append(f"[ -f {lda_de} ] && [ -f {model_prefix}.factor.info.html ] && touch {model_prefix}_summary.done")
+                cmds.append(f"[ -f {lda_de} ] && [ -f {model_prefix}.factor.html ] && touch {model_prefix}_summary.done")
                 mm.add_target(f"{model_prefix}_summary.done", [f"{model_prefix}.done", color_map], cmds)
 
             # - umap
@@ -445,7 +445,7 @@ def run_ficture2(_args):
             decode_flag = f"{decode_prefix}.done"
 
             decode_de = f"{decode_prefix}.bulk_chisq.tsv"
-            decode_report = f"{decode_prefix}.factor.info.html"
+            decode_report = f"{decode_prefix}.factor.html"
             decode_summary_flag=f"{decode_prefix}_summary.done"
 
             #1) transform/fit
@@ -501,7 +501,7 @@ def run_ficture2(_args):
                 f"--pseudobulk '{decode_postcount}.gz'",
                 f"--feature_label Feature",
                 f"--color_table '{color_map}'",
-                f"--output_pref '{decode_prefix}.factor.info'"
+                f"--output_pref '{decode_prefix}.factor'"
                 ])
             cmds.append(cmd)
             # - done & target

@@ -223,10 +223,10 @@ def add_lda_training_target(mm, args, ficture2bin, n_factor, train_width, model_
         f"--pseudobulk '{lda_model_matrix}'",
         f"--feature_label Feature",
         f"--color_table '{color_map}'",
-        f"--output_pref '{model_prefix}.factor.info'"
+        f"--output_pref '{model_prefix}.factor'"
         ])
     cmds.append(cmd)
-    cmds.append(f"[ -f '{lda_de}' ] && [ -f '{model_prefix}.factor.info.html' ] && touch '{model_prefix}_summary.done'")
+    cmds.append(f"[ -f '{lda_de}' ] && [ -f '{model_prefix}.factor.html' ] && touch '{model_prefix}_summary.done'")
     mm.add_target(f"{model_prefix}_summary.done", [f"{model_prefix}.done", color_map], cmds)
 
 def add_projection_target_per_sample(mm, args, ficture2bin, model_prefix, model_id, sample, train_width):
@@ -324,7 +324,7 @@ def add_pixel_decode_target_per_sample(mm, args, ficture2bin, ficture2report, mo
         f"--pseudobulk '{decode_postcount}.gz'",
         f"--feature_label Feature",
         f"--color_table '{cmap_path}'",
-        f"--output_pref '{decode_prefix}.factor.info'"
+        f"--output_pref '{decode_prefix}.factor'"
     ])
     cmds.append(cmd)
 
@@ -341,7 +341,7 @@ def add_pixel_decode_target_per_sample(mm, args, ficture2bin, ficture2report, mo
     cmds.append(cmd)
     cmds.append(f"rm -f '{decode_fit_tsv}'")
 
-    cmds.append(f"[ -f '{decode_de}' ] && [ -f '{decode_prefix}.factor.info.html' ] && [ -f '{decode_prefix}.png' ] && touch '{decode_prefix}.done'")
+    cmds.append(f"[ -f '{decode_de}' ] && [ -f '{decode_prefix}.factor.html' ] && [ -f '{decode_prefix}.png' ] && touch '{decode_prefix}.done'")
     mm.add_target(f"{decode_prefix}.done", [cmap_path, f"{decode_prefix}.tsv.done", f"{args.out_dir}/multi.done", f"{model_prefix}.done"], cmds)
 
     return f"{decode_prefix}.done"
