@@ -452,7 +452,7 @@ def run_ficture2(_args):
             cmds=cmd_separator([], f"Creating decode, ID: {decode_id}")
             cmd = " ".join([
                 ficture2bin, "pixel-decode",
-                f"--model ' {model_path}'",
+                f"--model '{model_path}'",
                 f"--in-tsv '{args.out_dir}/transcripts.tiled.tsv'",
                 f"--in-index '{args.out_dir}/transcripts.tiled.index'",
                 f"--temp-dir '{args.out_dir}/tmp/{decode_id}'",
@@ -492,7 +492,7 @@ def run_ficture2(_args):
             cmds.append(f"({args.gzip} -cd '{decode_de}.de.marginal.tsv.gz' | head -1 | sed 's/^Feature/gene/'; {args.gzip} -cd '{decode_de}.de.marginal.tsv.gz' | tail -n +2 | sort -k 2,2n -k 3,3gr;) > '{decode_de}'")
             cmds.append(f"rm -f '{decode_de}.de.marginal.tsv.gz'")
 
-            cmds.append(cmd)
+            # cmds.append(cmd)
             # - transform-report
             cmd = " ".join([
                 ficture2report,
