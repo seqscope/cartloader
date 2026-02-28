@@ -161,6 +161,7 @@ def call_openai(prompt: str, model_name: str, request_timeout: int, max_retries:
             r = requests.post(url, headers=headers, json=payload, timeout=request_timeout)
             r.raise_for_status()
             data = r.json()
+            break
         except Exception as e:
             if attempt == max_retries - 1:
                 raise e
@@ -244,6 +245,7 @@ def call_claude(prompt: str, model_name: str, request_timeout: int, max_retries:
             r = requests.post(url, headers=headers, json=payload, timeout=request_timeout)
             r.raise_for_status()
             data = r.json()
+            break
         except Exception as e:
             if attempt == max_retries - 1:
                 raise e
