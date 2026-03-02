@@ -2188,6 +2188,44 @@
 <hr />
 <h2 id="input-data">Input Data<a class="headerlink" href="#input-data" title="Permanent link">&para;</a></h2>
 <p>This tutorial uses a series of four human cortex <abbr title="Spatial transcriptomics">ST</abbr> datasets from <a href="https://www.nature.com/articles/s41586-025-09010-1">Walsh et al. Nature 2025</a>, generated using <abbr title="Multiplexed Error Robust Fluorescence In Situ Hybridization">MERFISH</abbr>.</p>
+<p><strong>Data Access</strong></p>
+<p>Follow the commands below to download the source data.</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nv">work_dir</span><span class="o">=</span>/path/to/work/directory
+mkdir<span class="w"> </span>-p<span class="w"> </span><span class="si">${</span><span class="nv">work_dir</span><span class="si">}</span>/raw
+<span class="nb">cd</span><span class="w"> </span><span class="si">${</span><span class="nv">work_dir</span><span class="si">}</span>/raw
+
+wget<span class="w"> </span>https://zenodo.org/records/15127709/files/FB080_O1a.zip?download<span class="o">=</span><span class="m">1</span>
+unzip<span class="w"> </span>FB080_O1a.zip
+
+wget<span class="w"> </span>https://zenodo.org/records/15127709/files/FB080_O1b.zip?download<span class="o">=</span><span class="m">1</span>
+unzip<span class="w"> </span>FB080_O1b.zip
+
+wget<span class="w"> </span>https://zenodo.org/records/15127709/files/FB080_O1c.zip?download<span class="o">=</span><span class="m">1</span>
+unzip<span class="w"> </span>FB080_O1c.zip
+
+wget<span class="w"> </span>https://zenodo.org/records/15127709/files/FB080_O1d.zip?download<span class="o">=</span><span class="m">1</span>
+unzip<span class="w"> </span>FB080_O1d.zip
+
+wget<span class="w"> </span>https://zenodo.org/records/15127709/files/FB121_O1.zip?download<span class="o">=</span><span class="m">1</span>
+unzip<span class="w"> </span>FB121_O1.zip
+</code></pre></div></td></tr></table></div>
 <p><strong>File Format</strong></p>
 <div class="admonition info">
 <p class="admonition-title"><code>detected_transcripts.csv.gz</code></p>
@@ -2213,38 +2251,6 @@
 <li><code>cell_id</code>: Unique identifier for cell.</li>
 </ul>
 </div>
-<p><strong>Data Access</strong></p>
-<p>Follow the commands below to download the source data.</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
-<span class="normal"> 2</span>
-<span class="normal"> 3</span>
-<span class="normal"> 4</span>
-<span class="normal"> 5</span>
-<span class="normal"> 6</span>
-<span class="normal"> 7</span>
-<span class="normal"> 8</span>
-<span class="normal"> 9</span>
-<span class="normal">10</span>
-<span class="normal">11</span>
-<span class="normal">12</span>
-<span class="normal">13</span>
-<span class="normal">14</span>
-<span class="normal">15</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nv">work_dir</span><span class="o">=</span>/path/to/work/directory
-mkdir<span class="w"> </span>-p<span class="w"> </span><span class="si">${</span><span class="nv">work_dir</span><span class="si">}</span>/raw
-<span class="nb">cd</span><span class="w"> </span><span class="si">${</span><span class="nv">work_dir</span><span class="si">}</span>/raw
-
-wget<span class="w"> </span>https://zenodo.org/records/15127709/files/FB080_O1a.zip?download<span class="o">=</span><span class="m">1</span>
-unzip<span class="w"> </span>FB080_O1a.zip
-
-wget<span class="w"> </span>https://zenodo.org/records/15127709/files/FB080_O1b.zip?download<span class="o">=</span><span class="m">1</span>
-unzip<span class="w"> </span>FB080_O1b.zip
-
-wget<span class="w"> </span>https://zenodo.org/records/15127709/files/FB080_O1c.zip?download<span class="o">=</span><span class="m">1</span>
-unzip<span class="w"> </span>FB080_O1c.zip
-
-wget<span class="w"> </span>https://zenodo.org/records/15127709/files/FB080_O1d.zip?download<span class="o">=</span><span class="m">1</span>
-unzip<span class="w"> </span>FB080_O1d.zip
-</code></pre></div></td></tr></table></div>
 <hr />
 <h2 id="set-up-the-environment">Set Up the Environment<a class="headerlink" href="#set-up-the-environment" title="Permanent link">&para;</a></h2>
 <div class="admonition warning">
@@ -2320,8 +2326,14 @@ conda<span class="w"> </span>activate<span class="w"> </span>ENV_NAME<span class
 </code></pre></div></td></tr></table></div>
 <hr />
 <h2 id="sge-format-conversion"><abbr title="Spatial Digital Gene Expression">SGE</abbr> Format Conversion<a class="headerlink" href="#sge-format-conversion" title="Permanent link">&para;</a></h2>
-<p>For each sample, convert its transcript‑indexed <abbr title="Spatial Digital Gene Expression">SGE</abbr> file to be the <code>CartLoader</code> format.</p>
-<p>Below use FB080_O1a as an example.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>For each sample, convert transcript-indexed <abbr title="Spatial Digital Gene Expression">SGE</abbr> to CartLoader format. Below use <code>FB080_O1a</code> as example.</p>
+<p>Set <code>sample_id</code> once, then run one of the two workflows below.</p>
+</div>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Recommended: <code>cartloader sge_convert</code></label><label for="__tabbed_1_2">Fast path: direct transform (no visualization/filtering)</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -2335,39 +2347,63 @@ conda<span class="w"> </span>activate<span class="w"> </span>ENV_NAME<span class
 <span class="normal">11</span>
 <span class="normal">12</span>
 <span class="normal">13</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nv">sample_id</span><span class="o">=</span>FB080_O1a
-mkdir<span class="w"> </span>-p<span class="w"> </span>./sge/<span class="si">${</span><span class="nv">sample_id</span><span class="si">}</span>
+mkdir<span class="w"> </span>-p<span class="w"> </span><span class="s2">&quot;./sge/</span><span class="si">${</span><span class="nv">sample_id</span><span class="si">}</span><span class="s2">&quot;</span>
 
 cartloader<span class="w"> </span>sge_convert<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--in-csv<span class="w"> </span>./raw/<span class="si">${</span><span class="nv">sample_id</span><span class="si">}</span>/detected_transcripts.csv.gz<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--in-csv<span class="w"> </span><span class="s2">&quot;./raw/</span><span class="si">${</span><span class="nv">sample_id</span><span class="si">}</span><span class="s2">/detected_transcripts.csv.gz&quot;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--platform<span class="w"> </span>generic<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--out-dir<span class="w"> </span>./sge/<span class="si">${</span><span class="nv">sample_id</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--out-dir<span class="w"> </span><span class="s2">&quot;./sge/</span><span class="si">${</span><span class="nv">sample_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--csv-delim<span class="w"> </span><span class="s2">&quot;,&quot;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--csv-colname-x<span class="w"> </span>global_x<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--csv-colname-y<span class="w"> </span>global_y<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--csv-colname-feature-name<span class="w"> </span>gene<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--csv-colnames-others<span class="w"> </span>cell_id,global_z<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--sge-visual<span class="w"> </span>
+<span class="w">  </span>--sge-visual
 </code></pre></div></td></tr></table></div>
-<p>Alternatively, if you don’t need <abbr title="Spatial Digital Gene Expression">SGE</abbr> visualization or density/feature‑based filtering, you can directly generate a CartLoader‑compatible <abbr title="Spatial Digital Gene Expression">SGE</abbr> with fixed column names (the raw <abbr title="Spatial Digital Gene Expression">SGE</abbr> is already in micrometers):</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nv">sample_id</span><span class="o">=</span>FB080_O1a
-mkdir<span class="w"> </span>-p<span class="w"> </span>./sge/<span class="si">${</span><span class="nv">sample_id</span><span class="si">}</span>
+</div>
+<div class="tabbed-block">
+<div class="admonition tips">
+<p class="admonition-title">Tips</p>
+<p>Given raw <abbr title="Spatial Digital Gene Expression">SGE</abbr> coordinates are already in micrometers, use this only if you do <strong>not</strong> need <abbr title="Spatial Digital Gene Expression">SGE</abbr> visualization or density/feature-based filtering.</p>
+</div>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nv">sample_id</span><span class="o">=</span>FB080_O1a
+mkdir<span class="w"> </span>-p<span class="w"> </span><span class="s2">&quot;./sge/</span><span class="si">${</span><span class="nv">sample_id</span><span class="si">}</span><span class="s2">&quot;</span>
 
-<span class="o">(</span><span class="nb">echo</span><span class="w"> </span>-e<span class="w"> </span><span class="s2">&quot;X\tY\tgene\tcount\tcell_id\tZ&quot;</span><span class="p">;</span>gzip<span class="w"> </span>-cd<span class="w"> </span>./raw/<span class="si">${</span><span class="nv">sample_id</span><span class="si">}</span>/detected_transcripts.csv.gz<span class="w"> </span><span class="p">|</span><span class="w"> </span>tail<span class="w"> </span>-n<span class="w"> </span>+2<span class="p">|</span><span class="w"> </span>tr<span class="w"> </span>,<span class="w"> </span><span class="s1">&#39;\t&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>perl<span class="w"> </span>-lane<span class="w"> </span><span class="s1">&#39;print join(&quot;\t&quot;,$F[2],$F[3],$F[8],1,$F[10],$F[4]);&#39;</span><span class="p">;</span><span class="o">)</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>gzip<span class="w"> </span>&gt;<span class="w"> </span>./sge/<span class="si">${</span><span class="nv">sample_id</span><span class="si">}</span>/transcripts.unsorted.tsv.gz
+<span class="o">(</span>
+<span class="w">  </span><span class="nb">echo</span><span class="w"> </span>-e<span class="w"> </span><span class="s2">&quot;X\tY\tgene\tcount\tcell_id\tZ&quot;</span>
+<span class="w">  </span>gzip<span class="w"> </span>-cd<span class="w"> </span><span class="s2">&quot;./raw/</span><span class="si">${</span><span class="nv">sample_id</span><span class="si">}</span><span class="s2">/detected_transcripts.csv.gz&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span><span class="p">|</span><span class="w"> </span>tail<span class="w"> </span>-n<span class="w"> </span>+2<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span><span class="p">|</span><span class="w"> </span>tr<span class="w"> </span><span class="s1">&#39;,&#39;</span><span class="w"> </span><span class="s1">&#39;\t&#39;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span><span class="p">|</span><span class="w"> </span>perl<span class="w"> </span>-lane<span class="w"> </span><span class="s1">&#39;print join(&quot;\t&quot;,$F[2],$F[3],$F[8],1,$F[10],$F[4]);&#39;</span>
+<span class="o">)</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>gzip<span class="w"> </span>&gt;<span class="w"> </span><span class="s2">&quot;./sge/</span><span class="si">${</span><span class="nv">sample_id</span><span class="si">}</span><span class="s2">/transcripts.unsorted.tsv.gz&quot;</span>
 </code></pre></div></td></tr></table></div>
+</div>
+</div>
+</div>
+<hr />
 <h2 id="prepare-input-list">Prepare Input List<a class="headerlink" href="#prepare-input-list" title="Permanent link">&para;</a></h2>
-<p>Create a tab‑separated TSV file (e.g., <code>input.tsv</code>) with one sample per line. The TSV should have no header and contain two to four columns.</p>
+<p>Create a tab‑separated TSV file (e.g., <code>input.tsv</code>). </p>
 <div class="admonition info">
 <p class="admonition-title">Example Input List: <code>input.tsv</code></p>
+<p>The TSV should be <strong>one sample per line</strong> and have <strong>no header</strong> and contain two to four columns.</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
 <span class="normal">3</span>
-<span class="normal">4</span></pre></div></td><td class="code"><div><pre><span></span><code>FB080_O1a /path/to/FB080_O1a/transcripts.unsorted.tsv.gz
+<span class="normal">4</span>
+<span class="normal">5</span></pre></div></td><td class="code"><div><pre><span></span><code>FB080_O1a /path/to/FB080_O1a/transcripts.unsorted.tsv.gz
 FB080_O1b /path/to/FB080_O1b/transcripts.unsorted.tsv.gz
 FB080_O1c /path/to/FB080_O1c/transcripts.unsorted.tsv.gz
 FB080_O1d /path/to/FB080_O1d/transcripts.unsorted.tsv.gz
+FB121_O1  /path/to/FB121_O1/transcripts.unsorted.tsv.gz
 </code></pre></div></td></tr></table></div>
 <ul>
 <li><code>1st Column</code> (required, str): Unique dataset identifier (avoid whitespace; prefer <code>-</code> to <code>_</code>).</li>
@@ -2376,6 +2412,7 @@ FB080_O1d /path/to/FB080_O1d/transcripts.unsorted.tsv.gz
 <li><code>4th Column</code>  (optional, str): Dataset description. Quote the value when whitespace is involved.</li>
 </ul>
 </div>
+<hr />
 <h2 id="multisample-ficture-analysis">Multi‑Sample <abbr title="Segmentation-free method inferring latent spatial factors from SGE (Si et al., Nature Methods 2024)">FICTURE</abbr> Analysis<a class="headerlink" href="#multisample-ficture-analysis" title="Permanent link">&para;</a></h2>
 <p>Trains <abbr title="Latent Dirichlet Allocation">LDA</abbr> models across samples for each parameter setting (width and n‑factor), decodes per sample, and writes per‑sample JSON manifests summarizing results.</p>
 <p>Outputs are written under <code>ficture2/&lt;sample_id&gt;/</code>. See details in <a href="../../reference/run_ficture2_multi.md">run_ficture2_multi</a>.</p>
@@ -2424,7 +2461,7 @@ FB080_O1d /path/to/FB080_O1d/transcripts.unsorted.tsv.gz
 <hr />
 <h2 id="upload-to-aws">Upload to AWS<a class="headerlink" href="#upload-to-aws" title="Permanent link">&para;</a></h2>
 <p>Upload the generated <code>CartLoader</code> outputs from above to your designated AWS S3 directory — either the whole collection at once or each sample individually. For full details, see <a href="../../reference/upload_aws.md">upload_aws</a>.</p>
-<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Upload a collection</label><label for="__tabbed_1_2">Upload a single sample</label></div>
+<div class="tabbed-set tabbed-alternate" data-tabs="2:2"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">Upload a collection</label><label for="__tabbed_2_2">Upload a single sample</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
