@@ -10,7 +10,7 @@
 
     [Explore in CartoScope](https://v3o-main.carto-scope.org/dataset?uri=s3%2Fcartostore%2Fdata%2Fbatch%3D2026_02%2Fmouse-brain-test-collection%2Fsubdata_seqscope_n17t89b_c1d2f){ .md-button .md-button--primary .button-tight-small }
 
-    [Download from Zenodo](https://zenodo.org/records/18090688){ .md-button .button-tight-small }
+    [Download from Zenodo](https://zenodo.org/records/18837725){ .md-button .button-tight-small }
 
 </div>
 

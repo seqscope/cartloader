@@ -9,7 +9,7 @@
 
     [Explore in CartoScope](https://v3o-main.carto-scope.org/dataset?uri=s3%2Fcartostore%2Fdata%2Fbatch%3D2026_02%2Fmouse-brain-test-collection%2Fsubdata_xenium_ffsection1){ .md-button .md-button--primary .button-tight-small }
 
-    [Download from Zenodo](https://zenodo.org/records/18090870){ .md-button .button-tight-small }
+    [Download from Zenodo](https://zenodo.org/records/18838928){ .md-button .button-tight-small }
 
 </div>
 
