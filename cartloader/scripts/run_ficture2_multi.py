@@ -224,7 +224,7 @@ def add_lda_training_target(mm, args, ficture2bin, n_factor, train_width, model_
         f"--pseudobulk '{lda_model_matrix}'",
         f"--feature_label Feature",
         f"--color_table '{color_map}'",
-        f"--output_pref '{model_prefix}.factor.info'"
+        f"--output_pref '{model_prefix}.factor'"
         ])
     cmds.append(cmd)
     cmds.append(f"[ -f '{lda_de}' ] && [ -f '{model_prefix}.factor.info.html' ] && touch '{model_prefix}_summary.done'")
@@ -325,7 +325,7 @@ def add_pixel_decode_target_per_sample(mm, args, ficture2bin, ficture2report, mo
         f"--pseudobulk '{decode_postcount}.gz'",
         f"--feature_label Feature",
         f"--color_table '{cmap_path}'",
-        f"--output_pref '{decode_prefix}.factor.info'"
+        f"--output_pref '{decode_prefix}.factor'"
     ])
     cmds.append(cmd)
 

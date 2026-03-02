@@ -402,7 +402,7 @@ def run_ficture2(_args):
                     f"--pseudobulk '{lda_model_matrix}'",
                     f"--feature_label Feature",
                     f"--color_table '{color_map}'",
-                    f"--output_pref '{model_prefix}.factor.info'"
+                    f"--output_pref '{model_prefix}.factor'"
                     ])
                 cmds.append(cmd)
                 cmds.append(f"[ -f {lda_de} ] && [ -f {model_prefix}.factor.info.html ] && touch {model_prefix}_summary.done")
@@ -501,7 +501,7 @@ def run_ficture2(_args):
                 f"--pseudobulk '{decode_postcount}.gz'",
                 f"--feature_label Feature",
                 f"--color_table '{color_map}'",
-                f"--output_pref '{decode_prefix}.factor.info'"
+                f"--output_pref '{decode_prefix}.factor'"
                 ])
             cmds.append(cmd)
             # - done & target
