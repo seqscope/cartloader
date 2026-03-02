@@ -544,7 +544,7 @@ def import_xenium_cell(_args):
                     f"--factor_label factor",
                     f"--feature_label Feature",
                     f"--color_table '{pseudobulk_prefix}.cmap.tsv'",
-                    f"--output_pref '{pseudobulk_prefix}'",
+                    f"--output_pref '{pseudobulk_prefix}.factor'",
                     ])
                 result = subprocess.run(cmd, shell=True, capture_output=True)
                 if result.returncode != 0:
