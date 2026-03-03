@@ -2099,8 +2099,12 @@
 <h2 id="input-data">Input Data<a class="headerlink" href="#input-data" title="Permanent link">&para;</a></h2>
 <p><strong>Data Access</strong></p>
 <p>Downloaded the <abbr title="Spatial transcriptomics">ST</abbr> data from <a href="https://www.10xgenomics.com/datasets/visium-hd-three-prime-mouse-brain-fresh-frozen">10x Genomics Dataset portal</a>.</p>
-<p>=== Use "<code>wget</code>"
-If you have <code>wget</code> installed, use the following commands to download the output from 10X.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:1"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Use <code>wget</code></label></div>
+<div class="tabbed-content">
+<div class="tabbed-block"></div>
+</div>
+</div>
+<p>If you have <code>wget</code> installed, use the following commands to download the output from 10X.</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
 <span class="normal">3</span>
@@ -2119,8 +2123,12 @@ wget<span class="w"> </span>https://cf.10xgenomics.com/samples/xenium/3.0.0/Xeni
 wget<span class="w"> </span>https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_he_image.ome.tif
 wget<span class="w"> </span>https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_he_imagealignment.csv
 </code></pre></div></td></tr></table></div>
-<p>=== Use "<code>curl</code>"
-If you have <code>curl</code> installed, use the following commands to download the output from 10X. </p>
+<div class="tabbed-set tabbed-alternate" data-tabs="2:1"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">Use <code>curl</code></label></div>
+<div class="tabbed-content">
+<div class="tabbed-block"></div>
+</div>
+</div>
+<p>If you have <code>curl</code> installed, use the following commands to download the output from 10X. </p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -2146,7 +2154,7 @@ curl<span class="w"> </span>-O<span class="w"> </span>https://cf.10xgenomics.com
 <hr />
 <p><strong>Data Structure and Format</strong></p>
 <p>See Space Ranger output details in the official documentation: <a href="https://www.10xgenomics.com/support/software/space-ranger/latest/analysis/outputs/output-overview">Space Ranger Outputs</a></p>
-<div class="tabbed-set tabbed-alternate" data-tabs="1:3"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><input id="__tabbed_1_3" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">RAW Data Structure</label><label for="__tabbed_1_2"><abbr title="Spatial Digital Gene Expression">SGE</abbr> Format</label><label for="__tabbed_1_3">Cell Analysis Result Format</label></div>
+<div class="tabbed-set tabbed-alternate" data-tabs="3:3"><input checked="checked" id="__tabbed_3_1" name="__tabbed_3" type="radio" /><input id="__tabbed_3_2" name="__tabbed_3" type="radio" /><input id="__tabbed_3_3" name="__tabbed_3" type="radio" /><div class="tabbed-labels"><label for="__tabbed_3_1">RAW Data Structure</label><label for="__tabbed_3_2"><abbr title="Spatial Digital Gene Expression">SGE</abbr> Format</label><label for="__tabbed_3_3">Cell Analysis Result Format</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
