@@ -2429,9 +2429,7 @@ ymax    1439.95
 <hr />
 <h2 id="cartloader-asset-packaging"><code>CartLoader</code> Asset Packaging<a class="headerlink" href="#cartloader-asset-packaging" title="Permanent link">&para;</a></h2>
 <p>Generate pmtiles and web-compatible tile directories. See more details in <a href="../../../reference/run_cartload2/">Reference page</a>.</p>
-<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Deploy <abbr title="Spatial Digital Gene Expression">SGE</abbr> and <abbr title="Segmentation-free method inferring latent spatial factors from SGE (Si et al., Nature Methods 2024)">FICTURE</abbr> output</label><label for="__tabbed_1_2">Deploy <abbr title="Spatial Digital Gene Expression">SGE</abbr> only</label></div>
-<div class="tabbed-content">
-<div class="tabbed-block">
+<!-- === "Deploy SGE and FICTURE output" -->
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -2458,38 +2456,24 @@ ymax    1439.95
 <span class="w">    </span>--n-jobs<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>--threads<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span>
 </code></pre></div></td></tr></table></div>
-</div>
-<div class="tabbed-block">
-<p>If you only want to deploy <abbr title="Spatial Digital Gene Expression">SGE</abbr> without <abbr title="Segmentation-free method inferring latent spatial factors from SGE (Si et al., Nature Methods 2024)">FICTURE</abbr> analysis, use the following commands.
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
-<span class="normal"> 2</span>
-<span class="normal"> 3</span>
-<span class="normal"> 4</span>
-<span class="normal"> 5</span>
-<span class="normal"> 6</span>
-<span class="normal"> 7</span>
-<span class="normal"> 8</span>
-<span class="normal"> 9</span>
-<span class="normal">10</span>
-<span class="normal">11</span>
-<span class="normal">12</span>
-<span class="normal">13</span></pre></div></td><td class="code"><div><pre><span></span><code>docker<span class="w"> </span>run<span class="w"> </span>-it<span class="w"> </span>--rm<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>-v<span class="w"> </span><span class="k">$(</span><span class="nb">pwd</span><span class="k">)</span>:/data<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>weiqiuc/cartloader:20250708b<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>run_cartload2<span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>--makefn<span class="w"> </span>run_cartload2.mk<span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>--sge-dir<span class="w"> </span>/data/sge_convert<span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>--out-dir<span class="w"> </span>/data/cartload2<span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>--id<span class="w"> </span><span class="si">${</span><span class="nv">DATA_ID</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>--spatula<span class="w"> </span>/app/cartloader/submodules/spatula/bin/spatula<span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>--pmtiles<span class="w"> </span>/usr/local/bin/pmtiles<span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>--tippecanoe<span class="w"> </span>/usr/local/bin/tippecanoe<span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>--n-jobs<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>--threads<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span>
-</code></pre></div></td></tr></table></div></p>
-</div>
-</div>
-</div>
+<!-- === "Deploy SGE only"
+    If you only want to deploy SGE without FICTURE analysis, use the following commands.
+    ```bash
+    docker run -it --rm \
+      -v $(pwd):/data \
+      weiqiuc/cartloader:20250708b \
+      run_cartload2 \
+        --makefn run_cartload2.mk \
+        --sge-dir /data/sge_convert \
+        --out-dir /data/cartload2 \
+        --id ${DATA_ID} \
+        --spatula /app/cartloader/submodules/spatula/bin/spatula \
+        --pmtiles /usr/local/bin/pmtiles \
+        --tippecanoe /usr/local/bin/tippecanoe \
+        --n-jobs ${n_jobs} \
+        --threads ${n_jobs}
+    ``` -->
+
 <table>
 <thead>
 <tr>
