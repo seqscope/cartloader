@@ -2194,6 +2194,7 @@ docker<span class="w"> </span>--version
 docker<span class="w"> </span>run<span class="w"> </span>hello-world
 </code></pre></div></td></tr></table></div></p>
 <p>If these commands fail, <a href="https://docs.docker.com/get-docker/">install Docker</a> in your system.</p>
+<hr />
 <h2 id="input-data">Input Data<a class="headerlink" href="#input-data" title="Permanent link">&para;</a></h2>
 <p>The input is an mouse hippocampus <abbr title="Spatial Digital Gene Expression">SGE</abbr> in a <code>FICTURE</code>-compatible format compatible, prepared by <a href="../../../reference/sge_convert/"><code>sge_convert</code></a> in <code>CartLoader</code> .</p>
 <p><strong>File Format</strong></p>
@@ -2289,6 +2290,7 @@ ymax    1439.95
 <span class="nv">train_width</span><span class="o">=</span><span class="m">18</span><span class="w">                           </span><span class="c1"># define LDA training hexagon width (comma-separated if multiple widths are applied)</span>
 <span class="nv">n_factor</span><span class="o">=</span><span class="m">6</span>,12<span class="w">                            </span><span class="c1"># define number of factors in LDA training (comma-separated if multiple n-factor are applied)</span>
 </code></pre></div></td></tr></table></div>
+<hr />
 <h2 id="ficture-analysis"><code>FICTURE</code> Analysis<a class="headerlink" href="#ficture-analysis" title="Permanent link">&para;</a></h2>
 <p>Compute spatial factors using <code>punkst</code> (FICTURE2 mode). See more details in <a href="../../../reference/run_ficture2/">Reference page</a>.</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
@@ -2424,8 +2426,12 @@ ymax    1439.95
 </tbody>
 </table>
 <p><sub><sup>1</sup>: <code>CartLoader</code> requires the user to specify <strong>at least one action</strong>. Available actions includes: <code>--tile</code> to run tiling step; <code>--segment</code> to run segmentation step; <code>--init-lda</code> to run <abbr title="Latent Dirichlet Allocation">LDA</abbr> training step; <code>--decode</code> to run decoding step; <code>--summary</code> to run summarization step; <code>--main</code> to run all above five actions.</sub></p>
+<hr />
 <h2 id="cartloader-asset-packaging"><code>CartLoader</code> Asset Packaging<a class="headerlink" href="#cartloader-asset-packaging" title="Permanent link">&para;</a></h2>
 <p>Generate pmtiles and web-compatible tile directories. See more details in <a href="../../../reference/run_cartload2/">Reference page</a>.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Deploy <abbr title="Spatial Digital Gene Expression">SGE</abbr> and <abbr title="Segmentation-free method inferring latent spatial factors from SGE (Si et al., Nature Methods 2024)">FICTURE</abbr> output</label><label for="__tabbed_1_2">Deploy <abbr title="Spatial Digital Gene Expression">SGE</abbr> only</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -2438,24 +2444,7 @@ ymax    1439.95
 <span class="normal">10</span>
 <span class="normal">11</span>
 <span class="normal">12</span>
-<span class="normal">13</span>
-<span class="normal">14</span>
-<span class="normal">15</span>
-<span class="normal">16</span>
-<span class="normal">17</span>
-<span class="normal">18</span>
-<span class="normal">19</span>
-<span class="normal">20</span>
-<span class="normal">21</span>
-<span class="normal">22</span>
-<span class="normal">23</span>
-<span class="normal">24</span>
-<span class="normal">25</span>
-<span class="normal">26</span>
-<span class="normal">27</span>
-<span class="normal">28</span>
-<span class="normal">29</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># Example: with FICTURE outputs</span>
-docker<span class="w"> </span>run<span class="w"> </span>-it<span class="w"> </span>--rm<span class="w"> </span><span class="se">\</span>
+<span class="normal">13</span></pre></div></td><td class="code"><div><pre><span></span><code>docker<span class="w"> </span>run<span class="w"> </span>-it<span class="w"> </span>--rm<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-v<span class="w"> </span><span class="k">$(</span><span class="nb">pwd</span><span class="k">)</span>:/data<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>weiqiuc/cartloader:20250708b<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>run_cartload2<span class="w"> </span><span class="se">\</span>
@@ -2468,9 +2457,23 @@ docker<span class="w"> </span>run<span class="w"> </span>-it<span class="w"> </s
 <span class="w">    </span>--tippecanoe<span class="w"> </span>/usr/local/bin/tippecanoe<span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>--n-jobs<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>--threads<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span>
-
-<span class="c1"># Example: SGE-only packaging</span>
-docker<span class="w"> </span>run<span class="w"> </span>-it<span class="w"> </span>--rm<span class="w"> </span><span class="se">\</span>
+</code></pre></div></td></tr></table></div>
+</div>
+<div class="tabbed-block">
+<p>If you only want to deploy <abbr title="Spatial Digital Gene Expression">SGE</abbr> without <abbr title="Segmentation-free method inferring latent spatial factors from SGE (Si et al., Nature Methods 2024)">FICTURE</abbr> analysis, use the following commands.
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span></pre></div></td><td class="code"><div><pre><span></span><code>docker<span class="w"> </span>run<span class="w"> </span>-it<span class="w"> </span>--rm<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-v<span class="w"> </span><span class="k">$(</span><span class="nb">pwd</span><span class="k">)</span>:/data<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>weiqiuc/cartloader:20250708b<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>run_cartload2<span class="w"> </span><span class="se">\</span>
@@ -2483,7 +2486,10 @@ docker<span class="w"> </span>run<span class="w"> </span>-it<span class="w"> </s
 <span class="w">    </span>--tippecanoe<span class="w"> </span>/usr/local/bin/tippecanoe<span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>--n-jobs<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>--threads<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span>
-</code></pre></div></td></tr></table></div>
+</code></pre></div></td></tr></table></div></p>
+</div>
+</div>
+</div>
 <table>
 <thead>
 <tr>
@@ -2568,6 +2574,7 @@ docker<span class="w"> </span>run<span class="w"> </span>-it<span class="w"> </s
 </tr>
 </tbody>
 </table>
+<hr />
 <h2 id="upload-to-data-repository">Upload to Data Repository<a class="headerlink" href="#upload-to-data-repository" title="Permanent link">&para;</a></h2>
 <div class="admonition info">
 <p class="admonition-title">Choose a data repository to host/share your output</p>
