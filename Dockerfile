@@ -94,7 +94,6 @@ RUN python3 -m pip install -e ./
 # Install submodules
 # ===============================
 RUN cd submodules/spatula && \
-    git checkout main && \
     git submodule update --init --recursive submodules/htslib submodules/qgenlib  
 
 # Build submodule: htslib
@@ -105,12 +104,14 @@ RUN cd submodules/spatula/submodules/htslib && \
 
 # Build submodule: qgenlib
 RUN cd submodules/spatula/submodules/qgenlib && \
+    git checkout cartloader-docker && \
     mkdir -p build && cd build && \
     cmake .. && \
     make -j$(nproc)
 
 # Build submodule: spatula
 RUN cd submodules/spatula && \
+    git checkout docker-dev && \
     mkdir -p build && cd build && \
     cmake .. && \
     make -j$(nproc)
