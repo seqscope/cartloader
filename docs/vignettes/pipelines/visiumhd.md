@@ -166,6 +166,7 @@ S3_DIR=/s3/path/to/s3/dir                # Recommend to use DATA_ID as directory
     
     Alternatively, provide the scale directly with `--units-per-um`.
 
+___
 
 ## Run Pipelines
 
@@ -240,6 +241,8 @@ Below are explanations of the parameters used in the example. For the full list,
 | `--tifs`                       | `--import-images` (manual)                 | One or more BTF/TIFF paths (relative to `--space-ranger-dir`).                        |
 | `--title`, `--desc`                | optional with `--run-cartload2`            | Human‑readable catalog title/description.                                             | 
 | `--zenodo-token`                   | `--upload-zenodo`                          | Path to file containing Zenodo access token.                                          |-->
+
+___
 
 ## Outputs
 

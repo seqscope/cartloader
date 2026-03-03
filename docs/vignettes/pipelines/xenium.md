@@ -55,7 +55,6 @@ Downloaded the ST data from [10x Genomics Dataset portal](https://www.10xgenomic
     ```
 ___
 
-
 **Data Structure and Format**
 
 See details of the Xenium Ranger output at [Xenium Ranger Official Documents](https://www.10xgenomics.com/support/software/xenium-onboard-analysis/latest/analysis/xoa-output-understanding-outputs)
@@ -171,6 +170,7 @@ S3_DIR=/s3/path/to/s3/dir                 # Recommend to use DATA_ID as director
 !!! info "How to Define Scaling Factors for Xenium?"
 
     The Xenium example data currently used here provides SGE in µm. Define scaling factor from coordinate to micrometer as 1.
+___
 
 ## Run Pipelines
 
@@ -250,6 +250,7 @@ Below are explanations of the parameters used in the example. For the full list,
     | `--title`, `--desc`                | optional with `--run-cartload2`            | Human‑readable catalog title/description.                                             | 
     | `--zenodo-token`                   | `--upload-zenodo`                          | Path to file containing Zenodo access token.                                          |-->
 
+___
 
 ## Outputs
 <!-- 
@@ -260,7 +261,6 @@ Example: [`includes/xenium_ranger_assets.human_lung_cancer.json`](../../../inclu
 ```json
 {% include-markdown "../../../includes/xenium_ranger_assets.human_lung_cancer.json" %}
 ```
-
 
 ### Spatial Factor Inference
 Below is an example of spatial factor inference results from `FICTURE` using a training width of 18, 12 factors, a fit width of 18, and an anchor resolution of 6. See more details of output at the Reference pages for [run_ficture2](../docs/reference/run_ficture2.md)

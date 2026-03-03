@@ -243,6 +243,7 @@ Upload the generated `CartLoader` outputs from above to your designated AWS S3 d
     ```
 
 ---
+
 ## Output Summary
 
 <!-- See reference details: [run_ficture2_multi](../../reference/run_ficture2_multi.md#output) and [run_cartload2_multi](../../reference/run_cartload2_multi.md#output).
@@ -255,10 +256,7 @@ Below is an example of spatial factor inference results from `FICTURE`, trained 
 ![cmap](../images/multi-sample.t18_f96.cmap.png)
 
 {{ read_csv('../tabs/FB080_O1a.t18_f96_p18_a6.factor.info.tsv',sep = '\t') }}
-
-### Packed SGE and Spatial Factor Outputs Per Sample
-
-TODO: Provide paths to these assets to serve the outputs. -->
+-->
 
 
 <div class="grid cards generic" markdown>
