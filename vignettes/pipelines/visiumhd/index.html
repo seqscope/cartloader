@@ -2095,7 +2095,54 @@
 <h1 id="visium-hd-end-to-end-pipeline">Visium HD End-to-End Pipeline<a class="headerlink" href="#visium-hd-end-to-end-pipeline" title="Permanent link">&para;</a></h1>
 <h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
 <p>This tutorial walks through end‑to‑end processing of 10x Visium HD data with <code>CartLoader</code>: converting inputs, running <abbr title="Segmentation-free method inferring latent spatial factors from SGE (Si et al., Nature Methods 2024)">FICTURE</abbr>, importing cell results and histology, packaging assets, and uploading for sharing.</p>
+<hr />
 <h2 id="input-data">Input Data<a class="headerlink" href="#input-data" title="Permanent link">&para;</a></h2>
+<p><strong>Data Access</strong></p>
+<p>Downloaded the <abbr title="Spatial transcriptomics">ST</abbr> data from <a href="https://www.10xgenomics.com/datasets/visium-hd-three-prime-mouse-brain-fresh-frozen">10x Genomics Dataset portal</a>.</p>
+<p>=== Use "<code>wget</code>"
+If you have <code>wget</code> installed, use the following commands to download the output from 10X.</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span>
+<span class="normal">6</span>
+<span class="normal">7</span>
+<span class="normal">8</span>
+<span class="normal">9</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># 1. Choose one of the following options to download the output files:</span>
+<span class="c1"># A. Download the full output files</span>
+wget<span class="w"> </span>https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_outs.zip
+<span class="c1"># B. Only download the Xenium Explorer subset output files</span>
+wget<span class="w"> </span>https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_xe_outs.zip
+
+<span class="c1"># 2) Download supplemental files</span>
+wget<span class="w"> </span>https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_he_image.ome.tif
+wget<span class="w"> </span>https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_he_imagealignment.csv
+</code></pre></div></td></tr></table></div>
+<p>=== Use "<code>curl</code>"
+If you have <code>curl</code> installed, use the following commands to download the output from 10X. </p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># 1. Choose one of the following options to download the output files:</span>
+<span class="c1"># A. Download the full output files</span>
+curl<span class="w"> </span>-O<span class="w"> </span>https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_outs.zip
+
+<span class="c1"># B. Only download the Xenium Explorer subset output files</span>
+curl<span class="w"> </span>-O<span class="w"> </span>https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_xe_outs.zip
+
+
+<span class="c1"># 2) Download supplemental files</span>
+curl<span class="w"> </span>-O<span class="w"> </span>https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_he_image.ome.tif
+curl<span class="w"> </span>-O<span class="w"> </span>https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_he_imagealignment.csv
+</code></pre></div></td></tr></table></div>
 <hr />
 <p><strong>Data Structure and Format</strong></p>
 <p>See Space Ranger output details in the official documentation: <a href="https://www.10xgenomics.com/support/software/space-ranger/latest/analysis/outputs/output-overview">Space Ranger Outputs</a></p>
@@ -2329,9 +2376,6 @@ ENSMUSG00000089699,Gm1992,0.00003369899313325135,2.372528175774452,0.49812531917
 </div>
 </div>
 </div>
-<hr />
-<p><strong>Data Access</strong></p>
-<p>Downloaded the <abbr title="Spatial transcriptomics">ST</abbr> data from <a href="https://www.10xgenomics.com/datasets/visium-hd-three-prime-mouse-brain-fresh-frozen">10x Genomics Dataset portal</a>.</p>
 <hr />
 <h2 id="set-up-the-environment">Set Up the Environment<a class="headerlink" href="#set-up-the-environment" title="Permanent link">&para;</a></h2>
 <div class="admonition warning">
