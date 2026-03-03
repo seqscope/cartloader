@@ -27,6 +27,7 @@ docker run hello-world
 
 If these commands fail, [install Docker](https://docs.docker.com/get-docker/) in your system.
 
+---
 
 ## Input Data
 
@@ -47,7 +48,7 @@ The input is an mouse hippocampus SGE in a `FICTURE`-compatible format compatibl
 
     If needs, it is also available on Zenodo: [DOI: 10.5281/zenodo.15701393](https://doi.org/10.5281/zenodo.15701393)
 
----------------
+---
 
 ## Set Up the Environment
 
@@ -75,6 +76,8 @@ train_width=18                           # define LDA training hexagon width (co
 n_factor=6,12                            # define number of factors in LDA training (comma-separated if multiple n-factor are applied)
 ```
 
+---
+
 ## `FICTURE` Analysis
 
 {%
@@ -86,6 +89,8 @@ n_factor=6,12                            # define number of factors in LDA train
   start="<!--parameter-start-->" end="<!--parameter-end-->"
 %}
 
+---
+
 ## `CartLoader` Asset Packaging
 
 {%
@@ -96,6 +101,8 @@ n_factor=6,12                            # define number of factors in LDA train
   include-markdown "../../../includes/includemd_vigenettes_run_cartload2.md"
   start="<!--parameter-start-->" end="<!--parameter-end-->"
 %}
+
+---
 
 ## Upload to Data Repository
 
@@ -119,7 +126,7 @@ n_factor=6,12                            # define number of factors in LDA train
   include-markdown "../../../includes/includemd_vigenettes_upload.md" start="<!--section3-start-->" end="<!--section3-end-->" preserve-includer-indent=false
 %}
 
----------------
+---
 
 ## Output Data
 
