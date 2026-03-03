@@ -32,6 +32,7 @@ This tutorial uses a series of four human cortex ST datasets from [Walsh et al. 
 Follow the commands below to download the source data.
 
 ```bash
+# define the work directory
 work_dir=/path/to/work/directory
 mkdir -p ${work_dir}/raw
 cd ${work_dir}/raw
