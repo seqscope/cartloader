@@ -47,7 +47,19 @@ if (!dir.exists(user_lib)) dir.create(user_lib, recursive = TRUE, showWarnings =
 .libPaths(c(user_lib, .libPaths()))
 message("Using library: ", .libPaths()[1])
 
-required_packages <- c("argparse", "data.table", "RcppParallel", "ggplot2", "uwot", "this.path")
+required_packages <- c(
+  "argparse",
+  "data.table",
+  "RcppParallel",
+  "ggplot2",
+  "uwot",
+  "this.path",
+  "dplyr",
+  "tidyr",
+  "patchwork",
+  "scales",
+  "R.utils"
+)
 
 # Consider all libraries in .libPaths() when checking what is installed
 installed <- rownames(installed.packages(lib.loc = .libPaths()))
