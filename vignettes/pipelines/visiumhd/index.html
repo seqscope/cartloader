@@ -2099,36 +2099,10 @@
 <h2 id="input-data">Input Data<a class="headerlink" href="#input-data" title="Permanent link">&para;</a></h2>
 <p><strong>Data Access</strong></p>
 <p>Downloaded the <abbr title="Spatial transcriptomics">ST</abbr> data from <a href="https://www.10xgenomics.com/datasets/visium-hd-three-prime-mouse-brain-fresh-frozen">10x Genomics Dataset portal</a>.</p>
-<div class="tabbed-set tabbed-alternate" data-tabs="1:1"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Use <code>wget</code></label></div>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Use <code>wget</code></label><label for="__tabbed_1_2">Use <code>curl</code></label></div>
 <div class="tabbed-content">
-<div class="tabbed-block"></div>
-</div>
-</div>
+<div class="tabbed-block">
 <p>If you have <code>wget</code> installed, use the following commands to download the output from 10X.</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span>
-<span class="normal">5</span>
-<span class="normal">6</span>
-<span class="normal">7</span>
-<span class="normal">8</span>
-<span class="normal">9</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># 1. Choose one of the following options to download the output files:</span>
-<span class="c1"># A. Download the full output files</span>
-wget<span class="w"> </span>https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_outs.zip
-<span class="c1"># B. Only download the Xenium Explorer subset output files</span>
-wget<span class="w"> </span>https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_xe_outs.zip
-
-<span class="c1"># 2) Download supplemental files</span>
-wget<span class="w"> </span>https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_he_image.ome.tif
-wget<span class="w"> </span>https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_he_imagealignment.csv
-</code></pre></div></td></tr></table></div>
-<div class="tabbed-set tabbed-alternate" data-tabs="2:1"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">Use <code>curl</code></label></div>
-<div class="tabbed-content">
-<div class="tabbed-block"></div>
-</div>
-</div>
-<p>If you have <code>curl</code> installed, use the following commands to download the output from 10X. </p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -2139,22 +2113,56 @@ wget<span class="w"> </span>https://cf.10xgenomics.com/samples/xenium/3.0.0/Xeni
 <span class="normal"> 8</span>
 <span class="normal"> 9</span>
 <span class="normal">10</span>
-<span class="normal">11</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># 1. Choose one of the following options to download the output files:</span>
-<span class="c1"># A. Download the full output files</span>
-curl<span class="w"> </span>-O<span class="w"> </span>https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_outs.zip
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># define the work directory</span>
+<span class="nv">work_dir</span><span class="o">=</span>/path/to/work/directory
+mkdir<span class="w"> </span>-p<span class="w"> </span><span class="si">${</span><span class="nv">work_dir</span><span class="si">}</span>/raw
+<span class="nb">cd</span><span class="w"> </span><span class="si">${</span><span class="nv">work_dir</span><span class="si">}</span>/raw
 
-<span class="c1"># B. Only download the Xenium Explorer subset output files</span>
-curl<span class="w"> </span>-O<span class="w"> </span>https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_xe_outs.zip
-
-
-<span class="c1"># 2) Download supplemental files</span>
-curl<span class="w"> </span>-O<span class="w"> </span>https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_he_image.ome.tif
-curl<span class="w"> </span>-O<span class="w"> </span>https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_he_imagealignment.csv
+wget<span class="w"> </span>https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_barcode_mappings.parquet
+wget<span class="w"> </span>https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_binned_outputs.tar.gz
+wget<span class="w"> </span>https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_cloupe_008um.cloupe
+wget<span class="w"> </span>https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_cloupe_cell.cloupe
+wget<span class="w"> </span>https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_feature_slice.h5
+wget<span class="w"> </span>https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_metrics_summary.csv
+wget<span class="w"> </span>https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_molecule_info.h5
+wget<span class="w"> </span>https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_segmented_outputs.tar.gz
+wget<span class="w"> </span>https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_spatial.tar.gz
+wget<span class="w"> </span>https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_web_summary.html
 </code></pre></div></td></tr></table></div>
+</div>
+<div class="tabbed-block">
+<p>If you have <code>curl</code> installed, use the following commands to download the output from 10X. </p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code>curl<span class="w"> </span>-O<span class="w"> </span>https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_barcode_mappings.parquet
+curl<span class="w"> </span>-O<span class="w"> </span>https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_binned_outputs.tar.gz
+curl<span class="w"> </span>-O<span class="w"> </span>https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_cloupe_008um.cloupe
+curl<span class="w"> </span>-O<span class="w"> </span>https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_cloupe_cell.cloupe
+curl<span class="w"> </span>-O<span class="w"> </span>https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_feature_slice.h5
+curl<span class="w"> </span>-O<span class="w"> </span>https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_metrics_summary.csv
+curl<span class="w"> </span>-O<span class="w"> </span>https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_molecule_info.h5
+curl<span class="w"> </span>-O<span class="w"> </span>https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_segmented_outputs.tar.gz
+curl<span class="w"> </span>-O<span class="w"> </span>https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_spatial.tar.gz
+curl<span class="w"> </span>-O<span class="w"> </span>https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_web_summary.html
+</code></pre></div></td></tr></table></div>
+</div>
+</div>
+</div>
 <hr />
 <p><strong>Data Structure and Format</strong></p>
 <p>See Space Ranger output details in the official documentation: <a href="https://www.10xgenomics.com/support/software/space-ranger/latest/analysis/outputs/output-overview">Space Ranger Outputs</a></p>
-<div class="tabbed-set tabbed-alternate" data-tabs="3:3"><input checked="checked" id="__tabbed_3_1" name="__tabbed_3" type="radio" /><input id="__tabbed_3_2" name="__tabbed_3" type="radio" /><input id="__tabbed_3_3" name="__tabbed_3" type="radio" /><div class="tabbed-labels"><label for="__tabbed_3_1">RAW Data Structure</label><label for="__tabbed_3_2"><abbr title="Spatial Digital Gene Expression">SGE</abbr> Format</label><label for="__tabbed_3_3">Cell Analysis Result Format</label></div>
+<div class="tabbed-set tabbed-alternate" data-tabs="2:3"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><input id="__tabbed_2_3" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">RAW Data Structure</label><label for="__tabbed_2_2"><abbr title="Spatial Digital Gene Expression">SGE</abbr> Format</label><label for="__tabbed_2_3">Cell Analysis Result Format</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>

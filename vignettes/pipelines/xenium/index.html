@@ -2097,9 +2097,82 @@
 <p>This tutorial walks through end‑to‑end processing of 10x Xenium data with <code>CartLoader</code>: converting inputs, running <abbr title="Segmentation-free method inferring latent spatial factors from SGE (Si et al., Nature Methods 2024)">FICTURE</abbr>, importing cell results and histology, packaging assets, and uploading to AWS for sharing.</p>
 <hr />
 <h2 id="input-data">Input Data<a class="headerlink" href="#input-data" title="Permanent link">&para;</a></h2>
+<p><strong>Data Access</strong></p>
+<p>Downloaded the <abbr title="Spatial transcriptomics">ST</abbr> data from <a href="https://www.10xgenomics.com/datasets/xenium-human-lung-cancer-post-xenium-technote">10x Genomics Dataset portal</a>.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Use <code>wget</code></label><label for="__tabbed_1_2">Use <code>curl</code></label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<p>If you have <code>wget</code> installed, use the following commands to download the output from 10X.</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># define the work directory</span>
+<span class="nv">work_dir</span><span class="o">=</span>/path/to/work/directory
+mkdir<span class="w"> </span>-p<span class="w"> </span><span class="si">${</span><span class="nv">work_dir</span><span class="si">}</span>/raw
+<span class="nb">cd</span><span class="w"> </span><span class="si">${</span><span class="nv">work_dir</span><span class="si">}</span>/raw
+
+<span class="c1"># 1. Choose one of the following options to download the output files:</span>
+<span class="c1"># A. Download the full output files</span>
+wget<span class="w"> </span>https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_outs.zip
+<span class="c1"># B. Only download the Xenium Explorer subset output files</span>
+wget<span class="w"> </span>https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_xe_outs.zip
+
+<span class="c1"># 2) Download supplemental files</span>
+wget<span class="w"> </span>https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_he_image.ome.tif
+wget<span class="w"> </span>https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_he_imagealignment.csv
+</code></pre></div></td></tr></table></div>
+</div>
+<div class="tabbed-block">
+<p>If you have <code>curl</code> installed, use the following commands to download the output from 10X. </p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># define the work directory</span>
+<span class="nv">work_dir</span><span class="o">=</span>/path/to/work/directory
+mkdir<span class="w"> </span>-p<span class="w"> </span><span class="si">${</span><span class="nv">work_dir</span><span class="si">}</span>/raw
+<span class="nb">cd</span><span class="w"> </span><span class="si">${</span><span class="nv">work_dir</span><span class="si">}</span>/raw
+
+<span class="c1"># 1. Choose one of the following options to download the output files:</span>
+<span class="c1"># A. Download the full output files</span>
+curl<span class="w"> </span>-O<span class="w"> </span>https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_outs.zip
+
+<span class="c1"># B. Only download the Xenium Explorer subset output files</span>
+curl<span class="w"> </span>-O<span class="w"> </span>https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_xe_outs.zip
+
+
+<span class="c1"># 2) Download supplemental files</span>
+curl<span class="w"> </span>-O<span class="w"> </span>https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_he_image.ome.tif
+curl<span class="w"> </span>-O<span class="w"> </span>https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_he_imagealignment.csv
+</code></pre></div></td></tr></table></div>
+</div>
+</div>
+</div>
+<hr />
 <p><strong>Data Structure and Format</strong></p>
 <p>See details of the Xenium Ranger output at <a href="https://www.10xgenomics.com/support/software/xenium-onboard-analysis/latest/analysis/xoa-output-understanding-outputs">Xenium Ranger Official Documents</a></p>
-<div class="tabbed-set tabbed-alternate" data-tabs="1:4"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><input id="__tabbed_1_3" name="__tabbed_1" type="radio" /><input id="__tabbed_1_4" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">RAW Data Structure</label><label for="__tabbed_1_2"><abbr title="Spatial Digital Gene Expression">SGE</abbr> Format</label><label for="__tabbed_1_3">Cell Analysis Result Format</label><label for="__tabbed_1_4">Morphology images</label></div>
+<div class="tabbed-set tabbed-alternate" data-tabs="2:4"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><input id="__tabbed_2_3" name="__tabbed_2" type="radio" /><input id="__tabbed_2_4" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">RAW Data Structure</label><label for="__tabbed_2_2"><abbr title="Spatial Digital Gene Expression">SGE</abbr> Format</label><label for="__tabbed_2_3">Cell Analysis Result Format</label><label for="__tabbed_2_4">Morphology images</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
@@ -2247,9 +2320,6 @@ ENSG00000127837,AAMP,0.02869137687178692,-0.8208377939888187,0.06947481704069494
 </div>
 </div>
 </div>
-<hr />
-<p><strong>Data Access</strong></p>
-<p>Downloaded the <abbr title="Spatial transcriptomics">ST</abbr> data from <a href="https://www.10xgenomics.com/datasets/xenium-human-lung-cancer-post-xenium-technote">10x Genomics Dataset portal</a>.</p>
 <hr />
 <h2 id="set-up-the-environment">Set Up the Environment<a class="headerlink" href="#set-up-the-environment" title="Permanent link">&para;</a></h2>
 <div class="admonition warning">
