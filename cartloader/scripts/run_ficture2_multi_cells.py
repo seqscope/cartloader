@@ -27,7 +27,7 @@ def parse_arguments(_args):
     cmd_params.add_argument('--umap', action='store_true', default=False, help='Generate UMAP manifolds based on LDA factorization')
     cmd_params.add_argument('--pseudobulk', action='store_true', default=False, help='Generate pseudobulk files based on Leiden clusters')
     cmd_params.add_argument('--heatmap', action='store_true', default=False, help='Generate heamap between LDA factors and Leiden clusters')
-    cmd_params.add_argument('--decode', action='store_true', default=False, help='Perform pixel-level decoding based on cell clusters. Onlt available when --pixel is specified.')
+    cmd_params.add_argument('--decode', action='store_true', default=False, help='Perform pixel-level decoding based on cell clusters.')
 
     inout_params = parser.add_argument_group("Input/Output Parameters", "Input and output parameters for FICTURE")
     inout_params.add_argument('--out-dir', required=True, type=str, help='Output directory')
@@ -52,26 +52,23 @@ def parse_arguments(_args):
     # input column indexes
     aux_params.add_argument('--colidx-x',  type=int, default=1, help='Column index for X-axis in the --in-transcript (default: 1)')
     aux_params.add_argument('--colidx-y',  type=int, default=2, help='Column index for Y-axis in the --in-transcript (default: 2)')
-    aux_params.add_argument('--colidx-feature',  type=int, default=3, help='Column index for Y-axis in the --in-transcript (default: 3)')
+    aux_params.add_argument('--colidx-feature',  type=int, default=3, help='Column index for feature in the --in-transcript (default: 3)')
     aux_params.add_argument('--colidx-count',  type=int, default=4, help='Column index for intensity in the --in-transcript (default: 4)')
     aux_params.add_argument('--colidx-cell-id', type=int, default=5, help='Column index for cell ID in the --in-transcript (default: 5)')
     aux_params.add_argument('--ignore-ids', type=str, default="UNASSIGNED,NA,0,-1", help='IDs to ignore in pixel file')
-    # segmentation - ficture
-    aux_params.add_argument('--min-count-per-sample', type=int, default=50, help='Minimum count per sample in the tiled SGE (default: 50)')
-    aux_params.add_argument('--min-ct-per-cell', type=int, default=50, help='Minimum count per hexagon in hexagon segmentation in FICTURE compatible format (default: 50)')
     # train
     aux_params.add_argument('--train-epoch', type=int, default=2, help='Training epoch for LDA model (default: 2)')
-    aux_params.add_argument('--skip-umap', action='store_true', default=False, help='Skip creating umap')
+    #aux_params.add_argument('--skip-umap', action='store_true', default=False, help='Skip creating umap')
     aux_params.add_argument('--decode-scale', type=int, default=1, help='Decode scale (default: 1)')
-    aux_params.add_argument('--seed', type=int, default=1, help='Random seed for random number generation (default: 0)')
+    aux_params.add_argument('--seed', type=int, default=1, help='Random seed for random number generation (default: 1)')
 
     # others parameters shared across steps
     aux_params.add_argument('--min-feature-count', type=int, default=20, help='Minimum feature count for LDA factorization')
-    aux_params.add_argument('--min-cell-count', type=int, default=50, help='Minimum cell count for LDA factorization')
+    aux_params.add_argument('--min-cell-count', type=int, default=50, help='Minimum cell count for LDA factorization (not in effect with --mex-dir option)')
     aux_params.add_argument('--de-min-ct-per-feature', type=int, default=20, help='Minimum count per feature for differential expression (default: 20)')
     aux_params.add_argument('--de-max-pval', type=float, default=1e-3, help='P-value cutoff for differential expression (default: 1e-3)')
     aux_params.add_argument('--de-min-fold', type=float, default=1.5, help='Fold-change cutoff for differential expression (default: 1.5)')
-    aux_params.add_argument('--decode-fit-width', type=int, default=18, help='Fitting width (in microns) for decoding (default: 10)')
+    aux_params.add_argument('--decode-fit-width', type=int, default=18, help='Fitting width (in microns) for decoding (default: 18)')
     # project from external model
     aux_params.add_argument('--pretrained-model', type=str, help='Path to a pre-trained model to use for projection. If provided, LDA training will be skipped, and the provided model will be used for projection.')
     aux_params.add_argument('--list-samples', type=str, help='Path to a TSV file containing sample IDs and paths to their transcript TSV files for multi-sample analysis. If provided, the samples listed in the file will be used for analysis.')
@@ -91,11 +88,11 @@ def parse_arguments(_args):
     env_params = parser.add_argument_group("ENV Parameters", "Environment parameters, e.g., tools.")
     env_params.add_argument('--gzip', type=str, default="gzip", help='Path to gzip binary. For faster processing, use "pigz -p 4"')
     env_params.add_argument('--sort', type=str, default="sort", help='Path to sort binary. For faster processing, you may add arguments like "sort -T /path/to/new/tmpdir --parallel=20 -S 10G"')
-    env_params.add_argument('--sort-mem', type=str, default="1G", help='Memory size for each process (default: 1G)')
+    #env_params.add_argument('--sort-mem', type=str, default="1G", help='Memory size for each process (default: 1G)')
     env_params.add_argument('--spatula', type=str, default=f"spatula",  help='Path to spatula binary (default: "spatula" in the system PATH)') # default=f"{repo_dir}/submodules/spatula/bin/spatula",
     env_params.add_argument('--ficture2', type=str, default=os.path.join(repo_dir, "submodules", "punkst"), help='Path to punkst (ficture2) repository (default: <cartloader_dir>/submodules/punkst)')
     env_params.add_argument('--python', type=str, default="python3",  help='Python3 binary')
-    env_params.add_argument('--R', type=str, default="Rscript", help='Path to R binary for UMAP generation (default: R)')
+    env_params.add_argument('--R', type=str, default="Rscript", help='Path to R binary for UMAP generation (default: Rscript)')
 
 
     if len(_args) == 0:
@@ -149,15 +146,18 @@ def run_ficture2_multi_cells(_args):
                 if not os.path.exists(sample_dir):
                     raise FileNotFoundError(f"Sample directory not found: {sample_dir}. Please make sure that the sample directory exists in --in-samples")
                 in_samples.append(sample_id)
+        logger.info(f"Found {len(in_samples)} samples: {in_samples}") 
+
     else:     ## list directories in args.in_dir/samples/
         samples_dir = os.path.join(args.in_dir, "samples")
         for entry in os.listdir(samples_dir):
             entry_path = os.path.join(samples_dir, entry)
             if os.path.isdir(entry_path):
                 in_samples.append(entry)
+        logger.info(f"Found {len(in_samples)} samples in {samples_dir}: {in_samples}") 
+
     n_samples = len(in_samples)
-    logger.info(f"Found {len(in_samples)} samples in {samples_dir}: {in_samples}")
-    
+
     # cmap
     assert os.path.exists(args.cmap_file), f"File not found: {args.cmap_file} (--cmap-file)"
     
@@ -235,7 +235,7 @@ def run_ficture2_multi_cells(_args):
                 #sample_id = in_samples[0]  ## use the first sample's tiled file to create SPTSV
                 pixelf = f"{args.in_dir}/samples/{sample_id}/{sample_id}.tiled"
                 sample_sptsv_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.sptsv"
-                cmd = f"{args.spatula} pixel2sptsv --pixel {pixelf}.tsv --no-header --idx-col-x {args.colidx_x} --idx-col-y {args.colidx_y} --idx-col-ftr {args.colidx_feature} --idx-col-cnt {args.colidx_count} --idx-col-id {args.colidx_cell_id} --ignore-ids {args.ignore_ids} --out {sample_sptsv_prefix} --min-feature-count {args.min_feature_count} {cmd_ftr_include_exclude}"
+                cmd = f"{args.spatula} pixel2sptsv --min-cell-count {args.min_cell_count} --pixel {pixelf}.tsv --no-header --idx-col-x {args.colidx_x} --idx-col-y {args.colidx_y} --idx-col-ftr {args.colidx_feature} --idx-col-cnt {args.colidx_count} --idx-col-id {args.colidx_cell_id} --ignore-ids {args.ignore_ids} --out {sample_sptsv_prefix} --min-feature-count {args.min_feature_count} {cmd_ftr_include_exclude}"
                 cmds.append(cmd)
                 samp2sptsv[sample_id] = sample_sptsv_prefix
                 deps.append(f"{pixelf}.tsv")
@@ -302,6 +302,7 @@ def run_ficture2_multi_cells(_args):
         cmds.append(f"touch {lda_prefix}.done")
         mm.add_target(f"{lda_prefix}.done", deps, cmds);
 
+    samp2boundaries = {}
     if args.leiden:
         lda_prefix = os.path.join(args.out_dir, args.out_prefix) + ".lda"
         leiden_prefix = os.path.join(args.out_dir, args.out_prefix) + ".leiden"
@@ -322,7 +323,7 @@ def run_ficture2_multi_cells(_args):
                 for line in rf:
                     toks = line.strip().split("\t")
                     if len(toks) != 2:
-                        raise ValueError(f"Each line in --list-cluster must have exactly 3 columns containing [SAMPLE_ID] [CLUSTER_FILE] [METADTA_FILE]")
+                        raise ValueError(f"Each line in --list-cluster must have exactly 2 columns containing [SAMPLE_ID] [CLUSTER_FILE] [METADTA_FILE]")
                     sample_id = toks[0]
                     cluster_file = toks[1]
                     if not os.path.exists(cluster_file):
@@ -424,7 +425,6 @@ def run_ficture2_multi_cells(_args):
         mm.add_target(f"{leiden_prefix}.done", [f"{lda_prefix}.done"], cmds)
 
         ## spatial visualization of leiden clusters
-        samp2boundaries = {}
         if args.list_boundaries is not None:
             with flexopen(args.list_boundaries, "rt") as rf:
                 for line in rf:
@@ -558,13 +558,13 @@ def run_ficture2_multi_cells(_args):
         cmds = cmd_separator([], f"Generating heatmap between LDA factors and Leiden clusters...")
         #model_tsv = args.pretrained_model if args.pretrained_model is not None else f"{lda_prefix}.model.tsv"
         model_tsv = f"{lda_prefix}.model.tsv"
-        cmd = f"{args.spatula} diffexp-model-matrix --tsv1 '{model_tsv}' --out '{lda_prefix}.model'"
+        cmd = f"{args.spatula} diffexp-model-matrix --tsv1 '{model_tsv}' --out '{lda_prefix}.model' --min-count {args.de_min_ct_per_feature} --max-pval {args.de_max_pval} --min-fc {args.de_min_fold}"
         cmds.append(cmd)
         cmds.append(f"({args.gzip} -cd {lda_prefix}.model.de.marginal.tsv.gz | head -1 | sed 's/^Feature/gene/'; {args.gzip} -cd {lda_prefix}.model.de.marginal.tsv.gz | tail -n +2 | {args.sort} -k 2,2n -k 3,3gr;) > {lda_prefix}.model.de.tsv")
         cmds.append(f"rm -f '{lda_prefix}.model.de.marginal.tsv.gz'")
 
         ## perform DE test on the cell pseudobulk matrix
-        cmd = f"{args.spatula} diffexp-model-matrix --tsv1 '{pseudobulk_prefix}.tsv' --out '{pseudobulk_prefix}'"
+        cmd = f"{args.spatula} diffexp-model-matrix --tsv1 '{pseudobulk_prefix}.tsv' --out '{pseudobulk_prefix}' --min-count {args.de_min_ct_per_feature} --max-pval {args.de_max_pval} --min-fc {args.de_min_fold}"
         cmds.append(cmd)
         cmds.append(f"({args.gzip} -cd {pseudobulk_prefix}.de.marginal.tsv.gz | head -1 | sed 's/^Feature/gene/'; {args.gzip} -cd {pseudobulk_prefix}.de.marginal.tsv.gz | tail -n +2 | {args.sort} -k 2,2n -k 3,3gr;) > {pseudobulk_prefix}.de.tsv")
         cmds.append(f"rm -f '{pseudobulk_prefix}.de.marginal.tsv.gz'")
@@ -572,11 +572,12 @@ def run_ficture2_multi_cells(_args):
         ## create factor report for cluster annotation
         cmd = " ".join([
             ficture2report,
+            f"--factor_label factor",
             f"--de '{pseudobulk_prefix}.de.tsv'",
             f"--pseudobulk '{pseudobulk_prefix}.tsv'",
             f"--feature_label Feature",
             f"--color_table '{pseudobulk_prefix}.cmap.tsv'",
-            f"--output_pref '{pseudobulk_prefix}'",
+            f"--output_pref '{pseudobulk_prefix}.factor'",
             ])
         cmds.append(cmd)
 
@@ -595,7 +596,7 @@ def run_ficture2_multi_cells(_args):
             sample_heatmap_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.heatmap"
 
             ## perform DE test on the cell pseudobulk matrix
-            cmd = f"{args.spatula} diffexp-model-matrix --tsv1 '{sample_pseudobulk_prefix}.tsv' --out '{sample_pseudobulk_prefix}'"
+            cmd = f"{args.spatula} diffexp-model-matrix --tsv1 '{sample_pseudobulk_prefix}.tsv' --out '{sample_pseudobulk_prefix}' --min-count {args.de_min_ct_per_feature} --max-pval {args.de_max_pval} --min-fc {args.de_min_fold}"
             cmds.append(cmd)
 
             cmds.append(f"({args.gzip} -cd {sample_pseudobulk_prefix}.de.marginal.tsv.gz | head -1 | sed 's/^Feature/gene/'; {args.gzip} -cd {sample_pseudobulk_prefix}.de.marginal.tsv.gz | tail -n +2 | {args.sort} -k 2,2n -k 3,3gr;) > {sample_pseudobulk_prefix}.de.tsv")
@@ -603,11 +604,12 @@ def run_ficture2_multi_cells(_args):
 
             cmd = " ".join([
                 ficture2report,
+                f"--factor_label factor",
                 f"--de '{sample_pseudobulk_prefix}.de.tsv'",
                 f"--pseudobulk '{sample_pseudobulk_prefix}.tsv'",
                 f"--feature_label Feature",
                 f"--color_table '{sample_pseudobulk_prefix}.cmap.tsv'",
-                f"--output_pref '{sample_pseudobulk_prefix}'",
+                f"--output_pref '{sample_pseudobulk_prefix}.factor'",
                 ])
             cmds.append(cmd)
 
@@ -633,7 +635,7 @@ def run_ficture2_multi_cells(_args):
             cmds = cmd_separator([], f"Performing pixel-level decoding for sample {sample_id}...")
             sample_prefix = f"{args.in_dir}/samples/{sample_id}/{sample_id}.tiled"
             decode_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.pixel"
-            fit_width = args.decode_fit_width  ## e.g., 10um
+            fit_width = args.decode_fit_width  ## e.g., 18um
             fit_n_move = fit_width // args.anchor_resolution + 1
             decode_id = f"p{fit_width}_a{args.anchor_resolution}"
             model_path= modelf
@@ -696,50 +698,66 @@ def run_ficture2_multi_cells(_args):
         sample_prefix = f"{sample_out_dir}/{sample}.{args.out_prefix}"
 
         out_manifolds = {
-            "shared": {
-                "tsne": {
-                    "tsv": f"{shared_prefix}.tsne.leiden.tsv.gz",
-                    "png": f"{shared_prefix}.tsne.png"
-                },
-                "umap": {
-                    "tsv": f"{shared_prefix}.umap.leiden.tsv.gz",
-                    "png": f"{shared_prefix}.umap.png"
-                }
-            },
-            "sample": {
-                "tsne": {
-                    "tsv": f"{sample_prefix}.tsne.leiden.tsv.gz",
-                    "png": f"{sample_prefix}.tsne.png"
-                },
-                "umap": {
-                    "tsv": f"{sample_prefix}.umap.leiden.tsv.gz",
-                    "png": f"{sample_prefix}.umap.png"
-                }
-            }
+            "shared": {},
+            "sample": {}
         }
+        if args.tsne:
+            out_manifolds["shared"]["tsne"] = {
+                "tsv": f"{shared_prefix}.tsne.leiden.tsv.gz",
+                "png": f"{shared_prefix}.tsne.png"
+            }
+            out_manifolds["sample"]["tsne"] = {
+                "tsv": f"{sample_prefix}.tsne.leiden.tsv.gz",
+                "png": f"{sample_prefix}.tsne.png"
+            }
+        
+        if args.umap:
+            out_manifolds["shared"]["umap"] = {
+                "tsv": f"{shared_prefix}.umap.leiden.tsv.gz",
+                "png": f"{shared_prefix}.umap.png"
+            }
+            out_manifolds["sample"]["umap"] = {
+                "tsv": f"{sample_prefix}.umap.leiden.tsv.gz",
+                "png": f"{sample_prefix}.umap.png"
+            }
+
         out_cell_params = { 
             "model_type": "lda",
             "model_id": args.out_prefix,
-            "cmap": f"{sample_prefix}.leiden.pseudobulk.cmap.tsv",
-            "model_path": f"{lda_prefix}.model.tsv",
-            "fit_path": f"{sample_prefix}.lda.results.tsv",
-            "sptsv_prefix": f"{sample_prefix}.sptsv",
-            "cell_xy_path": f"{sample_prefix}.leiden.xy.tsv.gz",
-            "cluster_path": f"{sample_prefix}.leiden.tsv.gz",
-            "cluster_pseudobulk": f"{sample_prefix}.leiden.pseudobulk.tsv",
-            "cluster_de": f"{sample_prefix}.leiden.pseudobulk.de.tsv",
-            "cluster_info": f"{sample_prefix}.leiden.pseudobulk.factor.info.tsv",
-            "cluster_model_heatmap_pdf": f"{sample_prefix}.heatmap.pdf",
-            "cluster_model_heatmap_tsv": f"{sample_prefix}.heatmap.normfrac.tsv",
-            "shared_cluster_de": f"{shared_prefix}.leiden.pseudobulk.de.tsv",
-            "shared_cluster_info": f"{shared_prefix}.leiden.pseudobulk.factor.info.tsv",
-            "shared_cluster_pseudobulk": f"{shared_prefix}.leiden.pseudobulk.tsv",
-            "shared_cluster_model_heatmap_pdf": f"{shared_prefix}.heatmap.pdf",
-            "shared_cluster_model_heatmap_tsv": f"{shared_prefix}.heatmap.normfrac.tsv",
-            "pixel_png_path": f"{sample_prefix}.pixel.png",
-            "pixel_tsv_path": f"{sample_prefix}.pixel.tsv.gz",
-            "manifolds": out_manifolds
         }
+        
+        if args.pseudobulk:
+            out_cell_params["cmap"] = f"{sample_prefix}.leiden.pseudobulk.cmap.tsv"
+            out_cell_params["cluster_pseudobulk"] = f"{sample_prefix}.leiden.pseudobulk.tsv"
+            out_cell_params["cluster_de"] = f"{sample_prefix}.leiden.pseudobulk.de.tsv"
+            out_cell_params["cluster_info"] = f"{sample_prefix}.leiden.pseudobulk.factor.info.tsv"
+            out_cell_params["shared_cluster_pseudobulk"] = f"{shared_prefix}.leiden.pseudobulk.tsv"
+            out_cell_params["shared_cluster_de"] = f"{shared_prefix}.leiden.pseudobulk.de.tsv"
+            out_cell_params["shared_cluster_info"] = f"{shared_prefix}.leiden.pseudobulk.factor.info.tsv"
+            
+        if args.lda:
+            out_cell_params["model_path"] = f"{lda_prefix}.model.tsv"
+            out_cell_params["fit_path"] = f"{sample_prefix}.lda.results.tsv"
+            
+        if args.sptsv:
+            out_cell_params["sptsv_prefix"] = f"{sample_prefix}.sptsv"
+            
+        if args.leiden:
+            out_cell_params["cell_xy_path"] = f"{sample_prefix}.leiden.xy.tsv.gz"
+            out_cell_params["cluster_path"] = f"{sample_prefix}.leiden.tsv.gz"
+            
+        if args.heatmap:
+            out_cell_params["cluster_model_heatmap_pdf"] = f"{sample_prefix}.heatmap.pdf"
+            out_cell_params["cluster_model_heatmap_tsv"] = f"{sample_prefix}.heatmap.normfrac.tsv"
+            out_cell_params["shared_cluster_model_heatmap_pdf"] = f"{shared_prefix}.heatmap.pdf"
+            out_cell_params["shared_cluster_model_heatmap_tsv"] = f"{shared_prefix}.heatmap.normfrac.tsv"
+            
+        if args.decode:
+            out_cell_params["pixel_png_path"] = f"{sample_prefix}.pixel.png"
+            out_cell_params["pixel_tsv_path"] = f"{sample_prefix}.pixel.tsv.gz"
+
+        if args.tsne or args.umap:
+            out_cell_params["manifolds"] = out_manifolds
         if n_samples > 1:
             out_cell_params["analysis_type"] = "multi-sample"
         if sample in samp2boundaries:

@@ -22,9 +22,35 @@ This tutorial demonstrates how to run multi‑sample FICTURE analysis and packag
     - If you choose stitching, plan for higher resource usage (RAM, disk, and I/O). Large mosaics can be slow to generate and train on, and may require substantially more memory and temporary storage than per‑sample runs.
 
 ---
+
 ## Input Data
 
 This tutorial uses a series of four human cortex ST datasets from [Walsh et al. Nature 2025](https://www.nature.com/articles/s41586-025-09010-1), generated using MERFISH.
+
+**Data Access**
+
+Follow the commands below to download the source data.
+
+```bash
+work_dir=/path/to/work/directory
+mkdir -p ${work_dir}/raw
+cd ${work_dir}/raw
+
+wget https://zenodo.org/records/15127709/files/FB080_O1a.zip?download=1
+unzip FB080_O1a.zip
+
+wget https://zenodo.org/records/15127709/files/FB080_O1b.zip?download=1
+unzip FB080_O1b.zip
+
+wget https://zenodo.org/records/15127709/files/FB080_O1c.zip?download=1
+unzip FB080_O1c.zip
+
+wget https://zenodo.org/records/15127709/files/FB080_O1d.zip?download=1
+unzip FB080_O1d.zip
+
+wget https://zenodo.org/records/15127709/files/FB121_O1.zip?download=1
+unzip FB121_O1.zip
+```
 
 **File Format**
 
@@ -49,29 +75,8 @@ This tutorial uses a series of four human cortex ST datasets from [Walsh et al. 
       * `transcript_id`: Unique identifier for the transcript.
       * `cell_id`: Unique identifier for cell.
 
-**Data Access**
-
-Follow the commands below to download the source data.
-
-```bash
-work_dir=/path/to/work/directory
-mkdir -p ${work_dir}/raw
-cd ${work_dir}/raw
-
-wget https://zenodo.org/records/15127709/files/FB080_O1a.zip?download=1
-unzip FB080_O1a.zip
-
-wget https://zenodo.org/records/15127709/files/FB080_O1b.zip?download=1
-unzip FB080_O1b.zip
-
-wget https://zenodo.org/records/15127709/files/FB080_O1c.zip?download=1
-unzip FB080_O1c.zip
-
-wget https://zenodo.org/records/15127709/files/FB080_O1d.zip?download=1
-unzip FB080_O1d.zip
-```
-
 ---
+
 ## Set Up the Environment
 
 {% 
@@ -103,51 +108,70 @@ cd ${work_dir}
 
 ## SGE Format Conversion
 
-For each sample, convert its transcript‑indexed SGE file to be the `CartLoader` format.
+!!! warning
+    For each sample, convert transcript-indexed SGE to CartLoader format. Below use `FB080_O1a` as example.
 
-Below use FB080_O1a as an example.
+    Set `sample_id` once, then run one of the two workflows below.
 
-```bash
-sample_id=FB080_O1a
-mkdir -p ./sge/${sample_id}
+=== "Recommended: `cartloader sge_convert`"
 
-cartloader sge_convert \
-  --in-csv ./raw/${sample_id}/detected_transcripts.csv.gz \
-  --platform generic \
-  --out-dir ./sge/${sample_id} \
-  --csv-delim "," \
-  --csv-colname-x global_x \
-  --csv-colname-y global_y \
-  --csv-colname-feature-name gene \
-  --csv-colnames-others cell_id,global_z \
-  --sge-visual 
-```
+    ```bash
+    sample_id=FB080_O1a
+    mkdir -p "./sge/${sample_id}"
 
-Alternatively, if you don’t need SGE visualization or density/feature‑based filtering, you can directly generate a CartLoader‑compatible SGE with fixed column names (the raw SGE is already in micrometers):
+    cartloader sge_convert \
+      --in-csv "./raw/${sample_id}/detected_transcripts.csv.gz" \
+      --platform generic \
+      --out-dir "./sge/${sample_id}" \
+      --csv-delim "," \
+      --csv-colname-x global_x \
+      --csv-colname-y global_y \
+      --csv-colname-feature-name gene \
+      --csv-colnames-others cell_id,global_z \
+      --sge-visual
+    ```
 
-```bash
-sample_id=FB080_O1a
-mkdir -p ./sge/${sample_id}
+=== "Fast path: direct transform (no visualization/filtering)"
 
-(echo -e "X\tY\tgene\tcount\tcell_id\tZ";gzip -cd ./raw/${sample_id}/detected_transcripts.csv.gz | tail -n +2| tr , '\t' | perl -lane 'print join("\t",$F[2],$F[3],$F[8],1,$F[10],$F[4]);';) | gzip > ./sge/${sample_id}/transcripts.unsorted.tsv.gz
-```
+    !!! tips
+        Given raw SGE coordinates are already in micrometers, use this only if you do **not** need SGE visualization or density/feature-based filtering.
+
+    ```bash
+    sample_id=FB080_O1a
+    mkdir -p "./sge/${sample_id}"
+
+    (
+      echo -e "X\tY\tgene\tcount\tcell_id\tZ"
+      gzip -cd "./raw/${sample_id}/detected_transcripts.csv.gz" \
+        | tail -n +2 \
+        | tr ',' '\t' \
+        | perl -lane 'print join("\t",$F[2],$F[3],$F[8],1,$F[10],$F[4]);'
+    ) | gzip > "./sge/${sample_id}/transcripts.unsorted.tsv.gz"
+    ```
+
+---
 
 ## Prepare Input List
 
-Create a tab‑separated TSV file (e.g., `input.tsv`) with one sample per line. The TSV should have no header and contain two to four columns.
+Create a tab‑separated TSV file (e.g., `input.tsv`). 
 
 !!! info "Example Input List: `input.tsv`"
+      The TSV should be **one sample per line** and have **no header** and contain two to four columns.
+      
       ```text
       FB080_O1a	/path/to/FB080_O1a/transcripts.unsorted.tsv.gz
       FB080_O1b	/path/to/FB080_O1b/transcripts.unsorted.tsv.gz
       FB080_O1c	/path/to/FB080_O1c/transcripts.unsorted.tsv.gz
       FB080_O1d	/path/to/FB080_O1d/transcripts.unsorted.tsv.gz
+      FB121_O1  /path/to/FB121_O1/transcripts.unsorted.tsv.gz
       ```
 
       * `1st Column` (required, str): Unique dataset identifier (avoid whitespace; prefer `-` to `_`).
       * `2nd Column` (required, str): Path to the transcript‑indexed SGE file in `CartLoader` format, generated from [SGE Format Conversion](#sge-format-conversion).
       * `3rd Column`  (optional, str): Dataset title. Quote the value when whitespace is involved.
       * `4th Column`  (optional, str): Dataset description. Quote the value when whitespace is involved.
+
+---
 
 ## Multi‑Sample FICTURE Analysis
 
@@ -170,6 +194,7 @@ cartloader run_ficture2_multi \
 ```
 
 ---
+
 ## Multi‑Sample Asset Packaging
 
 Package per‑sample outputs from `ficture2/<sample_id>/` into web‑ready PMTiles and catalogs.

@@ -113,7 +113,7 @@ DATA_ID="visiumhd_3prime_mouse_brain"    # change this to reflect your dataset n
 
 # LDA parameters
 train_width=18                           # define LDA training hexagon width (comma-separated if multiple widths are applied)
-n_factor=6,12                            # define number of factors in LDA training (comma-separated if multiple n-factor are applied)
+n_factor=48                              # define number of factors in LDA training (comma-separated if multiple n-factor are applied)
 
 # Path to AWS S3 directory
 S3_DIR=/s3/path/to/s3/dir                # Recommend to use DATA_ID as directory name, such as s3://bucket-name/visiumhd-3prime-mouse-brain
@@ -236,7 +236,7 @@ Individual PMTiles and asset JSON files reside alongside it under `<out-dir>/car
 
     The output are available in CartoScope.
 
-    [Explore in CartoScope](https://v3o-test.carto-scope.org/dataset?uri=s3%2Fcartostore%2Fdata%2Fbatch%3D2025_12%2Fcartloader-pipeline-example-collection%2Fvisiumhd_3prime_mouse_brain){ .md-button .md-button--primary .button-tight-small }
+    [Explore in CartoScope](https://v3o-main.carto-scope.org/dataset?uri=s3%2Fcartostore%2Fdata%2Fbatch%3D2026_02%2Fcartloader-pipeline-example-collection%2Fvisiumhd_3prime_mouse_brain){ .md-button .md-button--primary .button-tight-small }
 
     <!-- [Download from Zenodo](https://zenodo.org/records/17958847){ .md-button .button-tight-small } -->
 
