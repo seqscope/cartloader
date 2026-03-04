@@ -828,7 +828,7 @@
             
   
   <span class="md-ellipsis">
-    Getting Started with `cartloader`
+    Getting Started per Platform
     
   </span>
   
@@ -839,7 +839,7 @@
         <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_2_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_4_2">
             <span class="md-nav__icon md-icon"></span>
-            Getting Started with `cartloader`
+            Getting Started per Platform
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
@@ -2193,10 +2193,10 @@ docker<span class="w"> </span>--version
 <span class="c1"># Test if Docker can successfully run a container</span>
 docker<span class="w"> </span>run<span class="w"> </span>hello-world
 </code></pre></div></td></tr></table></div></p>
-<p>If these commands fail, <a href="https://docs.docker.com/get-docker/">install Docker</a> in your system.</p>
+<p>If these commands fail, <a href="https://docs.docker.com/get-docker/">install Docker</a> on your system.</p>
 <hr />
 <h2 id="input-data">Input Data<a class="headerlink" href="#input-data" title="Permanent link">&para;</a></h2>
-<p>The input is an mouse hippocampus <abbr title="Spatial Digital Gene Expression">SGE</abbr> in a <code>FICTURE</code>-compatible format compatible, prepared by <a href="../../../reference/sge_convert/"><code>sge_convert</code></a> in <code>CartLoader</code> .</p>
+<p>The input is a mouse hippocampus <abbr title="Spatial Digital Gene Expression">SGE</abbr> in a <code>FICTURE</code>-compatible format, prepared by <a href="../../../reference/sge_convert/"><code>sge_convert</code></a> in <code>CartLoader</code>.</p>
 <p><strong>File Format</strong></p>
 <details>
 <summary><code>transcripts.unsorted.tsv.gz</code>: transcript-indexed <abbr title="Spatial Digital Gene Expression">SGE</abbr> in TSV</summary>
@@ -2248,7 +2248,7 @@ ymax    1439.95
 <div class="admonition warning">
 <p class="admonition-title">Input data already included</p>
 <p>The <a href="https://zenodo.org/records/17953582/files/seqscope_starter.std.tar.gz">example dataset</a> is preloaded in the Docker image — no need to download separately.</p>
-<p>If needs, it is also available on Zenodo: <a href="https://doi.org/10.5281/zenodo.15701393">DOI: 10.5281/zenodo.15701393</a></p>
+<p>If needed, it is also available on Zenodo: <a href="https://doi.org/10.5281/zenodo.15701393">DOI: 10.5281/zenodo.15701393</a></p>
 </div>
 <hr />
 <h2 id="set-up-the-environment">Set Up the Environment<a class="headerlink" href="#set-up-the-environment" title="Permanent link">&para;</a></h2>
@@ -2280,7 +2280,7 @@ ymax    1439.95
 <span class="nb">cd</span><span class="w"> </span><span class="nv">$work_dir</span>
 
 <span class="c1"># Number of jobs</span>
-<span class="nv">n_jobs</span><span class="o">=</span><span class="m">10</span><span class="w">                               </span><span class="c1"># If not specify, the number of jobs defaults to 1.</span>
+<span class="nv">n_jobs</span><span class="o">=</span><span class="m">10</span><span class="w">                               </span><span class="c1"># If not specified, the number of jobs defaults to 1.</span>
 
 <span class="c1"># Unique identifier for your dataset</span>
 <span class="nv">DATA_ID</span><span class="o">=</span><span class="s2">&quot;seqscope_hippo&quot;</span><span class="w">                </span><span class="c1"># change this to reflect your dataset name</span>

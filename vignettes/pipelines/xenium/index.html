@@ -703,7 +703,7 @@
             
   
   <span class="md-ellipsis">
-    Getting Started with `cartloader`
+    Getting Started per Platform
     
   </span>
   
@@ -714,7 +714,7 @@
         <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_2_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_4_2">
             <span class="md-nav__icon md-icon"></span>
-            Getting Started with `cartloader`
+            Getting Started per Platform
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
@@ -987,36 +987,60 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#overview" class="md-nav__link">
+  <a href="#prepare-input" class="md-nav__link">
     <span class="md-ellipsis">
-      Overview
+      Prepare Input
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Prepare Input">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#data-access" class="md-nav__link">
+    <span class="md-ellipsis">
+      Data Access
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#data-structure-and-format" class="md-nav__link">
+    <span class="md-ellipsis">
+      Data Structure and Format
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#define-id-and-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      Define ID and Parameters
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#example-runs" class="md-nav__link">
+    <span class="md-ellipsis">
+      Example Runs
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#input-data" class="md-nav__link">
+  <a href="#customize-parameters" class="md-nav__link">
     <span class="md-ellipsis">
-      Input Data
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#set-up-the-environment" class="md-nav__link">
-    <span class="md-ellipsis">
-      Set Up the Environment
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#run-pipelines" class="md-nav__link">
-    <span class="md-ellipsis">
-      Run Pipelines
+      Customize Parameters
     </span>
   </a>
   
@@ -2029,36 +2053,60 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#overview" class="md-nav__link">
+  <a href="#prepare-input" class="md-nav__link">
     <span class="md-ellipsis">
-      Overview
+      Prepare Input
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Prepare Input">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#data-access" class="md-nav__link">
+    <span class="md-ellipsis">
+      Data Access
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#data-structure-and-format" class="md-nav__link">
+    <span class="md-ellipsis">
+      Data Structure and Format
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#define-id-and-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      Define ID and Parameters
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#example-runs" class="md-nav__link">
+    <span class="md-ellipsis">
+      Example Runs
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#input-data" class="md-nav__link">
+  <a href="#customize-parameters" class="md-nav__link">
     <span class="md-ellipsis">
-      Input Data
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#set-up-the-environment" class="md-nav__link">
-    <span class="md-ellipsis">
-      Set Up the Environment
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#run-pipelines" class="md-nav__link">
-    <span class="md-ellipsis">
-      Run Pipelines
+      Customize Parameters
     </span>
   </a>
   
@@ -2093,12 +2141,11 @@
 
 
 <h1 id="xenium-end-to-end-pipeline">Xenium End-to-End Pipeline<a class="headerlink" href="#xenium-end-to-end-pipeline" title="Permanent link">&para;</a></h1>
-<h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
 <p>This tutorial walks through end‑to‑end processing of 10x Xenium data with <code>CartLoader</code>: converting inputs, running <abbr title="Segmentation-free method inferring latent spatial factors from SGE (Si et al., Nature Methods 2024)">FICTURE</abbr>, importing cell results and histology, packaging assets, and uploading to AWS for sharing.</p>
 <hr />
-<h2 id="input-data">Input Data<a class="headerlink" href="#input-data" title="Permanent link">&para;</a></h2>
-<p><strong>Data Access</strong></p>
-<p>Downloaded the <abbr title="Spatial transcriptomics">ST</abbr> data from <a href="https://www.10xgenomics.com/datasets/preview-data-ffpe-human-lung-cancer-with-xenium-multimodal-cell-segmentation-1-standard">10x Genomics Dataset portal</a>.</p>
+<h2 id="prepare-input">Prepare Input<a class="headerlink" href="#prepare-input" title="Permanent link">&para;</a></h2>
+<h3 id="data-access">Data Access<a class="headerlink" href="#data-access" title="Permanent link">&para;</a></h3>
+<p>Download the <abbr title="Spatial transcriptomics">ST</abbr> data from the <a href="https://www.10xgenomics.com/datasets/preview-data-ffpe-human-lung-cancer-with-xenium-multimodal-cell-segmentation-1-standard">10x Genomics Dataset portal</a>.</p>
 <div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Use <code>wget</code></label><label for="__tabbed_1_2">Use <code>curl</code></label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
@@ -2170,7 +2217,7 @@ unzip<span class="w"> </span>Xenium_V1_humanLung_Cancer_FFPE_outs.zip
 </div>
 </div>
 <hr />
-<p><strong>Data Structure and Format</strong></p>
+<h3 id="data-structure-and-format">Data Structure and Format<a class="headerlink" href="#data-structure-and-format" title="Permanent link">&para;</a></h3>
 <p>See details of the Xenium Ranger output at <a href="https://www.10xgenomics.com/support/software/xenium-onboard-analysis/latest/analysis/xoa-output-understanding-outputs">Xenium Ranger Official Documents</a></p>
 <div class="tabbed-set tabbed-alternate" data-tabs="2:4"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><input id="__tabbed_2_3" name="__tabbed_2" type="radio" /><input id="__tabbed_2_4" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">RAW Data Structure</label><label for="__tabbed_2_2"><abbr title="Spatial Digital Gene Expression">SGE</abbr> Format</label><label for="__tabbed_2_3">Cell Analysis Result Format</label><label for="__tabbed_2_4">Morphology images</label></div>
 <div class="tabbed-content">
@@ -2320,13 +2367,44 @@ ENSG00000127837,AAMP,0.02869137687178692,-0.8208377939888187,0.06947481704069494
 </div>
 </div>
 </div>
-<hr />
-<h2 id="set-up-the-environment">Set Up the Environment<a class="headerlink" href="#set-up-the-environment" title="Permanent link">&para;</a></h2>
-<div class="admonition warning">
-<p class="admonition-title">Pre-installed tools</p>
-<p>Please ensure you have installed all required tools (See <a href="../../../installation/">Installation</a>).</p>
+<h3 id="define-id-and-parameters">Define ID and Parameters<a class="headerlink" href="#define-id-and-parameters" title="Permanent link">&para;</a></h3>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># Unique identifier for your dataset</span>
+<span class="nv">DATA_ID</span><span class="o">=</span><span class="s2">&quot;xenium-v1-humanlung-cancer-ffpe&quot;</span><span class="w">   </span><span class="c1"># change this to reflect your dataset name</span>
+<span class="nv">SCALE</span><span class="o">=</span><span class="m">1</span><span class="w">                                     </span><span class="c1"># coordinate to micrometer scaling factor</span>
+
+<span class="c1"># LDA parameters</span>
+<span class="nv">train_width</span><span class="o">=</span><span class="m">18</span><span class="w">                            </span><span class="c1"># define LDA training hexagon width (comma-separated if multiple widths are applied)</span>
+<span class="nv">n_factor</span><span class="o">=</span><span class="m">24</span><span class="w">                               </span><span class="c1"># define number of factors in LDA training (comma-separated if multiple n-factor are applied)</span>
+
+<span class="c1"># Path to AWS S3 directory</span>
+<span class="nv">S3_DIR</span><span class="o">=</span>/s3/path/to/s3/dir<span class="w">                 </span><span class="c1"># Recommend to use DATA_ID as directory name, such as s3://bucket-name/xenium-v1-humanlung-cancer-ffpe</span>
+</code></pre></div></td></tr></table></div>
+<div class="admonition info">
+<p class="admonition-title">How to Define Scaling Factors for Xenium?</p>
+<p><code>--units-per-um</code> means "coordinate units per micrometer" in your raw transcript coordinates.
+For the Xenium example dataset in this tutorial, coordinates are already in <abbr title="micrometer">µm</abbr>, so use <code>--units-per-um 1</code>.</p>
 </div>
-<p>Define paths to all required binaries and resources. Optionally, specify a fixed color map for consistent rendering.</p>
+<div class="admonition warning">
+<p class="admonition-title">Check this value for your own dataset</p>
+<p>Do not assume <code>--units-per-um 1</code> is always correct. Always verify the coordinate unit in your input data.</p>
+<p>If your coordinates are in pixels (or any unit other than <abbr title="micrometer">µm</abbr>), set <code>--units-per-um</code> to the correct value.</p>
+</div>
+<h2 id="example-runs">Example Runs<a class="headerlink" href="#example-runs" title="Permanent link">&para;</a></h2>
+<p>Choose one of the following options to run the <code>run_xenium</code> pipeline, either locally or with Docker.</p>
+<p>In the following examples, only <code>DAPI_OME</code> image is deployed. Alternatively, <code>CartLoader</code> supports <code>--all-images</code> to deploy all detected images.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="3:2"><input checked="checked" id="__tabbed_3_1" name="__tabbed_3" type="radio" /><input id="__tabbed_3_2" name="__tabbed_3" type="radio" /><div class="tabbed-labels"><label for="__tabbed_3_1">Run Pipeline Locally</label><label for="__tabbed_3_2">Run Pipeline via Docker</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<p><strong>Set Up Environment</strong>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -2370,41 +2448,8 @@ ENSG00000127837,AAMP,0.02869137687178692,-0.8208377939888187,0.06947481704069494
 
 <span class="c1"># Activate the bioconda environment</span>
 conda<span class="w"> </span>activate<span class="w"> </span>ENV_NAME<span class="w">                 </span><span class="c1"># replace ENV_NAME with your conda environment name</span>
-</code></pre></div></td></tr></table></div>
-<p>Define data ID and analysis parameters:</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
-<span class="normal"> 2</span>
-<span class="normal"> 3</span>
-<span class="normal"> 4</span>
-<span class="normal"> 5</span>
-<span class="normal"> 6</span>
-<span class="normal"> 7</span>
-<span class="normal"> 8</span>
-<span class="normal"> 9</span>
-<span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># Unique identifier for your dataset</span>
-<span class="nv">DATA_ID</span><span class="o">=</span><span class="s2">&quot;xenium-v1-humanlung-cancer-ffpe&quot;</span><span class="w">   </span><span class="c1"># change this to reflect your dataset name</span>
-<span class="nv">SCALE</span><span class="o">=</span><span class="m">1</span><span class="w">                                     </span><span class="c1"># coordinate to micrometer scaling factor</span>
-
-<span class="c1"># LDA parameters</span>
-<span class="nv">train_width</span><span class="o">=</span><span class="m">18</span><span class="w">                            </span><span class="c1"># define LDA training hexagon width (comma-separated if multiple widths are applied)</span>
-<span class="nv">n_factor</span><span class="o">=</span><span class="m">24</span><span class="w">                               </span><span class="c1"># define number of factors in LDA training (comma-separated if multiple n-factor are applied)</span>
-
-<span class="c1"># Path to AWS S3 directory</span>
-<span class="nv">S3_DIR</span><span class="o">=</span>/s3/path/to/s3/dir<span class="w">                 </span><span class="c1"># Recommend to use DATA_ID as directory name, such as s3://bucket-name/xenium-v1-humanlung-cancer-ffpe</span>
-</code></pre></div></td></tr></table></div>
-<div class="admonition info">
-<p class="admonition-title">How to Define Scaling Factors for Xenium?</p>
-<p><code>--units-per-um</code> means "coordinate units per micrometer" in your raw transcript coordinates.
-For the Xenium example dataset in this tutorial, coordinates are already in <abbr title="micrometer">µm</abbr>, so use <code>--units-per-um 1</code>.</p>
-</div>
-<div class="admonition warning">
-<p class="admonition-title">Check this value for your own dataset</p>
-<p>Do not assume <code>--units-per-um 1</code> is always correct. Always verify the coordinate unit in your input data.</p>
-<p>If your coordinates are in pixels (or any unit other than <abbr title="micrometer">µm</abbr>), set <code>--units-per-um</code> to the correct value.</p>
-</div>
-<h2 id="run-pipelines">Run Pipelines<a class="headerlink" href="#run-pipelines" title="Permanent link">&para;</a></h2>
-<p>Below is an example of showing running all modules together. You can customize the actions by flags.</p>
-<p>In the following example, we only deployed DAPI_OME image. Alternatively, <code>CartLoader</code> supports a <code>--all-images</code> to deploy all detected image.</p>
+</code></pre></div></td></tr></table></div></p>
+<p><strong>Example Command</strong>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -2450,7 +2495,111 @@ For the Xenium example dataset in this tutorial, coordinates are already in <abb
 <span class="w">  </span>--aws<span class="w"> </span><span class="si">${</span><span class="nv">aws</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--n-jobs<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--threads<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span>
+</code></pre></div></td></tr></table></div></p>
+</div>
+<div class="tabbed-block">
+<p><strong>Set Up Environment</strong></p>
+<p>Define paths to all required binaries and resources in the docker.</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># ====</span>
+<span class="c1"># Replace each placeholder with the actual path on your system.  </span>
+<span class="c1"># ====</span>
+<span class="nv">work_dir</span><span class="o">=</span>/path/to/work/directory<span class="w">                        </span><span class="c1"># path to work directory that contains the downloaded input data</span>
+<span class="nb">cd</span><span class="w"> </span><span class="nv">$work_dir</span>
+
+<span class="c1"># Following are fixed path in the docker. DONT REVISE </span>
+<span class="nv">spatula</span><span class="o">=</span>/app/cartloader/submodules/spatula/bin/spatula<span class="w">  </span><span class="c1"># path to spatula executable</span>
+<span class="nv">punkst</span><span class="o">=</span>/app/cartloader/submodules/punkst<span class="w">                </span><span class="c1"># path to FICTURE2 (punkst) executable</span>
+<span class="nv">tippecanoe</span><span class="o">=</span>/usr/local/bin/tippecanoe<span class="w">                    </span><span class="c1"># path to tippecanoe executable</span>
+<span class="nv">pmtiles</span><span class="o">=</span>/usr/local/bin/pmtiles<span class="w">                          </span><span class="c1"># path to pmtiles executable</span>
+<span class="nv">aws</span><span class="o">=</span>/usr/local/bin/aws<span class="w">                                  </span><span class="c1"># path to AWS CLI binary</span>
+
+<span class="c1"># (Optional) Define path to color map. </span>
+<span class="nv">cmap</span><span class="o">=</span>/app/cartloader/assets/fixed_color_map_256.tsv<span class="w">     </span><span class="c1"># Path to fixed color map. `CartLoader` includes one at cartloader/assets/fixed_color_map_256.tsv.</span>
+
+<span class="c1"># Number of jobs</span>
+<span class="nv">n_jobs</span><span class="o">=</span><span class="m">10</span><span class="w">                                               </span><span class="c1"># If not specified, the number of jobs defaults to 1.</span>
+
+<span class="c1"># Docker tag </span>
+<span class="nv">docker_tag</span><span class="o">=</span>20260304a
 </code></pre></div></td></tr></table></div>
+<p><strong>Example Command</strong></p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span>
+<span class="normal">22</span>
+<span class="normal">23</span>
+<span class="normal">24</span>
+<span class="normal">25</span>
+<span class="normal">26</span></pre></div></td><td class="code"><div><pre><span></span><code>docker<span class="w"> </span>run<span class="w"> </span>-it<span class="w"> </span>--rm<span class="w"> </span><span class="se">\</span>
+-v<span class="w"> </span><span class="si">${</span><span class="nv">work_dir</span><span class="si">}</span>:/data<span class="w"> </span><span class="se">\</span>
+weiqiuc/cartloader:20260303b<span class="se">\</span>
+run_xenium<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--load-xenium-ranger<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--sge-convert<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--run-ficture2<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--import-cells<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--import-images<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--run-cartload2<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--upload-aws<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--xenium-ranger-dir<span class="w"> </span>/data/raw<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--out-dir<span class="w"> </span>/data/output<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--s3-dir<span class="w"> </span><span class="si">${</span><span class="nv">S3_DIR</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--units-per-um<span class="w"> </span><span class="si">${</span><span class="nv">SCALE</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--width<span class="w"> </span><span class="si">${</span><span class="nv">train_width</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--n-factor<span class="w"> </span><span class="si">${</span><span class="nv">n_factor</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--id<span class="w"> </span><span class="si">${</span><span class="nv">DATA_ID</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--image-ids<span class="w"> </span>DAPI_OME<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--spatula<span class="w"> </span><span class="si">${</span><span class="nv">spatula</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--ficture2<span class="w"> </span><span class="si">${</span><span class="nv">punkst</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--pmtiles<span class="w"> </span><span class="si">${</span><span class="nv">pmtiles</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--tippecanoe<span class="w"> </span><span class="si">${</span><span class="nv">tippecanoe</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--aws<span class="w"> </span><span class="si">${</span><span class="nv">aws</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--n-jobs<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--threads<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span>
+</code></pre></div></td></tr></table></div>
+</div>
+</div>
+</div>
+<hr />
+<h2 id="customize-parameters">Customize Parameters<a class="headerlink" href="#customize-parameters" title="Permanent link">&para;</a></h2>
 <p><strong>Action Flags to Enable Modules</strong></p>
 <div class="admonition warning">
 <p class="admonition-title">Actions</p>

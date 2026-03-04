@@ -703,7 +703,7 @@
             
   
   <span class="md-ellipsis">
-    Getting Started with `cartloader`
+    Getting Started per Platform
     
   </span>
   
@@ -714,7 +714,7 @@
         <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_2_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_4_2">
             <span class="md-nav__icon md-icon"></span>
-            Getting Started with `cartloader`
+            Getting Started per Platform
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
@@ -2233,11 +2233,6 @@
 </div>
 <hr />
 <h2 id="set-up-the-environment">Set Up the Environment<a class="headerlink" href="#set-up-the-environment" title="Permanent link">&para;</a></h2>
-<div class="admonition warning">
-<p class="admonition-title">Pre-installed tools</p>
-<p>Please ensure you have installed all required tools (See <a href="../../installation/">Installation</a>).</p>
-</div>
-<p>Define paths to all required binaries and resources. Optionally, specify a fixed color map for consistent rendering.</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -2349,7 +2344,7 @@ unzip<span class="w"> </span>FB121_O1.zip
 <h2 id="sge-format-conversion"><abbr title="Spatial Digital Gene Expression">SGE</abbr> Format Conversion<a class="headerlink" href="#sge-format-conversion" title="Permanent link">&para;</a></h2>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
-<p>For each sample, convert transcript-indexed <abbr title="Spatial Digital Gene Expression">SGE</abbr> to CartLoader format. Below use <code>FB080_O1a</code> as example.</p>
+<p>For each sample, convert transcript-indexed <abbr title="Spatial Digital Gene Expression">SGE</abbr> to CartLoader format. Below, use <code>FB080_O1a</code> as an example.</p>
 <p>Set <code>sample_id</code> once, then run one of the two workflows below.</p>
 </div>
 <div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Recommended: <code>cartloader sge_convert</code></label><label for="__tabbed_1_2">Fast path: direct transform (no visualization/filtering)</label></div>
@@ -2385,7 +2380,7 @@ cartloader<span class="w"> </span>sge_convert<span class="w"> </span><span class
 <div class="tabbed-block">
 <div class="admonition tips">
 <p class="admonition-title">Tips</p>
-<p>Given raw <abbr title="Spatial Digital Gene Expression">SGE</abbr> coordinates are already in micrometers, use this only if you do <strong>not</strong> need <abbr title="Spatial Digital Gene Expression">SGE</abbr> visualization or density/feature-based filtering.</p>
+<p>Given that raw <abbr title="Spatial Digital Gene Expression">SGE</abbr> coordinates are already in micrometers, use this only if you do <strong>not</strong> need <abbr title="Spatial Digital Gene Expression">SGE</abbr> visualization or density/feature-based filtering.</p>
 </div>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
@@ -2412,10 +2407,10 @@ mkdir<span class="w"> </span>-p<span class="w"> </span><span class="s2">&quot;./
 </div>
 <hr />
 <h2 id="prepare-input-list">Prepare Input List<a class="headerlink" href="#prepare-input-list" title="Permanent link">&para;</a></h2>
-<p>Create a tab‑separated TSV file (e.g., <code>input.tsv</code>). </p>
+<p>Create a tab‑separated TSV file (e.g., <code>input.tsv</code>).</p>
 <div class="admonition info">
 <p class="admonition-title">Example Input List: <code>input.tsv</code></p>
-<p>The TSV should be <strong>one sample per line</strong> and have <strong>no header</strong> and contain two to four columns.</p>
+<p>The TSV should be <strong>one sample per line</strong>, have <strong>no header</strong>, and contain two to four columns.</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
 <span class="normal">3</span>

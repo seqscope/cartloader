@@ -703,7 +703,7 @@
             
   
   <span class="md-ellipsis">
-    Getting Started with `cartloader`
+    Getting Started per Platform
     
   </span>
   
@@ -714,7 +714,7 @@
         <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_2_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_4_2">
             <span class="md-nav__icon md-icon"></span>
-            Getting Started with `cartloader`
+            Getting Started per Platform
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
@@ -1009,46 +1009,37 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#overview" class="md-nav__link">
+  <a href="#prepare-input" class="md-nav__link">
     <span class="md-ellipsis">
-      Overview
+      Prepare Input
     </span>
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#input-data" class="md-nav__link">
-    <span class="md-ellipsis">
-      Input Data
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#example-runs" class="md-nav__link">
-    <span class="md-ellipsis">
-      Example Runs
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Example Runs">
+    <nav class="md-nav" aria-label="Prepare Input">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#define-data-id-and-parameters" class="md-nav__link">
+  <a href="#data-access" class="md-nav__link">
     <span class="md-ellipsis">
-      Define Data ID and Parameters
+      Data Access
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#run-pipeline" class="md-nav__link">
+  <a href="#data-structure-and-format" class="md-nav__link">
     <span class="md-ellipsis">
-      Run pipeline
+      Data Structure and Format
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#define-id-and-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      Define ID and Parameters
     </span>
   </a>
   
@@ -1060,9 +1051,18 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#customize" class="md-nav__link">
+  <a href="#example-runs" class="md-nav__link">
     <span class="md-ellipsis">
-      Customize
+      Example Runs
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#customize-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      Customize Parameters
     </span>
   </a>
   
@@ -2053,46 +2053,37 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#overview" class="md-nav__link">
+  <a href="#prepare-input" class="md-nav__link">
     <span class="md-ellipsis">
-      Overview
+      Prepare Input
     </span>
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#input-data" class="md-nav__link">
-    <span class="md-ellipsis">
-      Input Data
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#example-runs" class="md-nav__link">
-    <span class="md-ellipsis">
-      Example Runs
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Example Runs">
+    <nav class="md-nav" aria-label="Prepare Input">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#define-data-id-and-parameters" class="md-nav__link">
+  <a href="#data-access" class="md-nav__link">
     <span class="md-ellipsis">
-      Define Data ID and Parameters
+      Data Access
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#run-pipeline" class="md-nav__link">
+  <a href="#data-structure-and-format" class="md-nav__link">
     <span class="md-ellipsis">
-      Run pipeline
+      Data Structure and Format
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#define-id-and-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      Define ID and Parameters
     </span>
   </a>
   
@@ -2104,9 +2095,18 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#customize" class="md-nav__link">
+  <a href="#example-runs" class="md-nav__link">
     <span class="md-ellipsis">
-      Customize
+      Example Runs
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#customize-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      Customize Parameters
     </span>
   </a>
   
@@ -2141,12 +2141,11 @@
 
 
 <h1 id="visium-hd-end-to-end-pipeline">Visium HD End-to-End Pipeline<a class="headerlink" href="#visium-hd-end-to-end-pipeline" title="Permanent link">&para;</a></h1>
-<h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
 <p>This tutorial walks through end‑to‑end processing of 10x Visium HD data with <code>CartLoader</code>: converting inputs, running <abbr title="Segmentation-free method inferring latent spatial factors from SGE (Si et al., Nature Methods 2024)">FICTURE</abbr>, importing cell results and histology, packaging assets, and uploading for sharing.</p>
 <hr />
-<h2 id="input-data">Input Data<a class="headerlink" href="#input-data" title="Permanent link">&para;</a></h2>
-<p><strong>Data Access</strong></p>
-<p>Downloaded the <abbr title="Spatial transcriptomics">ST</abbr> data from <a href="https://www.10xgenomics.com/datasets/visium-hd-three-prime-mouse-brain-fresh-frozen">10x Genomics Dataset portal</a>.</p>
+<h2 id="prepare-input">Prepare Input<a class="headerlink" href="#prepare-input" title="Permanent link">&para;</a></h2>
+<h3 id="data-access">Data Access<a class="headerlink" href="#data-access" title="Permanent link">&para;</a></h3>
+<p>Download the <abbr title="Spatial transcriptomics">ST</abbr> data from the <a href="https://www.10xgenomics.com/datasets/visium-hd-three-prime-mouse-brain-fresh-frozen">10x Genomics Dataset portal</a>.</p>
 <div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Use <code>wget</code></label><label for="__tabbed_1_2">Use <code>curl</code></label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
@@ -2205,7 +2204,17 @@ wget<span class="w"> </span>https://cf.10xgenomics.com/samples/spatial-exp/4.0.1
 <span class="normal">11</span>
 <span class="normal">12</span>
 <span class="normal">13</span>
-<span class="normal">14</span></pre></div></td><td class="code"><div><pre><span></span><code>curl<span class="w"> </span>-O<span class="w"> </span>https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_barcode_mappings.parquet
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># define the work directory</span>
+<span class="nv">work_dir</span><span class="o">=</span>/path/to/work/directory
+mkdir<span class="w"> </span>-p<span class="w"> </span><span class="si">${</span><span class="nv">work_dir</span><span class="si">}</span>/raw
+<span class="nb">cd</span><span class="w"> </span><span class="si">${</span><span class="nv">work_dir</span><span class="si">}</span>/raw
+
+curl<span class="w"> </span>-O<span class="w"> </span>https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_barcode_mappings.parquet
 curl<span class="w"> </span>-O<span class="w"> </span>https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_binned_outputs.tar.gz
 curl<span class="w"> </span>-O<span class="w"> </span>https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_cloupe_008um.cloupe
 curl<span class="w"> </span>-O<span class="w"> </span>https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_cloupe_cell.cloupe
@@ -2223,8 +2232,7 @@ curl<span class="w"> </span>-O<span class="w"> </span>https://cf.10xgenomics.com
 </div>
 </div>
 </div>
-<hr />
-<p><strong>Data Structure and Format</strong></p>
+<h3 id="data-structure-and-format">Data Structure and Format<a class="headerlink" href="#data-structure-and-format" title="Permanent link">&para;</a></h3>
 <p>See Space Ranger output details in the official documentation: <a href="https://www.10xgenomics.com/support/software/space-ranger/latest/analysis/outputs/output-overview">Space Ranger Outputs</a></p>
 <div class="tabbed-set tabbed-alternate" data-tabs="2:3"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><input id="__tabbed_2_3" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">RAW Data Structure</label><label for="__tabbed_2_2"><abbr title="Spatial Digital Gene Expression">SGE</abbr> Format</label><label for="__tabbed_2_3">Cell Analysis Result Format</label></div>
 <div class="tabbed-content">
@@ -2456,11 +2464,7 @@ ENSMUSG00000089699,Gm1992,0.00003369899313325135,2.372528175774452,0.49812531917
 </div>
 </div>
 </div>
-<hr />
-<hr />
-<h2 id="example-runs">Example Runs<a class="headerlink" href="#example-runs" title="Permanent link">&para;</a></h2>
-<h3 id="define-data-id-and-parameters">Define Data ID and Parameters<a class="headerlink" href="#define-data-id-and-parameters" title="Permanent link">&para;</a></h3>
-<p>First, define the dataset ID and analysis parameters.</p>
+<h3 id="define-id-and-parameters">Define ID and Parameters<a class="headerlink" href="#define-id-and-parameters" title="Permanent link">&para;</a></h3>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
 <span class="normal">3</span>
@@ -2484,17 +2488,12 @@ ENSMUSG00000089699,Gm1992,0.00003369899313325135,2.372528175774452,0.49812531917
 <p>10x Visium HD provides <code>scalefactors_json.json</code> (pixel‑to‑<abbr title="micrometer">µm</abbr>). <code>CartLoader</code> accepts it via <code>--scale-json</code> and computes the scaling automatically, so you don’t need to manually specify <code>--units-per-um</code>.</p>
 <p>Alternatively, provide the scale directly with <code>--units-per-um</code>.</p>
 </div>
-<h3 id="run-pipeline">Run pipeline<a class="headerlink" href="#run-pipeline" title="Permanent link">&para;</a></h3>
-<p>Choose one of the following options to run run_xenium pipeline. Run it locally or run it with docker.</p>
+<h2 id="example-runs">Example Runs<a class="headerlink" href="#example-runs" title="Permanent link">&para;</a></h2>
+<p>Choose one of the following options to run the <code>run_visiumhd</code> pipeline, either locally or with Docker.</p>
 <div class="tabbed-set tabbed-alternate" data-tabs="3:2"><input checked="checked" id="__tabbed_3_1" name="__tabbed_3" type="radio" /><input id="__tabbed_3_2" name="__tabbed_3" type="radio" /><div class="tabbed-labels"><label for="__tabbed_3_1">Run Pipeline Locally</label><label for="__tabbed_3_2">Run Pipeline via Docker</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
-<p><strong>Set Up Environment</strong></p>
-<div class="admonition warning">
-<p class="admonition-title">Pre-installed tools</p>
-<p>Please ensure you have installed all required tools (See <a href="../../../installation/">Installation</a>).</p>
-</div>
-<p>Define paths to all required binaries and resources. Optionally, specify a fixed color map for consistent rendering.</p>
+<p><strong>Set Up Environment</strong>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -2538,8 +2537,8 @@ ENSMUSG00000089699,Gm1992,0.00003369899313325135,2.372528175774452,0.49812531917
 
 <span class="c1"># Activate the bioconda environment</span>
 conda<span class="w"> </span>activate<span class="w"> </span>ENV_NAME<span class="w">                 </span><span class="c1"># replace ENV_NAME with your conda environment name</span>
-</code></pre></div></td></tr></table></div>
-<p>The example below runs all modules together.
+</code></pre></div></td></tr></table></div></p>
+<p><strong>Example Command</strong>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -2584,6 +2583,51 @@ conda<span class="w"> </span>activate<span class="w"> </span>ENV_NAME<span class
 </code></pre></div></td></tr></table></div></p>
 </div>
 <div class="tabbed-block">
+<p><strong>Set Up Environment</strong></p>
+<p>Define paths to all required binaries and resources in the docker.</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># ====</span>
+<span class="c1"># Replace each placeholder with the actual path on your system.  </span>
+<span class="c1"># ====</span>
+<span class="nv">work_dir</span><span class="o">=</span>/path/to/work/directory<span class="w">                        </span><span class="c1"># path to work directory that contains the downloaded input data</span>
+<span class="nb">cd</span><span class="w"> </span><span class="nv">$work_dir</span>
+
+<span class="c1"># Following are fixed path in the docker. DONT REVISE </span>
+<span class="nv">spatula</span><span class="o">=</span>/app/cartloader/submodules/spatula/bin/spatula<span class="w">  </span><span class="c1"># path to spatula executable</span>
+<span class="nv">punkst</span><span class="o">=</span>/app/cartloader/submodules/punkst<span class="w">                </span><span class="c1"># path to FICTURE2 (punkst) executable</span>
+<span class="nv">tippecanoe</span><span class="o">=</span>/usr/local/bin/tippecanoe<span class="w">                    </span><span class="c1"># path to tippecanoe executable</span>
+<span class="nv">pmtiles</span><span class="o">=</span>/usr/local/bin/pmtiles<span class="w">                          </span><span class="c1"># path to pmtiles executable</span>
+<span class="nv">aws</span><span class="o">=</span>/usr/local/bin/aws<span class="w">                                  </span><span class="c1"># path to AWS CLI binary</span>
+
+<span class="c1"># (Optional) Define path to color map. </span>
+<span class="nv">cmap</span><span class="o">=</span>/app/cartloader/assets/fixed_color_map_256.tsv<span class="w">     </span><span class="c1"># Path to fixed color map. `CartLoader` includes one at cartloader/assets/fixed_color_map_256.tsv.</span>
+
+<span class="c1"># Number of jobs</span>
+<span class="nv">n_jobs</span><span class="o">=</span><span class="m">10</span><span class="w">                                               </span><span class="c1"># If not specified, the number of jobs defaults to 1.</span>
+
+<span class="c1"># Docker tag </span>
+<span class="nv">docker_tag</span><span class="o">=</span>20260304a
+</code></pre></div></td></tr></table></div>
+<p><strong>Example Command</strong></p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -2607,11 +2651,9 @@ conda<span class="w"> </span>activate<span class="w"> </span>ENV_NAME<span class
 <span class="normal">21</span>
 <span class="normal">22</span>
 <span class="normal">23</span>
-<span class="normal">24</span>
-<span class="normal">25</span></pre></div></td><td class="code"><div><pre><span></span><code>n_jobs
-docker<span class="w"> </span>run<span class="w"> </span>-it<span class="w"> </span>--rm<span class="w"> </span><span class="se">\</span>
+<span class="normal">24</span></pre></div></td><td class="code"><div><pre><span></span><code>docker<span class="w"> </span>run<span class="w"> </span>-it<span class="w"> </span>--rm<span class="w"> </span><span class="se">\</span>
 -v<span class="w"> </span><span class="si">${</span><span class="nv">work_dir</span><span class="si">}</span>:/data<span class="w"> </span><span class="se">\</span>
-weiqiuc/cartloader:20260303b<span class="se">\</span>
+weiqiuc/cartloader:<span class="si">${</span><span class="nv">docker_tag</span><span class="si">}</span><span class="se">\</span>
 run_visiumhd<span class="w"> </span><span class="se">\</span>
 --load-space-ranger<span class="w"> </span><span class="se">\</span>
 --sge-convert<span class="w"> </span><span class="se">\</span>
@@ -2626,11 +2668,11 @@ run_visiumhd<span class="w"> </span><span class="se">\</span>
 --width<span class="w"> </span><span class="si">${</span><span class="nv">train_width</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
 --n-factor<span class="w"> </span><span class="si">${</span><span class="nv">n_factor</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
 --id<span class="w"> </span><span class="si">${</span><span class="nv">DATA_ID</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
---spatula<span class="w"> </span>/app/cartloader/submodules/spatula/bin/spatula<span class="w"> </span><span class="se">\</span>
---ficture2<span class="w"> </span>/app/cartloader/submodules/punkst<span class="w"> </span><span class="se">\</span>
---pmtiles<span class="w"> </span>/usr/local/bin/pmtiles<span class="w"> </span><span class="se">\</span>
---tippecanoe<span class="w"> </span>/usr/local/bin/tippecanoe<span class="w"> </span><span class="se">\</span>
---aws<span class="w"> </span>/usr/local/bin/aws<span class="w"> </span><span class="se">\</span>
+--spatula<span class="w"> </span><span class="si">${</span><span class="nv">spatula</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+--ficture2<span class="w"> </span><span class="si">${</span><span class="nv">punkst</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+--pmtiles<span class="w"> </span><span class="si">${</span><span class="nv">pmtiles</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+--tippecanoe<span class="w"> </span><span class="si">${</span><span class="nv">tippecanoe</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+--aws<span class="w"> </span><span class="si">${</span><span class="nv">aws</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
 --n-jobs<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
 --threads<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span>
 </code></pre></div></td></tr></table></div>
@@ -2638,9 +2680,8 @@ run_visiumhd<span class="w"> </span><span class="se">\</span>
 </div>
 </div>
 <hr />
-<h2 id="customize">Customize<a class="headerlink" href="#customize" title="Permanent link">&para;</a></h2>
-<p>Customize actions with flags.
-<strong>Action Flags to Enable Modules</strong></p>
+<h2 id="customize-parameters">Customize Parameters<a class="headerlink" href="#customize-parameters" title="Permanent link">&para;</a></h2>
+<p><strong>Action Flags to Enable Modules</strong></p>
 <div class="admonition warning">
 <p class="admonition-title">Actions</p>
 <p><code>run_visiumhd</code> runs multiple <code>CartLoader</code> modules together; enable and combine actions with flags.</p>
