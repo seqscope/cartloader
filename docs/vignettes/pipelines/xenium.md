@@ -182,7 +182,7 @@ S3_DIR=/s3/path/to/s3/dir                 # Recommend to use DATA_ID as director
 
 Below is an example of showing running all modules together. You can customize the actions by flags.
 
-In the following example, we only deployed OME_DAPI image. Alternatively, `CartLoader` supports a `--all-images` to deploy all detected image.
+In the following example, we only deployed DAPI_OME image. Alternatively, `CartLoader` supports a `--all-images` to deploy all detected image.
 
 ```bash
 cartloader run_xenium \
@@ -200,7 +200,7 @@ cartloader run_xenium \
   --width ${train_width} \
   --n-factor ${n_factor} \
   --id ${DATA_ID} \
-  --image-ids OME_DAPI \
+  --image-ids DAPI_OME \
   --spatula ${spatula} \
   --ficture2 ${punkst} \
   --pmtiles ${pmtiles} \
