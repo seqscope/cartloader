@@ -185,8 +185,8 @@ def run_xenium(_args):
 
         if os.path.exists(ranger_assets) and not args.restart:
             print(f" * Skip --load-xenium-ranger since the Xenium Ranger raw input assets file ({ranger_assets}) already exists. You can use --restart to force execution of this step.", flush=True)
-            print("\n", flush=True)
             print(load_xenium_cmd, flush=True)
+            print("\n", flush=True)
         else:
             run_command_w_preq(load_xenium_cmd, prerequisites=[], dry_run=args.dry_run, flush=True)
     
@@ -270,8 +270,8 @@ def run_xenium(_args):
 
         if os.path.exists(cell_assets) and not args.restart:
             print(f" * Skip --import-cells since the Xenium Ranger cell assets file ({cell_assets}) already exists. You can use --restart to force execution of this step.", flush=True)
-            print("\n", flush=True)
             print(import_cell_cmd, flush=True)
+            print("\n", flush=True)
         else:
             run_command_w_preq(import_cell_cmd, prerequisites=prereq, dry_run=args.dry_run, flush=True)
     

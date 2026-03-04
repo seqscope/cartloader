@@ -333,7 +333,6 @@ def run_visiumhd(_args):
 
         if os.path.exists(cell_assets) and not args.restart:
             print(f" * Skip --import-cells since the Space Ranger cell assets file ({cell_assets}) already exists. You can use --restart to force execution of this step.\n", flush=True)
-            # print("\n", flush=True)
             print(import_cell_cmd, flush=True)
         else:
             run_command_w_preq(import_cell_cmd, prerequisites=prereq, dry_run=args.dry_run, flush=True)
@@ -378,6 +377,7 @@ def run_visiumhd(_args):
         square_assets = []
         if not square_plans:
             print(" * Skip --import-squares: no resolvable square-bin inputs", flush=True)
+            print("\n", flush=True)
         else:
             square_plans = sorted(square_plans, key=lambda x: x["bin_size"])
             stage_import_squares(cart_dir, args, square_plans,
