@@ -144,6 +144,22 @@ RUN wget https://github.com/protomaps/go-pmtiles/releases/download/v1.28.0/go-pm
     mv /opt/go-pmtiles/pmtiles /usr/local/bin/ && \
     rm -rf go-pmtiles_1.28.0_Linux_x86_64.tar.gz /opt/go-pmtiles
 
+# ===============================
+# Clone cartloader & install it
+# ===============================
+
+# Add a CACHEBUST argument right before cloning so we can force a fresh clone
+ARG CACHEBUST=1
+RUN git clone --branch main --single-branch https://github.com/seqscope/cartloader.git /app/cartloader_latest && \
+    cp -r /app/cartloader_latest/cartloader /app/cartloader/ && \
+    cp -r /app/cartloader_latest/installation /app/cartloader/ && \
+    cp -r /app/cartloader_latest/setup.py /app/cartloader/ && \
+    cp -r /app/cartloader_latest/pyproject.toml /app/cartloader/ && \
+    cp /app/cartloader_latest/entrypoint.sh /app/cartloader/ && \
+    rm -rf /app/cartloader_latest
+
+# Re-install cartloader itself with the latest Python code
+RUN cd /app/cartloader && python3 -m pip install -e ./
 
 # ===============================
 # Add a test dataset
