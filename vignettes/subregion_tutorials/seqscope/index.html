@@ -773,20 +773,53 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#input-data" class="md-nav__link">
+  <a href="#set-up-the-environment" class="md-nav__link">
     <span class="md-ellipsis">
-      Input Data
+      Set Up the Environment
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#set-up-the-environment" class="md-nav__link">
+  <a href="#prepare-input" class="md-nav__link">
     <span class="md-ellipsis">
-      Set Up the Environment
+      Prepare Input
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Prepare Input">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#data-access" class="md-nav__link">
+    <span class="md-ellipsis">
+      Data Access
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#file-format" class="md-nav__link">
+    <span class="md-ellipsis">
+      File Format
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#define-id-and-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      Define ID and Parameters
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -2071,20 +2104,53 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#input-data" class="md-nav__link">
+  <a href="#set-up-the-environment" class="md-nav__link">
     <span class="md-ellipsis">
-      Input Data
+      Set Up the Environment
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#set-up-the-environment" class="md-nav__link">
+  <a href="#prepare-input" class="md-nav__link">
     <span class="md-ellipsis">
-      Set Up the Environment
+      Prepare Input
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Prepare Input">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#data-access" class="md-nav__link">
+    <span class="md-ellipsis">
+      Data Access
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#file-format" class="md-nav__link">
+    <span class="md-ellipsis">
+      File Format
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#define-id-and-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      Define ID and Parameters
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -2177,9 +2243,71 @@
 
 
 <h1 id="seq-scope-starter-tutorial">Seq-Scope Starter Tutorial<a class="headerlink" href="#seq-scope-starter-tutorial" title="Permanent link">&para;</a></h1>
-<h2 id="input-data">Input Data<a class="headerlink" href="#input-data" title="Permanent link">&para;</a></h2>
 <p>This tutorial uses an example <abbr title="Spatial Digital Gene Expression">SGE</abbr> from <em>mouse hippocampus</em>, extracted via spatial masking from a <a href="https://www.nature.com/articles/s41596-024-01065-0">Seq-Scope</a> coronal brain slice.</p>
-<p><strong>File Format</strong></p>
+<p>It includes steps of input preparation, <abbr title="Spatial Digital Gene Expression">SGE</abbr> format conversion, <abbr title="Segmentation-free method inferring latent spatial factors from SGE (Si et al., Nature Methods 2024)">FICTURE</abbr> analysis, asset packaging, and data upload.</p>
+<hr />
+<h2 id="set-up-the-environment">Set Up the Environment<a class="headerlink" href="#set-up-the-environment" title="Permanent link">&para;</a></h2>
+<div class="admonition warning">
+<p class="admonition-title">Pre-installed tools</p>
+<p>Please ensure you have installed all required tools (See <a href="../../../installation/">Installation</a>).</p>
+</div>
+<p>Define paths to all required binaries and resources. Optionally, specify a fixed color map for consistent rendering.</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span>
+<span class="normal">22</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># ====</span>
+<span class="c1"># Replace each placeholder with the actual path on your system.  </span>
+<span class="c1"># ====</span>
+
+<span class="nv">work_dir</span><span class="o">=</span>/path/to/work/directory<span class="w">        </span><span class="c1"># path to work directory that contains the downloaded input data</span>
+<span class="nb">cd</span><span class="w"> </span><span class="nv">$work_dir</span>
+
+<span class="c1"># Define paths to required binaries and resources</span>
+<span class="nv">spatula</span><span class="o">=</span>/path/to/spatula/binary<span class="w">         </span><span class="c1"># path to spatula executable</span>
+<span class="nv">punkst</span><span class="o">=</span>/path/to/punkst/binary<span class="w">           </span><span class="c1"># path to FICTURE2 (punkst) executable</span>
+<span class="nv">tippecanoe</span><span class="o">=</span>/path/to/tippecanoe/binary<span class="w">   </span><span class="c1"># path to tippecanoe executable</span>
+<span class="nv">pmtiles</span><span class="o">=</span>/path/to/pmtiles/binary<span class="w">         </span><span class="c1"># path to pmtiles executable</span>
+<span class="nv">aws</span><span class="o">=</span>/path/to/aws/cli/binary<span class="w">             </span><span class="c1"># path to AWS CLI binary</span>
+
+<span class="c1"># (Optional) Define path to color map. </span>
+<span class="nv">cmap</span><span class="o">=</span>/path/to/color/map<span class="w">                 </span><span class="c1"># Path to fixed color map. `CartLoader` includes one at cartloader/assets/fixed_color_map_256.tsv.</span>
+
+<span class="c1"># Number of jobs</span>
+<span class="nv">n_jobs</span><span class="o">=</span><span class="m">10</span><span class="w">                               </span><span class="c1"># If not specified, the number of jobs defaults to 1.</span>
+
+<span class="c1"># Activate the bioconda environment</span>
+conda<span class="w"> </span>activate<span class="w"> </span>ENV_NAME<span class="w">                 </span><span class="c1"># replace ENV_NAME with your conda environment name</span>
+</code></pre></div></td></tr></table></div>
+<hr />
+<h2 id="prepare-input">Prepare Input<a class="headerlink" href="#prepare-input" title="Permanent link">&para;</a></h2>
+<h3 id="data-access">Data Access<a class="headerlink" href="#data-access" title="Permanent link">&para;</a></h3>
+<p>The example data is hosted on Zenodo (10.5281/zenodo.17953582).</p>
+<p>Follow the commands below to download the example data.</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nb">cd</span><span class="w"> </span><span class="nv">$work_dir</span>
+wget<span class="w">  </span>https://zenodo.org/records/17953582/files/seqscope_starter.raw.tar.gz
+tar<span class="w"> </span>-zxvf<span class="w"> </span>seqscope_starter.raw.tar.gz
+</code></pre></div></td></tr></table></div>
+<h3 id="file-format">File Format<a class="headerlink" href="#file-format" title="Permanent link">&para;</a></h3>
 <p>Actual input formats are platform-dependent. Please refer to the <a href="../../intro/">Vignettes</a> for detailed input specifications by each platform.</p>
 <p>SeqScope provides <abbr title="Spatial Digital Gene Expression">SGE</abbr> with three files:</p>
 <details>
@@ -2238,68 +2366,7 @@ ENSMUSG00000100480  Gm29156 3   0,0,0,0,0
 </li>
 </ul>
 </details>
-<p><strong>Data Access</strong></p>
-<p>The example data is hosted on Zenodo (10.5281/zenodo.17953582).</p>
-<p>Follow the commands below to download the example data.</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nv">work_dir</span><span class="o">=</span>/path/to/work/directory
-<span class="nb">cd</span><span class="w"> </span><span class="nv">$work_dir</span>
-wget<span class="w">  </span>https://zenodo.org/records/17953582/files/seqscope_starter.raw.tar.gz<span class="w"> </span>
-tar<span class="w"> </span>-zxvf<span class="w"> </span>seqscope_starter.raw.tar.gz<span class="w"> </span>
-</code></pre></div></td></tr></table></div>
-<h2 id="set-up-the-environment">Set Up the Environment<a class="headerlink" href="#set-up-the-environment" title="Permanent link">&para;</a></h2>
-<div class="admonition warning">
-<p class="admonition-title">Pre-installed tools</p>
-<p>Please ensure you have installed all required tools (See <a href="../../../installation/">Installation</a>).</p>
-</div>
-<p>Define paths to all required binaries and resources. Optionally, specify a fixed color map for consistent rendering.</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
-<span class="normal"> 2</span>
-<span class="normal"> 3</span>
-<span class="normal"> 4</span>
-<span class="normal"> 5</span>
-<span class="normal"> 6</span>
-<span class="normal"> 7</span>
-<span class="normal"> 8</span>
-<span class="normal"> 9</span>
-<span class="normal">10</span>
-<span class="normal">11</span>
-<span class="normal">12</span>
-<span class="normal">13</span>
-<span class="normal">14</span>
-<span class="normal">15</span>
-<span class="normal">16</span>
-<span class="normal">17</span>
-<span class="normal">18</span>
-<span class="normal">19</span>
-<span class="normal">20</span>
-<span class="normal">21</span>
-<span class="normal">22</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># ====</span>
-<span class="c1"># Replace each placeholder with the actual path on your system.  </span>
-<span class="c1"># ====</span>
-
-<span class="nv">work_dir</span><span class="o">=</span>/path/to/work/directory<span class="w">        </span><span class="c1"># path to work directory that contains the downloaded input data</span>
-<span class="nb">cd</span><span class="w"> </span><span class="nv">$work_dir</span>
-
-<span class="c1"># Define paths to required binaries and resources</span>
-<span class="nv">spatula</span><span class="o">=</span>/path/to/spatula/binary<span class="w">         </span><span class="c1"># path to spatula executable</span>
-<span class="nv">punkst</span><span class="o">=</span>/path/to/punkst/binary<span class="w">           </span><span class="c1"># path to FICTURE2 (punkst) executable</span>
-<span class="nv">tippecanoe</span><span class="o">=</span>/path/to/tippecanoe/binary<span class="w">   </span><span class="c1"># path to tippecanoe executable</span>
-<span class="nv">pmtiles</span><span class="o">=</span>/path/to/pmtiles/binary<span class="w">         </span><span class="c1"># path to pmtiles executable</span>
-<span class="nv">aws</span><span class="o">=</span>/path/to/aws/cli/binary<span class="w">             </span><span class="c1"># path to AWS CLI binary</span>
-
-<span class="c1"># (Optional) Define path to color map. </span>
-<span class="nv">cmap</span><span class="o">=</span>/path/to/color/map<span class="w">                 </span><span class="c1"># Path to fixed color map. `CartLoader` includes one at cartloader/assets/fixed_color_map_256.tsv.</span>
-
-<span class="c1"># Number of jobs</span>
-<span class="nv">n_jobs</span><span class="o">=</span><span class="m">10</span><span class="w">                               </span><span class="c1"># If not specified, the number of jobs defaults to 1.</span>
-
-<span class="c1"># Activate the bioconda environment</span>
-conda<span class="w"> </span>activate<span class="w"> </span>ENV_NAME<span class="w">                 </span><span class="c1"># replace ENV_NAME with your conda environment name</span>
-</code></pre></div></td></tr></table></div>
-<p>Define data ID and analysis parameters:</p>
+<h3 id="define-id-and-parameters">Define ID and Parameters<a class="headerlink" href="#define-id-and-parameters" title="Permanent link">&para;</a></h3>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
 <span class="normal">3</span>
@@ -2321,6 +2388,7 @@ conda<span class="w"> </span>activate<span class="w"> </span>ENV_NAME<span class
 <p>The latest <a href="https://www.nature.com/articles/s41596-024-01065-0">SeqScope</a> with an Illumina NovaSeq 6000 uses <a href="https://seqscope.github.io/NovaScope/"><code>NovaScope</code></a> pipeline to process sequencing data. <a href="https://seqscope.github.io/NovaScope/"><code>NovaScope</code></a> defaults to generate <abbr title="Spatial Digital Gene Expression">SGE</abbr> at nanometer (nm) resolution, meaning each pixel corresponds to 1 nm.</p>
 <p>Thus, use 1000 as scaling factor from coordinate to micrometer since 1000 nm = 1 <abbr title="micrometer">µm</abbr>.</p>
 </div>
+<hr />
 <h2 id="sge-format-conversion"><abbr title="Spatial Digital Gene Expression">SGE</abbr> Format Conversion<a class="headerlink" href="#sge-format-conversion" title="Permanent link">&para;</a></h2>
 <p>Convert the raw input to the unified <abbr title="Spatial Digital Gene Expression">SGE</abbr> format. See more details in <a href="../../../reference/sge_convert/"><abbr title="Spatial Digital Gene Expression">SGE</abbr> Format Conversion</a>.</p>
 <!-- ```bash
@@ -2424,8 +2492,9 @@ cartloader sge_convert \
 </tr>
 </tbody>
 </table>
+<hr />
 <h2 id="ficture-analysis"><code>FICTURE</code> Analysis<a class="headerlink" href="#ficture-analysis" title="Permanent link">&para;</a></h2>
-<p>Compute spatial factors using <code>punkst</code> (FICTURE2 mode). See more details on the <a href="../../../reference/run_ficture2/">Reference page</a>.</p>
+<p>Compute spatial factors using <code>punkst</code> (FICTURE2). See more details on the <a href="../../../reference/run_ficture2/">Reference page</a>.</p>
 <!-- ```bash
 cartloader run_ficture2 \
     --makefn run_ficture2.mk \                          # (optional) file name of the output make file
@@ -2574,6 +2643,7 @@ cartloader run_ficture2 \
 <p><sub><sup>1</sup>: <code>CartLoader</code> requires the user to specify <strong>at least one action</strong>. Available actions includes: <code>--tile</code> to run tiling step; <code>--segment</code> to run segmentation step; <code>--init-lda</code> to run <abbr title="Latent Dirichlet Allocation">LDA</abbr> training step; <code>--decode</code> to run decoding step; <code>--summary</code> to run summarization step; <code>--main</code> to run all above five actions.</sub></p>
 <!--parameter-end-->
 
+<hr />
 <h2 id="cartloader-asset-packaging"><code>CartLoader</code> Asset Packaging<a class="headerlink" href="#cartloader-asset-packaging" title="Permanent link">&para;</a></h2>
 <p>Generate pmtiles and web-compatible tile directories. See more details in <a href="../../../reference/run_cartload2/">Reference page</a>.</p>
 <!-- ```bash
@@ -2722,6 +2792,7 @@ cartloader<span class="w"> </span>run_cartload2<span class="w"> </span><span cla
 </table>
 <!--parameter-end-->
 
+<hr />
 <h2 id="upload-to-data-repository">Upload to Data Repository<a class="headerlink" href="#upload-to-data-repository" title="Permanent link">&para;</a></h2>
 <!--section1-start-->
 
@@ -2741,8 +2812,8 @@ cartloader<span class="w"> </span>run_cartload2<span class="w"> </span><span cla
 <span class="normal">5</span>
 <span class="normal">6</span>
 <span class="normal">7</span>
-<span class="normal">8</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># AWS S3 target location for cartostore</span>
-<span class="nv">S3_DIR</span><span class="o">=</span>/s3/path/to/s3/dir<span class="w">              </span><span class="c1"># Recommend to use DATA_ID as directory name, such as s3://bucket_name/xenium-v1-humanlung-cancer-ffpe</span>
+<span class="normal">8</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># AWS S3 target location</span>
+<span class="nv">S3_DIR</span><span class="o">=</span>/s3/path/to/s3/dir<span class="w">              </span><span class="c1"># Recommend to use DATA_ID as directory name, such as s3://bucket_name/test-data</span>
 
 cartloader<span class="w"> </span>upload_aws<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--in-dir<span class="w"> </span>./cartload2<span class="w"> </span><span class="se">\</span>
@@ -2860,6 +2931,7 @@ cartloader<span class="w"> </span>upload_zenodo<span class="w"> </span><span cla
 </table>
 <!--section3-end-->
 
+<hr />
 <h2 id="output-data">Output Data<a class="headerlink" href="#output-data" title="Permanent link">&para;</a></h2>
 <div class="grid cards generic">
 <ul>

@@ -883,20 +883,53 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#input-data" class="md-nav__link">
+  <a href="#set-up-the-environment" class="md-nav__link">
     <span class="md-ellipsis">
-      Input Data
+      Set Up the Environment
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#set-up-the-environment" class="md-nav__link">
+  <a href="#prepare-input" class="md-nav__link">
     <span class="md-ellipsis">
-      Set Up the Environment
+      Prepare Input
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Prepare Input">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#data-access" class="md-nav__link">
+    <span class="md-ellipsis">
+      Data Access
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#file-format" class="md-nav__link">
+    <span class="md-ellipsis">
+      File Format
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#define-id-and-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      Define ID and Parameters
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -2071,20 +2104,53 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#input-data" class="md-nav__link">
+  <a href="#set-up-the-environment" class="md-nav__link">
     <span class="md-ellipsis">
-      Input Data
+      Set Up the Environment
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#set-up-the-environment" class="md-nav__link">
+  <a href="#prepare-input" class="md-nav__link">
     <span class="md-ellipsis">
-      Set Up the Environment
+      Prepare Input
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Prepare Input">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#data-access" class="md-nav__link">
+    <span class="md-ellipsis">
+      Data Access
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#file-format" class="md-nav__link">
+    <span class="md-ellipsis">
+      File Format
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#define-id-and-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      Define ID and Parameters
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -2177,43 +2243,9 @@
 
 
 <h1 id="vizgen-merscope-starter-tutorial">Vizgen MERSCOPE Starter Tutorial<a class="headerlink" href="#vizgen-merscope-starter-tutorial" title="Permanent link">&para;</a></h1>
-<h2 id="input-data">Input Data<a class="headerlink" href="#input-data" title="Permanent link">&para;</a></h2>
 <p>The input is a <abbr title="Spatial Digital Gene Expression">SGE</abbr> dataset from the adult mouse hippocampus, extracted by masking a coronal brain section (Slice Number: 2；Replicate Number: 1; file: <code>detected_transcripts.csv</code>) from <a href="https://vizgen.com/applications/neuroscience-showcase/">Vizgen MERSCOPE Neuroscience Showcase</a>.</p>
-<p><strong>File Format</strong></p>
-<p>The MERSCOPE input <abbr title="Spatial Digital Gene Expression">SGE</abbr> includes one comma‑delimited text file in the following format:</p>
-<div class="admonition info">
-<p class="admonition-title">CSV File Format</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span></pre></div></td><td class="code"><div><pre><span></span><code>,barcode_id,global_x,global_y,global_z,x,y,fov,gene
-0,22,56.930107,3851.851,5.0,147.80061,1711.9067,0,Adgre1
-1,22,183.60107,3874.0085,5.0,1320.6799,1917.0692,0,Adgre1
-2,22,59.750736,3666.5576,5.0,132.66754,1844.2372,1,Adgre1
-</code></pre></div></td></tr></table></div>
-<ul>
-<li>Column 1: Unique numeric index for each transcript within a field of view (non-consecutive, ascending).  </li>
-<li><code>barcode_id</code>: Zero-based index of the transcript barcode in the codebook; forms a composite key with <code>fov</code>.</li>
-<li><code>global_x</code>: Transcript x coordinates (<abbr title="micrometer">µm</abbr>) in the experimental region; may be negative due to alignment.  </li>
-<li><code>global_y</code>: Transcript y coordinates (<abbr title="micrometer">µm</abbr>) in the experimental region; may be negative due to alignment.  </li>
-<li><code>global_z</code>: Zero‑based z‑position index.</li>
-<li><code>x</code>: The x-coordinate of the transcript (<abbr title="micrometer">µm</abbr>), within the coordinate space of the field of view.</li>
-<li><code>y</code>: The y-coordinate of the transcript (<abbr title="micrometer">µm</abbr>), within the coordinate space of the field of view.</li>
-<li><code>fov</code>: Zero-based field of view index; forms a composite key with <code>barcode_id</code>.  </li>
-<li><code>gene</code>: Gene name associated with the transcript.</li>
-</ul>
-</div>
-<p><strong>Data Access</strong></p>
-<p>The example data is hosted on Zenodo.</p>
-<p>Follow the commands below to download the example data.</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nv">work_dir</span><span class="o">=</span>/path/to/work/directory
-<span class="nb">cd</span><span class="w"> </span><span class="nv">$work_dir</span>
-wget<span class="w">  </span>https://zenodo.org/records/17953582/files/merscope_starter.raw.tar.gz
-tar<span class="w"> </span>--strip-components<span class="o">=</span><span class="m">1</span><span class="w"> </span>-zxvf<span class="w"> </span>merscope_starter.raw.tar.gz
-</code></pre></div></td></tr></table></div>
+<p>It includes steps of input preparation, <abbr title="Spatial Digital Gene Expression">SGE</abbr> format conversion, <abbr title="Segmentation-free method inferring latent spatial factors from SGE (Si et al., Nature Methods 2024)">FICTURE</abbr> analysis, asset packaging, and data upload.</p>
+<hr />
 <h2 id="set-up-the-environment">Set Up the Environment<a class="headerlink" href="#set-up-the-environment" title="Permanent link">&para;</a></h2>
 <div class="admonition warning">
 <p class="admonition-title">Pre-installed tools</p>
@@ -2264,7 +2296,41 @@ tar<span class="w"> </span>--strip-components<span class="o">=</span><span class
 <span class="c1"># Activate the bioconda environment</span>
 conda<span class="w"> </span>activate<span class="w"> </span>ENV_NAME<span class="w">                 </span><span class="c1"># replace ENV_NAME with your conda environment name</span>
 </code></pre></div></td></tr></table></div>
-<p>Define data ID and analysis parameters:</p>
+<hr />
+<h2 id="prepare-input">Prepare Input<a class="headerlink" href="#prepare-input" title="Permanent link">&para;</a></h2>
+<h3 id="data-access">Data Access<a class="headerlink" href="#data-access" title="Permanent link">&para;</a></h3>
+<p>The example data is hosted on Zenodo. Follow the commands below to download the example data.</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nb">cd</span><span class="w"> </span><span class="nv">$work_dir</span>
+wget<span class="w">  </span>https://zenodo.org/records/17953582/files/merscope_starter.raw.tar.gz
+tar<span class="w"> </span>--strip-components<span class="o">=</span><span class="m">1</span><span class="w"> </span>-zxvf<span class="w"> </span>merscope_starter.raw.tar.gz
+</code></pre></div></td></tr></table></div>
+<h3 id="file-format">File Format<a class="headerlink" href="#file-format" title="Permanent link">&para;</a></h3>
+<p>The MERSCOPE input <abbr title="Spatial Digital Gene Expression">SGE</abbr> includes one comma‑delimited text file in the following format:</p>
+<div class="admonition info">
+<p class="admonition-title">CSV File Format</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span></pre></div></td><td class="code"><div><pre><span></span><code>,barcode_id,global_x,global_y,global_z,x,y,fov,gene
+0,22,56.930107,3851.851,5.0,147.80061,1711.9067,0,Adgre1
+1,22,183.60107,3874.0085,5.0,1320.6799,1917.0692,0,Adgre1
+2,22,59.750736,3666.5576,5.0,132.66754,1844.2372,1,Adgre1
+</code></pre></div></td></tr></table></div>
+<ul>
+<li>Column 1: Unique numeric index for each transcript within a field of view (non-consecutive, ascending).  </li>
+<li><code>barcode_id</code>: Zero-based index of the transcript barcode in the codebook; forms a composite key with <code>fov</code>.</li>
+<li><code>global_x</code>: Transcript x coordinates (<abbr title="micrometer">µm</abbr>) in the experimental region; may be negative due to alignment.  </li>
+<li><code>global_y</code>: Transcript y coordinates (<abbr title="micrometer">µm</abbr>) in the experimental region; may be negative due to alignment.  </li>
+<li><code>global_z</code>: Zero‑based z‑position index.</li>
+<li><code>x</code>: The x-coordinate of the transcript (<abbr title="micrometer">µm</abbr>), within the coordinate space of the field of view.</li>
+<li><code>y</code>: The y-coordinate of the transcript (<abbr title="micrometer">µm</abbr>), within the coordinate space of the field of view.</li>
+<li><code>fov</code>: Zero-based field of view index; forms a composite key with <code>barcode_id</code>.  </li>
+<li><code>gene</code>: Gene name associated with the transcript.</li>
+</ul>
+</div>
+<h3 id="define-id-and-parameters">Define ID and Parameters<a class="headerlink" href="#define-id-and-parameters" title="Permanent link">&para;</a></h3>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
 <span class="normal">3</span>
@@ -2285,6 +2351,7 @@ conda<span class="w"> </span>activate<span class="w"> </span>ENV_NAME<span class
 <p class="admonition-title">How to Define Scaling Factors for MERSCOPE?</p>
 <p>The MERSCOPE example data currently used here provides <abbr title="Spatial Digital Gene Expression">SGE</abbr> in <abbr title="micrometer">µm</abbr>. Define scaling factor from coordinate to micrometer as 1.</p>
 </div>
+<hr />
 <h2 id="sge-format-conversion"><abbr title="Spatial Digital Gene Expression">SGE</abbr> Format Conversion<a class="headerlink" href="#sge-format-conversion" title="Permanent link">&para;</a></h2>
 <p>Convert the raw input to the unified <abbr title="Spatial Digital Gene Expression">SGE</abbr> format. See more details in its <a href="../../../reference/sge_convert/">Reference page</a>.</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
@@ -2373,8 +2440,9 @@ conda<span class="w"> </span>activate<span class="w"> </span>ENV_NAME<span class
 </tr>
 </tbody>
 </table>
+<hr />
 <h2 id="ficture-analysis"><code>FICTURE</code> Analysis<a class="headerlink" href="#ficture-analysis" title="Permanent link">&para;</a></h2>
-<p>Compute spatial factors using <code>punkst</code> (FICTURE2 mode). See more details on the <a href="../../../reference/run_ficture2/">Reference page</a>.</p>
+<p>Compute spatial factors using <code>punkst</code> (FICTURE2). See more details on the <a href="../../../reference/run_ficture2/">Reference page</a>.</p>
 <!-- ```bash
 cartloader run_ficture2 \
     --makefn run_ficture2.mk \                          # (optional) file name of the output make file
@@ -2523,6 +2591,7 @@ cartloader run_ficture2 \
 <p><sub><sup>1</sup>: <code>CartLoader</code> requires the user to specify <strong>at least one action</strong>. Available actions includes: <code>--tile</code> to run tiling step; <code>--segment</code> to run segmentation step; <code>--init-lda</code> to run <abbr title="Latent Dirichlet Allocation">LDA</abbr> training step; <code>--decode</code> to run decoding step; <code>--summary</code> to run summarization step; <code>--main</code> to run all above five actions.</sub></p>
 <!--parameter-end-->
 
+<hr />
 <h2 id="cartloader-asset-packaging"><code>CartLoader</code> Asset Packaging<a class="headerlink" href="#cartloader-asset-packaging" title="Permanent link">&para;</a></h2>
 <p>Generate pmtiles and web-compatible tile directories. See more details in <a href="../../../reference/run_cartload2/">Reference page</a>.</p>
 <!-- ```bash
@@ -2671,6 +2740,7 @@ cartloader<span class="w"> </span>run_cartload2<span class="w"> </span><span cla
 </table>
 <!--parameter-end-->
 
+<hr />
 <h2 id="upload-to-data-repository">Upload to Data Repository<a class="headerlink" href="#upload-to-data-repository" title="Permanent link">&para;</a></h2>
 <!--section1-start-->
 
@@ -2690,8 +2760,8 @@ cartloader<span class="w"> </span>run_cartload2<span class="w"> </span><span cla
 <span class="normal">5</span>
 <span class="normal">6</span>
 <span class="normal">7</span>
-<span class="normal">8</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># AWS S3 target location for cartostore</span>
-<span class="nv">S3_DIR</span><span class="o">=</span>/s3/path/to/s3/dir<span class="w">              </span><span class="c1"># Recommend to use DATA_ID as directory name, such as s3://bucket_name/xenium-v1-humanlung-cancer-ffpe</span>
+<span class="normal">8</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># AWS S3 target location</span>
+<span class="nv">S3_DIR</span><span class="o">=</span>/s3/path/to/s3/dir<span class="w">              </span><span class="c1"># Recommend to use DATA_ID as directory name, such as s3://bucket_name/test-data</span>
 
 cartloader<span class="w"> </span>upload_aws<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--in-dir<span class="w"> </span>./cartload2<span class="w"> </span><span class="se">\</span>
@@ -2809,6 +2879,7 @@ cartloader<span class="w"> </span>upload_zenodo<span class="w"> </span><span cla
 </table>
 <!--section3-end-->
 
+<hr />
 <h2 id="output-data">Output Data<a class="headerlink" href="#output-data" title="Permanent link">&para;</a></h2>
 <div class="grid cards generic">
 <ul>

@@ -905,20 +905,53 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#input-data" class="md-nav__link">
+  <a href="#set-up-the-environment" class="md-nav__link">
     <span class="md-ellipsis">
-      Input Data
+      Set Up the Environment
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#set-up-the-environment" class="md-nav__link">
+  <a href="#prepare-input" class="md-nav__link">
     <span class="md-ellipsis">
-      Set Up the Environment
+      Prepare Input
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Prepare Input">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#data-access" class="md-nav__link">
+    <span class="md-ellipsis">
+      Data Access
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#file-format" class="md-nav__link">
+    <span class="md-ellipsis">
+      File Format
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#define-id-and-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      Define ID and Parameters
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -2071,20 +2104,53 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#input-data" class="md-nav__link">
+  <a href="#set-up-the-environment" class="md-nav__link">
     <span class="md-ellipsis">
-      Input Data
+      Set Up the Environment
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#set-up-the-environment" class="md-nav__link">
+  <a href="#prepare-input" class="md-nav__link">
     <span class="md-ellipsis">
-      Set Up the Environment
+      Prepare Input
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Prepare Input">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#data-access" class="md-nav__link">
+    <span class="md-ellipsis">
+      Data Access
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#file-format" class="md-nav__link">
+    <span class="md-ellipsis">
+      File Format
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#define-id-and-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      Define ID and Parameters
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -2177,41 +2243,9 @@
 
 
 <h1 id="cosmx-smi-starter-tutorial">CosMX SMI Starter Tutorial<a class="headerlink" href="#cosmx-smi-starter-tutorial" title="Permanent link">&para;</a></h1>
-<h2 id="input-data">Input Data<a class="headerlink" href="#input-data" title="Permanent link">&para;</a></h2>
-<p>The input data is from an adult mouse hippocampus, extracted by masking a coronal brain section. The original full-section </p>
-<p><strong>File Format</strong></p>
-<p>NanoString CosMx SMI produces single‑molecule spatial transcriptomics data as a comma‑separated values (CSV) table.</p>
-<div class="admonition info">
-<p class="admonition-title">CSV File Format</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span></pre></div></td><td class="code"><div><pre><span></span><code>&quot;fov&quot;,&quot;cell_ID&quot;,&quot;x_global_px&quot;,&quot;y_global_px&quot;,&quot;x_local_px&quot;,&quot;y_local_px&quot;,&quot;z&quot;,&quot;target&quot;,&quot;CellComp&quot;
-64,0,-473043,7954.533,4015.3,4246.2,1,&quot;Gfap&quot;,&quot;None&quot;
-64,0,-473022.9,7902.723,4035.48,4194.39,1,&quot;Fth1&quot;,&quot;None&quot;
-64,0,-473132,7836.476,3926.34,4128.143,1,&quot;Ptn&quot;,&quot;None&quot;
-</code></pre></div></td></tr></table></div>
-<ul>
-<li><code>fov</code>: The field of view (FOV) number.</li>
-<li><code>cell_ID</code>: Unique identifier for a single cell within a given FOV; 0 if background or unassigned molecules.</li>
-<li><code>x_global_px</code>, <code>y_global_px</code>: Global pixel coordinates relative to the tissue.</li>
-<li><code>x_local_px</code>, <code>y_local_px</code>: The x or y position (in pixels) relative to the given FOV.</li>
-<li><code>z</code>: Z-plane index representing the depth (optical section) where the transcript was detected.</li>
-<li><code>target</code>: Target name.</li>
-<li><code>CellComp</code>: Subcellular location of the target.</li>
-</ul>
-</div>
-<p><strong>Data Access</strong></p>
-<p>The example data is hosted on Zenodo.</p>
-<p>Follow the commands below to download the example data.</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nv">work_dir</span><span class="o">=</span>/path/to/work/directory
-<span class="nb">cd</span><span class="w"> </span><span class="nv">$work_dir</span>
-wget<span class="w">  </span>https://zenodo.org/records/17953582/files/cosmxsmi_starter.raw.tar.gz
-tar<span class="w"> </span>--strip-components<span class="o">=</span><span class="m">1</span><span class="w"> </span>-zxvf<span class="w"> </span>cosmxsmi_starter.raw.tar.gz
-</code></pre></div></td></tr></table></div>
+<p>This tutorial walks through a starter end-to-end workflow for CosMX SMI data using an adult mouse hippocampus subset extracted from a coronal brain section.</p>
+<p>It includes steps of input preparation, <abbr title="Spatial Digital Gene Expression">SGE</abbr> format conversion, <abbr title="Segmentation-free method inferring latent spatial factors from SGE (Si et al., Nature Methods 2024)">FICTURE</abbr> analysis, asset packaging, and data upload.</p>
+<hr />
 <h2 id="set-up-the-environment">Set Up the Environment<a class="headerlink" href="#set-up-the-environment" title="Permanent link">&para;</a></h2>
 <div class="admonition warning">
 <p class="admonition-title">Pre-installed tools</p>
@@ -2262,7 +2296,39 @@ tar<span class="w"> </span>--strip-components<span class="o">=</span><span class
 <span class="c1"># Activate the bioconda environment</span>
 conda<span class="w"> </span>activate<span class="w"> </span>ENV_NAME<span class="w">                 </span><span class="c1"># replace ENV_NAME with your conda environment name</span>
 </code></pre></div></td></tr></table></div>
-<p>Define data ID and analysis parameters:</p>
+<hr />
+<h2 id="prepare-input">Prepare Input<a class="headerlink" href="#prepare-input" title="Permanent link">&para;</a></h2>
+<h3 id="data-access">Data Access<a class="headerlink" href="#data-access" title="Permanent link">&para;</a></h3>
+<p>The example input data is hosted on Zenodo. Follow the commands below to download it.</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nb">cd</span><span class="w"> </span><span class="nv">$work_dir</span>
+wget<span class="w">  </span>https://zenodo.org/records/17953582/files/cosmxsmi_starter.raw.tar.gz
+tar<span class="w"> </span>--strip-components<span class="o">=</span><span class="m">1</span><span class="w"> </span>-zxvf<span class="w"> </span>cosmxsmi_starter.raw.tar.gz
+</code></pre></div></td></tr></table></div>
+<h3 id="file-format">File Format<a class="headerlink" href="#file-format" title="Permanent link">&para;</a></h3>
+<p>NanoString CosMx SMI produces single‑molecule spatial transcriptomics data as a comma‑separated values (CSV) table.</p>
+<div class="admonition info">
+<p class="admonition-title">CSV File Format</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span></pre></div></td><td class="code"><div><pre><span></span><code>&quot;fov&quot;,&quot;cell_ID&quot;,&quot;x_global_px&quot;,&quot;y_global_px&quot;,&quot;x_local_px&quot;,&quot;y_local_px&quot;,&quot;z&quot;,&quot;target&quot;,&quot;CellComp&quot;
+64,0,-473043,7954.533,4015.3,4246.2,1,&quot;Gfap&quot;,&quot;None&quot;
+64,0,-473022.9,7902.723,4035.48,4194.39,1,&quot;Fth1&quot;,&quot;None&quot;
+64,0,-473132,7836.476,3926.34,4128.143,1,&quot;Ptn&quot;,&quot;None&quot;
+</code></pre></div></td></tr></table></div>
+<ul>
+<li><code>fov</code>: The field of view (FOV) number.</li>
+<li><code>cell_ID</code>: Unique identifier for a single cell within a given FOV; 0 if background or unassigned molecules.</li>
+<li><code>x_global_px</code>, <code>y_global_px</code>: Global pixel coordinates relative to the tissue.</li>
+<li><code>x_local_px</code>, <code>y_local_px</code>: The x or y position (in pixels) relative to the given FOV.</li>
+<li><code>z</code>: Z-plane index representing the depth (optical section) where the transcript was detected.</li>
+<li><code>target</code>: Target name.</li>
+<li><code>CellComp</code>: Subcellular location of the target.</li>
+</ul>
+</div>
+<h3 id="define-id-and-parameters">Define ID and Parameters<a class="headerlink" href="#define-id-and-parameters" title="Permanent link">&para;</a></h3>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
 <span class="normal">3</span>
@@ -2273,7 +2339,7 @@ conda<span class="w"> </span>activate<span class="w"> </span>ENV_NAME<span class
 <span class="normal">8</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># Unique identifier for your dataset</span>
 <span class="nv">DATA_ID</span><span class="o">=</span><span class="s2">&quot;cosmxsmi_hippo&quot;</span><span class="w">                </span><span class="c1"># change this to reflect your dataset name</span>
 <span class="nv">PLATFORM</span><span class="o">=</span><span class="s2">&quot;cosmx_smi&quot;</span><span class="w">                    </span><span class="c1"># platform information</span>
-<span class="nv">SCALE</span><span class="o">=</span><span class="k">$(</span><span class="nb">echo</span><span class="w"> </span><span class="m">1000</span>/120<span class="p">|</span>bc<span class="w"> </span>-l<span class="k">)</span><span class="w">              </span><span class="c1"># scale from coordinate to micrometer</span>
+<span class="nv">SCALE</span><span class="o">=</span><span class="k">$(</span><span class="nb">echo</span><span class="w"> </span><span class="m">1000</span>/120<span class="p">|</span>bc<span class="w"> </span>-l<span class="k">)</span><span class="w">            </span><span class="c1"># scale from coordinate to micrometer</span>
 
 <span class="c1"># LDA parameters</span>
 <span class="nv">train_width</span><span class="o">=</span><span class="m">12</span><span class="w">                           </span><span class="c1"># define LDA training hexagon width (comma-separated if multiple widths are applied)</span>
@@ -2281,8 +2347,9 @@ conda<span class="w"> </span>activate<span class="w"> </span>ENV_NAME<span class
 </code></pre></div></td></tr></table></div>
 <div class="admonition info">
 <p class="admonition-title">How to Define Scaling Factors for CosMX SMI?</p>
-<p>According to the README.html provided with the Pixel-seq dataset, each pixel has an edge length of 120 nm. To calculate the number of pixels per micrometer, use the formula: scale = 1000 / 120.</p>
+<p>According to the README.html provided with the example CosMX dataset, each pixel has an edge length of 120 nm. To calculate the number of pixels per micrometer, use the formula: scale = 1000 / 120.</p>
 </div>
+<hr />
 <h2 id="sge-format-conversion"><abbr title="Spatial Digital Gene Expression">SGE</abbr> Format Conversion<a class="headerlink" href="#sge-format-conversion" title="Permanent link">&para;</a></h2>
 <p>Convert the raw input to the unified <abbr title="Spatial Digital Gene Expression">SGE</abbr> format. See more details in its <a href="../../../reference/sge_convert/">Reference page</a>.</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
@@ -2371,8 +2438,9 @@ conda<span class="w"> </span>activate<span class="w"> </span>ENV_NAME<span class
 </tr>
 </tbody>
 </table>
+<hr />
 <h2 id="ficture-analysis"><code>FICTURE</code> Analysis<a class="headerlink" href="#ficture-analysis" title="Permanent link">&para;</a></h2>
-<p>Compute spatial factors using <code>punkst</code> (FICTURE2 mode). See more details on the <a href="../../../reference/run_ficture2/">Reference page</a>.</p>
+<p>Compute spatial factors using <code>punkst</code> (FICTURE2). See more details on the <a href="../../../reference/run_ficture2/">Reference page</a>.</p>
 <!-- ```bash
 cartloader run_ficture2 \
     --makefn run_ficture2.mk \                          # (optional) file name of the output make file
@@ -2521,6 +2589,7 @@ cartloader run_ficture2 \
 <p><sub><sup>1</sup>: <code>CartLoader</code> requires the user to specify <strong>at least one action</strong>. Available actions includes: <code>--tile</code> to run tiling step; <code>--segment</code> to run segmentation step; <code>--init-lda</code> to run <abbr title="Latent Dirichlet Allocation">LDA</abbr> training step; <code>--decode</code> to run decoding step; <code>--summary</code> to run summarization step; <code>--main</code> to run all above five actions.</sub></p>
 <!--parameter-end-->
 
+<hr />
 <h2 id="cartloader-asset-packaging"><code>CartLoader</code> Asset Packaging<a class="headerlink" href="#cartloader-asset-packaging" title="Permanent link">&para;</a></h2>
 <p>Generate pmtiles and web-compatible tile directories. See more details in <a href="../../../reference/run_cartload2/">Reference page</a>.</p>
 <!-- ```bash
@@ -2669,6 +2738,7 @@ cartloader<span class="w"> </span>run_cartload2<span class="w"> </span><span cla
 </table>
 <!--parameter-end-->
 
+<hr />
 <h2 id="upload-to-data-repository">Upload to Data Repository<a class="headerlink" href="#upload-to-data-repository" title="Permanent link">&para;</a></h2>
 <!--section1-start-->
 
@@ -2688,8 +2758,8 @@ cartloader<span class="w"> </span>run_cartload2<span class="w"> </span><span cla
 <span class="normal">5</span>
 <span class="normal">6</span>
 <span class="normal">7</span>
-<span class="normal">8</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># AWS S3 target location for cartostore</span>
-<span class="nv">S3_DIR</span><span class="o">=</span>/s3/path/to/s3/dir<span class="w">              </span><span class="c1"># Recommend to use DATA_ID as directory name, such as s3://bucket_name/xenium-v1-humanlung-cancer-ffpe</span>
+<span class="normal">8</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># AWS S3 target location</span>
+<span class="nv">S3_DIR</span><span class="o">=</span>/s3/path/to/s3/dir<span class="w">              </span><span class="c1"># Recommend to use DATA_ID as directory name, such as s3://bucket_name/test-data</span>
 
 cartloader<span class="w"> </span>upload_aws<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--in-dir<span class="w"> </span>./cartload2<span class="w"> </span><span class="se">\</span>
@@ -2807,6 +2877,7 @@ cartloader<span class="w"> </span>upload_zenodo<span class="w"> </span><span cla
 </table>
 <!--section3-end-->
 
+<hr />
 <h2 id="output-data">Output Data<a class="headerlink" href="#output-data" title="Permanent link">&para;</a></h2>
 <div class="grid cards generic">
 <ul>

@@ -1027,18 +1027,42 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#set-up-the-environment" class="md-nav__link">
+  <a href="#example-runs" class="md-nav__link">
     <span class="md-ellipsis">
-      Set Up the Environment
+      Example Runs
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Example Runs">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#define-data-id-and-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      Define Data ID and Parameters
     </span>
   </a>
   
 </li>
+        
+          <li class="md-nav__item">
+  <a href="#run-pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      Run pipeline
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
       
         <li class="md-nav__item">
-  <a href="#run-pipelines" class="md-nav__link">
+  <a href="#customize" class="md-nav__link">
     <span class="md-ellipsis">
-      Run Pipelines
+      Customize
     </span>
   </a>
   
@@ -2047,18 +2071,42 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#set-up-the-environment" class="md-nav__link">
+  <a href="#example-runs" class="md-nav__link">
     <span class="md-ellipsis">
-      Set Up the Environment
+      Example Runs
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Example Runs">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#define-data-id-and-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      Define Data ID and Parameters
     </span>
   </a>
   
 </li>
+        
+          <li class="md-nav__item">
+  <a href="#run-pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      Run pipeline
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
       
         <li class="md-nav__item">
-  <a href="#run-pipelines" class="md-nav__link">
+  <a href="#customize" class="md-nav__link">
     <span class="md-ellipsis">
-      Run Pipelines
+      Customize
     </span>
   </a>
   
@@ -2117,7 +2165,11 @@
 <span class="normal">12</span>
 <span class="normal">13</span>
 <span class="normal">14</span>
-<span class="normal">15</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># define the work directory</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># define the work directory</span>
 <span class="nv">work_dir</span><span class="o">=</span>/path/to/work/directory
 mkdir<span class="w"> </span>-p<span class="w"> </span><span class="si">${</span><span class="nv">work_dir</span><span class="si">}</span>/raw
 <span class="nb">cd</span><span class="w"> </span><span class="si">${</span><span class="nv">work_dir</span><span class="si">}</span>/raw
@@ -2132,6 +2184,10 @@ wget<span class="w"> </span>https://cf.10xgenomics.com/samples/spatial-exp/4.0.1
 wget<span class="w"> </span>https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_segmented_outputs.tar.gz
 wget<span class="w"> </span>https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_spatial.tar.gz
 wget<span class="w"> </span>https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_web_summary.html
+
+<span class="c1"># Download the histology image</span>
+wget<span class="w"> </span>https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_image.tif
+wget<span class="w"> </span>https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_tissue_image.btf
 </code></pre></div></td></tr></table></div>
 </div>
 <div class="tabbed-block">
@@ -2145,7 +2201,11 @@ wget<span class="w"> </span>https://cf.10xgenomics.com/samples/spatial-exp/4.0.1
 <span class="normal"> 7</span>
 <span class="normal"> 8</span>
 <span class="normal"> 9</span>
-<span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code>curl<span class="w"> </span>-O<span class="w"> </span>https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_barcode_mappings.parquet
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span></pre></div></td><td class="code"><div><pre><span></span><code>curl<span class="w"> </span>-O<span class="w"> </span>https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_barcode_mappings.parquet
 curl<span class="w"> </span>-O<span class="w"> </span>https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_binned_outputs.tar.gz
 curl<span class="w"> </span>-O<span class="w"> </span>https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_cloupe_008um.cloupe
 curl<span class="w"> </span>-O<span class="w"> </span>https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_cloupe_cell.cloupe
@@ -2155,6 +2215,10 @@ curl<span class="w"> </span>-O<span class="w"> </span>https://cf.10xgenomics.com
 curl<span class="w"> </span>-O<span class="w"> </span>https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_segmented_outputs.tar.gz
 curl<span class="w"> </span>-O<span class="w"> </span>https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_spatial.tar.gz
 curl<span class="w"> </span>-O<span class="w"> </span>https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_web_summary.html
+
+<span class="c1"># Download the histology image</span>
+curl<span class="w"> </span>-O<span class="w"> </span>https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_image.tif
+curl<span class="w"> </span>-O<span class="w"> </span>https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_tissue_image.btf
 </code></pre></div></td></tr></table></div>
 </div>
 </div>
@@ -2393,7 +2457,39 @@ ENSMUSG00000089699,Gm1992,0.00003369899313325135,2.372528175774452,0.49812531917
 </div>
 </div>
 <hr />
-<h2 id="set-up-the-environment">Set Up the Environment<a class="headerlink" href="#set-up-the-environment" title="Permanent link">&para;</a></h2>
+<hr />
+<h2 id="example-runs">Example Runs<a class="headerlink" href="#example-runs" title="Permanent link">&para;</a></h2>
+<h3 id="define-data-id-and-parameters">Define Data ID and Parameters<a class="headerlink" href="#define-data-id-and-parameters" title="Permanent link">&para;</a></h3>
+<p>First, define the dataset ID and analysis parameters.</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span>
+<span class="normal">6</span>
+<span class="normal">7</span>
+<span class="normal">8</span>
+<span class="normal">9</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># Unique identifier for your dataset</span>
+<span class="nv">DATA_ID</span><span class="o">=</span><span class="s2">&quot;visiumhd_3prime_mouse_brain&quot;</span><span class="w">    </span><span class="c1"># change this to reflect your dataset name</span>
+
+<span class="c1"># LDA parameters</span>
+<span class="nv">train_width</span><span class="o">=</span><span class="m">18</span><span class="w">                           </span><span class="c1"># define LDA training hexagon width (comma-separated if multiple widths are applied)</span>
+<span class="nv">n_factor</span><span class="o">=</span><span class="m">48</span><span class="w">                              </span><span class="c1"># define number of factors in LDA training (comma-separated if multiple n-factor are applied)</span>
+
+<span class="c1"># Path to AWS S3 directory</span>
+<span class="nv">S3_DIR</span><span class="o">=</span>/s3/path/to/s3/dir<span class="w">                </span><span class="c1"># Recommend to use DATA_ID as directory name, such as s3://bucket-name/visiumhd-3prime-mouse-brain</span>
+</code></pre></div></td></tr></table></div>
+<div class="admonition info">
+<p class="admonition-title">How to define scaling for Visium HD?</p>
+<p>10x Visium HD provides <code>scalefactors_json.json</code> (pixel‑to‑<abbr title="micrometer">µm</abbr>). <code>CartLoader</code> accepts it via <code>--scale-json</code> and computes the scaling automatically, so you don’t need to manually specify <code>--units-per-um</code>.</p>
+<p>Alternatively, provide the scale directly with <code>--units-per-um</code>.</p>
+</div>
+<h3 id="run-pipeline">Run pipeline<a class="headerlink" href="#run-pipeline" title="Permanent link">&para;</a></h3>
+<p>Choose one of the following options to run run_xenium pipeline. Run it locally or run it with docker.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="3:2"><input checked="checked" id="__tabbed_3_1" name="__tabbed_3" type="radio" /><input id="__tabbed_3_2" name="__tabbed_3" type="radio" /><div class="tabbed-labels"><label for="__tabbed_3_1">Run Pipeline Locally</label><label for="__tabbed_3_2">Run Pipeline via Docker</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<p><strong>Set Up Environment</strong></p>
 <div class="admonition warning">
 <p class="admonition-title">Pre-installed tools</p>
 <p>Please ensure you have installed all required tools (See <a href="../../../installation/">Installation</a>).</p>
@@ -2443,33 +2539,7 @@ ENSMUSG00000089699,Gm1992,0.00003369899313325135,2.372528175774452,0.49812531917
 <span class="c1"># Activate the bioconda environment</span>
 conda<span class="w"> </span>activate<span class="w"> </span>ENV_NAME<span class="w">                 </span><span class="c1"># replace ENV_NAME with your conda environment name</span>
 </code></pre></div></td></tr></table></div>
-<p>Define data ID and analysis parameters:</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span>
-<span class="normal">5</span>
-<span class="normal">6</span>
-<span class="normal">7</span>
-<span class="normal">8</span>
-<span class="normal">9</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># Unique identifier for your dataset</span>
-<span class="nv">DATA_ID</span><span class="o">=</span><span class="s2">&quot;visiumhd_3prime_mouse_brain&quot;</span><span class="w">    </span><span class="c1"># change this to reflect your dataset name</span>
-
-<span class="c1"># LDA parameters</span>
-<span class="nv">train_width</span><span class="o">=</span><span class="m">18</span><span class="w">                           </span><span class="c1"># define LDA training hexagon width (comma-separated if multiple widths are applied)</span>
-<span class="nv">n_factor</span><span class="o">=</span><span class="m">48</span><span class="w">                              </span><span class="c1"># define number of factors in LDA training (comma-separated if multiple n-factor are applied)</span>
-
-<span class="c1"># Path to AWS S3 directory</span>
-<span class="nv">S3_DIR</span><span class="o">=</span>/s3/path/to/s3/dir<span class="w">                </span><span class="c1"># Recommend to use DATA_ID as directory name, such as s3://bucket-name/visiumhd-3prime-mouse-brain</span>
-</code></pre></div></td></tr></table></div>
-<div class="admonition info">
-<p class="admonition-title">How to define scaling for Visium HD?</p>
-<p>10x Visium HD provides <code>scalefactors_json.json</code> (pixel‑to‑<abbr title="micrometer">µm</abbr>). <code>CartLoader</code> accepts it via <code>--scale-json</code> and computes the scaling automatically, so you don’t need to manually specify <code>--units-per-um</code>.</p>
-<p>Alternatively, provide the scale directly with <code>--units-per-um</code>.</p>
-</div>
-<hr />
-<h2 id="run-pipelines">Run Pipelines<a class="headerlink" href="#run-pipelines" title="Permanent link">&para;</a></h2>
-<p>The example below runs all modules together. Customize actions with flags.</p>
+<p>The example below runs all modules together.
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -2491,28 +2561,86 @@ conda<span class="w"> </span>activate<span class="w"> </span>ENV_NAME<span class
 <span class="normal">19</span>
 <span class="normal">20</span>
 <span class="normal">21</span></pre></div></td><td class="code"><div><pre><span></span><code>cartloader<span class="w"> </span>run_visiumhd<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--load-space-ranger<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--sge-convert<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--run-ficture2<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--import-cells<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--import-images<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--run-cartload2<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--upload-aws<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--space-ranger-dir<span class="w"> </span>/path/to/space/ranger/output<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--out-dir<span class="w"> </span>/path/to/out/dir<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--s3-dir<span class="w"> </span><span class="si">${</span><span class="nv">S3_DIR</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--width<span class="w"> </span><span class="si">${</span><span class="nv">train_width</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--n-factor<span class="w"> </span><span class="si">${</span><span class="nv">n_factor</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--id<span class="w"> </span><span class="si">${</span><span class="nv">DATA_ID</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--spatula<span class="w"> </span><span class="si">${</span><span class="nv">spatula</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--ficture2<span class="w"> </span><span class="si">${</span><span class="nv">punkst</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--pmtiles<span class="w"> </span><span class="si">${</span><span class="nv">pmtiles</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--tippecanoe<span class="w"> </span><span class="si">${</span><span class="nv">tippecanoe</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--aws<span class="w"> </span><span class="si">${</span><span class="nv">aws</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--n-jobs<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--threads<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span>
+--load-space-ranger<span class="w"> </span><span class="se">\</span>
+--sge-convert<span class="w"> </span><span class="se">\</span>
+--run-ficture2<span class="w"> </span><span class="se">\</span>
+--import-cells<span class="w"> </span><span class="se">\</span>
+--import-images<span class="w"> </span><span class="se">\</span>
+--run-cartload2<span class="w"> </span><span class="se">\</span>
+--upload-aws<span class="w"> </span><span class="se">\</span>
+--space-ranger-dir<span class="w"> </span>/path/to/space/ranger/output<span class="w"> </span><span class="se">\</span>
+--out-dir<span class="w"> </span>/path/to/out/dir<span class="w"> </span><span class="se">\</span>
+--s3-dir<span class="w"> </span><span class="si">${</span><span class="nv">S3_DIR</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+--width<span class="w"> </span><span class="si">${</span><span class="nv">train_width</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+--n-factor<span class="w"> </span><span class="si">${</span><span class="nv">n_factor</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+--id<span class="w"> </span><span class="si">${</span><span class="nv">DATA_ID</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+--spatula<span class="w"> </span><span class="si">${</span><span class="nv">spatula</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+--ficture2<span class="w"> </span><span class="si">${</span><span class="nv">punkst</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+--pmtiles<span class="w"> </span><span class="si">${</span><span class="nv">pmtiles</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+--tippecanoe<span class="w"> </span><span class="si">${</span><span class="nv">tippecanoe</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+--aws<span class="w"> </span><span class="si">${</span><span class="nv">aws</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+--n-jobs<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+--threads<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span>
+</code></pre></div></td></tr></table></div></p>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span>
+<span class="normal">22</span>
+<span class="normal">23</span>
+<span class="normal">24</span>
+<span class="normal">25</span></pre></div></td><td class="code"><div><pre><span></span><code>n_jobs
+docker<span class="w"> </span>run<span class="w"> </span>-it<span class="w"> </span>--rm<span class="w"> </span><span class="se">\</span>
+-v<span class="w"> </span><span class="si">${</span><span class="nv">work_dir</span><span class="si">}</span>:/data<span class="w"> </span><span class="se">\</span>
+weiqiuc/cartloader:20260303b<span class="se">\</span>
+run_visiumhd<span class="w"> </span><span class="se">\</span>
+--load-space-ranger<span class="w"> </span><span class="se">\</span>
+--sge-convert<span class="w"> </span><span class="se">\</span>
+--run-ficture2<span class="w"> </span><span class="se">\</span>
+--import-cells<span class="w"> </span><span class="se">\</span>
+--import-images<span class="w"> </span><span class="se">\</span>
+--run-cartload2<span class="w"> </span><span class="se">\</span>
+--upload-aws<span class="w"> </span><span class="se">\</span>
+--space-ranger-dir<span class="w"> </span>/data/raw<span class="w"> </span><span class="se">\</span>
+--out-dir<span class="w"> </span>/data/output<span class="w"> </span><span class="se">\</span>
+--s3-dir<span class="w"> </span><span class="si">${</span><span class="nv">S3_DIR</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+--width<span class="w"> </span><span class="si">${</span><span class="nv">train_width</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+--n-factor<span class="w"> </span><span class="si">${</span><span class="nv">n_factor</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+--id<span class="w"> </span><span class="si">${</span><span class="nv">DATA_ID</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+--spatula<span class="w"> </span>/app/cartloader/submodules/spatula/bin/spatula<span class="w"> </span><span class="se">\</span>
+--ficture2<span class="w"> </span>/app/cartloader/submodules/punkst<span class="w"> </span><span class="se">\</span>
+--pmtiles<span class="w"> </span>/usr/local/bin/pmtiles<span class="w"> </span><span class="se">\</span>
+--tippecanoe<span class="w"> </span>/usr/local/bin/tippecanoe<span class="w"> </span><span class="se">\</span>
+--aws<span class="w"> </span>/usr/local/bin/aws<span class="w"> </span><span class="se">\</span>
+--n-jobs<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+--threads<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span>
 </code></pre></div></td></tr></table></div>
-<p><strong>Action Flags to Enable Modules</strong></p>
+</div>
+</div>
+</div>
+<hr />
+<h2 id="customize">Customize<a class="headerlink" href="#customize" title="Permanent link">&para;</a></h2>
+<p>Customize actions with flags.
+<strong>Action Flags to Enable Modules</strong></p>
 <div class="admonition warning">
 <p class="admonition-title">Actions</p>
 <p><code>run_visiumhd</code> runs multiple <code>CartLoader</code> modules together; enable and combine actions with flags.</p>

@@ -1116,6 +1116,15 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#download-input-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      Download Input Data
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#sge-format-conversion" class="md-nav__link">
     <span class="md-ellipsis">
       SGE Format Conversion
@@ -2092,6 +2101,15 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#download-input-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      Download Input Data
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#sge-format-conversion" class="md-nav__link">
     <span class="md-ellipsis">
       SGE Format Conversion
@@ -2188,46 +2206,6 @@
 <hr />
 <h2 id="input-data">Input Data<a class="headerlink" href="#input-data" title="Permanent link">&para;</a></h2>
 <p>This tutorial uses a series of four human cortex <abbr title="Spatial transcriptomics">ST</abbr> datasets from <a href="https://www.nature.com/articles/s41586-025-09010-1">Walsh et al. Nature 2025</a>, generated using <abbr title="Multiplexed Error Robust Fluorescence In Situ Hybridization">MERFISH</abbr>.</p>
-<p><strong>Data Access</strong></p>
-<p>Follow the commands below to download the source data.</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
-<span class="normal"> 2</span>
-<span class="normal"> 3</span>
-<span class="normal"> 4</span>
-<span class="normal"> 5</span>
-<span class="normal"> 6</span>
-<span class="normal"> 7</span>
-<span class="normal"> 8</span>
-<span class="normal"> 9</span>
-<span class="normal">10</span>
-<span class="normal">11</span>
-<span class="normal">12</span>
-<span class="normal">13</span>
-<span class="normal">14</span>
-<span class="normal">15</span>
-<span class="normal">16</span>
-<span class="normal">17</span>
-<span class="normal">18</span>
-<span class="normal">19</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># define the work directory</span>
-<span class="nv">work_dir</span><span class="o">=</span>/path/to/work/directory
-mkdir<span class="w"> </span>-p<span class="w"> </span><span class="si">${</span><span class="nv">work_dir</span><span class="si">}</span>/raw
-<span class="nb">cd</span><span class="w"> </span><span class="si">${</span><span class="nv">work_dir</span><span class="si">}</span>/raw
-
-wget<span class="w"> </span>https://zenodo.org/records/15127709/files/FB080_O1a.zip?download<span class="o">=</span><span class="m">1</span>
-unzip<span class="w"> </span>FB080_O1a.zip
-
-wget<span class="w"> </span>https://zenodo.org/records/15127709/files/FB080_O1b.zip?download<span class="o">=</span><span class="m">1</span>
-unzip<span class="w"> </span>FB080_O1b.zip
-
-wget<span class="w"> </span>https://zenodo.org/records/15127709/files/FB080_O1c.zip?download<span class="o">=</span><span class="m">1</span>
-unzip<span class="w"> </span>FB080_O1c.zip
-
-wget<span class="w"> </span>https://zenodo.org/records/15127709/files/FB080_O1d.zip?download<span class="o">=</span><span class="m">1</span>
-unzip<span class="w"> </span>FB080_O1d.zip
-
-wget<span class="w"> </span>https://zenodo.org/records/15127709/files/FB121_O1.zip?download<span class="o">=</span><span class="m">1</span>
-unzip<span class="w"> </span>FB121_O1.zip
-</code></pre></div></td></tr></table></div>
 <p><strong>File Format</strong></p>
 <div class="admonition info">
 <p class="admonition-title"><code>detected_transcripts.csv.gz</code></p>
@@ -2325,6 +2303,47 @@ conda<span class="w"> </span>activate<span class="w"> </span>ENV_NAME<span class
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nv">work_dir</span><span class="o">=</span>/path/to/work/dir/<span class="si">${</span><span class="nv">COLLECTION_ID</span><span class="si">}</span>
 <span class="nb">cd</span><span class="w"> </span><span class="si">${</span><span class="nv">work_dir</span><span class="si">}</span>
+</code></pre></div></td></tr></table></div>
+<hr />
+<h2 id="download-input-data">Download Input Data<a class="headerlink" href="#download-input-data" title="Permanent link">&para;</a></h2>
+<p>Follow the commands below to download the source data.</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># define the work directory</span>
+<span class="nv">work_dir</span><span class="o">=</span>/path/to/work/directory
+mkdir<span class="w"> </span>-p<span class="w"> </span><span class="si">${</span><span class="nv">work_dir</span><span class="si">}</span>/raw
+<span class="nb">cd</span><span class="w"> </span><span class="si">${</span><span class="nv">work_dir</span><span class="si">}</span>/raw
+
+wget<span class="w"> </span>https://zenodo.org/records/15127709/files/FB080_O1a.zip?download<span class="o">=</span><span class="m">1</span>
+unzip<span class="w"> </span>FB080_O1a.zip
+
+wget<span class="w"> </span>https://zenodo.org/records/15127709/files/FB080_O1b.zip?download<span class="o">=</span><span class="m">1</span>
+unzip<span class="w"> </span>FB080_O1b.zip
+
+wget<span class="w"> </span>https://zenodo.org/records/15127709/files/FB080_O1c.zip?download<span class="o">=</span><span class="m">1</span>
+unzip<span class="w"> </span>FB080_O1c.zip
+
+wget<span class="w"> </span>https://zenodo.org/records/15127709/files/FB080_O1d.zip?download<span class="o">=</span><span class="m">1</span>
+unzip<span class="w"> </span>FB080_O1d.zip
+
+wget<span class="w"> </span>https://zenodo.org/records/15127709/files/FB121_O1.zip?download<span class="o">=</span><span class="m">1</span>
+unzip<span class="w"> </span>FB121_O1.zip
 </code></pre></div></td></tr></table></div>
 <hr />
 <h2 id="sge-format-conversion"><abbr title="Spatial Digital Gene Expression">SGE</abbr> Format Conversion<a class="headerlink" href="#sge-format-conversion" title="Permanent link">&para;</a></h2>
