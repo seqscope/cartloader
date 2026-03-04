@@ -273,7 +273,7 @@ def run_xenium(_args):
             print("\n", flush=True)
             print(import_cell_cmd, flush=True)
         else:
-            run_command_w_preq(import_cell_cmd, prerequisites=[], dry_run=args.dry_run, flush=True)
+            run_command_w_preq(import_cell_cmd, prerequisites=prereq, dry_run=args.dry_run, flush=True)
     
     if args.import_images:  ## TBC: currently, only support OME tifs
         print("="*10, flush=True)
