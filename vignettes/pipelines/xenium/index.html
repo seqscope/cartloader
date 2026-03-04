@@ -2098,7 +2098,7 @@
 <hr />
 <h2 id="input-data">Input Data<a class="headerlink" href="#input-data" title="Permanent link">&para;</a></h2>
 <p><strong>Data Access</strong></p>
-<p>Downloaded the <abbr title="Spatial transcriptomics">ST</abbr> data from <a href="https://www.10xgenomics.com/datasets/xenium-human-lung-cancer-post-xenium-technote">10x Genomics Dataset portal</a>.</p>
+<p>Downloaded the <abbr title="Spatial transcriptomics">ST</abbr> data from <a href="https://www.10xgenomics.com/datasets/preview-data-ffpe-human-lung-cancer-with-xenium-multimodal-cell-segmentation-1-standard">10x Genomics Dataset portal</a>.</p>
 <div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Use <code>wget</code></label><label for="__tabbed_1_2">Use <code>curl</code></label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
@@ -2113,21 +2113,29 @@
 <span class="normal"> 8</span>
 <span class="normal"> 9</span>
 <span class="normal">10</span>
-<span class="normal">11</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># Define the work directory</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># Define the work directory</span>
 <span class="nv">work_dir</span><span class="o">=</span>/path/to/work/directory
 mkdir<span class="w"> </span>-p<span class="w"> </span><span class="si">${</span><span class="nv">work_dir</span><span class="si">}</span>/raw
 <span class="nb">cd</span><span class="w"> </span><span class="si">${</span><span class="nv">work_dir</span><span class="si">}</span>/raw
 
 <span class="c1"># Download the full output files</span>
-wget<span class="w"> </span>https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_outs.zip
+wget<span class="w"> </span>https://cf.10xgenomics.com/samples/xenium/2.0.0/Xenium_V1_humanLung_Cancer_FFPE/Xenium_V1_humanLung_Cancer_FFPE_outs.zip
 
 <span class="c1"># Download supplemental files</span>
-wget<span class="w"> </span>https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_he_image.ome.tif
-wget<span class="w"> </span>https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_he_imagealignment.csv
+wget<span class="w"> </span>https://cf.10xgenomics.com/samples/xenium/2.0.0/Xenium_V1_humanLung_Cancer_FFPE/Xenium_V1_humanLung_Cancer_FFPE_he_image.ome.tif
+wget<span class="w"> </span>https://cf.10xgenomics.com/samples/xenium/2.0.0/Xenium_V1_humanLung_Cancer_FFPE/Xenium_V1_humanLung_Cancer_FFPE_he_imagealignment.csv
+wget<span class="w"> </span>https://cf.10xgenomics.com/samples/xenium/2.0.0/Xenium_V1_humanLung_Cancer_FFPE/Xenium_V1_humanLung_Cancer_FFPE_annotation.geojson
+
+<span class="c1"># Unzip compressed file</span>
+unzip<span class="w"> </span>Xenium_V1_humanLung_Cancer_FFPE_outs.zip
 </code></pre></div></td></tr></table></div>
 </div>
 <div class="tabbed-block">
-<p>If you have <code>curl</code> installed, use the following commands to download the output from 10X. </p>
+<p>If you have <code>curl</code> installed, use the following commands to download the output from 10X.</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -2138,17 +2146,25 @@ wget<span class="w"> </span>https://cf.10xgenomics.com/samples/xenium/3.0.0/Xeni
 <span class="normal"> 8</span>
 <span class="normal"> 9</span>
 <span class="normal">10</span>
-<span class="normal">11</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># Define the work directory</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># Define the work directory</span>
 <span class="nv">work_dir</span><span class="o">=</span>/path/to/work/directory
 mkdir<span class="w"> </span>-p<span class="w"> </span><span class="si">${</span><span class="nv">work_dir</span><span class="si">}</span>/raw
 <span class="nb">cd</span><span class="w"> </span><span class="si">${</span><span class="nv">work_dir</span><span class="si">}</span>/raw
 
 <span class="c1"># Download the full output files</span>
-curl<span class="w"> </span>-O<span class="w"> </span>https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_outs.zip
+curl<span class="w"> </span>-O<span class="w"> </span>https://cf.10xgenomics.com/samples/xenium/2.0.0/Xenium_V1_humanLung_Cancer_FFPE/Xenium_V1_humanLung_Cancer_FFPE_outs.zip
 
 <span class="c1"># Download supplemental files</span>
-curl<span class="w"> </span>-O<span class="w"> </span>https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_he_image.ome.tif
-curl<span class="w"> </span>-O<span class="w"> </span>https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_he_imagealignment.csv
+curl<span class="w"> </span>-O<span class="w"> </span>https://cf.10xgenomics.com/samples/xenium/2.0.0/Xenium_V1_humanLung_Cancer_FFPE/Xenium_V1_humanLung_Cancer_FFPE_he_image.ome.tif
+curl<span class="w"> </span>-O<span class="w"> </span>https://cf.10xgenomics.com/samples/xenium/2.0.0/Xenium_V1_humanLung_Cancer_FFPE/Xenium_V1_humanLung_Cancer_FFPE_he_imagealignment.csv
+curl<span class="w"> </span>-O<span class="w"> </span>https://cf.10xgenomics.com/samples/xenium/2.0.0/Xenium_V1_humanLung_Cancer_FFPE/Xenium_V1_humanLung_Cancer_FFPE_annotation.geojson
+
+<span class="c1"># Unzip compressed file</span>
+unzip<span class="w"> </span>Xenium_V1_humanLung_Cancer_FFPE_outs.zip
 </code></pre></div></td></tr></table></div>
 </div>
 </div>
@@ -2378,7 +2394,13 @@ conda<span class="w"> </span>activate<span class="w"> </span>ENV_NAME<span class
 </code></pre></div></td></tr></table></div>
 <div class="admonition info">
 <p class="admonition-title">How to Define Scaling Factors for Xenium?</p>
-<p>The Xenium example data currently used here provides <abbr title="Spatial Digital Gene Expression">SGE</abbr> in <abbr title="micrometer">µm</abbr>. Define scaling factor from coordinate to micrometer as 1.</p>
+<p><code>--units-per-um</code> means "coordinate units per micrometer" in your raw transcript coordinates.
+For the Xenium example dataset in this tutorial, coordinates are already in <abbr title="micrometer">µm</abbr>, so use <code>--units-per-um 1</code>.</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Check this value for your own dataset</p>
+<p>Do not assume <code>--units-per-um 1</code> is always correct. Always verify the coordinate unit in your input data.</p>
+<p>If your coordinates are in pixels (or any unit other than <abbr title="micrometer">µm</abbr>), set <code>--units-per-um</code> to the correct value.</p>
 </div>
 <h2 id="run-pipelines">Run Pipelines<a class="headerlink" href="#run-pipelines" title="Permanent link">&para;</a></h2>
 <p>Below is an example of showing running all modules together. You can customize the actions by flags.</p>
@@ -2404,7 +2426,8 @@ conda<span class="w"> </span>activate<span class="w"> </span>ENV_NAME<span class
 <span class="normal">19</span>
 <span class="normal">20</span>
 <span class="normal">21</span>
-<span class="normal">22</span></pre></div></td><td class="code"><div><pre><span></span><code>cartloader<span class="w"> </span>run_xenium<span class="w"> </span><span class="se">\</span>
+<span class="normal">22</span>
+<span class="normal">23</span></pre></div></td><td class="code"><div><pre><span></span><code>cartloader<span class="w"> </span>run_xenium<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--load-xenium-ranger<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--sge-convert<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--run-ficture2<span class="w"> </span><span class="se">\</span>
@@ -2415,6 +2438,7 @@ conda<span class="w"> </span>activate<span class="w"> </span>ENV_NAME<span class
 <span class="w">  </span>--xenium-ranger-dir<span class="w"> </span>/path/to/xenium/ranger/output<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--out-dir<span class="w"> </span>/path/to/out/dir<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--s3-dir<span class="w"> </span><span class="si">${</span><span class="nv">S3_DIR</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--units-per-um<span class="w"> </span><span class="si">${</span><span class="nv">SCALE</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--width<span class="w"> </span><span class="si">${</span><span class="nv">train_width</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--n-factor<span class="w"> </span><span class="si">${</span><span class="nv">n_factor</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--id<span class="w"> </span><span class="si">${</span><span class="nv">DATA_ID</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
