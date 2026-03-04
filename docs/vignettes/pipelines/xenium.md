@@ -9,7 +9,7 @@ This tutorial walks through end‑to‑end processing of 10x Xenium data with `C
 
 **Data Access**
 
-Downloaded the ST data from [10x Genomics Dataset portal](https://www.10xgenomics.com/datasets/xenium-human-lung-cancer-post-xenium-technote).
+Downloaded the ST data from [10x Genomics Dataset portal](https://www.10xgenomics.com/datasets/preview-data-ffpe-human-lung-cancer-with-xenium-multimodal-cell-segmentation-1-standard).
 
 
 === "Use `wget`"
@@ -22,15 +22,19 @@ Downloaded the ST data from [10x Genomics Dataset portal](https://www.10xgenomic
     cd ${work_dir}/raw
 
     # Download the full output files
-    wget https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_outs.zip
+    wget https://cf.10xgenomics.com/samples/xenium/2.0.0/Xenium_V1_humanLung_Cancer_FFPE/Xenium_V1_humanLung_Cancer_FFPE_outs.zip
 
     # Download supplemental files
-    wget https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_he_image.ome.tif
-    wget https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_he_imagealignment.csv
+    wget https://cf.10xgenomics.com/samples/xenium/2.0.0/Xenium_V1_humanLung_Cancer_FFPE/Xenium_V1_humanLung_Cancer_FFPE_he_image.ome.tif
+    wget https://cf.10xgenomics.com/samples/xenium/2.0.0/Xenium_V1_humanLung_Cancer_FFPE/Xenium_V1_humanLung_Cancer_FFPE_he_imagealignment.csv
+    wget https://cf.10xgenomics.com/samples/xenium/2.0.0/Xenium_V1_humanLung_Cancer_FFPE/Xenium_V1_humanLung_Cancer_FFPE_annotation.geojson
+
+    # Unzip compressed file
+    unzip Xenium_V1_humanLung_Cancer_FFPE_outs.zip
     ```
 
 === "Use `curl`"
-    If you have `curl` installed, use the following commands to download the output from 10X. 
+    If you have `curl` installed, use the following commands to download the output from 10X.
 
     ```bash
     # Define the work directory
@@ -39,14 +43,17 @@ Downloaded the ST data from [10x Genomics Dataset portal](https://www.10xgenomic
     cd ${work_dir}/raw
     
     # Download the full output files
-    curl -O https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_outs.zip
+    curl -O https://cf.10xgenomics.com/samples/xenium/2.0.0/Xenium_V1_humanLung_Cancer_FFPE/Xenium_V1_humanLung_Cancer_FFPE_outs.zip
 
     # Download supplemental files
-    curl -O https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_he_image.ome.tif
-    curl -O https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_he_imagealignment.csv
+    curl -O https://cf.10xgenomics.com/samples/xenium/2.0.0/Xenium_V1_humanLung_Cancer_FFPE/Xenium_V1_humanLung_Cancer_FFPE_he_image.ome.tif
+    curl -O https://cf.10xgenomics.com/samples/xenium/2.0.0/Xenium_V1_humanLung_Cancer_FFPE/Xenium_V1_humanLung_Cancer_FFPE_he_imagealignment.csv
+    curl -O https://cf.10xgenomics.com/samples/xenium/2.0.0/Xenium_V1_humanLung_Cancer_FFPE/Xenium_V1_humanLung_Cancer_FFPE_annotation.geojson
+
+    # Unzip compressed file
+    unzip Xenium_V1_humanLung_Cancer_FFPE_outs.zip
     ```
 ___
-
 
 **Data Structure and Format**
 
@@ -162,7 +169,14 @@ S3_DIR=/s3/path/to/s3/dir                 # Recommend to use DATA_ID as director
 
 !!! info "How to Define Scaling Factors for Xenium?"
 
-    The Xenium example data currently used here provides SGE in µm. Define scaling factor from coordinate to micrometer as 1.
+    `--units-per-um` means "coordinate units per micrometer" in your raw transcript coordinates.
+    For the Xenium example dataset in this tutorial, coordinates are already in µm, so use `--units-per-um 1`.
+
+!!! warning "Check this value for your own dataset"
+
+    Do not assume `--units-per-um 1` is always correct. Always verify the coordinate unit in your input data.
+
+    If your coordinates are in pixels (or any unit other than µm), set `--units-per-um` to the correct value.
 
 ## Run Pipelines
 
@@ -182,6 +196,7 @@ cartloader run_xenium \
   --xenium-ranger-dir /path/to/xenium/ranger/output \
   --out-dir /path/to/out/dir \
   --s3-dir ${S3_DIR} \
+  --units-per-um ${SCALE} \
   --width ${train_width} \
   --n-factor ${n_factor} \
   --id ${DATA_ID} \
@@ -296,5 +311,4 @@ individual PMTiles and asset JSON files reside alongside it under `<out-dir>/car
 </div>
 
 See more details of output at the Reference pages for [run_ficture2](../docs/reference/run_ficture2.md) and [run_cartload2](../docs/reference/run_cartload2.md).
-
 
