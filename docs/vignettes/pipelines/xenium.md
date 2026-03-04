@@ -16,18 +16,15 @@ Downloaded the ST data from [10x Genomics Dataset portal](https://www.10xgenomic
     If you have `wget` installed, use the following commands to download the output from 10X.
 
     ```bash
-    # define the work directory
+    # Define the work directory
     work_dir=/path/to/work/directory
     mkdir -p ${work_dir}/raw
     cd ${work_dir}/raw
 
-    # 1. Choose one of the following options to download the output files:
-    # A. Download the full output files
+    # Download the full output files
     wget https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_outs.zip
-    # B. Only download the Xenium Explorer subset output files
-    wget https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_xe_outs.zip
 
-    # 2) Download supplemental files
+    # Download supplemental files
     wget https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_he_image.ome.tif
     wget https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_he_imagealignment.csv
     ```
@@ -36,20 +33,15 @@ Downloaded the ST data from [10x Genomics Dataset portal](https://www.10xgenomic
     If you have `curl` installed, use the following commands to download the output from 10X. 
 
     ```bash
-    # define the work directory
+    # Define the work directory
     work_dir=/path/to/work/directory
     mkdir -p ${work_dir}/raw
     cd ${work_dir}/raw
     
-    # 1. Choose one of the following options to download the output files:
-    # A. Download the full output files
+    # Download the full output files
     curl -O https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_outs.zip
 
-    # B. Only download the Xenium Explorer subset output files
-    curl -O https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_xe_outs.zip
-
-
-    # 2) Download supplemental files
+    # Download supplemental files
     curl -O https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_he_image.ome.tif
     curl -O https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_he_imagealignment.csv
     ```
