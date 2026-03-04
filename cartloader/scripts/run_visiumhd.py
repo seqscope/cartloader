@@ -374,13 +374,17 @@ def run_visiumhd(_args):
         print("Executing --import-squares (execute directly)", flush=True)
         print("="*10, flush=True)
 
-        square_plans = resolve_square_plan(ranger_dir, use_json, ranger_assets, args.square_input)
-        square_plans = sorted(square_plans, key=lambda x: x["bin_size"])
-        stage_import_squares(cart_dir, args, square_plans,
-                            update_catalog=True if (not args.run_cartload2 and os.path.exists(catalog_yaml)) else False
-                            )
-        
-        square_assets = [os.path.join(cart_dir, f"{args.square_id}-sq{spec['bin_size']:03d}_assets.json") for spec in square_plans]
+        square_plans = resolve_square_plan(ranger_dir, use_json, ranger_assets, args.square_input, dry_run=args.dry_run)
+        square_assets = []
+        if not square_plans:
+            print(" * Skip --import-squares: no resolvable square-bin inputs", flush=True)
+        else:
+            square_plans = sorted(square_plans, key=lambda x: x["bin_size"])
+            stage_import_squares(cart_dir, args, square_plans,
+                                update_catalog=True if (not args.run_cartload2 and os.path.exists(catalog_yaml)) else False
+                                )
+            
+            square_assets = [os.path.join(cart_dir, f"{args.square_id}-sq{spec['bin_size']:03d}_assets.json") for spec in square_plans]
 
     if args.run_cartload2:   
         # prerequisites

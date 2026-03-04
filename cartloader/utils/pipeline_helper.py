@@ -173,16 +173,19 @@ def stage_import_images(cart_dir, args, image_plans, ome2png=False, transparent_
 #   squares
 #  =============
 
-def resolve_square_plan(ranger_dir, use_json, ranger_assets, square_input):
+def resolve_square_plan(ranger_dir, use_json, ranger_assets, square_input, dry_run=False):
     square_plans = []
 
     if use_json:
         if not ranger_assets or not os.path.exists(ranger_assets):
+            if dry_run:
+                print(" * Dry run: space_ranger assets JSON not found; skipping square-bin autodetection", flush=True)
+                return []
             raise ValueError("No space_ranger assets JSON found; run with --load-space-ranger or provide --square-input entries")
         data = load_file_to_dict(ranger_assets)
         
         for key, spec in data.items():
-            if not isinstance(key, str) and (key.startswith("GRID_") or key.startswith("SQUARE_")) and key.endswith("um"):
+            if (not isinstance(key, str)) or (not ((key.startswith("GRID_") or key.startswith("SQUARE_")) and key.endswith("um"))):
                 continue
             try:
                 bin_token = key.split("_", 1)[1]
@@ -232,6 +235,9 @@ def resolve_square_plan(ranger_dir, use_json, ranger_assets, square_input):
         raise ValueError("No square binning input provided; use --load-space-ranger or provide --square-input entries")
     
     if not square_plans:
+        if dry_run:
+            print(" * Dry run: no square-bin inputs detected; skipping --import-squares command generation", flush=True)
+            return []
         raise ValueError("No square bin inputs detected; provide --square-input entries or regenerate --space-ranger-assets.")
 
     return square_plans
