@@ -20,6 +20,7 @@ RUN apt-get update && apt-get install -y \
     wget \
     curl \
     gzip \
+    pigz \
     perl \
     tabix \
     bc \

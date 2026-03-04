@@ -16,18 +16,15 @@ Downloaded the ST data from [10x Genomics Dataset portal](https://www.10xgenomic
     If you have `wget` installed, use the following commands to download the output from 10X.
 
     ```bash
-    # define the work directory
+    # Define the work directory
     work_dir=/path/to/work/directory
     mkdir -p ${work_dir}/raw
     cd ${work_dir}/raw
 
-    # 1. Choose one of the following options to download the output files:
-    # A. Download the full output files
+    # Download the full output files
     wget https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_outs.zip
-    # B. Only download the Xenium Explorer subset output files
-    wget https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_xe_outs.zip
 
-    # 2) Download supplemental files
+    # Download supplemental files
     wget https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_he_image.ome.tif
     wget https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_he_imagealignment.csv
     ```
@@ -36,24 +33,20 @@ Downloaded the ST data from [10x Genomics Dataset portal](https://www.10xgenomic
     If you have `curl` installed, use the following commands to download the output from 10X. 
 
     ```bash
-    # define the work directory
+    # Define the work directory
     work_dir=/path/to/work/directory
     mkdir -p ${work_dir}/raw
     cd ${work_dir}/raw
     
-    # 1. Choose one of the following options to download the output files:
-    # A. Download the full output files
+    # Download the full output files
     curl -O https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_outs.zip
 
-    # B. Only download the Xenium Explorer subset output files
-    curl -O https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_xe_outs.zip
-
-
-    # 2) Download supplemental files
+    # Download supplemental files
     curl -O https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_he_image.ome.tif
     curl -O https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_he_imagealignment.csv
     ```
 ___
+
 
 **Data Structure and Format**
 
@@ -170,7 +163,6 @@ S3_DIR=/s3/path/to/s3/dir                 # Recommend to use DATA_ID as director
 !!! info "How to Define Scaling Factors for Xenium?"
 
     The Xenium example data currently used here provides SGE in µm. Define scaling factor from coordinate to micrometer as 1.
-___
 
 ## Run Pipelines
 
@@ -250,7 +242,6 @@ Below are explanations of the parameters used in the example. For the full list,
     | `--title`, `--desc`                | optional with `--run-cartload2`            | Human‑readable catalog title/description.                                             | 
     | `--zenodo-token`                   | `--upload-zenodo`                          | Path to file containing Zenodo access token.                                          |-->
 
-___
 
 ## Outputs
 <!-- 
@@ -261,6 +252,7 @@ Example: [`includes/xenium_ranger_assets.human_lung_cancer.json`](../../../inclu
 ```json
 {% include-markdown "../../../includes/xenium_ranger_assets.human_lung_cancer.json" %}
 ```
+
 
 ### Spatial Factor Inference
 Below is an example of spatial factor inference results from `FICTURE` using a training width of 18, 12 factors, a fit width of 18, and an anchor resolution of 6. See more details of output at the Reference pages for [run_ficture2](../docs/reference/run_ficture2.md)
