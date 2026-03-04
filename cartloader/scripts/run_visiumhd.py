@@ -42,7 +42,7 @@ def parse_arguments(_args):
         "Input/Output Parameters",
         'Two input modes: 1) Manual — set --space-ranger-dir and any "Manual Input Files Parameters" args. 2) Auto-detect — leave them unset; read from --space-ranger-assets (created by --load-space-ranger)'
     )
-    inout_params.add_argument('--space-ranger-dir', type=str, help='Path to the Space Ranger output directory containing transcript, cell, boundary, cluster, and image files  (required if manual input mode is enabled or if --load-xenium-ranger)')
+    inout_params.add_argument('--space-ranger-dir', type=str, help='Path to the Space Ranger output directory containing transcript, cell, boundary, cluster, and image files  (required if manual input mode is enabled or if --load-space-ranger)')
     inout_params.add_argument('--out-dir', type=str, required=True, help='Path to output directory. Stores converted SGE, FICTURE results, raster tiles in <out_dir>/sge, <out_dir>/ficture2, and <out_dir>/cartload2')
     inout_params.add_argument('--space-ranger-assets', type=str, default=None, help=f'Path to a JSON file containing Space Ranger asset paths. Written by --load-space-ranger; read when auto-detection mode is on (default: <out_dir>/space_ranger_assets.json)')
     inout_params.add_argument('--ext-fic-dir', type=str, help='Path to an external FICTURE directory for loading external FICTURE assets (required if --import-ext-ficture2)')

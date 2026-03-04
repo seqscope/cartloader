@@ -47,12 +47,12 @@ def parse_arguments(_args):
 
     inout_params = parser.add_argument_group("Input/Output Parameters")
     inout_params.add_argument('--out-dir', type=str, required=True, help='Output directory (PMTiles, assets JSON, and catalog YAML)')
-    inout_params.add_argument('--fic-dir', type=str, required=True, help='Path tp FICTURE results directory produced by "cartloader run_ficture"; must include FICTURE results and a parameter JSON (see --in-fic-params)')
+    inout_params.add_argument('--fic-dir', type=str, required=True, help='Path to FICTURE results directory produced by "cartloader run_ficture2" or "cartloader run_ficture2_multi"; must include FICTURE results and a parameter JSON (see --in-fic-params)')
     inout_params.add_argument('--in-list', type=str, required=True, help='Path to input TSV without header. One sample per row with 2 required columns [sample id, path to transcript] and 2 optional columns [title, description]. If id is omitted it defaults to sample (use lowercase and replace _ by -); quote title/description if they contain spaces.')
 
     ## Show the default value in help text but not set it here. All defaults will be applied in run_cartload2()
     aux_params = parser.add_argument_group("Auxiliary Parameters", "Advanced settings; defaults work for most cases") 
-    aux_params.add_argument('--in-fic-params', type=str, help='File name of FICTURE params JSON/YAML under --fic-dir, providing FICTURE paramaters (default: ficture.params.json)')
+    aux_params.add_argument('--in-fic-params', type=str, help='File name of FICTURE params JSON/YAML under --fic-dir, providing FICTURE parameters (default: ficture.params.json)')
     aux_params.add_argument('--out-fic-assets', type=str, help='File name of output JSON/YAML for FICTURE asset metadata under --out-dir (default: ficture_assets.json)')
     aux_params.add_argument('--out-catalog', type=str,  help='File name of output catalog YAML under --out-dir (default: catalog.yaml)')
     aux_params.add_argument('--rename-x', type=str, help='Column rename mapping for X axis in tippecanoe, format old:new (default: x:lon)')  
