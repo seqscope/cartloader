@@ -112,7 +112,7 @@ unzip FB121_O1.zip
 ## SGE Format Conversion
 
 !!! warning
-    For each sample, convert transcript-indexed SGE to CartLoader format. Below use `FB080_O1a` as example.
+    For each sample, convert transcript-indexed SGE to CartLoader format. Below, use `FB080_O1a` as an example.
 
     Set `sample_id` once, then run one of the two workflows below.
 
@@ -137,7 +137,7 @@ unzip FB121_O1.zip
 === "Fast path: direct transform (no visualization/filtering)"
 
     !!! tips
-        Given raw SGE coordinates are already in micrometers, use this only if you do **not** need SGE visualization or density/feature-based filtering.
+        Given that raw SGE coordinates are already in micrometers, use this only if you do **not** need SGE visualization or density/feature-based filtering.
 
     ```bash
     sample_id=FB080_O1a
@@ -156,10 +156,10 @@ unzip FB121_O1.zip
 
 ## Prepare Input List
 
-Create a tab‑separated TSV file (e.g., `input.tsv`). 
+Create a tab‑separated TSV file (e.g., `input.tsv`).
 
 !!! info "Example Input List: `input.tsv`"
-      The TSV should be **one sample per line** and have **no header** and contain two to four columns.
+      The TSV should be **one sample per line**, have **no header**, and contain two to four columns.
       
       ```text
       FB080_O1a	/path/to/FB080_O1a/transcripts.unsorted.tsv.gz

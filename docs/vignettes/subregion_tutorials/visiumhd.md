@@ -48,7 +48,7 @@ n_factor=6,12                            # define number of factors in LDA train
 
 !!! info "How to Define Scaling Factors for Visium HD?"
 
-    10x Visium HD includes a `scalefactors_json.json` file that provides pixel-to-micrometer scaling information. `CartLoader` can directly accept this file via the `--scale-json` option and will automatically compute the appropriate scaling factor, omitting manually calculate and specify `--units-per-um`. 
+    10x Visium HD includes a `scalefactors_json.json` file that provides pixel-to-micrometer scaling information. `CartLoader` can directly accept this file via the `--scale-json` option and automatically compute the appropriate scaling factor, so you do not need to manually calculate and specify `--units-per-um`.
     
     Alternatively, users may bypass the JSON file by directly providing a value through the `--units-per-um` option.
 

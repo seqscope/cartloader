@@ -1,15 +1,13 @@
 # Xenium End-to-End Pipeline
 
-## Overview
-
 This tutorial walks through end‑to‑end processing of 10x Xenium data with `CartLoader`: converting inputs, running FICTURE, importing cell results and histology, packaging assets, and uploading to AWS for sharing.
 
 ---
-## Input Data
+## Prepare Input
 
-**Data Access**
+### Data Access
 
-Downloaded the ST data from [10x Genomics Dataset portal](https://www.10xgenomics.com/datasets/preview-data-ffpe-human-lung-cancer-with-xenium-multimodal-cell-segmentation-1-standard).
+Download the ST data from the [10x Genomics Dataset portal](https://www.10xgenomics.com/datasets/preview-data-ffpe-human-lung-cancer-with-xenium-multimodal-cell-segmentation-1-standard).
 
 
 === "Use `wget`"
@@ -55,7 +53,7 @@ Downloaded the ST data from [10x Genomics Dataset portal](https://www.10xgenomic
     ```
 ___
 
-**Data Structure and Format**
+### Data Structure and Format
 
 See details of the Xenium Ranger output at [Xenium Ranger Official Documents](https://www.10xgenomics.com/support/software/xenium-onboard-analysis/latest/analysis/xoa-output-understanding-outputs)
 
@@ -144,15 +142,7 @@ See details of the Xenium Ranger output at [Xenium Ranger Official Documents](ht
     * `morphology_focus_0003.ome.tif`: Interior — protein (alphaSMA/Vimentin)
     * `morphology_mip.ome.tif`: DAPI maximum intensity projection (MIP) of the Z‑stack.
 
-___
-
-## Set Up the Environment
-
-{%
-  include-markdown "../../../includes/includemd_vigenettes_setupenv.md"
-%}
-
-Define data ID and analysis parameters:
+### Define ID and Parameters
 
 ```bash
 # Unique identifier for your dataset
@@ -178,37 +168,87 @@ S3_DIR=/s3/path/to/s3/dir                 # Recommend to use DATA_ID as director
 
     If your coordinates are in pixels (or any unit other than µm), set `--units-per-um` to the correct value.
 
-## Run Pipelines
+## Example Runs
 
-Below is an example of showing running all modules together. You can customize the actions by flags.
+Choose one of the following options to run the `run_xenium` pipeline, either locally or with Docker.
 
-In the following example, we only deployed DAPI_OME image. Alternatively, `CartLoader` supports a `--all-images` to deploy all detected image.
+In the following examples, only `DAPI_OME` image is deployed. Alternatively, `CartLoader` supports `--all-images` to deploy all detected images.
 
-```bash
-cartloader run_xenium \
-  --load-xenium-ranger \
-  --sge-convert \
-  --run-ficture2 \
-  --import-cells \
-  --import-images \
-  --run-cartload2 \
-  --upload-aws \
-  --xenium-ranger-dir /path/to/xenium/ranger/output \
-  --out-dir /path/to/out/dir \
-  --s3-dir ${S3_DIR} \
-  --units-per-um ${SCALE} \
-  --width ${train_width} \
-  --n-factor ${n_factor} \
-  --id ${DATA_ID} \
-  --image-ids DAPI_OME \
-  --spatula ${spatula} \
-  --ficture2 ${punkst} \
-  --pmtiles ${pmtiles} \
-  --tippecanoe ${tippecanoe} \
-  --aws ${aws} \
-  --n-jobs ${n_jobs} \
-  --threads ${n_jobs}
-```
+=== "Run Pipeline Locally"
+
+    **Set Up Environment**
+    {%
+    include-markdown "../../../includes/includemd_vigenettes_setupenv.md"
+    %}
+
+    **Example Command**
+    ```bash
+    cartloader run_xenium \
+      --load-xenium-ranger \
+      --sge-convert \
+      --run-ficture2 \
+      --import-cells \
+      --import-images \
+      --run-cartload2 \
+      --upload-aws \
+      --xenium-ranger-dir /path/to/xenium/ranger/output \
+      --out-dir /path/to/out/dir \
+      --s3-dir ${S3_DIR} \
+      --units-per-um ${SCALE} \
+      --width ${train_width} \
+      --n-factor ${n_factor} \
+      --id ${DATA_ID} \
+      --image-ids DAPI_OME \
+      --spatula ${spatula} \
+      --ficture2 ${punkst} \
+      --pmtiles ${pmtiles} \
+      --tippecanoe ${tippecanoe} \
+      --aws ${aws} \
+      --n-jobs ${n_jobs} \
+      --threads ${n_jobs}
+    ```
+
+=== "Run Pipeline via Docker"
+
+    **Set Up Environment**
+
+    {%
+    include-markdown "../../../includes/includemd_vigenettes_setupenv_docker.md"
+    %}
+
+    **Example Command**
+
+    ```bash
+    docker run -it --rm \
+    -v ${work_dir}:/data \
+    weiqiuc/cartloader:20260303b\
+    run_xenium \
+      --load-xenium-ranger \
+      --sge-convert \
+      --run-ficture2 \
+      --import-cells \
+      --import-images \
+      --run-cartload2 \
+      --upload-aws \
+      --xenium-ranger-dir /data/raw \
+      --out-dir /data/output \
+      --s3-dir ${S3_DIR} \
+      --units-per-um ${SCALE} \
+      --width ${train_width} \
+      --n-factor ${n_factor} \
+      --id ${DATA_ID} \
+      --image-ids DAPI_OME \
+      --spatula ${spatula} \
+      --ficture2 ${punkst} \
+      --pmtiles ${pmtiles} \
+      --tippecanoe ${tippecanoe} \
+      --aws ${aws} \
+      --n-jobs ${n_jobs} \
+      --threads ${n_jobs}
+    ```
+
+---
+## Customize Parameters
 
 **Action Flags to Enable Modules**
 
@@ -311,4 +351,3 @@ individual PMTiles and asset JSON files reside alongside it under `<out-dir>/car
 </div>
 
 See more details of output at the Reference pages for [run_ficture2](../docs/reference/run_ficture2.md) and [run_cartload2](../docs/reference/run_cartload2.md).
-

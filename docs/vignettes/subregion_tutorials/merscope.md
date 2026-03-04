@@ -1,6 +1,6 @@
 # Vizgen MERSCOPE Starter Tutorial
 
-The input is a SGE dataset from the adult mouse hippocampus, extracted by masking a coronal brain section (Slice Number: 2；Replicate Number: 1; file: `detected_transcripts.csv`) from [Vizgen MERSCOPE Neuroscience Showcase](https://vizgen.com/applications/neuroscience-showcase/).
+The input is an SGE dataset from the adult mouse hippocampus, extracted by masking a coronal brain section (Slice Number: 2; Replicate Number: 1; file: `detected_transcripts.csv`) from [Vizgen MERSCOPE Neuroscience Showcase](https://vizgen.com/applications/neuroscience-showcase/).
 
 It includes steps of input preparation, SGE format conversion, FICTURE analysis, asset packaging, and data upload.
 
@@ -47,7 +47,7 @@ n_factor=6,12                            # define number of factors in LDA train
 
 !!! info "How to Define Scaling Factors for MERSCOPE?"
 
-    The MERSCOPE example data currently used here provides SGE in µm. Define scaling factor from coordinate to micrometer as 1.
+    The MERSCOPE example data currently used here provides SGE in µm. Define the scaling factor from coordinate units to micrometers as 1.
 
 ---
 

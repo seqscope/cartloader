@@ -1,6 +1,6 @@
 # StereoSeq Starter Tutorial
 
-The input data represents mouse hippocampus. For demonstration purposes, we selected the adult mouse brain coronal section from the official release and extracted only the hippocampus region. The full-section data sourced from the [Stereo-seq](https://www.bgi.com/global/service/spatial-transcriptome-stereo-seq) platform, as part of the [MOSTA](https://db.cngb.org/stomics/mosta/download/) project.
+The input data represents the mouse hippocampus. For demonstration purposes, we selected an adult mouse brain coronal section from the official release and extracted only the hippocampus region. The full-section data is sourced from the [Stereo-seq](https://www.bgi.com/global/service/spatial-transcriptome-stereo-seq) platform as part of the [MOSTA](https://db.cngb.org/stomics/mosta/download/) project.
 
 It includes steps of input preparation, SGE format conversion, FICTURE analysis, asset packaging, and data upload.
 

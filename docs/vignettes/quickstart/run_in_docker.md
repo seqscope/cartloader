@@ -25,13 +25,13 @@ docker --version
 docker run hello-world
 ```
 
-If these commands fail, [install Docker](https://docs.docker.com/get-docker/) in your system.
+If these commands fail, [install Docker](https://docs.docker.com/get-docker/) on your system.
 
 ---
 
 ## Input Data
 
-The input is an mouse hippocampus SGE in a `FICTURE`-compatible format compatible, prepared by [`sge_convert`](../../reference/sge_convert.md) in `CartLoader` .
+The input is a mouse hippocampus SGE in a `FICTURE`-compatible format, prepared by [`sge_convert`](../../reference/sge_convert.md) in `CartLoader`.
 
 **File Format**
 
@@ -46,7 +46,7 @@ The input is an mouse hippocampus SGE in a `FICTURE`-compatible format compatibl
 
     The [example dataset](https://zenodo.org/records/17953582/files/seqscope_starter.std.tar.gz) is preloaded in the Docker image — no need to download separately.
 
-    If needs, it is also available on Zenodo: [DOI: 10.5281/zenodo.15701393](https://doi.org/10.5281/zenodo.15701393)
+    If needed, it is also available on Zenodo: [DOI: 10.5281/zenodo.15701393](https://doi.org/10.5281/zenodo.15701393)
 
 ---
 
@@ -65,7 +65,7 @@ work_dir=/path/to/work/directory        # path to work directory that contains t
 cd $work_dir
 
 # Number of jobs
-n_jobs=10                               # If not specify, the number of jobs defaults to 1.
+n_jobs=10                               # If not specified, the number of jobs defaults to 1.
 
 # Unique identifier for your dataset
 DATA_ID="seqscope_hippo"                # change this to reflect your dataset name
