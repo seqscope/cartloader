@@ -27,32 +27,6 @@ This tutorial demonstrates how to run multi‑sample FICTURE analysis and packag
 
 This tutorial uses a series of four human cortex ST datasets from [Walsh et al. Nature 2025](https://www.nature.com/articles/s41586-025-09010-1), generated using MERFISH.
 
-**Data Access**
-
-Follow the commands below to download the source data.
-
-```bash
-# define the work directory
-work_dir=/path/to/work/directory
-mkdir -p ${work_dir}/raw
-cd ${work_dir}/raw
-
-wget https://zenodo.org/records/15127709/files/FB080_O1a.zip?download=1
-unzip FB080_O1a.zip
-
-wget https://zenodo.org/records/15127709/files/FB080_O1b.zip?download=1
-unzip FB080_O1b.zip
-
-wget https://zenodo.org/records/15127709/files/FB080_O1c.zip?download=1
-unzip FB080_O1c.zip
-
-wget https://zenodo.org/records/15127709/files/FB080_O1d.zip?download=1
-unzip FB080_O1d.zip
-
-wget https://zenodo.org/records/15127709/files/FB121_O1.zip?download=1
-unzip FB121_O1.zip
-```
-
 **File Format**
 
 !!! info "`detected_transcripts.csv.gz`"
@@ -103,6 +77,34 @@ Prepare a working directory:
 ```bash
 work_dir=/path/to/work/dir/${COLLECTION_ID}
 cd ${work_dir}
+```
+
+---
+
+## Download Input Data
+
+Follow the commands below to download the source data.
+
+```bash
+# define the work directory
+work_dir=/path/to/work/directory
+mkdir -p ${work_dir}/raw
+cd ${work_dir}/raw
+
+wget https://zenodo.org/records/15127709/files/FB080_O1a.zip?download=1
+unzip FB080_O1a.zip
+
+wget https://zenodo.org/records/15127709/files/FB080_O1b.zip?download=1
+unzip FB080_O1b.zip
+
+wget https://zenodo.org/records/15127709/files/FB080_O1c.zip?download=1
+unzip FB080_O1c.zip
+
+wget https://zenodo.org/records/15127709/files/FB080_O1d.zip?download=1
+unzip FB080_O1d.zip
+
+wget https://zenodo.org/records/15127709/files/FB121_O1.zip?download=1
+unzip FB121_O1.zip
 ```
 
 ---

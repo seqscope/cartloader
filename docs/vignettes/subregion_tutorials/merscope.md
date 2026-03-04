@@ -1,27 +1,10 @@
 # Vizgen MERSCOPE Starter Tutorial
 
-## Input Data
-
 The input is a SGE dataset from the adult mouse hippocampus, extracted by masking a coronal brain section (Slice Number: 2；Replicate Number: 1; file: `detected_transcripts.csv`) from [Vizgen MERSCOPE Neuroscience Showcase](https://vizgen.com/applications/neuroscience-showcase/).
 
-**File Format**
+It includes steps of input preparation, SGE format conversion, FICTURE analysis, asset packaging, and data upload.
 
-{%
-  include-markdown "../../../includes/includemd_vigenettes_inputformat_merscope.md"
-%}
-
-**Data Access**
-
-The example data is hosted on Zenodo.
-
-Follow the commands below to download the example data.
-
-```bash
-work_dir=/path/to/work/directory
-cd $work_dir
-wget  https://zenodo.org/records/17953582/files/merscope_starter.raw.tar.gz
-tar --strip-components=1 -zxvf merscope_starter.raw.tar.gz
-```
+---
 
 ## Set Up the Environment
 
@@ -29,7 +12,27 @@ tar --strip-components=1 -zxvf merscope_starter.raw.tar.gz
   include-markdown "../../../includes/includemd_vigenettes_setupenv.md"
 %}
 
-Define data ID and analysis parameters:
+---
+
+## Prepare Input
+
+### Data Access
+
+The example data is hosted on Zenodo. Follow the commands below to download the example data.
+
+```bash
+cd $work_dir
+wget  https://zenodo.org/records/17953582/files/merscope_starter.raw.tar.gz
+tar --strip-components=1 -zxvf merscope_starter.raw.tar.gz
+```
+
+### File Format
+
+{%
+  include-markdown "../../../includes/includemd_vigenettes_inputformat_merscope.md"
+%}
+
+### Define ID and Parameters
 
 ```bash
 # Unique identifier for your dataset
@@ -46,6 +49,7 @@ n_factor=6,12                            # define number of factors in LDA train
 
     The MERSCOPE example data currently used here provides SGE in µm. Define scaling factor from coordinate to micrometer as 1.
 
+---
 
 ## SGE Format Conversion
 
@@ -53,11 +57,15 @@ n_factor=6,12                            # define number of factors in LDA train
   include-markdown "../../../includes/includemd_vigenettes_sge_convert_tsv.md"
 %}
 
+---
+
 ## `FICTURE` Analysis
 
 {%
   include-markdown "../../../includes/includemd_vigenettes_run_ficture2.md"
 %}
+
+---
 
 ## `CartLoader` Asset Packaging
 
@@ -65,10 +73,14 @@ n_factor=6,12                            # define number of factors in LDA train
   include-markdown "../../../includes/includemd_vigenettes_run_cartload2.md"
 %}
 
+---
+
 ## Upload to Data Repository
 {%
   include-markdown "../../../includes/includemd_vigenettes_upload.md" preserve-includer-indent=false
 %}
+
+---
 
 ## Output Data
 

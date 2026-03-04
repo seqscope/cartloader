@@ -18,7 +18,7 @@ This tutorial walks you through running the `CartLoader` workflow using a minima
 
 ## Input Data
 
-The input is a mouse hippocampus SGE, already converted to a format compatible with `FICTURE` using [`sge_convert`](../../reference/sge_convert.md) in `CartLoader`.
+The input is a mouse hippocampus SGE, already converted to **a format compatible with `FICTURE`** using [`sge_convert`](../../reference/sge_convert.md) in `CartLoader`.
 <!-- 
 !!! warning "Prepare Input SGE for `FICTURE`"
 
@@ -35,20 +35,6 @@ SGE in FICTURE-compatible format includes:
 {%
   include-markdown "../../../includes/includemd_vigenettes_sgeformat.md"
 %}
-
-**Data Access**
-
-The input example data is hosted on Zenodo [DOI: 10.5281/zenodo.15701393](https://doi.org/10.5281/zenodo.15701393).
-
-Download the example data:
-
-```bash
-work_dir=/path/to/work/directory        # path to work directory that contains the downloaded input data
-cd $work_dir
-
-wget https://zenodo.org/records/17953582/files/seqscope_starter.std.tar.gz
-tar -zxvf seqscope_starter.std.tar.gz
-```
 
 ---------------
 
@@ -70,6 +56,32 @@ train_width=18                           # define LDA training hexagon width (co
 n_factor=6,12                            # define number of factors in LDA training (comma-separated if multiple n-factor are applied)
 ```
 
+---
+
+## Download Input Data
+
+The input example data is hosted on Zenodo [DOI: 10.5281/zenodo.15701393](https://doi.org/10.5281/zenodo.15701393).
+
+Download the example data:
+
+```bash
+work_dir=/path/to/work/directory        # path to work directory that contains the downloaded input data
+cd $work_dir
+
+wget https://zenodo.org/records/17953582/files/seqscope_starter.std.tar.gz
+tar -zxvf seqscope_starter.std.tar.gz
+```
+
+<!-- 
+---
+
+## SGE Format Conversion
+
+{%
+  include-markdown "../../../includes/includemd_vigenettes_sge_convert_seqscope.md"
+%} -->
+
+---
 
 ## `FICTURE` Analysis
 
@@ -77,11 +89,15 @@ n_factor=6,12                            # define number of factors in LDA train
   include-markdown "../../../includes/includemd_vigenettes_run_ficture2.md"
 %}
 
+---
+
 ## `CartLoader` Asset Packaging
 
 {%
   include-markdown "../../../includes/includemd_vigenettes_run_cartload2.md"
 %}
+
+---
 
 ## Upload to Data Repository
 
@@ -89,7 +105,7 @@ n_factor=6,12                            # define number of factors in LDA train
   include-markdown "../../../includes/includemd_vigenettes_upload.md" preserve-includer-indent=false
 %}
 
----------------
+---
 
 ## Output Data
 

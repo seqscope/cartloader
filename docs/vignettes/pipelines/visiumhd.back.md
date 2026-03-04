@@ -12,6 +12,8 @@ This tutorial walks through end‑to‑end processing of 10x Visium HD data with
 
 Downloaded the ST data from [10x Genomics Dataset portal](https://www.10xgenomics.com/datasets/visium-hd-three-prime-mouse-brain-fresh-frozen).
 
+
+
 === "Use `wget`"
     If you have `wget` installed, use the following commands to download the output from 10X.
 
@@ -145,13 +147,13 @@ See Space Ranger output details in the official documentation: [Space Ranger Out
         ```
 ___
 
-___
+## Set Up the Environment
 
-## Example Runs
+{%
+  include-markdown "../../../includes/includemd_vigenettes_setupenv.md"
+%}
 
-### Define Data ID and Parameters
-
-First, define the dataset ID and analysis parameters.
+Define data ID and analysis parameters:
 
 ```bash
 # Unique identifier for your dataset
@@ -171,76 +173,36 @@ S3_DIR=/s3/path/to/s3/dir                # Recommend to use DATA_ID as directory
     
     Alternatively, provide the scale directly with `--units-per-um`.
 
-### Run pipeline
+___
 
-Choose one of the following options to run run_xenium pipeline. Run it locally or run it with docker.
+## Run Pipelines
 
-=== "Run Pipeline Locally"
+The example below runs all modules together. Customize actions with flags.
 
-    **Set Up Environment**
-    {%
-    include-markdown "../../../includes/includemd_vigenettes_setupenv.md"
-    %}
+```bash
+cartloader run_visiumhd \
+  --load-space-ranger \
+  --sge-convert \
+  --run-ficture2 \
+  --import-cells \
+  --import-images \
+  --run-cartload2 \
+  --upload-aws \
+  --space-ranger-dir /path/to/space/ranger/output \
+  --out-dir /path/to/out/dir \
+  --s3-dir ${S3_DIR} \
+  --width ${train_width} \
+  --n-factor ${n_factor} \
+  --id ${DATA_ID} \
+  --spatula ${spatula} \
+  --ficture2 ${punkst} \
+  --pmtiles ${pmtiles} \
+  --tippecanoe ${tippecanoe} \
+  --aws ${aws} \
+  --n-jobs ${n_jobs} \
+  --threads ${n_jobs}
+```
 
-    The example below runs all modules together.
-    ```bash
-    cartloader run_visiumhd \
-    --load-space-ranger \
-    --sge-convert \
-    --run-ficture2 \
-    --import-cells \
-    --import-images \
-    --run-cartload2 \
-    --upload-aws \
-    --space-ranger-dir /path/to/space/ranger/output \
-    --out-dir /path/to/out/dir \
-    --s3-dir ${S3_DIR} \
-    --width ${train_width} \
-    --n-factor ${n_factor} \
-    --id ${DATA_ID} \
-    --spatula ${spatula} \
-    --ficture2 ${punkst} \
-    --pmtiles ${pmtiles} \
-    --tippecanoe ${tippecanoe} \
-    --aws ${aws} \
-    --n-jobs ${n_jobs} \
-    --threads ${n_jobs}
-    ```
-
-=== "Run Pipeline via Docker"
-
-    ```bash
-    n_jobs
-    docker run -it --rm \
-    -v ${work_dir}:/data \
-    weiqiuc/cartloader:20260303b\
-    run_visiumhd \
-    --load-space-ranger \
-    --sge-convert \
-    --run-ficture2 \
-    --import-cells \
-    --import-images \
-    --run-cartload2 \
-    --upload-aws \
-    --space-ranger-dir /data/raw \
-    --out-dir /data/output \
-    --s3-dir ${S3_DIR} \
-    --width ${train_width} \
-    --n-factor ${n_factor} \
-    --id ${DATA_ID} \
-    --spatula /app/cartloader/submodules/spatula/bin/spatula \
-    --ficture2 /app/cartloader/submodules/punkst \
-    --pmtiles /usr/local/bin/pmtiles \
-    --tippecanoe /usr/local/bin/tippecanoe \
-    --aws /usr/local/bin/aws \
-    --n-jobs ${n_jobs} \
-    --threads ${n_jobs}
-    ```
-
----
-## Customize 
-
- Customize actions with flags.
 **Action Flags to Enable Modules**
 
 !!! warning "Actions"
@@ -260,8 +222,6 @@ Choose one of the following options to run run_xenium pipeline. Run it locally o
 **Parameter Requirements by Action Flag**
 
 Below are explanations of the parameters used in the example. For the full list, see the [`run_visiumhd` reference page](../../reference/run_visiumhd.md).
-
-
 
 | Parameter                          | Required when flags                        | Description                                                                           |
 |------------------------------------|--------------------------------------------|---------------------------------------------------------------------------------------|

@@ -1,4 +1,4 @@
-Compute spatial factors using `punkst` (FICTURE2 mode). See more details on the [Reference page](../docs/reference/run_ficture2.md).
+Compute spatial factors using `punkst` (FICTURE2). See more details on the [Reference page](../docs/reference/run_ficture2.md).
 
 <!-- ```bash
 cartloader run_ficture2 \
