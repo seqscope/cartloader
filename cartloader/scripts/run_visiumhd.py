@@ -7,7 +7,7 @@ from cartloader.utils.minimake import minimake
 from cartloader.utils.utils import add_param_to_cmd, cmd_separator, run_command_w_preq, load_file_to_dict, assert_unique
 from cartloader.utils.pipeline_helper import resolve_image_plan, validate_general_args, validate_imageid_args, validate_imagecol_args, validate_imageloc_args, stage_run_ficture2, stage_run_cartload2, stage_upload_aws, stage_upload_zenodo, stage_import_images, resolve_square_plan, stage_import_squares
 
-manual_str="--mex-transcript, --json-scale, --parquet-position, --geojson-cells, --mtx-cells, --csv-*, --tifs"
+manual_str="--mex-transcript, --json-scale, --parquet-position, --geojson-cells, --mtx-cells, --csv-*, --tifs, --square-input"
 
 def parse_arguments(_args):
     """
@@ -139,7 +139,15 @@ def parse_arguments(_args):
         args.space_ranger_assets = os.path.join(args.out_dir, "space_ranger_assets.json")
 
     # * Manual inputs vs asset JSON are mutually exclusive when --load-space-ranger
-    manual_mode = any([ args.mex_transcript, args.json_scale, args.geojson_cells, args.mtx_cells, args.csv_clust, args.csv_diffexp] + (args.tifs or []))
+    manual_mode = any([
+        args.mex_transcript,
+        args.json_scale,
+        args.parquet_position,
+        args.geojson_cells,
+        args.mtx_cells,
+        args.csv_clust,
+        args.csv_diffexp,
+    ] + (args.tifs or []) + (args.square_input or []))
     
     if manual_mode:
         if args.load_space_ranger:
@@ -178,7 +186,15 @@ def run_visiumhd(_args):
         os.makedirs(cart_dir, exist_ok=True)
     
     # use json or not
-    manual_inputs = [ args.mex_transcript, args.json_scale, args.geojson_cells, args.mtx_cells, args.csv_clust, args.csv_diffexp] + (args.tifs or [])
+    manual_inputs = [
+        args.mex_transcript,
+        args.json_scale,
+        args.parquet_position,
+        args.geojson_cells,
+        args.mtx_cells,
+        args.csv_clust,
+        args.csv_diffexp,
+    ] + (args.tifs or []) + (args.square_input or [])
     use_json = not any(x is not None for x in manual_inputs)
 
     # Common paths
@@ -187,6 +203,7 @@ def run_visiumhd(_args):
     sge_assets = os.path.join(sge_dir, "sge_assets.json")
     sge_flag = os.path.join(sge_dir, "sge_density_filtering.done" if args.filter_by_density else "sge_convert.done")
     cell_assets = os.path.join(cart_dir, f"{args.cell_id}_assets.json")
+    square_assets = []
     background_assets = []
     background_pmtiles = []
     catalog_yaml = os.path.join(cart_dir, "catalog.yaml")
@@ -319,7 +336,7 @@ def run_visiumhd(_args):
             # print("\n", flush=True)
             print(import_cell_cmd, flush=True)
         else:
-            run_command_w_preq(import_cell_cmd, prerequisites=[], dry_run=args.dry_run, flush=True)
+            run_command_w_preq(import_cell_cmd, prerequisites=prereq, dry_run=args.dry_run, flush=True)
     
     if args.import_images:  ## TBC: currently supports only OME-TIFFs
         print("="*10, flush=True)
@@ -363,7 +380,7 @@ def run_visiumhd(_args):
                             update_catalog=True if (not args.run_cartload2 and os.path.exists(catalog_yaml)) else False
                             )
         
-        square_assets = [ os.path.join(cart_dir, f"{args.square_id}-sq{spec["bin_size"]:03d}_assets.json") for spec in square_plans]
+        square_assets = [os.path.join(cart_dir, f"{args.square_id}-sq{spec['bin_size']:03d}_assets.json") for spec in square_plans]
 
     if args.run_cartload2:   
         # prerequisites
