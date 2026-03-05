@@ -42,7 +42,7 @@ SCALE=1                                 # scale from coordinate to micrometer
 
 # LDA parameters
 train_width=12                           # define LDA training hexagon width (comma-separated if multiple widths are applied)
-n_factor=6,12                            # define number of factors in LDA training (comma-separated if multiple n-factor are applied)
+n_factor=6,12                            # define number of factors in LDA training (comma-separated if multiple n-factor values are provided)
 ```
 
 !!! info "How to Define Scaling Factors for MERSCOPE?"

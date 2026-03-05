@@ -1,22 +1,23 @@
-# 🚀 Quick Start: Run with Docker
+# Quick Start: Run with Docker
 
-This tutorial walks through the `CartLoader` workflow — all packaged inside a prebuilt Docker image with dependencies and input data included.
+This tutorial walks through the `CartLoader` workflow, all packaged inside a prebuilt Docker image with dependencies and input data included.
 
 !!! info "Use Cases"
-
-    This is the fastest and simplest way to try `CartLoader` — no setup, installation, or data download required.
+    This is the fastest and simplest way to try `CartLoader`: no setup, installation, or data download required.
 
 !!! warning "Requirements"
     Users will need to:
 
-    * Set up `Docker` on their system (see [Set Up Docker](#set-up-docker) guide).
+    - Set up `Docker` on their system (see [Set Up Docker](#set-up-docker) guide).
 
+---
 
-## Set Up Docker
+## Install Docker
 
 If you are new to [Docker](https://www.docker.com/), please refer to the [Docker documentation](https://docs.docker.com/get-started/) for installation and basic usage.
 
 Verify whether Docker is properly set up on your system:
+
 ```bash
 # Check if Docker is installed and show its version
 docker --version
@@ -29,52 +30,51 @@ If these commands fail, [install Docker](https://docs.docker.com/get-docker/) on
 
 ---
 
-## Input Data
+## Set Up Environment
+
+{%
+include-markdown "../../../includes/includemd_vigenettes_setupenv_docker.md"
+%}
+
+---
+
+## Prepare Input
+
+### Data Access
+
+!!! warning "Input data already included"
+    The [example dataset](https://zenodo.org/records/17953582/files/seqscope_starter.std.tar.gz) is preloaded in the Docker image, so there is no need to download it separately.
+
+    If needed, it is also available on Zenodo: [DOI: 10.5281/zenodo.15701393](https://doi.org/10.5281/zenodo.15701393)
+
+### File Format
 
 The input is a mouse hippocampus SGE in a `FICTURE`-compatible format, prepared by [`sge_convert`](../../reference/sge_convert.md) in `CartLoader`.
-
-**File Format**
-
 
 {%
   include-markdown "../../../includes/includemd_vigenettes_sgeformat.md"
 %}
 
-**Data Access**
-
-!!! warning "Input data already included"
-
-    The [example dataset](https://zenodo.org/records/17953582/files/seqscope_starter.std.tar.gz) is preloaded in the Docker image — no need to download separately.
-
-    If needed, it is also available on Zenodo: [DOI: 10.5281/zenodo.15701393](https://doi.org/10.5281/zenodo.15701393)
-
----
-
-## Set Up the Environment
-
-!!! info "Fixed paths in the Docker Image"
-
-    Tools and dependencies have fixed paths in the Docker image (e.g., `/usr/local/bin/pmtiles`), which are used directly in the commands below. Skip specifying them manually.
+### Define ID and Parameters
 
 ```bash
-# ====
-# Replace each placeholder with the actual path on your system.  
-# ====
-
-work_dir=/path/to/work/directory        # path to work directory that contains the downloaded input data
-cd $work_dir
-
 # Number of jobs
-n_jobs=10                               # If not specified, the number of jobs defaults to 1.
+n_jobs=10                                # If not specified, the number of jobs defaults to 1.
 
 # Unique identifier for your dataset
-DATA_ID="seqscope_hippo"                # change this to reflect your dataset name
-PLATFORM="seqscope"                     # platform information
+DATA_ID="seqscope_hippo"               # change this to reflect your dataset name
+PLATFORM="seqscope"                    # platform information
 
 # LDA parameters
 train_width=18                           # define LDA training hexagon width (comma-separated if multiple widths are applied)
-n_factor=6,12                            # define number of factors in LDA training (comma-separated if multiple n-factor are applied)
+n_factor=6,12                            # define number of factors in LDA training (comma-separated if multiple n-factor values are provided)
 ```
+
+---
+
+## SGE Format Conversion
+
+The example dataset is already provided in `FICTURE`-compatible SGE format, so this conversion step is not required in this quickstart.
 
 ---
 

@@ -1,9 +1,9 @@
 ```bash
-zenodo_token=/path/to/zenodo/token/file    # replace /path/to/zenodo/token/file by path to your zenodo token file
+zenodo_token=/path/to/zenodo/token/file    # replace /path/to/zenodo/token/file with the path to your Zenodo token file
 
 docker run -it --rm \
   -v $(pwd):/data \
-  weiqiuc/cartloader:20250708b \
+  weiqiuc/cartloader:${docker_tag} \
   upload_zenodo \
     --in-dir /data/cartload2 \
     --upload-method catalog \

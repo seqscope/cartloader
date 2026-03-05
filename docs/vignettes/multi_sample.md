@@ -69,7 +69,7 @@ SCALE=1                                 # coordinate to micrometer scaling facto
 
 # LDA parameters
 train_width=24                           # define LDA training hexagon width (comma-separated if multiple widths are applied)
-n_factor=96,192                          # define number of factors in LDA training (comma-separated if multiple n-factor are applied)
+n_factor=96,192                          # define number of factors in LDA training (comma-separated if multiple n-factor values are provided)
 ```
 
 Prepare a working directory:
@@ -269,10 +269,10 @@ Below is an example of spatial factor inference results from `FICTURE`, trained 
 
     #### View/Explore
 
-    The output are available in CartoScope.
+    The outputs are available in CartoScope.
 
     [Explore in CartoScope](https://v3o-main.carto-scope.org/datasets?collections=multi-sample+analysis+of+human+occipital+cortex+%28gw20%29+development){ .md-button .md-button--primary .button-tight-small }
 
 </div>
 
-See more details of output at the Reference pages for [run_ficture2](../docs/reference/run_ficture2.md) and [run_cartload2](../docs/reference/run_cartload2.md).
+See output details in the reference pages for [run_ficture2](../docs/reference/run_ficture2.md) and [run_cartload2](../docs/reference/run_cartload2.md).

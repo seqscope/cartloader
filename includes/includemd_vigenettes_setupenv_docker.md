@@ -1,13 +1,13 @@
-Define paths to all required binaries and resources in the docker.
+Define paths to all required binaries and resources in Docker.
 
 ```bash
 # ====
-# Replace each placeholder with the actual path on your system.  
+# Replace user-specific placeholders with actual paths on your system.
 # ====
 work_dir=/path/to/work/directory                        # path to work directory that contains the downloaded input data
 cd $work_dir
 
-# Following are fixed path in the docker. DONT REVISE 
+# The following paths are fixed inside Docker. Do not modify them.
 spatula=/app/cartloader/submodules/spatula/bin/spatula  # path to spatula executable
 punkst=/app/cartloader/submodules/punkst                # path to FICTURE2 (punkst) executable
 tippecanoe=/usr/local/bin/tippecanoe                    # path to tippecanoe executable
@@ -23,3 +23,6 @@ n_jobs=10                                               # If not specified, the 
 # Docker tag 
 docker_tag=20260304a
 ```
+
+!!! tips "Fixed paths in the Docker Image"
+    Tools and dependencies have fixed paths in the Docker image (for example, `/usr/local/bin/pmtiles`), which are used directly in the commands below. Skip specifying them manually.

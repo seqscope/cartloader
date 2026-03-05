@@ -36,7 +36,7 @@ Upload the generated `CartLoader` outputs to your designated Zenodo deposition o
 <!--section2-end-->
 
 ```bash
-zenodo_token=/path/to/zenodo/token/file    # replace /path/to/zenodo/token/file by path to your zenodo token file
+zenodo_token=/path/to/zenodo/token/file    # replace /path/to/zenodo/token/file with the path to your Zenodo token file
 
 cartloader upload_zenodo \
   --in-dir ./cartload2 \

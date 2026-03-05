@@ -154,7 +154,7 @@ DATA_ID="visiumhd_3prime_mouse_brain"    # change this to reflect your dataset n
 
 # LDA parameters
 train_width=18                           # define LDA training hexagon width (comma-separated if multiple widths are applied)
-n_factor=48                              # define number of factors in LDA training (comma-separated if multiple n-factor are applied)
+n_factor=48                              # define number of factors in LDA training (comma-separated if multiple n-factor values are provided)
 
 # Path to AWS S3 directory
 S3_DIR=/s3/path/to/s3/dir                # Recommend to use DATA_ID as directory name, such as s3://bucket-name/visiumhd-3prime-mouse-brain
@@ -299,7 +299,7 @@ ___
 ```
 
 ### Spatial Factor Inference
-Below is an example of spatial factor inference results from `FICTURE` using a training width of 18, 12 factors, a fit width of 18, and an anchor resolution of 6. See more details of output at the Reference pages for [run_ficture2](../docs/reference/run_ficture2.md)
+Below is an example of spatial factor inference results from `FICTURE` using a training width of 18, 12 factors, a fit width of 18, and an anchor resolution of 6. See output details in the reference pages for [run_ficture2](../docs/reference/run_ficture2.md)
 
 ![FICTURE](../../images/pipeline_vignettes/visiumhd_3prime_mouse_brain.t18_f24_p18_a6.png)
 ![cmap](../../images/pipeline_vignettes/visiumhd_3prime_mouse_brain.t18_f24.rgb.png)
@@ -308,7 +308,7 @@ Below is an example of spatial factor inference results from `FICTURE` using a t
 
 ### SGE/FICTURE/Cell/Images assets
 
-See more details of output at the Reference pages for [run_cartload2](../..//reference/run_cartload2.md), [import_xenium_cell](../..//reference/import_cell.md), and [import_image](../../reference/import_image.md).
+See output details in the reference pages for [run_cartload2](../../reference/run_cartload2.md), [import_xenium_cell](../../reference/import_cell.md), and [import_image](../../reference/import_image.md).
 
 Individual PMTiles and asset JSON files reside alongside it under `<out-dir>/cartload2/`.
 - Catalog to serve: `<out-dir>/cartload2/catalog.yaml`
@@ -324,7 +324,7 @@ Individual PMTiles and asset JSON files reside alongside it under `<out-dir>/car
 
     #### View/Explore
 
-    The output are available in CartoScope.
+    The outputs are available in CartoScope.
 
     [Explore in CartoScope](https://v3o-main.carto-scope.org/dataset?uri=s3%2Fcartostore%2Fdata%2Fbatch%3D2026_02%2Fcartloader-pipeline-example-collection%2Fvisiumhd_3prime_mouse_brain){ .md-button .md-button--primary .button-tight-small }
 
@@ -332,4 +332,4 @@ Individual PMTiles and asset JSON files reside alongside it under `<out-dir>/car
 
 </div>
 
-See more details of output at the Reference pages for [run_ficture2](../docs/reference/run_ficture2.md) and [run_cartload2](../docs/reference/run_cartload2.md).
+See output details in the reference pages for [run_ficture2](../docs/reference/run_ficture2.md) and [run_cartload2](../docs/reference/run_cartload2.md).
