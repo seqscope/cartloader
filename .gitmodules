@@ -7,7 +7,7 @@
 [submodule "submodules/spatula"]
 	path = submodules/spatula
 	url = https://github.com/seqscope/spatula
-	branch = docker-dev
+	branch = main
 [submodule "submodules/tippecanoe"]
 	path = submodules/tippecanoe
 	url = https://github.com/felt/tippecanoe
