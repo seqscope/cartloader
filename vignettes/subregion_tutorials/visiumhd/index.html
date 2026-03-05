@@ -2308,7 +2308,7 @@ tar<span class="w"> </span>-zxvf<span class="w"> </span>visiumhd_starter.raw.tar
 <p class="admonition-title">ATTENTION</p>
 <p>The file‑format examples below use a sample Visium HD dataset. Paths, IDs, and values are illustrative and may not match the dataset used in this tutorial.</p>
 </div>
-<p><abbr title="Spatial Digital Gene Expression">SGE</abbr> comprises several key files as below: </p>
+<p><abbr title="Spatial Digital Gene Expression">SGE</abbr> comprises several key files as follows: </p>
 <details>
 <summary><code>filtered_feature_bc_matrix/barcodes.tsv.gz</code> – spatial barcode for tissue locations </summary>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
@@ -2352,7 +2352,7 @@ ENSMUSG00000025902  Sox17   Gene Expression
 <ul>
 <li><code>Header</code>: Initial lines form the header, declaring the matrix's adherence to the <a href="https://math.nist.gov/MatrixMarket/formats.html">Market Matrix (MTX) format</a>, outlining its traits. This may include comments (lines beginning with <code>%</code>) for extra metadata, all marked by a “%”.</li>
 <li><code>Dimensions</code>: Following the header, the first line details the matrix dimensions: the count of rows (features), columns (barcodes), and non-zero entries.</li>
-<li><code>Data Entries</code>: Post-dimensions, subsequent lines enumerate non-zero entries in seven columns: row index (feature index), column index (barcode index), and one value presenting the expression count per barcode per feature.</li>
+<li><code>Data Entries</code>: After the dimensions, each subsequent line provides three fields: row index (feature index), column index (barcode index), and the expression-count value.</li>
 </ul>
 </details>
 <details>
@@ -2411,7 +2411,7 @@ s_002um_00434_01637-1   1           434         1637        3396.371014         
 
 <span class="c1"># LDA parameters</span>
 <span class="nv">train_width</span><span class="o">=</span><span class="m">18</span><span class="w">                           </span><span class="c1"># define LDA training hexagon width (comma-separated if multiple widths are applied)</span>
-<span class="nv">n_factor</span><span class="o">=</span><span class="m">6</span>,12<span class="w">                            </span><span class="c1"># define number of factors in LDA training (comma-separated if multiple n-factor are applied)</span>
+<span class="nv">n_factor</span><span class="o">=</span><span class="m">6</span>,12<span class="w">                            </span><span class="c1"># define number of factors in LDA training (comma-separated if multiple n-factor values are provided)</span>
 </code></pre></div></td></tr></table></div>
 <div class="admonition info">
 <p class="admonition-title">How to Define Scaling Factors for Visium HD?</p>
@@ -2605,7 +2605,7 @@ cartloader<span class="w"> </span>run_ficture2<span class="w"> </span><span clas
 <span class="w">    </span>--exclude-feature-regex<span class="w"> </span><span class="s1">&#39;^(mt-.*$|Gm\d+$)&#39;</span><span class="w"> </span><span class="se">\ </span><span class="w">       </span><span class="c1"># regex pattern to exclude features (removing mitochondrial and predicted genes in the example analysis)</span>
 <span class="w">    </span>--out-dir<span class="w"> </span>./ficture2<span class="w"> </span><span class="se">\ </span><span class="w">                             </span><span class="c1"># path to output directory</span>
 <span class="w">    </span>--width<span class="w"> </span><span class="si">${</span><span class="nv">train_width</span><span class="si">}</span><span class="w"> </span><span class="se">\ </span><span class="w">                           </span><span class="c1"># LDA training hexagon width (comma-separated if multiple widths are applied)</span>
-<span class="w">    </span>--n-factor<span class="w"> </span><span class="si">${</span><span class="nv">n_factor</span><span class="si">}</span><span class="w"> </span><span class="se">\ </span><span class="w">                           </span><span class="c1"># number of factors in LDA training (comma-separated if multiple n-factor are applied)</span>
+<span class="w">    </span>--n-factor<span class="w"> </span><span class="si">${</span><span class="nv">n_factor</span><span class="si">}</span><span class="w"> </span><span class="se">\ </span><span class="w">                           </span><span class="c1"># number of factors in LDA training (comma-separated if multiple n-factor values are provided)</span>
 <span class="w">    </span>--spatula<span class="w"> </span><span class="si">${</span><span class="nv">spatula</span><span class="si">}</span><span class="w"> </span><span class="se">\ </span><span class="w">                             </span><span class="c1"># (optional) path to the spatula binary</span>
 <span class="w">    </span>--ficture2<span class="w"> </span><span class="si">${</span><span class="nv">punkst</span><span class="si">}</span><span class="w"> </span><span class="se">\ </span><span class="w">                             </span><span class="c1"># (optional) path to the punkst directory</span>
 <span class="w">    </span>--n-jobs<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span><span class="w">  </span><span class="se">\ </span><span class="w">                                     </span><span class="c1"># (optional) number of parallel jobs </span>
@@ -2728,25 +2728,15 @@ cartloader<span class="w"> </span>run_ficture2<span class="w"> </span><span clas
 </tr>
 </tbody>
 </table>
-<p><sub><sup>1</sup>: <code>CartLoader</code> requires the user to specify <strong>at least one action</strong>. Available actions includes: <code>--tile</code> to run tiling step; <code>--segment</code> to run segmentation step; <code>--init-lda</code> to run <abbr title="Latent Dirichlet Allocation">LDA</abbr> training step; <code>--decode</code> to run decoding step; <code>--summary</code> to run summarization step; <code>--main</code> to run all above five actions.</sub></p>
+<p><sub><sup>1</sup>: <code>CartLoader</code> requires the user to specify <strong>at least one action</strong>. Available actions include: <code>--tile</code> to run tiling step; <code>--segment</code> to run segmentation step; <code>--init-lda</code> to run <abbr title="Latent Dirichlet Allocation">LDA</abbr> training step; <code>--decode</code> to run decoding step; <code>--summary</code> to run summarization step; <code>--main</code> to run all above five actions.</sub></p>
 <!--parameter-end-->
 
 <hr />
 <h2 id="cartloader-asset-packaging"><code>CartLoader</code> Asset Packaging<a class="headerlink" href="#cartloader-asset-packaging" title="Permanent link">&para;</a></h2>
 <p>Generate pmtiles and web-compatible tile directories. See more details in <a href="../../../reference/run_cartload2/">Reference page</a>.</p>
-<!-- ```bash
-cartloader run_cartload2 \
-    --makefn run_cartload2.mk \         # (optional) file name of the output make file
-    --fic-dir ./ficture2 \              # path to input directory containing FICTURE2 output
-    --out-dir ./cartload2 \             # path to output directory for PMTiles and web tiles
-    --id ${DATA_ID} \                   # dataset ID used for naming outputs and metadata
-    --spatula ${spatula} \              # (optional) path to the spatula binary
-    --pmtiles ${pmtiles} \              # (optional) path to the pmtiles binary
-    --tippecanoe ${tippecanoe} \        # (optional) path to the tippecanoe binary
-    --n-jobs ${n_jobs} \                       # (optional) number of parallel jobs
-    --threads ${n_jobs}                       # (optional) number of threads per job
-``` -->
-
+<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">run_cartload2 with <abbr title="Segmentation-free method inferring latent spatial factors from SGE (Si et al., Nature Methods 2024)">FICTURE</abbr> output</label><label for="__tabbed_1_2">run_cartload2 with sge only</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -2757,19 +2747,7 @@ cartloader run_cartload2 \
 <span class="normal"> 8</span>
 <span class="normal"> 9</span>
 <span class="normal">10</span>
-<span class="normal">11</span>
-<span class="normal">12</span>
-<span class="normal">13</span>
-<span class="normal">14</span>
-<span class="normal">15</span>
-<span class="normal">16</span>
-<span class="normal">17</span>
-<span class="normal">18</span>
-<span class="normal">19</span>
-<span class="normal">20</span>
-<span class="normal">21</span>
-<span class="normal">22</span>
-<span class="normal">23</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># Example A: With FICTURE outputs (integrates factors + joins)</span>
+<span class="normal">11</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># Example A: With FICTURE outputs (integrates factors + joins)</span>
 cartloader<span class="w"> </span>run_cartload2<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--makefn<span class="w"> </span>run_cartload2.mk<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--fic-dir<span class="w"> </span>./ficture2<span class="w"> </span><span class="se">\</span>
@@ -2780,19 +2758,34 @@ cartloader<span class="w"> </span>run_cartload2<span class="w"> </span><span cla
 <span class="w">  </span>--tippecanoe<span class="w"> </span><span class="si">${</span><span class="nv">tippecanoe</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--n-jobs<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--threads<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span>
-
-<span class="c1"># Example B: SGE-only (package molecules without FICTURE)</span>
-cartloader<span class="w"> </span>run_cartload2<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--makefn<span class="w"> </span>run_cartload2.mk<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--sge-dir<span class="w"> </span>./sge_convert<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--out-dir<span class="w"> </span>./cartload2<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--id<span class="w"> </span><span class="si">${</span><span class="nv">DATA_ID</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--spatula<span class="w"> </span><span class="si">${</span><span class="nv">spatula</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--pmtiles<span class="w"> </span><span class="si">${</span><span class="nv">pmtiles</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--tippecanoe<span class="w"> </span><span class="si">${</span><span class="nv">tippecanoe</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--n-jobs<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--threads<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span>
 </code></pre></div></td></tr></table></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span></pre></div></td><td class="code"><div><pre><span></span><code># Example B: SGE-only (package molecules without FICTURE)
+cartloader run_cartload2 \
+  --makefn run_cartload2.mk \
+  --sge-dir ./sge_convert \
+  --out-dir ./cartload2 \
+  --id ${DATA_ID} \
+  --spatula ${spatula} \
+  --pmtiles ${pmtiles} \
+  --tippecanoe ${tippecanoe} \
+  --n-jobs ${n_jobs} \
+  --threads ${n_jobs}
+</code></pre></div></td></tr></table></div>
+</div>
+</div>
+</div>
 <!--parameter-start-->
 <table>
 <thead>
@@ -2958,7 +2951,7 @@ cartloader<span class="w"> </span>upload_aws<span class="w"> </span><span class=
 <span class="normal">6</span>
 <span class="normal">7</span>
 <span class="normal">8</span>
-<span class="normal">9</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nv">zenodo_token</span><span class="o">=</span>/path/to/zenodo/token/file<span class="w">    </span><span class="c1"># replace /path/to/zenodo/token/file by path to your zenodo token file</span>
+<span class="normal">9</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nv">zenodo_token</span><span class="o">=</span>/path/to/zenodo/token/file<span class="w">    </span><span class="c1"># replace /path/to/zenodo/token/file with the path to your Zenodo token file</span>
 
 cartloader<span class="w"> </span>upload_zenodo<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--in-dir<span class="w"> </span>./cartload2<span class="w"> </span><span class="se">\</span>
@@ -3027,13 +3020,13 @@ cartloader<span class="w"> </span>upload_zenodo<span class="w"> </span><span cla
 <p><img alt="Interactive Exploration" src="../../../images/starter_vignettes/visiumhd.t18_f12_p18_a6.png" />
     ---</p>
 <h4 id="viewexplore">View/Explore<a class="headerlink" href="#viewexplore" title="Permanent link">&para;</a></h4>
-<p>The output are available in both CartoScope and Zenodo. </p>
+<p>The outputs are available in both CartoScope and Zenodo. </p>
 <p><a class="md-button md-button--primary button-tight-small" href="https://v3o-main.carto-scope.org/dataset?uri=s3%2Fcartostore%2Fdata%2Fbatch%3D2026_02%2Fmouse-brain-test-collection%2Fsubdata_visiumhd_mousebrain">Explore in CartoScope</a></p>
 <p><a class="md-button button-tight-small" href="https://zenodo.org/records/18837730">Download from Zenodo</a></p>
 </li>
 </ul>
 </div>
-<p>See more details of output at the Reference pages for <a href="../../../reference/run_ficture2/">run_ficture2</a> and <a href="../../../reference/run_cartload2/">run_cartload2</a>.</p>
+<p>See output details in the reference pages for <a href="../../../reference/run_ficture2/">run_ficture2</a> and <a href="../../../reference/run_cartload2/">run_cartload2</a>.</p>
 
 
 

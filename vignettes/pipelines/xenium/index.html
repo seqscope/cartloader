@@ -2383,7 +2383,7 @@ ENSG00000127837,AAMP,0.02869137687178692,-0.8208377939888187,0.06947481704069494
 
 <span class="c1"># LDA parameters</span>
 <span class="nv">train_width</span><span class="o">=</span><span class="m">18</span><span class="w">                            </span><span class="c1"># define LDA training hexagon width (comma-separated if multiple widths are applied)</span>
-<span class="nv">n_factor</span><span class="o">=</span><span class="m">24</span><span class="w">                               </span><span class="c1"># define number of factors in LDA training (comma-separated if multiple n-factor are applied)</span>
+<span class="nv">n_factor</span><span class="o">=</span><span class="m">24</span><span class="w">                               </span><span class="c1"># define number of factors in LDA training (comma-separated if multiple n-factor values are provided)</span>
 
 <span class="c1"># Path to AWS S3 directory</span>
 <span class="nv">S3_DIR</span><span class="o">=</span>/s3/path/to/s3/dir<span class="w">                 </span><span class="c1"># Recommend to use DATA_ID as directory name, such as s3://bucket-name/xenium-v1-humanlung-cancer-ffpe</span>
@@ -2499,7 +2499,7 @@ conda<span class="w"> </span>activate<span class="w"> </span>ENV_NAME<span class
 </div>
 <div class="tabbed-block">
 <p><strong>Set Up Environment</strong></p>
-<p>Define paths to all required binaries and resources in the docker.</p>
+<p>Define paths to all required binaries and resources in Docker.</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -2521,12 +2521,12 @@ conda<span class="w"> </span>activate<span class="w"> </span>ENV_NAME<span class
 <span class="normal">19</span>
 <span class="normal">20</span>
 <span class="normal">21</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># ====</span>
-<span class="c1"># Replace each placeholder with the actual path on your system.  </span>
+<span class="c1"># Replace user-specific placeholders with actual paths on your system.</span>
 <span class="c1"># ====</span>
 <span class="nv">work_dir</span><span class="o">=</span>/path/to/work/directory<span class="w">                        </span><span class="c1"># path to work directory that contains the downloaded input data</span>
 <span class="nb">cd</span><span class="w"> </span><span class="nv">$work_dir</span>
 
-<span class="c1"># Following are fixed path in the docker. DONT REVISE </span>
+<span class="c1"># The following paths are fixed inside Docker. Do not modify them.</span>
 <span class="nv">spatula</span><span class="o">=</span>/app/cartloader/submodules/spatula/bin/spatula<span class="w">  </span><span class="c1"># path to spatula executable</span>
 <span class="nv">punkst</span><span class="o">=</span>/app/cartloader/submodules/punkst<span class="w">                </span><span class="c1"># path to FICTURE2 (punkst) executable</span>
 <span class="nv">tippecanoe</span><span class="o">=</span>/usr/local/bin/tippecanoe<span class="w">                    </span><span class="c1"># path to tippecanoe executable</span>
@@ -2542,6 +2542,10 @@ conda<span class="w"> </span>activate<span class="w"> </span>ENV_NAME<span class
 <span class="c1"># Docker tag </span>
 <span class="nv">docker_tag</span><span class="o">=</span>20260304a
 </code></pre></div></td></tr></table></div>
+<div class="admonition tips">
+<p class="admonition-title">Fixed paths in the Docker Image</p>
+<p>Tools and dependencies have fixed paths in the Docker image (for example, <code>/usr/local/bin/pmtiles</code>), which are used directly in the commands below. Skip specifying them manually.</p>
+</div>
 <p><strong>Example Command</strong></p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
@@ -2570,7 +2574,7 @@ conda<span class="w"> </span>activate<span class="w"> </span>ENV_NAME<span class
 <span class="normal">25</span>
 <span class="normal">26</span></pre></div></td><td class="code"><div><pre><span></span><code>docker<span class="w"> </span>run<span class="w"> </span>-it<span class="w"> </span>--rm<span class="w"> </span><span class="se">\</span>
 -v<span class="w"> </span><span class="si">${</span><span class="nv">work_dir</span><span class="si">}</span>:/data<span class="w"> </span><span class="se">\</span>
-weiqiuc/cartloader:20260303b<span class="se">\</span>
+weiqiuc/cartloader:<span class="si">${</span><span class="nv">docker_tag</span><span class="si">}</span><span class="se">\</span>
 run_xenium<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--load-xenium-ranger<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--sge-convert<span class="w"> </span><span class="se">\</span>
@@ -2797,7 +2801,7 @@ Example: [`includes/xenium_ranger_assets.human_lung_cancer.json`](../../../inclu
 
 
 ### Spatial Factor Inference
-Below is an example of spatial factor inference results from `FICTURE` using a training width of 18, 12 factors, a fit width of 18, and an anchor resolution of 6. See more details of output at the Reference pages for [run_ficture2](../docs/reference/run_ficture2.md)
+Below is an example of spatial factor inference results from `FICTURE` using a training width of 18, 12 factors, a fit width of 18, and an anchor resolution of 6. See output details in the reference pages for [run_ficture2](../docs/reference/run_ficture2.md)
 
 ![FICTURE](../../images/pipeline_vignettes/xenium_human_lung_cancer_v1.2.t18_f24_p18_a6.png)
 ![cmap](../../images/pipeline_vignettes/xenium_human_lung_cancer_v1.2.t18_f24.rgb.png)
@@ -2833,7 +2837,7 @@ Below is an example of spatial factor inference results from `FICTURE` using a t
 
 ### SGE/FICTURE/Cell/Image assets
 
-See more details of output at the Reference pages for [run_cartload2](../..//reference/run_cartload2.md), [import_xenium_cell](../..//reference/import_cell.md), and [import_image](../../reference/import_image.md).
+See output details in the reference pages for [run_cartload2](../../reference/run_cartload2.md), [import_xenium_cell](../../reference/import_cell.md), and [import_image](../../reference/import_image.md).
 
 - SGE assets JSON: `<out-dir>/sge/sge_assets.json`
 - FICTURE assets JSON: `<out-dir>/cartload2/ficture_assets.json` (when `--run-ficture2`)
@@ -2852,13 +2856,13 @@ individual PMTiles and asset JSON files reside alongside it under `<out-dir>/car
 <p><img alt="Interactive Exploration" src="../../../images/pipeline_vignettes/xenium_human_lung_cancer_v1.2.t18_f24_p18_a6.png" /></p>
 <hr />
 <h4 id="viewexplore">View/Explore<a class="headerlink" href="#viewexplore" title="Permanent link">&para;</a></h4>
-<p>The output are available in CartoScope.</p>
+<p>The outputs are available in CartoScope.</p>
 <p><a class="md-button md-button--primary button-tight-small" href="https://v3o-main.carto-scope.org/dataset?uri=s3%2Fcartostore%2Fdata%2Fbatch%3D2026_02%2Fcartloader-pipeline-example-collection%2Fxenium_human_lung_cancer">Explore in CartoScope</a></p>
 <!-- <a href="https://zenodo.org/records/17958845">Download from Zenodo</a>{ .md-button .button-tight-small } -->
 </li>
 </ul>
 </div>
-<p>See more details of output at the Reference pages for <a href="../docs/reference/run_ficture2.md">run_ficture2</a> and <a href="../docs/reference/run_cartload2.md">run_cartload2</a>.</p>
+<p>See output details in the reference pages for <a href="../docs/reference/run_ficture2.md">run_ficture2</a> and <a href="../docs/reference/run_cartload2.md">run_cartload2</a>.</p>
 
 
 

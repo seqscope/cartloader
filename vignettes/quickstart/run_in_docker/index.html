@@ -564,27 +564,69 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#set-up-docker" class="md-nav__link">
+  <a href="#install-docker" class="md-nav__link">
     <span class="md-ellipsis">
-      Set Up Docker
+      Install Docker
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#input-data" class="md-nav__link">
+  <a href="#set-up-environment" class="md-nav__link">
     <span class="md-ellipsis">
-      Input Data
+      Set Up Environment
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#set-up-the-environment" class="md-nav__link">
+  <a href="#prepare-input" class="md-nav__link">
     <span class="md-ellipsis">
-      Set Up the Environment
+      Prepare Input
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Prepare Input">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#data-access" class="md-nav__link">
+    <span class="md-ellipsis">
+      Data Access
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#file-format" class="md-nav__link">
+    <span class="md-ellipsis">
+      File Format
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#define-id-and-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      Define ID and Parameters
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sge-format-conversion" class="md-nav__link">
+    <span class="md-ellipsis">
+      SGE Format Conversion
     </span>
   </a>
   
@@ -2062,27 +2104,69 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#set-up-docker" class="md-nav__link">
+  <a href="#install-docker" class="md-nav__link">
     <span class="md-ellipsis">
-      Set Up Docker
+      Install Docker
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#input-data" class="md-nav__link">
+  <a href="#set-up-environment" class="md-nav__link">
     <span class="md-ellipsis">
-      Input Data
+      Set Up Environment
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#set-up-the-environment" class="md-nav__link">
+  <a href="#prepare-input" class="md-nav__link">
     <span class="md-ellipsis">
-      Set Up the Environment
+      Prepare Input
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Prepare Input">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#data-access" class="md-nav__link">
+    <span class="md-ellipsis">
+      Data Access
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#file-format" class="md-nav__link">
+    <span class="md-ellipsis">
+      File Format
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#define-id-and-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      Define ID and Parameters
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sge-format-conversion" class="md-nav__link">
+    <span class="md-ellipsis">
+      SGE Format Conversion
     </span>
   </a>
   
@@ -2167,11 +2251,11 @@
   
 
 
-<h1 id="quick-start-run-with-docker">🚀 Quick Start: Run with Docker<a class="headerlink" href="#quick-start-run-with-docker" title="Permanent link">&para;</a></h1>
-<p>This tutorial walks through the <code>CartLoader</code> workflow — all packaged inside a prebuilt Docker image with dependencies and input data included.</p>
+<h1 id="quick-start-run-with-docker">Quick Start: Run with Docker<a class="headerlink" href="#quick-start-run-with-docker" title="Permanent link">&para;</a></h1>
+<p>This tutorial walks through the <code>CartLoader</code> workflow, all packaged inside a prebuilt Docker image with dependencies and input data included.</p>
 <div class="admonition info">
 <p class="admonition-title">Use Cases</p>
-<p>This is the fastest and simplest way to try <code>CartLoader</code> — no setup, installation, or data download required.</p>
+<p>This is the fastest and simplest way to try <code>CartLoader</code>: no setup, installation, or data download required.</p>
 </div>
 <div class="admonition warning">
 <p class="admonition-title">Requirements</p>
@@ -2180,9 +2264,10 @@
 <li>Set up <code>Docker</code> on their system (see <a href="#set-up-docker">Set Up Docker</a> guide).</li>
 </ul>
 </div>
-<h2 id="set-up-docker">Set Up Docker<a class="headerlink" href="#set-up-docker" title="Permanent link">&para;</a></h2>
+<hr />
+<h2 id="install-docker">Install Docker<a class="headerlink" href="#install-docker" title="Permanent link">&para;</a></h2>
 <p>If you are new to <a href="https://www.docker.com/">Docker</a>, please refer to the <a href="https://docs.docker.com/get-started/">Docker documentation</a> for installation and basic usage.</p>
-<p>Verify whether Docker is properly set up on your system:
+<p>Verify whether Docker is properly set up on your system:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
 <span class="normal">3</span>
@@ -2192,12 +2277,67 @@ docker<span class="w"> </span>--version
 
 <span class="c1"># Test if Docker can successfully run a container</span>
 docker<span class="w"> </span>run<span class="w"> </span>hello-world
-</code></pre></div></td></tr></table></div></p>
+</code></pre></div></td></tr></table></div>
 <p>If these commands fail, <a href="https://docs.docker.com/get-docker/">install Docker</a> on your system.</p>
 <hr />
-<h2 id="input-data">Input Data<a class="headerlink" href="#input-data" title="Permanent link">&para;</a></h2>
+<h2 id="set-up-environment">Set Up Environment<a class="headerlink" href="#set-up-environment" title="Permanent link">&para;</a></h2>
+<p>Define paths to all required binaries and resources in Docker.</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># ====</span>
+<span class="c1"># Replace user-specific placeholders with actual paths on your system.</span>
+<span class="c1"># ====</span>
+<span class="nv">work_dir</span><span class="o">=</span>/path/to/work/directory<span class="w">                        </span><span class="c1"># path to work directory that contains the downloaded input data</span>
+<span class="nb">cd</span><span class="w"> </span><span class="nv">$work_dir</span>
+
+<span class="c1"># The following paths are fixed inside Docker. Do not modify them.</span>
+<span class="nv">spatula</span><span class="o">=</span>/app/cartloader/submodules/spatula/bin/spatula<span class="w">  </span><span class="c1"># path to spatula executable</span>
+<span class="nv">punkst</span><span class="o">=</span>/app/cartloader/submodules/punkst<span class="w">                </span><span class="c1"># path to FICTURE2 (punkst) executable</span>
+<span class="nv">tippecanoe</span><span class="o">=</span>/usr/local/bin/tippecanoe<span class="w">                    </span><span class="c1"># path to tippecanoe executable</span>
+<span class="nv">pmtiles</span><span class="o">=</span>/usr/local/bin/pmtiles<span class="w">                          </span><span class="c1"># path to pmtiles executable</span>
+<span class="nv">aws</span><span class="o">=</span>/usr/local/bin/aws<span class="w">                                  </span><span class="c1"># path to AWS CLI binary</span>
+
+<span class="c1"># (Optional) Define path to color map. </span>
+<span class="nv">cmap</span><span class="o">=</span>/app/cartloader/assets/fixed_color_map_256.tsv<span class="w">     </span><span class="c1"># Path to fixed color map. `CartLoader` includes one at cartloader/assets/fixed_color_map_256.tsv.</span>
+
+<span class="c1"># Number of jobs</span>
+<span class="nv">n_jobs</span><span class="o">=</span><span class="m">10</span><span class="w">                                               </span><span class="c1"># If not specified, the number of jobs defaults to 1.</span>
+
+<span class="c1"># Docker tag </span>
+<span class="nv">docker_tag</span><span class="o">=</span>20260304a
+</code></pre></div></td></tr></table></div>
+<div class="admonition tips">
+<p class="admonition-title">Fixed paths in the Docker Image</p>
+<p>Tools and dependencies have fixed paths in the Docker image (for example, <code>/usr/local/bin/pmtiles</code>), which are used directly in the commands below. Skip specifying them manually.</p>
+</div>
+<hr />
+<h2 id="prepare-input">Prepare Input<a class="headerlink" href="#prepare-input" title="Permanent link">&para;</a></h2>
+<h3 id="data-access">Data Access<a class="headerlink" href="#data-access" title="Permanent link">&para;</a></h3>
+<div class="admonition warning">
+<p class="admonition-title">Input data already included</p>
+<p>The <a href="https://zenodo.org/records/17953582/files/seqscope_starter.std.tar.gz">example dataset</a> is preloaded in the Docker image, so there is no need to download it separately.</p>
+<p>If needed, it is also available on Zenodo: <a href="https://doi.org/10.5281/zenodo.15701393">DOI: 10.5281/zenodo.15701393</a></p>
+</div>
+<h3 id="file-format">File Format<a class="headerlink" href="#file-format" title="Permanent link">&para;</a></h3>
 <p>The input is a mouse hippocampus <abbr title="Spatial Digital Gene Expression">SGE</abbr> in a <code>FICTURE</code>-compatible format, prepared by <a href="../../../reference/sge_convert/"><code>sge_convert</code></a> in <code>CartLoader</code>.</p>
-<p><strong>File Format</strong></p>
 <details>
 <summary><code>transcripts.unsorted.tsv.gz</code>: transcript-indexed <abbr title="Spatial Digital Gene Expression">SGE</abbr> in TSV</summary>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
@@ -2244,18 +2384,7 @@ ymax    1439.95
 <li><code>ymin</code> <code>ymax</code>: min and max Y coordinates in um</li>
 </ul>
 </details>
-<p><strong>Data Access</strong></p>
-<div class="admonition warning">
-<p class="admonition-title">Input data already included</p>
-<p>The <a href="https://zenodo.org/records/17953582/files/seqscope_starter.std.tar.gz">example dataset</a> is preloaded in the Docker image — no need to download separately.</p>
-<p>If needed, it is also available on Zenodo: <a href="https://doi.org/10.5281/zenodo.15701393">DOI: 10.5281/zenodo.15701393</a></p>
-</div>
-<hr />
-<h2 id="set-up-the-environment">Set Up the Environment<a class="headerlink" href="#set-up-the-environment" title="Permanent link">&para;</a></h2>
-<div class="admonition info">
-<p class="admonition-title">Fixed paths in the Docker Image</p>
-<p>Tools and dependencies have fixed paths in the Docker image (e.g., <code>/usr/local/bin/pmtiles</code>), which are used directly in the commands below. Skip specifying them manually.</p>
-</div>
+<h3 id="define-id-and-parameters">Define ID and Parameters<a class="headerlink" href="#define-id-and-parameters" title="Permanent link">&para;</a></h3>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -2265,34 +2394,23 @@ ymax    1439.95
 <span class="normal"> 7</span>
 <span class="normal"> 8</span>
 <span class="normal"> 9</span>
-<span class="normal">10</span>
-<span class="normal">11</span>
-<span class="normal">12</span>
-<span class="normal">13</span>
-<span class="normal">14</span>
-<span class="normal">15</span>
-<span class="normal">16</span>
-<span class="normal">17</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># ====</span>
-<span class="c1"># Replace each placeholder with the actual path on your system.  </span>
-<span class="c1"># ====</span>
-
-<span class="nv">work_dir</span><span class="o">=</span>/path/to/work/directory<span class="w">        </span><span class="c1"># path to work directory that contains the downloaded input data</span>
-<span class="nb">cd</span><span class="w"> </span><span class="nv">$work_dir</span>
-
-<span class="c1"># Number of jobs</span>
-<span class="nv">n_jobs</span><span class="o">=</span><span class="m">10</span><span class="w">                               </span><span class="c1"># If not specified, the number of jobs defaults to 1.</span>
+<span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># Number of jobs</span>
+<span class="nv">n_jobs</span><span class="o">=</span><span class="m">10</span><span class="w">                                </span><span class="c1"># If not specified, the number of jobs defaults to 1.</span>
 
 <span class="c1"># Unique identifier for your dataset</span>
-<span class="nv">DATA_ID</span><span class="o">=</span><span class="s2">&quot;seqscope_hippo&quot;</span><span class="w">                </span><span class="c1"># change this to reflect your dataset name</span>
-<span class="nv">PLATFORM</span><span class="o">=</span><span class="s2">&quot;seqscope&quot;</span><span class="w">                     </span><span class="c1"># platform information</span>
+<span class="nv">DATA_ID</span><span class="o">=</span><span class="s2">&quot;seqscope_hippo&quot;</span><span class="w">               </span><span class="c1"># change this to reflect your dataset name</span>
+<span class="nv">PLATFORM</span><span class="o">=</span><span class="s2">&quot;seqscope&quot;</span><span class="w">                    </span><span class="c1"># platform information</span>
 
 <span class="c1"># LDA parameters</span>
 <span class="nv">train_width</span><span class="o">=</span><span class="m">18</span><span class="w">                           </span><span class="c1"># define LDA training hexagon width (comma-separated if multiple widths are applied)</span>
-<span class="nv">n_factor</span><span class="o">=</span><span class="m">6</span>,12<span class="w">                            </span><span class="c1"># define number of factors in LDA training (comma-separated if multiple n-factor are applied)</span>
+<span class="nv">n_factor</span><span class="o">=</span><span class="m">6</span>,12<span class="w">                            </span><span class="c1"># define number of factors in LDA training (comma-separated if multiple n-factor values are provided)</span>
 </code></pre></div></td></tr></table></div>
 <hr />
+<h2 id="sge-format-conversion"><abbr title="Spatial Digital Gene Expression">SGE</abbr> Format Conversion<a class="headerlink" href="#sge-format-conversion" title="Permanent link">&para;</a></h2>
+<p>The example dataset is already provided in <code>FICTURE</code>-compatible <abbr title="Spatial Digital Gene Expression">SGE</abbr> format, so this conversion step is not required in this quickstart.</p>
+<hr />
 <h2 id="ficture-analysis"><code>FICTURE</code> Analysis<a class="headerlink" href="#ficture-analysis" title="Permanent link">&para;</a></h2>
-<p>Compute spatial factors using <code>punkst</code> (FICTURE2 mode). See more details in <a href="../../../reference/run_ficture2/">Reference page</a>.</p>
+<p>Compute spatial factors using <code>punkst</code> (FICTURE2). See more details in <a href="../../../reference/run_ficture2/">Reference page</a>.</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -2312,20 +2430,20 @@ ymax    1439.95
 <span class="normal">17</span>
 <span class="normal">18</span></pre></div></td><td class="code"><div><pre><span></span><code>docker<span class="w"> </span>run<span class="w"> </span>-it<span class="w"> </span>--rm<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-v<span class="w"> </span><span class="k">$(</span><span class="nb">pwd</span><span class="k">)</span>:/data<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>weiqiuc/cartloader:20250708b<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>weiqiuc/cartloader:<span class="si">${</span><span class="nv">docker_tag</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>run_ficture2<span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>--makefn<span class="w"> </span>run_ficture2.mk<span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>--main<span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>--in-transcript<span class="w"> </span>/app/data/sge/transcripts.unsorted.tsv.gz<span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>--in-feature<span class="w"> </span>/app/data/sge/feature.clean.tsv.gz<span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>--in-minmax<span class="w"> </span>/app/data/sge/coordinate_minmax.tsv<span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>--cmap-file<span class="w"> </span>/app/cartloader/assets/fixed_color_map_256.tsv<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--cmap-file<span class="w"> </span><span class="si">${</span><span class="nv">cmap</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>--exclude-feature-regex<span class="w"> </span><span class="s1">&#39;^(mt-.*$|Gm\d+$)&#39;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>--out-dir<span class="w"> </span>/data/ficture2<span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>--width<span class="w"> </span><span class="si">${</span><span class="nv">train_width</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>--n-factor<span class="w"> </span><span class="si">${</span><span class="nv">n_factor</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>--ficture2<span class="w"> </span>/app/cartloader/submodules/punkst<span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>--spatula<span class="w"> </span>/app/cartloader/submodules/spatula/bin/spatula<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--ficture2<span class="w"> </span><span class="si">${</span><span class="nv">punkst</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--spatula<span class="w"> </span><span class="si">${</span><span class="nv">spatula</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>--n-jobs<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>--threads<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span>
 </code></pre></div></td></tr></table></div>
@@ -2425,7 +2543,7 @@ ymax    1439.95
 </tr>
 </tbody>
 </table>
-<p><sub><sup>1</sup>: <code>CartLoader</code> requires the user to specify <strong>at least one action</strong>. Available actions includes: <code>--tile</code> to run tiling step; <code>--segment</code> to run segmentation step; <code>--init-lda</code> to run <abbr title="Latent Dirichlet Allocation">LDA</abbr> training step; <code>--decode</code> to run decoding step; <code>--summary</code> to run summarization step; <code>--main</code> to run all above five actions.</sub></p>
+<p><sub><sup>1</sup>: <code>CartLoader</code> requires the user to specify <strong>at least one action</strong>. Available actions include: <code>--tile</code> to run tiling step; <code>--segment</code> to run segmentation step; <code>--init-lda</code> to run <abbr title="Latent Dirichlet Allocation">LDA</abbr> training step; <code>--decode</code> to run decoding step; <code>--summary</code> to run summarization step; <code>--main</code> to run all above five actions.</sub></p>
 <hr />
 <h2 id="cartloader-asset-packaging"><code>CartLoader</code> Asset Packaging<a class="headerlink" href="#cartloader-asset-packaging" title="Permanent link">&para;</a></h2>
 <p>Generate pmtiles and web-compatible tile directories. See more details in <a href="../../../reference/run_cartload2/">Reference page</a>.</p>
@@ -2444,15 +2562,15 @@ ymax    1439.95
 <span class="normal">12</span>
 <span class="normal">13</span></pre></div></td><td class="code"><div><pre><span></span><code>docker<span class="w"> </span>run<span class="w"> </span>-it<span class="w"> </span>--rm<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-v<span class="w"> </span><span class="k">$(</span><span class="nb">pwd</span><span class="k">)</span>:/data<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>weiqiuc/cartloader:20250708b<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>weiqiuc/cartloader:<span class="si">${</span><span class="nv">docker_tag</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>run_cartload2<span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>--makefn<span class="w"> </span>run_cartload2.mk<span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>--fic-dir<span class="w"> </span>/data/ficture2<span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>--out-dir<span class="w"> </span>/data/cartload2<span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>--id<span class="w"> </span><span class="si">${</span><span class="nv">DATA_ID</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>--spatula<span class="w"> </span>/app/cartloader/submodules/spatula/bin/spatula<span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>--pmtiles<span class="w"> </span>/usr/local/bin/pmtiles<span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>--tippecanoe<span class="w"> </span>/usr/local/bin/tippecanoe<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--spatula<span class="w"> </span><span class="si">${</span><span class="nv">spatula</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--pmtiles<span class="w"> </span><span class="si">${</span><span class="nv">pmtiles</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--tippecanoe<span class="w"> </span><span class="si">${</span><span class="nv">tippecanoe</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>--n-jobs<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>--threads<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span>
 </code></pre></div></td></tr></table></div>
@@ -2461,7 +2579,7 @@ ymax    1439.95
     ```bash
     docker run -it --rm \
       -v $(pwd):/data \
-      weiqiuc/cartloader:20250708b \
+      weiqiuc/cartloader:${docker_tag} \
       run_cartload2 \
         --makefn run_cartload2.mk \
         --sge-dir /data/sge_convert \
@@ -2582,11 +2700,11 @@ ymax    1439.95
 
 docker<span class="w"> </span>run<span class="w"> </span>-it<span class="w"> </span>--rm<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-v<span class="w"> </span><span class="k">$(</span><span class="nb">pwd</span><span class="k">)</span>:/data<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>weiqiuc/cartloader:20250708b<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>weiqiuc/cartloader:<span class="si">${</span><span class="nv">docker_tag</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>upload_aws<span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>--in-dir<span class="w"> </span>/data/cartload2<span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>--s3-dir<span class="w"> </span><span class="s2">&quot;s3://</span><span class="si">${</span><span class="nv">AWS_BUCKET</span><span class="si">}</span><span class="s2">/</span><span class="si">${</span><span class="nv">DATA_ID</span><span class="si">}</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>--aws<span class="w"> </span>/usr/local/bin/aws<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--aws<span class="w"> </span><span class="si">${</span><span class="nv">aws</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>--n-jobs<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span>
 </code></pre></div></td></tr></table></div>
 <h3 id="zenodo-uploads">Zenodo Uploads<a class="headerlink" href="#zenodo-uploads" title="Permanent link">&para;</a></h3>
@@ -2602,11 +2720,11 @@ docker<span class="w"> </span>run<span class="w"> </span>-it<span class="w"> </s
 <span class="normal"> 9</span>
 <span class="normal">10</span>
 <span class="normal">11</span>
-<span class="normal">12</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nv">zenodo_token</span><span class="o">=</span>/path/to/zenodo/token/file<span class="w">    </span><span class="c1"># replace /path/to/zenodo/token/file by path to your zenodo token file</span>
+<span class="normal">12</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nv">zenodo_token</span><span class="o">=</span>/path/to/zenodo/token/file<span class="w">    </span><span class="c1"># replace /path/to/zenodo/token/file with the path to your Zenodo token file</span>
 
 docker<span class="w"> </span>run<span class="w"> </span>-it<span class="w"> </span>--rm<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-v<span class="w"> </span><span class="k">$(</span><span class="nb">pwd</span><span class="k">)</span>:/data<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>weiqiuc/cartloader:20250708b<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>weiqiuc/cartloader:<span class="si">${</span><span class="nv">docker_tag</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>upload_zenodo<span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>--in-dir<span class="w"> </span>/data/cartload2<span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>--upload-method<span class="w"> </span>catalog<span class="w"> </span><span class="se">\</span>
@@ -2671,13 +2789,13 @@ docker<span class="w"> </span>run<span class="w"> </span>-it<span class="w"> </s
 <p><img alt="Interactive Exploration" src="../../../images/starter_vignettes/seqscope.t18_f12_p18_a6.png" /></p>
 <hr />
 <h4 id="viewexplore">View/Explore<a class="headerlink" href="#viewexplore" title="Permanent link">&para;</a></h4>
-<p>The output are available in both CartoScope and Zenodo. </p>
+<p>The outputs are available in both CartoScope and Zenodo. </p>
 <p><a class="md-button md-button--primary button-tight-small" href="https://v3o-main.carto-scope.org/dataset?uri=s3%2Fcartostore%2Fdata%2Fbatch%3D2026_02%2Fmouse-brain-test-collection%2Fsubdata_seqscope_n17t89b_c1d2f">Explore in CartoScope</a></p>
 <p><a class="md-button button-tight-small" href="https://zenodo.org/records/18837725">Download from Zenodo</a></p>
 </li>
 </ul>
 </div>
-<p>See more details of output at the Reference pages for <a href="../../../reference/run_ficture2/">run_ficture2</a> and <a href="../../../reference/run_cartload2/">run_cartload2</a>.</p>
+<p>See output details in the reference pages for <a href="../../../reference/run_ficture2/">run_ficture2</a> and <a href="../../../reference/run_cartload2/">run_cartload2</a>.</p>
 <!-- ### Spatial Factor Inference
 Below is an example of spatial factor inference results from `FICTURE` using a training width of 18, 12 factors, a fit width of 18, and an anchor resolution of 6.
 
