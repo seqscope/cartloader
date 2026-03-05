@@ -42,6 +42,7 @@ RUN apt-get update && apt-get install -y \
     libopencv-dev \
     gdal-bin \
     imagemagick \
+    libpng-dev \
     r-base \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
@@ -60,7 +61,7 @@ WORKDIR /app
 # Clone the cartloader repository 
 # * submodules: 
 #   - Only clone the submodules of punkst, spatula and tippecanoe (skip the rest)
-#   - spatula uses main branch
+#   - spatula uses docker-dev branch
 #   - the following submodules are not installed:
 #       - ficture
 #       - ImageMagick: (installed in the step apt-get install step)
@@ -113,6 +114,7 @@ RUN cd submodules/spatula/submodules/qgenlib && \
 # Build submodule: spatula
 RUN cd submodules/spatula && \
     git checkout docker-dev && \
+    git pull origin docker-dev && \
     mkdir -p build && cd build && \
     cmake .. && \
     make -j$(nproc)
