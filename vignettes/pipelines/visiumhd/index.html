@@ -2585,6 +2585,10 @@ conda<span class="w"> </span>activate<span class="w"> </span>ENV_NAME<span class
 <div class="tabbed-block">
 <p><strong>Set Up Environment</strong></p>
 <p>Define paths to all required binaries and resources in Docker.</p>
+<div class="admonition warning">
+<p class="admonition-title">Fixed paths in the Docker Image</p>
+<p>Tools and dependencies have fixed paths in the Docker image (for example, <code>/usr/local/bin/pmtiles</code>), which are used directly in the commands below. Skip specifying them manually.</p>
+</div>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -2627,10 +2631,6 @@ conda<span class="w"> </span>activate<span class="w"> </span>ENV_NAME<span class
 <span class="c1"># Docker tag </span>
 <span class="nv">docker_tag</span><span class="o">=</span>20260304a
 </code></pre></div></td></tr></table></div>
-<div class="admonition tips">
-<p class="admonition-title">Fixed paths in the Docker Image</p>
-<p>Tools and dependencies have fixed paths in the Docker image (for example, <code>/usr/local/bin/pmtiles</code>), which are used directly in the commands below. Skip specifying them manually.</p>
-</div>
 <p><strong>Example Command</strong></p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>

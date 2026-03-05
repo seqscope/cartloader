@@ -2282,6 +2282,10 @@ docker<span class="w"> </span>run<span class="w"> </span>hello-world
 <hr />
 <h2 id="set-up-environment">Set Up Environment<a class="headerlink" href="#set-up-environment" title="Permanent link">&para;</a></h2>
 <p>Define paths to all required binaries and resources in Docker.</p>
+<div class="admonition warning">
+<p class="admonition-title">Fixed paths in the Docker Image</p>
+<p>Tools and dependencies have fixed paths in the Docker image (for example, <code>/usr/local/bin/pmtiles</code>), which are used directly in the commands below. Skip specifying them manually.</p>
+</div>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -2324,10 +2328,6 @@ docker<span class="w"> </span>run<span class="w"> </span>hello-world
 <span class="c1"># Docker tag </span>
 <span class="nv">docker_tag</span><span class="o">=</span>20260304a
 </code></pre></div></td></tr></table></div>
-<div class="admonition tips">
-<p class="admonition-title">Fixed paths in the Docker Image</p>
-<p>Tools and dependencies have fixed paths in the Docker image (for example, <code>/usr/local/bin/pmtiles</code>), which are used directly in the commands below. Skip specifying them manually.</p>
-</div>
 <hr />
 <h2 id="prepare-input">Prepare Input<a class="headerlink" href="#prepare-input" title="Permanent link">&para;</a></h2>
 <h3 id="data-access">Data Access<a class="headerlink" href="#data-access" title="Permanent link">&para;</a></h3>
