@@ -95,32 +95,7 @@ RUN python3 -m pip install -e ./
 # ===============================
 # Install submodules
 # ===============================
-RUN cd submodules/spatula && \
-    git submodule update --init --recursive submodules/htslib submodules/qgenlib  
-
-# Build submodule: htslib
-RUN cd submodules/spatula/submodules/htslib && \
-    autoreconf -i && \
-    ./configure && \
-    make -j$(nproc)
-
-# Build submodule: qgenlib
-RUN cd submodules/spatula/submodules/qgenlib && \
-    git checkout cartloader-docker && \
-    mkdir -p build && cd build && \
-    cmake .. && \
-    make -j$(nproc)
-
-# Build submodule: spatula
-RUN cd submodules/spatula && \
-    git checkout docker-dev && \
-    git pull origin docker-dev && \
-    mkdir -p build && cd build && \
-    cmake .. && \
-    make -j$(nproc)
-
 # Build submodule: tippecanoe
-# Build 
 RUN cd submodules/tippecanoe && \
     make -j && \
     make install
@@ -146,12 +121,39 @@ RUN wget https://github.com/protomaps/go-pmtiles/releases/download/v1.28.0/go-pm
     mv /opt/go-pmtiles/pmtiles /usr/local/bin/ && \
     rm -rf go-pmtiles_1.28.0_Linux_x86_64.tar.gz /opt/go-pmtiles
 
+# Bump this at build time to force only spatula-related layers to rebuild.
+# Example: docker build --build-arg SPATULA_CACHEBUST=$(date +%s) -t cartloader .
+ARG SPATULA_CACHEBUST=1
+
+# Build submodule: Spatula
+RUN echo "SPATULA_CACHEBUST=${SPATULA_CACHEBUST}" && \
+    cd submodules/spatula && \
+    git submodule update --init --recursive submodules/htslib submodules/qgenlib  
+
+# Build submodule: htslib
+RUN cd submodules/spatula/submodules/htslib && \
+    autoreconf -i && \
+    ./configure && \
+    make -j$(nproc)
+
+# Build submodule: qgenlib
+RUN cd submodules/spatula/submodules/qgenlib && \
+    git checkout cartloader-docker && \
+    git pull origin cartloader-docker && \
+    mkdir -p build && cd build && \
+    cmake .. && \
+    make -j$(nproc)
+
+# Build submodule: spatula
+RUN cd submodules/spatula && \
+    git checkout docker-dev && \
+    git pull origin docker-dev && \
+    mkdir -p build && cd build && \
+    cmake .. && \
+    make -j$(nproc)
 # ===============================
 # Clone cartloader & install it
 # ===============================
-
-# Add a CACHEBUST argument right before cloning so we can force a fresh clone
-ARG CACHEBUST=1
 RUN git clone --branch main --single-branch https://github.com/seqscope/cartloader.git /app/cartloader_latest && \
     cp -r /app/cartloader_latest/cartloader /app/cartloader/ && \
     cp -r /app/cartloader_latest/installation /app/cartloader/ && \
