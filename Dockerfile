@@ -154,6 +154,8 @@ RUN cd submodules/spatula && \
 # ===============================
 # Clone cartloader & install it
 # ===============================
+ARG CACHEBUST=1
+
 RUN git clone --branch main --single-branch https://github.com/seqscope/cartloader.git /app/cartloader_latest && \
     cp -r /app/cartloader_latest/cartloader /app/cartloader/ && \
     cp -r /app/cartloader_latest/installation /app/cartloader/ && \
