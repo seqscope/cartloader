@@ -2397,7 +2397,7 @@ mkdir<span class="w"> </span>-p<span class="w"> </span>./sge
 <span class="w">  </span>mkdir<span class="w"> </span>-p<span class="w"> </span><span class="s2">&quot;./sge/</span><span class="si">${</span><span class="nv">sample_id</span><span class="si">}</span><span class="s2">&quot;</span>
 
 <span class="w">  </span>cartloader<span class="w"> </span>sge_convert<span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>--in-csv<span class="w"> </span><span class="s2">&quot;./raw/</span><span class="si">${</span><span class="nv">sample_id</span><span class="si">}</span><span class="s2">/detected_transcripts.csv&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--in-csv<span class="w"> </span><span class="s2">&quot;./raw/</span><span class="si">${</span><span class="nv">sample_id</span><span class="si">}</span><span class="s2">/detected_transcripts.csv.gz&quot;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>--platform<span class="w"> </span>generic<span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>--out-dir<span class="w"> </span><span class="s2">&quot;./sge/</span><span class="si">${</span><span class="nv">sample_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>--csv-delim<span class="w"> </span><span class="s2">&quot;,&quot;</span><span class="w"> </span><span class="se">\</span>
@@ -2439,7 +2439,7 @@ mkdir<span class="w"> </span>-p<span class="w"> </span>./sge
 
 <span class="w">  </span><span class="o">(</span>
 <span class="w">    </span><span class="nb">echo</span><span class="w"> </span>-e<span class="w"> </span><span class="s2">&quot;X\tY\tgene\tcount\tcell_id\tZ&quot;</span>
-<span class="w">    </span>cat<span class="w"> </span><span class="s2">&quot;./raw/</span><span class="si">${</span><span class="nv">sample_id</span><span class="si">}</span><span class="s2">/detected_transcripts.csv&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>gzip<span class="w"> </span>-cd<span class="w"> </span><span class="s2">&quot;./raw/</span><span class="si">${</span><span class="nv">sample_id</span><span class="si">}</span><span class="s2">/detected_transcripts.csv.gz&quot;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">      </span><span class="p">|</span><span class="w"> </span>tail<span class="w"> </span>-n<span class="w"> </span>+2<span class="w"> </span><span class="se">\</span>
 <span class="w">      </span><span class="p">|</span><span class="w"> </span>tr<span class="w"> </span><span class="s1">&#39;,&#39;</span><span class="w"> </span><span class="s1">&#39;\t&#39;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">      </span><span class="p">|</span><span class="w"> </span>perl<span class="w"> </span>-lane<span class="w"> </span><span class="s1">&#39;print join(&quot;\t&quot;,$F[2],$F[3],$F[8],1,$F[10],$F[4]);&#39;</span>
