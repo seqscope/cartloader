@@ -24,6 +24,6 @@ cmap=/app/cartloader/assets/fixed_color_map_256.tsv     # Path to fixed color ma
 n_jobs=10                                               # If not specified, the number of jobs defaults to 1.
 
 # Docker tag 
-docker_tag=20260304a
+docker_tag=20260306
 ```
 
