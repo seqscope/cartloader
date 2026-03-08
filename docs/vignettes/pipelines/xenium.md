@@ -4,9 +4,58 @@
 
 This tutorial walks through end‑to‑end processing of 10x Xenium data with `CartLoader`: converting inputs, running FICTURE, importing cell results and histology, packaging assets, and uploading to AWS for sharing.
 
+---
 ## Input Data
 
----
+**Data Access**
+
+Downloaded the ST data from [10x Genomics Dataset portal](https://www.10xgenomics.com/datasets/xenium-human-lung-cancer-post-xenium-technote).
+
+
+=== "Use `wget`"
+    If you have `wget` installed, use the following commands to download the output from 10X.
+
+    ```bash
+    # define the work directory
+    work_dir=/path/to/work/directory
+    mkdir -p ${work_dir}/raw
+    cd ${work_dir}/raw
+
+    # 1. Choose one of the following options to download the output files:
+    # A. Download the full output files
+    wget https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_outs.zip
+    # B. Only download the Xenium Explorer subset output files
+    wget https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_xe_outs.zip
+
+    # 2) Download supplemental files
+    wget https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_he_image.ome.tif
+    wget https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_he_imagealignment.csv
+    ```
+
+=== "Use `curl`"
+    If you have `curl` installed, use the following commands to download the output from 10X. 
+
+    ```bash
+    # define the work directory
+    work_dir=/path/to/work/directory
+    mkdir -p ${work_dir}/raw
+    cd ${work_dir}/raw
+    
+    # 1. Choose one of the following options to download the output files:
+    # A. Download the full output files
+    curl -O https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_outs.zip
+
+    # B. Only download the Xenium Explorer subset output files
+    curl -O https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_xe_outs.zip
+
+
+    # 2) Download supplemental files
+    curl -O https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_he_image.ome.tif
+    curl -O https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_he_imagealignment.csv
+    ```
+___
+
+
 **Data Structure and Format**
 
 See details of the Xenium Ranger output at [Xenium Ranger Official Documents](https://www.10xgenomics.com/support/software/xenium-onboard-analysis/latest/analysis/xoa-output-understanding-outputs)
@@ -95,12 +144,6 @@ See details of the Xenium Ranger output at [Xenium Ranger Official Documents](ht
     * `morphology_focus_0002.ome.tif`: Interior — RNA (18S)
     * `morphology_focus_0003.ome.tif`: Interior — protein (alphaSMA/Vimentin)
     * `morphology_mip.ome.tif`: DAPI maximum intensity projection (MIP) of the Z‑stack.
-
-___
-
-**Data Access**
-
-Downloaded the ST data from [10x Genomics Dataset portal](https://www.10xgenomics.com/datasets/xenium-human-lung-cancer-post-xenium-technote).
 
 ___
 
@@ -254,7 +297,7 @@ individual PMTiles and asset JSON files reside alongside it under `<out-dir>/car
 
     The output are available in CartoScope.
 
-    [Explore in CartoScope](https://v3o-test.carto-scope.org/dataset?uri=s3%2Fcartostore%2Fdata%2Fbatch%3D2025_12%2Fcartloader-pipeline-example-collection%2Fxenium_human_lung_cancer){ .md-button .md-button--primary .button-tight-small }
+    [Explore in CartoScope](https://v3o-main.carto-scope.org/dataset?uri=s3%2Fcartostore%2Fdata%2Fbatch%3D2026_02%2Fcartloader-pipeline-example-collection%2Fxenium_human_lung_cancer){ .md-button .md-button--primary .button-tight-small }
 
     <!-- [Download from Zenodo](https://zenodo.org/records/17958845){ .md-button .button-tight-small } -->
 

@@ -20,6 +20,7 @@ RUN apt-get update && apt-get install -y \
     wget \
     curl \
     gzip \
+    perl \
     tabix \
     bc \
     python3 \
@@ -40,6 +41,7 @@ RUN apt-get update && apt-get install -y \
     libopencv-dev \
     gdal-bin \
     imagemagick \
+    r-base \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 
@@ -57,14 +59,14 @@ WORKDIR /app
 # Clone the cartloader repository 
 # * submodules: 
 #   - Only clone the submodules of punkst, spatula and tippecanoe (skip the rest)
-#   - spatula uses docker-dev branch
+#   - spatula uses main branch
 #   - the following submodules are not installed:
 #       - ficture
 #       - ImageMagick: (installed in the step apt-get install step)
 #       - factor_viz 
 #       - go_pmtiles: (download from the release directly)
 
-RUN git clone https://github.com/seqscope/cartloader.git 
+RUN git clone --branch main --single-branch https://github.com/seqscope/cartloader.git 
 
 # Set working directory to the cloned repository
 WORKDIR /app/cartloader
@@ -73,7 +75,7 @@ WORKDIR /app/cartloader
 RUN git submodule update --init submodules/punkst submodules/spatula submodules/tippecanoe
 
 # Install Python dependencies
-RUN python3 -m pip install --no-cache-dir -r requirements.txt
+RUN python3 -m pip install --no-cache-dir -r installation/requirements.txt
 
 # Install Python dependencies from ficture 
 # * Add this step due to missing python packages
@@ -82,6 +84,9 @@ RUN cd assets && \
     grep -v '^importlib' ficture_requirements.txt > ficture_requirements.fixed.txt && \
     python3 -m pip install -r ./ficture_requirements.fixed.txt
 
+# Install R dependencies
+RUN Rscript installation/install_r_packages.R
+
 # Install cartloader itself
 RUN python3 -m pip install -e ./
 
@@ -89,7 +94,6 @@ RUN python3 -m pip install -e ./
 # Install submodules
 # ===============================
 RUN cd submodules/spatula && \
-    git checkout docker-dev && \
     git submodule update --init --recursive submodules/htslib submodules/qgenlib  
 
 # Build submodule: htslib
@@ -100,12 +104,14 @@ RUN cd submodules/spatula/submodules/htslib && \
 
 # Build submodule: qgenlib
 RUN cd submodules/spatula/submodules/qgenlib && \
+    git checkout cartloader-docker && \
     mkdir -p build && cd build && \
     cmake .. && \
     make -j$(nproc)
 
 # Build submodule: spatula
 RUN cd submodules/spatula && \
+    git checkout docker-dev && \
     mkdir -p build && cd build && \
     cmake .. && \
     make -j$(nproc)

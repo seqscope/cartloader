@@ -4,8 +4,55 @@
 
 This tutorial walks through end‑to‑end processing of 10x Visium HD data with `CartLoader`: converting inputs, running FICTURE, importing cell results and histology, packaging assets, and uploading for sharing.
 
-## Input Data
 ---
+
+## Input Data
+
+**Data Access**
+
+Downloaded the ST data from [10x Genomics Dataset portal](https://www.10xgenomics.com/datasets/visium-hd-three-prime-mouse-brain-fresh-frozen).
+
+
+
+=== "Use `wget`"
+    If you have `wget` installed, use the following commands to download the output from 10X.
+
+    ```bash
+    # define the work directory
+    work_dir=/path/to/work/directory
+    mkdir -p ${work_dir}/raw
+    cd ${work_dir}/raw
+
+    wget https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_barcode_mappings.parquet
+    wget https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_binned_outputs.tar.gz
+    wget https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_cloupe_008um.cloupe
+    wget https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_cloupe_cell.cloupe
+    wget https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_feature_slice.h5
+    wget https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_metrics_summary.csv
+    wget https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_molecule_info.h5
+    wget https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_segmented_outputs.tar.gz
+    wget https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_spatial.tar.gz
+    wget https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_web_summary.html
+    ```
+
+=== "Use `curl`"
+    If you have `curl` installed, use the following commands to download the output from 10X. 
+
+    ```bash
+    curl -O https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_barcode_mappings.parquet
+    curl -O https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_binned_outputs.tar.gz
+    curl -O https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_cloupe_008um.cloupe
+    curl -O https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_cloupe_cell.cloupe
+    curl -O https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_feature_slice.h5
+    curl -O https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_metrics_summary.csv
+    curl -O https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_molecule_info.h5
+    curl -O https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_segmented_outputs.tar.gz
+    curl -O https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_spatial.tar.gz
+    curl -O https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_web_summary.html
+
+    ```
+___
+
 **Data Structure and Format**
 
 See Space Ranger output details in the official documentation: [Space Ranger Outputs](https://www.10xgenomics.com/support/software/space-ranger/latest/analysis/outputs/output-overview)
@@ -93,12 +140,6 @@ See Space Ranger output details in the official documentation: [Space Ranger Out
         ```
 ___
 
-**Data Access**
-
-Downloaded the ST data from [10x Genomics Dataset portal](https://www.10xgenomics.com/datasets/visium-hd-three-prime-mouse-brain-fresh-frozen).
-
-___
-
 ## Set Up the Environment
 
 {%
@@ -113,7 +154,7 @@ DATA_ID="visiumhd_3prime_mouse_brain"    # change this to reflect your dataset n
 
 # LDA parameters
 train_width=18                           # define LDA training hexagon width (comma-separated if multiple widths are applied)
-n_factor=6,12                            # define number of factors in LDA training (comma-separated if multiple n-factor are applied)
+n_factor=48                              # define number of factors in LDA training (comma-separated if multiple n-factor are applied)
 
 # Path to AWS S3 directory
 S3_DIR=/s3/path/to/s3/dir                # Recommend to use DATA_ID as directory name, such as s3://bucket-name/visiumhd-3prime-mouse-brain
@@ -236,7 +277,7 @@ Individual PMTiles and asset JSON files reside alongside it under `<out-dir>/car
 
     The output are available in CartoScope.
 
-    [Explore in CartoScope](https://v3o-test.carto-scope.org/dataset?uri=s3%2Fcartostore%2Fdata%2Fbatch%3D2025_12%2Fcartloader-pipeline-example-collection%2Fvisiumhd_3prime_mouse_brain){ .md-button .md-button--primary .button-tight-small }
+    [Explore in CartoScope](https://v3o-main.carto-scope.org/dataset?uri=s3%2Fcartostore%2Fdata%2Fbatch%3D2026_02%2Fcartloader-pipeline-example-collection%2Fvisiumhd_3prime_mouse_brain){ .md-button .md-button--primary .button-tight-small }
 
     <!-- [Download from Zenodo](https://zenodo.org/records/17958847){ .md-button .button-tight-small } -->
 

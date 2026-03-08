@@ -391,7 +391,7 @@ def run_ficture2(_args):
 
                 # 2) DE
                 cmds = cmd_separator([], f" LDA DE/report for {train_width}um and {n_factor} factors...")
-                cmds.append(f"'{args.spatula}' diffexp-model-matrix --tsv1 '{lda_model_matrix}' --out '{lda_de}' --min-count {args.de_min_ct_per_feature} --max-pval {args.de_max_pval} --min-fc {args.de_min_fold}")
+                cmds.append(f"'{args.spatula}' diffexp-model-matrix --tsv1 '{lda_model_matrix}' --out '{lda_de}' --min-count {args.min_ct_per_feature} --max-pval {args.de_max_pval} --min-fc {args.de_min_fold}")
                 cmds.append(f"({args.gzip} -cd '{lda_de}.de.marginal.tsv.gz' | head -1 | sed 's/^Feature/gene/'; {args.gzip} -cd '{lda_de}.de.marginal.tsv.gz' | tail -n +2 | sort -k 2,2n -k 3,3gr;) > '{lda_de}'")
                 cmds.append(f"rm -f '{lda_de}.de.marginal.tsv.gz'")
                 # cmds.append(f"{ficture2de} --input {lda_model_matrix} --output {lda_de} --feature_label Feature --min_ct_per_feature {args.min_ct_per_feature} --max_pval_output {args.de_max_pval} --min_fold_output {args.de_min_fold}")
@@ -452,7 +452,7 @@ def run_ficture2(_args):
             cmds=cmd_separator([], f"Creating decode, ID: {decode_id}")
             cmd = " ".join([
                 ficture2bin, "pixel-decode",
-                f"--model ' {model_path}'",
+                f"--model '{model_path}'",
                 f"--in-tsv '{args.out_dir}/transcripts.tiled.tsv'",
                 f"--in-index '{args.out_dir}/transcripts.tiled.index'",
                 f"--temp-dir '{args.out_dir}/tmp/{decode_id}'",
@@ -488,11 +488,11 @@ def run_ficture2(_args):
             #     f"--min_fold_output {args.de_min_fold}",
             #     f"--feature_label Feature"
             #     ])
-            cmds.append(f"'{args.spatula}' diffexp-model-matrix --tsv1 '{decode_postcount}' --out '{decode_de}' --min-count {args.de_min_ct_per_feature} --max-pval {args.de_max_pval} --min-fc {args.de_min_fold}")
+            cmds.append(f"'{args.spatula}' diffexp-model-matrix --tsv1 '{decode_postcount}.gz' --out '{decode_de}' --min-count {args.min_ct_per_feature} --max-pval {args.de_max_pval} --min-fc {args.de_min_fold}")
             cmds.append(f"({args.gzip} -cd '{decode_de}.de.marginal.tsv.gz' | head -1 | sed 's/^Feature/gene/'; {args.gzip} -cd '{decode_de}.de.marginal.tsv.gz' | tail -n +2 | sort -k 2,2n -k 3,3gr;) > '{decode_de}'")
             cmds.append(f"rm -f '{decode_de}.de.marginal.tsv.gz'")
 
-            cmds.append(cmd)
+            # cmds.append(cmd)
             # - transform-report
             cmd = " ".join([
                 ficture2report,

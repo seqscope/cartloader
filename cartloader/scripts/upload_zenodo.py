@@ -1,8 +1,11 @@
 
-import requests, json, os, sys, argparse, inspect, glob, yaml
+import requests, os, sys, argparse, inspect, glob
 from pathlib import Path
 from datetime import date
 from cartloader.scripts.upload_aws import collect_files_from_yaml
+
+ZENODO_API_BASE = "https://zenodo.org/api/deposit/depositions"
+ZENODO_REQUEST_TIMEOUT = 60
 
 # === FILES ==
 ##  Zenodo’s bucket URL is actually a direct S3 endpoint, not a RESTful Zenodo API endpoint -- it cannot get the files that actually exist
@@ -17,15 +20,53 @@ from cartloader.scripts.upload_aws import collect_files_from_yaml
 #         print(f"Error fetching existing files: {response.status_code} - {response.text}")
 #         sys.exit(1)
 
-def list_existing_files(deposition_id, access_token):
-    url = f"https://zenodo.org/api/deposit/depositions/{deposition_id}/files"
-    response = requests.get(url, params={'access_token': access_token})
+def list_existing_file_entries(deposition_id, access_token):
+    url = f"{ZENODO_API_BASE}/{deposition_id}/files"
+    response = requests.get(url, params={'access_token': access_token}, timeout=ZENODO_REQUEST_TIMEOUT)
     print(f"File list status: {response.status_code}")
     if response.status_code == 200:
-        return [file['filename'] for file in response.json()]
-    else:
-        print(f"Error fetching files: {response.status_code} - {response.text}")
+        return response.json()
+    raise RuntimeError(f"Error fetching files: {response.status_code} - {response.text}")
+
+def list_existing_files(deposition_id, access_token):
+    return [file.get('filename', '') for file in list_existing_file_entries(deposition_id, access_token)]
+
+def delete_deposition_file(deposition_id, file_id, access_token):
+    url = f"{ZENODO_API_BASE}/{deposition_id}/files/{file_id}"
+    return requests.delete(url, params={'access_token': access_token}, timeout=ZENODO_REQUEST_TIMEOUT)
+
+def purge_deposition_files(deposition_id, access_token, dry_run=False):
+    file_entries = list_existing_file_entries(deposition_id, access_token)
+    if not file_entries:
+        print(" * Restart mode: deposition already has no files.")
         return []
+
+    print(f" * Restart mode: removing {len(file_entries)} existing file(s) from deposition {deposition_id}")
+    if dry_run:
+        for file_entry in file_entries:
+            print(f"    - Would delete: {file_entry.get('filename', '<unknown>')}")
+        return []
+
+    failed_deletions = []
+    for file_entry in file_entries:
+        file_id = file_entry.get("id")
+        file_name = file_entry.get("filename", "<unknown>")
+        if file_id is None:
+            failed_deletions.append(file_name)
+            print(f"    - Failed to delete {file_name}: missing file id")
+            continue
+
+        response = delete_deposition_file(deposition_id, file_id, access_token)
+        if response.status_code in (200, 204):
+            print(f"    - Deleted: {file_name}")
+        else:
+            failed_deletions.append(file_name)
+            print(f"    - Failed to delete {file_name}: {response.status_code} - {response.text}")
+
+    if failed_deletions:
+        raise RuntimeError(f"Failed to delete {len(failed_deletions)} file(s) before restart: {failed_deletions}")
+
+    return []
 
 def upload_file(filepath, bucket_url, access_token):
     filename = os.path.basename(filepath)
@@ -34,6 +75,7 @@ def upload_file(filepath, bucket_url, access_token):
             f"{bucket_url}/{filename}",
             data=fp,
             params={'access_token': access_token},
+            timeout=ZENODO_REQUEST_TIMEOUT,
         )
     return response
 
@@ -74,8 +116,8 @@ def build_metadata(args, existing_metadata=None):
     return metadata
 
 def update_deposition_metadata(deposition_id, access_token, metadata):
-    url = f"https://zenodo.org/api/deposit/depositions/{deposition_id}"
-    response = requests.put(url, params={'access_token': access_token}, json={"metadata": metadata}, headers={"Content-Type": "application/json"})
+    url = f"{ZENODO_API_BASE}/{deposition_id}"
+    response = requests.put(url, params={'access_token': access_token}, json={"metadata": metadata}, headers={"Content-Type": "application/json"}, timeout=ZENODO_REQUEST_TIMEOUT)
     if response.status_code == 200:
         print(f" * Successfully updated metadata for deposition {deposition_id}")
     else:
@@ -84,10 +126,10 @@ def update_deposition_metadata(deposition_id, access_token, metadata):
 # === DEPOSITION ==
 def create_deposition(access_token, metadata=None):
     headers = {"Content-Type": "application/json"}
-    url = "https://zenodo.org/api/deposit/depositions"
+    url = ZENODO_API_BASE
     payload = {"metadata": metadata} if metadata else {}
 
-    response = requests.post(url, params={"access_token": access_token}, json=payload, headers=headers)
+    response = requests.post(url, params={"access_token": access_token}, json=payload, headers=headers, timeout=ZENODO_REQUEST_TIMEOUT)
 
     if response.status_code == 201:
         deposition = response.json()
@@ -99,8 +141,8 @@ def create_deposition(access_token, metadata=None):
         raise RuntimeError(f"Error creating deposition: {response.status_code} - {response.text}")
 
 def publish_deposition(deposition_id, access_token):
-    url = f"https://zenodo.org/api/deposit/depositions/{deposition_id}/actions/publish"
-    response = requests.post(url, params={'access_token': access_token})
+    url = f"{ZENODO_API_BASE}/{deposition_id}/actions/publish"
+    response = requests.post(url, params={'access_token': access_token}, timeout=ZENODO_REQUEST_TIMEOUT)
     if response.status_code == 202:
         print("Deposition published successfully.")
     else:
@@ -110,9 +152,9 @@ def publish_deposition(deposition_id, access_token):
 def find_existing_draft_by_concept(conceptrecid, token):
     if not conceptrecid:
         return None
-    url = "https://zenodo.org/api/deposit/depositions"
+    url = ZENODO_API_BASE
     params = {"access_token": token, "q": f"conceptrecid:{conceptrecid}"}
-    response = requests.get(url, params=params)
+    response = requests.get(url, params=params, timeout=ZENODO_REQUEST_TIMEOUT)
     if response.status_code != 200:
         print(f"    - Warning: failed to search drafts: {response.status_code} - {response.text}")
         return None
@@ -124,8 +166,8 @@ def find_existing_draft_by_concept(conceptrecid, token):
 
 # == NEW VERSION ==
 def create_new_version(old_id, token):
-    url = f"https://zenodo.org/api/deposit/depositions/{old_id}/actions/newversion"
-    r = requests.post(url, params={"access_token": token})
+    url = f"{ZENODO_API_BASE}/{old_id}/actions/newversion"
+    r = requests.post(url, params={"access_token": token}, timeout=ZENODO_REQUEST_TIMEOUT)
     if r.status_code != 201:
         raise RuntimeError(f"Failed to create new version: {r.status_code} - {r.text}")
     print("New version draft created.")
@@ -162,7 +204,8 @@ def upload_zenodo(_args):
     group_flags.add_argument('--publish', action='store_true', default=False, help='If set, publish the deposition automatically after upload. '
                                                                                     'Recommended to leave this DISABLED and publish manually after verifying the deposition via the Zenodo web interface.'
                                                                                     )
-    group_flags.add_argument('--restart', action='store_true', default=False, help='Restart all upload requests regardless of existing files.')
+    group_flags.add_argument('--overwrite', action='store_true', default=False, help='Upload overlapping filenames even if they already exist in the deposition.')
+    group_flags.add_argument('--restart', action='store_true', default=False, help='Reset the target draft deposition by deleting all remote files, then upload input files from scratch.')
     group_flags.add_argument('--dry-run', action='store_true', default=False, help='Simulate the upload process without making changes.')
 
     args = parser.parse_args(_args)
@@ -184,6 +227,7 @@ def upload_zenodo(_args):
         print("ERROR: Zenodo access token file is empty.")
         sys.exit(1)
 
+    created_from_published_version = False
     if args.zenodo_deposition_id:
         # print(f" * Accessing the deposition ID: {args.zenodo_deposition_id}")
         # if args.create_new_version:
@@ -205,10 +249,7 @@ def upload_zenodo(_args):
         # Update: automatically detect whether it should create a new version -- if the status is submitted, use a new version
         print(f" * Using an existing Zenodo deposition ({args.zenodo_deposition_id})...")
 
-        response = requests.get(
-            f'https://zenodo.org/api/deposit/depositions/{args.zenodo_deposition_id}',
-            params={'access_token': ACCESS_TOKEN}
-        )
+        response = requests.get(f'{ZENODO_API_BASE}/{args.zenodo_deposition_id}', params={'access_token': ACCESS_TOKEN}, timeout=ZENODO_REQUEST_TIMEOUT)
 
         if response.status_code != 200:
             print(f"Error fetching deposition: {response.status_code} - {response.text}")
@@ -222,6 +263,7 @@ def upload_zenodo(_args):
         is_published = deposition_metadata.get("submitted", False)  # Or check "state" == "done"
 
         if is_published:
+            created_from_published_version = True
             links = deposition_metadata.get("links", {})
             latest_draft_url = links.get("latest_draft")
             draft_metadata = None
@@ -229,7 +271,7 @@ def upload_zenodo(_args):
 
             if latest_draft_url:
                 print(f"    - Detected published deposition. Checking for existing draft: {latest_draft_url}")
-                draft_resp = requests.get(latest_draft_url, params={"access_token": ACCESS_TOKEN})
+                draft_resp = requests.get(latest_draft_url, params={"access_token": ACCESS_TOKEN}, timeout=ZENODO_REQUEST_TIMEOUT)
                 if draft_resp.status_code == 200:
                     draft_metadata = draft_resp.json()
                     if not draft_metadata.get("submitted", False):
@@ -254,8 +296,9 @@ def upload_zenodo(_args):
                         if draft_metadata.get("submitted", False):
                             raise RuntimeError("Latest draft is not editable (still submitted).")
                         response = requests.get(
-                            f'https://zenodo.org/api/deposit/depositions/{draft_metadata["id"]}',
-                            params={"access_token": ACCESS_TOKEN}
+                            f'{ZENODO_API_BASE}/{draft_metadata["id"]}',
+                            params={"access_token": ACCESS_TOKEN},
+                            timeout=ZENODO_REQUEST_TIMEOUT
                         )
                         if response.status_code != 200:
                             raise RuntimeError(f"Failed to retrieve existing draft: {response.status_code} - {response.text}")
@@ -264,10 +307,11 @@ def upload_zenodo(_args):
                     else:
                         raise
                 else:
-                    response = requests.get(draft_url, params={"access_token": ACCESS_TOKEN})
+                    response = requests.get(draft_url, params={"access_token": ACCESS_TOKEN}, timeout=ZENODO_REQUEST_TIMEOUT)
                     if response.status_code != 200:
                         raise RuntimeError(f"Failed to retrieve new draft: {response.status_code} - {response.text}")
                     args.zenodo_deposition_id = response.json()["id"]
+                    created_from_published_version = True
                     print(f"    - New version created. New deposition ID: {args.zenodo_deposition_id }")
         else:
             print(f"    - Deposition is still a draft. Using existing deposition ID: {args.zenodo_deposition_id}")
@@ -283,6 +327,11 @@ def upload_zenodo(_args):
         print(f" *  Checking files in bucket URL: {bucket_url}")
         existing_files = list_existing_files(args.zenodo_deposition_id, ACCESS_TOKEN)
         print(f"      Found {len(existing_files)} existing files")
+        if created_from_published_version and len(existing_files) > 0:
+            print("      Note: Zenodo new-version drafts inherit files from the previous published version.")
+            print("      Use --overwrite to replace overlaps, or --restart to clear draft files first.")
+        if args.restart:
+            existing_files = purge_deposition_files(args.zenodo_deposition_id, ACCESS_TOKEN, dry_run=args.dry_run)
     else:
         print(" * Creating a new Zenodo deposition...")
         print(f"    - Building metadata")
@@ -310,9 +359,10 @@ def upload_zenodo(_args):
         basic_files_raw.append(catalog_f)
         opt_files_raw = [os.path.join(args.in_dir, fn) for fn in list(optional_files)]
         basemap_files_raw = [os.path.join(args.in_dir, fn) for fn in list(basemap_files)]
-        in_files_raw = list(set(basic_files_raw + opt_files_raw + basemap_files_raw))
-        in_files_raw.append(catalog_f)
+        in_files_raw = list(dict.fromkeys(basic_files_raw + opt_files_raw + basemap_files_raw))
     elif args.upload_method == "files":
+        if len(args.files) == 0:
+            raise ValueError("--files is required when --upload-method files")
         in_files_raw = [fn if os.path.isabs(fn) else os.path.join(args.in_dir, fn) for fn in args.files]
     else:
         raise ValueError(f"Unsupported upload method: {args.upload_method}")
@@ -363,12 +413,13 @@ def upload_zenodo(_args):
                     print(f"    - Error uploading {in_file}: {e}")
         return failed_list
 
-    def process_uploading_by_list(in_files_raw, existing_files, all_input_basenames, force_upload_files=[], touch_flag=False, flag_suffix="zenodo.done", overwrite=False, dry_run=False):
+    def process_uploading_by_list(in_files_raw, existing_files, all_input_basenames, force_upload_files=None, touch_flag=False, flag_suffix="zenodo.done", overwrite=False, dry_run=False):
         if not in_files_raw:
             raise ValueError(f" * No input files found")
+        force_upload_files = force_upload_files or []
 
         failed_list = []
-        print(f" * Checking overlapping with existing files in the Zenodo deposition (overwrite mode: {'On' if args.restart else 'Off'})")
+        print(f" * Checking overlapping with existing files in the Zenodo deposition (overwrite mode: {'On' if overwrite else 'Off'})")
         input_fnames = {os.path.basename(f): f for f in in_files_raw}
 
         # existing_files is a list of filenames (strings) returned by list_existing_files().
@@ -382,35 +433,28 @@ def upload_zenodo(_args):
         input_overlap = [input_fnames[name] for name in input_fnames if name in existing_fnames]
         input_only = [input_fnames[name] for name in input_fnames if name not in existing_fnames]
 
-        in_files = in_files_raw if overwrite else input_only
+        in_files = list(input_only)
+        if overwrite:
+            in_files.extend(input_overlap)
         
         if len(force_upload_files) > 0 :
             print(f"    - Files to upload regardless of existence: {';'.join(force_upload_files)}")
-            in_files.extend(force_upload_files)
+            force_upload_set = set(force_upload_files)
+            in_files.extend([f for f in force_upload_set if f not in set(in_files)])
 
         if len(in_files) == 0:
             print(" ! WARNING: No files to be uploaded. Aborting upload.")
         
         else:
             print(f" * Uploading (dry-run mode)") if dry_run else print(f" * Uploading") 
-            if input_only:
-                print(f"\n    - New input file(s) (not in deposition): N={len(input_only)}")
-                failed_list1=uploading(input_only, dry_run, touch_flag=False, flag_suffix="zenodo.done")
-                failed_list.extend(failed_list1)
-            else:
-                print("\n    - New input file(s) (not in deposition): N=0")
-
+            print(f"\n    - New input file(s) (not in deposition): N={len(input_only)}")
             if input_overlap:
-                if args.restart:
-                    print(f"\n    - Overlapping input file(s) (already in deposition): N={len(input_overlap)} (will be overwritten)")
-                    failed_list2=uploading(input_overlap, dry_run, touch_flag=False, flag_suffix="zenodo.done")
-                    failed_list.extend(failed_list2)
-                else:
-                    print(f"\n    - Overlapping input file(s) (already in deposition): N={len(input_overlap)} (will be skipped)")
-                    # for f in input_overlap:
-                    #     print(f"        * {f}")
+                print(f"\n    - Overlapping input file(s) (already in deposition): N={len(input_overlap)} ({'will be overwritten' if overwrite else 'will be skipped'})")
             else:
-                print("\n * Overlapping file(s): N=0")
+                print("\n    - Overlapping input file(s) (already in deposition): N=0")
+
+            failed_list1 = uploading(in_files, dry_run, touch_flag=touch_flag, flag_suffix=flag_suffix)
+            failed_list.extend(failed_list1)
 
             print(f" * Showing existing files in the deposition") 
             if existing_only:
@@ -422,15 +466,19 @@ def upload_zenodo(_args):
         return failed_list
 
     failed_list=[]
+    overwrite_mode = args.overwrite or args.restart
+    if args.restart and args.overwrite:
+        print(" * Both --restart and --overwrite were set; --restart already implies overwrite after purge.")
+
     if args.upload_method == "all" or args.upload_method == "files":
         all_input_basenames = set(os.path.basename(f) for f in in_files_raw)
-        failed_sublist=process_uploading_by_list(in_files_raw, existing_files, all_input_basenames, force_upload_files=[], touch_flag=False, flag_suffix="zenodo.done", overwrite=args.restart, dry_run=args.dry_run)
+        failed_sublist=process_uploading_by_list(in_files_raw, existing_files, all_input_basenames, force_upload_files=[], touch_flag=False, flag_suffix="zenodo.done", overwrite=overwrite_mode, dry_run=args.dry_run)
         failed_list.extend(failed_sublist)
     elif args.upload_method == "catalog":
         # For catalog mode, define the whole planned upload as the union of all groups
         all_input_basenames = set(os.path.basename(f) for f in (basic_files_raw + basemap_files_raw + opt_files_raw))
         print(f"\n1) Upload: tiled map data for SGE (with or without FICTURE)\n")
-        failed_sublist=process_uploading_by_list(basic_files_raw, existing_files, all_input_basenames, force_upload_files=[], touch_flag=False, flag_suffix="zenodo.done", overwrite=args.restart, dry_run=args.dry_run)
+        failed_sublist=process_uploading_by_list(basic_files_raw, existing_files, all_input_basenames, force_upload_files=[], touch_flag=False, flag_suffix="zenodo.done", overwrite=overwrite_mode, dry_run=args.dry_run)
         failed_list.extend(failed_sublist)
         if not args.dry_run:
             cartload_flag=os.path.join(args.in_dir, "cartload.zenodo.done")
@@ -438,14 +486,14 @@ def upload_zenodo(_args):
         
         if len(basemap_files_raw) > 0:
             print(f"\n2) Upload: tiled map data for background images, such as histology images\n")
-            failed_sublist=process_uploading_by_list(basemap_files_raw, existing_files, all_input_basenames, force_upload_files=[], touch_flag=True, flag_suffix="zenodo.done", overwrite=args.restart, dry_run=args.dry_run)
+            failed_sublist=process_uploading_by_list(basemap_files_raw, existing_files, all_input_basenames, force_upload_files=[], touch_flag=True, flag_suffix="zenodo.done", overwrite=overwrite_mode, dry_run=args.dry_run)
             failed_list.extend(failed_sublist)
         else:
             print(f"\n2) Skipping: no basemap files to upload\n")
         
         if len(opt_files_raw) > 0:
             print(f"\n3) Upload: optional files\n")
-            failed_sublist=process_uploading_by_list(opt_files_raw, existing_files, all_input_basenames, force_upload_files=[], touch_flag=True, flag_suffix="zenodo.done", overwrite=args.restart, dry_run=args.dry_run)
+            failed_sublist=process_uploading_by_list(opt_files_raw, existing_files, all_input_basenames, force_upload_files=[], touch_flag=True, flag_suffix="zenodo.done", overwrite=overwrite_mode, dry_run=args.dry_run)
             failed_list.extend(failed_sublist)
         else:
             print(f"\n3) Skipping: no optional files to upload\n")
