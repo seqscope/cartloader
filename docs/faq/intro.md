@@ -9,6 +9,7 @@ This section provides answers to frequently asked questions about CartoScope.
 ## Choose the Right Tutorial
 *   [I am not sure whether to run with Docker or run locally. Which one should I choose?](./choose_run_mode.md)
 *   [How do I choose the right tutorial for my platform?](./choose_platform.md)
+*   [My platform is not in the supported list. Can I still use `CartLoader`?](./unsupported_platform.md)
 
 ## `cartloader` Function Questions 
 *   [How do I define scaling (`--units-per-um`) for `sge_convert`?](./define_units_per_um.md)

@@ -112,6 +112,7 @@ nav:
       - Find tutorials:
         - Run Mode: faq/choose_run_mode.md
         - Platform Tutorial: faq/choose_platform.md
+        - Unsupported Platform: faq/unsupported_platform.md
       - Basics Function:
         - Units per um: faq/define_units_per_um.md
         - Image Orientation: faq/background_image_orientation.md
