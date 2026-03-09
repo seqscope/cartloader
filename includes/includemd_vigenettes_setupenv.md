@@ -1,10 +1,3 @@
-
-!!! warning "Pre-installed tools"
-
-    Please ensure you have installed all required tools (See [Installation](../docs/installation.md)).
-
-Define paths to all required binaries and resources. Optionally, specify a fixed color map for consistent rendering.
-
 ```bash
 # ====
 # Replace each placeholder with the actual path on your system.  

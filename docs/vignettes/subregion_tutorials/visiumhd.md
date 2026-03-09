@@ -1,28 +1,10 @@
 # 10x VisiumHD Starter Tutorial
 
-## Input Data
-
 The input data originates from the mouse hippocampus and is extracted from an official release of mouse brain SGE data.
 
-**File Format**
+It includes steps of input preparation, SGE format conversion, FICTURE analysis, asset packaging, and data upload.
 
-{%
-  include-markdown "../../../includes/includemd_vigenettes_inputformat_visiumhd.md"
-%}
-
-
-**Data Access**
-
-The example data is hosted on Zenodo.
-
-Follow the commands below to download the example data.
-
-```bash
-work_dir=/path/to/work/directory
-cd $work_dir
-wget  https://zenodo.org/records/17953582/files/visiumhd_starter.raw.tar.gz 
-tar -zxvf visiumhd_starter.raw.tar.gz  
-```
+---
 
 ## Set Up the Environment
 
@@ -30,7 +12,29 @@ tar -zxvf visiumhd_starter.raw.tar.gz
   include-markdown "../../../includes/includemd_vigenettes_setupenv.md"
 %}
 
-Define data ID and analysis parameters:
+---
+
+## Prepare Input
+
+### Data Access
+
+The example data is hosted on Zenodo.
+
+Follow the commands below to download the example data.
+
+```bash
+cd $work_dir
+wget  https://zenodo.org/records/17953582/files/visiumhd_starter.raw.tar.gz
+tar -zxvf visiumhd_starter.raw.tar.gz
+```
+
+### File Format
+
+{%
+  include-markdown "../../../includes/includemd_vigenettes_inputformat_visiumhd.md"
+%}
+
+### Define ID and Parameters
 
 ```bash
 # Unique identifier for your dataset
@@ -39,21 +43,24 @@ PLATFORM="10x_visium_hd"                 # platform information
 
 # LDA parameters
 train_width=18                           # define LDA training hexagon width (comma-separated if multiple widths are applied)
-n_factor=6,12                            # define number of factors in LDA training (comma-separated if multiple n-factor are applied)
+n_factor=6,12                            # define number of factors in LDA training (comma-separated if multiple n-factor values are provided)
 ```
 
 !!! info "How to Define Scaling Factors for Visium HD?"
 
-    10x Visium HD includes a `scalefactors_json.json` file that provides pixel-to-micrometer scaling information. `CartLoader` can directly accept this file via the `--scale-json` option and will automatically compute the appropriate scaling factor, omitting manually calculate and specify `--units-per-um`. 
+    10x Visium HD includes a `scalefactors_json.json` file that provides pixel-to-micrometer scaling information. `CartLoader` can directly accept this file via the `--scale-json` option and automatically compute the appropriate scaling factor, so you do not need to manually calculate and specify `--units-per-um`.
     
     Alternatively, users may bypass the JSON file by directly providing a value through the `--units-per-um` option.
 
+---
 
 ## SGE Format Conversion
 
 {%
   include-markdown "../../../includes/includemd_vigenettes_sge_convert_visiumhd.md"
 %}
+
+---
 
 ## `FICTURE` Analysis
 
@@ -80,6 +87,7 @@ cartloader run_ficture2 \
 
 {% include-markdown "../../../includes/includemd_vigenettes_run_ficture2.md" %}
 
+---
 
 ## `CartLoader` Asset Packaging
 
@@ -87,10 +95,14 @@ cartloader run_ficture2 \
   include-markdown "../../../includes/includemd_vigenettes_run_cartload2.md"
 %}
 
+---
+
 ## Upload to Data Repository
 {%
   include-markdown "../../../includes/includemd_vigenettes_upload.md" preserve-includer-indent=false
 %}
+
+---
 
 ## Output Data
 

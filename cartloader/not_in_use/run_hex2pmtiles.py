@@ -64,7 +64,7 @@ def _build_parser(repo_dir, prog_name):
     aux_params = parser.add_argument_group("Auxiliary Parameters", "Auxiliary parameters frequently used by users")
     aux_params.add_argument('--log', action='store_true', default=False, help='Write log to file')
     aux_params.add_argument('--threads', type=int, default=4, help='Maximum number of threads per job (for tippecanoe)')
-    aux_params.add_argument('--skip-pmtiles', action='store_true', default=False, help='Keep intermediate output files')
+    aux_params.add_argument('--skip-pmtiles', action='store_true', default=False, help='Skip PMTiles conversion')
     aux_params.add_argument('--keep-intermediate-files', action='store_true', default=False, help='Keep intermediate output files')
     aux_params.add_argument('--chunk-size', type=int, default=1000000, help='Number of rows to read at a time. Default is 1000000')
     aux_params.add_argument('--log-suffix', type=str, default=".log", help='The suffix for the log file (appended to the output directory). Default: .log')

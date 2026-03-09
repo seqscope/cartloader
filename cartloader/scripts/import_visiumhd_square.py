@@ -296,7 +296,7 @@ def import_visiumhd_square(_args):
             logger.error(f"Command {cmd}\nfailed with error: {result.stderr.decode()}")
             sys.exit(1)
 
-        cmd = f"cp '{pseudobulk_prefix}.info.tsv' '{args.outprefix}-info.tsv'"
+        cmd = f"cp '{pseudobulk_prefix}.factor.info.tsv' '{args.outprefix}-info.tsv'"
         result = subprocess.run(cmd, shell=True, capture_output=True)
         if result.returncode != 0:
             logger.error(f"Command {cmd}\nfailed with error: {result.stderr.decode()}")
@@ -306,7 +306,7 @@ def import_visiumhd_square(_args):
         temp_fs.append(f"{args.outprefix}-pseudobulk.de.marginal.tsv.gz")
         temp_fs.append(f"{args.outprefix}-pseudobulk.tsv")
         temp_fs.append(f"{args.outprefix}-pseudobulk.cmap.tsv")
-        temp_fs.append(f"{args.outprefix}-pseudobulk.info.tsv")
+        temp_fs.append(f"{args.outprefix}-pseudobulk.factor.info.tsv")
 
 
     ## write the color map

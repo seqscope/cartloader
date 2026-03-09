@@ -1,29 +1,10 @@
 # Seq-Scope Starter Tutorial
 
-## Input Data
-
 This tutorial uses an example SGE from *mouse hippocampus*, extracted via spatial masking from a [Seq-Scope](https://www.nature.com/articles/s41596-024-01065-0) coronal brain slice.
 
-**File Format**
+It includes steps of input preparation, SGE format conversion, FICTURE analysis, asset packaging, and data upload.
 
-Actual input formats are platform-dependent. Please refer to the [Vignettes](../intro.md) for detailed input specifications by each platform.
-
-{%
-  include-markdown "../../../includes/includemd_vigenettes_inputformat_seqscope.md"
-%}
-
-**Data Access**
-
-The example data is hosted on Zenodo (10.5281/zenodo.17953582).
-
-Follow the commands below to download the example data.
-
-```bash
-work_dir=/path/to/work/directory
-cd $work_dir
-wget  https://zenodo.org/records/17953582/files/seqscope_starter.raw.tar.gz 
-tar -zxvf seqscope_starter.raw.tar.gz 
-```
+---
 
 ## Set Up the Environment
 
@@ -31,7 +12,31 @@ tar -zxvf seqscope_starter.raw.tar.gz
   include-markdown "../../../includes/includemd_vigenettes_setupenv.md"
 %}
 
-Define data ID and analysis parameters:
+---
+
+## Prepare Input
+
+### Data Access
+
+The example data is hosted on Zenodo (10.5281/zenodo.17953582).
+
+Follow the commands below to download the example data.
+
+```bash
+cd $work_dir
+wget  https://zenodo.org/records/17953582/files/seqscope_starter.raw.tar.gz
+tar -zxvf seqscope_starter.raw.tar.gz
+```
+
+### File Format
+
+Actual input formats are platform-dependent. Please refer to the [Vignettes](../intro.md) for detailed input specifications by each platform.
+
+{%
+  include-markdown "../../../includes/includemd_vigenettes_inputformat_seqscope.md"
+%}
+
+### Define ID and Parameters
 
 ```bash
 # Unique identifier for your dataset
@@ -41,7 +46,7 @@ SCALE=1000                              # scale from coordinate to micrometer
 
 # LDA parameters
 train_width=18                           # define LDA training hexagon width (comma-separated if multiple widths are applied)
-n_factor=6,12                            # define number of factors in LDA training (comma-separated if multiple n-factor are applied)
+n_factor=6,12                            # define number of factors in LDA training (comma-separated if multiple n-factor values are provided)
 ```
 
 !!! info "How to Define Scaling Factors for Seq-Scope?"
@@ -50,6 +55,7 @@ n_factor=6,12                            # define number of factors in LDA train
 
     Thus, use 1000 as scaling factor from coordinate to micrometer since 1000 nm = 1 µm.
 
+---
 
 ## SGE Format Conversion
 
@@ -57,11 +63,15 @@ n_factor=6,12                            # define number of factors in LDA train
   include-markdown "../../../includes/includemd_vigenettes_sge_convert_seqscope.md"
 %}
 
+---
+
 ## `FICTURE` Analysis
 
 {%
   include-markdown "../../../includes/includemd_vigenettes_run_ficture2.md"
 %}
+
+---
 
 ## `CartLoader` Asset Packaging
 
@@ -69,12 +79,15 @@ n_factor=6,12                            # define number of factors in LDA train
   include-markdown "../../../includes/includemd_vigenettes_run_cartload2.md"
 %}
 
+---
+
 ## Upload to Data Repository
 
 {%
   include-markdown "../../../includes/includemd_vigenettes_upload.md" preserve-includer-indent=false
 %}
 
+---
 
 ## Output Data
 
