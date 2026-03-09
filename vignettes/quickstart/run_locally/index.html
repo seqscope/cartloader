@@ -327,6 +327,26 @@
   
 
       
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../faq/intro/" class="md-tabs__link">
+          
+  
+    
+  
+  FAQ
+
+        </a>
+      </li>
+    
+  
+
+      
     </ul>
   </div>
 </nav>
@@ -669,30 +689,6 @@
       Upload to Data Repository
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="Upload to Data Repository">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#aws-uploads" class="md-nav__link">
-    <span class="md-ellipsis">
-      AWS Uploads
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#zenodo-uploads" class="md-nav__link">
-    <span class="md-ellipsis">
-      Zenodo Uploads
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -1315,6 +1311,8 @@
       
         
       
+        
+      
     
     
       
@@ -1380,11 +1378,33 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/sge_addon/" class="md-nav__link">
+      <a href="../../../reference/sge_stitch/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
-    SGE Preparation Add-ons
+    SGE Stitching
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/sge_orientate/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    SGE Reorientation
     
   </span>
   
@@ -2068,6 +2088,82 @@
   
 
     
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    FAQ
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            FAQ
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../faq/intro/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
   </ul>
 </nav>
                   </div>
@@ -2178,30 +2274,6 @@
       Upload to Data Repository
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="Upload to Data Repository">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#aws-uploads" class="md-nav__link">
-    <span class="md-ellipsis">
-      AWS Uploads
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#zenodo-uploads" class="md-nav__link">
-    <span class="md-ellipsis">
-      Zenodo Uploads
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -2676,16 +2748,17 @@ cartloader run_cartload2 \
 <hr />
 <h2 id="upload-to-data-repository">Upload to Data Repository<a class="headerlink" href="#upload-to-data-repository" title="Permanent link">&para;</a></h2>
 <!--section1-start-->
-
 <div class="admonition info">
 <p class="admonition-title">Choose a data repository to host/share your output</p>
 <p><code>CartLoader</code> supports two upload options (<code>AWS</code> and <code>Zenodo</code>) for storing <abbr title="Single-file archive format for map tiles and web visualization">PMTiles</abbr> of <abbr title="Spatial Digital Gene Expression">SGE</abbr> and spatial factors in a data repository.</p>
 <p><strong>Choose the one that best suits your needs.</strong></p>
 </div>
-<h3 id="aws-uploads">AWS Uploads<a class="headerlink" href="#aws-uploads" title="Permanent link">&para;</a></h3>
-<p>Upload the generated <code>CartLoader</code> outputs to your designated AWS S3 directory:</p>
 <!--section1-end-->
 
+<div class="tabbed-set tabbed-alternate" data-tabs="2:2"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">AWS Uploads</label><label for="__tabbed_2_2">Zenodo Uploads</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<p>Upload the generated <code>CartLoader</code> outputs to your designated AWS S3 directory:
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
 <span class="normal">3</span>
@@ -2701,7 +2774,7 @@ cartloader<span class="w"> </span>upload_aws<span class="w"> </span><span class=
 <span class="w">  </span>--s3-dir<span class="w"> </span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">S3_DIR</span><span class="si">}</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--aws<span class="w"> </span><span class="si">${</span><span class="nv">aws</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--n-jobs<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span>
-</code></pre></div></td></tr></table></div>
+</code></pre></div></td></tr></table></div></p>
 <table>
 <thead>
 <tr>
@@ -2738,11 +2811,9 @@ cartloader<span class="w"> </span>upload_aws<span class="w"> </span><span class=
 </tr>
 </tbody>
 </table>
-<!--section2-start-->
-<h3 id="zenodo-uploads">Zenodo Uploads<a class="headerlink" href="#zenodo-uploads" title="Permanent link">&para;</a></h3>
+</div>
+<div class="tabbed-block">
 <p>Upload the generated <code>CartLoader</code> outputs to your designated Zenodo deposition or a new deposition.</p>
-<!--section2-end-->
-
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
 <span class="normal">3</span>
@@ -2761,7 +2832,6 @@ cartloader<span class="w"> </span>upload_zenodo<span class="w"> </span><span cla
 <span class="w">  </span>--creators<span class="w"> </span><span class="s2">&quot;Your Name&quot;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--description<span class="w"> </span><span class="s2">&quot;This is an example description&quot;</span>
 </code></pre></div></td></tr></table></div>
-<!--section3-start-->
 <table>
 <thead>
 <tr>
@@ -2810,8 +2880,9 @@ cartloader<span class="w"> </span>upload_zenodo<span class="w"> </span><span cla
 </tr>
 </tbody>
 </table>
-<!--section3-end-->
-
+</div>
+</div>
+</div>
 <hr />
 <h2 id="output-data">Output Data<a class="headerlink" href="#output-data" title="Permanent link">&para;</a></h2>
 <div class="grid cards generic">

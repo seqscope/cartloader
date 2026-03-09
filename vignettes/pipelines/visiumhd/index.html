@@ -327,6 +327,26 @@
   
 
       
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../faq/intro/" class="md-tabs__link">
+          
+  
+    
+  
+  FAQ
+
+        </a>
+      </li>
+    
+  
+
+      
     </ul>
   </div>
 </nav>
@@ -1057,6 +1077,30 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Example Runs">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#run-pipeline-locally" class="md-nav__link">
+    <span class="md-ellipsis">
+      Run Pipeline Locally
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#run-pipeline-via-docker" class="md-nav__link">
+    <span class="md-ellipsis">
+      Run Pipeline via Docker
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1273,6 +1317,8 @@
       
         
       
+        
+      
     
     
       
@@ -1338,11 +1384,33 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/sge_addon/" class="md-nav__link">
+      <a href="../../../reference/sge_stitch/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
-    SGE Preparation Add-ons
+    SGE Stitching
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/sge_orientate/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    SGE Reorientation
     
   </span>
   
@@ -2026,6 +2094,82 @@
   
 
     
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    FAQ
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            FAQ
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../faq/intro/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
   </ul>
 </nav>
                   </div>
@@ -2100,6 +2244,30 @@
       Example Runs
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Example Runs">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#run-pipeline-locally" class="md-nav__link">
+    <span class="md-ellipsis">
+      Run Pipeline Locally
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#run-pipeline-via-docker" class="md-nav__link">
+    <span class="md-ellipsis">
+      Run Pipeline via Docker
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -2483,16 +2651,14 @@ ENSMUSG00000089699,Gm1992,0.00003369899313325135,2.372528175774452,0.49812531917
 <span class="c1"># Path to AWS S3 directory</span>
 <span class="nv">S3_DIR</span><span class="o">=</span>/s3/path/to/s3/dir<span class="w">                </span><span class="c1"># Recommend to use DATA_ID as directory name, such as s3://bucket-name/visiumhd-3prime-mouse-brain</span>
 </code></pre></div></td></tr></table></div>
-<div class="admonition info">
+<div class="admonition question">
 <p class="admonition-title">How to define scaling for Visium HD?</p>
 <p>10x Visium HD provides <code>scalefactors_json.json</code> (pixel‑to‑<abbr title="micrometer">µm</abbr>). <code>CartLoader</code> accepts it via <code>--scale-json</code> and computes the scaling automatically, so you don’t need to manually specify <code>--units-per-um</code>.</p>
 <p>Alternatively, provide the scale directly with <code>--units-per-um</code>.</p>
 </div>
 <h2 id="example-runs">Example Runs<a class="headerlink" href="#example-runs" title="Permanent link">&para;</a></h2>
 <p>Choose one of the following options to run the <code>run_visiumhd</code> pipeline, either locally or with Docker.</p>
-<div class="tabbed-set tabbed-alternate" data-tabs="3:2"><input checked="checked" id="__tabbed_3_1" name="__tabbed_3" type="radio" /><input id="__tabbed_3_2" name="__tabbed_3" type="radio" /><div class="tabbed-labels"><label for="__tabbed_3_1">Run Pipeline Locally</label><label for="__tabbed_3_2">Run Pipeline via Docker</label></div>
-<div class="tabbed-content">
-<div class="tabbed-block">
+<h3 id="run-pipeline-locally">Run Pipeline Locally<a class="headerlink" href="#run-pipeline-locally" title="Permanent link">&para;</a></h3>
 <p><strong>Set Up Environment</strong>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
@@ -2559,35 +2725,41 @@ conda<span class="w"> </span>activate<span class="w"> </span>ENV_NAME<span class
 <span class="normal">18</span>
 <span class="normal">19</span>
 <span class="normal">20</span>
-<span class="normal">21</span></pre></div></td><td class="code"><div><pre><span></span><code>cartloader<span class="w"> </span>run_visiumhd<span class="w"> </span><span class="se">\</span>
---load-space-ranger<span class="w"> </span><span class="se">\</span>
---sge-convert<span class="w"> </span><span class="se">\</span>
---run-ficture2<span class="w"> </span><span class="se">\</span>
---import-cells<span class="w"> </span><span class="se">\</span>
---import-images<span class="w"> </span><span class="se">\</span>
---run-cartload2<span class="w"> </span><span class="se">\</span>
---upload-aws<span class="w"> </span><span class="se">\</span>
---space-ranger-dir<span class="w"> </span>/path/to/space/ranger/output<span class="w"> </span><span class="se">\</span>
---out-dir<span class="w"> </span>/path/to/out/dir<span class="w"> </span><span class="se">\</span>
---s3-dir<span class="w"> </span><span class="si">${</span><span class="nv">S3_DIR</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
---width<span class="w"> </span><span class="si">${</span><span class="nv">train_width</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
---n-factor<span class="w"> </span><span class="si">${</span><span class="nv">n_factor</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
---id<span class="w"> </span><span class="si">${</span><span class="nv">DATA_ID</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
---spatula<span class="w"> </span><span class="si">${</span><span class="nv">spatula</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
---ficture2<span class="w"> </span><span class="si">${</span><span class="nv">punkst</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
---pmtiles<span class="w"> </span><span class="si">${</span><span class="nv">pmtiles</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
---tippecanoe<span class="w"> </span><span class="si">${</span><span class="nv">tippecanoe</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
---aws<span class="w"> </span><span class="si">${</span><span class="nv">aws</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
---n-jobs<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
---threads<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span>
+<span class="normal">21</span>
+<span class="normal">22</span>
+<span class="normal">23</span>
+<span class="normal">24</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nb">cd</span><span class="w"> </span><span class="nv">$work_dir</span>
+mkdir<span class="w"> </span>-p<span class="w"> </span><span class="si">${</span><span class="nv">work_dir</span><span class="si">}</span>/output
+
+cartloader<span class="w"> </span>run_visiumhd<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--load-space-ranger<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--sge-convert<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--run-ficture2<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--import-cells<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--import-images<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--run-cartload2<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--upload-aws<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--space-ranger-dir<span class="w"> </span><span class="si">${</span><span class="nv">work_dir</span><span class="si">}</span>/raw<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--out-dir<span class="w"> </span><span class="si">${</span><span class="nv">work_dir</span><span class="si">}</span>/output<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--s3-dir<span class="w"> </span><span class="si">${</span><span class="nv">S3_DIR</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--width<span class="w"> </span><span class="si">${</span><span class="nv">train_width</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--n-factor<span class="w"> </span><span class="si">${</span><span class="nv">n_factor</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--id<span class="w"> </span><span class="si">${</span><span class="nv">DATA_ID</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--spatula<span class="w"> </span><span class="si">${</span><span class="nv">spatula</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--ficture2<span class="w"> </span><span class="si">${</span><span class="nv">punkst</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--pmtiles<span class="w"> </span><span class="si">${</span><span class="nv">pmtiles</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--tippecanoe<span class="w"> </span><span class="si">${</span><span class="nv">tippecanoe</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--aws<span class="w"> </span><span class="si">${</span><span class="nv">aws</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--n-jobs<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--threads<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span>
 </code></pre></div></td></tr></table></div></p>
-</div>
-<div class="tabbed-block">
+<hr />
+<h3 id="run-pipeline-via-docker">Run Pipeline via Docker<a class="headerlink" href="#run-pipeline-via-docker" title="Permanent link">&para;</a></h3>
 <p><strong>Set Up Environment</strong></p>
-<p>Define paths to all required binaries and resources in Docker.</p>
 <div class="admonition warning">
 <p class="admonition-title">Fixed paths in the Docker Image</p>
-<p>Tools and dependencies have fixed paths in the Docker image (for example, <code>/usr/local/bin/pmtiles</code>), which are used directly in the commands below. Skip specifying them manually.</p>
+<p>Tools and dependencies have <strong>fixed</strong> paths in the Docker image (for example, <code>/usr/local/bin/pmtiles</code>).</p>
+<p>DO <strong>NOT</strong> modify paths of tools and dependencies manually.</p>
 </div>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
@@ -2655,34 +2827,37 @@ conda<span class="w"> </span>activate<span class="w"> </span>ENV_NAME<span class
 <span class="normal">21</span>
 <span class="normal">22</span>
 <span class="normal">23</span>
-<span class="normal">24</span></pre></div></td><td class="code"><div><pre><span></span><code>docker<span class="w"> </span>run<span class="w"> </span>-it<span class="w"> </span>--rm<span class="w"> </span><span class="se">\</span>
--v<span class="w"> </span><span class="si">${</span><span class="nv">work_dir</span><span class="si">}</span>:/data<span class="w"> </span><span class="se">\</span>
-weiqiuc/cartloader:<span class="si">${</span><span class="nv">docker_tag</span><span class="si">}</span><span class="se">\</span>
-run_visiumhd<span class="w"> </span><span class="se">\</span>
---load-space-ranger<span class="w"> </span><span class="se">\</span>
---sge-convert<span class="w"> </span><span class="se">\</span>
---run-ficture2<span class="w"> </span><span class="se">\</span>
---import-cells<span class="w"> </span><span class="se">\</span>
---import-images<span class="w"> </span><span class="se">\</span>
---run-cartload2<span class="w"> </span><span class="se">\</span>
---upload-aws<span class="w"> </span><span class="se">\</span>
---space-ranger-dir<span class="w"> </span>/data/raw<span class="w"> </span><span class="se">\</span>
---out-dir<span class="w"> </span>/data/output<span class="w"> </span><span class="se">\</span>
---s3-dir<span class="w"> </span><span class="si">${</span><span class="nv">S3_DIR</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
---width<span class="w"> </span><span class="si">${</span><span class="nv">train_width</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
---n-factor<span class="w"> </span><span class="si">${</span><span class="nv">n_factor</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
---id<span class="w"> </span><span class="si">${</span><span class="nv">DATA_ID</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
---spatula<span class="w"> </span><span class="si">${</span><span class="nv">spatula</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
---ficture2<span class="w"> </span><span class="si">${</span><span class="nv">punkst</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
---pmtiles<span class="w"> </span><span class="si">${</span><span class="nv">pmtiles</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
---tippecanoe<span class="w"> </span><span class="si">${</span><span class="nv">tippecanoe</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
---aws<span class="w"> </span><span class="si">${</span><span class="nv">aws</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
---n-jobs<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
---threads<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span>
+<span class="normal">24</span>
+<span class="normal">25</span>
+<span class="normal">26</span>
+<span class="normal">27</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nb">cd</span><span class="w"> </span><span class="si">${</span><span class="nv">work_dir</span><span class="si">}</span>
+mkdir<span class="w"> </span>-p<span class="w"> </span><span class="si">${</span><span class="nv">work_dir</span><span class="si">}</span>/output
+
+docker<span class="w"> </span>run<span class="w"> </span>-it<span class="w"> </span>--rm<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-v<span class="w"> </span><span class="si">${</span><span class="nv">work_dir</span><span class="si">}</span>:/data<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>weiqiuc/cartloader:<span class="si">${</span><span class="nv">docker_tag</span><span class="si">}</span><span class="se">\</span>
+<span class="w">    </span>run_visiumhd<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--load-space-ranger<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--sge-convert<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--run-ficture2<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--import-cells<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--import-images<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--run-cartload2<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--upload-aws<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--space-ranger-dir<span class="w"> </span>/data/raw<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--out-dir<span class="w"> </span>/data/output<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--s3-dir<span class="w"> </span><span class="si">${</span><span class="nv">S3_DIR</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--width<span class="w"> </span><span class="si">${</span><span class="nv">train_width</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--n-factor<span class="w"> </span><span class="si">${</span><span class="nv">n_factor</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--id<span class="w"> </span><span class="si">${</span><span class="nv">DATA_ID</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--spatula<span class="w"> </span><span class="si">${</span><span class="nv">spatula</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--ficture2<span class="w"> </span><span class="si">${</span><span class="nv">punkst</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--pmtiles<span class="w"> </span><span class="si">${</span><span class="nv">pmtiles</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--tippecanoe<span class="w"> </span><span class="si">${</span><span class="nv">tippecanoe</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--aws<span class="w"> </span><span class="si">${</span><span class="nv">aws</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--n-jobs<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--threads<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span>
 </code></pre></div></td></tr></table></div>
-</div>
-</div>
-</div>
 <hr />
 <h2 id="customize-parameters">Customize Parameters<a class="headerlink" href="#customize-parameters" title="Permanent link">&para;</a></h2>
 <p><strong>Action Flags to Enable Modules</strong></p>

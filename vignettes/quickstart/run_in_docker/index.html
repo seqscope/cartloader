@@ -327,6 +327,26 @@
   
 
       
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../faq/intro/" class="md-tabs__link">
+          
+  
+    
+  
+  FAQ
+
+        </a>
+      </li>
+    
+  
+
+      
     </ul>
   </div>
 </nav>
@@ -656,30 +676,6 @@
       Upload to Data Repository
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="Upload to Data Repository">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#aws-uploads" class="md-nav__link">
-    <span class="md-ellipsis">
-      AWS Uploads
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#zenodo-uploads" class="md-nav__link">
-    <span class="md-ellipsis">
-      Zenodo Uploads
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -1324,6 +1320,8 @@
       
         
       
+        
+      
     
     
       
@@ -1389,11 +1387,33 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/sge_addon/" class="md-nav__link">
+      <a href="../../../reference/sge_stitch/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
-    SGE Preparation Add-ons
+    SGE Stitching
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/sge_orientate/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    SGE Reorientation
     
   </span>
   
@@ -2077,6 +2097,82 @@
   
 
     
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    FAQ
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            FAQ
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../faq/intro/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
   </ul>
 </nav>
                   </div>
@@ -2197,30 +2293,6 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Upload to Data Repository">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#aws-uploads" class="md-nav__link">
-    <span class="md-ellipsis">
-      AWS Uploads
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#zenodo-uploads" class="md-nav__link">
-    <span class="md-ellipsis">
-      Zenodo Uploads
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
 </li>
       
         <li class="md-nav__item">
@@ -2281,10 +2353,10 @@ docker<span class="w"> </span>run<span class="w"> </span>hello-world
 <p>If these commands fail, <a href="https://docs.docker.com/get-docker/">install Docker</a> on your system.</p>
 <hr />
 <h2 id="set-up-environment">Set Up Environment<a class="headerlink" href="#set-up-environment" title="Permanent link">&para;</a></h2>
-<p>Define paths to all required binaries and resources in Docker.</p>
 <div class="admonition warning">
 <p class="admonition-title">Fixed paths in the Docker Image</p>
-<p>Tools and dependencies have fixed paths in the Docker image (for example, <code>/usr/local/bin/pmtiles</code>), which are used directly in the commands below. Skip specifying them manually.</p>
+<p>Tools and dependencies have <strong>fixed</strong> paths in the Docker image (for example, <code>/usr/local/bin/pmtiles</code>).</p>
+<p>DO <strong>NOT</strong> modify paths of tools and dependencies manually.</p>
 </div>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
@@ -2683,8 +2755,10 @@ ymax    1439.95
 <p><code>CartLoader</code> supports two upload options (<code>AWS</code> and <code>Zenodo</code>) for storing <abbr title="Single-file archive format for map tiles and web visualization">PMTiles</abbr> of <abbr title="Spatial Digital Gene Expression">SGE</abbr> and spatial factors in a data repository.</p>
 <p><strong>Choose the one that best suits your needs.</strong></p>
 </div>
-<h3 id="aws-uploads">AWS Uploads<a class="headerlink" href="#aws-uploads" title="Permanent link">&para;</a></h3>
-<p>Upload the generated <code>CartLoader</code> outputs to your designated AWS S3 directory:</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">AWS Uploads</label><label for="__tabbed_1_2">Zenodo Uploads</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<p>Upload the generated <code>CartLoader</code> outputs to your designated AWS S3 directory:
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -2695,20 +2769,57 @@ ymax    1439.95
 <span class="normal"> 8</span>
 <span class="normal"> 9</span>
 <span class="normal">10</span>
-<span class="normal">11</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># AWS S3 target location for cartostore</span>
-<span class="nv">AWS_BUCKET</span><span class="o">=</span><span class="s2">&quot;EXAMPLE_AWS_BUCKET&quot;</span><span class="w">         </span><span class="c1"># replace EXAMPLE_AWS_BUCKET with your actual S3 bucket name</span>
+<span class="normal">11</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># AWS S3 target location </span>
+<span class="nv">S3_DIR</span><span class="o">=</span>/s3/path/to/s3/dir<span class="w">              </span><span class="c1"># Recommend to use DATA_ID as directory name, such as s3://bucket_name/test-data</span>
 
 docker<span class="w"> </span>run<span class="w"> </span>-it<span class="w"> </span>--rm<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-v<span class="w"> </span><span class="k">$(</span><span class="nb">pwd</span><span class="k">)</span>:/data<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>weiqiuc/cartloader:<span class="si">${</span><span class="nv">docker_tag</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>upload_aws<span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>--in-dir<span class="w"> </span>/data/cartload2<span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>--s3-dir<span class="w"> </span><span class="s2">&quot;s3://</span><span class="si">${</span><span class="nv">AWS_BUCKET</span><span class="si">}</span><span class="s2">/</span><span class="si">${</span><span class="nv">DATA_ID</span><span class="si">}</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>--aws<span class="w"> </span><span class="si">${</span><span class="nv">aws</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>--n-jobs<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span>
-</code></pre></div></td></tr></table></div>
-<h3 id="zenodo-uploads">Zenodo Uploads<a class="headerlink" href="#zenodo-uploads" title="Permanent link">&para;</a></h3>
-<p>Upload the generated <code>CartLoader</code> outputs to your designated Zenodo deposition or a new deposition.</p>
+<span class="w">  </span>--in-dir<span class="w"> </span>/data/cartload2<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--s3-dir<span class="w"> </span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">S3_DIR</span><span class="si">}</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--aws<span class="w"> </span><span class="si">${</span><span class="nv">aws</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--n-jobs<span class="w"> </span><span class="si">${</span><span class="nv">n_jobs</span><span class="si">}</span>
+</code></pre></div></td></tr></table></div></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Required</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--in-dir</code></td>
+<td>required</td>
+<td>string</td>
+<td>Path to the input directory containing the <code>CartLoader</code> asset packaging output</td>
+</tr>
+<tr>
+<td><code>--s3-dir</code></td>
+<td>required</td>
+<td>string</td>
+<td>Path to the target S3 directory for uploading</td>
+</tr>
+<tr>
+<td><code>--aws</code></td>
+<td></td>
+<td>string</td>
+<td>Path to the AWS CLI binary</td>
+</tr>
+<tr>
+<td><code>--n-jobs</code></td>
+<td></td>
+<td>int</td>
+<td>Number of parallel jobs</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="tabbed-block">
+<p>Upload the generated <code>CartLoader</code> outputs to your designated Zenodo deposition or a new deposition.
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -2732,7 +2843,7 @@ docker<span class="w"> </span>run<span class="w"> </span>-it<span class="w"> </s
 <span class="w">    </span>--title<span class="w">  </span><span class="s2">&quot;Your Title&quot;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>--creators<span class="w"> </span><span class="s2">&quot;Your Name&quot;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>--description<span class="w"> </span><span class="s2">&quot;This is an example description&quot;</span>
-</code></pre></div></td></tr></table></div>
+</code></pre></div></td></tr></table></div></p>
 <table>
 <thead>
 <tr>
@@ -2781,6 +2892,9 @@ docker<span class="w"> </span>run<span class="w"> </span>-it<span class="w"> </s
 </tr>
 </tbody>
 </table>
+</div>
+</div>
+</div>
 <hr />
 <h2 id="output-data">Output Data<a class="headerlink" href="#output-data" title="Permanent link">&para;</a></h2>
 <div class="grid cards generic">

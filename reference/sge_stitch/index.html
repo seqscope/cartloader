@@ -8,13 +8,13 @@
       
       
       
-        <link rel="canonical" href="https://seqscope.github.io/cartloader/reference/sge_addon/">
+        <link rel="canonical" href="https://seqscope.github.io/cartloader/reference/sge_stitch/">
       
       
         <link rel="prev" href="../sge_convert/">
       
       
-        <link rel="next" href="../run_ficture2/">
+        <link rel="next" href="../sge_orientate/">
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
@@ -22,7 +22,7 @@
     
     
       
-        <title>SGE Preparation Add-ons - cartloader</title>
+        <title>SGE Stitching - cartloader</title>
       
     
     
@@ -82,7 +82,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#sge-add-on-modules" class="md-skip">
+        <a href="#sge-stitching-sge_stitch" class="md-skip">
           Skip to content
         </a>
       
@@ -116,7 +116,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              SGE Preparation Add-ons
+              SGE Stitching
             
           </span>
         </div>
@@ -320,6 +320,26 @@
     
   
   References
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../faq/intro/" class="md-tabs__link">
+          
+  
+    
+  
+  FAQ
 
         </a>
       </li>
@@ -1156,6 +1176,8 @@
       
         
       
+        
+      
     
     
       
@@ -1235,7 +1257,7 @@
           
   
   <span class="md-ellipsis">
-    SGE Preparation Add-ons
+    SGE Stitching
     
   </span>
   
@@ -1247,7 +1269,7 @@
         
   
   <span class="md-ellipsis">
-    SGE Preparation Add-ons
+    SGE Stitching
     
   </span>
   
@@ -1288,68 +1310,11 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#actions" class="md-nav__link">
-    <span class="md-ellipsis">
-      Actions
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Actions">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#reorient-sge-sge_orientate" class="md-nav__link">
-    <span class="md-ellipsis">
-      Reorient SGE (sge_orientate)
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#stitch-multiple-sge-datasets-sge_stitch" class="md-nav__link">
-    <span class="md-ellipsis">
-      Stitch Multiple SGE Datasets (sge_stitch)
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#example-usage" class="md-nav__link">
     <span class="md-ellipsis">
       Example Usage
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="Example Usage">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#reorient-sge" class="md-nav__link">
-    <span class="md-ellipsis">
-      Reorient SGE
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#stitch-multiple-sge-datasets" class="md-nav__link">
-    <span class="md-ellipsis">
-      Stitch Multiple SGE Datasets
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -1364,18 +1329,36 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#reorient-sge_1" class="md-nav__link">
+  <a href="#sge-stitch" class="md-nav__link">
     <span class="md-ellipsis">
-      Reorient SGE
+      SGE Stitch
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#stitch-multiple-sge-datasets_1" class="md-nav__link">
+  <a href="#density-based-filtering" class="md-nav__link">
     <span class="md-ellipsis">
-      Stitch Multiple SGE Datasets
+      Density-based Filtering
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sge-visualization" class="md-nav__link">
+    <span class="md-ellipsis">
+      SGE Visualization
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#environment-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      Environment Parameters
     </span>
   </a>
   
@@ -1393,36 +1376,34 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Output">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#reorient-sge_2" class="md-nav__link">
-    <span class="md-ellipsis">
-      Reorient SGE
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#stitch-multiple-sge-datasets_2" class="md-nav__link">
-    <span class="md-ellipsis">
-      Stitch Multiple SGE Datasets
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
 </li>
       
     </ul>
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../sge_orientate/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    SGE Reorientation
+    
+  </span>
+  
+
+      </a>
     </li>
   
 
@@ -2113,6 +2094,82 @@
   
 
     
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    FAQ
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            FAQ
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../faq/intro/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
   </ul>
 </nav>
                   </div>
@@ -2158,68 +2215,11 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#actions" class="md-nav__link">
-    <span class="md-ellipsis">
-      Actions
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Actions">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#reorient-sge-sge_orientate" class="md-nav__link">
-    <span class="md-ellipsis">
-      Reorient SGE (sge_orientate)
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#stitch-multiple-sge-datasets-sge_stitch" class="md-nav__link">
-    <span class="md-ellipsis">
-      Stitch Multiple SGE Datasets (sge_stitch)
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#example-usage" class="md-nav__link">
     <span class="md-ellipsis">
       Example Usage
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="Example Usage">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#reorient-sge" class="md-nav__link">
-    <span class="md-ellipsis">
-      Reorient SGE
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#stitch-multiple-sge-datasets" class="md-nav__link">
-    <span class="md-ellipsis">
-      Stitch Multiple SGE Datasets
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -2234,18 +2234,36 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#reorient-sge_1" class="md-nav__link">
+  <a href="#sge-stitch" class="md-nav__link">
     <span class="md-ellipsis">
-      Reorient SGE
+      SGE Stitch
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#stitch-multiple-sge-datasets_1" class="md-nav__link">
+  <a href="#density-based-filtering" class="md-nav__link">
     <span class="md-ellipsis">
-      Stitch Multiple SGE Datasets
+      Density-based Filtering
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sge-visualization" class="md-nav__link">
+    <span class="md-ellipsis">
+      SGE Visualization
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#environment-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      Environment Parameters
     </span>
   </a>
   
@@ -2262,30 +2280,6 @@
       Output
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="Output">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#reorient-sge_2" class="md-nav__link">
-    <span class="md-ellipsis">
-      Reorient SGE
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#stitch-multiple-sge-datasets_2" class="md-nav__link">
-    <span class="md-ellipsis">
-      Stitch Multiple SGE Datasets
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -2308,50 +2302,18 @@
   
 
 
-<h1 id="sge-add-on-modules"><abbr title="Spatial Digital Gene Expression">SGE</abbr> Add-on Modules<a class="headerlink" href="#sge-add-on-modules" title="Permanent link">&para;</a></h1>
+<h1 id="sge-stitching-sge_stitch"><abbr title="Spatial Digital Gene Expression">SGE</abbr> Stitching (<code>sge_stitch</code>)<a class="headerlink" href="#sge-stitching-sge_stitch" title="Permanent link">&para;</a></h1>
 <h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
-<p><code>CartLoader</code> provides add-on modules to support specialized <abbr title="Spatial Digital Gene Expression">SGE</abbr> preparation tasks that complement <code>sge_convert</code>:</p>
-<ul>
-<li><a href="#reorient-sge-rotateflip"><code>sge_orientate</code></a>: Rotate/flip <abbr title="Spatial Digital Gene Expression">SGE</abbr> coordinates (e.g., to match image orientation).</li>
-<li><a href="#stitch-multiple-sge-datasets"><code>sge_stitch</code></a>: Stitch two or more <abbr title="Spatial Digital Gene Expression">SGE</abbr> datasets into one.</li>
-</ul>
+<p><code>sge_stitch</code> stitches two or more <abbr title="Spatial Digital Gene Expression">SGE</abbr> datasets into a single <abbr title="Spatial Digital Gene Expression">SGE</abbr>, with optional per-tile orientation.
+It can also run density-based filtering and quick visualization.</p>
 <hr />
 <h2 id="requirements">Requirements<a class="headerlink" href="#requirements" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Input <abbr title="Spatial Digital Gene Expression">SGE</abbr>(s) in the unified format (from <a href="../sge_convert/"><abbr title="Spatial Digital Gene Expression">SGE</abbr> format conversion</a>)</li>
+<li>Input SGEs in the unified format (from <a href="../sge_convert/"><abbr title="Spatial Digital Gene Expression">SGE</abbr> format conversion</a>)</li>
 <li>Pre-installed tools: <code>gzip</code>, <code>spatula</code>, <code>gdal_translate</code>, <code>gdalwarp</code></li>
 </ul>
 <hr />
-<h2 id="actions">Actions<a class="headerlink" href="#actions" title="Permanent link">&para;</a></h2>
-<h3 id="reorient-sge-sge_orientate">Reorient <abbr title="Spatial Digital Gene Expression">SGE</abbr> (<code>sge_orientate</code>)<a class="headerlink" href="#reorient-sge-sge_orientate" title="Permanent link">&para;</a></h3>
-<p>Rotations are clockwise; flips are applied after rotation.</p>
-<h3 id="stitch-multiple-sge-datasets-sge_stitch">Stitch Multiple <abbr title="Spatial Digital Gene Expression">SGE</abbr> Datasets (<code>sge_stitch</code>)<a class="headerlink" href="#stitch-multiple-sge-datasets-sge_stitch" title="Permanent link">&para;</a></h3>
-<p>Stitch two or more <abbr title="Spatial Digital Gene Expression">SGE</abbr> datasets into a single <abbr title="Spatial Digital Gene Expression">SGE</abbr>, with optional per‑tile orientation. Can also run density‑based filtering and quick visualization.</p>
-<hr />
 <h2 id="example-usage">Example Usage<a class="headerlink" href="#example-usage" title="Permanent link">&para;</a></h2>
-<h3 id="reorient-sge">Reorient <abbr title="Spatial Digital Gene Expression">SGE</abbr><a class="headerlink" href="#reorient-sge" title="Permanent link">&para;</a></h3>
-<p>Below is an example with 90° rotation and a horizontal flip.</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
-<span class="normal"> 2</span>
-<span class="normal"> 3</span>
-<span class="normal"> 4</span>
-<span class="normal"> 5</span>
-<span class="normal"> 6</span>
-<span class="normal"> 7</span>
-<span class="normal"> 8</span>
-<span class="normal"> 9</span>
-<span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nv">OUT_PREFIX</span><span class="o">=</span>r90_hflip<span class="w">                </span><span class="c1"># Replace r90_hflip with your prefix</span>
-cartloader<span class="w"> </span>sge_orientate<span class="w">  </span><span class="se">\</span>
-<span class="w">    </span>--in-transcript<span class="w"> </span>/path/to/transcripts.unsorted.tsv.gz<span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>--in-feature<span class="w">  </span>/path/to/feature.clean.tsv.gz<span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>--in-minmax<span class="w"> </span>/path/to/coordinate_minmax.tsv<span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>--out-transcript<span class="w"> </span>/path/to/<span class="si">${</span><span class="nv">OUT_PREFIX</span><span class="si">}</span>.transcripts.unsorted.tsv.gz<span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>--out-feature<span class="w"> </span>/path/to/<span class="si">${</span><span class="nv">OUT_PREFIX</span><span class="si">}</span>.feature.clean.tsv.gz<span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>--out-minmax<span class="w">  </span>/path/to/<span class="si">${</span><span class="nv">OUT_PREFIX</span><span class="si">}</span>.coordinate_minmax.tsv<span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>--rotate<span class="w"> </span><span class="m">90</span><span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>--flip-horizontal
-</code></pre></div></td></tr></table></div>
-<h3 id="stitch-multiple-sge-datasets">Stitch Multiple <abbr title="Spatial Digital Gene Expression">SGE</abbr> Datasets<a class="headerlink" href="#stitch-multiple-sge-datasets" title="Permanent link">&para;</a></h3>
 <p>Define each input tile as a CSV of paths and tile metadata:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
@@ -2369,25 +2331,7 @@ cartloader<span class="w"> </span>sge_orientate<span class="w">  </span><span cl
 </code></pre></div></td></tr></table></div>
 <hr />
 <h2 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">&para;</a></h2>
-<h3 id="reorient-sge_1">Reorient <abbr title="Spatial Digital Gene Expression">SGE</abbr><a class="headerlink" href="#reorient-sge_1" title="Permanent link">&para;</a></h3>
-<h4 id="inputoutput-parameters">Input/Output Parameters<a class="headerlink" href="#inputoutput-parameters" title="Permanent link">&para;</a></h4>
-<ul>
-<li><code>--in-transcript</code> (str): Path to input transcript <abbr title="Spatial Digital Gene Expression">SGE</abbr> TSV (gzipped).</li>
-<li><code>--in-feature</code> (str): Path to input feature TSV (gzipped).</li>
-<li><code>--in-minmax</code> (str): Path to input coordinate min/max TSV.</li>
-<li><code>--out-transcript</code> (str): Output path for oriented transcript <abbr title="Spatial Digital Gene Expression">SGE</abbr> TSV (gzipped).</li>
-<li><code>--out-feature</code> (str): Output path for feature TSV (copied from input).</li>
-<li><code>--out-minmax</code> (str): Output path for oriented min/max TSV.</li>
-</ul>
-<h4 id="key-parameters">Key Parameters<a class="headerlink" href="#key-parameters" title="Permanent link">&para;</a></h4>
-<ul>
-<li><code>--rotate</code> (90|180|270): Rotate clockwise (applied before flips).</li>
-<li><code>--flip-vertical</code> (flag): Flip vertically (flipped along the Y‑axis; applied after rotation).</li>
-<li><code>--flip-horizontal</code> (flag): Flip horizontally (flipped along the X‑axis; applied after rotation).</li>
-<li><code>--chunk-size</code> (int, default: 1_000_000): Rows per chunk when processing the transcript TSV.</li>
-</ul>
-<h3 id="stitch-multiple-sge-datasets_1">Stitch Multiple <abbr title="Spatial Digital Gene Expression">SGE</abbr> Datasets<a class="headerlink" href="#stitch-multiple-sge-datasets_1" title="Permanent link">&para;</a></h3>
-<h4 id="sge-stitch"><abbr title="Spatial Digital Gene Expression">SGE</abbr> Stitch<a class="headerlink" href="#sge-stitch" title="Permanent link">&para;</a></h4>
+<h3 id="sge-stitch"><abbr title="Spatial Digital Gene Expression">SGE</abbr> Stitch<a class="headerlink" href="#sge-stitch" title="Permanent link">&para;</a></h3>
 <ul>
 <li><code>--out-dir</code> (str): Output directory for stitched (filtered) <abbr title="Spatial Digital Gene Expression">SGE</abbr>, visualizations, and Makefile.</li>
 <li><code>--in-tiles</code> (list of str): One or more tile tuples describing each input tile.</li>
@@ -2398,12 +2342,12 @@ cartloader<span class="w"> </span>sge_orientate<span class="w">  </span><span cl
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code>&quot;transcript_path,feature_path,minmax_path,row,col,rotate,vertical_flip,horizontal_flip&quot;
 </code></pre></div></td></tr></table></div></p>
 <ul>
-<li><code>transcript_path</code> (str): Path to the tile’s transcript‑indexed <abbr title="Spatial Digital Gene Expression">SGE</abbr> TSV.gz.</li>
-<li><code>feature_path</code> (str): Path to the tile’s per‑gene <abbr title="Unique Molecular Identifier">UMI</abbr> count TSV.gz.</li>
-<li><code>minmax_path</code> (str): Path to the tile’s coordinate min/max TSV.</li>
-<li><code>row</code>, <code>col</code> (int): Integer grid indices (0‑based) locating the tile within the stitched mosaic (row = tile grid row, col = tile grid column).</li>
+<li><code>transcript_path</code> (str): Path to the tile's transcript-indexed <abbr title="Spatial Digital Gene Expression">SGE</abbr> TSV.gz.</li>
+<li><code>feature_path</code> (str): Path to the tile's per-gene <abbr title="Unique Molecular Identifier">UMI</abbr> count TSV.gz.</li>
+<li><code>minmax_path</code> (str): Path to the tile's coordinate min/max TSV.</li>
+<li><code>row</code>, <code>col</code> (int): Integer grid indices (0-based) locating the tile within the stitched mosaic (row = tile grid row, col = tile grid column).</li>
 <li><code>rotate</code> (int): One of <code>0</code>, <code>90</code>, <code>180</code>, <code>270</code> (clockwise rotation).</li>
-<li><code>vertical_flip</code>, <code>horizontal_flip</code>: Boolean flags <code>true</code>/<code>false</code> (case‑insensitive); flips are applied after rotation.</li>
+<li><code>vertical_flip</code>, <code>horizontal_flip</code>: Boolean flags <code>true</code>/<code>false</code> (case-insensitive); flips are applied after rotation.</li>
 </ul>
 </div>
 <details class="note">
@@ -2411,10 +2355,10 @@ cartloader<span class="w"> </span>sge_orientate<span class="w">  </span><span cl
 <p>We recommend using default values; override only if needed.</p>
 <p><strong>Auxiliary Output Parameters</strong>:</p>
 <ul>
-<li><code>--out-transcript</code> (str): Output transcript‑indexed <abbr title="Spatial Digital Gene Expression">SGE</abbr> under <code>--out-dir</code> (default: <code>transcripts.unsorted.tsv.gz</code>).</li>
-<li><code>--out-feature</code> (str): Output per‑gene <abbr title="Unique Molecular Identifier">UMI</abbr> counts under <code>--out-dir</code> (default: <code>feature.clean.tsv.gz</code>).</li>
+<li><code>--out-transcript</code> (str): Output transcript-indexed <abbr title="Spatial Digital Gene Expression">SGE</abbr> under <code>--out-dir</code> (default: <code>transcripts.unsorted.tsv.gz</code>).</li>
+<li><code>--out-feature</code> (str): Output per-gene <abbr title="Unique Molecular Identifier">UMI</abbr> counts under <code>--out-dir</code> (default: <code>feature.clean.tsv.gz</code>).</li>
 <li><code>--out-minmax</code> (str): Output coordinate min/max TSV under <code>--out-dir</code> (default: <code>coordinate_minmax.tsv</code>).</li>
-<li><code>--out-tile-minmax</code> (str): Output per‑tile min/max TSV (default: <code>coordinate_minmax_per_tile.tsv</code>).</li>
+<li><code>--out-tile-minmax</code> (str): Output per-tile min/max TSV (default: <code>coordinate_minmax_per_tile.tsv</code>).</li>
 <li><code>--out-json</code> (str): Output JSON summarizing <abbr title="Spatial Digital Gene Expression">SGE</abbr> assets (default: <code>&lt;out-dir&gt;/sge_assets.json</code>).</li>
 </ul>
 <p><strong>Auxiliary Colname Parameters</strong>:</p>
@@ -2427,17 +2371,17 @@ cartloader<span class="w"> </span>sge_orientate<span class="w">  </span><span cl
 </ul>
 <p><strong>Auxiliary Scale and Precision Parameters</strong>:</p>
 <ul>
-<li><code>--units-per-um</code> (float): Coordinate units per <abbr title="micrometer">µm</abbr> for global transform (default: 1.0). If input <abbr title="Spatial Digital Gene Expression">SGE</abbr> is generated by <code>sge_convert</code>, use the default value.</li>
+<li><code>--units-per-um</code> (float): Coordinate units per um for global transform (default: 1.0). If input <abbr title="Spatial Digital Gene Expression">SGE</abbr> is generated by <code>sge_convert</code>, use the default value.</li>
 <li><code>--precision</code> (int): Decimal precision for stitched coordinates (default: 2).</li>
 </ul>
 </details>
-<h4 id="densitybased-filtering">Density‑based Filtering<a class="headerlink" href="#densitybased-filtering" title="Permanent link">&para;</a></h4>
+<h3 id="density-based-filtering">Density-based Filtering<a class="headerlink" href="#density-based-filtering" title="Permanent link">&para;</a></h3>
 <ul>
 <li><code>--filter-by-density</code> (flag): Enable <abbr title="Spatial Digital Gene Expression">SGE</abbr> filtering by density.</li>
 <li><code>--out-filtered-prefix</code> (str): Prefix for output filtered <abbr title="Spatial Digital Gene Expression">SGE</abbr> files (default: filtered).</li>
 </ul>
 <details class="note">
-<summary>Auxiliary Density‑based Filtering Parameters</summary>
+<summary>Auxiliary Density-based Filtering Parameters</summary>
 <p>We recommend using default values; override only if needed.</p>
 <ul>
 <li><code>--radius</code> (int): Radius for the polygon area calculation (default: 15).</li>
@@ -2446,34 +2390,31 @@ cartloader<span class="w"> </span>sge_orientate<span class="w">  </span><span cl
 <li><code>--polygon-min-size</code> (int): Minimum polygon size (default: 500).</li>
 </ul>
 </details>
-<h4 id="sge-visualization"><abbr title="Spatial Digital Gene Expression">SGE</abbr> Visualization<a class="headerlink" href="#sge-visualization" title="Permanent link">&para;</a></h4>
+<h3 id="sge-visualization"><abbr title="Spatial Digital Gene Expression">SGE</abbr> Visualization<a class="headerlink" href="#sge-visualization" title="Permanent link">&para;</a></h3>
 <ul>
 <li><code>--sge-visual</code> (flag): Enable <abbr title="Spatial Digital Gene Expression">SGE</abbr> visualization.</li>
-<li><code>--north-up</code> (flag): Enable north‑up orientation for the <abbr title="Spatial Digital Gene Expression">SGE</abbr> visualization.</li>
+<li><code>--north-up</code> (flag): Enable north-up orientation for the <abbr title="Spatial Digital Gene Expression">SGE</abbr> visualization.</li>
 </ul>
 <details class="note">
 <summary>Auxiliary <abbr title="Spatial Digital Gene Expression">SGE</abbr> Visualization Parameters</summary>
 <p>We recommend using default values; override only if needed.</p>
 <ul>
 <li><code>--out-xy</code> (str): File name for output <abbr title="Spatial Digital Gene Expression">SGE</abbr> visualization image (default: <code>xy.png</code>).</li>
-<li><code>--out-northup-tif</code> (str): File name for output north‑up oriented image (default: <code>xy_northup.tif</code>).</li>
+<li><code>--out-northup-tif</code> (str): File name for output north-up oriented image (default: <code>xy_northup.tif</code>).</li>
 <li><code>--srs</code> (str): Spatial reference system (used with <code>--north-up</code>; default: EPSG:3857).</li>
 <li><code>--resample</code> (str): Resampling method (used with <code>--north-up</code>; options: near, bilinear, cubic, etc.; default: cubic).</li>
 <li><code>--gdal_translate</code> (str): Path to <code>gdal_translate</code> binary (used with <code>--north-up</code>; default: <code>gdal_translate</code>)</li>
 <li><code>--gdalwarp</code> (str): Path to <code>gdalwarp</code> binary (used with <code>--north-up</code>; default: <code>gdalwarp</code>)</li>
 </ul>
 </details>
-<h4 id="environment-parameters">Environment Parameters<a class="headerlink" href="#environment-parameters" title="Permanent link">&para;</a></h4>
+<h3 id="environment-parameters">Environment Parameters<a class="headerlink" href="#environment-parameters" title="Permanent link">&para;</a></h3>
 <ul>
 <li><code>--gzip</code> (str): Path to gzip binary (default: gzip).</li>
 <li><code>--spatula</code> (str): Path to spatula binary (default: spatula).</li>
 </ul>
 <hr />
 <h2 id="output">Output<a class="headerlink" href="#output" title="Permanent link">&para;</a></h2>
-<h3 id="reorient-sge_2">Reorient <abbr title="Spatial Digital Gene Expression">SGE</abbr><a class="headerlink" href="#reorient-sge_2" title="Permanent link">&para;</a></h3>
-<p>An output <abbr title="Spatial Digital Gene Expression">SGE</abbr> matrix after orientation.</p>
-<h3 id="stitch-multiple-sge-datasets_2">Stitch Multiple <abbr title="Spatial Digital Gene Expression">SGE</abbr> Datasets<a class="headerlink" href="#stitch-multiple-sge-datasets_2" title="Permanent link">&para;</a></h3>
-<p>An <abbr title="Spatial Digital Gene Expression">SGE</abbr> matrix consisting of all input <abbr title="Spatial Digital Gene Expression">SGE</abbr> in a specific layout. In addition:</p>
+<p>An <abbr title="Spatial Digital Gene Expression">SGE</abbr> matrix consisting of all input SGEs in a specific layout. In addition:</p>
 <ul>
 <li>If <code>--filter-by-density</code> is enabled, a polygon-based filtered <abbr title="Spatial Digital Gene Expression">SGE</abbr> matrix is created from the stitched <abbr title="Spatial Digital Gene Expression">SGE</abbr>.</li>
 <li>If <code>--sge-visual</code> is enabled, a monochrome PNG image is generated to visualize the stitched <abbr title="Spatial Digital Gene Expression">SGE</abbr>.</li>
