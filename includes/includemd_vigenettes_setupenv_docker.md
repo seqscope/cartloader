@@ -1,7 +1,7 @@
-Define paths to all required binaries and resources in Docker.
-
 !!! warning "Fixed paths in the Docker Image"
-    Tools and dependencies have fixed paths in the Docker image (for example, `/usr/local/bin/pmtiles`), which are used directly in the commands below. Skip specifying them manually.
+    Tools and dependencies have **fixed** paths in the Docker image (for example, `/usr/local/bin/pmtiles`).
+    
+    DO **NOT** modify paths of tools and dependencies manually.
 
 ```bash
 # ====

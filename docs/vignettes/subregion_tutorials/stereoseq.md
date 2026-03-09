@@ -47,7 +47,7 @@ train_width=18                           # define LDA training hexagon width (co
 n_factor=6,12                            # define number of factors in LDA training (comma-separated if multiple n-factor values are provided)
 ```
 
-!!! info "How to Define Scaling Factors for StereoSeq?"
+!!! question "How to define Scaling Factors for StereoSeq?"
 
     According to the [StereoSeq paper](https://doi.org/10.1016/j.cell.2022.04.003), the technology features spot sizes of approximately 220 nanometers in diameter with center-to-center distances of about 500 nanometers. Thus, each pixel corresponds to approximately 0.5 micrometers. The scaling factor from coordinate to µm is defined as 2.
 

@@ -1,25 +1,20 @@
-<!--section1-start-->
-!!! info "Choose a data repository to host/share your output"
-
-    `CartLoader` supports two upload options (`AWS` and `Zenodo`) for storing PMTiles of SGE and spatial factors in a data repository.
-
-    **Choose the one that best suits your needs.**
-<!--section1-end-->
-
 === "AWS Uploads"
+
     Upload the generated `CartLoader` outputs to your designated AWS S3 directory:
-    
     ```bash
-    # AWS S3 target location
+    # AWS S3 target location 
     S3_DIR=/s3/path/to/s3/dir              # Recommend to use DATA_ID as directory name, such as s3://bucket_name/test-data
 
-    cartloader upload_aws \
-      --in-dir ./cartload2 \
+    docker run -it --rm \
+      -v $(pwd):/data \
+      weiqiuc/cartloader:${docker_tag} \
+      upload_aws \
+      --in-dir /data/cartload2 \
       --s3-dir "${S3_DIR}" \
       --aws ${aws} \
       --n-jobs ${n_jobs}
     ```
-
+    
     | Parameter       | Required  | Type   | Description                                                                 |
     |-----------------|-----------|--------|-----------------------------------------------------------------------------|
     | `--in-dir`      | required  | string | Path to the input directory containing the `CartLoader` asset packaging output    |
@@ -27,21 +22,26 @@
     | `--aws`         |           | string | Path to the AWS CLI binary                                                  |
     | `--n-jobs`      |           | int    | Number of parallel jobs                                                     |
 
-=== "Zenodo Uploads"
-    Upload the generated `CartLoader` outputs to your designated Zenodo deposition or a new deposition.
 
+=== "Zenodo Uploads"
+
+    Upload the generated `CartLoader` outputs to your designated Zenodo deposition or a new deposition.
+    
     ```bash
     zenodo_token=/path/to/zenodo/token/file    # replace /path/to/zenodo/token/file with the path to your Zenodo token file
 
-    cartloader upload_zenodo \
-      --in-dir ./cartload2 \
-      --upload-method catalog \
-      --zenodo-token $zenodo_token \
-      --title  "Your Title" \
-      --creators "Your Name" \
-      --description "This is an example description"
+    docker run -it --rm \
+      -v $(pwd):/data \
+      weiqiuc/cartloader:${docker_tag} \
+      upload_zenodo \
+        --in-dir /data/cartload2 \
+        --upload-method catalog \
+        --zenodo-token ${zenodo_token} \
+        --title  "Your Title" \
+        --creators "Your Name" \
+        --description "This is an example description"
     ```
-    
+
     | Parameter         | Required | Type        | Description                                                                                                                                                                                                         |
     |-------------------|----------|-------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
     | `--in-dir`        | required | string      | Path to the input directory containing the `CartLoader` asset packaging output                                                                                                                                            |

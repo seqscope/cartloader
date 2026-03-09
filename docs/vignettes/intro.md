@@ -25,7 +25,7 @@ These tutorials demonstrate how to run `CartLoader` on a variety of ST platforms
 
 <!-- If a platform lacks hippocampal data, we select a comparable brain subregion. -->
 
-!!! warning
+!!! tips
 
     For consistency, we use mouse hippocampus when available. 
 

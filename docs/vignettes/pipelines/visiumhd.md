@@ -160,7 +160,7 @@ n_factor=48                              # define number of factors in LDA train
 S3_DIR=/s3/path/to/s3/dir                # Recommend to use DATA_ID as directory name, such as s3://bucket-name/visiumhd-3prime-mouse-brain
 ```
 
-!!! info "How to define scaling for Visium HD?"
+!!! question "How to define scaling for Visium HD?"
 
     10x Visium HD provides `scalefactors_json.json` (pixel‑to‑µm). `CartLoader` accepts it via `--scale-json` and computes the scaling automatically, so you don’t need to manually specify `--units-per-um`.
     
@@ -170,16 +170,19 @@ S3_DIR=/s3/path/to/s3/dir                # Recommend to use DATA_ID as directory
 
 Choose one of the following options to run the `run_visiumhd` pipeline, either locally or with Docker.
 
-=== "Run Pipeline Locally"
+### Run Pipeline Locally
 
-    **Set Up Environment**
-    {%
-    include-markdown "../../../includes/includemd_vigenettes_setupenv.md"
-    %}
+**Set Up Environment**
+{%
+include-markdown "../../../includes/includemd_vigenettes_setupenv.md"
+%}
 
-    **Example Command**
-    ```bash
-    cartloader run_visiumhd \
+**Example Command**
+```bash
+cd $work_dir
+mkdir -p ${work_dir}/output
+
+cartloader run_visiumhd \
     --load-space-ranger \
     --sge-convert \
     --run-ficture2 \
@@ -187,8 +190,8 @@ Choose one of the following options to run the `run_visiumhd` pipeline, either l
     --import-images \
     --run-cartload2 \
     --upload-aws \
-    --space-ranger-dir /path/to/space/ranger/output \
-    --out-dir /path/to/out/dir \
+    --space-ranger-dir ${work_dir}/raw \
+    --out-dir ${work_dir}/output \
     --s3-dir ${S3_DIR} \
     --width ${train_width} \
     --n-factor ${n_factor} \
@@ -200,20 +203,23 @@ Choose one of the following options to run the `run_visiumhd` pipeline, either l
     --aws ${aws} \
     --n-jobs ${n_jobs} \
     --threads ${n_jobs}
-    ```
+```
+---
+### Run Pipeline via Docker
 
-=== "Run Pipeline via Docker"
+**Set Up Environment**
 
-    **Set Up Environment**
+{%
+include-markdown "../../../includes/includemd_vigenettes_setupenv_docker.md"
+%}
 
-    {%
-    include-markdown "../../../includes/includemd_vigenettes_setupenv_docker.md"
-    %}
+**Example Command**
 
-    **Example Command**
+```bash
+cd ${work_dir}
+mkdir -p ${work_dir}/output
 
-    ```bash
-    docker run -it --rm \
+docker run -it --rm \
     -v ${work_dir}:/data \
     weiqiuc/cartloader:${docker_tag}\
     run_visiumhd \
@@ -237,7 +243,7 @@ Choose one of the following options to run the `run_visiumhd` pipeline, either l
     --aws ${aws} \
     --n-jobs ${n_jobs} \
     --threads ${n_jobs}
-    ```
+```
 
 ---
 ## Customize Parameters

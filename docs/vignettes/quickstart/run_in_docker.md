@@ -111,19 +111,7 @@ The example dataset is already provided in `FICTURE`-compatible SGE format, so t
 %}
 
 {%
-  include-markdown "../../../includes/includemd_vigenettes_upload_aws_docker.md"
-%}
-
-{%
-  include-markdown "../../../includes/includemd_vigenettes_upload.md" start="<!--section2-start-->" end="<!--section2-end-->" preserve-includer-indent=false
-%}
-
-{%
-  include-markdown "../../../includes/includemd_vigenettes_upload_zenodo_docker.md"
-%}
-
-{%
-  include-markdown "../../../includes/includemd_vigenettes_upload.md" start="<!--section3-start-->" end="<!--section3-end-->" preserve-includer-indent=false
+  include-markdown "../../../includes/includemd_vigenettes_upload_docker.md" preserve-includer-indent=false
 %}
 
 ---

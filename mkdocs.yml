@@ -106,7 +106,8 @@ nav:
           - Visium HD:
               - Pipeline Orchestrator: reference/run_visiumhd.md
               - Pipeline Add-ons: reference/visiumhd_addon.md
-      
+  - FAQ:
+      - Overview: faq/intro.md
 
 # Watch for changes
 watch:
