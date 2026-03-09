@@ -25,3 +25,11 @@ cd ../../
 cd tippecanoe
 make
 cd ..
+
+## build punkst
+cd punkst
+mkdir build
+cd build
+cmake ..
+make
+cd ../../
