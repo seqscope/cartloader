@@ -85,7 +85,8 @@ nav:
       - Overview: reference/intro.md
       - SGE Preparation:
           - SGE Format Conversion: reference/sge_convert.md
-          - SGE Preparation Add-ons: reference/sge_addon.md
+          - SGE Stitching: reference/sge_stitch.md
+          - SGE Reorientation: reference/sge_orientate.md
       - Analysis:
           - FICTURE Analysis: reference/run_ficture2.md
           - Multi-Sample FICTURE Analysis: reference/run_ficture2_multi.md

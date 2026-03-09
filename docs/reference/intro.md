@@ -13,12 +13,25 @@ This section documents the `CartLoader` CLI by task.
     [Read](./sge_convert.md){ .md-button .md-button--primary .button-tight-small }
 -   <ul>
     <li>
-        <h4>SGE Preparation Add-ons</h4>
+        <h4>SGE Stitching</h4>
         <p><code>sge_stitch</code>: Stitch >=2 SGEs into one.</p>
+    </li>
+    </ul>
+    [Read](./sge_stitch.md){ .md-button .md-button--primary .button-tight-small }
+-   <ul>
+    <li>
+        <h4>SGE Reorientation</h4>
         <p><code>sge_orientate</code>: Reorient SGE by rotation and flips.</p>
     </li>
     </ul>
-    [Read](./sge_addon.md){ .md-button .md-button--primary .button-tight-small }
+    [Read](./sge_orientate.md){ .md-button .md-button--primary .button-tight-small }
+-   <ul>
+    <li>
+        <h4>Feature Customization</h4>
+        <p><code>feature_filtering</code>: Customize the feature set by list, substring, regex, or type for downstream analysis, e.g., FICTURE</p>
+    </li>
+    </ul>
+    [Read](./feature_customization.md){ .md-button .md-button--primary .button-tight-small }
 </div>
 
 ## FICTURE Analysis
@@ -37,13 +50,6 @@ This section documents the `CartLoader` CLI by task.
     </li>
     </ul>
     [Read](./run_ficture2_multi.md){ .md-button .md-button--primary .button-tight-small }
--   <ul>
-    <li>
-        <h4>Feature Customization</h4>
-        <p><code>feature_filtering</code>: Customize the feature set by list, substring, regex, or type for downstream analysis, e.g., FICTURE</p>
-    </li>
-    </ul>
-    [Read](./feature_customization.md){ .md-button .md-button--primary .button-tight-small }
 </div>
 
 ## Asset Packaging

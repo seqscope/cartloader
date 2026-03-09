@@ -8,7 +8,7 @@ This tutorial demonstrates how to run multi‑sample FICTURE analysis and packag
     **`CartLoader` supports analyzing ≥2 samples in two ways**:
 
     - Multi‑sample FICTURE analysis ([`run_ficture2_multi`](../reference/run_ficture2_multi.md)): Jointly learns spatial factors across all samples and writes per‑sample outputs in one parallelizable run.
-    - SGE stitch + single‑sample analysis ([`sge_stitch`](../reference/sge_addon.md) → [`run_ficture2`](../reference/run_ficture2.md)): Stitch multiple SGEs into a single mosaic, then train one model on that mosaic.
+    - SGE stitch + single‑sample analysis ([`sge_stitch`](../reference/sge_stitch.md) → [`run_ficture2`](../reference/run_ficture2.md)): Stitch multiple SGEs into a single mosaic, then train one model on that mosaic.
 
     **What to expect**
 
