@@ -25,7 +25,7 @@ This tutorial demonstrates how to run multi‑sample FICTURE analysis and packag
 
 ## Input Data
 
-This tutorial uses a series of four human cortex ST datasets from [Walsh et al. Nature 2025](https://www.nature.com/articles/s41586-025-09010-1), generated using MERFISH.
+This tutorial uses a series of five human cortex ST datasets from [Walsh et al. Nature 2025](https://www.nature.com/articles/s41586-025-09010-1), generated using MERFISH.
 
 **Data Access**
 
@@ -55,7 +55,7 @@ unzip FB121_O1.zip
 
 **File Format**
 
-!!! info "`detected_transcripts.csv.gz`"
+!!! info "`detected_transcripts.csv`"
 
       ```
       ,barcode_id,global_x,global_y,global_z,x,y,fov,gene,transcript_id,cell_id
@@ -121,7 +121,7 @@ cd ${work_dir}
     mkdir -p "./sge/${sample_id}"
 
     cartloader sge_convert \
-      --in-csv "./raw/${sample_id}/detected_transcripts.csv.gz" \
+      --in-csv "./raw/${sample_id}/detected_transcripts.csv" \
       --platform generic \
       --out-dir "./sge/${sample_id}" \
       --csv-delim "," \
@@ -143,7 +143,7 @@ cd ${work_dir}
 
     (
       echo -e "X\tY\tgene\tcount\tcell_id\tZ"
-      gzip -cd "./raw/${sample_id}/detected_transcripts.csv.gz" \
+      cat "./raw/${sample_id}/detected_transcripts.csv" \
         | tail -n +2 \
         | tr ',' '\t' \
         | perl -lane 'print join("\t",$F[2],$F[3],$F[8],1,$F[10],$F[4]);'
