@@ -109,6 +109,20 @@ nav:
               - Pipeline Add-ons: reference/visiumhd_addon.md
   - FAQ:
       - Overview: faq/intro.md
+      - Find tutorials:
+        - Run Mode: faq/choose_run_mode.md
+        - Platform Tutorial: faq/choose_platform.md
+      - Basics Function:
+        - Units per um: faq/define_units_per_um.md
+        - Image Orientation: faq/background_image_orientation.md
+        - FICTURE & punkst: faq/ficture.md
+        - Why Multi-sample: faq/why_multi-sample.md
+        - Zenodo Setup: faq/zenodo_setup.md
+        - AWS Upload Failures: faq/aws_upload_failures.md
+      - Execution Tips:
+        - Resume or Restart: faq/restart_or_resume.md
+        - Speed Up Runs: faq/speed_up_runs.md
+        - Find Outputs: faq/find_outputs.md
 
 # Watch for changes
 watch:

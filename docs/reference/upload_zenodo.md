@@ -17,28 +17,10 @@ Use `upload_zenodo` to publish `CartLoader` outputs — including PMTiles, decod
 - A Zenodo access token saved in a file (for API authentication).
 - (Optional) A Zenodo deposition ID to upload to an existing deposition.
 
-!!! info "What are the Zenodo token and deposition ID, and how do you get them?"
-    **Zenodo Token File**
+!!! question
+    - [What are the Zenodo token and deposition ID, and how do you get them?](../faq/zenodo_setup.md)
 
-    `CartLoader` uses the Zenodo API for uploading files. To authenticate, Zenodo requires an access token.
-
-    To obtain a token for use with `CartLoader`:
-
-    1. Log in to [Zenodo](https://zenodo.org).
-    2. Go to your [applications page](https://zenodo.org/account/settings/applications/).
-    3. Click "New Token" and select appropriate scopes (e.g., `deposit:write`, `deposit:actions`).
-    4. Copy the generated token.
-    5. Save the token in a plain text file and pass the file path to `--zenodo-token` when running `CartLoader`.
-
-    **Zenodo Deposition ID**
-
-    A deposition ID is a unique numeric identifier assigned to a deposition (i.e., a dataset record) you create on Zenodo. This ID specifies where your uploaded files will be stored.
-    If you’ve already created a deposition, you can find its ID at the end of the URL. For example:
-    ```
-    https://zenodo.org/deposit/1234567
-                                        ↑
-                                This is the deposition ID
-    ```
+    
 ## Actions
 
 - Upload files to a Zenodo deposition. 
