@@ -7,7 +7,7 @@ from cartloader.utils.minimake import minimake
 from cartloader.utils.utils import add_param_to_cmd, cmd_separator, run_command_w_preq, load_file_to_dict, assert_unique
 from cartloader.utils.pipeline_helper import resolve_image_plan, validate_general_args, validate_imageid_args, validate_imagecol_args, validate_imageloc_args, stage_run_ficture2, stage_run_cartload2, stage_upload_aws, stage_upload_zenodo, stage_import_images, resolve_square_plan, stage_import_squares
 
-manual_str="--mex-transcript, --json-scale, --parquet-position, --geojson-cells, --mtx-cells, --csv-*, --tifs"
+manual_str="--mex-transcript, --json-scale, --parquet-position, --geojson-cells, --mtx-cells, --csv-*, --tifs, --square-input"
 
 def parse_arguments(_args):
     """
@@ -42,7 +42,7 @@ def parse_arguments(_args):
         "Input/Output Parameters",
         'Two input modes: 1) Manual — set --space-ranger-dir and any "Manual Input Files Parameters" args. 2) Auto-detect — leave them unset; read from --space-ranger-assets (created by --load-space-ranger)'
     )
-    inout_params.add_argument('--space-ranger-dir', type=str, help='Path to the Space Ranger output directory containing transcript, cell, boundary, cluster, and image files  (required if manual input mode is enabled or if --load-xenium-ranger)')
+    inout_params.add_argument('--space-ranger-dir', type=str, help='Path to the Space Ranger output directory containing transcript, cell, boundary, square bins, cluster, and image files  (required if manual input mode is enabled or if --load-space-ranger)')
     inout_params.add_argument('--out-dir', type=str, required=True, help='Path to output directory. Stores converted SGE, FICTURE results, raster tiles in <out_dir>/sge, <out_dir>/ficture2, and <out_dir>/cartload2')
     inout_params.add_argument('--space-ranger-assets', type=str, default=None, help=f'Path to a JSON file containing Space Ranger asset paths. Written by --load-space-ranger; read when auto-detection mode is on (default: <out_dir>/space_ranger_assets.json)')
     inout_params.add_argument('--ext-fic-dir', type=str, help='Path to an external FICTURE directory for loading external FICTURE assets (required if --import-ext-ficture2)')
@@ -76,7 +76,7 @@ def parse_arguments(_args):
 
     # Parameters for --import-squares
     squares_params = parser.add_argument_group("Parameters for --import-squares")
-    squares_params.add_argument('--square-id', type=str, default="spaceranger", help='Identifier of Space Ranger cell results; no whitespace (default: spaceranger)')
+    squares_params.add_argument('--square-id', type=str, default="spaceranger", help='Identifier of Space Ranger square bins results; no whitespace (default: spaceranger)')
     squares_params.add_argument('--use-parquet-tools', action='store_true', help='Use parquet-tools instead of polars/pigz for parquet to csv conversion (default: False). parquet-tools may be slower for large files.')
 
     # Parameters for --import-images
@@ -139,7 +139,15 @@ def parse_arguments(_args):
         args.space_ranger_assets = os.path.join(args.out_dir, "space_ranger_assets.json")
 
     # * Manual inputs vs asset JSON are mutually exclusive when --load-space-ranger
-    manual_mode = any([ args.mex_transcript, args.json_scale, args.geojson_cells, args.mtx_cells, args.csv_clust, args.csv_diffexp] + (args.tifs or []))
+    manual_mode = any([
+        args.mex_transcript,
+        args.json_scale,
+        args.parquet_position,
+        args.geojson_cells,
+        args.mtx_cells,
+        args.csv_clust,
+        args.csv_diffexp,
+    ] + (args.tifs or []) + (args.square_input or []))
     
     if manual_mode:
         if args.load_space_ranger:
@@ -178,7 +186,15 @@ def run_visiumhd(_args):
         os.makedirs(cart_dir, exist_ok=True)
     
     # use json or not
-    manual_inputs = [ args.mex_transcript, args.json_scale, args.geojson_cells, args.mtx_cells, args.csv_clust, args.csv_diffexp] + (args.tifs or [])
+    manual_inputs = [
+        args.mex_transcript,
+        args.json_scale,
+        args.parquet_position,
+        args.geojson_cells,
+        args.mtx_cells,
+        args.csv_clust,
+        args.csv_diffexp,
+    ] + (args.tifs or []) + (args.square_input or [])
     use_json = not any(x is not None for x in manual_inputs)
 
     # Common paths
@@ -187,6 +203,7 @@ def run_visiumhd(_args):
     sge_assets = os.path.join(sge_dir, "sge_assets.json")
     sge_flag = os.path.join(sge_dir, "sge_density_filtering.done" if args.filter_by_density else "sge_convert.done")
     cell_assets = os.path.join(cart_dir, f"{args.cell_id}_assets.json")
+    square_assets = []
     background_assets = []
     background_pmtiles = []
     catalog_yaml = os.path.join(cart_dir, "catalog.yaml")
@@ -316,10 +333,9 @@ def run_visiumhd(_args):
 
         if os.path.exists(cell_assets) and not args.restart:
             print(f" * Skip --import-cells since the Space Ranger cell assets file ({cell_assets}) already exists. You can use --restart to force execution of this step.\n", flush=True)
-            # print("\n", flush=True)
             print(import_cell_cmd, flush=True)
         else:
-            run_command_w_preq(import_cell_cmd, prerequisites=[], dry_run=args.dry_run, flush=True)
+            run_command_w_preq(import_cell_cmd, prerequisites=prereq, dry_run=args.dry_run, flush=True)
     
     if args.import_images:  ## TBC: currently supports only OME-TIFFs
         print("="*10, flush=True)
@@ -357,13 +373,18 @@ def run_visiumhd(_args):
         print("Executing --import-squares (execute directly)", flush=True)
         print("="*10, flush=True)
 
-        square_plans = resolve_square_plan(ranger_dir, use_json, ranger_assets, args.square_input)
-        square_plans = sorted(square_plans, key=lambda x: x["bin_size"])
-        stage_import_squares(cart_dir, args, square_plans,
-                            update_catalog=True if (not args.run_cartload2 and os.path.exists(catalog_yaml)) else False
-                            )
-        
-        square_assets = [ os.path.join(cart_dir, f"{args.square_id}-sq{spec["bin_size"]:03d}_assets.json") for spec in square_plans]
+        square_plans = resolve_square_plan(ranger_dir, use_json, ranger_assets, args.square_input, dry_run=args.dry_run)
+        square_assets = []
+        if not square_plans:
+            print(" * Skip --import-squares: no resolvable square-bin inputs", flush=True)
+            print("\n", flush=True)
+        else:
+            square_plans = sorted(square_plans, key=lambda x: x["bin_size"])
+            stage_import_squares(cart_dir, args, square_plans,
+                                update_catalog=True if (not args.run_cartload2 and os.path.exists(catalog_yaml)) else False
+                                )
+            
+            square_assets = [os.path.join(cart_dir, f"{args.square_id}-sq{spec['bin_size']:03d}_assets.json") for spec in square_plans]
 
     if args.run_cartload2:   
         # prerequisites

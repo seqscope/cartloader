@@ -36,7 +36,7 @@ def parse_arguments(_args):
     inout_params = parser.add_argument_group("Input/Output Parameters", 'Two input modes: 1) Manual — set --xenium-ranger-dir and any "Manual Input Parameters" args. 2) Auto-detect — leave them unset; read from --xenium-ranger-assets (created by --load-xenium-ranger)')
     inout_params.add_argument('--xenium-ranger-dir', type=str, help='Path to the Xenium Ranger output directory containing transcript, cell, boundary, cluster, and image files (required if manual input mode is enabled or if --load-xenium-ranger)')
     inout_params.add_argument('--out-dir', type=str, required=True, help='Path to output directory. Stores converted SGE, FICTURE results, raster tiles in <out_dir>/sge, <out_dir>/ficture2, and <out_dir>/cartload2')
-    inout_params.add_argument('--xenium-ranger-assets', type=str, default=None, help='Path to a JSON file containing Xenium Ranger outputs paths. Written by --load-space-ranger; read when auto-detection mode is on (default: <out_dir>/xenium_ranger_assets.json)')
+    inout_params.add_argument('--xenium-ranger-assets', type=str, default=None, help='Path to a JSON file containing Xenium Ranger outputs paths. Written by --load-xenium-ranger; read when auto-detection mode is on (default: <out_dir>/xenium_ranger_assets.json)')
     inout_params.add_argument('--ext-fic-dir', type=str, help='Path to an external FICTURE directory for loading external FICTURE assets (required if --import-ext-ficture2)')
 
     # Key Parameters (split by command)
@@ -116,13 +116,13 @@ def parse_arguments(_args):
     manual_mode = any([ args.csv_transcript, args.csv_cells, args.csv_boundaries, args.csv_clust, args.csv_diffexp ] + (args.ome_tifs or []))
     
     if manual_mode and args.load_xenium_ranger:
-        parser.error("Cannot enable both auto-detection model (--load-xenium-ranger) and manual input model (--csv-*, --ome-tifs). Choose one mode")
+        parser.error("Cannot enable both auto-detection mode (--load-xenium-ranger) and manual input mode (--csv-*, --ome-tifs). Choose one mode")
     
     if manual_mode:            
         if args.all_images:
-            parser.error("--all-images cannot be used in manual input model (specifying --ome-tifs)")
+            parser.error("--all-images cannot be used in manual input mode (specifying --ome-tifs)")
         if not args.xenium_ranger_dir:
-            parser.error("--xenium-ranger-dir is required in manual input model (specifying --csv-*, --ome-tifs)")
+            parser.error("--xenium-ranger-dir is required in manual input mode (specifying --csv-*, --ome-tifs)")
         if not os.path.exists(args.xenium_ranger_dir):
             parser.error(f"Directory not found: {args.xenium_ranger_dir} (--xenium-ranger-dir)")
     
@@ -185,8 +185,8 @@ def run_xenium(_args):
 
         if os.path.exists(ranger_assets) and not args.restart:
             print(f" * Skip --load-xenium-ranger since the Xenium Ranger raw input assets file ({ranger_assets}) already exists. You can use --restart to force execution of this step.", flush=True)
-            print("\n", flush=True)
             print(load_xenium_cmd, flush=True)
+            print("\n", flush=True)
         else:
             run_command_w_preq(load_xenium_cmd, prerequisites=[], dry_run=args.dry_run, flush=True)
     
@@ -270,10 +270,10 @@ def run_xenium(_args):
 
         if os.path.exists(cell_assets) and not args.restart:
             print(f" * Skip --import-cells since the Xenium Ranger cell assets file ({cell_assets}) already exists. You can use --restart to force execution of this step.", flush=True)
-            print("\n", flush=True)
             print(import_cell_cmd, flush=True)
+            print("\n", flush=True)
         else:
-            run_command_w_preq(import_cell_cmd, prerequisites=[], dry_run=args.dry_run, flush=True)
+            run_command_w_preq(import_cell_cmd, prerequisites=prereq, dry_run=args.dry_run, flush=True)
     
     if args.import_images:  ## TBC: currently, only support OME tifs
         print("="*10, flush=True)

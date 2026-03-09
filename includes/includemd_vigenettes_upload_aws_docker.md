@@ -4,11 +4,11 @@ AWS_BUCKET="EXAMPLE_AWS_BUCKET"         # replace EXAMPLE_AWS_BUCKET with your a
 
 docker run -it --rm \
   -v $(pwd):/data \
-  weiqiuc/cartloader:20250708b \
+  weiqiuc/cartloader:${docker_tag} \
   upload_aws \
     --in-dir /data/cartload2 \
     --s3-dir "s3://${AWS_BUCKET}/${DATA_ID}" \
-    --aws /usr/local/bin/aws \
+    --aws ${aws} \
     --n-jobs ${n_jobs}
 
 ```

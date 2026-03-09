@@ -64,7 +64,7 @@ nav:
   - Vignettes:
       - Overview: vignettes/intro.md
       #- Quick Start: vignettes/quickstart/run_locally.md
-      - Getting Started with `cartloader`:
+      - Getting Started per Platform:
         - SeqScope Starter Tutorial: vignettes/subregion_tutorials/seqscope.md
         - StereoSeq Starter Tutorial: vignettes/subregion_tutorials/stereoseq.md
         - Visium HD Starter Tutorial: vignettes/subregion_tutorials/visiumhd.md

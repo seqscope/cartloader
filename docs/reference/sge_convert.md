@@ -47,10 +47,10 @@ Ensure the input data (raw, platform‑specific SGE) is transcript‑indexed and
 Converting SGE into a FICTURE-compatible TSV format. During conversion, SGE coordinates are rescaled to micrometer units based on the pixel resolution specified in the input. It's also available to apply feature (typically, genes) filtering.
 
 ### Density-based Filtering (`--filter-by-density`)
-If `--filter-by-density` is set, automatically identify and retain high-quality tissue regions based on transcript density and spatial structure. This step takes the format-standardized SGE as input and generate a density-based filtered SGE.
+If `--filter-by-density` is set, it automatically identifies and retains high-quality tissue regions based on transcript density and spatial structure. This step takes the format-standardized SGE as input and generates a density-based filtered SGE.
 
 ### SGE Visualization (`--sge-visual`)
-If `--sge-visual` is set, draws an image of 2D points provided as an input. In this step, it is optional to enable the `--north-up` option to ensuring correct spatial orientation (i.e., Y-axis increases upward/north and X-axis increases to the right/east).
+If `--sge-visual` is set, it draws an image of input 2D points. In this step, you can optionally enable `--north-up` to ensure correct spatial orientation (i.e., Y-axis increases upward/north and X-axis increases to the right/east).
 
 ---
 ## Example Usage
@@ -61,7 +61,7 @@ If `--sge-visual` is set, draws an image of 2D points provided as an input. In t
 ```bash
 cartloader sge_convert \
     --platform seqscope \
-    --in-mex /path/to/input/dir/of/mex \   
+    --in-mex /path/to/input/dir/of/mex \
     --units-per-um 1000 \
     --icols-mtx 1 \
     --out-dir /path/to/output/dir \
@@ -78,7 +78,7 @@ cartloader sge_convert \
 ```bash
 cartloader sge_convert \
     --platform 10x_visium_hd \
-    --in-mex /path/to/input/dir/of/mex \   
+    --in-mex /path/to/input/dir/of/mex \
     --in-parquet /path/to/input/parquet/file \
     --scale-json /path/to/input/json/file \
     --exclude-feature-regex '^(BLANK.*$|NegCon.*$|NegPrb.*$)' \
@@ -89,7 +89,7 @@ cartloader sge_convert \
 
 ### 2) Input SGE in TSV/CSV Format
 
-This applies to input SGE in TSV/CSV format from platforms. Below is an example converting SGE from Stereo‑seq.
+This applies to SGE input in TSV/CSV format across supported platforms. Below is an example that converts SGE from Stereo-seq.
 
 ```bash
 cartloader sge_convert \
@@ -123,7 +123,7 @@ cartloader sge_convert \
     | MERSCOPE               | `False`                     | `,`           | `global_x`        | `global_y`        | -                      | `gene`                       |
     | Pixel-seq              | `False`                     | `\t`          | `xcoord`          | `ycoord`          | -                      | `geneName`                   |
     
-    <sub><sup>1</sup> `--csv-comment`: If `True`, the lines starts with `#` will be treated as comments and will be skipped.
+    <sub><sup>1</sup> `--csv-comment`: If `True`, lines that start with `#` are treated as comments and skipped.
 
     <sub><sup>2</sup> 10x Xenium: Besides the above default settings, for 10x Xenium data, `sge_convert` also applies `--csv-colname-phredscore qv ` and `--min-phred-score 20`.
 

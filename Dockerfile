@@ -20,6 +20,7 @@ RUN apt-get update && apt-get install -y \
     wget \
     curl \
     gzip \
+    pigz \
     perl \
     tabix \
     bc \
@@ -41,6 +42,7 @@ RUN apt-get update && apt-get install -y \
     libopencv-dev \
     gdal-bin \
     imagemagick \
+    libpng-dev \
     r-base \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
@@ -59,7 +61,7 @@ WORKDIR /app
 # Clone the cartloader repository 
 # * submodules: 
 #   - Only clone the submodules of punkst, spatula and tippecanoe (skip the rest)
-#   - spatula uses main branch
+#   - spatula uses docker-dev branch
 #   - the following submodules are not installed:
 #       - ficture
 #       - ImageMagick: (installed in the step apt-get install step)
@@ -93,31 +95,7 @@ RUN python3 -m pip install -e ./
 # ===============================
 # Install submodules
 # ===============================
-RUN cd submodules/spatula && \
-    git submodule update --init --recursive submodules/htslib submodules/qgenlib  
-
-# Build submodule: htslib
-RUN cd submodules/spatula/submodules/htslib && \
-    autoreconf -i && \
-    ./configure && \
-    make -j$(nproc)
-
-# Build submodule: qgenlib
-RUN cd submodules/spatula/submodules/qgenlib && \
-    git checkout cartloader-docker && \
-    mkdir -p build && cd build && \
-    cmake .. && \
-    make -j$(nproc)
-
-# Build submodule: spatula
-RUN cd submodules/spatula && \
-    git checkout docker-dev && \
-    mkdir -p build && cd build && \
-    cmake .. && \
-    make -j$(nproc)
-
 # Build submodule: tippecanoe
-# Build 
 RUN cd submodules/tippecanoe && \
     make -j && \
     make install
@@ -143,6 +121,51 @@ RUN wget https://github.com/protomaps/go-pmtiles/releases/download/v1.28.0/go-pm
     mv /opt/go-pmtiles/pmtiles /usr/local/bin/ && \
     rm -rf go-pmtiles_1.28.0_Linux_x86_64.tar.gz /opt/go-pmtiles
 
+# Bump this at build time to force only spatula-related layers to rebuild.
+# Example: docker build --build-arg SPATULA_CACHEBUST=$(date +%s) -t cartloader .
+ARG SPATULA_CACHEBUST=1
+
+# Build submodule: Spatula
+RUN echo "SPATULA_CACHEBUST=${SPATULA_CACHEBUST}" && \
+    cd submodules/spatula && \
+    git submodule update --init --recursive submodules/htslib submodules/qgenlib  
+
+# Build submodule: htslib
+RUN cd submodules/spatula/submodules/htslib && \
+    autoreconf -i && \
+    ./configure && \
+    make -j$(nproc)
+
+# Build submodule: qgenlib
+RUN cd submodules/spatula/submodules/qgenlib && \
+    git checkout cartloader-docker && \
+    git pull origin cartloader-docker && \
+    mkdir -p build && cd build && \
+    cmake .. && \
+    make -j$(nproc)
+
+# Build submodule: spatula
+RUN cd submodules/spatula && \
+    git checkout docker-dev && \
+    git pull origin docker-dev && \
+    mkdir -p build && cd build && \
+    cmake .. && \
+    make -j$(nproc)
+# ===============================
+# Clone cartloader & install it
+# ===============================
+ARG CACHEBUST=1
+
+RUN git clone --branch main --single-branch https://github.com/seqscope/cartloader.git /app/cartloader_latest && \
+    cp -r /app/cartloader_latest/cartloader /app/cartloader/ && \
+    cp -r /app/cartloader_latest/installation /app/cartloader/ && \
+    cp -r /app/cartloader_latest/setup.py /app/cartloader/ && \
+    cp -r /app/cartloader_latest/pyproject.toml /app/cartloader/ && \
+    cp /app/cartloader_latest/entrypoint.sh /app/cartloader/ && \
+    rm -rf /app/cartloader_latest
+
+# Re-install cartloader itself with the latest Python code
+RUN cd /app/cartloader && python3 -m pip install -e ./
 
 # ===============================
 # Add a test dataset

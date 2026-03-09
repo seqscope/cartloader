@@ -1,62 +1,59 @@
 # Xenium End-to-End Pipeline
 
-## Overview
-
 This tutorial walks through end‑to‑end processing of 10x Xenium data with `CartLoader`: converting inputs, running FICTURE, importing cell results and histology, packaging assets, and uploading to AWS for sharing.
 
 ---
-## Input Data
+## Prepare Input
 
-**Data Access**
+### Data Access
 
-Downloaded the ST data from [10x Genomics Dataset portal](https://www.10xgenomics.com/datasets/xenium-human-lung-cancer-post-xenium-technote).
+Download the ST data from the [10x Genomics Dataset portal](https://www.10xgenomics.com/datasets/preview-data-ffpe-human-lung-cancer-with-xenium-multimodal-cell-segmentation-1-standard).
 
 
 === "Use `wget`"
     If you have `wget` installed, use the following commands to download the output from 10X.
 
     ```bash
-    # define the work directory
+    # Define the work directory
     work_dir=/path/to/work/directory
     mkdir -p ${work_dir}/raw
     cd ${work_dir}/raw
 
-    # 1. Choose one of the following options to download the output files:
-    # A. Download the full output files
-    wget https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_outs.zip
-    # B. Only download the Xenium Explorer subset output files
-    wget https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_xe_outs.zip
+    # Download the full output files
+    wget https://cf.10xgenomics.com/samples/xenium/2.0.0/Xenium_V1_humanLung_Cancer_FFPE/Xenium_V1_humanLung_Cancer_FFPE_outs.zip
 
-    # 2) Download supplemental files
-    wget https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_he_image.ome.tif
-    wget https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_he_imagealignment.csv
+    # Download supplemental files
+    wget https://cf.10xgenomics.com/samples/xenium/2.0.0/Xenium_V1_humanLung_Cancer_FFPE/Xenium_V1_humanLung_Cancer_FFPE_he_image.ome.tif
+    wget https://cf.10xgenomics.com/samples/xenium/2.0.0/Xenium_V1_humanLung_Cancer_FFPE/Xenium_V1_humanLung_Cancer_FFPE_he_imagealignment.csv
+    wget https://cf.10xgenomics.com/samples/xenium/2.0.0/Xenium_V1_humanLung_Cancer_FFPE/Xenium_V1_humanLung_Cancer_FFPE_annotation.geojson
+
+    # Unzip compressed file
+    unzip Xenium_V1_humanLung_Cancer_FFPE_outs.zip
     ```
 
 === "Use `curl`"
-    If you have `curl` installed, use the following commands to download the output from 10X. 
+    If you have `curl` installed, use the following commands to download the output from 10X.
 
     ```bash
-    # define the work directory
+    # Define the work directory
     work_dir=/path/to/work/directory
     mkdir -p ${work_dir}/raw
     cd ${work_dir}/raw
     
-    # 1. Choose one of the following options to download the output files:
-    # A. Download the full output files
-    curl -O https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_outs.zip
+    # Download the full output files
+    curl -O https://cf.10xgenomics.com/samples/xenium/2.0.0/Xenium_V1_humanLung_Cancer_FFPE/Xenium_V1_humanLung_Cancer_FFPE_outs.zip
 
-    # B. Only download the Xenium Explorer subset output files
-    curl -O https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_xe_outs.zip
+    # Download supplemental files
+    curl -O https://cf.10xgenomics.com/samples/xenium/2.0.0/Xenium_V1_humanLung_Cancer_FFPE/Xenium_V1_humanLung_Cancer_FFPE_he_image.ome.tif
+    curl -O https://cf.10xgenomics.com/samples/xenium/2.0.0/Xenium_V1_humanLung_Cancer_FFPE/Xenium_V1_humanLung_Cancer_FFPE_he_imagealignment.csv
+    curl -O https://cf.10xgenomics.com/samples/xenium/2.0.0/Xenium_V1_humanLung_Cancer_FFPE/Xenium_V1_humanLung_Cancer_FFPE_annotation.geojson
 
-
-    # 2) Download supplemental files
-    curl -O https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_he_image.ome.tif
-    curl -O https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_V1_Human_Lung_Cancer_FFPE/Xenium_V1_Human_Lung_Cancer_FFPE_he_imagealignment.csv
+    # Unzip compressed file
+    unzip Xenium_V1_humanLung_Cancer_FFPE_outs.zip
     ```
 ___
 
-
-**Data Structure and Format**
+### Data Structure and Format
 
 See details of the Xenium Ranger output at [Xenium Ranger Official Documents](https://www.10xgenomics.com/support/software/xenium-onboard-analysis/latest/analysis/xoa-output-understanding-outputs)
 
@@ -145,15 +142,7 @@ See details of the Xenium Ranger output at [Xenium Ranger Official Documents](ht
     * `morphology_focus_0003.ome.tif`: Interior — protein (alphaSMA/Vimentin)
     * `morphology_mip.ome.tif`: DAPI maximum intensity projection (MIP) of the Z‑stack.
 
-___
-
-## Set Up the Environment
-
-{%
-  include-markdown "../../../includes/includemd_vigenettes_setupenv.md"
-%}
-
-Define data ID and analysis parameters:
+### Define ID and Parameters
 
 ```bash
 # Unique identifier for your dataset
@@ -162,7 +151,7 @@ SCALE=1                                     # coordinate to micrometer scaling f
 
 # LDA parameters
 train_width=18                            # define LDA training hexagon width (comma-separated if multiple widths are applied)
-n_factor=24                               # define number of factors in LDA training (comma-separated if multiple n-factor are applied)
+n_factor=24                               # define number of factors in LDA training (comma-separated if multiple n-factor values are provided)
 
 # Path to AWS S3 directory
 S3_DIR=/s3/path/to/s3/dir                 # Recommend to use DATA_ID as directory name, such as s3://bucket-name/xenium-v1-humanlung-cancer-ffpe
@@ -170,38 +159,97 @@ S3_DIR=/s3/path/to/s3/dir                 # Recommend to use DATA_ID as director
 
 !!! info "How to Define Scaling Factors for Xenium?"
 
-    The Xenium example data currently used here provides SGE in µm. Define scaling factor from coordinate to micrometer as 1.
+    `--units-per-um` means "coordinate units per micrometer" in your raw transcript coordinates.
+    For the Xenium example dataset in this tutorial, coordinates are already in µm, so use `--units-per-um 1`.
 
-## Run Pipelines
+!!! warning "Check this value for your own dataset"
 
-Below is an example of showing running all modules together. You can customize the actions by flags.
+    Do not assume `--units-per-um 1` is always correct. Always verify the coordinate unit in your input data.
 
-In the following example, we only deployed OME_DAPI image. Alternatively, `CartLoader` supports a `--all-images` to deploy all detected image.
+    If your coordinates are in pixels (or any unit other than µm), set `--units-per-um` to the correct value.
 
-```bash
-cartloader run_xenium \
-  --load-xenium-ranger \
-  --sge-convert \
-  --run-ficture2 \
-  --import-cells \
-  --import-images \
-  --run-cartload2 \
-  --upload-aws \
-  --xenium-ranger-dir /path/to/xenium/ranger/output \
-  --out-dir /path/to/out/dir \
-  --s3-dir ${S3_DIR} \
-  --width ${train_width} \
-  --n-factor ${n_factor} \
-  --id ${DATA_ID} \
-  --image-ids OME_DAPI \
-  --spatula ${spatula} \
-  --ficture2 ${punkst} \
-  --pmtiles ${pmtiles} \
-  --tippecanoe ${tippecanoe} \
-  --aws ${aws} \
-  --n-jobs ${n_jobs} \
-  --threads ${n_jobs}
-```
+## Example Runs
+
+Choose one of the following options to run the `run_xenium` pipeline, either locally or with Docker.
+
+In the following examples, only `DAPI_OME` image is deployed. Alternatively, `CartLoader` supports `--all-images` to deploy all detected images.
+
+=== "Run Pipeline Locally"
+
+    **Set Up Environment**
+    {%
+    include-markdown "../../../includes/includemd_vigenettes_setupenv.md"
+    %}
+
+    **Example Command**
+    ```bash
+    cartloader run_xenium \
+      --load-xenium-ranger \
+      --sge-convert \
+      --run-ficture2 \
+      --import-cells \
+      --import-images \
+      --run-cartload2 \
+      --upload-aws \
+      --xenium-ranger-dir /path/to/xenium/ranger/output \
+      --out-dir /path/to/out/dir \
+      --s3-dir ${S3_DIR} \
+      --units-per-um ${SCALE} \
+      --width ${train_width} \
+      --n-factor ${n_factor} \
+      --id ${DATA_ID} \
+      --image-ids DAPI_OME \
+      --spatula ${spatula} \
+      --ficture2 ${punkst} \
+      --pmtiles ${pmtiles} \
+      --tippecanoe ${tippecanoe} \
+      --aws ${aws} \
+      --n-jobs ${n_jobs} \
+      --threads ${n_jobs}
+    ```
+
+=== "Run Pipeline via Docker"
+
+    **Set Up Environment**
+
+    {%
+    include-markdown "../../../includes/includemd_vigenettes_setupenv_docker.md"
+    %}
+
+    **Example Command**
+
+    ```bash
+    docker run -it --rm \
+    -v ${work_dir}:/data \
+    weiqiuc/cartloader:${docker_tag}\
+    run_xenium \
+      --load-xenium-ranger \
+      --sge-convert \
+      --run-ficture2 \
+      --import-cells \
+      --import-images \
+      --run-cartload2 \
+      --upload-aws \
+      --xenium-ranger-dir /data/raw \
+      --out-dir /data/output \
+      --s3-dir ${S3_DIR} \
+      --units-per-um ${SCALE} \
+      --width ${train_width} \
+      --n-factor ${n_factor} \
+      --id ${DATA_ID} \
+      --image-ids DAPI_OME \
+      --spatula ${spatula} \
+      --ficture2 ${punkst} \
+      --pmtiles ${pmtiles} \
+      --tippecanoe ${tippecanoe} \
+      --aws ${aws} \
+      --n-jobs ${n_jobs} \
+      --threads ${n_jobs}
+    ```
+
+---
+
+## Customize Parameters
 
 **Action Flags to Enable Modules**
 
@@ -263,7 +311,7 @@ Example: [`includes/xenium_ranger_assets.human_lung_cancer.json`](../../../inclu
 
 
 ### Spatial Factor Inference
-Below is an example of spatial factor inference results from `FICTURE` using a training width of 18, 12 factors, a fit width of 18, and an anchor resolution of 6. See more details of output at the Reference pages for [run_ficture2](../docs/reference/run_ficture2.md)
+Below is an example of spatial factor inference results from `FICTURE` using a training width of 18, 12 factors, a fit width of 18, and an anchor resolution of 6. See output details in the reference pages for [run_ficture2](../docs/reference/run_ficture2.md)
 
 ![FICTURE](../../images/pipeline_vignettes/xenium_human_lung_cancer_v1.2.t18_f24_p18_a6.png)
 ![cmap](../../images/pipeline_vignettes/xenium_human_lung_cancer_v1.2.t18_f24.rgb.png)
@@ -274,7 +322,7 @@ Below is an example of spatial factor inference results from `FICTURE` using a t
 
 ### SGE/FICTURE/Cell/Image assets
 
-See more details of output at the Reference pages for [run_cartload2](../..//reference/run_cartload2.md), [import_xenium_cell](../..//reference/import_cell.md), and [import_image](../../reference/import_image.md).
+See output details in the reference pages for [run_cartload2](../../reference/run_cartload2.md), [import_xenium_cell](../../reference/import_cell.md), and [import_image](../../reference/import_image.md).
 
 - SGE assets JSON: `<out-dir>/sge/sge_assets.json`
 - FICTURE assets JSON: `<out-dir>/cartload2/ficture_assets.json` (when `--run-ficture2`)
@@ -295,7 +343,7 @@ individual PMTiles and asset JSON files reside alongside it under `<out-dir>/car
 
     #### View/Explore
 
-    The output are available in CartoScope.
+    The outputs are available in CartoScope.
 
     [Explore in CartoScope](https://v3o-main.carto-scope.org/dataset?uri=s3%2Fcartostore%2Fdata%2Fbatch%3D2026_02%2Fcartloader-pipeline-example-collection%2Fxenium_human_lung_cancer){ .md-button .md-button--primary .button-tight-small }
 
@@ -303,6 +351,4 @@ individual PMTiles and asset JSON files reside alongside it under `<out-dir>/car
 
 </div>
 
-See more details of output at the Reference pages for [run_ficture2](../docs/reference/run_ficture2.md) and [run_cartload2](../docs/reference/run_cartload2.md).
-
-
+See output details in the reference pages for [run_ficture2](../docs/reference/run_ficture2.md) and [run_cartload2](../docs/reference/run_cartload2.md).
