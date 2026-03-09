@@ -5,7 +5,8 @@ Following format conversion, `CartLoader` provides the **`run_ficture2`** module
 
 !!! question 
     - [What is `FICTURE` and `punkst`?](../faq/ficture.md)
-
+    - [How can I speed up runs safely?](../faq/speed_up_runs.md)
+    - [How do I resume a run, or rerun everything from scratch?](../faq/restart_or_resume.md)
 
 ---
 ## Requirements

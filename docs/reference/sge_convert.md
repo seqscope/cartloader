@@ -4,6 +4,9 @@
 
 SGE datasets vary widely in format and resolution across platforms. Since `FICTURE` requires SGE in a specific format, `CartLoader` toolkit provides the `sge_convert` module to standardize raw, platform-specific SGE into a FICTURE-compatible format.
 
+!!! question
+    - [How do I define scaling (`--units-per-um`) for `sge_convert`?](../faq/define_units_per_um.md)
+
 ---
 ## Requirements
 

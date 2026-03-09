@@ -10,6 +10,8 @@ This tutorial walks through the `CartLoader` workflow, all packaged inside a pre
 
     - Set up `Docker` on their system (see [Set Up Docker](#set-up-docker) guide).
 
+!!! question
+    - [I am not sure whether to run with Docker or run locally. Which one should I choose?](../../faq/choose_run_mode.md)
 ---
 
 ## Install Docker

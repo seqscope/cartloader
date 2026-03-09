@@ -4,6 +4,9 @@ Explore a series of tutorials that help you learn `CartLoader`, from quick getti
 
 To view details for a specific module, see the [Reference](../reference/intro.md) section.
 
+!!! question
+    - [How do I choose the right tutorial for my platform?](../faq/choose_platform.md)
+
 ## Quick Start
 
 If you’re new to `CartLoader`, start with the [Quick Start](./quickstart/run_locally.md) tutorial, a beginner‑friendly walkthrough using a small mouse hippocampus dataset that covers core `CartLoader` functions.

@@ -4,6 +4,9 @@
 
 Use `upload_aws` to publish `CartLoader` outputs (PMTiles, decoded spatial factors, and the catalog) to Amazon S3 for sharing or deployment. Supports single‑dataset uploads and collection uploads (multiple datasets via `--in-list`). File lists are taken from `catalog.yaml` and split into cartload basics (required outputs), cartload optional files (e.g., UMAP, alias), and additional basemaps (non-SGE PMTiles).
 
+!!! question
+    - [Why did my AWS upload fail, and how can I fix it?](../faq/aws_upload_failures.md)
+
 ---
 ## Requirements
 
