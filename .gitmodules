@@ -17,9 +17,6 @@
 [submodule "submodules/ImageMagick"]
 	path = submodules/ImageMagick
 	url = https://github.com/ImageMagick/ImageMagick
-[submodule "submodules/go-pmtiles"]
-	path = submodules/go-pmtiles
-	url = https://github.com/protomaps/go-pmtiles
 [submodule "submodules/punkst"]
 	path = submodules/punkst
 	url = https://github.com/Yichen-Si/punkst
