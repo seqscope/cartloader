@@ -18,7 +18,7 @@ URL=https://cf.10xgenomics.com/samples/xenium/1.0.2/Xenium_V1_FF_Mouse_Brain_Cor
 ID=xenium-v1-ff-mouse-brain-coronal-subset-ctx-hp
 
 ## Download the Xenium output from 10x Genomics
-#wget ${URL}
+wget ${URL}
 ## Unzip the downloaded file to the OUTDIR
 mkdir -p ${OUTDIR}
 unzip Xenium_V1_FF_Mouse_Brain_Coronal_Subset_CTX_HP_outs.zip -d ${OUTDIR}/outs
