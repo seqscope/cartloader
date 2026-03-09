@@ -5,19 +5,31 @@ cd ..
 
 ## build qgenlib
 cd qgenlib
-cd build
-rm -f CMakeCache.txt
-make clean
-cd ../../
+rm -rf build/
+rm -rf bin/
+cd ../
 
 ## build spatula
 cd spatula
-cd build
-rm -f CMakeCache.txt
-make clean
-cd ../../
+rm -rf build/
+rm -rf bin/
+cd ../
 
 ## build tippecanoe
 cd tippecanoe
 make clean
 cd ..
+
+## build punkst
+cd punkst
+rm -rf build/
+rm -rf bin/
+cd ../
+
+## build ImageMagick
+cd ImageMagick
+make clean
+cd ..
+
+## download pmtiles CLI
+rm -rf ./pmtiles

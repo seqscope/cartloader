@@ -13,7 +13,6 @@
 [submodule "submodules/ficture"]
 	path = submodules/ficture
 	url = http://github.com/seqscope/ficture
-	branch = de
 [submodule "submodules/ImageMagick"]
 	path = submodules/ImageMagick
 	url = https://github.com/ImageMagick/ImageMagick

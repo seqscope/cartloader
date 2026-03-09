@@ -1,3 +1,6 @@
+#!/bin/bash
+set -Eeuo pipefail
+
 ## build htslib
 cd htslib
 autoreconf -i
