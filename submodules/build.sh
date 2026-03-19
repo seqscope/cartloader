@@ -10,7 +10,7 @@ cd ..
 
 ## build qgenlib
 cd qgenlib
-mkdir build
+mkdir -p build
 cd build
 cmake ..
 make -j 4
@@ -18,7 +18,7 @@ cd ../../
 
 ## build spatula
 cd spatula
-mkdir build
+mkdir -p build
 cd build
 cmake ..
 make -j 4
@@ -26,7 +26,7 @@ cd ../../
 
 ## build pmpoint
 cd pmpoint
-mkdir build
+mkdir -p build
 cd build
 cmake ..
 make -j 4
@@ -39,7 +39,7 @@ cd ..
 
 ## build punkst
 cd punkst
-mkdir build
+mkdir -p build
 cd build
 cmake ..
 make -j 4

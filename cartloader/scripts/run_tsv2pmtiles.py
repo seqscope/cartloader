@@ -56,6 +56,7 @@ def parse_arguments(_args):
     aux_params.add_argument('--out-features-suffix', type=str, default="features.tsv.gz", help='The output file to store feature count matrix. Each file name will be [out-prefix].split.[bin_id].[out-features-suffix]. Default: features.tsv.gz')
     aux_params.add_argument('--tippecanoe', type=str, default=f"{repo_dir}/submodules/tippecanoe/tippecanoe", help='Path to tippecanoe binary')
     aux_params.add_argument('--pmpoint', type=str, default=f"{repo_dir}/submodules/pmpoint/bin/pmpoint", help='Path to pmpoint binary')
+    aux_params.add_argument('--spatula', type=str, default=f"{repo_dir}/submodules/spatula/bin/spatula", help='Path to spatula binary')
     aux_params.add_argument('--keep-intermediate-files', action='store_true', default=False, help='Keep intermediate output files')
     aux_params.add_argument('--use-pmpoint', action='store_true', default=False, help='Use pmpoint/MLT instead of tippecanoe for point PMTiles generation (requires --pmpoint)')
     aux_params.add_argument('--pmpoint-compression-scale', type=float, default=10.0, help='Additional compression scale for pmpoint when --use-pmpoint is turned on. Default: 10.0')
@@ -107,27 +108,17 @@ def run_tsv2pmtiles(_args):
     if args.split:
         logger.info("Splitting the input cross-platform TSV file into CSV files")
 
-        cmd = f"""cartloader split_molecule_counts \\
-                --in-molecules {args.in_molecules} \\
-                --in-features {args.in_features} \\
-                --out-prefix {args.out_prefix} \\
-                --in-molecules-delim \"{args.in_molecules_delim}\" \\
-                --in-features-delim \"{args.in_features_delim}\" \\
-                --out-molecules-suffix {args.out_molecules_suffix} \\
-                --out-molecules-delim \"{args.out_molecules_delim}\" \\
-                --out-features-suffix {args.out_features_suffix} \\
-                --out-features-delim \"{args.out_features_delim}\" \\
-                --colname-feature {args.colname_feature} \\
-                --colname-count {args.colname_count} \\
-                --bin-count {args.bin_count} \\
-                --equal-bins \\
-                --dummy-genes \"{args.dummy_genes}\" \\
-                --chunk-size {args.chunk_size} \\
-                --log-suffix {args.log_suffix} \\
-        """ + ("--log" if args.log else "") + ("--skip-original" if args.skip_original else "")
-
-        #        --col-rename {" ".join(args.col_rename)} \\
-
+        cmd = f"""'{args.spatula}' split-molecule-counts \\
+                --mol-tsv '{args.in_molecules}' \\
+                --feature-tsv '{args.in_features}' \\
+                --out-prefix '{args.out_prefix}' \\
+                --in-mol-tsv-delim '{args.in_molecules_delim}' \\
+                --in-feature-tsv-delim '{args.in_features_delim}' \\
+                --out-mol-tsv-delim '{args.out_molecules_delim}' \\
+                --out-feature-tsv-delim '{args.out_features_delim}' \\
+                --out-mol-suffix '{args.out_molecules_suffix}' \\
+                --out-feature-suffix '{args.out_features_suffix}'
+        """ + ("--skip-original" if args.skip_original else "")
 
         print(cmd)
         result = subprocess.run(cmd, shell=True)
