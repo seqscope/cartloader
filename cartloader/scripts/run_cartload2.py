@@ -78,6 +78,7 @@ def parse_arguments(_args):
     aux_params.add_argument('--sge-scale', type=int, default=1, help='scales input coordinates to pixels in the output image (default: 1)')
     aux_params.add_argument('--hex-thres-prob', type=float, default=0.0001, help='Minimum probability threshold for storing per-factor probability in hex PMTiles')
     aux_params.add_argument('--use-pmpoint', action='store_true', default=False, help='Use pmpoint/MLT instead of tippecanoe for point PMTiles generation (requires --pmpoint)')
+    aux_params.add_argument('--pmpoint-compression-scale', type=float, default=10.0, help='Additional compression scale for pmpoint when --use-pmpoint is turned on. Default: 10.0')
 
     env_params = parser.add_argument_group("Env Parameters", "Tool paths (override defaults if needed)")
     # aux_params.add_argument('--magick', type=str, default=f"magick", help='Path to ImageMagick binary') # Disable this function. The user need to add the path to the ImageMagick binary directory to the PATH environment variable
@@ -756,7 +757,7 @@ def run_cartload2(_args):
         "--all",
         "--n-jobs", str(args.n_jobs),
         f"--log --log-suffix '{args.log_suffix}'" if args.log else "",        
-        f"--use-pmpoint --pmpoint '{args.pmpoint}'" if args.use_pmpoint else f"--tippecanoe '{args.tippecanoe}'",
+        f"--use-pmpoint --pmpoint '{args.pmpoint}' --pmpoint-compression-scale {args.pmpoint_compression_scale}" if args.use_pmpoint else f"--tippecanoe '{args.tippecanoe}'",
         f"--tmp-dir '{args.tmp_dir}'",
         "--keep-intermediate-files" if args.keep_intermediate_files else ""
     ])
