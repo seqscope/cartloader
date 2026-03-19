@@ -1,18 +1,14 @@
 # Visium HD End-to-End Pipeline
 
-## Overview
-
 This tutorial walks through end‑to‑end processing of 10x Visium HD data with `CartLoader`: converting inputs, running FICTURE, importing cell results and histology, packaging assets, and uploading for sharing.
 
 ---
 
-## Input Data
+## Prepare Input
 
-**Data Access**
+### Data Access
 
-Downloaded the ST data from [10x Genomics Dataset portal](https://www.10xgenomics.com/datasets/visium-hd-three-prime-mouse-brain-fresh-frozen).
-
-
+Download the ST data from the [10x Genomics Dataset portal](https://www.10xgenomics.com/datasets/visium-hd-three-prime-mouse-brain-fresh-frozen).
 
 === "Use `wget`"
     If you have `wget` installed, use the following commands to download the output from 10X.
@@ -33,12 +29,21 @@ Downloaded the ST data from [10x Genomics Dataset portal](https://www.10xgenomic
     wget https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_segmented_outputs.tar.gz
     wget https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_spatial.tar.gz
     wget https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_web_summary.html
+
+    # Download the histology image
+    wget https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_image.tif
+    wget https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_tissue_image.btf
     ```
 
 === "Use `curl`"
     If you have `curl` installed, use the following commands to download the output from 10X. 
 
     ```bash
+    # define the work directory
+    work_dir=/path/to/work/directory
+    mkdir -p ${work_dir}/raw
+    cd ${work_dir}/raw
+
     curl -O https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_barcode_mappings.parquet
     curl -O https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_binned_outputs.tar.gz
     curl -O https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_cloupe_008um.cloupe
@@ -50,10 +55,12 @@ Downloaded the ST data from [10x Genomics Dataset portal](https://www.10xgenomic
     curl -O https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_spatial.tar.gz
     curl -O https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_web_summary.html
 
+    # Download the histology image
+    curl -O https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_image.tif
+    curl -O https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_tissue_image.btf
     ```
-___
 
-**Data Structure and Format**
+### Data Structure and Format
 
 See Space Ranger output details in the official documentation: [Space Ranger Outputs](https://www.10xgenomics.com/support/software/space-ranger/latest/analysis/outputs/output-overview)
 
@@ -138,15 +145,8 @@ See Space Ranger output details in the official documentation: [Space Ranger Out
         ENSMUSG00000051951,Xkr4,0.0020893375742615837,0.542453177216764,0.16305286911324085,0.0019306072327678393,0.34251290321116556,0.628624629681027,0.0009020306879791494,-0.677062452566048,0.6057595443651351,0.0008575468486789855,-0.53825692400323,1,0.0018835945742411177,0.3347722133550999,1,0.0017232930683496192,0.30174489068131116,1,0.0008765004215231041,-0.6062657172996246,1,0.0006958304617047569,-0.669599363115374,1,0.0021901445815864866,0.5424639235287998,0.6460045298567026,0,-0.513593267969263,1,0.000450562773540615,-0.8809942923847434,1,0.0006856395158652269,-0.2651228613954135,1,0.0008800111512863451,-0.49971125727530463,1,0.0026227703011305675,1.0167399161570962,1,0.002277387540951688,0.7536928538206205,1,0,-1.333742893536682,1,0.0007018464992057343,-0.23097850703201495,1,0.0005602354699616488,-0.560849410646286,1,0.0015894120085537071,0.37398251412889394,1,0,1.526558986825357,1,0,-0.5313075119163866,1,0,4.9659921506021,1,0,1.1981124565354708,1,0,1.1280527529013042,1
         ENSMUSG00000089699,Gm1992,0.00003369899313325135,2.372528175774452,0.49812531917443914,0,1.0054779159335947,1,0,2.907900048155108,1,0,3.8795955908826674,1,0,2.9741824980986316,1,0,3.8867073914024672,1,0,3.4811971239507127,1,0,4.171702890865568,1,0,2.5799386289474633,1,0,5.929350227879466,1,0,4.553633935251982,1,0,5.16950536624131,1,0,3.9181412576105927,1,0,5.104202757407435,1,0,4.56960978938165,1,0,5.109200602312047,1,0,5.203649720604709,1,0,4.873778816990438,1,0,4.791835029014791,1,0,7.969502482674086,1,0,5.911635983932342,1,0,11.408935646450828,1,0,7.641055952384198,1,0,7.570996248750033,1
         ```
-___
 
-## Set Up the Environment
-
-{%
-  include-markdown "../../../includes/includemd_vigenettes_setupenv.md"
-%}
-
-Define data ID and analysis parameters:
+### Define ID and Parameters
 
 ```bash
 # Unique identifier for your dataset
@@ -154,7 +154,7 @@ DATA_ID="visiumhd_3prime_mouse_brain"    # change this to reflect your dataset n
 
 # LDA parameters
 train_width=18                           # define LDA training hexagon width (comma-separated if multiple widths are applied)
-n_factor=48                              # define number of factors in LDA training (comma-separated if multiple n-factor are applied)
+n_factor=48                              # define number of factors in LDA training (comma-separated if multiple n-factor values are provided)
 
 # Path to AWS S3 directory
 S3_DIR=/s3/path/to/s3/dir                # Recommend to use DATA_ID as directory name, such as s3://bucket-name/visiumhd-3prime-mouse-brain
@@ -166,34 +166,81 @@ S3_DIR=/s3/path/to/s3/dir                # Recommend to use DATA_ID as directory
     
     Alternatively, provide the scale directly with `--units-per-um`.
 
+## Example Runs
 
-## Run Pipelines
+Choose one of the following options to run the `run_visiumhd` pipeline, either locally or with Docker.
 
-The example below runs all modules together. Customize actions with flags.
+=== "Run Pipeline Locally"
 
-```bash
-cartloader run_visiumhd \
-  --load-space-ranger \
-  --sge-convert \
-  --run-ficture2 \
-  --import-cells \
-  --import-images \
-  --run-cartload2 \
-  --upload-aws \
-  --space-ranger-dir /path/to/space/ranger/output \
-  --out-dir /path/to/out/dir \
-  --s3-dir ${S3_DIR} \
-  --width ${train_width} \
-  --n-factor ${n_factor} \
-  --id ${DATA_ID} \
-  --spatula ${spatula} \
-  --ficture2 ${punkst} \
-  --pmtiles ${pmtiles} \
-  --tippecanoe ${tippecanoe} \
-  --aws ${aws} \
-  --n-jobs ${n_jobs} \
-  --threads ${n_jobs}
-```
+    **Set Up Environment**
+    {%
+    include-markdown "../../../includes/includemd_vigenettes_setupenv.md"
+    %}
+
+    **Example Command**
+    ```bash
+    cartloader run_visiumhd \
+    --load-space-ranger \
+    --sge-convert \
+    --run-ficture2 \
+    --import-cells \
+    --import-images \
+    --run-cartload2 \
+    --upload-aws \
+    --space-ranger-dir /path/to/space/ranger/output \
+    --out-dir /path/to/out/dir \
+    --s3-dir ${S3_DIR} \
+    --width ${train_width} \
+    --n-factor ${n_factor} \
+    --id ${DATA_ID} \
+    --spatula ${spatula} \
+    --ficture2 ${punkst} \
+    --pmtiles ${pmtiles} \
+    --tippecanoe ${tippecanoe} \
+    --aws ${aws} \
+    --n-jobs ${n_jobs} \
+    --threads ${n_jobs}
+    ```
+
+=== "Run Pipeline via Docker"
+
+    **Set Up Environment**
+
+    {%
+    include-markdown "../../../includes/includemd_vigenettes_setupenv_docker.md"
+    %}
+
+    **Example Command**
+
+    ```bash
+    docker run -it --rm \
+    -v ${work_dir}:/data \
+    weiqiuc/cartloader:${docker_tag}\
+    run_visiumhd \
+    --load-space-ranger \
+    --sge-convert \
+    --run-ficture2 \
+    --import-cells \
+    --import-images \
+    --run-cartload2 \
+    --upload-aws \
+    --space-ranger-dir /data/raw \
+    --out-dir /data/output \
+    --s3-dir ${S3_DIR} \
+    --width ${train_width} \
+    --n-factor ${n_factor} \
+    --id ${DATA_ID} \
+    --spatula ${spatula} \
+    --ficture2 ${punkst} \
+    --pmtiles ${pmtiles} \
+    --tippecanoe ${tippecanoe} \
+    --aws ${aws} \
+    --n-jobs ${n_jobs} \
+    --threads ${n_jobs}
+    ```
+
+---
+## Customize Parameters
 
 **Action Flags to Enable Modules**
 
@@ -241,6 +288,8 @@ Below are explanations of the parameters used in the example. For the full list,
 | `--title`, `--desc`                | optional with `--run-cartload2`            | Human‑readable catalog title/description.                                             | 
 | `--zenodo-token`                   | `--upload-zenodo`                          | Path to file containing Zenodo access token.                                          |-->
 
+___
+
 ## Outputs
 
 <!-- ### Space Ranger Assets JSON
@@ -250,7 +299,7 @@ Below are explanations of the parameters used in the example. For the full list,
 ```
 
 ### Spatial Factor Inference
-Below is an example of spatial factor inference results from `FICTURE` using a training width of 18, 12 factors, a fit width of 18, and an anchor resolution of 6. See more details of output at the Reference pages for [run_ficture2](../docs/reference/run_ficture2.md)
+Below is an example of spatial factor inference results from `FICTURE` using a training width of 18, 12 factors, a fit width of 18, and an anchor resolution of 6. See output details in the reference pages for [run_ficture2](../docs/reference/run_ficture2.md)
 
 ![FICTURE](../../images/pipeline_vignettes/visiumhd_3prime_mouse_brain.t18_f24_p18_a6.png)
 ![cmap](../../images/pipeline_vignettes/visiumhd_3prime_mouse_brain.t18_f24.rgb.png)
@@ -259,7 +308,7 @@ Below is an example of spatial factor inference results from `FICTURE` using a t
 
 ### SGE/FICTURE/Cell/Images assets
 
-See more details of output at the Reference pages for [run_cartload2](../..//reference/run_cartload2.md), [import_xenium_cell](../..//reference/import_cell.md), and [import_image](../../reference/import_image.md).
+See output details in the reference pages for [run_cartload2](../../reference/run_cartload2.md), [import_xenium_cell](../../reference/import_cell.md), and [import_image](../../reference/import_image.md).
 
 Individual PMTiles and asset JSON files reside alongside it under `<out-dir>/cartload2/`.
 - Catalog to serve: `<out-dir>/cartload2/catalog.yaml`
@@ -275,7 +324,7 @@ Individual PMTiles and asset JSON files reside alongside it under `<out-dir>/car
 
     #### View/Explore
 
-    The output are available in CartoScope.
+    The outputs are available in CartoScope.
 
     [Explore in CartoScope](https://v3o-main.carto-scope.org/dataset?uri=s3%2Fcartostore%2Fdata%2Fbatch%3D2026_02%2Fcartloader-pipeline-example-collection%2Fvisiumhd_3prime_mouse_brain){ .md-button .md-button--primary .button-tight-small }
 
@@ -283,4 +332,4 @@ Individual PMTiles and asset JSON files reside alongside it under `<out-dir>/car
 
 </div>
 
-See more details of output at the Reference pages for [run_ficture2](../docs/reference/run_ficture2.md) and [run_cartload2](../docs/reference/run_cartload2.md).
+See output details in the reference pages for [run_ficture2](../docs/reference/run_ficture2.md) and [run_cartload2](../docs/reference/run_cartload2.md).

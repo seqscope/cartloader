@@ -22,14 +22,14 @@ def parse_arguments(_args):
     inout_params = parser.add_argument_group("Input output parameters", "Input and output parameters")
     inout_params.add_argument('--tsv', type=str, required=True, help='Input TSV file in the LDA output')
     inout_params.add_argument('--out', type=str, required=True, help='Output CSV file containing clustering results')
-    inout_params.add_argument('--offset-data', type=int, default=3, help='Offset for the results file (default: 2)')
-    inout_params.add_argument('--random-seed', type=int, help='Random seed (default: 42)')
+    inout_params.add_argument('--offset-data', type=int, default=3, help='Offset for the results file (default: 3)')
+    inout_params.add_argument('--random-seed', type=int, default=42, help='Random seed (default: 42)')
     inout_params.add_argument('--key-ids', type=str, nargs='+',default=['cell_id'], help='Key ID for the results file (default: cell_id)')
     inout_params.add_argument('--drop-columns', type=str, nargs='*', default=['topK', 'topP'], help='Columns to drop from the results file (default: ["topK", "topP"])')
     inout_params.add_argument('--perplexity', type=int, default=50, help='Perplexity for fit-SNE (default: 50)')
     inout_params.add_argument('--exaggeration', type=float, help='Exaggeration for fit-SNE (default: None)')
-    inout_params.add_argument('--initialization', type=str, default='spectral', choices=['spectral', 'pca', 'random'], help='Initialization for fit-SNE (default: spectral)')
-    inout_params.add_argument('--sep', type=str, default="\t", help='Separator for the results file (default: ,)')
+    inout_params.add_argument('--initialization', type=str, default='spectral', choices=['spectral', 'pca', 'random'], help='Initialization for fit-SNE (default: spectral; choices: spectral, pca, random)')
+    inout_params.add_argument('--sep', type=str, default="\t", help='Separator for the results file (default: \\t)')
     inout_params.add_argument('--n-jobs', type=int, default=8, help='Number of jobs for fit-SNE (default: 8)')
 
     if len(_args) == 0:

@@ -134,7 +134,7 @@ def update_csvformat_by_platform(args):
             "x": "X",
             "y": "Y",
             "feature_name": "gene",
-            "count": "count",
+            "count": None,
             "delim": None, # none for using default tab
             "comment": False
         }

@@ -1,12 +1,12 @@
 # Vignettes
 
-Explore a series of tutorials that help you learn `CartLoader` — from quick, getting‑started examples to processing full‑scale ST datasets.
+Explore a series of tutorials that help you learn `CartLoader`, from quick getting‑started examples to full‑scale ST dataset processing.
 
-To view details of a specific module, see [Reference](../reference/intro.md) section.
+To view details for a specific module, see the [Reference](../reference/intro.md) section.
 
 ## Quick Start
 
-If you’re new to `CartLoader`, start with the [Quick Start](./quickstart/run_locally.md) tutorial, a beginner‑friendly walkthrough using a small mouse hippocampus dataset to core `CartLoader` functions.
+If you’re new to `CartLoader`, start with the [Quick Start](./quickstart/run_locally.md) tutorial, a beginner‑friendly walkthrough using a small mouse hippocampus dataset that covers core `CartLoader` functions.
 
 <div class="grid cards generic single-left" markdown>
 
@@ -91,7 +91,7 @@ These tutorials demonstrate how to run `CartLoader` on a variety of ST platforms
 </div>
 
 ## End‑to‑end workflows by platform
-These examples show how to process real‑world ST datasets from different platform using end-to-end workflow from `CartLoader`.
+These examples show how to process real‑world ST datasets from different platforms using end‑to‑end workflows in `CartLoader`.
 
 <div class="grid cards generic" markdown>
 -   <figure markdown="span">

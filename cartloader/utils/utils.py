@@ -868,12 +868,18 @@ def parquet_to_csv_with_polars_pigz(
         cmd.extend(["-p", str(pigz_threads)])
 
         # Start pigz process
-        proc = subprocess.Popen(
-            cmd,
-            stdin=subprocess.PIPE,   # we'll stream text CSV into pigz's stdin
-            stdout=fout,             # pigz writes compressed bytes here
-            stderr=subprocess.PIPE
-        )
+        try:
+            proc = subprocess.Popen(
+                cmd,
+                stdin=subprocess.PIPE,   # we'll stream text CSV into pigz's stdin
+                stdout=fout,             # pigz writes compressed bytes here
+                stderr=subprocess.PIPE
+            )
+        except FileNotFoundError as e:
+            raise FileNotFoundError(
+                f"Compression binary not found: '{pigz_path}'. "
+                "Install pigz in the runtime environment or pass --pigz with a valid path."
+            ) from e
         
         try:
             # Wrap pigz's binary stdin with a text writer for CSV

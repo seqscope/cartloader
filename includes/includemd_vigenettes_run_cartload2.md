@@ -1,43 +1,34 @@
 Generate pmtiles and web-compatible tile directories. See more details in [Reference page](../docs/reference/run_cartload2.md).
 
-<!-- ```bash
-cartloader run_cartload2 \
-    --makefn run_cartload2.mk \         # (optional) file name of the output make file
-    --fic-dir ./ficture2 \              # path to input directory containing FICTURE2 output
-    --out-dir ./cartload2 \             # path to output directory for PMTiles and web tiles
-    --id ${DATA_ID} \                   # dataset ID used for naming outputs and metadata
-    --spatula ${spatula} \              # (optional) path to the spatula binary
-    --pmtiles ${pmtiles} \              # (optional) path to the pmtiles binary
-    --tippecanoe ${tippecanoe} \        # (optional) path to the tippecanoe binary
-    --n-jobs ${n_jobs} \                       # (optional) number of parallel jobs
-    --threads ${n_jobs}                       # (optional) number of threads per job
-``` -->
+=== "run_cartload2 with FICTURE output"
+    ```bash
+    # Example A: With FICTURE outputs (integrates factors + joins)
+    cartloader run_cartload2 \
+      --makefn run_cartload2.mk \
+      --fic-dir ./ficture2 \
+      --out-dir ./cartload2 \
+      --id ${DATA_ID} \
+      --spatula ${spatula} \
+      --pmtiles ${pmtiles} \
+      --tippecanoe ${tippecanoe} \
+      --n-jobs ${n_jobs} \
+      --threads ${n_jobs}
+    ```
 
-```bash
-# Example A: With FICTURE outputs (integrates factors + joins)
-cartloader run_cartload2 \
-  --makefn run_cartload2.mk \
-  --fic-dir ./ficture2 \
-  --out-dir ./cartload2 \
-  --id ${DATA_ID} \
-  --spatula ${spatula} \
-  --pmtiles ${pmtiles} \
-  --tippecanoe ${tippecanoe} \
-  --n-jobs ${n_jobs} \
-  --threads ${n_jobs}
-
-# Example B: SGE-only (package molecules without FICTURE)
-cartloader run_cartload2 \
-  --makefn run_cartload2.mk \
-  --sge-dir ./sge_convert \
-  --out-dir ./cartload2 \
-  --id ${DATA_ID} \
-  --spatula ${spatula} \
-  --pmtiles ${pmtiles} \
-  --tippecanoe ${tippecanoe} \
-  --n-jobs ${n_jobs} \
-  --threads ${n_jobs}
-```
+=== "run_cartload2 with sge only"
+    ```
+    # Example B: SGE-only (package molecules without FICTURE)
+    cartloader run_cartload2 \
+      --makefn run_cartload2.mk \
+      --sge-dir ./sge_convert \
+      --out-dir ./cartload2 \
+      --id ${DATA_ID} \
+      --spatula ${spatula} \
+      --pmtiles ${pmtiles} \
+      --tippecanoe ${tippecanoe} \
+      --n-jobs ${n_jobs} \
+      --threads ${n_jobs}
+    ```
 
 <!--parameter-start-->
 | Parameter         | Required | Type   | Description                                                                                     |

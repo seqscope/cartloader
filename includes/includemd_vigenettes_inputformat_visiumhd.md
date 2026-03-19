@@ -3,7 +3,7 @@ Visium HD slides use a 2×2 µm grid of barcoded squares (`square_002um`) for 
 !!! warning "ATTENTION"
     The file‑format examples below use a sample Visium HD dataset. Paths, IDs, and values are illustrative and may not match the dataset used in this tutorial.
 
-SGE comprises several key files as below: 
+SGE comprises several key files as follows: 
 
 ??? "`filtered_feature_bc_matrix/barcodes.tsv.gz` – spatial barcode for tissue locations "
 
@@ -41,7 +41,7 @@ SGE comprises several key files as below:
     
     * `Header`: Initial lines form the header, declaring the matrix's adherence to the [Market Matrix (MTX) format](https://math.nist.gov/MatrixMarket/formats.html), outlining its traits. This may include comments (lines beginning with `%`) for extra metadata, all marked by a “%”.
     * `Dimensions`: Following the header, the first line details the matrix dimensions: the count of rows (features), columns (barcodes), and non-zero entries.
-    * `Data Entries`: Post-dimensions, subsequent lines enumerate non-zero entries in seven columns: row index (feature index), column index (barcode index), and one value presenting the expression count per barcode per feature.
+    * `Data Entries`: After the dimensions, each subsequent line provides three fields: row index (feature index), column index (barcode index), and the expression-count value.
 
 ??? "`tissue_positions.parquet` – spatial barcode metadata "
 

@@ -1,28 +1,10 @@
 # 10x Xenium Starter Tutorial
 
-## Input Data
-
 This tutorial uses SGE data generated with the 10x Genomics Xenium platform, and it has been cropped to a small region of the adult mouse brain for demonstration purposes.
 
-**File Format**
+It includes steps of input preparation, SGE format conversion, FICTURE analysis, asset packaging, and data upload.
 
-{%
-  include-markdown "../../../includes/includemd_vigenettes_inputformat_xenium.md"
-%}
-
-**Data Access**
-
-The example data is hosted on Zenodo.
-
-Follow the commands below to download the example data.
-
-```bash
-work_dir=/path/to/work/directory
-cd $work_dir
-wget  https://zenodo.org/records/17953582/files/xenium_starter.raw.tar.gz 
-tar --strip-components=1 -zxvf xenium_starter.raw.tar.gz  
-```
-
+---
 
 ## Set Up the Environment
 
@@ -30,7 +12,29 @@ tar --strip-components=1 -zxvf xenium_starter.raw.tar.gz
   include-markdown "../../../includes/includemd_vigenettes_setupenv.md"
 %}
 
-Define data ID and analysis parameters:
+---
+
+## Prepare Input
+
+### Data Access
+
+The example data is hosted on Zenodo.
+
+Follow the commands below to download the example data.
+
+```bash
+cd $work_dir
+wget  https://zenodo.org/records/17953582/files/xenium_starter.raw.tar.gz
+tar --strip-components=1 -zxvf xenium_starter.raw.tar.gz
+```
+
+### File Format
+
+{%
+  include-markdown "../../../includes/includemd_vigenettes_inputformat_xenium.md"
+%}
+
+### Define ID and Parameters
 
 ```bash
 # Unique identifier for your dataset
@@ -40,12 +44,14 @@ SCALE=1                                 # coordinate to micrometer scaling facto
 
 # LDA parameters
 train_width=12                           # define LDA training hexagon width (comma-separated if multiple widths are applied)
-n_factor=6,12                            # define number of factors in LDA training (comma-separated if multiple n-factor are applied)
+n_factor=6,12                            # define number of factors in LDA training (comma-separated if multiple n-factor values are provided)
 ```
 
 !!! info "How to Define Scaling Factors for Xenium?"
 
-    The Xenium example data currently used here provides SGE in micrometer units. Define scaling factor from coordinate to micrometer as 1.
+    The Xenium example data currently used here provides SGE in micrometer units. Define the scaling factor from coordinate units to micrometers as 1.
+
+---
 
 ## SGE Format Conversion
 
@@ -53,11 +59,15 @@ n_factor=6,12                            # define number of factors in LDA train
   include-markdown "../../../includes/includemd_vigenettes_sge_convert_tsv.md"
 %}
 
+---
+
 ## `FICTURE` Analysis
 
 {%
   include-markdown "../../../includes/includemd_vigenettes_run_ficture2.md"
 %}
+
+---
 
 ## `CartLoader` Asset Packaging
 
@@ -65,11 +75,15 @@ n_factor=6,12                            # define number of factors in LDA train
   include-markdown "../../../includes/includemd_vigenettes_run_cartload2.md"
 %}
 
+---
+
 ## Upload to Data Repository
 
 {%
   include-markdown "../../../includes/includemd_vigenettes_upload.md" preserve-includer-indent=false
 %}
+
+---
 
 ## Output Data
 

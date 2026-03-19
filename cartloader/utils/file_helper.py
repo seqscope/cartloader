@@ -63,25 +63,30 @@ def find_valid_path(pattern, in_dir):
             return f
     return None
 
-def find_valid_path_from_zip(pattern, in_dir, unzip_dir, overwrite=False):
+def find_valid_path_from_zip(pattern, in_dir, unzip_dir, overwrite=False, extracted_archives=None):
     """
     Search for the *first* existing file within the compressed file
     """
     assert len(pattern.get("zips", []))>0, "No prebuild zip file name"
-    
+
+    # If a prior extraction already produced the target path, reuse it.
+    existing_in_unzip = find_valid_path(pattern, unzip_dir)
+    if existing_in_unzip is not None:
+        return existing_in_unzip
+
     for zip_fn in pattern["zips"]:
         zip_in=os.path.join(in_dir, zip_fn)
         assert os.path.exists(zip_in), f"An input compressed file does not exist: {zip_in}"
-        zip_stem, zip_suffix = split_prefix_suffix_from_compression(zip_fn)
-        unzip_subdir=os.path.join(unzip_dir, zip_stem) # decompress the file (unzip_dir the root directory to host the decompressed files)
-        if os.path.exists(unzip_subdir):
-            if overwrite:
-                print(f"Warning: overwriting decompressed files in: {unzip_subdir}")
-        if not os.path.exists(unzip_subdir) or overwrite:
+        _, zip_suffix = split_prefix_suffix_from_compression(zip_fn)
+
+        already_extracted = extracted_archives is not None and zip_in in extracted_archives
+        if not already_extracted:
             if zip_suffix == ".tar.gz":
                 decompress_tar_gz(zip_in, unzip_dir)
             else:
                 raise ValueError(f"Unsupported compressed file extension '{zip_suffix}'. Please unzip manually: {zip_in}")
+            if extracted_archives is not None:
+                extracted_archives.add(zip_in)
 
         f = find_valid_path(pattern, unzip_dir)
         if f is not None:
@@ -102,11 +107,13 @@ def resolve_paths_by_pattern(
     - Fills in missing keys using find_valid_path / find_valid_path_from_zip.
     - Collects missing required files and raises ValueError if any are not found.
     """
+    extracted_archives: set[str] = set()
+
     def _resolve_path(spec: dict) -> str | None:
         """Return a valid path for this spec, trying zip sources if needed."""
         path = find_valid_path(spec, in_dir)
         if path is None and spec.get("zips"):
-            path = find_valid_path_from_zip(spec, in_dir, unzip_dir, overwrite)
+            path = find_valid_path_from_zip(spec, in_dir, unzip_dir, overwrite, extracted_archives=extracted_archives)
         return path
 
     errors = []

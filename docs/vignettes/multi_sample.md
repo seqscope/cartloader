@@ -1,7 +1,5 @@
 # Human Cortex Multi‑Sample Spatial Factor Analysis Tutorial
 
-## Overview
-
 This tutorial demonstrates how to run multi‑sample FICTURE analysis and package results using `run_ficture2_multi` and `run_cartload2_multi`.
 
 !!! info "Why use Multi‑Sample FICTURE Analysis?"
@@ -23,17 +21,25 @@ This tutorial demonstrates how to run multi‑sample FICTURE analysis and packag
 
 ---
 
+
+## Set Up the Environment
+
+{% 
+  include-markdown "../../includes/includemd_vigenettes_setupenv.md"
+%}
+
+---
+
 ## Input Data
 
 This tutorial uses a series of four human cortex ST datasets from [Walsh et al. Nature 2025](https://www.nature.com/articles/s41586-025-09010-1), generated using MERFISH.
 
-**Data Access**
+
+### Data Access
 
 Follow the commands below to download the source data.
 
 ```bash
-# define the work directory
-work_dir=/path/to/work/directory
 mkdir -p ${work_dir}/raw
 cd ${work_dir}/raw
 
@@ -53,7 +59,7 @@ wget https://zenodo.org/records/15127709/files/FB121_O1.zip?download=1
 unzip FB121_O1.zip
 ```
 
-**File Format**
+### File Format
 
 !!! info "`detected_transcripts.csv.gz`"
 
@@ -76,18 +82,10 @@ unzip FB121_O1.zip
       * `transcript_id`: Unique identifier for the transcript.
       * `cell_id`: Unique identifier for cell.
 
----
-
-## Set Up the Environment
-
-{% 
-  include-markdown "../../includes/includemd_vigenettes_setupenv.md"
-%}
-
-
-Define data ID and analysis parameters:
+### Define ID and Parameters
 
 ```bash
+cd $work_dir
 # Unique identifier for your collection
 COLLECTION_ID="walsh2025-human-cortex-fb080-O1" # change this to reflect your dataset name
 PLATFORM="generic"                      # platform information
@@ -95,76 +93,94 @@ SCALE=1                                 # coordinate to micrometer scaling facto
 
 # LDA parameters
 train_width=24                           # define LDA training hexagon width (comma-separated if multiple widths are applied)
-n_factor=96,192                          # define number of factors in LDA training (comma-separated if multiple n-factor are applied)
+n_factor=96,192                          # define number of factors in LDA training (comma-separated if multiple n-factor values are provided)
 ```
 
-Prepare a working directory:
-
-```bash
-work_dir=/path/to/work/dir/${COLLECTION_ID}
-cd ${work_dir}
-```
 
 ---
 
 ## SGE Format Conversion
 
 !!! warning
-    For each sample, convert transcript-indexed SGE to CartLoader format. Below use `FB080_O1a` as example.
-
-    Set `sample_id` once, then run one of the two workflows below.
+    Convert each sample's transcript file to CartLoader SGE format. The commands below run all five samples in a loop.
 
 === "Recommended: `cartloader sge_convert`"
 
     ```bash
-    sample_id=FB080_O1a
-    mkdir -p "./sge/${sample_id}"
+    cd "${work_dir}"
+    mkdir -p ./sge
 
-    cartloader sge_convert \
-      --in-csv "./raw/${sample_id}/detected_transcripts.csv.gz" \
-      --platform generic \
-      --out-dir "./sge/${sample_id}" \
-      --csv-delim "," \
-      --csv-colname-x global_x \
-      --csv-colname-y global_y \
-      --csv-colname-feature-name gene \
-      --csv-colnames-others cell_id,global_z \
-      --sge-visual
+    sample_ids=(FB080_O1a FB080_O1b FB080_O1c FB080_O1d FB121_O1)
+
+    for sample_id in "${sample_ids[@]}"; do
+      mkdir -p "./sge/${sample_id}"
+
+      cartloader sge_convert \
+        --in-csv "./raw/${sample_id}/detected_transcripts.csv.gz" \
+        --platform generic \
+        --out-dir "./sge/${sample_id}" \
+        --csv-delim "," \
+        --csv-colname-x global_x \
+        --csv-colname-y global_y \
+        --csv-colname-feature-name gene \
+        --csv-colnames-others cell_id global_z \
+        --sge-visual
+    done
     ```
 
 === "Fast path: direct transform (no visualization/filtering)"
 
     !!! tips
-        Given raw SGE coordinates are already in micrometers, use this only if you do **not** need SGE visualization or density/feature-based filtering.
+        Given that raw SGE coordinates are already in micrometers, use this only if you do **not** need SGE visualization or density/feature-based filtering.
 
     ```bash
-    sample_id=FB080_O1a
-    mkdir -p "./sge/${sample_id}"
+    cd "${work_dir}"
+    mkdir -p ./sge
 
-    (
-      echo -e "X\tY\tgene\tcount\tcell_id\tZ"
-      gzip -cd "./raw/${sample_id}/detected_transcripts.csv.gz" \
-        | tail -n +2 \
-        | tr ',' '\t' \
-        | perl -lane 'print join("\t",$F[2],$F[3],$F[8],1,$F[10],$F[4]);'
-    ) | gzip > "./sge/${sample_id}/transcripts.unsorted.tsv.gz"
+    sample_ids=(FB080_O1a FB080_O1b FB080_O1c FB080_O1d FB121_O1)
+
+    for sample_id in "${sample_ids[@]}"; do
+      mkdir -p "./sge/${sample_id}"
+
+      (
+        echo -e "X\tY\tgene\tcount\tcell_id\tZ"
+        gzip -cd "./raw/${sample_id}/detected_transcripts.csv.gz" \
+          | tail -n +2 \
+          | tr ',' '\t' \
+          | perl -lane 'print join("\t",$F[2],$F[3],$F[8],1,$F[10],$F[4]);'
+      ) | gzip > "./sge/${sample_id}/transcripts.unsorted.tsv.gz"
+    done
     ```
 
 ---
 
 ## Prepare Input List
 
-Create a tab‑separated TSV file (e.g., `input.tsv`). 
+Create a tab‑separated TSV file (for example, `input.tsv`) with one sample per line.
+
+```bash
+cd "${work_dir}"
+
+sample_ids=(FB080_O1a FB080_O1b FB080_O1c FB080_O1d FB121_O1)
+
+: > ./input.tsv
+for sample_id in "${sample_ids[@]}"; do
+  printf "%s\t%s/sge/%s/transcripts.unsorted.tsv.gz\n" \
+    "${sample_id}" "${work_dir}" "${sample_id}" >> ./input.tsv
+done
+
+cat ./input.tsv
+```
 
 !!! info "Example Input List: `input.tsv`"
-      The TSV should be **one sample per line** and have **no header** and contain two to four columns.
+      The TSV should be **one sample per line**, have **no header**, and contain two to four columns.
       
       ```text
-      FB080_O1a	/path/to/FB080_O1a/transcripts.unsorted.tsv.gz
-      FB080_O1b	/path/to/FB080_O1b/transcripts.unsorted.tsv.gz
-      FB080_O1c	/path/to/FB080_O1c/transcripts.unsorted.tsv.gz
-      FB080_O1d	/path/to/FB080_O1d/transcripts.unsorted.tsv.gz
-      FB121_O1  /path/to/FB121_O1/transcripts.unsorted.tsv.gz
+      FB080_O1a	/path/to/work_dir/sge/FB080_O1a/transcripts.unsorted.tsv.gz
+      FB080_O1b	/path/to/work_dir/sge/FB080_O1b/transcripts.unsorted.tsv.gz
+      FB080_O1c	/path/to/work_dir/sge/FB080_O1c/transcripts.unsorted.tsv.gz
+      FB080_O1d	/path/to/work_dir/sge/FB080_O1d/transcripts.unsorted.tsv.gz
+      FB121_O1	/path/to/work_dir/sge/FB121_O1/transcripts.unsorted.tsv.gz
       ```
 
       * `1st Column` (required, str): Unique dataset identifier (avoid whitespace; prefer `-` to `_`).
@@ -188,8 +204,8 @@ cartloader run_ficture2_multi \
   --n-factor $n_factor \
   --exclude-feature-regex "^(Blank-.*$)" \
   --redo-merge-units \
-  --ficture2 ${PUNKST} \
-  --spatula ${SPATULA} \
+  --ficture2 ${punkst} \
+  --spatula ${spatula} \
   --threads 12 \
   --n-jobs 10 
 ```
@@ -207,8 +223,8 @@ cartloader run_cartload2_multi \
   --in-list ./input.tsv \
   --fic-dir ./ficture2 \
   --out-dir ./cartload2 \
-  --spatula ${SPATULA} \
-  --tippecanoe ${TIPPECANOE} \
+  --spatula ${spatula} \
+  --tippecanoe ${tippecanoe} \
   --threads 12 \
   --n-jobs 10 
 ```
@@ -243,23 +259,8 @@ Upload the generated `CartLoader` outputs from above to your designated AWS S3 d
     ```
 
 ---
+
 ## Output Summary
-
-<!-- See reference details: [run_ficture2_multi](../../reference/run_ficture2_multi.md#output) and [run_cartload2_multi](../../reference/run_cartload2_multi.md#output).
-
-### Spatial Factor Inference Per Sample
-
-Below is an example of spatial factor inference results from `FICTURE`, trained at width 18 with 96 factors, decoded at width 18, and anchor resolution 6.
-
-![FICTURE](../images/multisample_vigenettes/FB080_O1a.t18_f96_p18_a6.png)
-![cmap](../images/multi-sample.t18_f96.cmap.png)
-
-{{ read_csv('../tabs/FB080_O1a.t18_f96_p18_a6.factor.info.tsv',sep = '\t') }}
-
-### Packed SGE and Spatial Factor Outputs Per Sample
-
-TODO: Provide paths to these assets to serve the outputs. -->
-
 
 <div class="grid cards generic" markdown>
 
@@ -269,10 +270,10 @@ TODO: Provide paths to these assets to serve the outputs. -->
 
     #### View/Explore
 
-    The output are available in CartoScope.
+    The outputs are available in CartoScope.
 
     [Explore in CartoScope](https://v3o-main.carto-scope.org/datasets?collections=multi-sample+analysis+of+human+occipital+cortex+%28gw20%29+development){ .md-button .md-button--primary .button-tight-small }
 
 </div>
 
-See more details of output at the Reference pages for [run_ficture2](../docs/reference/run_ficture2.md) and [run_cartload2](../docs/reference/run_cartload2.md).
+See output details in the reference pages for [run_ficture2](../docs/reference/run_ficture2.md) and [run_cartload2](../docs/reference/run_cartload2.md).

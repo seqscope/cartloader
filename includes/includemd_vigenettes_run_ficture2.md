@@ -1,4 +1,4 @@
-Compute spatial factors using `punkst` (FICTURE2 mode). See more details on the [Reference page](../docs/reference/run_ficture2.md).
+Compute spatial factors using `punkst` (FICTURE2). See more details on the [Reference page](../docs/reference/run_ficture2.md).
 
 <!-- ```bash
 cartloader run_ficture2 \
@@ -11,7 +11,7 @@ cartloader run_ficture2 \
     --exclude-feature-regex '^(mt-.*$|Gm\d+$)' \        # regex pattern to exclude features (removing mitochondrial and predicted genes in the example analysis)
     --out-dir ./ficture2 \                              # path to output directory
     --width ${train_width} \                            # LDA training hexagon width (comma-separated if multiple widths are applied)
-    --n-factor ${n_factor} \                            # number of factors in LDA training (comma-separated if multiple n-factor are applied)
+    --n-factor ${n_factor} \                            # number of factors in LDA training (comma-separated if multiple n-factor values are provided)
     --spatula ${spatula} \                              # (optional) path to the spatula binary
     --ficture2 ${punkst} \                              # (optional) path to the punkst directory
     --n-jobs ${n_jobs}  \                                      # (optional) number of parallel jobs 
@@ -56,5 +56,5 @@ cartloader run_ficture2 \
 | `--threads`               |                       | int                         | Number of threads per job (default: `1`)                                                                        |
 
 
-<sub><sup>1</sup>: `CartLoader` requires the user to specify **at least one action**. Available actions includes: `--tile` to run tiling step; `--segment` to run segmentation step; `--init-lda` to run LDA training step; `--decode` to run decoding step; `--summary` to run summarization step; `--main` to run all above five actions.</sub>
+<sub><sup>1</sup>: `CartLoader` requires the user to specify **at least one action**. Available actions include: `--tile` to run tiling step; `--segment` to run segmentation step; `--init-lda` to run LDA training step; `--decode` to run decoding step; `--summary` to run summarization step; `--main` to run all above five actions.</sub>
 <!--parameter-end-->

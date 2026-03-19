@@ -30,7 +30,7 @@ def parse_arguments(_args):
     inout_params = parser.add_argument_group("Input/Output Parameters", "Primary input and output locations")
     inout_params.add_argument('--out-dir', type=str, required=True, help='Output directory (PMTiles, assets JSON, and catalog YAML)')
     inout_params.add_argument('--sge-dir', type=str, help='Path to SGE directory produced by "cartloader sge_convert"; must include SGE files and an assets JSON (see --in-sge-assets)')
-    inout_params.add_argument('--fic-dir', type=str, help='Path tp FICTURE results directory produced by "cartloader run_ficture"; must include FICTURE results and a parameter JSON (see --in-fic-params)')
+    inout_params.add_argument('--fic-dir', type=str, help='Path to FICTURE results directory produced by "cartloader run_ficture2"; must include FICTURE results and a parameter JSON (see --in-fic-params)')
     inout_params.add_argument('--cell-assets', type=str, nargs="+", default=[], help='Optional list of cell asset JSON/YAML files produced by import_xenium_cell or import_visiumhd_cell')
     inout_params.add_argument('--background-assets', type=str, nargs="+", default=[], help='Optional list of background asset specs (JSON/YAML or inline id:path or id1:id2:path)')
     inout_params.add_argument('--square-assets', type=str, nargs="+", default=[], help='Optional list of square asset JSON/YAML files produced by import_visiumhd_square')
@@ -42,7 +42,7 @@ def parse_arguments(_args):
 
     aux_params = parser.add_argument_group("Auxiliary Parameters", "Advanced settings; defaults work for most cases")
     aux_params.add_argument('--in-sge-assets', type=str, default="sge_assets.json", help='File name of a SGE assets JSON/YAML under --sge-dir, providing paths to transcript, feature, minmax files (default: sge_assets.json)')
-    aux_params.add_argument('--in-fic-params', type=str, default="ficture.params.json", help='File name of FICTURE params JSON/YAML under --fic-dir, providing FICTURE paramaters (default: ficture.params.json)')
+    aux_params.add_argument('--in-fic-params', type=str, default="ficture.params.json", help='File name of FICTURE params JSON/YAML under --fic-dir, providing FICTURE parameters (default: ficture.params.json)')
     aux_params.add_argument('--in-cell-params', type=str, nargs="+", default=[], help='Optional list of FICTURE cell parameter JSON/YAML files produced by run_ficture2_multi_cells')
     aux_params.add_argument('--out-fic-assets', type=str, default="ficture_assets.json", help='File name of output JSON/YAML for FICTURE asset metadata under --out-dir (default: ficture_assets.json)')
     aux_params.add_argument('--out-catalog', type=str, default="catalog.yaml", help='File name of output catalog YAML under --out-dir (default: catalog.yaml)')
