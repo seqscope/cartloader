@@ -1,140 +1,86 @@
-import sys, os, gzip, logging, argparse, inspect, json
+import sys, os, re, gzip, logging, argparse, inspect
 import pandas as pd
-import polars as pl
 import numpy as np
 from collections import Counter
 
 from cartloader.utils.utils import create_custom_logger
 
-
-def _write_csv(df, path, separator='\t', null_value=''):
-    """Write a polars DataFrame to CSV, supporting gzip compression."""
-    if path.endswith('.gz'):
-        csv_bytes = df.write_csv(separator=separator, null_value=null_value).encode('utf-8')
-        with gzip.open(path, 'wb') as f:
-            f.write(csv_bytes)
-    else:
-        df.write_csv(path, separator=separator, null_value=null_value)
-
-
-def _append_csv(df, path, separator, null_value, include_header):
-    """Write/append a polars DataFrame to a CSV file, supporting gzip."""
-    csv_bytes = df.write_csv(
-        separator=separator, null_value=null_value, include_header=include_header
-    ).encode('utf-8')
-    # 'wb' to create/overwrite on first write, 'ab' to append on subsequent writes
-    mode = 'wb' if include_header else 'ab'
-    if path.endswith('.gz'):
-        with gzip.open(path, mode) as f:
-            f.write(csv_bytes)
-    else:
-        with open(path, mode) as f:
-            f.write(csv_bytes)
-
-
-def _read_csv_chunked(path, separator, chunk_size):
-    """Generator yielding polars DataFrames in chunks. Supports gzip."""
-    if not path.endswith('.gz'):
-        reader = pl.read_csv_batched(path, separator=separator, batch_size=chunk_size)
-        while True:
-            batches = reader.next_batches(1)
-            if batches is None:
-                break
-            yield batches[0]
-    else:
-        # Use pandas for chunked gzip reading (C-level decompression),
-        # then convert each chunk to polars for fast processing
-        for chunk_pd in pd.read_csv(path, sep=separator, chunksize=chunk_size,
-                                    keep_default_na=False, na_values=[]):
-            yield pl.from_pandas(chunk_pd)
-
-
 # Function to get equal bins from the first file
 def get_equal_bins(n_bins, in_features, out_prefix, out_features_suffix, delim, colname_feature, colname_count, skip_original):
     ## read the feature data frame
-    df = pl.read_csv(in_features, separator=delim)
+    df = pd.read_csv(in_features, sep=delim)
 
-    ## sort by largest to smallest
-    df = df.sort(colname_count, descending=True)
+    ## sort by smallest to largest
+    df = df.sort_values(by=colname_count, ascending=False).reset_index(drop=True)
 
-    # Fast bin assignment using numpy arrays instead of iterrows
-    counts = df[colname_count].to_numpy().astype(np.float64)
-    n = len(counts)
-    bins_arr = np.zeros(n, dtype=np.int64)
+    # Calculate the cumulative sum of 'count'
+    df['cumulative_sum'] = df[colname_count].cumsum()
 
-    total_sum = float(counts.sum())
+    # Define the total sum and target sum for each bin
+    total_sum = df[colname_count].sum()
     target_sum = total_sum / n_bins
-    current_sum = 0.0
+    
+    df['bin'] = 0
+    current_sum = 0
     current_bin = 1
-
-    for i in range(n):
-        c = counts[i]
-        if current_sum + c < target_sum or current_bin >= n_bins:
-            current_sum += c
-            bins_arr[i] = current_bin
-        else:
-            current_sum += c
-            bins_arr[i] = current_bin
+    for index, row in df.iterrows():
+        #print("***", total_sum, target_sum, current_sum, current_bin, row[colname_count])
+        if current_sum + row[colname_count] < target_sum or current_bin >= n_bins: # keep adding more features
+            current_sum += row[colname_count]
+            df.at[index, 'bin'] = current_bin
+        else: # stop here
+            current_sum += row[colname_count]
+            df.at[index, 'bin'] = current_bin
             current_bin += 1
+            ## update target_sum
             total_sum -= current_sum
             if current_bin <= n_bins:
-                target_sum = total_sum / (n_bins - current_bin + 1)
-                current_sum = 0.0
+              target_sum = total_sum / (n_bins - current_bin + 1)
+              current_sum = 0
+    
 
-    df = df.with_columns(pl.Series("bin", bins_arr))
+    equal_bins = df.set_index(colname_feature)['bin'].to_dict()
 
-    equal_bins = dict(zip(df[colname_feature].to_list(), df["bin"].to_list()))
+    df = df.drop(columns=['cumulative_sum'])
 
     if not skip_original:
-        _write_csv(df, f"{out_prefix}_all_{out_features_suffix}", separator='\t', null_value='NA')
+        df.to_csv(f"{out_prefix}_all_{out_features_suffix}", sep='\t', index=False, na_rep='NA')
+    df.to_json(f"{out_prefix}_bin_counts.json", orient='records')
 
-    with open(f"{out_prefix}_bin_counts.json", 'w') as f:
-        json.dump(df.to_dicts(), f, separators=(',', ':'))
-
-    for bin_val in sorted(df["bin"].unique().to_list()):
-        group = df.filter(pl.col("bin") == bin_val).drop("bin")
-        output_file = f"{out_prefix}_bin{bin_val}_{out_features_suffix}"
-        _write_csv(group, output_file, separator='\t', null_value='NA')
-
+    for equal_bin, group in df.groupby('bin'):
+        output_file = f"{out_prefix}_bin{equal_bin}_{out_features_suffix}"
+        group.drop('bin', axis=1).to_csv(output_file, sep='\t', index=False, na_rep='NA')
+    
     return equal_bins
 
 # Function to get log2 bins from the first file
 def get_log2_bins(multiplier, in_features, out_prefix, out_features_suffix, delim, colname_feature, colname_count, skip_original):
-    df = pl.read_csv(in_features, separator=delim)
-    df = df.with_columns(
-        (pl.col(colname_count).cast(pl.Float64) + 1).log(2.0).mul(multiplier).floor().cast(pl.Int64).alias("bin")
-    )
-    log2_bins = dict(zip(df[colname_feature].to_list(), df["bin"].to_list()))
+    #print(f"delim = {delim} {len(delim)}")
+    df = pd.read_csv(in_features, sep=delim)
+    df['bin'] = np.floor(multiplier * np.log2(df[colname_count]+1)).astype(int)
+    log2_bins = df.set_index(colname_feature)['bin'].to_dict()
 
     if not skip_original:
-        _write_csv(df, f"{out_prefix}_all_{out_features_suffix}", separator='\t')
+        df.to_csv(f"{out_prefix}_all_{out_features_suffix}", sep='\t', index=False)
+    df.to_json(f"{out_prefix}_bin_counts.json", orient='records')
 
-    with open(f"{out_prefix}_bin_counts.json", 'w') as f:
-        json.dump(df.to_dicts(), f, separators=(',', ':'))
-
-    for bin_val in sorted(df["bin"].unique().to_list()):
-        group = df.filter(pl.col("bin") == bin_val).drop("bin")
-        output_file = f"{out_prefix}_bin{bin_val}_{out_features_suffix}"
-        _write_csv(group, output_file, separator='\t')
-
+    for log2_bin, group in df.groupby('bin'):
+        output_file = f"{out_prefix}_bin{log2_bin}_{out_features_suffix}"
+        group.drop('bin', axis=1).to_csv(output_file, sep='\t', index=False)
+    
     return log2_bins
 
 # Function to process chunks of the second file
-def process_chunk(chunk, bins_df, colname_feature, out_prefix, out_tsv_suffix, out_tsv_delim, written_bins):
+def process_chunk(chunk, bins, colname_feature, out_prefix, out_tsv_suffix, out_tsv_delim, rename_dict):
     bin2nmols = {}
-    # Join with bins lookup (replaces per-row dict.map)
-    chunk = chunk.join(bins_df, on=colname_feature, how="left")
-    for group in chunk.partition_by("__bin__", maintain_order=True):
-        bin_id_val = group["__bin__"][0]
-        if bin_id_val is None:
-            continue
-        bin_id = int(bin_id_val)
-        group = group.drop("__bin__")
-        bin2nmols[bin_id] = group.height
-        output_file = f"{out_prefix}_bin{bin_id}_{out_tsv_suffix}"
-        include_header = bin_id not in written_bins
-        _append_csv(group, output_file, separator=out_tsv_delim, null_value='NA', include_header=include_header)
-        written_bins.add(bin_id)
+    chunk.rename(columns=rename_dict, inplace=True)
+    for bin_id, group in chunk.groupby(chunk[colname_feature].map(bins)):
+        bin2nmols[bin_id] = group.shape[0]
+        # bin_id may be 1.0, 2.0, etc. Convert to int and then to str
+        output_file = f"{out_prefix}_bin{str(int(bin_id))}_{out_tsv_suffix}"
+        mode = 'a' if os.path.exists(output_file) else 'w'
+        #group.rename(columns=rename_dict).to_csv(output_file, sep=out_tsv_delim, index=False, mode=mode, header=(mode == 'w'), na_rep='NA')
+        group.to_csv(output_file, sep=out_tsv_delim, index=False, mode=mode, header=(mode == 'w'), na_rep='NA')
     return bin2nmols
 
 def split_molecule_counts(_args):
@@ -145,9 +91,9 @@ def split_molecule_counts(_args):
     inout_params = parser.add_argument_group("Input/Output Parameters", "Input/output directory/files.")
     inout_params.add_argument('--in-molecules', type=str, help='Input Long Format TSV/CSV (possibly gzipped) file containing the X/Y coordinates and gene expression counts per spot')
     inout_params.add_argument('--in-features', type=str, help='Input TSV/CSV (possibly gzipped) file containing the gene name and total count for each gene')
-    inout_params.add_argument('--out-prefix', required= True, type=str, help='Output prefix. New directory will be created if needed')
-    inout_params.add_argument('--in-molecules-delim', type=str, default='\t', help='Delimiter used in the input molecules files. Default is tab.')
-    inout_params.add_argument('--in-features-delim', type=str, default='\t', help='Delimiter used in the input feature files. Default is tab.')
+    inout_params.add_argument('--out-prefix', required= True, type=str, help='Output prefix. New directory will be created if needed')  
+    inout_params.add_argument('--in-molecules-delim', type=str, default='\t', help='Delimiter used in the input molecules files. Default is tab.')  
+    inout_params.add_argument('--in-features-delim', type=str, default='\t', help='Delimiter used in the input feature files. Default is tab.')  
     inout_params.add_argument('--out-molecules-delim', type=str, default='\t', help='Delimiter used in the output molecule TSV/CSV files. Default is ,')
     inout_params.add_argument('--out-features-delim', type=str, default='\t', help='Delimiter used in the output feature files. Default is tab.')
     inout_params.add_argument('--out-molecules-suffix', type=str, default="molecules.tsv.gz", help='Name prefix of a output file to store individual molecule count matrix. Each file name will be [out-prefix]_[bin_id]_[out-molecules-suffix]. Default: molecules.tsv.gz')
@@ -173,7 +119,7 @@ def split_molecule_counts(_args):
     logger = create_custom_logger(__name__, args.out_prefix + "_split_molecule_counts" + args.log_suffix if args.log else None)
 
     logger.info("Reading the feature counts and splitting into bins")
-    # Get bins from the feature file
+    # Get log2 bins from the tsv file
     if args.equal_bins:
         bins = get_equal_bins(args.bin_count, args.in_features, args.out_prefix, args.out_features_suffix, args.in_features_delim, args.colname_feature, args.colname_count, args.skip_original)
     else:
@@ -186,29 +132,18 @@ def split_molecule_counts(_args):
             old_name, new_name = rename.split(':')
             rename_dict[old_name] = new_name
 
-    # Create bins lookup DataFrame for efficient join-based bin mapping
-    bins_df = pl.DataFrame({
-        args.colname_feature: list(bins.keys()),
-        "__bin__": [int(v) for v in bins.values()],
-    })
+    logger.info("Splitting the TSV file by chunks and writing to individual bins")  
 
-    logger.info("Splitting the TSV file by chunks and writing to individual bins")
-
-    # Process the molecules file in chunks
+    # Process the second file in chunks
     nchunks = 0
     bin2mols = {}
-    written_bins = set()  # Track which bin files have headers written
-    all_header_written = False
-    for chunk in _read_csv_chunked(args.in_molecules, args.in_molecules_delim, args.chunk_size):
-        if rename_dict:
-            chunk = chunk.rename(rename_dict)
-        bin2mols_chunk = process_chunk(chunk, bins_df, args.colname_feature, args.out_prefix, args.out_molecules_suffix, args.out_molecules_delim, written_bins)
+    for chunk in pd.read_csv(args.in_molecules, sep=args.in_molecules_delim, chunksize=args.chunk_size, keep_default_na=False, na_values=[]):
+        bin2mols_chunk = process_chunk(chunk, bins, args.colname_feature, args.out_prefix, args.out_molecules_suffix, args.out_molecules_delim, rename_dict)
         for bin_id, nmols in bin2mols_chunk.items():
             bin2mols[bin_id] = bin2mols.get(bin_id, 0) + nmols
             bin2mols["all"] = bin2mols.get("all", 0) + nmols
         if not args.skip_original:
-            _append_csv(chunk, f"{args.out_prefix}_all_{args.out_molecules_suffix}", separator=args.out_molecules_delim, null_value='NA', include_header=not all_header_written)
-            all_header_written = True
+            chunk.rename(columns=rename_dict).to_csv(f"{args.out_prefix}_all_{args.out_molecules_suffix}", sep=args.out_molecules_delim, index=False, mode='a', header=(nchunks == 0),na_rep='NA')
         nchunks += 1
         logger.info(f"Finished processing chunk {nchunks} of size {args.chunk_size}...")
 
@@ -216,7 +151,7 @@ def split_molecule_counts(_args):
     bin2nftrs["all"] = len(bins)
 
     ## write the index file
-    logger.info("Writing the index file...")
+    logger.info("Writing the index file...")  
     with open(f"{args.out_prefix}_index.tsv", 'w') as wf:
         wf.write(f"bin_id\tmolecules_count\tfeatures_count\tmolecules_path\tfeatures_path\n")
         out_basename = os.path.basename(args.out_prefix)
@@ -228,6 +163,8 @@ def split_molecule_counts(_args):
             nmols = bin2mols.get(bin_id, 0)
             nftrs = bin2nftrs.get(bin_id, 0)
             wf.write(f"{bin_id}\t{nmols}\t{nftrs}\t{out_basename}_bin{bin_id}_{args.out_molecules_suffix}\t{out_basename}_bin{bin_id}_{args.out_features_suffix}\n")
+
+    ## write json file of 
 
     logger.info("Analysis Finished")
 
