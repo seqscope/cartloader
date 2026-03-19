@@ -1,4 +1,5 @@
 import sys, os, gzip, logging, argparse, inspect, json
+import pandas as pd
 import polars as pl
 import numpy as np
 from collections import Counter
@@ -14,6 +15,38 @@ def _write_csv(df, path, separator='\t', null_value=''):
             f.write(csv_bytes)
     else:
         df.write_csv(path, separator=separator, null_value=null_value)
+
+
+def _append_csv(df, path, separator, null_value, include_header):
+    """Write/append a polars DataFrame to a CSV file, supporting gzip."""
+    csv_bytes = df.write_csv(
+        separator=separator, null_value=null_value, include_header=include_header
+    ).encode('utf-8')
+    # 'wb' to create/overwrite on first write, 'ab' to append on subsequent writes
+    mode = 'wb' if include_header else 'ab'
+    if path.endswith('.gz'):
+        with gzip.open(path, mode) as f:
+            f.write(csv_bytes)
+    else:
+        with open(path, mode) as f:
+            f.write(csv_bytes)
+
+
+def _read_csv_chunked(path, separator, chunk_size):
+    """Generator yielding polars DataFrames in chunks. Supports gzip."""
+    if not path.endswith('.gz'):
+        reader = pl.read_csv_batched(path, separator=separator, batch_size=chunk_size)
+        while True:
+            batches = reader.next_batches(1)
+            if batches is None:
+                break
+            yield batches[0]
+    else:
+        # Use pandas for chunked gzip reading (C-level decompression),
+        # then convert each chunk to polars for fast processing
+        for chunk_pd in pd.read_csv(path, sep=separator, chunksize=chunk_size,
+                                    keep_default_na=False, na_values=[]):
+            yield pl.from_pandas(chunk_pd)
 
 
 # Function to get equal bins from the first file
@@ -86,6 +119,24 @@ def get_log2_bins(multiplier, in_features, out_prefix, out_features_suffix, deli
 
     return log2_bins
 
+# Function to process chunks of the second file
+def process_chunk(chunk, bins_df, colname_feature, out_prefix, out_tsv_suffix, out_tsv_delim, written_bins):
+    bin2nmols = {}
+    # Join with bins lookup (replaces per-row dict.map)
+    chunk = chunk.join(bins_df, on=colname_feature, how="left")
+    for group in chunk.partition_by("__bin__", maintain_order=True):
+        bin_id_val = group["__bin__"][0]
+        if bin_id_val is None:
+            continue
+        bin_id = int(bin_id_val)
+        group = group.drop("__bin__")
+        bin2nmols[bin_id] = group.height
+        output_file = f"{out_prefix}_bin{bin_id}_{out_tsv_suffix}"
+        include_header = bin_id not in written_bins
+        _append_csv(group, output_file, separator=out_tsv_delim, null_value='NA', include_header=include_header)
+        written_bins.add(bin_id)
+    return bin2nmols
+
 def split_molecule_counts(_args):
     """
     Split the cross-platform TSV/CSV file by groups based on total number of molecular observations
@@ -112,7 +163,7 @@ def split_molecule_counts(_args):
     key_params.add_argument('--bin-count', type=int, default=50, help='When --equal-bins is used, determine the number of bins to split the data into the same bin')
     key_params.add_argument('--log2-multiplier', type=float, default=1.0, help='Multiplier used to determine the log2 bin. Bin is determined as [multiplier] * log2(total_count). Default is 1.0')
     key_params.add_argument('--dummy-genes', type=str, default='', help='A single name or a regex describing the names of negative control probes')
-    key_params.add_argument('--chunk-size', type=int, default=1000000, help='Kept for backward compatibility. Polars reads the full file at once for efficiency.')
+    key_params.add_argument('--chunk-size', type=int, default=1000000, help='Number of rows to read at a time. Default is 1000000')
     key_params.add_argument('--skip-original', action='store_true', default=False, help='Skip writing the original file')
     key_params.add_argument('--log', action='store_true', default=False, help='Write log to file')
     key_params.add_argument('--log-suffix', type=str, default=".log", help='The suffix for the log file (appended to the output directory). Default: .log')
@@ -141,39 +192,25 @@ def split_molecule_counts(_args):
         "__bin__": [int(v) for v in bins.values()],
     })
 
-    logger.info("Reading the molecules file...")
-    df_mol = pl.read_csv(args.in_molecules, separator=args.in_molecules_delim)
+    logger.info("Splitting the TSV file by chunks and writing to individual bins")
 
-    if rename_dict:
-        df_mol = df_mol.rename(rename_dict)
-
-    logger.info(f"Read {df_mol.height} molecules. Joining with bin assignments and splitting...")
-
-    # Join with bins lookup for vectorized bin mapping (replaces per-row dict.map)
-    df_mol = df_mol.join(bins_df, on=args.colname_feature, how="left")
-
-    # Write per-bin output files
+    # Process the molecules file in chunks
+    nchunks = 0
     bin2mols = {}
-    for group in df_mol.partition_by("__bin__", maintain_order=True):
-        bin_id_val = group["__bin__"][0]
-        if bin_id_val is None:
-            continue
-        bin_id = int(bin_id_val)
-        group = group.drop("__bin__")
-        bin2mols[bin_id] = group.height
-        bin2mols["all"] = bin2mols.get("all", 0) + group.height
-        output_file = f"{args.out_prefix}_bin{bin_id}_{args.out_molecules_suffix}"
-        _write_csv(group, output_file, separator=args.out_molecules_delim, null_value='NA')
-
-    if not args.skip_original:
-        _write_csv(
-            df_mol.drop("__bin__"),
-            f"{args.out_prefix}_all_{args.out_molecules_suffix}",
-            separator=args.out_molecules_delim,
-            null_value='NA',
-        )
-
-    logger.info(f"Finished splitting molecules into {len(bin2mols) - (1 if 'all' in bin2mols else 0)} bins")
+    written_bins = set()  # Track which bin files have headers written
+    all_header_written = False
+    for chunk in _read_csv_chunked(args.in_molecules, args.in_molecules_delim, args.chunk_size):
+        if rename_dict:
+            chunk = chunk.rename(rename_dict)
+        bin2mols_chunk = process_chunk(chunk, bins_df, args.colname_feature, args.out_prefix, args.out_molecules_suffix, args.out_molecules_delim, written_bins)
+        for bin_id, nmols in bin2mols_chunk.items():
+            bin2mols[bin_id] = bin2mols.get(bin_id, 0) + nmols
+            bin2mols["all"] = bin2mols.get("all", 0) + nmols
+        if not args.skip_original:
+            _append_csv(chunk, f"{args.out_prefix}_all_{args.out_molecules_suffix}", separator=args.out_molecules_delim, null_value='NA', include_header=not all_header_written)
+            all_header_written = True
+        nchunks += 1
+        logger.info(f"Finished processing chunk {nchunks} of size {args.chunk_size}...")
 
     bin2nftrs = Counter(bins.values())
     bin2nftrs["all"] = len(bins)
