@@ -76,16 +76,18 @@ def parse_arguments(_args):
     aux_params.add_argument('--transparent-below', type=int, help='Set pixels below this value to transparent for dark background (range: 0~255)')
     aux_params.add_argument('--transparent-above', type=int, help='Set pixels above this value to transparent for light background (range: 0~255)')
     aux_params.add_argument('--sge-scale', type=int, default=1, help='scales input coordinates to pixels in the output image (default: 1)')
-    aux_params.add_argument('--hex-thres-prob', type=float, default=0.01, help='Minimum probability threshold for storing per-factor probability in hex PMTiles')
+    aux_params.add_argument('--hex-thres-prob', type=float, default=0.0001, help='Minimum probability threshold for storing per-factor probability in hex PMTiles')
+    aux_params.add_argument('--use-pmpoint', action='store_true', default=False, help='Use pmpoint/MLT instead of tippecanoe for point PMTiles generation (requires --pmpoint)')
 
     env_params = parser.add_argument_group("Env Parameters", "Tool paths (override defaults if needed)")
     # aux_params.add_argument('--magick', type=str, default=f"magick", help='Path to ImageMagick binary') # Disable this function. The user need to add the path to the ImageMagick binary directory to the PATH environment variable
-    env_params.add_argument('--gzip', type=str, default="gzip", help='Path to gzip-compatible binary (tip: use "pigz -p4" for speed)')
-    env_params.add_argument('--pmtiles', type=str, default=f"pmtiles", help='Path to pmtiles binary from go-pmtiles')
+    env_params.add_argument('--gzip', type=str, default="gzip", help='Path to gzip-compatible binary (tip: use "pigz" for speed)')
+    env_params.add_argument('--pmtiles', type=str, default=f"{repo_dir}/submodules/pmtiles/pmtiles", help='Path to pmtiles binary from go-pmtiles')
     env_params.add_argument('--gdal_translate', type=str, default=f"gdal_translate", help='Path to gdal_translate binary')
     env_params.add_argument('--gdaladdo', type=str, default=f"gdaladdo", help='Path to gdaladdo binary')
-    env_params.add_argument('--tippecanoe', type=str, default=f"tippecanoe", help='Path to tippecanoe binary') # default=f"{repo_dir}/submodules/tippecanoe/tippecanoe", 
-    env_params.add_argument('--spatula', type=str, default=f"spatula",  help='Path to spatula binary') # default=f"{repo_dir}/submodules/spatula/bin/spatula",
+    env_params.add_argument('--tippecanoe', type=str, default=f"{repo_dir}/submodules/tippecanoe/tippecanoe", help='Path to tippecanoe binary') # default=f"{repo_dir}/submodules/tippecanoe/tippecanoe", 
+    env_params.add_argument('--spatula', type=str, default=f"{repo_dir}/submodules/spatula/bin/spatula",  help='Path to spatula binary') # default=f"{repo_dir}/submodules/spatula/bin/spatula",
+    env_params.add_argument('--pmpoint', type=str, default=f"{repo_dir}/submodules/pmpoint/bin/pmpoint",  help='Path to pmpoint binary') # default=f"{repo_dir}/submodules/pmpoint/bin/pmpoint",
 
     if len(_args) == 0:
         parser.print_help()
@@ -753,8 +755,8 @@ def run_cartload2(_args):
         "--bin-count", str(args.bin_count),
         "--all",
         "--n-jobs", str(args.n_jobs),
-        f"--log --log-suffix '{args.log_suffix}'" if args.log else "",
-        f"--tippecanoe '{args.tippecanoe}'",
+        f"--log --log-suffix '{args.log_suffix}'" if args.log else "",        
+        f"--use-pmpoint --pmpoint '{args.pmpoint}'" if args.use_pmpoint else f"--tippecanoe '{args.tippecanoe}'",
         f"--tmp-dir '{args.tmp_dir}'",
         "--keep-intermediate-files" if args.keep_intermediate_files else ""
     ])
@@ -812,12 +814,6 @@ def run_cartload2(_args):
 
     execute_makefile(make_f, dry_run=args.dry_run, restart=args.restart, n_jobs=args.n_jobs)
 
-
-def run_cartload2_generic(_args):
-    """Backward compatibility: old command name forwards to run_cartload2."""
-    return run_cartload2(_args)
-
-    logger.info("Cartload2-generic finished")
 
 if __name__ == "__main__":
     # Get the base file name without extension

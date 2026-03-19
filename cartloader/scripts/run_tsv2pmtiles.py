@@ -55,7 +55,9 @@ def parse_arguments(_args):
     aux_params.add_argument('--out-molecules-suffix', type=str, default="molecules.csv", help='The output file to store individual molecule count matrix. Each file name will be [out-prefix].split.[bin_id].[out-molecules-suffix]. Default: molecules.tsv.gz')
     aux_params.add_argument('--out-features-suffix', type=str, default="features.tsv.gz", help='The output file to store feature count matrix. Each file name will be [out-prefix].split.[bin_id].[out-features-suffix]. Default: features.tsv.gz')
     aux_params.add_argument('--tippecanoe', type=str, default=f"{repo_dir}/submodules/tippecanoe/tippecanoe", help='Path to tippecanoe binary')
+    aux_params.add_argument('--pmpoint', type=str, default=f"{repo_dir}/submodules/pmpoint/bin/pmpoint", help='Path to pmpoint binary')
     aux_params.add_argument('--keep-intermediate-files', action='store_true', default=False, help='Keep intermediate output files')
+    aux_params.add_argument('--use-pmpoint', action='store_true', default=False, help='Use pmpoint/MLT instead of tippecanoe for point PMTiles generation (requires --pmpoint)')
     aux_params.add_argument('--tmp-dir', type=str, help='Temporary directory to be used (default: out-dir/tmp; specify /tmp if needed)')
 
     if len(_args) == 0:
@@ -116,13 +118,15 @@ def run_tsv2pmtiles(_args):
                 --out-features-delim \"{args.out_features_delim}\" \\
                 --colname-feature {args.colname_feature} \\
                 --colname-count {args.colname_count} \\
-                --col-rename {" ".join(args.col_rename)} \\
                 --bin-count {args.bin_count} \\
                 --equal-bins \\
                 --dummy-genes \"{args.dummy_genes}\" \\
                 --chunk-size {args.chunk_size} \\
                 --log-suffix {args.log_suffix} \\
         """ + ("--log" if args.log else "") + ("--skip-original" if args.skip_original else "")
+
+        #        --col-rename {" ".join(args.col_rename)} \\
+
 
         print(cmd)
         result = subprocess.run(cmd, shell=True)
@@ -141,12 +145,21 @@ def run_tsv2pmtiles(_args):
             bin_id = row["bin_id"]
             csv_path = out_dir + "/" + row["molecules_path"]
             if bin_id == "all":
-                pmtiles_path = args.out_prefix + "_all.pmtiles"
+                #pmtiles_path = args.out_prefix + "_all.pmtiles"
+                pmtiles_prefix = args.out_prefix + "_all"
             else:
-                pmtiles_path = args.out_prefix + "_bin" + bin_id + ".pmtiles"
+                #pmtiles_path = args.out_prefix + "_bin" + bin_id + ".pmtiles"
+                pmtiles_prefix = args.out_prefix + "_bin" + bin_id 
             cmds = cmd_separator([], f"Converting bin {bin_id} to pmtiles")
-            cmds.append(f"TIPPECANOE_MAX_THREADS={args.threads} '{args.tippecanoe}' -t {args.tmp_dir} -o {pmtiles_path} -Z {args.min_zoom} -z {args.max_zoom} --force -s EPSG:3857 -M {args.max_tile_bytes} -O {args.max_feature_counts} --drop-densest-as-needed --extend-zooms-if-still-dropping '--preserve-point-density-threshold={args.preserve_point_density_thres}' --no-duplication --no-clipping --buffer 0 {csv_path}")
-            mm.add_target(pmtiles_path, [csv_path], cmds)
+            if args.use_pmpoint:
+                cmds.append(f"mkdir -p {args.tmp_dir}/{bin_id}")
+                cmds.append(f"'{args.pmpoint}' build-mlt-point-pmtiles --tmp-dir {args.tmp_dir}/{bin_id} --in {csv_path} --out {pmtiles_prefix}.z{args.max_zoom}.pmtiles --zoom {args.max_zoom} --colname-x X --colname-y Y --delim ',' --threads {args.threads}")
+                cmds.append(f"'{args.pmpoint}' build-pyramid-pmtiles --tmp-dir {args.tmp_dir}/{bin_id} --in {pmtiles_prefix}.z{args.max_zoom}.pmtiles --out {pmtiles_prefix}.pmtiles --min-zoom {args.min_zoom} --max-tile-bytes {args.max_tile_bytes} --max-tile-features {args.max_feature_counts} --threads {args.threads}")
+                cmds.append(f"rm {pmtiles_prefix}.z{args.max_zoom}.pmtiles")
+                cmds.append(f"rm -rf {args.tmp_dir}/{bin_id}")
+            else:
+                cmds.append(f"TIPPECANOE_MAX_THREADS={args.threads} '{args.tippecanoe}' -t {args.tmp_dir} -o {pmtiles_prefix}.pmtiles -Z {args.min_zoom} -z {args.max_zoom} --force -s EPSG:3857 -M {args.max_tile_bytes} -O {args.max_feature_counts} --drop-densest-as-needed --extend-zooms-if-still-dropping '--preserve-point-density-threshold={args.preserve_point_density_thres}' --no-duplication --no-clipping --buffer 0 {csv_path}")
+            mm.add_target(f"{pmtiles_prefix}.pmtiles", [csv_path], cmds)
 
         if len(mm.targets) == 0:
             logging.error("There is no target to run. Please make sure that at least one run option was turned on")

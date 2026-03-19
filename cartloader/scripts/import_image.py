@@ -73,7 +73,7 @@ def parse_arguments(_args):
     aux_params3.add_argument('--georef-offset-y', type=float, default=0.0, help='Offset to add to Y coordinates of georeference bounds (default: 0.0)')
 
     env_params = parser.add_argument_group("Env Parameters", "Environment parameters, e.g., tools.")
-    env_params.add_argument('--pmtiles', type=str, default=f"pmtiles", help='Path to pmtiles binary from go-pmtiles (default: pmtiles)')
+    env_params.add_argument('--pmtiles', type=str, default=f"{repo_dir}/submodules/pmtiles/pmtiles", help='Path to pmtiles binary from go-pmtiles (default: pmtiles)')
     env_params.add_argument('--gdal_translate', type=str, default=f"gdal_translate", help='Path to gdal_translate binary (default: gdal_translate)')
     env_params.add_argument('--gdaladdo', type=str, default=f"gdaladdo", help='Path to gdaladdo binary (default: gdaladdo)')
     env_params.add_argument('--gdalinfo', type=str, default=f"gdalinfo", help='Path to gdalinfo binary (default: gdalinfo)')

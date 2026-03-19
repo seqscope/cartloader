@@ -131,7 +131,7 @@ def scheck_app(app_cmd):
     """
     # Only check the executable part when flags are included
     exe = app_cmd.split()[0] if isinstance(app_cmd, str) else app_cmd
-    if not shutil.which(exe):
+    if not shutil.which(exe) and not shutil.which(app_cmd):
         logging.error(
             f"Cannot find executable '{exe}' (from '{app_cmd}'). Please verify your PATH or provide a correct path."
         )

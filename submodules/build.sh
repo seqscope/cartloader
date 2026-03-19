@@ -24,6 +24,14 @@ cmake ..
 make -j 4
 cd ../../
 
+## build pmpoint
+cd pmpoint
+mkdir build
+cd build
+cmake ..
+make -j 4
+cd ../../
+
 ## build tippecanoe
 cd tippecanoe
 make -j 4

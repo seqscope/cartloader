@@ -19,3 +19,7 @@
 [submodule "submodules/punkst"]
 	path = submodules/punkst
 	url = https://github.com/Yichen-Si/punkst
+[submodule "submodules/pmpoint"]
+	path = submodules/pmpoint
+	url = https://github.com/seqscope/pmpoint
+	branch = pyramid

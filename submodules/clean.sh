@@ -15,6 +15,12 @@ rm -rf build/
 rm -rf bin/
 cd ../
 
+## build pmpoint
+cd pmpoint
+rm -rf build/
+rm -rf bin/
+cd ../
+
 ## build tippecanoe
 cd tippecanoe
 make clean

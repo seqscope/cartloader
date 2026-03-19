@@ -108,21 +108,21 @@ def parse_arguments(_args):
 
     # Default settings: tools will use the PATH: sort, gzip, python3
     env_params = parser.add_argument_group("Env Parameters", "Environment parameters, e.g., tools.")
-    env_params.add_argument('--pmtiles', type=str, help='Path to pmtiles binary from go-pmtiles (default: pmtiles)')
-    env_params.add_argument('--gdal_translate', type=str, help='Path to gdal_translate binary (default: gdal_translate)')
-    env_params.add_argument('--gdaladdo', type=str, help='Path to gdaladdo binary (default: gdaladdo)')
-    env_params.add_argument('--gdalwarp', type=str, help='Path to gdalwarp binary (default: gdalwarp)')
-    env_params.add_argument('--tippecanoe', type=str, help='Path to tippecanoe binary (default: <cartloader_dir>/submodules/tippecanoe/tippecanoe)')
-    env_params.add_argument('--spatula', type=str, help='Path to spatula binary (default: spatula)')
+    env_params.add_argument('--pmtiles', type=str, default=f"{repo_dir}/submodules/pmtiles/pmtiles", help='Path to pmtiles binary from go-pmtiles (default: pmtiles)')
+    env_params.add_argument('--gdal_translate', type=str, default="gdal_translate", help='Path to gdal_translate binary (default: gdal_translate)')
+    env_params.add_argument('--gdaladdo', type=str, default="gdaladdo", help='Path to gdaladdo binary (default: gdaladdo)')
+    env_params.add_argument('--gdalwarp', type=str, default="gdalwarp", help='Path to gdalwarp binary (default: gdalwarp)')
+    env_params.add_argument('--tippecanoe', type=str, default=f"{repo_dir}/submodules/tippecanoe/tippecanoe", help='Path to tippecanoe binary (default: <cartloader_dir>/submodules/tippecanoe/tippecanoe)')
+    env_params.add_argument('--spatula', type=str, default=f"{repo_dir}/submodules/spatula/bin/spatula", help='Path to spatula binary (default: spatula)')
     env_params.add_argument('--parquet-tools', type=str, dest='parquet_tools', help='Path to parquet-tools binary (default: parquet-tools)')
-    env_params.add_argument('--ficture2', type=str, help='Path to punkst(ficture2) repository (default: <cartloader_dir>/submodules/punkst)')
+    env_params.add_argument('--ficture2', type=str, default=f"{repo_dir}/submodules/punkst", help='Path to punkst(ficture2) repository (default: <cartloader_dir>/submodules/punkst)')
     env_params.add_argument('--aws', type=str, default="aws", help='Path to aws CLI (default: aws)')
-    env_params.add_argument('--pigz', type=str, help='Path to pigz binary (default: pigz)') # the default will be applied in the sub script
-    env_params.add_argument('--pigz-threads', type=int, help='Number of threads for pigz (default: 4)') 
-    env_params.add_argument('--R', type=str, help='Path to R binary (default: R).')
-    env_params.add_argument('--gzip', type=str, help='Path to gzip binary (default: gzip)')
-    env_params.add_argument('--sort', type=str, help='Path to sort binary. For faster processing, you may add arguments like "sort -T /path/to/new/tmpdir --parallel=20 -S 10G"')
-    env_params.add_argument('--python', type=str, help='Python3 binary')
+    env_params.add_argument('--pigz', type=str, default="pigz", help='Path to pigz binary (default: pigz)') # the default will be applied in the sub script
+    env_params.add_argument('--pigz-threads', type=int, default=4, help='Number of threads for pigz (default: 4)') 
+    env_params.add_argument('--R', type=str, default="Rscript", help='Path to R binary (default: R).')
+    env_params.add_argument('--gzip', type=str, default="gzip", help='Path to gzip binary (default: gzip)')
+    env_params.add_argument('--sort', type=str, default="sort", help='Path to sort binary. For faster processing, you may add arguments like "sort -T /path/to/new/tmpdir --parallel=20 -S 10G"')
+    env_params.add_argument('--python', type=str, default="python3", help='Python3 binary')
 
     if len(_args) == 0:
         parser.print_help()
