@@ -6,10 +6,6 @@ set -euo pipefail
 # To run this script correctly, it is important to specify the absolute paths to the tools
 # PLEASE UPDATE the following variables to the absolute paths to the tools
 CARTLOADER=/Users/hmkang/code/working/cartloader
-PUNKST=${CARTLOADER}/submodules/punkst
-CMAP=${CARTLOADER}/assets/fixed_color_map_256.tsv
-SPATULA=${CARTLOADER}/submodules/spatula/bin/spatula
-TIPPECANOE=${CARTLOADER}/submodules/tippecanoe/tippecanoe
 AWS=aws
 OUTDIR=./out
 ##########################################################################################################
@@ -49,7 +45,7 @@ echo -e "rep1\t${OUTDIR}/tsv/transcripts.unsorted.tsv.gz" > ${OUTDIR}/tsv/in_lis
 
 ## run FICTURE2 with 12um hexagons and 12, 24, 48 factors
 LIST=${OUTDIR}/tsv/in_list.tsv
-cartloader run_ficture2_multi --in-list ${LIST} --out-dir ${FIC} --width 12 --n-factor 12,24,48 --threads ${THREADS} --n-jobs ${JOBS} --ficture2 ${PUNKST} --cmap-file ${CMAP} --spatula ${SPATULA} --exclude-feature-regex "^(Unassigned|Neg|BLANK|Blank|Intergenic|Deprecated).*" --min-ct-per-unit-hexagon 50 --gzip "pigz -p${THREADS}"
+cartloader run_ficture2_multi --in-list ${LIST} --out-dir ${FIC} --width 12 --n-factor 12,24,48 --threads ${THREADS} --n-jobs ${JOBS} --exclude-feature-regex "^(Unassigned|Neg|BLANK|Blank|Intergenic|Deprecated).*" --min-ct-per-unit-hexagon 50 --gzip pigz
 
 ## Write inputn file to import segmented cells, clusters, and cell boundaries from Xenium output
 echo -e "rep1\t${INDIR}/analysis/clustering/gene_expression_graphclust/clusters.csv" > ${OUTDIR}/tsv/in_clust.tsv
@@ -60,15 +56,15 @@ echo -e "rep1\t${INDIR}/cell_boundaries.csv.gz" > ${OUTDIR}/tsv/in_boundaries.ts
 MODEL=${FIC}/t12_f48.model.tsv
 
 ## Perform LDA-based cell clustering and pixel-level decoding based on segmented cells and boundaries provided by Xenium output
-cartloader run_ficture2_multi_cells --all --out-prefix cartloader --out-dir ${FIC} --threads ${THREADS} --n-jobs ${JOBS} --ficture2 ${PUNKST} --cmap-file ${CMAP} --spatula ${SPATULA} --exclude-feature-regex "^(Unassigned|Neg|BLANK|Blank|Intergenic|Deprecated).*" --list-boundaries ${OUTDIR}/tsv/in_boundaries.tsv --pretrained-model ${MODEL} --gzip "pigz -p${THREADS}"
+cartloader run_ficture2_multi_cells --all --out-prefix cartloader --out-dir ${FIC} --threads ${THREADS} --n-jobs ${JOBS} --exclude-feature-regex "^(Unassigned|Neg|BLANK|Blank|Intergenic|Deprecated).*" --list-boundaries ${OUTDIR}/tsv/in_boundaries.tsv --pretrained-model ${MODEL} --gzip pigz
 
 ## Import Xenium Ranger cell clustering and pixel-level decoding
-cartloader run_ficture2_multi_cells --all --out-dir ${FIC} --out-prefix xeniumranger --list-cluster ${OUTDIR}/tsv/in_clust.tsv --list-xy ${OUTDIR}/tsv/in_xy.tsv --list-boundaries ${OUTDIR}/tsv/in_boundaries.tsv --threads 20 --n-jobs 3 --ficture2 ${PUNKST} --cmap-file ${CMAP} --spatula ${SPATULA} --exclude-feature-regex "^(Unassigned|Neg|BLANK|Blank|Intergenic|Deprecated).*" --xy-colname-x x_centroid --xy-colname-y y_centroid --pretrained-model ${MODEL} --gzip "pigz -p${THREADS}"
+cartloader run_ficture2_multi_cells --all --out-dir ${FIC} --out-prefix xeniumranger --list-cluster ${OUTDIR}/tsv/in_clust.tsv --list-xy ${OUTDIR}/tsv/in_xy.tsv --list-boundaries ${OUTDIR}/tsv/in_boundaries.tsv --threads 20 --n-jobs 3 --exclude-feature-regex "^(Unassigned|Neg|BLANK|Blank|Intergenic|Deprecated).*" --xy-colname-x x_centroid --xy-colname-y y_centroid --pretrained-model ${MODEL} --gzip pigz
 
 ## Import all 
 ## We use 'rep1' as generic sample name. Change it to your own sample name that you prefer
 SAMPLE=rep1
-cartloader run_cartload2 --fic-dir ${FIC}/samples/${SAMPLE} --in-cell-params ${FIC}/samples/${SAMPLE}/ficture.cartloader.params.json ${FIC}/samples/${SAMPLE}/ficture.xeniumranger.params.json --out-dir ${CART}/samples/${SAMPLE} --id ${ID} --n-jobs 5 --threads ${THREADS} --colname-count count --spatula ${SPATULA} --tippecanoe ${TIPPECANOE}
+cartloader run_cartload2 --fic-dir ${FIC}/samples/${SAMPLE} --in-cell-params ${FIC}/samples/${SAMPLE}/ficture.cartloader.params.json ${FIC}/samples/${SAMPLE}/ficture.xeniumranger.params.json --out-dir ${CART}/samples/${SAMPLE} --id ${ID} --n-jobs 5 --threads ${THREADS} --colname-count count --use-pmpoint --gzip pigz
 
 ## Import morphology images
 FOCUSDIR=${INDIR}/morphology_focus

@@ -33,9 +33,9 @@ rm -rf bin/
 cd ../
 
 ## build ImageMagick
-cd ImageMagick
-make clean
-cd ..
+# cd ImageMagick
+# make clean
+# cd ..
 
 ## download pmtiles CLI
 rm -rf ./pmtiles

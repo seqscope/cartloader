@@ -45,11 +45,13 @@ cmake ..
 make -j 4
 cd ../../
 
-## build ImageMagick
-cd ImageMagick
-./configure --without-lqr
-make -j 4
-cd ..
+## build ImageMagick --- SKIP : build only optionally ---
+# cd ImageMagick
+# ./configure --without-lqr
+# make -j 4
+# cd ..
+
+## ficture1 build is also skipped because it will be deprecated
 
 ## download pmtiles CLI
 bash install-pmtiles.sh --dest ./pmtiles

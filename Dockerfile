@@ -68,13 +68,14 @@ WORKDIR /app
 #       - factor_viz 
 #       - go_pmtiles: (download from the release directly)
 
-RUN git clone --branch main --single-branch https://github.com/seqscope/cartloader.git 
+RUN git clone -b dev --recursive https://github.com/seqscope/cartloader.git 
 
 # Set working directory to the cloned repository
-WORKDIR /app/cartloader
+WORKDIR /app/cartloader/submodule
 
-# sync up submodules 
-RUN git submodule update --init submodules/punkst submodules/spatula submodules/tippecanoe
+RUN bash -x build.sh
+
+WORKDIR /app/cartloader
 
 # Install Python dependencies
 RUN python3 -m pip install --no-cache-dir -r installation/requirements.txt
@@ -91,81 +92,6 @@ RUN Rscript installation/install_r_packages.R
 
 # Install cartloader itself
 RUN python3 -m pip install -e ./
-
-# ===============================
-# Install submodules
-# ===============================
-# Build submodule: tippecanoe
-RUN cd submodules/tippecanoe && \
-    make -j && \
-    make install
-
-# Build submodule: punkst
-# * libtbb-dev and libopencv-dev are installed at the step of installing system dependencies
-# * add this sed cmd to update the markerselection.hpp file to include <optional> to avoid the error of `/app/cartloader/submodules/punkst/src/markerselection.hpp:173:14: error: 'optional' is not a member of 'std'`
-RUN cd submodules/punkst && \
-    git checkout main && \
-    git pull origin main && \
-    git submodule update --init
-
-RUN sed -i '/#include <tbb\/global_control.h>/a #include <optional>' submodules/punkst/src/markerselection.hpp
-RUN cd submodules/punkst && \
-    mkdir -p build && cd build && \
-    cmake .. && \
-    cmake --build .  --parallel 2
-
-# Build tools: go-pmtiles
-RUN wget https://github.com/protomaps/go-pmtiles/releases/download/v1.28.0/go-pmtiles_1.28.0_Linux_x86_64.tar.gz && \
-    mkdir -p /opt/go-pmtiles && \
-    tar -zxvf go-pmtiles_1.28.0_Linux_x86_64.tar.gz --one-top-level=/opt/go-pmtiles && \
-    mv /opt/go-pmtiles/pmtiles /usr/local/bin/ && \
-    rm -rf go-pmtiles_1.28.0_Linux_x86_64.tar.gz /opt/go-pmtiles
-
-# Bump this at build time to force only spatula-related layers to rebuild.
-# Example: docker build --build-arg SPATULA_CACHEBUST=$(date +%s) -t cartloader .
-ARG SPATULA_CACHEBUST=1
-
-# Build submodule: Spatula
-RUN echo "SPATULA_CACHEBUST=${SPATULA_CACHEBUST}" && \
-    cd submodules/spatula && \
-    git submodule update --init --recursive submodules/htslib submodules/qgenlib  
-
-# Build submodule: htslib
-RUN cd submodules/spatula/submodules/htslib && \
-    autoreconf -i && \
-    ./configure && \
-    make -j$(nproc)
-
-# Build submodule: qgenlib
-RUN cd submodules/spatula/submodules/qgenlib && \
-    git checkout cartloader-docker && \
-    git pull origin cartloader-docker && \
-    mkdir -p build && cd build && \
-    cmake .. && \
-    make -j$(nproc)
-
-# Build submodule: spatula
-RUN cd submodules/spatula && \
-    git checkout docker-dev && \
-    git pull origin docker-dev && \
-    mkdir -p build && cd build && \
-    cmake .. && \
-    make -j$(nproc)
-# ===============================
-# Clone cartloader & install it
-# ===============================
-ARG CACHEBUST=1
-
-RUN git clone --branch main --single-branch https://github.com/seqscope/cartloader.git /app/cartloader_latest && \
-    cp -r /app/cartloader_latest/cartloader /app/cartloader/ && \
-    cp -r /app/cartloader_latest/installation /app/cartloader/ && \
-    cp -r /app/cartloader_latest/setup.py /app/cartloader/ && \
-    cp -r /app/cartloader_latest/pyproject.toml /app/cartloader/ && \
-    cp /app/cartloader_latest/entrypoint.sh /app/cartloader/ && \
-    rm -rf /app/cartloader_latest
-
-# Re-install cartloader itself with the latest Python code
-RUN cd /app/cartloader && python3 -m pip install -e ./
 
 # ===============================
 # Add a test dataset
