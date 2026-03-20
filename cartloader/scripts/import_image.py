@@ -13,6 +13,8 @@ def parse_arguments(_args):
     """
     Parse command-line arguments.
     """
+    repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
     parser = argparse.ArgumentParser(
         prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}",
         description="Import an image (OME-TIFF/TIFF/PNG) and produce PMTiles; optional georeferencing/orientation and catalog update. To apply a single action, please use the module directly (e.g., cartloader image_ome2png).",
