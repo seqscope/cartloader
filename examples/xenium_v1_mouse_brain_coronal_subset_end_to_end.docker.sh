@@ -5,7 +5,7 @@ set -euo pipefail
 # NOTE: This is an end-to-end example of running cartloader on Xenium v1 mouse brain coronal subset data
 # To run this script correctly, it is important to specify the absolute paths to the tools
 # PLEASE UPDATE the following variables to the absolute paths to the tools
-IMAGE="hyunminkang/cartloader:20260319c"
+IMAGE="hyunminkang/cartloader:20260320a"
 SCRIPTDIR="$(cd "$(dirname "$0")" && pwd)"
 REAL_OUTDIR="${SCRIPTDIR}/out"
 REAL_INDIR="${SCRIPTDIR}/data"
