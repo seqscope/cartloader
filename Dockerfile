@@ -73,7 +73,11 @@ RUN git clone -b dev --recursive https://github.com/seqscope/cartloader.git
 # Set working directory to the cloned repository
 WORKDIR /app/cartloader/submodules
 
-RUN bash -x build.sh
+RUN bash -x build.sh && cp pmtiles/pmtiles /usr/local/bin/ && \
+    cp tippecanoe/tippecanoe /usr/local/bin/ && \
+    cp spatula/bin/spatula /usr/local/bin/ && \
+    cp pmpoint/bin/pmpoint /usr/local/bin/ && \
+    cp punkst/bin/punkst /usr/local/bin/
 
 WORKDIR /app/cartloader
 
