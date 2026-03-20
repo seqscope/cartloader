@@ -71,7 +71,7 @@ RUN git config --global http.postBuffer 524288000
 RUN git clone -b dev --recursive https://github.com/seqscope/cartloader.git 
 
 # Set working directory to the cloned repository
-WORKDIR /app/cartloader/submodule
+WORKDIR /app/cartloader/submodules
 
 RUN bash -x build.sh
 
