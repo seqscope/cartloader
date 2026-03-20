@@ -11,6 +11,8 @@ def parse_arguments(_args):
     """
     Parse command-line arguments.
     """
+    repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
     parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", description="""
                                     Convert Xenium H&E image to PMTiles format based on the alignment information using affine transformation.
                                      """)
