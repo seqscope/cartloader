@@ -14,3 +14,4 @@ polars
 igraph
 leidenalg
 google-genai
+pynndescent
