@@ -59,14 +59,14 @@ RUN python3 -m pip install --upgrade pip && \
 WORKDIR /app
 
 # Clone the cartloader repository 
-# * submodules: 
-#   - Only clone the submodules of punkst, spatula and tippecanoe (skip the rest)
-#   - spatula uses docker-dev branch
-#   - the following submodules are not installed:
-#       - ficture
-#       - ImageMagick: (installed in the step apt-get install step)
-#       - factor_viz 
-#       - go_pmtiles: (download from the release directly)
+# 1. Update certificates and Git
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    git \
+    && update-ca-certificates
+
+# 2. Increase Git's HTTP buffer size to prevent timeout drops
+RUN git config --global http.postBuffer 524288000
 
 RUN git clone -b dev --recursive https://github.com/seqscope/cartloader.git 
 
