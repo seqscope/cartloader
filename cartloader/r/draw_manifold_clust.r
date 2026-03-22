@@ -73,14 +73,19 @@ df_manifold <- fread(args$tsv_manifold, sep = "\t", header = TRUE)
 ## remove the leading '#' in the first column name if exists
 setnames(df_manifold, 1, sub("^#", "", names(df_manifold)[1]))
 
+if ( args$tsv_manifold == args$tsv_clust ) {
+  log_message("Manifold and cluster TSV are the same file, skipping reading the cluster TSV and joining them.")
+  df_clust <- df_manifold
+  plot_dt <- df_manifold
+} else {
+  log_message(sprintf("Reading Input: %s", args$tsv_clust))
+  df_clust <- fread(args$tsv_clust, sep = "\t", header = TRUE)
+  ## remove the leading '#' in the first column name if exists
+  setnames(df_clust, 1, sub("^#", "", names(df_clust)[1]))
 
-log_message(sprintf("Reading Input: %s", args$tsv_clust))
-df_clust <- fread(args$tsv_clust, sep = "\t", header = TRUE)
-## remove the leading '#' in the first column name if exists
-setnames(df_clust, 1, sub("^#", "", names(df_clust)[1]))
-
-log_message("Joining two input files")
-plot_dt <- left_join(df_manifold, df_clust, by = args$tsv_colname_ids)
+  log_message("Joining two input files")
+  plot_dt <- left_join(df_manifold, df_clust, by = args$tsv_colname_ids)
+}
 
 if (!is.null(args$out_tsv)) {
   log_message(sprintf("Writing joined TSV to: %s", args$out_tsv))
