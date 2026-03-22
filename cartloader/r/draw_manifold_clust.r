@@ -42,6 +42,8 @@ cmapgrp$add_argument("--cmap-colname-hex",     type = "character", default = "Co
                     help = "Column name in colour map for hex values (default: Color_hex)")
 cmapgrp$add_argument("--missing-colour",       type = "character", default = "#a1a1a1ff",
                     help = "Hex colour to use for missing factor levels (default: #a1a1a1ff)")
+cmapgrp$add_argument("--ignore-cmap-name",     action = "store_true", default = FALSE,
+                    help = "Ignore factor names in the colour map and sequentially assign colours to unique cluster values")
 
 plotgrp <- parser$add_argument_group("Optional Plot Parameters")
 plotgrp$add_argument("--dpi",           type = "integer",  default = 300,
@@ -56,6 +58,8 @@ plotgrp$add_argument("--max-dim",       type = "double", default = 15,
                  help = "Maximum size in inches for auto-computed dimension (default: 15)")
 plotgrp$add_argument("--plot-dim",      type = "double", default = NULL, 
                   help = "Manual defined single plot size in inches (used for BOTH width and height) because it uses a 1:1 aspect. If omitted, the size is auto-computed from data span.")
+plotgrp$add_argument("--legend-nrow",  type = "integer", default = NULL,
+                    help = "Number of rows in the legend. If omitted, it is auto-computed based on the number of clusters and their name lengths.")
 
 args <- parser$parse_args()
 
@@ -117,8 +121,19 @@ if ( all(plot_dt[[args$tsv_colname_clust]] %>% is.integer()) ) {
   plot_dt[, (args$tsv_colname_clust) := as.character(get(args$tsv_colname_clust))]
 }
 
-## join cmap_dt with plot_dt
-plot_prep <- left_join(plot_dt, cmap_dt, by = setNames("cmap_factor", args$tsv_colname_clust))
+if (isTRUE(args$ignore_cmap_name)) {
+  log_message("--ignore-cmap-name is set: sequentially assigning colours from colour map to unique cluster values")
+  unique_clusters <- sort(unique(as.character(plot_dt[[args$tsv_colname_clust]])))
+  n_clusters <- length(unique_clusters)
+  available_hex <- cmap_dt$cmap_hex
+  ## recycle colours if there are more clusters than colours
+  assigned_hex <- rep_len(available_hex, n_clusters)
+  seq_cmap <- data.table(cmap_factor = unique_clusters, cmap_hex = assigned_hex)
+  plot_prep <- left_join(plot_dt, seq_cmap, by = setNames("cmap_factor", args$tsv_colname_clust))
+} else {
+  ## join cmap_dt with plot_dt
+  plot_prep <- left_join(plot_dt, cmap_dt, by = setNames("cmap_factor", args$tsv_colname_clust))
+}
 ## set cmap_hex as missing_colour if cmap_hex is missing
 plot_prep[ is.na(cmap_hex), cmap_hex := args$missing_colour]
 
@@ -141,7 +156,13 @@ log_message(paste0("Plot dimension: ", plot_dim))
 
 n_clust <- length(unique(plot_prep$cmap_hex))
 max_clust_name_length <- max(nchar(as.character(unique(plot_prep$cmap_hex)))) + 3
-legend_nrow <- ceiling((max_clust_name_length * n_clust) / 150)
+if (!is.null(args$legend_nrow)) {
+  legend_nrow <- args$legend_nrow
+  log_message(paste0("Use user-defined legend nrow: ", legend_nrow))
+} else {
+  log_message("Computing legend nrow based on the number of clusters and their name lengths...")
+  legend_nrow <- ceiling((max_clust_name_length * n_clust) / 150)
+}
 n_points <- nrow(plot_prep)
 pt_size <- 1 / log(n_points) / log(n_points) * 50
 
