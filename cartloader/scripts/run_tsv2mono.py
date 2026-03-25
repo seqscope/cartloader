@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 
 from cartloader.utils.minimake import minimake
-from cartloader.utils.utils import cmd_separator, scheck_app, create_custom_logger, read_minmax, execute_makefile
+from cartloader.utils.utils import cmd_separator, scheck_app, create_custom_logger, read_minmax, execute_makefile, flexopen
 
 def parse_arguments(_args):
     """
@@ -75,8 +75,8 @@ def run_tsv2mono(_args):
 
     ## check input tsv file header and get the column indices
     icol_x, icol_y, icol_cnt = None, None, None
-    with gzip.open(args.in_tsv, 'rt') as f:
-        header = f.readline().strip().split("\t")
+    with flexopen(args.in_tsv, 'rt') as f:
+        header = f.readline().lstrip('#').rstrip().split("\t")
         col2idx = {x:i for i,x in enumerate(header)}
         icol_x = col2idx["X"]
         icol_y = col2idx["Y"]

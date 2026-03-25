@@ -265,7 +265,8 @@ def ficture2_params_to_factor_assets(params, skip_raster=False, cell_params = No
             model_manifolds = cell_param.get("manifolds", [])
             cell_de_tsvf = cell_param["cluster_de"]
             cell_post_tsvf = cell_param["cluster_pseudobulk"]
-            cell_pixel_tsvf = cell_param["pixel_tsv_path"]
+            cell_pixel_bin_prefix = cell_param["pixel_bin_prefix"]
+            #cell_pixel_tsvf = cell_param["pixel_tsv_path"]
             cell_pixel_pngf = cell_param["pixel_png_path"]
             cell_heatmap_pdf = cell_param["cluster_model_heatmap_pdf"]
             cell_heatmap_tsv = cell_param["cluster_model_heatmap_tsv"]

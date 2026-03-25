@@ -12,7 +12,8 @@ def parse_arguments(_args):
     parser.add_argument('--out-dir', required=True, type=str, help='Output directory')
     parser.add_argument('--out-json', type=str, default=None, help='Path to the output JSON file. Default: <out-dir>/ficture.params.json')
     parser.add_argument('--mode', type=str, default="write", choices=["write", "append"], help='Write mode for the output JSON. Default: write. If write, a new file will be created based on the arguments provided. If append, the new parameters will be merged into the existing JSON file if it exists.')
-    parser.add_argument('--in-transcript', type=str, default=None, help='Path to the transcript file.')
+    #parser.add_argument('--in-transcript', type=str, default=None, help='Path to the transcript file.')
+    parser.add_argument('--in-tiled', type=str, default=None, help='Prefix of tiled transcript file.')
     parser.add_argument('--in-feature', type=str, default=None, help='Path to the feature file.')
     parser.add_argument('--in-minmax', type=str, default=None, help='Path to the minmax file.')
     parser.add_argument('--in-feature-ficture', type=str, default=None, help='(Optional) If FICTURE used a different feature file than the in-feature file, specify the path to the feature file used for FICTURE analysis.')
@@ -37,14 +38,19 @@ def _needs_feature_entry(feature_path, sge_feature_path):
     return _normalize_path(feature_path) != _normalize_path(sge_feature_path)
 
 def build_sge_data(args, old_data):
-    sge_keys = ["in_transcript", "in_feature", "in_minmax"]
+    #sge_keys = ["in_transcript", "in_feature", "in_minmax"]
+    sge_keys = ["in_tiled", "in_feature", "in_minmax"]
     new_sge = {key: getattr(args, key) for key in sge_keys}
 
     if args.mode == "write" or not old_data:
         for key in sge_keys:
             path = new_sge[key]
             assert path is not None, f"Path not provided: --{key.replace('_', '-')}"
-            assert os.path.exists(path), f"File not found: {path} ( --{key.replace('_', '-')})"
+            if key == "in_tiled":
+                assert os.path.exists(path + ".tsv"), f"File not found: {path}.tsv ( --{key.replace('_', '-')})"
+                assert os.path.exists(path + ".index"), f"File not found: {path}.bin ( --{key.replace('_', '-')})"
+            else:
+                assert os.path.exists(path), f"File not found: {path} ( --{key.replace('_', '-')})"
         return new_sge
 
     old_sge = old_data.get("in_sge", {})
@@ -157,16 +163,18 @@ def write_json_for_ficture2_multi(_args):
     # Process decode data
     if args.decode is not None:
         for dec in args.decode:
-            model_type, model_id, decode_id, fit_width, anchor_res, decode_pixel_tsv, decode_pixel_png, decode_pseudobulk_tsv, decode_de_tsv, decode_info_tsv  = dec.split(',')
+            model_type, model_id, decode_id, fit_width, anchor_res, decode_pixel_bin, decode_pixel_png, decode_pseudobulk_tsv, decode_de_tsv, decode_info_tsv, decode_pixel_res, decode_scale  = dec.split(',')
             decode_entry = {
                 "decode_id": decode_id,
                 "fit_width": int(fit_width),
                 "anchor_res": int(anchor_res),
-                "pixel_tsv_path": decode_pixel_tsv,
+                "pixel_bin_prefix": decode_pixel_bin,
                 "pixel_png_path": decode_pixel_png,
                 "pseudobulk_tsv_path": decode_pseudobulk_tsv,
                 "de_tsv_path": decode_de_tsv,
-                "info_tsv_path": decode_info_tsv
+                "info_tsv_path": decode_info_tsv,
+                "pixel_res": decode_pixel_res,
+                "decode_scale": decode_scale
             }
             model_entry = model_dict.get((model_type, model_id))
             assert model_entry is not None, f"No matching model for decode entry: {dec}"
