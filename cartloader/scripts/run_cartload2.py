@@ -748,9 +748,9 @@ def run_cartload2(_args):
             ])
             ## this is not 
             cmds.append(cmd)
-        cmds.append(f"{args.gzip} -f {out_join_pixel_prefix}.tsv")
-        mm.add_target(f"{out_join_pixel_prefix}.tsv.gz", [f"{in_tiled}.tsv", f"{in_tiled}.index"] + [f"{x}.bin" for x in join_pixel_bins], cmds)
-        molecules_f = f"{out_join_pixel_prefix}.tsv.gz"
+        #cmds.append(f"{args.gzip} -f {out_join_pixel_prefix}.tsv")
+        mm.add_target(f"{out_join_pixel_prefix}.tsv", [f"{in_tiled}.tsv", f"{in_tiled}.index"] + [f"{x}.bin" for x in join_pixel_bins], cmds)
+        molecules_f = f"{out_join_pixel_prefix}.tsv"
 
     ## 5. run tsv2pmtiles for the convert the joined pixel-level TSV to PMTiles
     cmds = cmd_separator([], f"Converting the joined pixel-level TSV to PMTiles")

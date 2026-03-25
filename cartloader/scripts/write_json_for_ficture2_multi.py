@@ -62,10 +62,19 @@ def build_sge_data(args, old_data):
 
         if new_path is None:
             assert old_path is not None, f"Path for --{key.replace('_', '-')} not provided and not present in existing JSON."
-            assert os.path.exists(old_path), f"File not found: {old_path} (from existing JSON for --{key.replace('_', '-')})"
+            if key == "in_tiled":
+                assert os.path.exists(old_path + ".tsv"), f"File not found: {old_path}.tsv (from existing JSON for --{key.replace('_', '-')})"
+                assert os.path.exists(old_path + ".index"), f"File not found: {old_path}.bin (from existing JSON for --{key.replace('_', '-')})"
+            else:
+                assert os.path.exists(old_path), f"File not found: {old_path} (from existing JSON for --{key.replace('_', '-')})"
             final_sge[key] = old_path
         else:
-            assert os.path.exists(new_path), ( f"File not found: {new_path} ( --{key.replace('_', '-')})")
+            if key == "in_tiled":
+                assert os.path.exists(new_path + ".tsv"), f"File not found: {new_path}.tsv ( --{key.replace('_', '-')})"
+                assert os.path.exists(new_path + ".index"), f"File not found: {new_path}.bin ( --{key.replace('_', '-')})"
+            else:
+                assert os.path.exists(new_path), ( f"File not found: {new_path} ( --{key.replace('_', '-')})")
+                
             if old_path is not None:
                 assert os.path.abspath(new_path) == os.path.abspath(old_path), f"Found inconsistent absolute path for '{key}' SGE between existing json ({old_path}) and the input arguments ({new_path})."
                 final_sge[key] = old_path

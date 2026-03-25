@@ -31,9 +31,9 @@ COLNAME=count
 
 ## convert the 10x-specific transcript file into generic TSV file compatible with cartloader 
 if [ -e "${INDIR}/transcripts.csv.gz" ]; then
-	cartloader sge_convert --makefn sge_convert.mk --platform 10x_xenium --in-csv ${INDIR}/transcripts.csv.gz --out-dir ${OUTDIR}/tsv --exclude-feature-regex '^(Unassigned|Neg|BLANK|Blank|Intergenic|Deprecated)' --sge-visual --spatula ${SPATULA} --n-jobs ${JOBS} --pigz-threads ${THREADS} --csv-colnames-others cell_id z_location
+	cartloader sge_convert --makefn sge_convert.mk --platform 10x_xenium --in-csv ${INDIR}/transcripts.csv.gz --out-dir ${OUTDIR}/tsv --exclude-feature-regex '^(Unassigned|Neg|BLANK|Blank|Intergenic|Deprecated)' --sge-visual --n-jobs ${JOBS} --pigz-threads ${THREADS} --csv-colnames-others cell_id z_location
 elif [ -e "${INDIR}/transcripts.parquet" ]; then
-	cartloader sge_convert --makefn sge_convert.mk --platform 10x_xenium --in-parquet ${INDIR}/transcripts.parquet --out-dir ${OUTDIR}/tsv --exclude-feature-regex '^(Unassigned|Neg|BLANK|Blank|Intergenic|Deprecated)' --sge-visual --spatula ${SPATULA} --n-jobs ${JOBS} --pigz-threads ${THREADS} --csv-colnames-others cell_id z_location
+	cartloader sge_convert --makefn sge_convert.mk --platform 10x_xenium --in-parquet ${INDIR}/transcripts.parquet --out-dir ${OUTDIR}/tsv --exclude-feature-regex '^(Unassigned|Neg|BLANK|Blank|Intergenic|Deprecated)' --sge-visual --n-jobs ${JOBS} --pigz-threads ${THREADS} --csv-colnames-others cell_id z_location
 else
 	echo "ERROR: ${INDIR}/transcripts.csv.gz or ${INDIR}/transcripts.parquet files found"
 	exit
