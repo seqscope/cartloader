@@ -515,7 +515,7 @@ def run_ficture2(_args):
             # 7) visualization
             cmds=cmd_separator([], f"Decode visualization, ID: {decode_id}")
             #cmds.append(f"{args.gzip} -dc '{decode_fit_tsv}.gz' > '{decode_fit_tsv}'")
-            cmd = f"'{ficture2bin}' tile-op --in '{decode_prefix}' --binary --dump-tsv --out - | '{ficture2bin}' draw-pixel-factors --in-tsv - --in-color '{color_map}' --out '{decode_prefix}.png' --scale {args.decode_scale} --range '{args.in_minmax}'"
+            cmd = f"'{ficture2bin}' draw-pixel-factors '{decode_prefix}' --binary --in-color '{color_map}' --out '{decode_prefix}.png' --scale {args.decode_scale} --range '{args.in_minmax}'"
             # cmd = " ".join([
             #     f"'{ficture2bin}'", "draw-pixel-factors",
             #     #f"--in-tsv '{decode_fit_tsv}'",

@@ -251,7 +251,6 @@ def run_ficture2_multi_cells(_args):
                     sample_sptsv_prefix = samp2sptsv[sample_id]
                     #wf.write(f"{sample_id}\t{sample_sptsv_prefix}.feature.counts.tsv\t{sample_sptsv_prefix}.tsv\t{sample_sptsv_prefix}.json\t-2\n")
                     wf.write(f"{sample_id}\t{sample_sptsv_prefix}.feature.counts.tsv\t{sample_sptsv_prefix}.tsv\t{sample_sptsv_prefix}.json\n")
-            #cmd = f"{ficture2bin} merge-units --in-list {samp_listf} --out-pref {sptsv_prefix} --temp-dir {sptsv_prefix}.tmp --threads {args.threads}"
             cmd = f"{args.spatula} merge-sptsv --list {samp_listf} --out {sptsv_prefix}"
             cmds.append(cmd)
         ## randomize SPTSV file
@@ -661,7 +660,7 @@ def run_ficture2_multi_cells(_args):
                 #f"--output-original"
             ])
             cmds.append(cmd)
-            cmd = f"'{ficture2bin}' tile-op --in '{decode_prefix}' --binary --dump-tsv --out - | '{ficture2bin}' draw-pixel-factors --in-tsv - --in-color '{args.cmap_file}' --out '{decode_prefix}.png' --scale {args.decode_scale} --range '{sample_prefix}.coord_range.tsv'"
+            cmd = f"'{ficture2bin}' draw-pixel-factors --in '{decode_prefix}' --binary --in-color '{args.cmap_file}' --out '{decode_prefix}.png' --scale {args.decode_scale} --range '{sample_prefix}.coord_range.tsv'"
             # cmd = " ".join([
             #     ficture2bin, "draw-pixel-factors",
             #     f"--in-tsv '{decode_prefix}.tsv'",

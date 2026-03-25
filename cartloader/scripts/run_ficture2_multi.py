@@ -61,7 +61,7 @@ def parse_arguments(_args):
     aux_params.add_argument('--skip-umap', action='store_true', default=False, help='Skip creating umap')
     aux_params.add_argument('--decode-scale', type=int, default=1, help='Decode scale parameter for plotting')
     aux_params.add_argument('--single-molecule', action='store_true', default=False, help='Turn on single-molecule mode for pixel decode')
-    aux_params.add_argument('--decode-pixel-res', type=float, default=0.5, help='Decode resolution (default: 0.5)')    
+    aux_params.add_argument('--decode-pixel-res', type=float, default=0.5, help='Decode resolution (default: 0.5)')
 
     # others parameters shared across steps
     # aux_params.add_argument('--min-count-train', type=int, default=50, help='Minimum count for training (default: 50)') ## disabled due to lack of use
@@ -73,7 +73,7 @@ def parse_arguments(_args):
     aux_params.add_argument('--retrain', action='store_true', default=False, help='If set, retain the pre-trained model. Only applicable when --pretrained-model is set.')
 
     # AUX gene-filtering params
-    aux_ftrfilter_params = parser.add_argument_group( "Feature Customizing Auxiliary Parameters", "Customize features (typically genes) used by FICTURE without altering the original feature TSV") # This ensures the original feature TSV file is retained in the output JSON file for downstream processing 
+    aux_ftrfilter_params = parser.add_argument_group( "Feature Customizing Auxiliary Parameters", "Customize features (typically genes) used by FICTURE without altering the original feature TSV") # This ensures the original feature TSV file is retained in the output JSON file for downstream processing
     aux_ftrfilter_params.add_argument('--include-feature-regex', type=str, default=None, help='Regex of feature names to include')
     aux_ftrfilter_params.add_argument('--exclude-feature-regex', type=str, default=None, help='Regex of feature names to exclude')
 
@@ -127,25 +127,25 @@ def add_multisample_prepare_targets(mm, args, ficture2bin, in_samples):
 def add_lda_training_target(mm, args, ficture2bin, n_factor, train_width, model_prefix, hex_prefix, color_map, ficture2report):
     """Add Makefile target for training (or projecting) an LDA model."""
     cmds = cmd_separator([], f"LDA training for {train_width}um and {n_factor} factors...")
-    
+
     unsorted_prefix = f"{model_prefix}.unsorted"
     lda_model_matrix = f"{model_prefix}.model.tsv"
     lda_fit_tsv = f"{model_prefix}.results.tsv.gz"
     lda_de = f"{model_prefix}.bulk_chisq.tsv"
-    
+
     # copy model
     if args.pretrained_model is not None and not args.retrain:
         cmds.append(f"cp {args.pretrained_model} {unsorted_prefix}.model.tsv")
-    
+
     # configure parameters
     if args.pretrained_model is not None and args.retrain:
         model_prior_arg = f"--model-prior {args.pretrained_model}"
-        projection_only_arg = ""  
+        projection_only_arg = ""
         n_topics_arg = ""
         sort_topics_arg = ""
     elif args.pretrained_model is not None and not args.retrain:
         model_prior_arg = f"--model-prior {unsorted_prefix}.model.tsv"
-        projection_only_arg = "--projection-only"  
+        projection_only_arg = "--projection-only"
         n_topics_arg = ""
         sort_topics_arg = ""
     else:
@@ -153,7 +153,7 @@ def add_lda_training_target(mm, args, ficture2bin, n_factor, train_width, model_
         projection_only_arg = ""
         n_topics_arg = f"--n-topics {n_factor}"
         sort_topics_arg = "--sort-topics"
-    
+
     # 1) train LDA
     train_cmd = " ".join([
         f"'{ficture2bin}'", "lda4hex",
@@ -166,6 +166,7 @@ def add_lda_training_target(mm, args, ficture2bin, n_factor, train_width, model_
         sort_topics_arg,
         "--transform",
         "--append-topk",
+        "--drop-random-key",
         f"--minibatch-size {args.minibatch_size}",
         f"--seed {args.seed}",
         f"--n-epochs {args.train_epoch}",
@@ -173,7 +174,7 @@ def add_lda_training_target(mm, args, ficture2bin, n_factor, train_width, model_
     ])
     cmds.append(train_cmd)
 
-    cmds.append(f"cut -f 2- '{unsorted_prefix}.results.tsv' | {args.gzip} > '{lda_fit_tsv}'")
+    cmds.append(f"sed '1s/^#//' '{unsorted_prefix}.results.tsv' | {args.gzip} > '{lda_fit_tsv}'")
 #     # 2) append topk
 #     append_cmd = " ".join([
 #         f"'{args.spatula}'", "append-topk-tsv",
@@ -233,6 +234,7 @@ def add_projection_target_per_sample(mm, args, ficture2bin, model_prefix, model_
         f"--out-prefix '{sample_lda_prefix}.unsorted'",
         "--transform",
         "--append-topk",
+        "--drop-random-key",
         f"--minibatch-size {args.minibatch_size}",
         f"--seed {args.seed}",
         f"--n-epochs {args.train_epoch}",
@@ -240,7 +242,7 @@ def add_projection_target_per_sample(mm, args, ficture2bin, model_prefix, model_
     ])
     cmds.append(cmd)
 
-    cmd = f"cut -f 2- '{sample_lda_prefix}.unsorted.results.tsv' | {args.gzip} > '{sample_lda_fit_tsv}'"
+    cmd = f"sed '1s/^#//' '{sample_lda_prefix}.unsorted.results.tsv' | {args.gzip} > '{sample_lda_fit_tsv}'"
     cmds.append(cmd)
 
     # cmd = " ".join([
@@ -311,7 +313,7 @@ def add_pixel_decode_target_per_sample(mm, args, ficture2bin, ficture2report, mo
     cmds.append(cmd)
 
     #cmds.append(f"{args.gzip} -dc '{decode_fit_tsv}.gz' > '{decode_fit_tsv}'")
-    cmd = f"'{ficture2bin}' tile-op --in '{decode_prefix}' --binary --dump-tsv --out - | '{ficture2bin}' draw-pixel-factors --in-tsv - --in-color '{cmap_path}' --out '{decode_prefix}.png' --scale {args.decode_scale} --range '{args.out_dir}/samples/{sample}/{sample}.tiled.coord_range.tsv'"
+    cmd = f"'{ficture2bin}' draw-pixel-factors --in '{decode_prefix}' --binary --in-color '{cmap_path}' --out '{decode_prefix}.png' --scale {args.decode_scale}"
     # cmd = " ".join([
     #     f"'{ficture2bin}'", "draw-pixel-factors",
     #     #f"--in-tsv '{decode_fit_tsv}'",
@@ -369,7 +371,7 @@ def add_sample_json_target(mm, args, sample, sample_transcript, n_samples):
             f"{model_prefix}.cmap.tsv",
             f"{model_prefix}.model.tsv",
             f"{model_prefix}.results.tsv.gz",  # shared fit
-            f"{sample_prefix}.results.tsv.gz", # sample specific fit 
+            f"{sample_prefix}.results.tsv.gz", # sample specific fit
             f"{model_prefix}.bulk_chisq.tsv",
             f"{model_prefix}.factor.info.tsv"
         ])
@@ -380,14 +382,14 @@ def add_sample_json_target(mm, args, sample, sample_transcript, n_samples):
             umap_tsv = f"{model_prefix}.umap.tsv.gz"
             umap_png = f"{model_prefix}.umap.png"
             umap_single_prob_png = f"{model_prefix}.umap.single.prob.png"
-            
+
             sample_umap_tsv = f"{sample_prefix}.umap.tsv.gz"
             sample_umap_png = f"{sample_prefix}.umap.png"
             sample_umap_single_prob_png = f"{sample_prefix}.umap.single.prob.png"
 
             prerequisities.extend([umap_tsv, umap_png, umap_single_prob_png, sample_umap_tsv, sample_umap_png, sample_umap_single_prob_png])
             summary_aux_args_umap.append(f"lda,{model_id},{umap_tsv},{umap_png},{umap_single_prob_png},{sample_umap_tsv},{sample_umap_png},{sample_umap_single_prob_png}")
-    
+
     if len(summary_aux_args_models) > 1:
         summary_aux_args.append(" ".join(summary_aux_args_models))
     if not args.skip_umap and len(summary_aux_args_umap) > 1:
@@ -471,20 +473,20 @@ def run_ficture2_multi(_args):
             in_tsvs.append(toks[1])
 
     n_samples = len(in_samples)
-    
+
     assert os.path.exists(args.cmap_file), f"File not found: {args.cmap_file} (--cmap-file)"
-    
+
     # apps/ficture2
     scheck_app(args.spatula)
     if not args.skip_umap:
         scheck_app(args.R)
     scheck_app(args.sort)
     scheck_app(args.gzip)
-    
+
     ficture2bin = os.path.join(args.ficture2, "bin/punkst")
     assert os.path.exists(ficture2bin), f"File not found: {ficture2bin}. FICTURE2 Directory should include bin/punkst (--ficture2)"
     ficture2report = args.python + " '" + os.path.join(args.ficture2, "ext/py/factor_report.py") + "'"
-    
+
     # start mm
     mm = minimake()
 
@@ -527,8 +529,8 @@ def run_ficture2_multi(_args):
                 out_prefix=model_prefix,
                 subtitle=f"{model_id} - shared"
             )
-        
-        # 3) Sample-specific LDA projection 
+
+        # 3) Sample-specific LDA projection
         lda_each_targets = []
         for sample in in_samples:
             sample_lda_prefix = os.path.join(args.out_dir, "samples", sample, f"{sample}.{model_id}")
@@ -545,10 +547,10 @@ def run_ficture2_multi(_args):
 
             # 4) Sample-specific UMAP
             if not args.skip_umap:
-                add_umap_targets(mm=mm, 
-                                input_tsv=f"{sample_lda_prefix}.results.tsv.gz", 
-                                color_map=color_map, 
-                                out_prefix=sample_lda_prefix, 
+                add_umap_targets(mm=mm,
+                                input_tsv=f"{sample_lda_prefix}.results.tsv.gz",
+                                color_map=color_map,
+                                out_prefix=sample_lda_prefix,
                                 subtitle=f"{model_id} - sample specific ({sample})")
         cmds = cmd_separator([], f"Finishing LDA projection for each sample for model {model_id}...")
         cmds.append(f"touch '{model_prefix}_each.done'")
@@ -557,7 +559,7 @@ def run_ficture2_multi(_args):
     ## step 3. multi-sample pixel-decode (perform pixel-decode for each sample)
 
     decode_runs = define_decode_runs(args, **LDA_CONFIG)
-    for decode_params in decode_runs:            
+    for decode_params in decode_runs:
         model_prefix = os.path.join(args.out_dir, decode_params["model_id"])
         fit_width = decode_params["fit_width"]
         decode_id = decode_params["decode_id"]
@@ -597,7 +599,7 @@ def run_ficture2_multi(_args):
     if len(mm.targets) == 0:
         logging.error("There is no target to run. Please make sure that at least one run option was turned on")
         sys.exit(1)
-    
+
     make_f = os.path.join(args.out_dir, args.makefn)
     mm.write_makefile(make_f)
 
