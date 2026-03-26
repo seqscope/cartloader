@@ -744,7 +744,7 @@ def run_cartload2(_args):
                 f"--annotate-pts {in_tiled} --icol-x 0 --icol-y 1 --icol-feature 2 --anno-keep-all --null-k NA --null-p NA",
                 f"--threads {args.threads}",
                 f"--in {join_pixel_bins[0]} --binary",
-                ## need to add pixel-res-override?
+                f"--merge-emb " + join_pixel_bins[0] + ".bin"
             ])
             ## this is not 
             cmds.append(cmd)
