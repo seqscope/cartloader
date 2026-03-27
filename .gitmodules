@@ -13,14 +13,14 @@
 	url = https://github.com/felt/tippecanoe
 [submodule "submodules/ficture"]
 	path = submodules/ficture
-	url = git@github.com:seqscope/ficture.git
-	branch = dev
+	url = http://github.com/seqscope/ficture
 [submodule "submodules/ImageMagick"]
 	path = submodules/ImageMagick
-	url = git@github.com:ImageMagick/ImageMagick.git
-[submodule "submodules/go-pmtiles"]
-	path = submodules/go-pmtiles
-	url = git@github.com:protomaps/go-pmtiles.git
+	url = https://github.com/ImageMagick/ImageMagick
 [submodule "submodules/punkst"]
 	path = submodules/punkst
-	url = https://github.com/Yichen-Si/punkst.git
+	url = https://github.com/Yichen-Si/punkst
+[submodule "submodules/pmpoint"]
+	path = submodules/pmpoint
+	url = https://github.com/seqscope/pmpoint
+	branch = pyramid

@@ -79,7 +79,7 @@ def _build_parser(repo_dir, prog_name):
     aux_params.add_argument('--max-tile-bytes', type=int, default=5000000, help='Maximum bytes for each tile in PMTiles')
     aux_params.add_argument('--max-feature-counts', type=int, default=500000, help='Max feature limits per tile in PMTiles')
     aux_params.add_argument('--preserve-point-density-thres', type=int, default=1024, help='Threshold for preserving point density in PMTiles')
-    aux_params.add_argument('--thres-prob', type=float, default=0.01, help='Minimum probability threshold for storing per-factor probability')
+    aux_params.add_argument('--thres-prob', type=float, default=0.0001, help='Minimum probability threshold for storing per-factor probability')
     aux_params.add_argument('--tmp-dir', type=str, help='Temporary directory to be used (default: out-dir/tmp; specify /tmp if needed)')
 
     return parser

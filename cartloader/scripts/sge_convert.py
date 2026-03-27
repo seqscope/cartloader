@@ -7,6 +7,8 @@ from cartloader.scripts.feature_filtering import filter_feature_by_type
 
 def parse_arguments(_args):
 
+    repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(
         prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}",
@@ -116,7 +118,7 @@ def parse_arguments(_args):
     # env params
     env_params = parser.add_argument_group("ENV Parameters", "Paths to external tools")
     env_params.add_argument('--gzip', type=str, default="gzip", help='Path to gzip binary (default: gzip). For speed, consider "pigz -p 4"')
-    env_params.add_argument('--spatula', type=str, default="spatula", help='Path to spatula binary (default: spatula)')
+    env_params.add_argument('--spatula', type=str, default=f"{repo_dir}/submodules/spatula/bin/spatula", help='Path to spatula binary (default: spatula)')
     env_params.add_argument('--parquet-tools', type=str, default="parquet-tools", help='Path to parquet-tools (used with --in-parquet or --pos-parquet; default: parquet-tools)')
     env_params.add_argument('--pigz', type=str, default="pigz", help='Path to pigz binary (default: pigz)')
     env_params.add_argument('--pigz-threads', type=int, default=4, help='Number of threads for pigz (default: 4)')
@@ -179,13 +181,13 @@ def convert_visiumhd(cmds, args):
         assert os.path.exists(args.scale_json), f"File not found: {args.scale_json} (--scale-json)"
         args.units_per_um = extract_unit2px_from_json(args.scale_json)
     # * convert sge to tsv (output: out_transcript, out_minmax, out_feature, (optional) out_sge)
-    cmd = " ".join([f"{args.spatula} convert-sge",
-                    f"--in-sge {args.in_mex}",
-                    f"--out-tsv {args.out_dir}",
-                    f"--pos {tmp_parquet}",
-                    f"--tsv-mtx {args.out_transcript}",
-                    f"--tsv-ftr {args.out_feature}",
-                    f"--tsv-minmax {args.out_minmax}",
+    cmd = " ".join([f"'{args.spatula}' convert-sge",
+                    f"--in-sge '{args.in_mex}'",
+                    f"--out-tsv '{args.out_dir}'",
+                    f"--pos '{tmp_parquet}'",
+                    f"--tsv-mtx '{args.out_transcript}'",
+                    f"--tsv-ftr '{args.out_feature}'",
+                    f"--tsv-minmax '{args.out_minmax}'",
                     f"--colnames-count {args.colname_count}" if args.colname_count else ""])
     aux_argset = set(item for lst in [aux_sge_args["out"], aux_sge_args["inftr"], aux_sge_args["inmtx"], aux_sge_args["inpos"], aux_sge_args["spatula"], aux_sge_args["ftrname"]] for item in lst)
     cmd = add_param_to_cmd(cmd, args, aux_argset)
@@ -200,12 +202,12 @@ def convert_seqscope(cmds, args):
     ## input: in_mex
     ## output: out_transcript, out_minmax, out_feature
     # * convert sge to tsv (output: out_transcript, out_minmax, out_feature
-    cmd = " ".join([f"{args.spatula} convert-sge",
-                f"--in-sge {args.in_mex}",
-                f"--out-tsv {args.out_dir}",
-                f"--tsv-mtx {args.out_transcript}",
-                f"--tsv-ftr {args.out_feature}",
-                f"--tsv-minmax {args.out_minmax}",
+    cmd = " ".join([f"'{args.spatula}' convert-sge",
+                f"--in-sge '{args.in_mex}'",
+                f"--out-tsv '{args.out_dir}'",
+                f"--tsv-mtx '{args.out_transcript}'",
+                f"--tsv-ftr '{args.out_feature}'",
+                f"--tsv-minmax '{args.out_minmax}'",
                 f"--colnames-count {args.colname_count}" if args.colname_count else ""])
     aux_argset = set(item for lst in [aux_sge_args["out"], aux_sge_args["inftr"], aux_sge_args["inbcd"], aux_sge_args["inmtx"], aux_sge_args["ftrname"]] for item in lst)
     cmd = add_param_to_cmd(cmd, args, aux_argset)
@@ -236,12 +238,12 @@ def convert_tsv(cmds, args):
 
     transcript_tsv = args.out_transcript.replace(".gz", "")
     cmd =  " ".join([f"cartloader sge_format_generic",
-                     f"--input {args.in_csv}",
-                     f"--out-dir {args.out_dir}",
-                     f"--out-transcript {transcript_tsv}",
-                     f"--out-feature {args.out_feature}",
-                     f"--out-minmax {args.out_minmax}",
-                     f"--colname-count {args.colname_count}" if args.colname_count else ""])      
+                     f"--input '{args.in_csv}'",
+                     f"--out-dir '{args.out_dir}'",
+                     f"--out-transcript '{transcript_tsv}'",
+                     f"--out-feature '{args.out_feature}'",
+                     f"--out-minmax '{args.out_minmax}'",
+                     f"--colname-count '{args.colname_count}'" if args.colname_count else ""])      
     # aux args
     aux_argset = set(item for lst in [aux_sge_args["out"], 
                                       aux_sge_args["incsv"], 
@@ -251,8 +253,8 @@ def convert_tsv(cmds, args):
     cmd = add_param_to_cmd(cmd, args, aux_argset)
     # append to cmds
     cmds.append(cmd)
-    cmds.append(f"{args.gzip} -c {args.out_dir}/{transcript_tsv} > {args.out_dir}/{args.out_transcript}")
-    cmds.append(f"rm {args.out_dir}/{transcript_tsv}")
+    cmds.append(f"{args.gzip} -c '{args.out_dir}/{transcript_tsv}' > '{args.out_dir}/{args.out_transcript}'")
+    cmds.append(f"rm '{args.out_dir}/{transcript_tsv}'")
     return cmds
 
 #================================================================================================
@@ -269,7 +271,7 @@ def sge_density_filtering(mm, sge_filtering_dict):
             f"--input {sge_filtering_dict['raw_transcript']}",
             f"--feature {sge_filtering_dict['raw_feature']}",
             f"--output", sge_filtering_dict["filtered_transcript"],
-            f"--output_boundary  {sge_filtering_dict['filtered_prefix']}",
+            f"--output_boundary {sge_filtering_dict['filtered_prefix']}",
             f"--filter_based_on {genomic_feature}", 
             f"--mu_scale {sge_filtering_dict['mu_scale']}",
             f"--radius {sge_filtering_dict['radius']}", 
