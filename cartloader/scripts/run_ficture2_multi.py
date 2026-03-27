@@ -70,6 +70,7 @@ def parse_arguments(_args):
     aux_params.add_argument('--de-min-fold', type=float, default=1.5, help='Fold-change cutoff for differential expression (default: 1.5)')
     # project from external model
     aux_params.add_argument('--pretrained-model', type=str, help='Path to a pre-trained model to use for projection. If provided, LDA training will be skipped, and the provided model will be used for projection.')
+    aux_params.add_argument('--model-id', type=str, help='Model ID used for naming the output files (works when only one model is trained or projected)')
     aux_params.add_argument('--retrain', action='store_true', default=False, help='If set, retain the pre-trained model. Only applicable when --pretrained-model is set.')
 
     # AUX gene-filtering params
@@ -122,6 +123,9 @@ def add_multisample_prepare_targets(mm, args, ficture2bin, in_samples):
 
     cmd = f"[ -f '{args.out_dir}/multi.features.tsv' ]" + "".join([f" && [ -f '{args.out_dir}/multi.hex_{width}.txt' ]" for width in widths]) + f" && touch '{args.out_dir}/multi.done'"
     cmds.append(cmd)
+    ## remove multi.done if exists to support incremental running
+    if os.path.exists(f"{args.out_dir}/multi.done"):
+        os.remove(f"{args.out_dir}/multi.done")
     mm.add_target(f"{args.out_dir}/multi.done", [args.in_list], cmds)
 
 def add_lda_training_target(mm, args, ficture2bin, n_factor, train_width, model_prefix, hex_prefix, color_map, ficture2report):
@@ -455,6 +459,11 @@ def run_ficture2_multi(_args):
     # validate args
     if args.n_factor is None and args.pretrained_model is None:
         raise ValueError("When --pretrained-model is not provided, --n-factor is required.")
+    if args.model_id is not None: ## model id is specified
+        if args.pretrained_model is None: ## pretrained_model is not specified
+            if args.n_factor.find(",") != -1 or args.width.find(",") != -1: ## multiple models are being trained
+                raise ValueError("When --model-id is provided, only a single width and single n-factor should be provided, or --pretrained-model should be provided. Found comma in --n-factor or --width, which suggests multiple models are being trained. Please provide a single value for --n-factor and --width, or do not provide --model-id.")
+
     #if "," in args.width:
     #    raise ValueError("In multi-sample pipeline, when --train-width is provided, it should be a single value, not a comma-separated list. Use --width instead.")
 

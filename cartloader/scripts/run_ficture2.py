@@ -86,6 +86,7 @@ def parse_arguments(_args):
     aux_params.add_argument('--min-ct-per-feature', type=int, default=20, help='Minimum count per feature during LDA training, transform and decoding (default: 20)')
     aux_params.add_argument('--de-max-pval', type=float, default=1e-3, help='P-value cutoff for differential expression (default: 1e-3)')
     aux_params.add_argument('--de-min-fold', type=float, default=1.5, help='Fold-change cutoff for differential expression (default: 1.5)')
+    aux_params.add_argument('--model-id', type=str, help='Model ID used for naming the output files (works when only one model is trained or projected)')
 
     # AUX feacture-filtering params
     aux_ftrfilter_params = parser.add_argument_group("Feature Customizing Auxiliary Parameters", "Customize features (typically genes) used by FICTURE without altering the original feature TSV")
