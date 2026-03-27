@@ -61,6 +61,8 @@ def parse_arguments(_args):
     #aux_params.add_argument('--skip-umap', action='store_true', default=False, help='Skip creating umap')
     aux_params.add_argument('--decode-scale', type=int, default=1, help='Decode scale (default: 1)')
     aux_params.add_argument('--seed', type=int, default=1, help='Random seed for random number generation (default: 1)')
+    aux_params.add_argument('--single-molecule', action='store_true', default=False, help='Turn on single-molecule mode for pixel decode')
+    aux_params.add_argument('--decode-pixel-res', type=float, default=0.5, help='Decode resolution (default: 0.5)')
 
     # others parameters shared across steps
     aux_params.add_argument('--min-feature-count', type=int, default=20, help='Minimum feature count for LDA factorization')
@@ -249,7 +251,6 @@ def run_ficture2_multi_cells(_args):
                     sample_sptsv_prefix = samp2sptsv[sample_id]
                     #wf.write(f"{sample_id}\t{sample_sptsv_prefix}.feature.counts.tsv\t{sample_sptsv_prefix}.tsv\t{sample_sptsv_prefix}.json\t-2\n")
                     wf.write(f"{sample_id}\t{sample_sptsv_prefix}.feature.counts.tsv\t{sample_sptsv_prefix}.tsv\t{sample_sptsv_prefix}.json\n")
-            #cmd = f"{ficture2bin} merge-units --in-list {samp_listf} --out-pref {sptsv_prefix} --temp-dir {sptsv_prefix}.tmp --threads {args.threads}"
             cmd = f"{args.spatula} merge-sptsv --list {samp_listf} --out {sptsv_prefix}"
             cmds.append(cmd)
         ## randomize SPTSV file
@@ -652,25 +653,28 @@ def run_ficture2_multi_cells(_args):
                 f"--icol-val 3",
                 f"--hex-grid-dist {fit_width}",
                 f"--n-moves {fit_n_move}",
-                f"--pixel-res 0.5",
+                f"--single-molecule" if args.single_molecule else f"--pixel-res {args.decode_pixel_res}",
+                f"--output-binary",
                 f"--threads {args.threads}",
-                f"--seed {args.seed}",
-                f"--output-original"
-                ])
+                f"--seed {args.seed}"
+                #f"--output-original"
+            ])
             cmds.append(cmd)
-            cmd = " ".join([
-                ficture2bin, "draw-pixel-factors",
-                f"--in-tsv '{decode_prefix}.tsv'",
-                f"--header-json '{decode_prefix}.json'",
-                f"--in-color '{args.cmap_file}'",
-                f"--out '{decode_prefix}.png'",
-                f"--scale {args.decode_scale}",
-                f"--range '{sample_prefix}.coord_range.tsv'"
-                ])
+            cmd = f"'{ficture2bin}' draw-pixel-factors --in '{decode_prefix}' --binary --in-color '{args.cmap_file}' --out '{decode_prefix}.png' --scale {args.decode_scale} --range '{sample_prefix}.coord_range.tsv'"
+            # cmd = " ".join([
+            #     ficture2bin, "draw-pixel-factors",
+            #     f"--in-tsv '{decode_prefix}.tsv'",
+            #     f"--header-json '{decode_prefix}.json'",
+            #     f"--in-color '{args.cmap_file}'",
+            #     f"--out '{decode_prefix}.png'",
+            #     f"--scale {args.decode_scale}",
+            #     f"--range '{sample_prefix}.coord_range.tsv'"
+            #     ])
             cmds.append(cmd)
-            cmd = f"{args.gzip} -f '{decode_prefix}.tsv'"
-            cmds.append(cmd)
-            cmd = f"[ -f '{decode_prefix}.tsv.gz' ] && touch '{decode_prefix}.done'"
+            # cmd = f"{args.gzip} -f '{decode_prefix}.tsv'"
+            # cmds.append(cmd)
+            #cmd = f"[ -f '{decode_prefix}.tsv.gz' ] && touch '{decode_prefix}.done'"
+            cmd = f"[ -f '{decode_prefix}.bin' ] && touch '{decode_prefix}.done'"
             cmds.append(cmd)
             mm.add_target(f"{decode_prefix}.done", [modelf_done], cmds)
             sample_decode_done_files.append(f"{decode_prefix}.done")
@@ -754,7 +758,10 @@ def run_ficture2_multi_cells(_args):
             
         if args.decode:
             out_cell_params["pixel_png_path"] = f"{sample_prefix}.pixel.png"
-            out_cell_params["pixel_tsv_path"] = f"{sample_prefix}.pixel.tsv.gz"
+            out_cell_params["pixel_bin_prefix"] = f"{sample_prefix}.pixel"
+            out_cell_params["pixel_res"] = "0" if args.single_molecule else str(args.decode_pixel_res) ## use 0 to indicate single-molecule decoding
+            out_cell_params["decode_scale"] = str(args.decode_scale)
+            #out_cell_params["pixel_tsv_path"] = f"{sample_prefix}.pixel.tsv.gz"
 
         if args.tsne or args.umap:
             out_cell_params["manifolds"] = out_manifolds

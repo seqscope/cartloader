@@ -46,16 +46,28 @@ def define_lda_runs(
             args.n_factor = default_n_factor
         n_factors = _parse_int_csv(args.n_factor)
 
-    train_params = [
-        {
-            "model_type": "lda",
-            "train_width": train_width,
-            "n_factor": n_factor,
-            "model_id": f"t{train_width}_f{n_factor}",
-        }
-        for train_width in train_widths
-        for n_factor in n_factors
-    ]
+    if args.model_id is not None: ## if model_id is specified, only a single train width and n-factor should be provided
+        if len(train_widths) > 1 or len(n_factors) > 1:
+            raise ValueError("When --model-id is provided, only a single train width and single n-factor (or pretrained-model) should be provided. Found multiple train widths or n-factors. Please provide a single value for --width and --n-factor, or do not provide --model-id.")
+        train_params = [
+            {
+                "model_type": "lda",
+                "train_width": train_widths[0],
+                "n_factor": n_factors[0],
+                "model_id": args.model_id,
+            }
+        ]
+    else:    
+        train_params = [
+            {
+                "model_type": "lda",
+                "train_width": train_width,
+                "n_factor": n_factor,
+                "model_id": f"t{train_width}_f{n_factor}",
+            }
+            for train_width in train_widths
+            for n_factor in n_factors
+        ]
     return train_params
 
 
@@ -74,7 +86,8 @@ def define_decode_runs(args, **kwargs):
         model_path = f"{model_prefix}.model.tsv"
         fit_widths = _fit_widths(args, train_width)
         for fit_width in fit_widths:
-            decode_id = f"{model_id}_p{fit_width}_a{args.anchor_res}"
+            #decode_id = f"{model_id}_p{fit_width}_a{args.anchor_res}"
+            decode_id = f"{model_id}_pixel"
             cmap_path = f"{model_prefix}.cmap.tsv"
             decode_runs.append({
                 "model_type": model_type,
@@ -265,7 +278,8 @@ def ficture2_params_to_factor_assets(params, skip_raster=False, cell_params = No
             model_manifolds = cell_param.get("manifolds", [])
             cell_de_tsvf = cell_param["cluster_de"]
             cell_post_tsvf = cell_param["cluster_pseudobulk"]
-            cell_pixel_tsvf = cell_param["pixel_tsv_path"]
+            cell_pixel_bin_prefix = cell_param["pixel_bin_prefix"]
+            #cell_pixel_tsvf = cell_param["pixel_tsv_path"]
             cell_pixel_pngf = cell_param["pixel_png_path"]
             cell_heatmap_pdf = cell_param["cluster_model_heatmap_pdf"]
             cell_heatmap_tsv = cell_param["cluster_model_heatmap_tsv"]

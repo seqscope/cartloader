@@ -85,15 +85,19 @@ def _needs_feature_entry(feature_path, sge_feature_path):
     return _normalize_path(feature_path) != _normalize_path(sge_feature_path)
 
 def build_sge_data(args, old_data):
-    sge_keys = ["in_transcript", "in_feature", "in_minmax"]
+    #sge_keys = ["in_transcript", "in_feature", "in_minmax"]
+    sge_keys = ["in_tiled", "in_feature", "in_minmax"]
     new_sge = {key: getattr(args, key) for key in sge_keys}
 
-    # --- write mode or append mode without existing json file ---
-    if args.mode == "write" or (args.mode == "append" and not os.path.exists(args.out_json)):
+    if args.mode == "write" or not old_data:
         for key in sge_keys:
             path = new_sge[key]
             assert path is not None, f"Path not provided: --{key.replace('_', '-')}"
-            assert os.path.exists(path), f"File not found: {path} ( --{key.replace('_', '-')})"
+            if key == "in_tiled":
+                assert os.path.exists(path + ".tsv"), f"File not found: {path}.tsv ( --{key.replace('_', '-')})"
+                assert os.path.exists(path + ".index"), f"File not found: {path}.bin ( --{key.replace('_', '-')})"
+            else:
+                assert os.path.exists(path), f"File not found: {path} ( --{key.replace('_', '-')})"
         return new_sge
 
     # --- append mode with existing json file ---
@@ -108,11 +112,19 @@ def build_sge_data(args, old_data):
         if new_path is None:
             # User didn't override -> keep old value (ensure exists)
             assert old_path is not None, f"Path for --{key.replace('_', '-')} not provided and not present in existing JSON."
-            assert os.path.exists(old_path), f"File not found: {old_path} (from existing JSON for --{key.replace('_', '-')})"
+            if key == "in_tiled":
+                assert os.path.exists(old_path + ".tsv"), f"File not found: {old_path}.tsv (from existing JSON for --{key.replace('_', '-')})"
+                assert os.path.exists(old_path + ".index"), f"File not found: {old_path}.bin (from existing JSON for --{key.replace('_', '-')})"
+            else:
+                assert os.path.exists(old_path), f"File not found: {old_path} (from existing JSON for --{key.replace('_', '-')})"
             final_sge[key] = old_path
         else:
             # User provided a path; check it exists
-            assert os.path.exists(new_path), ( f"File not found: {new_path} ( --{key.replace('_', '-')})")
+            if key == "in_tiled":
+                assert os.path.exists(new_path + ".tsv"), f"File not found: {new_path}.tsv ( --{key.replace('_', '-')})"
+                assert os.path.exists(new_path + ".index"), f"File not found: {new_path}.bin ( --{key.replace('_', '-')})"
+            else:
+                assert os.path.exists(new_path), ( f"File not found: {new_path} ( --{key.replace('_', '-')})")
             if old_path is not None:
                 # Require consistency with existing path
                 assert os.path.abspath(new_path) == os.path.abspath(old_path), f"Found inconsistent absolute path for '{key}' SGE between existing json ({old_path}) and the input arguments ({new_path})."
@@ -129,7 +141,8 @@ def parse_arguments(_args):
                                      description="Write a JSON file to summarize the parameters.")
     parser.add_argument('--out-json', type=str, default=None, required=True, help='Path to the output JSON file (recommended naming scheme and directory: "ficture.params.json" in the directory hosting FICTURE results)')
     parser.add_argument('--mode', type=str, default="write", choices=["write", "append"], help='Write mode for the output JSON. Default: write. If write, a new file will be created based on the arguments provided. If append, the new parameters will be merged into the existing JSON file if it exists.')
-    parser.add_argument('--in-transcript', type=str, default=None, help='Path to the transcript file. Required if --mode is write.')
+    #parser.add_argument('--in-transcript', type=str, default=None, help='Path to the transcript file. Required if --mode is write.')
+    parser.add_argument('--in-tiled', type=str, default=None, help='Path to the tiled transcript prefix. Required if --mode is write.')
     parser.add_argument('--in-feature', type=str, default=None, help='Path to the feature file. Required if --mode is write.')
     parser.add_argument('--in-minmax', type=str, default=None, help='Path to the minmax file. Required if --mode is write.')
     
@@ -229,7 +242,7 @@ def write_json_for_ficture2(_args):
     
     if args.decode is not None:
         for dec in args.decode:
-            model_type, model_id, decode_id, fit_width, anchor_res = dec.split(',')
+            model_type, model_id, decode_id, fit_width, anchor_res, pixel_res, decode_scale = dec.split(',')
             key = (model_type, model_id)
             
             model_entry = model_dict.get(key)
@@ -239,6 +252,8 @@ def write_json_for_ficture2(_args):
                 "decode_id": decode_id,
                 "fit_width": int(fit_width),
                 "anchor_res": int(anchor_res),
+                "pixel_res": float(pixel_res),
+                "decode_scale": float(decode_scale)
             }
             existing_dec = next((d for d in model_entry["decode_params"] if d["decode_id"] == decode_id), None)
             if existing_dec is None:
@@ -247,6 +262,8 @@ def write_json_for_ficture2(_args):
                 msg_id = f"model ({model_type}, {model_id}) - decode_id {decode_id}"
                 reconcile_field(existing_dec, "fit_width", int(fit_width), type="override", msg_id=msg_id)
                 reconcile_field(existing_dec, "anchor_res", int(anchor_res), type="override", msg_id=msg_id)
+                reconcile_field(existing_dec, "pixel_res", float(pixel_res), type="override", msg_id=msg_id)
+                reconcile_field(existing_dec, "decode_scale", float(decode_scale), type="override", msg_id=msg_id)
 
     # 4. Process UMAP data
     if args.umap is not None:

@@ -80,10 +80,13 @@ def parse_arguments(_args):
     key_params.add_argument('--segment-width-10x', type=str, default=None, help='Comma-separated hexagon flat-to-flat widths (µm) in 10x format (required if --segment-10x)')
     # decode
     aux_params.add_argument('--decode-scale', type=int, default=1, help='Scale factor from input coordinates to output image pixels (default: 1)')
+    aux_params.add_argument('--single-molecule', action='store_true', default=False, help='Turn on single-molecule mode for pixel decode')
+    aux_params.add_argument('--decode-pixel-res', type=float, default=0.5, help='Decode resolution (default: 0.5)')    
     # others parameters shared across steps
     aux_params.add_argument('--min-ct-per-feature', type=int, default=20, help='Minimum count per feature during LDA training, transform and decoding (default: 20)')
     aux_params.add_argument('--de-max-pval', type=float, default=1e-3, help='P-value cutoff for differential expression (default: 1e-3)')
     aux_params.add_argument('--de-min-fold', type=float, default=1.5, help='Fold-change cutoff for differential expression (default: 1.5)')
+    aux_params.add_argument('--model-id', type=str, help='Model ID used for naming the output files (works when only one model is trained or projected)')
 
     # AUX feacture-filtering params
     aux_ftrfilter_params = parser.add_argument_group("Feature Customizing Auxiliary Parameters", "Customize features (typically genes) used by FICTURE without altering the original feature TSV")
@@ -354,6 +357,8 @@ def run_ficture2(_args):
                     f"--in-meta '{hexagon_meta}'",
                     f"--out-prefix '{model_prefix}.unsorted'",
                     f"--n-topics {n_factor}",
+                    f"--sort-topics",
+                    f"--append-topk",
                     f"--transform",
                     f"--min-count-train {args.min_ct_per_unit_train}",
                     f"--min-count-per-feature {args.min_ct_per_feature}",
@@ -366,18 +371,19 @@ def run_ficture2(_args):
                     f"--threads {args.threads}",
                     ])
                 cmds.append(cmd)
-                #cmd = f"cut -f 2- {model_prefix}.unsorted.results.tsv > {model_prefix}.unsorted.results.nohex.tsv"
-                #cmds.append(cmd)
-                cmd = " ".join([
-                    args.spatula, "append-topk-tsv",
-                    f"--in-model '{model_prefix}.unsorted.model.tsv'",
-                    f"--in-json '{hexagon_meta}'",
-                    f"--out-model '{model_prefix}.model.tsv'",
-                    f"--reorder",
-                    f"--in-tsv '{model_prefix}.unsorted.results.tsv'",
-                    f"--out-tsv '{lda_fit_tsv}'",
-                    f"--offset-model 1"
-                ])
+                cmd = f"cut -f 2- {model_prefix}.unsorted.results.tsv | {args.gzip} -c> '{lda_fit_tsv}'"
+                cmds.append(cmd)
+                cmd = f"cp {model_prefix}.unsorted.model.tsv '{model_prefix}.model.tsv'"
+                # cmd = " ".join([
+                #     args.spatula, "append-topk-tsv",
+                #     f"--in-model '{model_prefix}.unsorted.model.tsv'",
+                #     f"--in-json '{hexagon_meta}'",
+                #     f"--out-model '{model_prefix}.model.tsv'",
+                #     f"--reorder",
+                #     f"--in-tsv '{model_prefix}.unsorted.results.tsv'",
+                #     f"--out-tsv '{lda_fit_tsv}'",
+                #     f"--offset-model 1"
+                # ])
                 cmds.append(cmd)
                 #cmds.append(f"rm -f {model_prefix}.unsorted.model.tsv {model_prefix}.unsorted.results.tsv {model_prefix}.unsorted.results.nohex.tsv")
                 cmds.append(f"rm -f {model_prefix}.unsorted.model.tsv {model_prefix}.unsorted.results.tsv")
@@ -441,7 +447,6 @@ def run_ficture2(_args):
 
             fit_n_move = int(fit_width / args.anchor_res)
             decode_postcount = f"{decode_prefix}.pseudobulk.tsv"
-            decode_fit_tsv = f"{decode_prefix}.tsv"
             decode_flag = f"{decode_prefix}.done"
 
             decode_de = f"{decode_prefix}.bulk_chisq.tsv"
@@ -456,24 +461,24 @@ def run_ficture2(_args):
                 f"--in-tsv '{args.out_dir}/transcripts.tiled.tsv'",
                 f"--in-index '{args.out_dir}/transcripts.tiled.index'",
                 f"--temp-dir '{args.out_dir}/tmp/{decode_id}'",
-                f"--out '{decode_prefix}.tsv'",
+                f"--out '{decode_prefix}'",
                 f"--icol-x {args.colidx_x-1}",
                 f"--icol-y {args.colidx_y-1}",
                 f"--icol-feature 2",
                 f"--icol-val 3",
                 f"--hex-grid-dist {fit_width}",
                 f"--n-moves {fit_n_move}",
-                f"--pixel-res 0.5",
+                f"--single-molecule" if args.single_molecule else f"--pixel-res {args.decode_pixel_res}",
                 f"--threads {args.threads}",
                 f"--seed {args.seed}",
-                f"--output-original"
+                f"--output-binary",
                 ])
             cmds.append(cmd)
             # compress the decode tsv file
-            cmds.append(f"{args.gzip} -f {decode_fit_tsv}")
+            #cmds.append(f"{args.gzip} -f {decode_fit_tsv}")
             cmds.append(f"{args.gzip} -f {decode_postcount}")
 
-            cmds.append(f"[ -f {decode_fit_tsv}.gz ] && [ -f {decode_postcount}.gz ] && touch {decode_flag}" )
+            cmds.append(f"[ -f {decode_prefix}.bin ] && [ -f {decode_prefix}.index ] && [ -f {decode_postcount}.gz ] && touch {decode_flag}" )
             mm.add_target(decode_flag, [f"{args.out_dir}/transcripts.tiled.done", f"{model_prefix}.done"], cmds)
 
             # 3) DE/report
@@ -511,16 +516,17 @@ def run_ficture2(_args):
             # 7) visualization
             cmds=cmd_separator([], f"Decode visualization, ID: {decode_id}")
             #cmds.append(f"{args.gzip} -dc '{decode_fit_tsv}.gz' > '{decode_fit_tsv}'")
-            cmd = " ".join([
-                f"'{ficture2bin}'", "draw-pixel-factors",
-                #f"--in-tsv '{decode_fit_tsv}'",
-                f"--in-tsv '{decode_fit_tsv}.gz'",
-                f"--header-json '{decode_prefix}.json'",
-                f"--in-color '{color_map}'",
-                f"--out '{decode_prefix}.png'",
-                f"--scale {args.decode_scale}",
-                f"--range {args.in_minmax}"
-                ])
+            cmd = f"'{ficture2bin}' draw-pixel-factors --in '{decode_prefix}' --binary --in-color '{color_map}' --out '{decode_prefix}.png' --scale {args.decode_scale} --range '{args.in_minmax}'"
+            # cmd = " ".join([
+            #     f"'{ficture2bin}'", "draw-pixel-factors",
+            #     #f"--in-tsv '{decode_fit_tsv}'",
+            #     f"--in-tsv '{decode_fit_tsv}.gz'",
+            #     f"--header-json '{decode_prefix}.json'",
+            #     f"--in-color '{color_map}'",
+            #     f"--out '{decode_prefix}.png'",
+            #     f"--scale {args.decode_scale}",
+            #     f"--range {args.in_minmax}"
+            #     ])
             cmds.append(cmd)
             #cmds.append(f"rm -f '{decode_fit_tsv}'")
             mm.add_target(f"{decode_prefix}.png", [decode_summary_flag, color_map, minmax_prereq], cmds)
@@ -573,7 +579,8 @@ def run_ficture2(_args):
                     prerequisities.append(f"{args.out_dir}/{decode_id}.done")
                 # args
                 if args.decode:
-                    summary_aux_args_decode.append(f"{model_type},{model_id},{decode_id},{fit_width},{args.anchor_res}")
+                    pixel_res = "0" if args.single_molecule else str(args.decode_pixel_res)
+                    summary_aux_args_decode.append(f"{model_type},{model_id},{decode_id},{fit_width},{args.anchor_res},{pixel_res},{args.decode_scale}")
             if args.decode and len(summary_aux_args_decode) > 1:
                 summary_aux_args.append(" ".join(summary_aux_args_decode))
 
@@ -582,9 +589,12 @@ def run_ficture2(_args):
         summary_cmd_parts = [
             "cartloader", "write_json_for_ficture2",
             "--mode append",
-            f"--in-transcript '{args.in_transcript}'",
-            f"--in-feature '{args.in_feature}'", # use the original feature file for SGE
-            f"--in-minmax '{args.in_minmax}'",
+            f"--in-tiled '{args.out_dir}/transcripts.tiled'",
+            f"--in-feature '{feature_nohdr}'",
+            f"--in-minmax '{minmax_prereq}'",
+            # f"--in-transcript '{args.in_transcript}'",
+            # f"--in-feature '{args.in_feature}'", # use the original feature file for SGE
+            # f"--in-minmax '{args.in_minmax}'",
             f"--out-json '{args.out_json}'",
         ]
         if feature_plain:
