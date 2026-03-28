@@ -108,7 +108,7 @@ def add_multisample_prepare_targets(mm, args, ficture2bin, in_samples):
         f"--icol-y {args.colidx_y-1}",
         f"--icol-feature {args.colidx_feature-1}",
         f"--icol-int {args.colidx_count-1}",
-        f"--skip 1",
+        f"--skip 1 --skip-last-is-header",
         f"--temp-dir '{args.out_dir}/tmp'",
         f"--tile-size {args.tile_size}",
         f"--tile-buffer {args.tile_buffer}",
@@ -425,9 +425,11 @@ def add_sample_json_target(mm, args, sample, sample_transcript, n_samples):
     if len(summary_aux_args_decodes) > 1:
         summary_aux_args.append(" ".join(summary_aux_args_decodes))
 
+    # Rebuild the per-sample manifest from the current invocation so stale
+    # models from older runs in the same output directory do not persist.
     summary_cmd_parts = [
         "cartloader", "write_json_for_ficture2_multi",
-        "--mode append",
+        "--mode write",
         #f"--in-transcript '{sample_transcript}'",
         f"--in-tiled '{sample_tiled_prefix}'",
         f"--in-feature '{sample_feature_hdr}'",

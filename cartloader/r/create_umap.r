@@ -17,7 +17,7 @@ parser$add_argument("--input",               type = "character", required = TRUE
                     help = "Path to input TSV with metadata columns followed by numeric topic columns")
 parser$add_argument("--out-prefix",                 type = "character", required = TRUE,
                     help = "Output file prefix (no extension)")
-parser$add_argument("--tsv-colname-meta", nargs = "+", default = c("x", "y", "topK", "topP"),
+parser$add_argument("--tsv-colname-meta", nargs = "+", default = c("x", "y", "topK", "topP", "sample"),
                     help = "One or more column names for metadata in input TSV file")
 parser$add_argument("--n-neighbors", type = "integer", default = NULL,
                     help = "UMAP n_neighbors. By default, it applies 50 when datasets has > 50 hexagons, 8 when <=50 and >20, 5 when <=20 and >10, 3 when <10.")
