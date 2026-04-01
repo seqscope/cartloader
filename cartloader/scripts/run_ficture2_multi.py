@@ -429,7 +429,7 @@ def add_sample_json_target(mm, args, sample, sample_transcript, n_samples):
     # models from older runs in the same output directory do not persist.
     summary_cmd_parts = [
         "cartloader", "write_json_for_ficture2_multi",
-        "--mode write",
+        "--mode append",
         #f"--in-transcript '{sample_transcript}'",
         f"--in-tiled '{sample_tiled_prefix}'",
         f"--in-feature '{sample_feature_hdr}'",
