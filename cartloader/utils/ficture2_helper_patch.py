@@ -158,27 +158,68 @@ def make_direct_pmtiles_cmd(args, ficture2bin, out_prefix, tiled_prefix, feature
     return " ".join(parts)
 
 
-def make_direct_pmtiles_pyramid_cmd(args, out_dir, index_tsv):
+# def make_direct_pmtiles_pyramid_cmd(args, out_dir, index_tsv):
+#     out_dir_q = shlex.quote(out_dir)
+#     index_q = shlex.quote(index_tsv)
+#     tmp_dir_q = shlex.quote(args.tmp_dir)
+#     pmpoint_q = shlex.quote(args.pmpoint)
+#     cleanup = "" if args.keep_intermediate_files else 'rm -rf "$tmpd"; '
+#     return (
+#         f"tail -n +2 {index_q} | cut -f4 | while read rel; do "
+#         f'src={out_dir_q}/"$rel"; '
+#         'stem=$(basename "$src" .pmtiles); '
+#         f'tmpd={tmp_dir_q}/"${{stem}}"; '
+#         'out="$src.tmp"; '
+#         'mkdir -p "$tmpd"; '
+#         f"{pmpoint_q} build-pyramid-pmtiles "
+#         f"--scale-factor-compression {args.pmpoint_compression_scale} "
+#         f'--tmp-dir "$tmpd" --in "$src" --out "$out" '
+#         f"--min-zoom {args.point_min_zoom} "
+#         f"--max-tile-bytes {args.max_point_tile_bytes} "
+#         f"--max-tile-features {args.max_point_feature_counts} "
+#         f"--threads {args.threads}; "
+#         'mv "$out" "$src"; '
+#         f"{cleanup}"
+#         "done"
+#     )
+
+def make_direct_pmtiles_pyramid_cmd(args, out_dir, index_tsv, n_jobs=5):
     out_dir_q = shlex.quote(out_dir)
     index_q = shlex.quote(index_tsv)
     tmp_dir_q = shlex.quote(args.tmp_dir)
     pmpoint_q = shlex.quote(args.pmpoint)
-    cleanup = "" if args.keep_intermediate_files else 'rm -rf "$tmpd"; '
+    
+    # Define cleanup string 
+    cleanup_cmd = "" if args.keep_intermediate_files else 'rm -rf "$tmpd"; '
+
     return (
-        f"tail -n +2 {index_q} | cut -f4 | while read rel; do "
-        f'src={out_dir_q}/"$rel"; '
+        # 1. Export python variables to bash environment variables to avoid nested quote issues
+        f"export OUT_DIR={out_dir_q} TMP_DIR={tmp_dir_q} PMPOINT={pmpoint_q}; "
+        
+        # 2. Start the pipeline
+        f"tail -n +2 {index_q} | cut -f4 | "
+        
+        # 3. Use xargs to run n_jobs in parallel
+        # Note: {{}} escapes the brackets in Python's f-string so xargs sees {}
+        f"xargs -P {n_jobs} -I {{}} bash -c '"
+        
+        # 4. Inner bash script 
+        'rel="{}"; '
+        'src="$OUT_DIR/$rel"; '
         'stem=$(basename "$src" .pmtiles); '
-        f'tmpd={tmp_dir_q}/"${{stem}}"; '
+        'tmpd="$TMP_DIR/${stem}"; '
         'out="$src.tmp"; '
         'mkdir -p "$tmpd"; '
-        f"{pmpoint_q} build-pyramid-pmtiles "
+        
+        '"$PMPOINT" build-pyramid-pmtiles '
         f"--scale-factor-compression {args.pmpoint_compression_scale} "
-        f'--tmp-dir "$tmpd" --in "$src" --out "$out" '
+        '--tmp-dir "$tmpd" --in "$src" --out "$out" '
         f"--min-zoom {args.point_min_zoom} "
         f"--max-tile-bytes {args.max_point_tile_bytes} "
         f"--max-tile-features {args.max_point_feature_counts} "
         f"--threads {args.threads}; "
+        
         'mv "$out" "$src"; '
-        f"{cleanup}"
-        "done"
+        f"{cleanup_cmd}"
+        "'"
     )

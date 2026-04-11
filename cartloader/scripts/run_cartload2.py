@@ -754,7 +754,8 @@ def run_cartload2(_args):
             join_pixel_bins, join_pixel_ids, layout
         ))
         if args.use_pmpoint:
-            cmds.append(make_direct_pmtiles_pyramid_cmd(args, args.out_dir, direct_index_f))
+            #cmds.append(make_direct_pmtiles_pyramid_cmd(args, args.out_dir, direct_index_f))
+            cmds.append(make_direct_pmtiles_pyramid_cmd(args, args.out_dir, direct_index_f, args.n_jobs))
         cmds.append(f"cp {shlex.quote(direct_index_f)} {shlex.quote(sge_index_f)}")
         cmds.append(f"cp {shlex.quote(direct_counts_f)} {shlex.quote(sge_counts_f)}")
         direct_outputs = [sge_index_f, sge_counts_f, f"{out_molecules_prefix}_all.pmtiles"]
