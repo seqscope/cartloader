@@ -59,6 +59,7 @@ def parse_arguments(_args):
     aux_params.add_argument('--spatula', type=str, default=f"{repo_dir}/submodules/spatula/bin/spatula", help='Path to spatula binary')
     aux_params.add_argument('--keep-intermediate-files', action='store_true', default=False, help='Keep intermediate output files')
     aux_params.add_argument('--use-pmpoint', action='store_true', default=False, help='Use pmpoint/MLT instead of tippecanoe for point PMTiles generation (requires --pmpoint)')
+    aux_params.add_argument('--tile-format-pmpoint', choices=['MLT', 'MVT'], default='MVT', help='Tile format to use when --use-pmpoint is enabled (default: MVT)')
     aux_params.add_argument('--pmpoint-compression-scale', type=float, default=10.0, help='Additional compression scale for pmpoint when --use-pmpoint is turned on. Default: 10.0')
     aux_params.add_argument('--tmp-dir', type=str, help='Temporary directory to be used (default: out-dir/tmp; specify /tmp if needed)')
 
@@ -145,7 +146,7 @@ def run_tsv2pmtiles(_args):
             cmds = cmd_separator([], f"Converting bin {bin_id} to pmtiles")
             if args.use_pmpoint:
                 cmds.append(f"mkdir -p {args.tmp_dir}/{bin_id}")
-                cmds.append(f"'{args.pmpoint}' build-mlt-point-pmtiles --tmp-dir {args.tmp_dir}/{bin_id} --in {csv_path} --out {pmtiles_prefix}.z{args.max_zoom}.pmtiles --zoom {args.max_zoom} --colname-x X --colname-y Y --delim ',' --threads {args.threads}")
+                cmds.append(f"'{args.pmpoint}' build-point-pmtiles --tmp-dir {args.tmp_dir}/{bin_id} --in {csv_path} --out {pmtiles_prefix}.z{args.max_zoom}.pmtiles --zoom {args.max_zoom} --colname-x X --colname-y Y --delim ',' --threads {args.threads} --format {args.tile_format_pmpoint}")
                 cmds.append(f"'{args.pmpoint}' build-pyramid-pmtiles --scale-factor-compression {args.pmpoint_compression_scale} --tmp-dir {args.tmp_dir}/{bin_id} --in {pmtiles_prefix}.z{args.max_zoom}.pmtiles --out {pmtiles_prefix}.pmtiles --min-zoom {args.min_zoom} --max-tile-bytes {args.max_tile_bytes} --max-tile-features {args.max_feature_counts} --threads {args.threads}")
                 cmds.append(f"rm {pmtiles_prefix}.z{args.max_zoom}.pmtiles")
                 cmds.append(f"rm -rf {args.tmp_dir}/{bin_id}")

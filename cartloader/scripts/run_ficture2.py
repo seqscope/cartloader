@@ -53,7 +53,7 @@ def parse_arguments(_args):
     key_params.add_argument('--n-factor', type=str, default=None, help='Comma-separated factor counts for LDA training')
     key_params.add_argument('--anchor-res', type=int, default=6, help='Anchor resolution for decoding (default: 6)')
     # key_params.add_argument('--radius-buffer', type=int, default=1, help='Buffer to radius(=anchor_res + radius_buffer) for pixel-level decoding (default: 1)')
-    key_params.add_argument('--cmap-file', type=str, default=os.path.join(repo_dir, "assets", "fixed_color_map_256.tsv"), help='Path to fixed color map TSV (default: <cartloader_dir>/assets/fixed_color_map_256.tsv)')
+    key_params.add_argument('--cmap-file', type=str, default=os.path.join(repo_dir, "assets", "fixed_color_map_512.tsv"), help='Path to fixed color map TSV (default: <cartloader_dir>/assets/fixed_color_map_512.tsv)')
 
     # aux params
     aux_params = parser.add_argument_group("Auxiliary Parameters", "Additional parameters (defaults recommended)")

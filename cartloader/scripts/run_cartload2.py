@@ -82,6 +82,7 @@ def parse_arguments(_args):
     aux_params.add_argument('--sge-scale', type=int, default=1, help='scales input coordinates to pixels in the output image (default: 1)')
     aux_params.add_argument('--hex-thres-prob', type=float, default=0.0001, help='Minimum probability threshold for storing per-factor probability in hex PMTiles')
     aux_params.add_argument('--use-pmpoint', action='store_true', default=False, help='Use pmpoint/MLT instead of tippecanoe for point PMTiles generation (requires --pmpoint)')
+    aux_params.add_argument('--tile-format-pmpoint', choices=['MLT', 'MVT'], default='MVT', help='Tile format to use when --use-pmpoint is enabled (default: MVT)')
     aux_params.add_argument('--use-ficture2-direct-pmtiles', action='store_true', default=False, help='Use direct punkst/ficture2 PMTiles packaging for joined transcript-factor molecule layers while keeping the legacy tsv2pmtiles route as the default')
     aux_params.add_argument('--pmpoint-compression-scale', type=float, default=10.0, help='Additional compression scale for pmpoint when --use-pmpoint is turned on. Default: 10.0')
 
@@ -753,9 +754,9 @@ def run_cartload2(_args):
             args, ficture2bin, out_molecules_prefix, in_tiled, feature_count_nohdr_tsv,
             join_pixel_bins, join_pixel_ids, layout
         ))
-        if args.use_pmpoint:
-            #cmds.append(make_direct_pmtiles_pyramid_cmd(args, args.out_dir, direct_index_f))
-            cmds.append(make_direct_pmtiles_pyramid_cmd(args, args.out_dir, direct_index_f, args.n_jobs))
+        #if args.use_ficture2_direct_pmtiles:
+        #cmds.append(make_direct_pmtiles_pyramid_cmd(args, args.out_dir, direct_index_f))
+        cmds.append(make_direct_pmtiles_pyramid_cmd(args, args.out_dir, direct_index_f, args.n_jobs))
         cmds.append(f"cp {shlex.quote(direct_index_f)} {shlex.quote(sge_index_f)}")
         cmds.append(f"cp {shlex.quote(direct_counts_f)} {shlex.quote(sge_counts_f)}")
         direct_outputs = [sge_index_f, sge_counts_f, f"{out_molecules_prefix}_all.pmtiles"]
@@ -815,7 +816,7 @@ def run_cartload2(_args):
             "--all",
             "--n-jobs", str(args.n_jobs),
             f"--log --log-suffix '{args.log_suffix}'" if args.log else "",
-            f"--use-pmpoint --pmpoint '{args.pmpoint}' --pmpoint-compression-scale {args.pmpoint_compression_scale}" if args.use_pmpoint else f"--tippecanoe '{args.tippecanoe}'",
+            f"--use-pmpoint --pmpoint '{args.pmpoint}' --pmpoint-compression-scale {args.pmpoint_compression_scale} --tile-format-pmpoint {args.tile_format_pmpoint}" if args.use_pmpoint else f"--tippecanoe '{args.tippecanoe}'",
             f"--tmp-dir '{args.tmp_dir}'",
             "--keep-intermediate-files" if args.keep_intermediate_files else ""
         ])
