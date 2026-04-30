@@ -1,4 +1,4 @@
-import os
+import os, sys
 import shlex
 
 
@@ -191,6 +191,7 @@ def make_direct_pmtiles_pyramid_cmd(args, out_dir, index_tsv, n_jobs=5):
     
     # Define cleanup string 
     cleanup_cmd = "" if args.keep_intermediate_files else 'rm -rf "$tmpd"; '
+    xargs_opt = "-S 65536" if sys.platform == "darwin" else ""
 
     return (
         # 1. Export python variables to bash environment variables to avoid nested quote issues
@@ -201,7 +202,7 @@ def make_direct_pmtiles_pyramid_cmd(args, out_dir, index_tsv, n_jobs=5):
         
         # 3. Use xargs to run n_jobs in parallel
         # Note: {{}} escapes the brackets in Python's f-string so xargs sees {}
-        f"xargs -P {n_jobs} -S 65536 -I {{}} bash -c '"
+        f"xargs -P {n_jobs} {xargs_opt} -I {{}} bash -c '"
         
         # 4. Inner bash script 
         'rel="{}"; '
