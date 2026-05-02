@@ -80,6 +80,7 @@ def parse_arguments(_args):
     aux_params.add_argument('--xy-colname-cell-id', type=str, default="cell_id", help='Column name for cell IDs in the metadata file (default: cell_id)')
     aux_params.add_argument('--xy-colname-x', type=str, default="X", help='Column name for X coordinates in the metadata file (default: X)')
     aux_params.add_argument('--xy-colname-y', type=str, default="Y", help='Column name for Y coordinates in the metadata file (default: Y)')
+    aux_params.add_argument('--zero-based-clust-id', action='store_true', default=False, help='Whether the cluster IDs in the existing cluster files provided by --list-cluster are zero-based. By default, it is assumed that the cluster IDs are one-based and will be converted to zero-based by subtracting 1. If the cluster IDs are already zero-based, please turn on this option to avoid incorrect cluster ID conversion.')
 
     # AUX gene-filtering params
     aux_ftrfilter_params = parser.add_argument_group( "Feature Customizing Auxiliary Parameters", "Customize features (typically genes) used by FICTURE without altering the original feature TSV") # This ensures the original feature TSV file is retained in the output JSON file for downstream processing 
@@ -356,9 +357,12 @@ def run_ficture2_multi_cells(_args):
                             cell_id = toks[0].replace('"', '')
                             cluster_id = toks[1].replace('"', '')
                             if nlines > 0 or cluster_id.isdigit():
-                                int_cluster_id = int(cluster_id)-1 ## convert to 0-based
+                                if args.zero_based_clust_id:
+                                    int_cluster_id = int(cluster_id)
+                                else:
+                                    int_cluster_id = int(cluster_id)-1 ## convert to 0-based
                                 if int_cluster_id < 0:
-                                    raise ValueError(f"Cluster ID must be >= 1 in existing cluster file. Found {cluster_id} in line: {line}")
+                                    raise ValueError(f"Cluster ID must be >= {0 if args.zero_based_clust_id else 1} in existing cluster file. Found {cluster_id} in line: {line}")
                                 wf.write(f"{sample_id}\t{cell_id}\t{int_cluster_id}\n")
                                 wf_sample.write(f"{cell_id}\t{int_cluster_id}\n")
                             nlines += 1
