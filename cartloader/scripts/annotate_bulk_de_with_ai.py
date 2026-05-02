@@ -74,22 +74,22 @@ def _normalize_alias(raw: str) -> str:
     return s if s else "Unknown"
 
 
-def _make_prompt(tissue: str, organism: str, genes: List[str]) -> str:
+def _make_prompt(tissue: str, organism: str, genes: List[str], infer_type: str = "cell type") -> str:
     """
-    Ask for a single most likely cell type. Force JSON output with alias only.
+    Ask for a single most likely {infer_type}. Force JSON output with alias only.
     """
     gene_list = ", ".join(genes)
     return (
         "You are annotating latent factors from bulk differential expression.\n"
-        "Task: Identify the single most likely cell type represented by these ordered, top marker genes.\n\n"
+        f"Task: Identify the single most likely {infer_type} represented by these ordered, top marker genes.\n\n"
         f"Organism: {organism}\n"
         f"Tissue: {tissue}\n"
         f"Top marker genes (comma-separated): {gene_list}\n\n"
         "Return ONLY a JSON object with this exact schema:\n"
-        "{\"alias\": \"UpperCamelCaseCellType\"}\n\n"
+        "{\"alias\": \"UpperCamelCaseInferredCellTypeOrProgramName\"}\n\n"
         "Rules:\n"
         "- alias must be terse and singular.\n"
-        "- Use informative shorthand when appropriate (e.g., CD4+T, CD8+T, NKCell, BCell, PlasmaCell).\n"
+        "- Use informative shorthand when appropriate (e.g., CD4+T, CD8+T, NKCell, BCell, G2MPhaseCellCycle, CapillaryCaveolarTransportProgram, LipidTransportingCapillaryEndothelium, ImprintedGrowthMetabolicProgram).\n"
         "- Avoid long phrases, parentheses, or multi-sentence explanations.\n"
     )
 
@@ -338,6 +338,7 @@ def annotate_factors(
     organism: str,
     api_type: str,
     model_name: str,
+    infer_type: str,
     request_timeout: int,
     max_retries: int,
     logger: logging.Logger
@@ -353,7 +354,7 @@ def annotate_factors(
     for idx in sorted(factor2genes.keys()):
         logger.info(f"Annotating factor {idx} with {api_type} API...")
         genes = factor2genes[idx]
-        prompt = _make_prompt(tissue=tissue, organism=organism, genes=genes)
+        prompt = _make_prompt(tissue=tissue, organism=organism, genes=genes, infer_type=infer_type)
 
         if api_type == "openai":
             text = call_openai(prompt, model_name, request_timeout, max_retries)
@@ -405,6 +406,7 @@ def annotate_bulk_de_with_ai(_args):
     aux_params.add_argument('--secondary-rank', type=str, default="FoldChange", help='Secondary ranking column name in the input TSV (e.g., FoldChange)')
     aux_params.add_argument('--top-n', type=int, default=10, help='Number of top genes to use for annotation (default: 10)')
     aux_params.add_argument('--model-name', type=str, help='Model name for generative AI API. Default will be used otherwise')
+    aux_params.add_argument('--infer-type', type=str, default="cell type", help='Type of entity to infer (e.g., cell type, transcriptional program, etc)')
     aux_params.add_argument('--request-timeout', type=int, default=60, help='Request timeout (in seconds) for generative AI API (default: 60)')
     aux_params.add_argument('--max-retries', type=int, default=3, help='Maximum number of retries for failed requests (default: 3)')
 
@@ -443,6 +445,7 @@ def annotate_bulk_de_with_ai(_args):
         organism=args.organism,
         api_type=args.api_type,
         model_name=args.model_name,
+        infer_type=args.infer_type,
         request_timeout=args.request_timeout,
         max_retries=args.max_retries,
         logger=logger
