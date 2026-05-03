@@ -1,5 +1,6 @@
 import argparse, os, sys, gzip, json, re, logging, inspect, time
 from venv import logger
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import requests
 import pandas as pd
 from typing import Dict, List, Optional, Tuple
@@ -341,44 +342,61 @@ def annotate_factors(
     infer_type: str,
     request_timeout: int,
     max_retries: int,
+    threads: int,
     logger: logging.Logger
 ) -> Dict[str, List[Tuple[int, str]]]:
     """
     Returns dict keyed by engine name -> list of (factor_index, alias)
     """
-    results: List[Tuple[int, str]] = []
+    if api_type == "openai":
+        api_fn = call_openai
+    elif api_type == "google":
+        api_fn = call_google
+    elif api_type == "claude":
+        api_fn = call_claude
+    else:
+        raise ValueError(f"Unknown API type: {api_type}")
 
-    ## keep track of duplicates
-    alias2cnts = {}
-
-    for idx in sorted(factor2genes.keys()):
+    def _annotate_one(idx: int) -> Tuple[int, str]:
         logger.info(f"Annotating factor {idx} with {api_type} API...")
         genes = factor2genes[idx]
         prompt = _make_prompt(tissue=tissue, organism=organism, genes=genes, infer_type=infer_type)
+        text = api_fn(prompt, model_name, request_timeout, max_retries)
+        alias = _extract_json_alias(text)
+        return idx, alias
 
-        if api_type == "openai":
-            text = call_openai(prompt, model_name, request_timeout, max_retries)
-            alias = _extract_json_alias(text)
-            results.append([idx, alias])
-        elif api_type == "google":
-            text = call_google(prompt, model_name, request_timeout, max_retries)
-            alias = _extract_json_alias(text)
-            results.append([idx, alias])
-        elif api_type == "claude":
-            text = call_claude(prompt, model_name, request_timeout, max_retries)
-            alias = _extract_json_alias(text)
-            results.append([idx, alias])
-        else:
-            raise ValueError(f"Unknown API type: {api_type}")
+    sorted_indices = sorted(factor2genes.keys())
+    idx2alias: Dict[int, str] = {}
+
+    n_workers = max(1, int(threads))
+    logger.info(f"Annotating {len(sorted_indices)} factors with {n_workers} thread(s)...")
+
+    with ThreadPoolExecutor(max_workers=n_workers) as executor:
+        future2idx = {executor.submit(_annotate_one, idx): idx for idx in sorted_indices}
+        for future in as_completed(future2idx):
+            idx = future2idx[future]
+            try:
+                _, alias = future.result()
+            except Exception as e:
+                logger.error(f"Failed to annotate factor {idx}: {e}")
+                raise
+            idx2alias[idx] = alias
+
+    ## preserve factor-index order so duplicate suffixing is deterministic
+    results: List[List] = [[idx, idx2alias[idx]] for idx in sorted_indices]
+
+    ## keep track of duplicates
+    alias2cnts: Dict[str, int] = {}
+    for _, alias in results:
         alias2cnts[alias] = alias2cnts.get(alias, 0) + 1
 
     ## rename duplicate factors
     logger.info(f"Resolving duplicate aliases...")
-    alias2iter = {}
+    alias2iter: Dict[str, int] = {}
     for i in range(len(results)):
         idx, alias = results[i]
         if alias2cnts[alias] > 1:
-            alias2iter[alias] = alias2iter.get(alias,0) + 1
+            alias2iter[alias] = alias2iter.get(alias, 0) + 1
             results[i][1] = f"{alias}_{alias2iter[alias]}"
 
     return results
@@ -409,6 +427,7 @@ def annotate_bulk_de_with_ai(_args):
     aux_params.add_argument('--infer-type', type=str, default="cell type", help='Type of entity to infer (e.g., cell type, transcriptional program, etc)')
     aux_params.add_argument('--request-timeout', type=int, default=60, help='Request timeout (in seconds) for generative AI API (default: 60)')
     aux_params.add_argument('--max-retries', type=int, default=3, help='Maximum number of retries for failed requests (default: 3)')
+    aux_params.add_argument('--threads', type=int, default=1, help='Number of threads to use for parallel API calls (default: 1)')
 
     args = parser.parse_args(_args)
 
@@ -448,6 +467,7 @@ def annotate_bulk_de_with_ai(_args):
         infer_type=args.infer_type,
         request_timeout=args.request_timeout,
         max_retries=args.max_retries,
+        threads=args.threads,
         logger=logger
     )
 
