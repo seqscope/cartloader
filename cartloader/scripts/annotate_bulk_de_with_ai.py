@@ -23,9 +23,9 @@ ANTHROPIC_MODEL_ENV = "ANTHROPIC_MODEL"
 # -----------------------------
 # Defaults
 # -----------------------------
-DEFAULT_OPENAI_MODEL = "gpt-5-mini"
+DEFAULT_OPENAI_MODEL = "gpt-5.4-mini"
 DEFAULT_GOOGLE_MODEL = "gemini-3-flash-preview"
-DEFAULT_ANTHROPIC_MODEL = "claude-opus-4-6"
+DEFAULT_ANTHROPIC_MODEL = "claude-opus-4-7"
 
 # TOP_N_GENES = 10
 # REQUEST_TIMEOUT_S = 60
