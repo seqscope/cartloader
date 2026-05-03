@@ -237,7 +237,6 @@ def call_claude(prompt: str, model_name: str, request_timeout: int, max_retries:
     payload = {
         "model": model,
         "max_tokens": 256,
-        "temperature": 0.2,
         "messages": [{"role": "user", "content": prompt}],
     }
 
@@ -371,7 +370,9 @@ def annotate_factors(
     n_workers = max(1, int(threads))
     logger.info(f"Annotating {len(sorted_indices)} factors with {n_workers} thread(s)...")
 
-    with ThreadPoolExecutor(max_workers=n_workers) as executor:
+    ## fail-fast: cancel pending tasks and don't wait on running ones if any factor errors
+    executor = ThreadPoolExecutor(max_workers=n_workers)
+    try:
         future2idx = {executor.submit(_annotate_one, idx): idx for idx in sorted_indices}
         for future in as_completed(future2idx):
             idx = future2idx[future]
@@ -381,6 +382,8 @@ def annotate_factors(
                 logger.error(f"Failed to annotate factor {idx}: {e}")
                 raise
             idx2alias[idx] = alias
+    finally:
+        executor.shutdown(wait=False, cancel_futures=True)
 
     ## preserve factor-index order so duplicate suffixing is deterministic
     results: List[List] = [[idx, idx2alias[idx]] for idx in sorted_indices]
