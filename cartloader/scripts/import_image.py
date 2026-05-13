@@ -48,6 +48,7 @@ def parse_arguments(_args):
     aux_params1 = parser.add_argument_group("Auxiliary parameters for --ome2png")
     aux_params1.add_argument('--micron2pixel-csv', type=str, help='CSV file containing transformation parameters from microns to mosaic pixels (platform: Vizgen; typical: micron_to_mosaic_pixel_transform.csv)')
     aux_params1.add_argument("--shrink-factor", type=float, default=None, help='Downsample the image by this factor in both dimensions before processing (e.g., 2.0 = half resolution). Reduces memory when used with --high-memory.')
+    aux_params1.add_argument("--use-middle-page", action='store_true', default=False, help='Automatically select the middle page of the OME-TIFF if --page is not provided; only applicable when multiple pages are detected')
     aux_params1.add_argument("--page", type=int, help='Z-slice index to extract from multi-page OME-TIFF (3D)')
     aux_params1.add_argument("--level", type=int, help='Resolution level index to extract from OME-TIFF')
     aux_params1.add_argument("--series", type=int, help='Series index to extract from OME-TIFF')
@@ -160,6 +161,21 @@ def import_image(_args):
         color_mode=f"{transform_prefix}.color.csv"
 
         assert not args.georef_bounds and not args.georef_pixel_tsv and not args.georef_bounds_tsv, f"Since --ome2png, skip --georef-pixel-tsv, --georef-bounds, and --georef-bounds-tsv. The georeferenced bounds will be automatically extract from the OME TIFF file"
+
+        if args.use_middle_page:
+            if args.page is not None:
+                print(f"Warning: --use-middle-page is enabled, but --page {args.page} is provided, which will override the automatic page selection.", file=sys.stderr)
+            else:
+                with tifffile.TiffFile(args.in_img) as tif:
+                    n_pages = len(tif.pages)
+                    if n_pages > 1:
+                        args.page = n_pages // 2
+                        print(f"Multiple pages detected in OME-TIFF. Automatically select the middle page: {args.page}")
+                    elif n_pages == 1:
+                        args.page = 0
+                        print(f"Single page detected in OME-TIFF. Select page: {args.page}")
+                    else:
+                        raise ValueError("In --ome2png, no pages detected in the OME-TIFF file")
 
         cmds = cmd_separator([], f"Converting OME TIFF ({args.in_img}) to PNG ({transform_f})")
         cmd= " ".join([
