@@ -46,6 +46,7 @@ def sge_format_generic(_args):
     outcol_params.add_argument('--colname-feature-id', type=str, default='gene_id', help='Column name for gene ID in the output (used with --csv-colname-feature-id; default: gene_id)')
 
     aux_params = parser.add_argument_group("Auxiliary Feature Filtering Parameters")
+    aux_params.add_argument('--jitter-xy', type=float, default=0.0, help='Maximum value of random jitter in micron added to xy coordinates for the output (default: 0.0)')
     aux_params.add_argument('--include-feature-list', type=str, default=None, help='Path to file listing genes to include')
     aux_params.add_argument('--exclude-feature-list', type=str, default=None, help='Path to file listing genes to exclude')
     aux_params.add_argument('--include-feature-regex', type=str, default=None, help='Regex of feature names to include')
@@ -200,6 +201,15 @@ def sge_format_generic(_args):
             chunk[args.colname_y] = chunk[args.colname_y] / args.units_per_um
         chunk[args.colname_x] = chunk[args.colname_x].map(lambda x: float(float_format % x))
         chunk[args.colname_y] = chunk[args.colname_y].map(lambda y: float(float_format % y))
+        # if jitter is enabled, add random jitter to the coordinates
+        if args.jitter_xy > 0:
+            jitter_x = np.random.uniform(-args.jitter_xy, args.jitter_xy, size=chunk.shape[0])
+            jitter_y = np.random.uniform(-args.jitter_xy, args.jitter_xy, size=chunk.shape[0])
+            chunk[args.colname_x] += jitter_x
+            chunk[args.colname_y] += jitter_y
+            # re-apply float_format after jitter
+            chunk[args.colname_x] = chunk[args.colname_x].map(lambda x: float(float_format % x)))
+            chunk[args.colname_y] = chunk[args.colname_y].map(lambda y: float(float_format % y)))
         
         # add molecule id if provided
         if args.add_molecule_id:

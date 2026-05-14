@@ -89,6 +89,7 @@ def parse_arguments(_args):
     aux_out_params.add_argument('--colname-count', type=str, default='count', help='Comma-separated column names for count in the output (default: count)')
     aux_out_params.add_argument('--colname-feature-name', type=str, default='gene', help='Column name for gene name in the output (default: gene)')
     aux_out_params.add_argument('--scale-xy', type=float, default=1.0, help='Micron per pixel resolution for xy.png (default: 1.0)')
+    aux_out_params.add_argument('--jitter-xy', type=float, default=0.0, help='Maximum value of random jitter in micron added to xy coordinates for the output (default: 0.0)')
     # aux_out_params.add_argument('--colname-feature-id', type=str, default=None, help='Column name for gene ID. Required only when --csv-colname-feature-id or --print-feature-id is applied') 
 
     # AUX gene-filtering params
@@ -188,6 +189,7 @@ def convert_visiumhd(cmds, args):
                     f"--tsv-mtx '{args.out_transcript}'",
                     f"--tsv-ftr '{args.out_feature}'",
                     f"--tsv-minmax '{args.out_minmax}'",
+                    f"--jitter-xy {args.jitter_xy}" if args.jitter_xy > 0 else "",
                     f"--colnames-count {args.colname_count}" if args.colname_count else ""])
     aux_argset = set(item for lst in [aux_sge_args["out"], aux_sge_args["inftr"], aux_sge_args["inmtx"], aux_sge_args["inpos"], aux_sge_args["spatula"], aux_sge_args["ftrname"]] for item in lst)
     cmd = add_param_to_cmd(cmd, args, aux_argset)
@@ -208,6 +210,7 @@ def convert_seqscope(cmds, args):
                 f"--tsv-mtx '{args.out_transcript}'",
                 f"--tsv-ftr '{args.out_feature}'",
                 f"--tsv-minmax '{args.out_minmax}'",
+                f"--jitter-xy {args.jitter_xy}" if args.jitter_xy > 0 else "",
                 f"--colnames-count {args.colname_count}" if args.colname_count else ""])
     aux_argset = set(item for lst in [aux_sge_args["out"], aux_sge_args["inftr"], aux_sge_args["inbcd"], aux_sge_args["inmtx"], aux_sge_args["ftrname"]] for item in lst)
     cmd = add_param_to_cmd(cmd, args, aux_argset)
@@ -243,6 +246,7 @@ def convert_tsv(cmds, args):
                      f"--out-transcript '{transcript_tsv}'",
                      f"--out-feature '{args.out_feature}'",
                      f"--out-minmax '{args.out_minmax}'",
+                     f"--jitter-xy {args.jitter_xy}" if args.jitter_xy > 0 else "",
                      f"--colname-count '{args.colname_count}'" if args.colname_count else ""])      
     # aux args
     aux_argset = set(item for lst in [aux_sge_args["out"], 
