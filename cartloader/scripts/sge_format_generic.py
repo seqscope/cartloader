@@ -208,8 +208,8 @@ def sge_format_generic(_args):
             chunk[args.colname_x] += jitter_x
             chunk[args.colname_y] += jitter_y
             # re-apply float_format after jitter
-            chunk[args.colname_x] = chunk[args.colname_x].map(lambda x: float(float_format % x)))
-            chunk[args.colname_y] = chunk[args.colname_y].map(lambda y: float(float_format % y)))
+            chunk[args.colname_x] = chunk[args.colname_x].map(lambda x: float(float_format % x))
+            chunk[args.colname_y] = chunk[args.colname_y].map(lambda y: float(float_format % y))
         
         # add molecule id if provided
         if args.add_molecule_id:
