@@ -35,19 +35,30 @@ anno_top_k_genes <- function(chisqf, top_k) {
     if (!"gene" %in% colnames(df_chisq)) {
         stop("The chisqf file must contain a 'gene' or 'Feature' column.")
     }
-    df_tmp = df_chisq %>% 
-        group_by(factor) %>% 
+    df_tmp = df_chisq %>%
+        group_by(factor) %>%
         slice_head(n = top_k)
     unique_factors = unique(df_tmp$factor)
     sprintf_str = "%02d"
-    if ( length(unique_factors) >= 100 ) {
-        sprintf_str = "%03d"
-    } else if ( length(unique_factors) >= 1000 ) {
+    if ( length(unique_factors) >= 1000 ) {
         sprintf_str = "%04d"
+    } else if ( length(unique_factors) >= 100 ) {
+        sprintf_str = "%03d"
     }
-    return(df_tmp %>% 
-        summarise(gene_string = paste0(sprintf(sprintf_str, unique(factor)), "_", paste(gene, collapse = "_")), .groups = "drop") %>% 
-        pull(gene_string))
+    return(df_tmp %>%
+        summarise(gene_string = paste0(sprintf(sprintf_str, unique(factor)), "_", paste(gene, collapse = "_")), .groups = "drop"))
+}
+
+## Look up aliases for a vector of factor/cluster IDs.
+## Returns the original ID (as character) for any ID missing from the alias table.
+lookup_alias <- function(ids, alias_df, label = "ID") {
+    match_idx = match(ids, alias_df$factor)
+    missing = is.na(match_idx)
+    if (any(missing)) {
+        warning(sprintf("%s(s) missing from alias table, keeping original ID: %s",
+                        label, paste(unique(ids[missing]), collapse = ", ")))
+    }
+    ifelse(missing, as.character(ids), alias_df$gene_string[match_idx])
 }
 
 load_lda_results <- function(tsvf, chisqf, offset_data, top_k, min_count, colnames_cell_clust) {
@@ -61,8 +72,8 @@ load_lda_results <- function(tsvf, chisqf, offset_data, top_k, min_count, colnam
 
     print(paste("Number of factors:", ncol(df_tsv)-ibeg+1))
 
-    factor_alias = anno_top_k_genes(chisqf, top_k)
-    
+    factor_alias_df = anno_top_k_genes(chisqf, top_k)
+
     mat = as.matrix(df_tsv[, ibeg:(ncol(df_tsv))])
     mat_colsums = colSums(mat)
 
@@ -72,9 +83,12 @@ load_lda_results <- function(tsvf, chisqf, offset_data, top_k, min_count, colnam
 
     df_tsv = df_tsv[, .SD, .SDcols = c(rep(TRUE,length(colnames_cell_clust)), mat_colsums>=min_count)]  # Select 1st and 3rd columns
 
+    ## Capture original factor IDs (column names) before renaming, so each kept
+    ## column gets its own alias instead of relying on positional alignment.
+    factor_ids = suppressWarnings(as.integer(colnames(df_tsv)[ibeg:ncol(df_tsv)]))
 
     colnames(df_tsv)[1:(ibeg-1)] = colnames_cell_clust
-    colnames(df_tsv)[ibeg:(ncol(df_tsv))] = factor_alias[1:(ncol(df_tsv) - ibeg + 1)]
+    colnames(df_tsv)[ibeg:(ncol(df_tsv))] = lookup_alias(factor_ids, factor_alias_df, "Factor")
     iend = ncol(df_tsv)
 
     return(df_tsv)
@@ -125,11 +139,13 @@ heatmaps = lda_celltype_heatmaps(df_tsv, df_clust, args$colname_clust, args$offs
 
 if ( length(args$de_clust) > 0 ) {
     log_message("Loading DE results for clusters")
-    clust_alias = anno_top_k_genes(args$de_clust, args$top_k)
+    clust_alias_df = anno_top_k_genes(args$de_clust, args$top_k)
 
-    #print(head(heatmaps))
-    heatmaps$count$cluster = clust_alias
-    heatmaps$norm_frac$cluster = clust_alias
+    ## Look up by cluster ID — DE results may contain clusters that have no
+    ## cells in the heatmap (or vice versa), so positional assignment breaks.
+    new_cluster = lookup_alias(heatmaps$count$cluster, clust_alias_df, "Cluster")
+    heatmaps$count$cluster = new_cluster
+    heatmaps$norm_frac$cluster = new_cluster
 }
 
 log_message("Saving heatmaps")
