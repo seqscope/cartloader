@@ -315,6 +315,7 @@ def run_cartload2(_args):
     ## 3. deploy FICTURE results
     join_pixel_bins = []
     join_pixel_ids = []
+    join_pixel_res = []
     if args.fic_dir is not None:
         fic_jsonf = os.path.join(args.fic_dir, args.in_fic_params)
         fic_data = load_file_to_dict(fic_jsonf)
@@ -510,6 +511,7 @@ def run_cartload2(_args):
             cell_heatmap_tsv = cell_param["cluster_model_heatmap_tsv"]
             #cell_pixel_tsvf = cell_param["pixel_tsv_path"]
             cell_pixel_bin_prefix = cell_param["pixel_bin_prefix"]
+            cell_pixel_res = cell_param["pixel_res"]
             cell_pixel_pngf = cell_param["pixel_png_path"]
             copy_rgb_tsv(model_rgb, f"{out_prefix}-rgb.tsv", restart=args.restart)
 
@@ -540,6 +542,7 @@ def run_cartload2(_args):
 
             join_pixel_bins.append(cell_pixel_bin_prefix)
             join_pixel_ids.append(out_id)
+            join_pixel_res.append(float(cell_pixel_res))
 
             if not args.skip_raster:
                 cmd = " ".join([
@@ -672,6 +675,7 @@ def run_cartload2(_args):
                 in_prefix = f"{args.fic_dir}/{in_id}"
                 #in_pixel_tsvf = decode_param.get("pixel_tsv_path", f"{in_prefix}.tsv.gz")
                 in_pixel_bin_prefix = decode_param.get("pixel_bin_prefix", f"{in_prefix}")
+                in_pixel_res = decode_param.get("pixel_res", 0.5)
                 in_pixel_png = decode_param.get("pixel_png_path", f"{in_prefix}.png")
                 in_de_tsvf  = decode_param.get("de_tsv_path", f"{in_prefix}.bulk_chisq.tsv")
                 in_post_tsvf = decode_param.get("pseudobulk_tsv_path", f"{in_prefix}.pseudobulk.tsv.gz")
@@ -682,6 +686,7 @@ def run_cartload2(_args):
 
                 join_pixel_bins.append(in_pixel_bin_prefix)
                 join_pixel_ids.append(out_id)
+                join_pixel_res.append(float(in_pixel_res))
 
                 cmds = cmd_separator([], f"Converting decoded factors {in_id} into PMTiles and copying relevant files.")
                 outfiles=[]
@@ -731,6 +736,14 @@ def run_cartload2(_args):
     sge_counts_f = f"{out_molecules_prefix}_bin_counts.json"
     molecules_target = sge_index_f
     molecules_f = f"{in_tiled}.tsv"
+
+    ## sort the pixel_bins by resolution (from low to high)
+    if len(join_pixel_bins) > 0:
+        sorted_indices = sorted(range(len(join_pixel_res)), key=lambda i: join_pixel_res[i])
+        join_pixel_bins = [join_pixel_bins[i] for i in sorted_indices]
+        join_pixel_ids = [join_pixel_ids[i] for i in sorted_indices]
+        join_pixel_res = [join_pixel_res[i] for i in sorted_indices]
+
     if len(join_pixel_bins) > 0 and args.use_ficture2_direct_pmtiles:
         if args.bin_count <= 0:
             raise ValueError("--use-ficture2-direct-pmtiles requires positive --bin-count")
