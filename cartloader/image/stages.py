@@ -368,7 +368,6 @@ def register_geotif2mbtiles_stage(
         "mbtile_resampled": f"{out_prefix}.pmtiles.{args.resample}.mbtiles",
     }
 
-
 def register_mbtiles2pmtiles_stage(
     mm: minimake,
     args,
@@ -397,6 +396,44 @@ def register_mbtiles2pmtiles_stage(
 
     return pmtiles_f
 
+def register_gdalwarp_stage(
+    mm: minimake,
+    args,
+    *,
+    src_tif: str,
+    out_prefix: str,
+) -> Optional[str]:
+    
+    gdalwarp_bin = getattr(args, "gdalwarp", "gdalwarp")
+    warped_f = f"{out_prefix}.warped.tif"
+
+    scheck_app(gdalwarp_bin)
+
+    cmds = cmd_separator([], f"Performing pixel-level operations on GeoTIFF: {src_tif}")
+    cmds.append(f"'{gdalwarp_bin}' -r bilinear -of GTiff {src_tif} {warped_f}")
+    mm.add_target(warped_f, [src_tif], cmds)
+
+    return warped_f
+
+def register_geotiff2pmtiles_stage(
+    mm: minimake,
+    args,
+    *,
+    src_tif: str,
+    out_prefix: str,
+) -> Optional[str]:
+    if not getattr(args, "geotiff2pmtiles", False):
+        return None
+
+    scheck_app(args.geotiff2pmtiles)
+
+    pmtiles_f = f"{out_prefix}.pmtiles"
+
+    cmds = cmd_separator([], f"Converting from geotiff to pmtiles: {src_tif}")
+    cmds.append(f"'{args.geotiff2pmtiles}' --format {args.tile_format} --min-zoom {args.min_zoom} " + (f"--max-zoom {args.max_zoom} " if args.max_zoom is not None else "") + f"{src_tif} {pmtiles_f}")
+    mm.add_target(pmtiles_f, [src_tif], cmds)
+
+    return pmtiles_f
 
 def register_png2pmtiles_pipeline(
     mm: minimake,
@@ -412,32 +449,46 @@ def register_png2pmtiles_pipeline(
     if getattr(args, "georeference", False):
         georef_f = register_georeference_stage(mm, args, in_img=src_img, out_prefix=prefix)
 
-    oriented_f = register_orientation_stage(mm, args, src_tif=georef_f, out_prefix=prefix)
+    if args.gdal_only: ## use gdal-based pipeline for performing pmtiles conversion
+        oriented_f = register_orientation_stage(mm, args, src_tif=georef_f, out_prefix=prefix)
 
-    mbtile_info = register_geotif2mbtiles_stage(mm, args, src_tif=oriented_f, out_prefix=prefix)
+        mbtile_info = register_geotif2mbtiles_stage(mm, args, src_tif=oriented_f, out_prefix=prefix)
 
-    pmtiles_f = None
-    mbtile_flag = None
-    mbtile_path = None
-    if mbtile_info:
-        mbtile_flag = mbtile_info["mbtile_flag"]
-        mbtile_path = mbtile_info["mbtile_f"]
-        pmtiles_f = register_mbtiles2pmtiles_stage(
-            mm,
-            args,
+        pmtiles_f = None
+        mbtile_flag = None
+        mbtile_path = None
+        if mbtile_info:
+            mbtile_flag = mbtile_info["mbtile_flag"]
+            mbtile_path = mbtile_info["mbtile_f"]
+            pmtiles_f = register_mbtiles2pmtiles_stage(
+                mm,
+                args,
+                mbtile_flag=mbtile_flag,
+                mbtile_f=mbtile_path,
+                mbtile_resampled=mbtile_info["mbtile_resampled"],
+                out_prefix=prefix,
+            )
+
+        final_tif = oriented_f if oriented_f else georef_f
+
+        return Png2PmtilesResult(
+            georef_tif=georef_f,
+            oriented_tif=oriented_f,
+            final_tif=final_tif,
             mbtile_flag=mbtile_flag,
-            mbtile_f=mbtile_path,
-            mbtile_resampled=mbtile_info["mbtile_resampled"],
-            out_prefix=prefix,
+            mbtile_path=mbtile_path,
+            pmtiles_path=pmtiles_f,
         )
+    else:
+        gdalwarp_f = register_gdalwarp_stage(mm, args, src_tif=georef_f, out_prefix=prefix)
 
-    final_tif = oriented_f if oriented_f else georef_f
+        pmtiles_f = register_geotiff2pmtiles_stage(mm, args, src_tif=gdalwarp_f, out_prefix=prefix)
 
-    return Png2PmtilesResult(
-        georef_tif=georef_f,
-        oriented_tif=oriented_f,
-        final_tif=final_tif,
-        mbtile_flag=mbtile_flag,
-        mbtile_path=mbtile_path,
-        pmtiles_path=pmtiles_f,
-    )
+        return Png2PmtilesResult(
+            georef_tif=georef_f,
+            oriented_tif=gdalwarp_f,
+            final_tif=gdalwarp_f,
+            mbtile_flag=None,
+            mbtile_path=None,
+            pmtiles_path=pmtiles_f
+        )

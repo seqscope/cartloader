@@ -32,17 +32,23 @@ def parse_arguments(_args):
     key_params = parser.add_argument_group("Key parameters")
     key_params.add_argument('--threads', type=int, default=12, help='Number of threads to use for processing (default: 12)')
     key_params.add_argument('--remove-intermediate-files', action='store_true', default=False, help='If set, remove intermediate files (e.g., .mbtiles) after generating the final output.')
+    key_params.add_argument('--gdal-only', action='store_true', default=False, help='If set, only run gdal_translate to convert a georeferenced GeoTIFF to PMTileswithout using geotiff2pmtiles')
     
     env_params = parser.add_argument_group("Env Parameters", "Environment parameters, e.g., tools.")
     env_params.add_argument('--pmtiles', type=str, default=f"{repo_dir}/submodules/pmtiles/pmtiles", help='Path to pmtiles binary from go-pmtiles (default: pmtiles)')
     env_params.add_argument('--gdal_translate', type=str, default=f"gdal_translate", help='Path to gdal_translate binary (default: gdal_translate)')
-    env_params.add_argument('--gdaladdo', type=str, default=f"gdaladdo", help='Path to gdaladdo binar (default: gdaladdo)')
+    env_params.add_argument('--gdalwarp', type=str, default=f"gdalwarp", help='Path to gdalwarp binary (default: gdalwarp)')
+    env_params.add_argument('--gdaladdo', type=str, default=f"gdaladdo", help='Path to gdaladdo binary (default: gdaladdo)')
     env_params.add_argument('--gdalinfo', type=str, default=f"gdalinfo", help='Path to gdalinfo binary (default: gdalinfo)')
-    env_params.add_argument('--vips', type=str, default=f"vips", help='Path to vips binary (default: vips)')
+    env_params.add_argument('--geotiff2pmtiles', type=str, default=f"{repo_dir}/submodules/geotiff2pmtiles/geotiff2pmtiles", help='Path to geotiff2pmtiles binary (default: geotiff2pmtiles)')
+#    env_params.add_argument('--vips', type=str, default=f"vips", help='Path to vips binary (default: vips)')
 
     aux_params = parser.add_argument_group("Auxiliary Parameters")    
     aux_params.add_argument('--log', action='store_true', default=False)
     aux_params.add_argument('--log-suffix', type=str, default=".log")
+    aux_params.add_argument('--min-zoom', type=int, default=6, help='Minimum zoom level for PMTiles (default: 6)')
+    aux_params.add_argument('--max-zoom', type=int, help='Maximum zoom level for PMTiles (default: 20)')
+    aux_params.add_argument('--tile-format', type=str, default='png', choices=['png', 'webp'], help='Tile image format for PMTiles (default: png)')
 
     if len(_args) == 0:
         parser.print_help()
@@ -201,6 +207,7 @@ def image_xenium_hne2pmtiles(_args):
     
     #logger.info("Affine Transformation Matrix (in um): \n" + str(affine_mat))
 
+    ## perform affine transformation and convert to georeferenced GeoTIFF using gdal_translate
     cmd = f"GDAL_NUM_THREADS={args.threads} {args.gdal_translate} -of GTiff -a_srs EPSG:3857 -a_gt {affine_mat[0,2]} {affine_mat[0,0]} {affine_mat[0,1]} {affine_mat[1,2]} {affine_mat[1,0]} {affine_mat[1,1]} '{args.tif}' '{args.out_prefix}.georef.tif'"
     logger.info("Running gdal_translate command:\n" + cmd)
     result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
@@ -221,32 +228,56 @@ def image_xenium_hne2pmtiles(_args):
         # if result2.returncode != 0:
         #     logger.error("gdal_translate failed with error:\n" + result2.stderr)
         #     raise RuntimeError("gdal_translate command failed even after vips conversion.")
-    
-    cmd = f"GDAL_NUM_THREADS={args.threads} gdal_translate -ot Byte -of mbtiles -b 1 -b 2 -b 3 -strict -co 'ZOOM_LEVEL_STRATEGY=UPPER' -co 'RESAMPLING=cubic' -co 'BLOCKSIZE=512' -co 'QUALITY=100' -a_srs EPSG:3857 {args.out_prefix}.georef.tif {args.out_prefix}.mbtiles"
-    logger.info("Running gdal_translate command:\n" + cmd)
-    result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
-    if result.returncode != 0:
-        logger.error("gdal_translate failed with error:\n" + result.stderr)
-        raise RuntimeError("gdal_translate command failed.")
-    
-    cmd = f"GDAL_NUM_THREADS={args.threads} {args.gdaladdo} '{args.out_prefix}.mbtiles' -r cubic 2 4 8 16 32 64 128 256 512 1024"
-    logger.info("Running gdal_translate command:\n" + cmd)
-    result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
-    if result.returncode != 0:
-        logger.error("gdal_translate failed with error:\n" + result.stderr)
-        raise RuntimeError("gdaladdo command failed.")
 
-    cmd = f"{args.pmtiles} convert --force '{args.out_prefix}.mbtiles' '{args.out_prefix}.pmtiles'"
-    logger.info("Running pmtiles convert command:\n" + cmd)
-    result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
-    if result.returncode != 0:
-        logger.error("pmtiles convert failed with error:\n" + result.stderr)
-        raise RuntimeError("pmtiles convert command failed.")
-    
-    if args.remove_intermediate_files:
-        os.remove(f"{args.out_prefix}.mbtiles")
-        os.remove(f"{args.out_prefix}.georef.tif")
-        logger.info("Removed intermediate files.")
+    ## steps convert the georeferenced GeoTIFF to PMTiles
+    if args.gdal_only:    
+        cmd = f"GDAL_NUM_THREADS={args.threads} gdal_translate -ot Byte -of mbtiles -b 1 -b 2 -b 3 -strict -co 'ZOOM_LEVEL_STRATEGY=UPPER' -co 'RESAMPLING=cubic' -co 'BLOCKSIZE=512' -co 'QUALITY=100' -a_srs EPSG:3857 {args.out_prefix}.georef.tif {args.out_prefix}.mbtiles"
+        logger.info("Running gdal_translate command:\n" + cmd)
+        result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+        if result.returncode != 0:
+            logger.error("gdal_translate failed with error:\n" + result.stderr)
+            raise RuntimeError("gdal_translate command failed.")
+        
+        cmd = f"GDAL_NUM_THREADS={args.threads} {args.gdaladdo} '{args.out_prefix}.mbtiles' -r cubic 2 4 8 16 32 64 128 256 512 1024"
+        logger.info("Running gdal_translate command:\n" + cmd)
+        result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+        if result.returncode != 0:
+            logger.error("gdal_translate failed with error:\n" + result.stderr)
+            raise RuntimeError("gdaladdo command failed.")
+
+        cmd = f"{args.pmtiles} convert --force '{args.out_prefix}.mbtiles' '{args.out_prefix}.pmtiles'"
+        logger.info("Running pmtiles convert command:\n" + cmd)
+        result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+        if result.returncode != 0:
+            logger.error("pmtiles convert failed with error:\n" + result.stderr)
+            raise RuntimeError("pmtiles convert command failed.")
+        
+        if args.remove_intermediate_files:
+            os.remove(f"{args.out_prefix}.mbtiles")
+            os.remove(f"{args.out_prefix}.georef.tif")
+            os.remove(f"{args.out_prefix}.northup.tif")
+            logger.info("Removed intermediate files.")
+    else:
+        ## perform gdalwrap to convert the GeoTIFF to northup
+        cmd = f"GDAL_NUM_THREADS={args.threads} {args.gdalwarp} -r bilinear -of GTiff {args.out_prefix}.georef.tif {args.out_prefix}.northup.tif"
+        logger.info("Running gdalwarp command:\n" + cmd)
+        result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+        if result.returncode != 0:
+            logger.error("gdalwarp failed with error:\n" + result.stderr)
+            raise RuntimeError("gdalwarp command failed.")
+        max_zoom_params = f"--max-zoom {args.max_zoom}" if args.max_zoom is not None else ""
+        cmd = f"{args.geotiff2pmtiles} --format {args.tile_format} --min-zoom {args.min_zoom} {max_zoom_params} {args.out_prefix}.northup.tif {args.out_prefix}.pmtiles"
+        logger.info("Running geotiff2pmtiles command:\n" + cmd)
+        result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+        if result.returncode != 0:
+            logger.error("geotiff2pmtiles failed with error:\n" + result.stderr)
+            raise RuntimeError("geotiff2pmtiles command failed.")
+        if args.remove_intermediate_files:
+            os.remove(f"{args.out_prefix}.georef.tif")
+            os.remove(f"{args.out_prefix}.northup.tif")
+            logger.info("Removed intermediate files.")
+ 
+
     logger.info("Analysis Finished")
 
 
