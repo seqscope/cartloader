@@ -24,7 +24,7 @@ ANTHROPIC_MODEL_ENV = "ANTHROPIC_MODEL"
 # Defaults
 # -----------------------------
 DEFAULT_OPENAI_MODEL = "gpt-5.4-mini"
-DEFAULT_GOOGLE_MODEL = "gemini-3-flash-preview"
+DEFAULT_GOOGLE_MODEL = "gemini-3.5-flash"
 DEFAULT_ANTHROPIC_MODEL = "claude-opus-4-7"
 
 # TOP_N_GENES = 10
@@ -131,7 +131,7 @@ def _extract_json_alias(text: str) -> str:
 # -----------------------------
 # API Calls
 # -----------------------------
-def call_openai(prompt: str, model_name: str, request_timeout: int, max_retries: int) -> str:
+def call_openai(prompt: str, model_name: str, request_timeout: int, max_retries: int, api_base_url: Optional[str]) -> str:
     """
     OpenAI Responses API via REST.
     Env: OPENAI_API_KEY, optional OPENAI_MODEL
@@ -140,7 +140,7 @@ def call_openai(prompt: str, model_name: str, request_timeout: int, max_retries:
     model = os.environ.get(OPENAI_MODEL_ENV, DEFAULT_OPENAI_MODEL) if model_name is None else model_name
 
     # Updated implementation for gpt-5 series
-    url = "https://api.openai.com/v1/responses"  # New endpoint
+    url = api_base_url or "https://api.openai.com/v1/responses"  # New endpoint
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
@@ -186,13 +186,16 @@ def call_openai(prompt: str, model_name: str, request_timeout: int, max_retries:
         return ""
 
 
-def call_google(prompt: str, model_name: str, request_timeout: int, max_retries: int) -> str:
+def call_google(prompt: str, model_name: str, request_timeout: int, max_retries: int, api_base_url: Optional[str]) -> str:
     """
     Google Gemini 3 SDK call.
     Env: GEMINI_API_KEY, optional GOOGLE_MODEL
     """
     # The SDK automatically looks for the GEMINI_API_KEY environment variable
     client = genai.Client()
+
+    if api_base_url:
+        client._client._base_url = api_base_url  # Override base URL for custom/proxy endpoints
     
     model_id = os.environ.get(GOOGLE_MODEL_ENV, DEFAULT_GOOGLE_MODEL) if model_name is None else model_name
     
@@ -220,7 +223,7 @@ def call_google(prompt: str, model_name: str, request_timeout: int, max_retries:
     return ""
 
 
-def call_claude(prompt: str, model_name: str, request_timeout: int, max_retries: int) -> str:
+def call_claude(prompt: str, model_name: str, request_timeout: int, max_retries: int, api_base_url: Optional[str]) -> str:
     """
     Anthropic Messages API via REST.
     Env: ANTHROPIC_API_KEY, optional ANTHROPIC_MODEL
@@ -228,7 +231,7 @@ def call_claude(prompt: str, model_name: str, request_timeout: int, max_retries:
     api_key = os.environ.get(ANTHROPIC_API_KEY_ENV, "")
     model = os.environ.get(ANTHROPIC_MODEL_ENV, DEFAULT_ANTHROPIC_MODEL) if model_name is None else model_name
 
-    url = "https://api.anthropic.com/v1/messages"
+    url = api_base_url or "https://api.anthropic.com/v1/messages"
     headers = {
         "x-api-key": api_key,
         "anthropic-version": "2023-06-01",
@@ -342,6 +345,7 @@ def annotate_factors(
     request_timeout: int,
     max_retries: int,
     threads: int,
+    api_base_url: Optional[str],
     logger: logging.Logger
 ) -> Dict[str, List[Tuple[int, str]]]:
     """
@@ -360,7 +364,7 @@ def annotate_factors(
         logger.info(f"Annotating factor {idx} with {api_type} API...")
         genes = factor2genes[idx]
         prompt = _make_prompt(tissue=tissue, organism=organism, genes=genes, infer_type=infer_type)
-        text = api_fn(prompt, model_name, request_timeout, max_retries)
+        text = api_fn(prompt, model_name, request_timeout, max_retries, api_base_url)
         alias = _extract_json_alias(text)
         return idx, alias
 
@@ -431,6 +435,7 @@ def annotate_bulk_de_with_ai(_args):
     aux_params.add_argument('--request-timeout', type=int, default=60, help='Request timeout (in seconds) for generative AI API (default: 60)')
     aux_params.add_argument('--max-retries', type=int, default=3, help='Maximum number of retries for failed requests (default: 3)')
     aux_params.add_argument('--threads', type=int, default=1, help='Number of threads to use for parallel API calls (default: 1)')
+    aux_params.add_argument('--api-base-url', type=str, help='Base URL for the API endpoint if using a custom or proxy service')
 
     args = parser.parse_args(_args)
 
@@ -471,6 +476,7 @@ def annotate_bulk_de_with_ai(_args):
         request_timeout=args.request_timeout,
         max_retries=args.max_retries,
         threads=args.threads,
+        api_base_url=args.api_base_url,
         logger=logger
     )
 
