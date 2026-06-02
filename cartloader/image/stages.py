@@ -6,6 +6,8 @@ import gzip
 import os
 from dataclasses import dataclass
 from typing import Dict, Optional
+import json
+import subprocess
 
 import shlex
 
@@ -77,6 +79,41 @@ def configure_color_mode(args) -> None:
         args.rgba = False
         args.mono = False
 
+import json
+import subprocess
+
+def _needs_rgb_expansion_cli(image_path: str, args) -> bool:
+    """Checks if an image needs '-expand rgb' using the gdalinfo CLI tool."""
+    scheck_app(args.gdalinfo)
+
+    try:
+        # Run gdalinfo and capture the JSON output
+        result = subprocess.run(
+            [args.gdalinfo, "-json", image_path],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            check=True
+        )
+        
+        info_json = json.loads(result.stdout)
+        bands = info_json.get('bands', [])
+        
+        if bands:
+            return bands[0].get('colorInterpretation', '') == 'Palette'
+            
+    except (subprocess.CalledProcessError, json.JSONDecodeError, KeyError, IndexError):
+        # Handle cases where the file doesn't exist or gdalinfo fails
+        pass
+        
+    return False
+
+# --- Example Usage ---
+# file_path = "cartostore/visiumhd-public-dataset-collection/.../rep1.t12_f48_pixel.png"
+# if needs_rgb_expansion(file_path):
+#     print("Use: -expand rgb")
+# else:
+#     print("Do not use: -expand rgb")
 
 def _resolve_bounds_from_args(args, *, in_img: str) -> Optional[Dict[str, float]]:
 
@@ -169,6 +206,16 @@ def register_georeference_stage(
     georef_f = f"{out_prefix}.georef.tif"
     cmds = cmd_separator([], f"Geo-referencing {in_img} to {georef_f}")
     ullr = "{ulx} {uly} {lrx} {lry}".format(**bounds)
+    ## check if rgb expansion is needed
+    if in_img.endswith(".png") and _needs_rgb_expansion_cli(in_img, args):
+        if getattr(args, "rgba", False):
+            expand_str = "-expand rgba"
+        elif getattr(args, "mono", False):
+            expand_str = "-expand gray"
+        else:
+            expand_str = "-expand rgb"
+    else:
+        expand_str = ""
     cmds.append(
         " ".join(
             [
@@ -176,7 +223,7 @@ def register_georeference_stage(
                 "-of GTiff",
                 f"-a_srs {args.srs}",
                 f"-a_ullr {ullr}",
-                f"-expand rgba" if getattr(args, "rgba", False) else (f"-expand rgb" if (in_img.endswith(".png") and not getattr(args, "mono", False)) else ""),
+                expand_str,
                 in_img,
                 georef_f,
             ]
