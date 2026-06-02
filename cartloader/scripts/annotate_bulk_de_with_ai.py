@@ -668,6 +668,8 @@ def annotate_bulk_de_with_ai(_args):
                 logger.error(f"Invalid template argument: {kv}. Must be in KEY=VALUE format.")
                 sys.exit(1)
             key, value = kv.split("=", 1)
+            key = key.strip("'\"")
+            value = value.strip("'\"") ## allow values to be optionally enclosed in quotes
             template_keyvals[key] = value
     elif args.template_argfile:
         if not os.path.isfile(args.template_argfile):
@@ -693,6 +695,8 @@ def annotate_bulk_de_with_ai(_args):
                         sys.exit(1)
                     key, value = line.rstrip().split("\t", maxsplit=1)
                     key = key.rstrip(":") ## allow keys to optionally end with a colon, which is common in templates
+                    key = key.strip("'\"")
+                    value = value.strip("'\"") ## allow values to be optionally enclosed in quotes
                     template_keyvals[key] = value
 
     logger.info(f"Annotating {len(factor2genes)} factors with {args.api_type} API...")
