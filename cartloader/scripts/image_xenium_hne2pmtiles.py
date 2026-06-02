@@ -255,18 +255,18 @@ def image_xenium_hne2pmtiles(_args):
         if args.remove_intermediate_files:
             os.remove(f"{args.out_prefix}.mbtiles")
             os.remove(f"{args.out_prefix}.georef.tif")
-            os.remove(f"{args.out_prefix}.northup.tif")
+            #os.remove(f"{args.out_prefix}.northup.tif")
             logger.info("Removed intermediate files.")
     else:
         ## perform gdalwrap to convert the GeoTIFF to northup
-        cmd = f"GDAL_NUM_THREADS={args.threads} {args.gdalwarp} -r bilinear -of GTiff {args.out_prefix}.georef.tif {args.out_prefix}.northup.tif"
+        cmd = f"GDAL_NUM_THREADS={args.threads} {args.gdalwarp} -r bilinear -of GTiff {args.out_prefix}.georef.tif {args.out_prefix}.warped.tif"
         logger.info("Running gdalwarp command:\n" + cmd)
         result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
         if result.returncode != 0:
             logger.error("gdalwarp failed with error:\n" + result.stderr)
             raise RuntimeError("gdalwarp command failed.")
         max_zoom_params = f"--max-zoom {args.max_zoom}" if args.max_zoom is not None else ""
-        cmd = f"{args.geotiff2pmtiles} --format {args.tile_format} --min-zoom {args.min_zoom} {max_zoom_params} {args.out_prefix}.northup.tif {args.out_prefix}.pmtiles"
+        cmd = f"{args.geotiff2pmtiles} --format {args.tile_format} --min-zoom {args.min_zoom} {max_zoom_params} {args.out_prefix}.warped.tif {args.out_prefix}.pmtiles"
         logger.info("Running geotiff2pmtiles command:\n" + cmd)
         result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
         if result.returncode != 0:
@@ -274,7 +274,7 @@ def image_xenium_hne2pmtiles(_args):
             raise RuntimeError("geotiff2pmtiles command failed.")
         if args.remove_intermediate_files:
             os.remove(f"{args.out_prefix}.georef.tif")
-            os.remove(f"{args.out_prefix}.northup.tif")
+            os.remove(f"{args.out_prefix}.warped.tif")
             logger.info("Removed intermediate files.")
  
 

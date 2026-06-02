@@ -14,18 +14,41 @@ from google.genai import types
 OPENAI_API_KEY_ENV = "OPENAI_API_KEY"
 GEMINI_API_KEY_ENV = "GEMINI_API_KEY"
 ANTHROPIC_API_KEY_ENV = "ANTHROPIC_API_KEY"
+UMGPT_API_KEY_ENV = "UMGPT_API_KEY"
 
 # Optional overrides
 OPENAI_MODEL_ENV = "OPENAI_MODEL"
 GOOGLE_MODEL_ENV = "GOOGLE_MODEL"
 ANTHROPIC_MODEL_ENV = "ANTHROPIC_MODEL"
+UMGPT_MODEL_ENV = "UMGPT_MODEL"
 
 # -----------------------------
 # Defaults
 # -----------------------------
 DEFAULT_OPENAI_MODEL = "gpt-5.4-mini"
 DEFAULT_GOOGLE_MODEL = "gemini-3.5-flash"
-DEFAULT_ANTHROPIC_MODEL = "claude-opus-4-7"
+DEFAULT_ANTHROPIC_MODEL = "claude-opus-4-8"
+DEFAULT_UMGPT_MODEL = "gpt-5-mini"
+
+# U-M GPT Toolkit gateway (OpenAI-compatible). The working API root ends in /v1;
+# the /responses endpoint serves all model families (GPT, Claude, Gemini) with
+# Bearer auth and a uniform request/response shape.
+DEFAULT_UMGPT_BASE_URL = "https://api.toolkit.umgpt.umich.edu/v1"
+
+# Substrings identifying reasoning-capable models on the UMGPT gateway. Only
+# these accept a 'reasoning.effort' parameter; others (e.g. gpt-4o, gpt-4.1,
+# Llama) reject it with HTTP 400.
+UMGPT_REASONING_HINTS = ("gpt-5", "o1", "o3", "claude-sonnet", "claude-opus", "gemini")
+
+# Reasoning models (especially the GPT-5 series) spend tokens on hidden
+# reasoning BEFORE emitting visible output. For this task the answer is a tiny
+# JSON alias, so we use LOW effort and a large output budget so reasoning can
+# finish AND still leave room for the JSON. If a response still comes back
+# truncated (incomplete / max_output_tokens), the budget is escalated and the
+# request retried once more.
+UMGPT_REASONING_EFFORT = "low"
+UMGPT_MAX_OUTPUT_TOKENS = 2048
+UMGPT_MAX_OUTPUT_TOKENS_ESCALATED = 8192
 
 # TOP_N_GENES = 10
 # REQUEST_TIMEOUT_S = 60
@@ -75,26 +98,44 @@ def _normalize_alias(raw: str) -> str:
     return s if s else "Unknown"
 
 
-def _make_prompt(tissue: str, organism: str, genes: List[str], infer_type: str = "cell type") -> str:
+# def _make_prompt(tissue: str, organism: str, genes: List[str], infer_type: str) -> str:
+#     """
+#     Ask for a single most likely {infer_type}. Force JSON output with alias only.
+#     """
+#     gene_list = ", ".join(genes)
+#     return (
+#         "You are annotating latent factors from bulk differential expression.\n"
+#         f"Task: Identify the single most likely {infer_type} represented by these ordered, top marker genes.\n\n"
+#         f"Organism: {organism}\n"
+#         f"Tissue: {tissue}\n"
+#         f"Top marker genes (comma-separated): {gene_list}\n\n"
+#         "Return ONLY a JSON object with this exact schema:\n"
+#         "{\"alias\": \"UpperCamelCaseInferredCellTypeOrProgramName\"}\n\n"
+#         "Rules:\n"
+#         "- alias must be terse and singular.\n"
+#         "- Use informative shorthand when appropriate (e.g., CD4+T, CD8+T, NKCell, BCell, G2MPhaseCellCycle, CapillaryCaveolarTransportProgram, LipidTransportingCapillaryEndothelium, ImprintedGrowthMetabolicProgram).\n"
+#         "- Avoid long phrases, parentheses, or multi-sentence explanations.\n"
+#     )
+
+def _make_prompt(template_str:str, template_keyvals: Dict[str, str], genes: List[str]) -> str:
     """
-    Ask for a single most likely {infer_type}. Force JSON output with alias only.
+    Create a prompt using a template string and key-value pairs.
     """
     gene_list = ", ".join(genes)
-    return (
-        "You are annotating latent factors from bulk differential expression.\n"
-        f"Task: Identify the single most likely {infer_type} represented by these ordered, top marker genes.\n\n"
-        f"Organism: {organism}\n"
-        f"Tissue: {tissue}\n"
-        f"Top marker genes (comma-separated): {gene_list}\n\n"
-        "Return ONLY a JSON object with this exact schema:\n"
-        "{\"alias\": \"UpperCamelCaseInferredCellTypeOrProgramName\"}\n\n"
-        "Rules:\n"
-        "- alias must be terse and singular.\n"
-        "- Use informative shorthand when appropriate (e.g., CD4+T, CD8+T, NKCell, BCell, G2MPhaseCellCycle, CapillaryCaveolarTransportProgram, LipidTransportingCapillaryEndothelium, ImprintedGrowthMetabolicProgram).\n"
-        "- Avoid long phrases, parentheses, or multi-sentence explanations.\n"
-    )
-
-
+    keyvals = template_keyvals.copy()
+    keyvals["top_marker_gene_list"] = gene_list
+    prompt = template_str
+    for k, v in keyvals.items():
+        placeholder = "{" + k + "}"
+        ## make sure the placeholder exists in the template
+        if placeholder not in prompt:
+            raise ValueError(f"Argument {placeholder} not found in template. Available args: {re.findall(r'{(.*?)}', template_str)}")
+        prompt = prompt.replace(placeholder, v)
+    ## make sure that all placeholders were replaced
+    if re.search(r"\{\S*?\}", prompt):
+        unreplaced = re.findall(r"\{\S*?\}", prompt)
+        raise ValueError(f"Unreplaced arguments {unreplaced} remain in the prompt. Please provide values for these arguments using --template-args or remove them from the template.")
+    return prompt
 
 def _extract_json_alias(text: str) -> str:
     """
@@ -222,27 +263,40 @@ def call_google(prompt: str, model_name: str, request_timeout: int, max_retries:
             time.sleep(2 ** attempt + 5) ## wait for 7, 9, 13, ... seconds
     return ""
 
-
 def call_claude(prompt: str, model_name: str, request_timeout: int, max_retries: int, api_base_url: Optional[str]) -> str:
     """
     Anthropic Messages API via REST.
     Env: ANTHROPIC_API_KEY, optional ANTHROPIC_MODEL
+
+    When api_base_url is provided (e.g. the U-M GPT Toolkit gateway), the API key
+    is sent via the 'Authorization: Bearer' header. Otherwise the standard
+    Anthropic 'x-api-key' header is used against api.anthropic.com.
     """
     api_key = os.environ.get(ANTHROPIC_API_KEY_ENV, "")
     model = os.environ.get(ANTHROPIC_MODEL_ENV, DEFAULT_ANTHROPIC_MODEL) if model_name is None else model_name
 
-    url = api_base_url or "https://api.anthropic.com/v1/messages"
-    headers = {
-        "x-api-key": api_key,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-    }
+    if api_base_url:
+        url = api_base_url
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+        }
+    else:
+        url = "https://api.anthropic.com/v1/messages"
+        headers = {
+            "x-api-key": api_key,
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+        }
+
     payload = {
         "model": model,
         "max_tokens": 256,
         "messages": [{"role": "user", "content": prompt}],
     }
 
+    data = None
     for attempt in range(max_retries):
         try:
             r = requests.post(url, headers=headers, json=payload, timeout=request_timeout)
@@ -252,7 +306,7 @@ def call_claude(prompt: str, model_name: str, request_timeout: int, max_retries:
         except Exception as e:
             if attempt == max_retries - 1:
                 raise e
-            time.sleep(2 ** attempt + 5) ## wait for 7, 9, 13, ... seconds
+            time.sleep(2 ** attempt + 5)  ## wait for 7, 9, 13, ... seconds
 
     # content is a list of blocks; extract text blocks
     try:
@@ -262,6 +316,127 @@ def call_claude(prompt: str, model_name: str, request_timeout: int, max_retries:
     except Exception:
         return ""
 
+
+def _umgpt_supports_reasoning(model: str) -> bool:
+    low = model.lower()
+    return any(h in low for h in UMGPT_REASONING_HINTS)
+
+
+def _umgpt_extract_text(data: dict) -> str:
+    """Extract assistant text from a /responses payload, tolerating shapes."""
+    if not isinstance(data, dict):
+        return ""
+    # Convenience field present in some responses.
+    if data.get("output_text"):
+        return str(data["output_text"]).strip()
+    # Walk output[].content[] for output_text blocks.
+    try:
+        texts = []
+        for item in data.get("output", []) or []:
+            for c in item.get("content", []) or []:
+                if c.get("type") == "output_text" and "text" in c:
+                    texts.append(c["text"])
+        return "\n".join(texts).strip()
+    except Exception:
+        return ""
+
+
+def _umgpt_is_truncated(data: dict) -> bool:
+    """True when the response was cut off before finishing (reasoning ate the
+    whole output budget), which yields empty/partial text and downstream
+    'Unknown'. Detected via status/incomplete_details, or empty output where
+    usage shows the cap was reached."""
+    if not isinstance(data, dict):
+        return False
+    if data.get("status") == "incomplete":
+        return True
+    inc = data.get("incomplete_details")
+    if isinstance(inc, dict) and inc.get("reason") == "max_output_tokens":
+        return True
+    return False
+
+
+def call_umgpt(prompt: str, model_name: str, request_timeout: int, max_retries: int, api_base_url: Optional[str]) -> str:
+    """
+    U-M GPT Toolkit gateway via REST (OpenAI-compatible /responses endpoint).
+    Env: UMGPT_API_KEY, optional UMGPT_MODEL
+
+    The Toolkit is a single OpenAI-compatible gateway that serves all model
+    families (GPT, Claude, Gemini) through /responses with Bearer auth. The
+    model name (e.g. 'gpt-5-mini', 'claude-opus-4-7', 'gemini-3-flash-preview')
+    selects the underlying model. 'reasoning.effort' is sent only for
+    reasoning-capable models, since others reject it with HTTP 400.
+
+    GPT-5-series models spend heavily on hidden reasoning before producing
+    output, which can exhaust the token budget and return truncated/empty text
+    (downstream this becomes 'Unknown'). To avoid that we use low reasoning
+    effort with a large output budget, and if a response still comes back
+    truncated we escalate the budget and retry.
+    """
+    api_key = os.environ.get(UMGPT_API_KEY_ENV, "")
+    model = os.environ.get(UMGPT_MODEL_ENV, DEFAULT_UMGPT_MODEL) if model_name is None else model_name
+
+    # Resolve the /responses endpoint, tolerating various forms of base URL:
+    #   .../v1                -> append /responses
+    #   .../v1/               -> append responses
+    #   .../v1/responses      -> use as-is
+    #   https://host          -> assume /v1/responses
+    base = (api_base_url or DEFAULT_UMGPT_BASE_URL).strip().rstrip("/")
+    if base.endswith("/responses"):
+        url = base
+    elif base.endswith("/v1"):
+        url = base + "/responses"
+    else:
+        url = base + "/v1/responses"
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+    supports_reasoning = _umgpt_supports_reasoning(model)
+
+    def _build_payload(max_out: int) -> dict:
+        p = {
+            "model": model,
+            "input": prompt,
+            "max_output_tokens": max_out,
+        }
+        if supports_reasoning:
+            p["reasoning"] = {"effort": UMGPT_REASONING_EFFORT}
+        return p
+
+    # Two budget tiers: normal, then escalated if the first comes back truncated.
+    budgets = [UMGPT_MAX_OUTPUT_TOKENS, UMGPT_MAX_OUTPUT_TOKENS_ESCALATED]
+
+    data = None
+    text = ""
+    for budget in budgets:
+        payload = _build_payload(budget)
+        data = None
+        for attempt in range(max_retries):
+            try:
+                r = requests.post(url, headers=headers, json=payload, timeout=request_timeout)
+                r.raise_for_status()
+                data = r.json()
+                break
+            except Exception as e:
+                if attempt == max_retries - 1:
+                    raise e
+                time.sleep(2 ** attempt + 5)  ## wait for 7, 9, 13, ... seconds
+
+        text = _umgpt_extract_text(data)
+        # If we got usable text and the response wasn't truncated, we're done.
+        if text and not _umgpt_is_truncated(data):
+            return text
+        # Truncated or empty: escalate the budget and try once more.
+        if budget != budgets[-1]:
+            logging.getLogger(__name__).warning(
+                f"UMGPT response truncated or empty for model '{model}' at "
+                f"max_output_tokens={budget}; retrying with larger budget."
+            )
+
+    # Return whatever text we managed to extract (may be empty -> 'Unknown').
+    return text
 
 # -----------------------------
 # Core logic
@@ -337,11 +512,10 @@ def top_genes_per_factor(
 
 def annotate_factors(
     factor2genes: Dict[int, List[str]],
-    tissue: str,
-    organism: str,
+    template_str: str,
+    template_keyvals: Dict[str, str],
     api_type: str,
     model_name: str,
-    infer_type: str,
     request_timeout: int,
     max_retries: int,
     threads: int,
@@ -357,13 +531,15 @@ def annotate_factors(
         api_fn = call_google
     elif api_type == "claude":
         api_fn = call_claude
+    elif api_type == "umgpt":
+        api_fn = call_umgpt
     else:
         raise ValueError(f"Unknown API type: {api_type}")
 
     def _annotate_one(idx: int) -> Tuple[int, str]:
         logger.info(f"Annotating factor {idx} with {api_type} API...")
         genes = factor2genes[idx]
-        prompt = _make_prompt(tissue=tissue, organism=organism, genes=genes, infer_type=infer_type)
+        prompt = _make_prompt(template_str=template_str, template_keyvals=template_keyvals, genes=genes)
         text = api_fn(prompt, model_name, request_timeout, max_retries, api_base_url)
         alias = _extract_json_alias(text)
         return idx, alias
@@ -415,6 +591,8 @@ def write_output(out: str, rows: List[Tuple[int, str]]) -> str:
     return out
 
 def annotate_bulk_de_with_ai(_args):
+    repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
     parser = argparse.ArgumentParser(prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}", 
                                      description="""
                                      Annotate Bulk DE test results with Generative AI APIs.
@@ -422,22 +600,30 @@ def annotate_bulk_de_with_ai(_args):
     inout_params = parser.add_argument_group("Input/Output Parameters", "Input/output directory/files.")
     inout_params.add_argument('--de', required= True, type=str, help='TSV file containing bulk DE test results.')
     inout_params.add_argument('--out', required=True, type=str, help='Output file name')
-    inout_params.add_argument('--tissue', type=str, required=True, help='Tissue name used in the prompt')
-    inout_params.add_argument('--organism', default="human", help='Organism name for gene interpretation (e.g., human, mouse)')
-    inout_params.add_argument('--api-type', type=str, required=True, choices=['openai', 'google', 'claude'], help='API for generative AI model')
+    inout_params.add_argument('--template', type=str, default=f"{repo_dir}/assets/template.ai_anno.txt", help='Path to prompt template file (default: assets/template.ai_anno.txt)')
+    inout_params.add_argument('--template-args', type=str, nargs='+', metavar="KEY=VALUE", help="Template variables as key=value pairs (e.g., tissue='lung')")
+    inout_params.add_argument('--template-argfile', type=str, help='Path to a TSV or JSON file containing template variables. TSV should have two collumns: key and value. JSON should be a flat object with string keys and values.')
+    # inout_params.add_argument('--tissue', type=str, required=True, help='Tissue name used in the prompt')
+    # inout_params.add_argument('--organism', default="human", help='Organism name for gene interpretation (e.g., human, mouse)')
+    inout_params.add_argument('--api-type', type=str, required=True, choices=['openai', 'google', 'claude', 'umgpt'], help='API for generative AI model')
 
     aux_params = parser.add_argument_group("Auxiliary Parameters", "Other parameters")
     aux_params.add_argument('--primary-rank', type=str, default="Chi2", help='Primary ranking column name in the input TSV (e.g., Chi2)')
     aux_params.add_argument('--secondary-rank', type=str, default="FoldChange", help='Secondary ranking column name in the input TSV (e.g., FoldChange)')
     aux_params.add_argument('--top-n', type=int, default=10, help='Number of top genes to use for annotation (default: 10)')
     aux_params.add_argument('--model-name', type=str, help='Model name for generative AI API. Default will be used otherwise')
-    aux_params.add_argument('--infer-type', type=str, default="cell type", help='Type of entity to infer (e.g., cell type, transcriptional program, etc)')
+    # aux_params.add_argument('--infer-type', type=str, default="cell type, subcellular transcriptional program, or known biological pathway", help='Type of entity to infer (e.g., cell type, transcriptional program, etc)')
     aux_params.add_argument('--request-timeout', type=int, default=60, help='Request timeout (in seconds) for generative AI API (default: 60)')
     aux_params.add_argument('--max-retries', type=int, default=3, help='Maximum number of retries for failed requests (default: 3)')
     aux_params.add_argument('--threads', type=int, default=1, help='Number of threads to use for parallel API calls (default: 1)')
-    aux_params.add_argument('--api-base-url', type=str, help='Base URL for the API endpoint if using a custom or proxy service')
+    aux_params.add_argument('--api-base-url', type=str, help=f'Base URL for the API endpoint if using a custom or proxy service. For --api-type umgpt, defaults to {DEFAULT_UMGPT_BASE_URL}')
 
     args = parser.parse_args(_args)
+
+    # For the U-M GPT Toolkit, default the base URL when the user didn't supply
+    # one, so the gateway endpoint is used out of the box.
+    if args.api_type == "umgpt" and not args.api_base_url:
+        args.api_base_url = DEFAULT_UMGPT_BASE_URL
 
     log_format = "[%(asctime)s - %(levelname)s - %(message)s]"
     date_format = "[%Y-%m-%d %H:%M:%S]"  # Clean timestamp without milliseconds
@@ -463,22 +649,81 @@ def annotate_bulk_de_with_ai(_args):
         top_n=args.top_n
     )
 
+    ## make sure that the template file exists
+    if not os.path.isfile(args.template):
+        logger.error(f"Template file not found: {args.template}")
+        sys.exit(1)
+    ## read the template file and store it in a string
+    with open(args.template, "r") as f:
+        template_str = f.read()
+
+    ## parse the template arguments
+    template_keyvals = {}
+    if args.template_args is not None and len(args.template_args) > 0:
+        if args.template_argfile:
+            logger.error("Cannot specify both --template-args and --template-argfile")
+            sys.exit(1)
+        for kv in args.template_args:
+            if "=" not in kv:
+                logger.error(f"Invalid template argument: {kv}. Must be in KEY=VALUE format.")
+                sys.exit(1)
+            key, value = kv.split("=", 1)
+            template_keyvals[key] = value
+    elif args.template_argfile:
+        if not os.path.isfile(args.template_argfile):
+            logger.error(f"Template argument file not found: {args.template_argfile}")
+            sys.exit(1)
+        if args.template_argfile.endswith(".json"):
+            with open(args.template_argfile, "r") as f:
+                try:
+                    obj = json.load(f)
+                    if not isinstance(obj, dict):
+                        logger.error("Template argument JSON file must contain a flat object with string keys and values")
+                        sys.exit(1)
+                    for k, v in obj.items():
+                        template_keyvals[k] = str(v)
+                except Exception as e:
+                    logger.error(f"Failed to parse template argument JSON file: {e}")
+                    sys.exit(1)
+        else: ## assume TSV with key in first column and value in second column
+            with open(args.template_argfile, "r") as f:
+                for line in f:
+                    if "\t" not in line:
+                        logger.error(f"Invalid line in template argument TSV file (missing tab): {line.strip()}")
+                        sys.exit(1)
+                    key, value = line.rstrip().split("\t", maxsplit=1)
+                    key = key.rstrip(":") ## allow keys to optionally end with a colon, which is common in templates
+                    template_keyvals[key] = value
+
     logger.info(f"Annotating {len(factor2genes)} factors with {args.api_type} API...")
 
     # Annotate
     results = annotate_factors(
         factor2genes=factor2genes,
-        tissue=args.tissue,
-        organism=args.organism,
+        template_str=template_str,
+        template_keyvals=template_keyvals,
         api_type=args.api_type,
         model_name=args.model_name,
-        infer_type=args.infer_type,
         request_timeout=args.request_timeout,
         max_retries=args.max_retries,
         threads=args.threads,
         api_base_url=args.api_base_url,
         logger=logger
     )
+
+    # results = annotate_factors(
+    #     factor2genes=factor2genes,
+    #     tissue=args.tissue,
+    #     organism=args.organism,
+    #     api_type=args.api_type,
+    #     model_name=args.model_name,
+    #     infer_type=args.infer_type,
+    #     request_timeout=args.request_timeout,
+    #     max_retries=args.max_retries,
+    #     threads=args.threads,
+    #     api_base_url=args.api_base_url,
+    #     logger=logger
+    # )
 
     logger.info(f"Writing results to {args.out}")
 

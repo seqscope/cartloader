@@ -158,6 +158,8 @@ def register_georeference_stage(
 ) -> str:
     scheck_app(args.gdal_translate)
 
+    #print(f"args.mono = {args.mono}, args.rgba = {args.rgba}, {in_img.endswith('.png')} {getattr(args, 'mono', False)}")
+
     bounds = _resolve_bounds_from_args(args, in_img=in_img)
     if bounds is None:
         raise ValueError(
@@ -174,6 +176,7 @@ def register_georeference_stage(
                 "-of GTiff",
                 f"-a_srs {args.srs}",
                 f"-a_ullr {ullr}",
+                f"-expand rgba" if getattr(args, "rgba", False) else (f"-expand rgb" if (in_img.endswith(".png") and not getattr(args, "mono", False)) else ""),
                 in_img,
                 georef_f,
             ]
