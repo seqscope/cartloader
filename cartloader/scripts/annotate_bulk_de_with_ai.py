@@ -5,6 +5,7 @@ import requests
 import pandas as pd
 from typing import Dict, List, Optional, Tuple
 from google import genai
+from cartloader.utils.utils import create_custom_logger
 from google.genai import types
 
 
@@ -96,26 +97,6 @@ def _normalize_alias(raw: str) -> str:
 
     # Empty fallback
     return s if s else "Unknown"
-
-
-# def _make_prompt(tissue: str, organism: str, genes: List[str], infer_type: str) -> str:
-#     """
-#     Ask for a single most likely {infer_type}. Force JSON output with alias only.
-#     """
-#     gene_list = ", ".join(genes)
-#     return (
-#         "You are annotating latent factors from bulk differential expression.\n"
-#         f"Task: Identify the single most likely {infer_type} represented by these ordered, top marker genes.\n\n"
-#         f"Organism: {organism}\n"
-#         f"Tissue: {tissue}\n"
-#         f"Top marker genes (comma-separated): {gene_list}\n\n"
-#         "Return ONLY a JSON object with this exact schema:\n"
-#         "{\"alias\": \"UpperCamelCaseInferredCellTypeOrProgramName\"}\n\n"
-#         "Rules:\n"
-#         "- alias must be terse and singular.\n"
-#         "- Use informative shorthand when appropriate (e.g., CD4+T, CD8+T, NKCell, BCell, G2MPhaseCellCycle, CapillaryCaveolarTransportProgram, LipidTransportingCapillaryEndothelium, ImprintedGrowthMetabolicProgram).\n"
-#         "- Avoid long phrases, parentheses, or multi-sentence explanations.\n"
-#     )
 
 def _make_prompt(template_str:str, template_keyvals: Dict[str, str], genes: List[str]) -> str:
     """
@@ -541,6 +522,8 @@ def annotate_factors(
         genes = factor2genes[idx]
         prompt = _make_prompt(template_str=template_str, template_keyvals=template_keyvals, genes=genes)
         text = api_fn(prompt, model_name, request_timeout, max_retries, api_base_url)
+        ## print the raw response for debugging
+        logger.debug(f"ANNOTATION DETAILS FOR FACTOR {idx}:\nmarkers : {genes}\nresponse : {text}")
         alias = _extract_json_alias(text)
         return idx, alias
 
@@ -603,8 +586,6 @@ def annotate_bulk_de_with_ai(_args):
     inout_params.add_argument('--template', type=str, default=f"{repo_dir}/assets/template.ai_anno.txt", help='Path to prompt template file (default: assets/template.ai_anno.txt)')
     inout_params.add_argument('--template-args', type=str, nargs='+', metavar="KEY=VALUE", help="Template variables as key=value pairs (e.g., tissue='lung')")
     inout_params.add_argument('--template-argfile', type=str, help='Path to a TSV or JSON file containing template variables. TSV should have two collumns: key and value. JSON should be a flat object with string keys and values.')
-    # inout_params.add_argument('--tissue', type=str, required=True, help='Tissue name used in the prompt')
-    # inout_params.add_argument('--organism', default="human", help='Organism name for gene interpretation (e.g., human, mouse)')
     inout_params.add_argument('--api-type', type=str, required=True, choices=['openai', 'google', 'claude', 'umgpt'], help='API for generative AI model')
 
     aux_params = parser.add_argument_group("Auxiliary Parameters", "Other parameters")
@@ -612,11 +593,13 @@ def annotate_bulk_de_with_ai(_args):
     aux_params.add_argument('--secondary-rank', type=str, default="FoldChange", help='Secondary ranking column name in the input TSV (e.g., FoldChange)')
     aux_params.add_argument('--top-n', type=int, default=10, help='Number of top genes to use for annotation (default: 10)')
     aux_params.add_argument('--model-name', type=str, help='Model name for generative AI API. Default will be used otherwise')
-    # aux_params.add_argument('--infer-type', type=str, default="cell type, subcellular transcriptional program, or known biological pathway", help='Type of entity to infer (e.g., cell type, transcriptional program, etc)')
     aux_params.add_argument('--request-timeout', type=int, default=60, help='Request timeout (in seconds) for generative AI API (default: 60)')
     aux_params.add_argument('--max-retries', type=int, default=3, help='Maximum number of retries for failed requests (default: 3)')
     aux_params.add_argument('--threads', type=int, default=1, help='Number of threads to use for parallel API calls (default: 1)')
     aux_params.add_argument('--api-base-url', type=str, help=f'Base URL for the API endpoint if using a custom or proxy service. For --api-type umgpt, defaults to {DEFAULT_UMGPT_BASE_URL}')
+    aux_params.add_argument('--verbose', action='store_true', help='Enable verbose logging')
+    aux_params.add_argument('--log', action='store_true', default=False, help='Write logs to a file under the output directory')
+    aux_params.add_argument('--log-suffix', type=str, default=".log", help='Suffix for the log filename; final path is <out_dir>_cartload<suffix> (default: .log)')
 
     args = parser.parse_args(_args)
 
@@ -624,17 +607,21 @@ def annotate_bulk_de_with_ai(_args):
     # one, so the gateway endpoint is used out of the box.
     if args.api_type == "umgpt" and not args.api_base_url:
         args.api_base_url = DEFAULT_UMGPT_BASE_URL
+        
+    logger = create_custom_logger(__name__, args.out + args.log_suffix if args.log else None, level=logging.DEBUG if args.verbose else logging.INFO)
+    logger.info("Analysis started")
+    logger.debug("Verbose logging enabled")
 
-    log_format = "[%(asctime)s - %(levelname)s - %(message)s]"
-    date_format = "[%Y-%m-%d %H:%M:%S]"  # Clean timestamp without milliseconds
+    # log_format = "[%(asctime)s - %(levelname)s - %(message)s]"
+    # date_format = "[%Y-%m-%d %H:%M:%S]"  # Clean timestamp without milliseconds
 
-    logging.basicConfig(
-        level=logging.INFO,
-        format=log_format,
-        datefmt=date_format
-    )
+    # logging.basicConfig(
+    #     level=logging.INFO,
+    #     format=log_format,
+    #     datefmt=date_format
+    # )
 
-    logger = logging.getLogger(__name__)
+    # logger = logging.getLogger(__name__)
 
     logger.info(f"Reading DE test results from {args.de}")
 
@@ -714,20 +701,6 @@ def annotate_bulk_de_with_ai(_args):
         api_base_url=args.api_base_url,
         logger=logger
     )
-
-    # results = annotate_factors(
-    #     factor2genes=factor2genes,
-    #     tissue=args.tissue,
-    #     organism=args.organism,
-    #     api_type=args.api_type,
-    #     model_name=args.model_name,
-    #     infer_type=args.infer_type,
-    #     request_timeout=args.request_timeout,
-    #     max_retries=args.max_retries,
-    #     threads=args.threads,
-    #     api_base_url=args.api_base_url,
-    #     logger=logger
-    # )
 
     logger.info(f"Writing results to {args.out}")
 

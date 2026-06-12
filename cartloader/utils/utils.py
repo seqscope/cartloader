@@ -158,7 +158,8 @@ def create_custom_logger(name, logfile=None, level=logging.INFO):
     Create a custom logger object
     """
     logger = logging.getLogger(name)
-    logger.setLevel(logging.INFO)
+    #logger.setLevel(logging.INFO)
+    logger.setLevel(level)
     logger.propagate = False  # Prevent log messages from being propagated to parent loggers
     
     if logger.hasHandlers():
@@ -177,7 +178,8 @@ def create_custom_logger(name, logfile=None, level=logging.INFO):
             os.makedirs(output_dir)
         
         log_file_handler = logging.FileHandler(logfile)
-        log_file_handler.setLevel(logging.INFO)
+        #log_file_handler.setLevel(logging.INFO)
+        log_file_handler.setLevel(level)
         log_file_format = logging.Formatter('[%(asctime)s] %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
         log_file_handler.setFormatter(log_file_format)
         logger.addHandler(log_file_handler)

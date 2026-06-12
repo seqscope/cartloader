@@ -113,6 +113,7 @@ def run_tsv2pmtiles(_args):
                 --mol-tsv '{args.in_molecules}' \\
                 --feature-tsv '{args.in_features}' \\
                 --out-prefix '{args.out_prefix}' \\
+                --bin-count {args.bin_count} \\
                 --in-mol-tsv-delim '{args.in_molecules_delim}' \\
                 --in-feature-tsv-delim '{args.in_features_delim}' \\
                 --out-mol-tsv-delim '{args.out_molecules_delim}' \\
