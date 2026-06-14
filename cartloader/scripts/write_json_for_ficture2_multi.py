@@ -12,7 +12,7 @@ def parse_arguments(_args):
     parser.add_argument('--out-dir', required=True, type=str, help='Output directory')
     parser.add_argument('--out-json', type=str, default=None, help='Path to the output JSON file. Default: <out-dir>/ficture.params.json')
     parser.add_argument('--mode', type=str, default="write", choices=["write", "append"], help='Write mode for the output JSON. Default: write. If write, a new file will be created based on the arguments provided. If append, the new parameters will be merged into the existing JSON file if it exists.')
-    #parser.add_argument('--in-transcript', type=str, default=None, help='Path to the transcript file.')
+    parser.add_argument('--in-transcript', type=str, default=None, help='Path to the transcript file.')
     parser.add_argument('--in-tiled', type=str, default=None, help='Prefix of tiled transcript file.')
     parser.add_argument('--in-feature', type=str, default=None, help='Path to the feature file.')
     parser.add_argument('--in-minmax', type=str, default=None, help='Path to the minmax file.')
@@ -39,7 +39,7 @@ def _needs_feature_entry(feature_path, sge_feature_path):
 
 def build_sge_data(args, old_data):
     #sge_keys = ["in_transcript", "in_feature", "in_minmax"]
-    sge_keys = ["in_tiled", "in_feature", "in_minmax"]
+    sge_keys = ["in_transcript","in_tiled", "in_feature", "in_minmax"]
     new_sge = {key: getattr(args, key) for key in sge_keys}
 
     if args.mode == "write" or not old_data:

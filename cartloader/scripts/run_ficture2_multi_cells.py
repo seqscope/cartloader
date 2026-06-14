@@ -201,16 +201,8 @@ def run_ficture2_multi_cells(_args):
             raise ValueError("When --sptsv is ON, --sptsv-prefix should not be provided.")
         sptsv_prefix = os.path.join(args.out_dir, args.out_prefix) + ".sptsv"
         cmds = cmd_separator([], f"Creating cell-based SPTSV files...")
+        cmds.append(f"touch '{sptsv_prefix}.begin'")
         samp2sptsv = {} ## sample ID to SPTSV file mapping
-        ## if mex_dir is provided, create SPTSV from MEX files, assuming that MEX files contain cell-level data across all samples
-        # if args.mex_dir is not None:
-        #     if args.mex_list is not None:
-        #         raise ValueError("When --mex-dir is provided, --mex-list should not be provided.")
-        #     cmd = f"{args.spatula} mex2sptsv --in-dir {args.mex_dir} --bcd {args.mex_bcd} --ftr {args.mex_ftr} --mtx {args.mex_mtx} --out {sptsv_prefix} --min-feature-count {args.min_feature_count} {cmd_ftr_include_exclude}"
-
-        #     cmds.append(cmd)
-        #     ## in this case, we assume that merged SPTSV file already exists
-        # elif args.mex_list is not None:
         deps = []
         if args.mex_list is not None:
             with flexopen(args.mex_list, 'rt') as rf:
@@ -235,7 +227,6 @@ def run_ficture2_multi_cells(_args):
                     deps.extend([mex_bcd, mex_ftr, mex_mtx])
         else:
             for sample_id in in_samples:
-                #sample_id = in_samples[0]  ## use the first sample's tiled file to create SPTSV
                 pixelf = f"{args.in_dir}/samples/{sample_id}/{sample_id}.tiled"
                 sample_sptsv_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.sptsv"
                 cmd = f"{args.spatula} pixel2sptsv --min-cell-count {args.min_cell_count} --pixel {pixelf}.tsv --no-header --idx-col-x {args.colidx_x} --idx-col-y {args.colidx_y} --idx-col-ftr {args.colidx_feature} --idx-col-cnt {args.colidx_count} --idx-col-id {args.colidx_cell_id} --ignore-ids {args.ignore_ids} --out {sample_sptsv_prefix} --min-feature-count {args.min_feature_count} {cmd_ftr_include_exclude}"
@@ -250,7 +241,6 @@ def run_ficture2_multi_cells(_args):
             with flexopen(samp_listf, "wt") as wf:
                 for sample_id in samp2sptsv:
                     sample_sptsv_prefix = samp2sptsv[sample_id]
-                    #wf.write(f"{sample_id}\t{sample_sptsv_prefix}.feature.counts.tsv\t{sample_sptsv_prefix}.tsv\t{sample_sptsv_prefix}.json\t-2\n")
                     wf.write(f"{sample_id}\t{sample_sptsv_prefix}.feature.counts.tsv\t{sample_sptsv_prefix}.tsv\t{sample_sptsv_prefix}.json\n")
             cmd = f"{args.spatula} merge-sptsv --list {samp_listf} --out {sptsv_prefix}"
             cmds.append(cmd)
@@ -258,7 +248,6 @@ def run_ficture2_multi_cells(_args):
         cmd = f"sort -k 1,1 {sptsv_prefix}.tsv > {sptsv_prefix}.randomized.tsv"
         cmds.append(cmd)
         cmds.append(f"[ -f {sptsv_prefix}.randomized.tsv ] && touch {sptsv_prefix}.done" )
-        #mm.add_target(f"{sptsv_prefix}.done", [f"{args.mex_dir}/{args.mex_bcd}", f"{args.mex_dir}/{args.mex_ftr}", f"{args.mex_dir}/{args.mex_mtx}"] if args.mex_dir is not None else [], cmds)
         mm.add_target(f"{sptsv_prefix}.done", deps, cmds)
     elif args.sptsv_prefix is not None:
         sptsv_prefix = args.sptsv_prefix
@@ -270,6 +259,7 @@ def run_ficture2_multi_cells(_args):
         lda_prefix = os.path.join(args.out_dir, args.out_prefix) + ".lda"
         if args.pretrained_model is None:  ## run LDA to generate model
             cmds = cmd_separator([], f"Performing LDA training/projection...")
+            cmds.append(f"touch {lda_prefix}.multi.begin")
             if args.n_factor is None:
                 raise ValueError("--n-factor must be specified when --model is not specified with --lda ON.")
             cmd = f"{ficture2bin} lda4hex --in-data {sptsv_prefix}.randomized.tsv --in-meta {sptsv_prefix}.json --out-prefix {lda_prefix} --sort-topics --n-topics {args.n_factor} --transform --minibatch-size 500 --seed {args.seed} --n-epochs 2 --threads {args.threads}"
@@ -278,6 +268,7 @@ def run_ficture2_multi_cells(_args):
             mm.add_target(f"{lda_prefix}.multi.done", [f"{sptsv_prefix}.done"], cmds)
         else:  ## use existing model
             cmds = cmd_separator([], f"Projecting existing LDA model...")
+            cmds.append(f"touch {lda_prefix}.multi.begin")
             ## copy the pretrained model to lda_prefix
             if args.pretrained_model.endswith(".gz"):
                 cmd = f"{args.gzip} -dc {args.pretrained_model} > {lda_prefix}.model.tsv"
@@ -294,6 +285,7 @@ def run_ficture2_multi_cells(_args):
             cmds = cmd_separator([], f"Performing LDA projection for {sample_id}...")
             sample_lda_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.lda"
             sample_sptsv_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.sptsv"
+            cmds.append(f"touch {sample_lda_prefix}.begin")
             cmd = f"{ficture2bin} lda4hex --model-prior {lda_prefix}.model.tsv --projection-only --in-data {sample_sptsv_prefix}.tsv --in-meta {sample_sptsv_prefix}.json --out-prefix {sample_lda_prefix} --transform --minibatch-size 500 --seed {args.seed} --n-epochs 2 --threads {args.threads}"
             cmds.append(cmd)
             cmds.append(f"[ -f {sample_lda_prefix}.results.tsv ] && touch {sample_lda_prefix}.done" )
@@ -309,6 +301,7 @@ def run_ficture2_multi_cells(_args):
         lda_prefix = os.path.join(args.out_dir, args.out_prefix) + ".lda"
         leiden_prefix = os.path.join(args.out_dir, args.out_prefix) + ".leiden"
         cmds = cmd_separator([], f"Generating Leiden clusters...")
+        cmds.append(f"touch '{leiden_prefix}.begin'")
         if args.list_cluster is None:
             cmd = f"cartloader lda_leiden_cluster_fast --offset-data 4 --tsv '{lda_prefix}.results.tsv' --out '{leiden_prefix}.tsv.gz' --resolution {args.leiden_resolution} --colname-cluster topK --key-ids sample_id cell_id"
             cmds.append(cmd)
@@ -447,6 +440,7 @@ def run_ficture2_multi_cells(_args):
         leiden_prefix = os.path.join(args.out_dir, args.out_prefix) + ".leiden"
         tsne_prefix = os.path.join(args.out_dir, args.out_prefix) 
         cmds = cmd_separator([], f"Generating TSNE manifolds...")
+        cmds.append(f"touch {tsne_prefix}.tsne.begin")
         cmd = f"cartloader lda_tsne --offset-data 4 --tsv '{lda_prefix}.results.tsv' --out '{tsne_prefix}.tsne.tsv.gz' --key-ids sample_id cell_id"
         cmds.append(cmd)
 
@@ -485,6 +479,7 @@ def run_ficture2_multi_cells(_args):
         leiden_prefix = os.path.join(args.out_dir, args.out_prefix) + ".leiden"
         umap_prefix = os.path.join(args.out_dir, args.out_prefix) 
         cmds = cmd_separator([], f"Generating UMAP manifolds...")
+        cmds.append(f"touch {umap_prefix}.umap.begin")
         create_umap_rscript=f"{repo_dir}/cartloader/r/create_umap.r"
         cmd = f"{args.R} '{create_umap_rscript}' --input '{lda_prefix}.results.tsv' --out-prefix '{umap_prefix}' --tsv-colname-meta random_key sample_id cell_id"
         cmds.append(cmd)
@@ -525,6 +520,7 @@ def run_ficture2_multi_cells(_args):
         pseudobulk_prefix = os.path.join(args.out_dir, args.out_prefix) + ".leiden.pseudobulk"
 
         cmds = cmd_separator([], f"Generating pseudobulk matrix...")
+        cmds.append(f"touch {pseudobulk_prefix}.begin")
         cmd = f"{args.spatula} sptsv2model --min-count {args.min_feature_count} --tsv '{sptsv_prefix}.randomized.tsv' --clust '{leiden_prefix}.tsv.gz' --features '{sptsv_prefix}.feature.counts.tsv' --json '{sptsv_prefix}.json' --out '{pseudobulk_prefix}.tsv'"
         cmds.append(cmd)
 
@@ -561,6 +557,7 @@ def run_ficture2_multi_cells(_args):
         heatmap_prefix = os.path.join(args.out_dir, args.out_prefix) + ".heatmap"
 
         cmds = cmd_separator([], f"Generating heatmap between LDA factors and Leiden clusters...")
+        cmds.append(f"touch {heatmap_prefix}.begin")
         #model_tsv = args.pretrained_model if args.pretrained_model is not None else f"{lda_prefix}.model.tsv"
         model_tsv = f"{lda_prefix}.model.tsv"
         cmd = f"{args.spatula} diffexp-model-matrix --tsv1 '{model_tsv}' --out '{lda_prefix}.model' --min-count {args.de_min_ct_per_feature} --max-pval {args.de_max_pval} --min-fc {args.de_min_fold}"
@@ -640,6 +637,7 @@ def run_ficture2_multi_cells(_args):
             cmds = cmd_separator([], f"Performing pixel-level decoding for sample {sample_id}...")
             sample_prefix = f"{args.in_dir}/samples/{sample_id}/{sample_id}.tiled"
             decode_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.pixel"
+            cmds.append(f"touch '{decode_prefix}.begin'")
             fit_width = args.decode_fit_width  ## e.g., 18um
             fit_n_move = fit_width // args.anchor_resolution + 1
             decode_id = f"p{fit_width}_a{args.anchor_resolution}"

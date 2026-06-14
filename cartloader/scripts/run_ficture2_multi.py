@@ -99,6 +99,7 @@ def add_multisample_prepare_targets(mm, args, ficture2bin, in_samples):
     widths = args.width.split(",")
 
     cmds = cmd_separator([], f"Creating tiled tsv from {os.path.basename(args.in_list)}...")
+    cmds.append(f"touch '{args.out_dir}/multi.begin'")
     cmd = " ".join([
         f"'{ficture2bin}'", "multisample-prepare",
         f"--in-tsv-list '{args.in_list}'",
@@ -131,6 +132,7 @@ def add_multisample_prepare_targets(mm, args, ficture2bin, in_samples):
 def add_lda_training_target(mm, args, ficture2bin, n_factor, train_width, model_prefix, hex_prefix, color_map, ficture2report):
     """Add Makefile target for training (or projecting) an LDA model."""
     cmds = cmd_separator([], f"LDA training for {train_width}um and {n_factor} factors...")
+    cmds.append(f"touch '{model_prefix}.begin'")
 
     unsorted_prefix = f"{model_prefix}.unsorted"
     lda_model_matrix = f"{model_prefix}.model.tsv"
@@ -229,6 +231,8 @@ def add_projection_target_per_sample(mm, args, ficture2bin, model_prefix, model_
     sample_lda_prefix = os.path.join(args.out_dir, "samples", sample, f"{sample}.{model_id}")
     sample_lda_fit_tsv = f"{sample_lda_prefix}.results.tsv.gz"
 
+    cmds.append(f"touch '{sample_lda_prefix}.begin'")
+
     cmd = " ".join([
         f"{ficture2bin}", "lda4hex",
         f"--in-data '{sample_hex_prefix}.txt'",
@@ -273,6 +277,7 @@ def add_pixel_decode_target_per_sample(mm, args, ficture2bin, ficture2report, mo
     decode_de = f"{decode_prefix}.bulk_chisq.tsv"
 
     cmds = cmd_separator([], f"Performing pixel-decode, ID {decode_id} for sample {sample}...")
+    cmds.append(f"touch '{decode_prefix}.bin.begin'")
     cmd = " ".join([
         f"'{ficture2bin}'", "pixel-decode",
         f"--model '{model_path}'",
@@ -336,7 +341,7 @@ def add_pixel_decode_target_per_sample(mm, args, ficture2bin, ficture2report, mo
 
     return f"{decode_prefix}.done"
 
-def add_sample_json_target(mm, args, sample, sample_transcript, n_samples):
+def add_sample_json_target(mm, args, sample, sample_transcript, n_samples, sample_tsv_transcript):
     """Add Makefile target to write the output JSON for a single sample."""
     cmds = cmd_separator([], f"Writing output JSON file for sample {sample}...")
     sample_out_dir = os.path.join(args.out_dir, "samples", sample)
@@ -430,7 +435,7 @@ def add_sample_json_target(mm, args, sample, sample_transcript, n_samples):
     summary_cmd_parts = [
         "cartloader", "write_json_for_ficture2_multi",
         "--mode append",
-        #f"--in-transcript '{sample_transcript}'",
+        f"--in-transcript '{sample_tsv_transcript}'",
         f"--in-tiled '{sample_tiled_prefix}'",
         f"--in-feature '{sample_feature_hdr}'",
         f"--in-minmax '{sample_minmax}'",
@@ -477,11 +482,13 @@ def run_ficture2_multi(_args):
 
     in_samples = []
     in_tsvs = []
+    sample2tsv = {}
     with flexopen(args.in_list, "rt") as f:
         for line in f:
             toks = line.strip().split("\t")
             in_samples.append(toks[0])
             in_tsvs.append(toks[1])
+            sample2tsv[toks[0]] = toks[1]
 
     n_samples = len(in_samples)
 
@@ -599,7 +606,7 @@ def run_ficture2_multi(_args):
     ## step 4. write the output JSON file for each sample
     json_each_targets = []
     for sample, sample_transcript in zip(in_samples, in_tsvs):
-        sample_out_json = add_sample_json_target(mm, args, sample, sample_transcript, n_samples)
+        sample_out_json = add_sample_json_target(mm, args, sample, sample_transcript, n_samples, sample2tsv.get(sample))
         json_each_targets.append(sample_out_json)
 
     cmds=cmd_separator([], f"Finishing writing the JSON file for each sample...")
