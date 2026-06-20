@@ -84,7 +84,11 @@ def parse_arguments(_args):
     aux_params.add_argument('--use-pmpoint', action='store_true', default=False, help='Use pmpoint/MLT instead of tippecanoe for point PMTiles generation (requires --pmpoint)')
     aux_params.add_argument('--tile-format-pmpoint', choices=['MLT', 'MVT'], default='MVT', help='Tile format to use when --use-pmpoint is enabled (default: MVT)')
     aux_params.add_argument('--use-ficture2-direct-pmtiles', action='store_true', default=False, help='Use direct punkst/ficture2 PMTiles packaging for joined transcript-factor molecule layers while keeping the legacy tsv2pmtiles route as the default')
+    aux_params.add_argument('--use-image-png2pmtiles', action='store_true', default=False, help='Do not use image2pmtiles even if it is availableand use image_png2pmtiles instead')
     aux_params.add_argument('--pmpoint-compression-scale', type=float, default=10.0, help='Additional compression scale for pmpoint when --use-pmpoint is turned on. Default: 10.0')
+    aux_params.add_argument('--raster-min-zoom', type=int, default=6, help='Minimum zoom for generated Raster PMTiles (default: 6)')
+    aux_params.add_argument('--raster-max-zoom', type=int, default=18, help='Maximum zoom for generated UMAP PMTiles (default: 18)')
+
 
     env_params = parser.add_argument_group("Env Parameters", "Tool paths (override defaults if needed)")
     # aux_params.add_argument('--magick', type=str, default=f"magick", help='Path to ImageMagick binary') # Disable this function. The user need to add the path to the ImageMagick binary directory to the PATH environment variable
@@ -284,21 +288,36 @@ def run_cartload2(_args):
     if not args.skip_raster:
         ## create raster mono pmtiles for SGE
         cmds = cmd_separator([], f"Converting SGE counts into PMTiles")
-        cmd = " ".join([
-            "cartloader", "run_tsv2mono",
-            "--in-tsv", f"{in_tiled}.tsv",
-            "--in-minmax", in_minmax,
-            "--out-prefix", f"{args.out_dir}/sge-mono",
-            "--colname-count", args.colname_count,
-            "--main",
-            "--units-per-pixel", str(args.sge_scale),
-            f"--pmtiles '{args.pmtiles}'",
-            f"--gdal_translate '{args.gdal_translate}'",
-            f"--gdaladdo '{args.gdaladdo}'",
-            f"--spatula '{args.spatula}'",
-            "--keep-intermediate-files" if args.keep_intermediate_files else "",
-            # f"--sge-scale {args.sge_scale}" if args.sge_scale else "",
-        ])
+        if args.use_image_png2pmtiles:
+            cmd = " ".join([
+                "cartloader", "run_tsv2mono",
+                "--in-tsv", f"{in_tiled}.tsv",
+                "--in-minmax", in_minmax,
+                "--out-prefix", f"{args.out_dir}/sge-mono",
+                "--colname-count", args.colname_count,
+                "--main",
+                "--units-per-pixel", str(args.sge_scale),
+                f"--pmtiles '{args.pmtiles}'",
+                f"--gdal_translate '{args.gdal_translate}'",
+                f"--gdaladdo '{args.gdaladdo}'",
+                f"--spatula '{args.spatula}'",
+                "--keep-intermediate-files" if args.keep_intermediate_files else "",
+                "--use-gdal",
+            ])
+        else:
+            cmd = " ".join([
+                "cartloader", "run_tsv2mono",
+                "--in-tsv", f"{in_tiled}.tsv",
+                "--in-minmax", in_minmax,
+                "--out-prefix", f"{args.out_dir}/sge-mono",
+                "--colname-count", args.colname_count,
+                "--main",
+                "--units-per-pixel", str(args.sge_scale),
+                f"--spatula '{args.spatula}'",
+                f"--ficture2 '{args.ficture2}'",
+                "--keep-intermediate-files" if args.keep_intermediate_files else "",
+            ])
+
         cmds.append(cmd)
         # Use a flag to make sure both light and dark pmtiles are done
         tsv2mono_flag = f"{args.out_dir}/sge-mono.done"
@@ -545,17 +564,30 @@ def run_cartload2(_args):
             join_pixel_res.append(float(cell_pixel_res))
 
             if not args.skip_raster:
-                cmd = " ".join([
-                    "cartloader", "image_png2pmtiles",
-                    "--georeference", "--geotif2mbtiles", "--mbtiles2pmtiles",
-                    "--in-img", cell_pixel_pngf,
-                    f'--georef-bounds="{xmin},{ymin},{xmax},{ymax}"',
-                    "--out-prefix", f"{out_prefix}-pixel-raster",
-                    f"--pmtiles '{args.pmtiles}'",
-                    f"--gdal_translate '{args.gdal_translate}'",
-                    f"--gdaladdo '{args.gdaladdo}'",
-                    "--keep-intermediate-files" if args.keep_intermediate_files else ""
-                ])
+                if args.use_image_png2pmtiles:
+                    cmd = " ".join([
+                        "cartloader", "image_png2pmtiles",
+                        "--georeference", "--geotif2mbtiles", "--mbtiles2pmtiles",
+                        "--in-img", cell_pixel_pngf,
+                        f'--georef-bounds="{xmin},{ymin},{xmax},{ymax}"',
+                        "--out-prefix", f"{out_prefix}-pixel-raster",
+                        f"--pmtiles '{args.pmtiles}'",
+                        f"--gdal_translate '{args.gdal_translate}'",
+                        f"--gdaladdo '{args.gdaladdo}'",
+                        "--keep-intermediate-files" if args.keep_intermediate_files else ""
+                    ])
+                else:
+                    cmd = " ".join([
+                        ficture2bin, "image2pmtiles",
+                        "--in-image", cell_pixel_pngf,
+                        "--id", out_id,
+                        "--min-zoom", str(args.raster_min_zoom),
+                        "--max-zoom", str(args.raster_max_zoom),
+                        "--offset-x-um", str(xmin),
+                        "--offset-y-um", str(ymin),
+                        "--microns-per-pixel", str(args.sge_scale),
+                        "--out-prefix", f"{out_prefix}-pixel-raster", "--overwrite"
+                    ])
                 cmds.append(cmd)
                 prerequisites.append(cell_pixel_pngf)
                 outfiles.append(f"{out_prefix}-pixel-raster.pmtiles")
@@ -691,17 +723,30 @@ def run_cartload2(_args):
                 cmds = cmd_separator([], f"Converting decoded factors {in_id} into PMTiles and copying relevant files.")
                 outfiles=[]
                 if not args.skip_raster:
-                    cmd = " ".join([
-                        "cartloader", "image_png2pmtiles",
-                        "--georeference", "--geotif2mbtiles", "--mbtiles2pmtiles",
-                        "--in-img", in_pixel_png,
-                        f'--georef-bounds="{xmin},{ymin},{xmax},{ymax}"',
-                        "--out-prefix", f"{out_prefix}-pixel-raster",
-                        f"--pmtiles '{args.pmtiles}'",
-                        f"--gdal_translate '{args.gdal_translate}'",
-                        f"--gdaladdo '{args.gdaladdo}'",
-                        "--keep-intermediate-files" if args.keep_intermediate_files else ""
-                    ])
+                    if args.use_image_png2pmtiles:
+                        cmd = " ".join([
+                            "cartloader", "image_png2pmtiles",
+                            "--georeference", "--geotif2mbtiles", "--mbtiles2pmtiles",
+                            "--in-img", in_pixel_png,
+                            f'--georef-bounds="{xmin},{ymin},{xmax},{ymax}"',
+                            "--out-prefix", f"{out_prefix}-pixel-raster",
+                            f"--pmtiles '{args.pmtiles}'",
+                            f"--gdal_translate '{args.gdal_translate}'",
+                            f"--gdaladdo '{args.gdaladdo}'",
+                            "--keep-intermediate-files" if args.keep_intermediate_files else ""
+                        ])
+                    else:
+                        cmd = " ".join([
+                            ficture2bin, "image2pmtiles",
+                            "--in-image", in_pixel_png,
+                            "--id", out_id,
+                            "--min-zoom", str(args.raster_min_zoom),
+                            "--max-zoom", str(args.raster_max_zoom),
+                            "--offset-x-um", str(xmin),
+                            "--offset-y-um", str(ymin),
+                            "--microns-per-pixel", str(args.sge_scale),
+                            "--out-prefix", f"{out_prefix}-pixel-raster"
+                        ])
                     cmds.append(cmd)
                     outfiles.append(f"{out_prefix}-pixel-raster.pmtiles")
 

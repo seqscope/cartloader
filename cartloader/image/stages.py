@@ -114,7 +114,6 @@ def _needs_rgb_expansion_cli(image_path: str, args) -> bool:
 #     print("Use: -expand rgb")
 # else:
 #     print("Do not use: -expand rgb")
-
 def _resolve_bounds_from_args(args, *, in_img: str) -> Optional[Dict[str, float]]:
 
     # only one should be provided and indicate that current georef_detect only supports ome.
@@ -495,11 +494,11 @@ def register_png2pmtiles_pipeline(
     src_img = in_img if in_img is not None else args.in_img
     prefix = out_prefix if out_prefix is not None else args.out_prefix
 
-    georef_f = src_img
-    if getattr(args, "georeference", False):
-        georef_f = register_georeference_stage(mm, args, in_img=src_img, out_prefix=prefix)
+    if args.method == "gdal": ## use gdal-based pipeline for performing pmtiles conversion
+        georef_f = src_img
+        if getattr(args, "georeference", False):
+            georef_f = register_georeference_stage(mm, args, in_img=src_img, out_prefix=prefix)
 
-    if args.gdal_only: ## use gdal-based pipeline for performing pmtiles conversion
         oriented_f = register_orientation_stage(mm, args, src_tif=georef_f, out_prefix=prefix)
 
         mbtile_info = register_geotif2mbtiles_stage(mm, args, src_tif=oriented_f, out_prefix=prefix)
@@ -529,7 +528,11 @@ def register_png2pmtiles_pipeline(
             mbtile_path=mbtile_path,
             pmtiles_path=pmtiles_f,
         )
-    else:
+    elif args.method == "geotiff2pmtiles": ## use geotiff2pmtiles for direct conversion to pmtiles without mbtiles intermediate
+        georef_f = src_img
+        if getattr(args, "georeference", False):
+            georef_f = register_georeference_stage(mm, args, in_img=src_img, out_prefix=prefix)
+
         gdalwarp_f = register_gdalwarp_stage(mm, args, src_tif=georef_f, out_prefix=prefix)
 
         pmtiles_f = register_geotiff2pmtiles_stage(mm, args, src_tif=gdalwarp_f, out_prefix=prefix)
@@ -542,3 +545,16 @@ def register_png2pmtiles_pipeline(
             mbtile_path=None,
             pmtiles_path=pmtiles_f
         )
+    # elif args.method == "ficture2": ## use ficture2 for direct conversion to pmtiles without mbtiles intermediate
+    #     pmtiles_f = register_ficture2_stage(mm, args, src_img=src_img, out_prefix=prefix)
+
+    #     return Png2PmtilesResult(
+    #         georef_tif=None,
+    #         oriented_tif=None,
+    #         final_tif=None,
+    #         mbtile_flag=None,
+    #         mbtile_path=None,
+    #         pmtiles_path=pmtiles_f
+    #     )
+    else:
+        raise ValueError(f"Unsupported method: {args.method}")

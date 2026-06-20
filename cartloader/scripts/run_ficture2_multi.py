@@ -36,7 +36,7 @@ def parse_arguments(_args):
     key_params.add_argument('--width', type=str, required=True, help='Comma-separated hexagon flat-to-flat widths (in um) for LDA training')
     key_params.add_argument('--n-factor', type=str, help='Comma-separated list of factor counts for LDA training.')
     key_params.add_argument('--anchor-res', type=int, default=6, help='Anchor resolution for decoding (default: 6)')
-    key_params.add_argument('--cmap-file', type=str, default=os.path.join(repo_dir, "assets", "fixed_color_map_512.tsv"), help='Path to fixed color map TSV (default: <cartloader_dir>/assets/fixed_color_map_512.tsv)')
+    key_params.add_argument('--cmap-file', type=str, default=os.path.join(repo_dir, "assets", "default_color_map.tsv"), help='Path to fixed color map TSV (default: <cartloader_dir>/assets/default_color_map.tsv)')
 
     # aux params
     aux_params = parser.add_argument_group("Auxiliary Parameters", "Auxiliary parameters (using default is recommended)")
@@ -171,8 +171,8 @@ def add_lda_training_target(mm, args, ficture2bin, n_factor, train_width, model_
         n_topics_arg,
         sort_topics_arg,
         "--transform",
-        "--append-topk",
-        "--drop-random-key",
+        # "--append-topk",
+        # "--drop-random-key",
         f"--minibatch-size {args.minibatch_size}",
         f"--seed {args.seed}",
         f"--n-epochs {args.train_epoch}",
@@ -180,19 +180,19 @@ def add_lda_training_target(mm, args, ficture2bin, n_factor, train_width, model_
     ])
     cmds.append(train_cmd)
 
-    cmds.append(f"sed '1s/^#//' '{unsorted_prefix}.results.tsv' | {args.gzip} > '{lda_fit_tsv}'")
-#     # 2) append topk
-#     append_cmd = " ".join([
-#         f"'{args.spatula}'", "append-topk-tsv",
-#         f"--in-model '{unsorted_prefix}.model.tsv'",
-#         f"--in-json '{hex_prefix}.json'",
-#         f"--out-model '{lda_model_matrix}'",
-# #        "--reorder",
-#         f"--in-tsv '{unsorted_prefix}.results.tsv'",
-#         f"--out-tsv '{lda_fit_tsv}'",
-#         "--offset-model 1"
-#     ])
-#     cmds.append(append_cmd)
+#    cmds.append(f"sed '1s/^#//' '{unsorted_prefix}.results.tsv' | {args.gzip} > '{lda_fit_tsv}'")
+    # 2) append topk
+    append_cmd = " ".join([
+        f"'{args.spatula}'", "append-topk-tsv",
+        f"--in-model '{unsorted_prefix}.model.tsv'",
+        f"--in-json '{hex_prefix}.json'",
+        f"--out-model '{lda_model_matrix}'",
+#        "--reorder",
+        f"--in-tsv '{unsorted_prefix}.results.tsv'",
+        f"--out-tsv '{lda_fit_tsv}'",
+        "--offset-model 1"
+    ])
+    cmds.append(append_cmd)
     cmds.append(f"cp '{unsorted_prefix}.model.tsv' '{lda_model_matrix}'")
     cmds.append(f"rm -f '{unsorted_prefix}.model.tsv' '{unsorted_prefix}.results.tsv'")
     cmds.append(f"[ -f '{lda_fit_tsv}' ] && [ -f '{lda_model_matrix}' ] && touch '{model_prefix}.done'")
@@ -241,8 +241,8 @@ def add_projection_target_per_sample(mm, args, ficture2bin, model_prefix, model_
         f"--model-prior '{lda_model_matrix}'",
         f"--out-prefix '{sample_lda_prefix}.unsorted'",
         "--transform",
-        "--append-topk",
-        "--drop-random-key",
+        # "--append-topk",
+        # "--drop-random-key",
         f"--minibatch-size {args.minibatch_size}",
         f"--seed {args.seed}",
         f"--n-epochs {args.train_epoch}",
@@ -250,19 +250,21 @@ def add_projection_target_per_sample(mm, args, ficture2bin, model_prefix, model_
     ])
     cmds.append(cmd)
 
-    cmd = f"sed '1s/^#//' '{sample_lda_prefix}.unsorted.results.tsv' | {args.gzip} > '{sample_lda_fit_tsv}'"
-    cmds.append(cmd)
+    # cmd = f"sed '1s/^#//' '{sample_lda_prefix}.unsorted.results.tsv' | {args.gzip} > '{sample_lda_fit_tsv}'"
+    # cmds.append(cmd)
 
-    # cmd = " ".join([
-    #     f"'{args.spatula}'", "append-topk-tsv",
-    #     f"--in-model '{lda_model_matrix}'",
-    #     f"--out-model '{sample_lda_prefix}.model.tsv'",
-    #     f"--in-tsv '{sample_lda_prefix}.unsorted.results.tsv'",
-    #     f"--out-tsv '{sample_lda_fit_tsv}'",
-    #     "--offset-model 1",
-    #     "--offset-data 3",
-    #     "--icol-random-key 0"
-    # ])
+    cmd = " ".join([
+        f"'{args.spatula}'", "append-topk-tsv",
+        f"--in-model '{lda_model_matrix}'",
+        f"--out-model '{sample_lda_prefix}.model.tsv'",
+        f"--in-tsv '{sample_lda_prefix}.unsorted.results.tsv'",
+        f"--out-tsv '{sample_lda_fit_tsv}'",
+        "--offset-model 1",
+        "--offset-data 3",
+        "--icol-random-key 0"
+    ])
+    cmds.append(cmd)
+    
     cmds.append(f"rm -f '{sample_lda_prefix}.unsorted.results.tsv'")
     cmds.append(f"[ -f '{sample_lda_fit_tsv}' ] && touch '{sample_lda_prefix}.done'")
     mm.add_target(f"{sample_lda_prefix}.done", [f"{model_prefix}.done", f"{args.out_dir}/multi.done"], cmds)
