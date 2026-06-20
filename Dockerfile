@@ -68,7 +68,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # 2. Increase Git's HTTP buffer size to prevent timeout drops
 RUN git config --global http.postBuffer 524288000
 
-RUN git clone -b dev --recursive https://github.com/seqscope/cartloader.git 
+RUN git clone --recursive https://github.com/seqscope/cartloader.git 
+#RUN git clone -b dev --recursive https://github.com/seqscope/cartloader.git 
 
 # Set working directory to the cloned repository
 WORKDIR /app/cartloader/submodules
