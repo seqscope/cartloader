@@ -116,8 +116,9 @@ def parse_arguments(_args):
     scheck_app(args.tippecanoe)
     if not args.skip_raster:
         scheck_app(args.pmtiles)
-        scheck_app(args.gdal_translate)
-        scheck_app(args.gdaladdo)
+        if args.use_image_png2pmtiles:
+            scheck_app(args.gdal_translate)
+            scheck_app(args.gdaladdo)
 
     return args
 
