@@ -48,6 +48,7 @@ def parse_arguments(_args):
     aux_params1 = parser.add_argument_group("Auxiliary parameters for --ome2png")
     aux_params1.add_argument('--micron2pixel-csv', type=str, help='CSV file containing transformation parameters from microns to mosaic pixels (platform: Vizgen; typical: micron_to_mosaic_pixel_transform.csv)')
     aux_params1.add_argument("--shrink-factor", type=float, default=None, help='Downsample the image by this factor in both dimensions before processing (e.g., 2.0 = half resolution). Reduces memory when used with --high-memory.')
+    aux_params1.add_argument("--use-middle-page", action='store_true', default=False, help='Automatically select the middle page of the OME-TIFF if --page is not provided; only applicable when multiple pages are detected')
     aux_params1.add_argument("--page", type=int, help='Z-slice index to extract from multi-page OME-TIFF (3D)')
     aux_params1.add_argument("--level", type=int, help='Resolution level index to extract from OME-TIFF')
     aux_params1.add_argument("--series", type=int, help='Series index to extract from OME-TIFF')
@@ -65,6 +66,10 @@ def parse_arguments(_args):
     aux_params2.add_argument('--rgba', action='store_true', default=False, help='Input is 4-band RGBA PNG. Skip it if --ome2png is enabled')
     aux_params2.add_argument('--resample', type=str, default='cubic', help='Resampling method: near, bilinear, cubic, etc (default: cubic)')
     aux_params2.add_argument('--blocksize', type=int, default=512, help='Block size in pixels for GDAL operations (default: 512)')
+    aux_params2.add_argument('--min-zoom', type=int, default=6, help='Minimum zoom level for PMTiles (default: 6)')
+    aux_params2.add_argument('--max-zoom', type=int, help='Maximum zoom level for PMTiles (default: 20)')
+    aux_params2.add_argument('--tile-format', type=str, default='png', choices=['png', 'webp'], help='Tile image format for PMTiles (default: png)')
+    aux_params2.add_argument('--gdal-only', action='store_true', default=False, help='If set, only run gdal_translate to convert a georeferenced GeoTIFF to PMTileswithout using geotiff2pmtiles')
 
     aux_params3 = parser.add_argument_group("Auxiliary parameters for --georeference", "Pick one of the following three ways to provide georeferencing bounds")
     aux_params3.add_argument('--georef-pixel-tsv', type=str, default=None, help='Bounds source: *.pixel.sorted.tsv.gz from run_ficture2. Skip it if --ome2png is enabled')
@@ -79,6 +84,8 @@ def parse_arguments(_args):
     env_params.add_argument('--gdal_translate', type=str, default=f"gdal_translate", help='Path to gdal_translate binary (default: gdal_translate)')
     env_params.add_argument('--gdaladdo', type=str, default=f"gdaladdo", help='Path to gdaladdo binary (default: gdaladdo)')
     env_params.add_argument('--gdalinfo', type=str, default=f"gdalinfo", help='Path to gdalinfo binary (default: gdalinfo)')
+    env_params.add_argument('--geotiff2pmtiles', type=str, default=f"{repo_dir}/submodules/geotiff2pmtiles/geotiff2pmtiles", help='Path to geotiff2pmtiles binary (default: geotiff2pmtiles)')
+
 
     if len(_args) == 0:
         parser.print_help()
@@ -93,7 +100,7 @@ def parse_arguments(_args):
 
 aux_image_arg={
     "ome2png": ["page", "level", "series", "upper_thres_quantile", "upper_thres_intensity", "lower_thres_quantile", "lower_thres_intensity", "transparent_below", "colorize", "high_memory", "shrink_factor"],
-    "png2pmtiles": ["srs", "mono", "rgba", "resample", "blocksize", "pmtiles", "gdaladdo"],
+    "png2pmtiles": ["srs", "mono", "rgba", "resample", "blocksize", "pmtiles", "gdaladdo", "gdal_only", "min_zoom", "max_zoom", "tile_format", "geotiff2pmtiles"],
     "georeference": ["georef_pixel_tsv", "georef_bounds_tsv", "georef_bounds", "srs"],
     "orientate": ["gdalinfo"]
 }
@@ -160,6 +167,21 @@ def import_image(_args):
         color_mode=f"{transform_prefix}.color.csv"
 
         assert not args.georef_bounds and not args.georef_pixel_tsv and not args.georef_bounds_tsv, f"Since --ome2png, skip --georef-pixel-tsv, --georef-bounds, and --georef-bounds-tsv. The georeferenced bounds will be automatically extract from the OME TIFF file"
+
+        if args.use_middle_page:
+            if args.page is not None:
+                print(f"Warning: --use-middle-page is enabled, but --page {args.page} is provided, which will override the automatic page selection.", file=sys.stderr)
+            else:
+                with tifffile.TiffFile(args.in_img) as tif:
+                    n_pages = len(tif.pages)
+                    if n_pages > 1:
+                        args.page = n_pages // 2
+                        print(f"Multiple pages detected in OME-TIFF. Automatically select the middle page: {args.page}")
+                    elif n_pages == 1:
+                        args.page = 0
+                        print(f"Single page detected in OME-TIFF. Select page: {args.page}")
+                    else:
+                        raise ValueError("In --ome2png, no pages detected in the OME-TIFF file")
 
         cmds = cmd_separator([], f"Converting OME TIFF ({args.in_img}) to PNG ({transform_f})")
         cmd= " ".join([

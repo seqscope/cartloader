@@ -55,3 +55,6 @@ cd ../../
 
 ## download pmtiles CLI
 bash install-pmtiles.sh --dest ./pmtiles
+
+## download geotiff2pmtiles binary
+bash install-geotiff2pmtiles.sh --dest ./geotiff2pmtiles

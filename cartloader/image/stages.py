@@ -6,6 +6,8 @@ import gzip
 import os
 from dataclasses import dataclass
 from typing import Dict, Optional
+import json
+import subprocess
 
 import shlex
 
@@ -77,7 +79,41 @@ def configure_color_mode(args) -> None:
         args.rgba = False
         args.mono = False
 
+import json
+import subprocess
 
+def _needs_rgb_expansion_cli(image_path: str, args) -> bool:
+    """Checks if an image needs '-expand rgb' using the gdalinfo CLI tool."""
+    scheck_app(args.gdalinfo)
+
+    try:
+        # Run gdalinfo and capture the JSON output
+        result = subprocess.run(
+            [args.gdalinfo, "-json", image_path],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            check=True
+        )
+        
+        info_json = json.loads(result.stdout)
+        bands = info_json.get('bands', [])
+        
+        if bands:
+            return bands[0].get('colorInterpretation', '') == 'Palette'
+            
+    except (subprocess.CalledProcessError, json.JSONDecodeError, KeyError, IndexError):
+        # Handle cases where the file doesn't exist or gdalinfo fails
+        pass
+        
+    return False
+
+# --- Example Usage ---
+# file_path = "cartostore/visiumhd-public-dataset-collection/.../rep1.t12_f48_pixel.png"
+# if needs_rgb_expansion(file_path):
+#     print("Use: -expand rgb")
+# else:
+#     print("Do not use: -expand rgb")
 def _resolve_bounds_from_args(args, *, in_img: str) -> Optional[Dict[str, float]]:
 
     # only one should be provided and indicate that current georef_detect only supports ome.
@@ -158,6 +194,8 @@ def register_georeference_stage(
 ) -> str:
     scheck_app(args.gdal_translate)
 
+    #print(f"args.mono = {args.mono}, args.rgba = {args.rgba}, {in_img.endswith('.png')} {getattr(args, 'mono', False)}")
+
     bounds = _resolve_bounds_from_args(args, in_img=in_img)
     if bounds is None:
         raise ValueError(
@@ -167,6 +205,16 @@ def register_georeference_stage(
     georef_f = f"{out_prefix}.georef.tif"
     cmds = cmd_separator([], f"Geo-referencing {in_img} to {georef_f}")
     ullr = "{ulx} {uly} {lrx} {lry}".format(**bounds)
+    ## check if rgb expansion is needed
+    if in_img.endswith(".png") and _needs_rgb_expansion_cli(in_img, args):
+        if getattr(args, "rgba", False):
+            expand_str = "-expand rgba"
+        elif getattr(args, "mono", False):
+            expand_str = "-expand gray"
+        else:
+            expand_str = "-expand rgb"
+    else:
+        expand_str = ""
     cmds.append(
         " ".join(
             [
@@ -174,6 +222,7 @@ def register_georeference_stage(
                 "-of GTiff",
                 f"-a_srs {args.srs}",
                 f"-a_ullr {ullr}",
+                expand_str,
                 in_img,
                 georef_f,
             ]
@@ -368,7 +417,6 @@ def register_geotif2mbtiles_stage(
         "mbtile_resampled": f"{out_prefix}.pmtiles.{args.resample}.mbtiles",
     }
 
-
 def register_mbtiles2pmtiles_stage(
     mm: minimake,
     args,
@@ -397,6 +445,44 @@ def register_mbtiles2pmtiles_stage(
 
     return pmtiles_f
 
+def register_gdalwarp_stage(
+    mm: minimake,
+    args,
+    *,
+    src_tif: str,
+    out_prefix: str,
+) -> Optional[str]:
+    
+    gdalwarp_bin = getattr(args, "gdalwarp", "gdalwarp")
+    warped_f = f"{out_prefix}.warped.tif"
+
+    scheck_app(gdalwarp_bin)
+
+    cmds = cmd_separator([], f"Performing pixel-level operations on GeoTIFF: {src_tif}")
+    cmds.append(f"'{gdalwarp_bin}' -r bilinear -of GTiff {src_tif} {warped_f}")
+    mm.add_target(warped_f, [src_tif], cmds)
+
+    return warped_f
+
+def register_geotiff2pmtiles_stage(
+    mm: minimake,
+    args,
+    *,
+    src_tif: str,
+    out_prefix: str,
+) -> Optional[str]:
+    if not getattr(args, "geotiff2pmtiles", False):
+        return None
+
+    scheck_app(args.geotiff2pmtiles)
+
+    pmtiles_f = f"{out_prefix}.pmtiles"
+
+    cmds = cmd_separator([], f"Converting from geotiff to pmtiles: {src_tif}")
+    cmds.append(f"'{args.geotiff2pmtiles}' --format {args.tile_format} --min-zoom {args.min_zoom} " + (f"--max-zoom {args.max_zoom} " if args.max_zoom is not None else "") + f"{src_tif} {pmtiles_f}")
+    mm.add_target(pmtiles_f, [src_tif], cmds)
+
+    return pmtiles_f
 
 def register_png2pmtiles_pipeline(
     mm: minimake,
@@ -408,36 +494,67 @@ def register_png2pmtiles_pipeline(
     src_img = in_img if in_img is not None else args.in_img
     prefix = out_prefix if out_prefix is not None else args.out_prefix
 
-    georef_f = src_img
-    if getattr(args, "georeference", False):
-        georef_f = register_georeference_stage(mm, args, in_img=src_img, out_prefix=prefix)
+    if args.method == "gdal": ## use gdal-based pipeline for performing pmtiles conversion
+        georef_f = src_img
+        if getattr(args, "georeference", False):
+            georef_f = register_georeference_stage(mm, args, in_img=src_img, out_prefix=prefix)
 
-    oriented_f = register_orientation_stage(mm, args, src_tif=georef_f, out_prefix=prefix)
+        oriented_f = register_orientation_stage(mm, args, src_tif=georef_f, out_prefix=prefix)
 
-    mbtile_info = register_geotif2mbtiles_stage(mm, args, src_tif=oriented_f, out_prefix=prefix)
+        mbtile_info = register_geotif2mbtiles_stage(mm, args, src_tif=oriented_f, out_prefix=prefix)
 
-    pmtiles_f = None
-    mbtile_flag = None
-    mbtile_path = None
-    if mbtile_info:
-        mbtile_flag = mbtile_info["mbtile_flag"]
-        mbtile_path = mbtile_info["mbtile_f"]
-        pmtiles_f = register_mbtiles2pmtiles_stage(
-            mm,
-            args,
+        pmtiles_f = None
+        mbtile_flag = None
+        mbtile_path = None
+        if mbtile_info:
+            mbtile_flag = mbtile_info["mbtile_flag"]
+            mbtile_path = mbtile_info["mbtile_f"]
+            pmtiles_f = register_mbtiles2pmtiles_stage(
+                mm,
+                args,
+                mbtile_flag=mbtile_flag,
+                mbtile_f=mbtile_path,
+                mbtile_resampled=mbtile_info["mbtile_resampled"],
+                out_prefix=prefix,
+            )
+
+        final_tif = oriented_f if oriented_f else georef_f
+
+        return Png2PmtilesResult(
+            georef_tif=georef_f,
+            oriented_tif=oriented_f,
+            final_tif=final_tif,
             mbtile_flag=mbtile_flag,
-            mbtile_f=mbtile_path,
-            mbtile_resampled=mbtile_info["mbtile_resampled"],
-            out_prefix=prefix,
+            mbtile_path=mbtile_path,
+            pmtiles_path=pmtiles_f,
         )
+    elif args.method == "geotiff2pmtiles": ## use geotiff2pmtiles for direct conversion to pmtiles without mbtiles intermediate
+        georef_f = src_img
+        if getattr(args, "georeference", False):
+            georef_f = register_georeference_stage(mm, args, in_img=src_img, out_prefix=prefix)
 
-    final_tif = oriented_f if oriented_f else georef_f
+        gdalwarp_f = register_gdalwarp_stage(mm, args, src_tif=georef_f, out_prefix=prefix)
 
-    return Png2PmtilesResult(
-        georef_tif=georef_f,
-        oriented_tif=oriented_f,
-        final_tif=final_tif,
-        mbtile_flag=mbtile_flag,
-        mbtile_path=mbtile_path,
-        pmtiles_path=pmtiles_f,
-    )
+        pmtiles_f = register_geotiff2pmtiles_stage(mm, args, src_tif=gdalwarp_f, out_prefix=prefix)
+
+        return Png2PmtilesResult(
+            georef_tif=georef_f,
+            oriented_tif=gdalwarp_f,
+            final_tif=gdalwarp_f,
+            mbtile_flag=None,
+            mbtile_path=None,
+            pmtiles_path=pmtiles_f
+        )
+    # elif args.method == "ficture2": ## use ficture2 for direct conversion to pmtiles without mbtiles intermediate
+    #     pmtiles_f = register_ficture2_stage(mm, args, src_img=src_img, out_prefix=prefix)
+
+    #     return Png2PmtilesResult(
+    #         georef_tif=None,
+    #         oriented_tif=None,
+    #         final_tif=None,
+    #         mbtile_flag=None,
+    #         mbtile_path=None,
+    #         pmtiles_path=pmtiles_f
+    #     )
+    else:
+        raise ValueError(f"Unsupported method: {args.method}")

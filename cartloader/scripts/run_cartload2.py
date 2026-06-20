@@ -1,4 +1,4 @@
-import sys, os, argparse, logging, subprocess, inspect
+import sys, os, argparse, logging, subprocess, inspect, shlex
 import pandas as pd
 from pathlib import Path
 
@@ -6,6 +6,7 @@ from cartloader.utils.minimake import minimake
 from cartloader.utils.utils import cmd_separator, scheck_app, create_custom_logger, load_file_to_dict, write_dict_to_file, read_minmax, flexopen, execute_makefile, valid_and_touch_cmd
 from cartloader.utils.color_helper import normalize_rgb
 from cartloader.utils.ficture2_helper import ficture2_params_to_factor_assets
+from cartloader.utils.ficture2_helper_patch import infer_tiled_query_layout, make_direct_pmtiles_cmd, make_direct_pmtiles_pyramid_cmd
 
 def parse_arguments(_args):
     """
@@ -48,17 +49,19 @@ def parse_arguments(_args):
     aux_params.add_argument('--out-catalog', type=str, default="catalog.yaml", help='File name of output catalog YAML under --out-dir (default: catalog.yaml)')
     # sge scale
     # aux_params.add_argument('--sge-scale', type=int, default=1, help='Scale factor from input coordinates to output sge image pixels (default: 1)')
-    # tippecanoe/PMTiles 
-    aux_params.add_argument('--rename-x', type=str, default='x:lon', help='Column rename mapping for X axis in tippecanoe, format old:new (default: x:lon)')  
-    aux_params.add_argument('--rename-y', type=str, default='y:lat', help='Column rename mapping for Y axis in tippecanoe, format old:new (default: y:lat)')  
+    # tippecanoe/PMTiles
+    aux_params.add_argument('--rename-x', type=str, default='x:lon', help='Column rename mapping for X axis in tippecanoe, format old:new (default: x:lon)')
+    aux_params.add_argument('--rename-y', type=str, default='y:lat', help='Column rename mapping for Y axis in tippecanoe, format old:new (default: y:lat)')
     aux_params.add_argument('--colname-feature', type=str, default='gene', help='Column name for feature/gene (default: gene)')
     aux_params.add_argument('--colname-count', type=str, default='count', help='Column name for molecule counts (default: count)')
     aux_params.add_argument('--out-molecules-id', type=str, default='genes', help='Base name for output molecules PMTiles files (no directory)')
     aux_params.add_argument('--max-join-dist-um', type=float, default=0.1, help='Max distance (in µm) to associate molecules with decoded pixels (default: 0.1)')
     aux_params.add_argument('--join-tile-size', type=float, default=500, help='Tile size (in µm) when joining molecules with decoded pixels (default: 500)')
     aux_params.add_argument('--bin-count', type=int, default=50, help='Number of bins when splitting input molecules (default: 50)')
-    aux_params.add_argument('--max-point-tile-bytes', type=int, default=5000000, help='Maximum tile size of points in bytes for tippecanoe/PMTiles (default: 5000000)')
-    aux_params.add_argument('--max-point-feature-counts', type=int, default=500000, help='Maximum features of points per tile for tippecanoe/PMTiles (default: 500000)')
+    aux_params.add_argument('--point-min-zoom', type=int, default=10, help='Minimum zoom for direct point PMTiles pyramid building (default: 10)')
+    aux_params.add_argument('--point-max-zoom', type=int, default=18, help='Maximum zoom for direct point PMTiles export (default: 18)')
+    aux_params.add_argument('--max-point-tile-bytes', type=int, default=10000000, help='Maximum tile size of points in bytes for tippecanoe/PMTiles (default: 5000000)')
+    aux_params.add_argument('--max-point-feature-counts', type=int, default=1000000, help='Maximum features of points per tile for tippecanoe/PMTiles (default: 500000)')
     aux_params.add_argument('--max-polygon-tile-bytes', type=int, default=50000000, help='Maximum tile size of polygons in bytes for tippecanoe/PMTiles (default: 50000000)')
     aux_params.add_argument('--max-polygon-feature-counts', type=int, default=5000000, help='Maximum features of polygons per tile for tippecanoe/PMTiles (default: 5000000)')
     aux_params.add_argument('--preserve-point-density-thres', type=int, default=1024, help='Tippecanoe point-density preservation threshold (default: 1024)')
@@ -67,6 +70,7 @@ def parse_arguments(_args):
     aux_params.add_argument('--umap-colname-y', type=str, default='UMAP2', help='Column name for the UMAP Y coordinate (default: UMAP2)')
     aux_params.add_argument('--umap-min-zoom', type=int, default=0, help='Minimum zoom for generated UMAP PMTiles (default: 0)')
     aux_params.add_argument('--umap-max-zoom', type=int, default=18, help='Maximum zoom for generated UMAP PMTiles (default: 18)')
+    aux_params.add_argument('--skip-umap', action='store_true', default=False, help='Skip UMAP PMTiles and copied UMAP assets even when UMAP inputs are present')
     # ?
     aux_params.add_argument('--skip-raster', action='store_true', default=False, help='Skip raster image generation (no GDAL/go-pmtiles required)')
     # tmp
@@ -78,7 +82,13 @@ def parse_arguments(_args):
     aux_params.add_argument('--sge-scale', type=int, default=1, help='scales input coordinates to pixels in the output image (default: 1)')
     aux_params.add_argument('--hex-thres-prob', type=float, default=0.0001, help='Minimum probability threshold for storing per-factor probability in hex PMTiles')
     aux_params.add_argument('--use-pmpoint', action='store_true', default=False, help='Use pmpoint/MLT instead of tippecanoe for point PMTiles generation (requires --pmpoint)')
+    aux_params.add_argument('--tile-format-pmpoint', choices=['MLT', 'MVT'], default='MVT', help='Tile format to use when --use-pmpoint is enabled (default: MVT)')
+    aux_params.add_argument('--use-ficture2-direct-pmtiles', action='store_true', default=False, help='Use direct punkst/ficture2 PMTiles packaging for joined transcript-factor molecule layers while keeping the legacy tsv2pmtiles route as the default')
+    aux_params.add_argument('--use-image-png2pmtiles', action='store_true', default=False, help='Do not use image2pmtiles even if it is availableand use image_png2pmtiles instead')
     aux_params.add_argument('--pmpoint-compression-scale', type=float, default=10.0, help='Additional compression scale for pmpoint when --use-pmpoint is turned on. Default: 10.0')
+    aux_params.add_argument('--raster-min-zoom', type=int, default=6, help='Minimum zoom for generated Raster PMTiles (default: 6)')
+    aux_params.add_argument('--raster-max-zoom', type=int, default=18, help='Maximum zoom for generated UMAP PMTiles (default: 18)')
+
 
     env_params = parser.add_argument_group("Env Parameters", "Tool paths (override defaults if needed)")
     # aux_params.add_argument('--magick', type=str, default=f"magick", help='Path to ImageMagick binary') # Disable this function. The user need to add the path to the ImageMagick binary directory to the PATH environment variable
@@ -86,27 +96,29 @@ def parse_arguments(_args):
     env_params.add_argument('--pmtiles', type=str, default=f"{repo_dir}/submodules/pmtiles/pmtiles", help='Path to pmtiles binary from go-pmtiles')
     env_params.add_argument('--gdal_translate', type=str, default=f"gdal_translate", help='Path to gdal_translate binary')
     env_params.add_argument('--gdaladdo', type=str, default=f"gdaladdo", help='Path to gdaladdo binary')
-    env_params.add_argument('--tippecanoe', type=str, default=f"{repo_dir}/submodules/tippecanoe/tippecanoe", help='Path to tippecanoe binary') # default=f"{repo_dir}/submodules/tippecanoe/tippecanoe", 
+    env_params.add_argument('--tippecanoe', type=str, default=f"{repo_dir}/submodules/tippecanoe/tippecanoe", help='Path to tippecanoe binary') # default=f"{repo_dir}/submodules/tippecanoe/tippecanoe",
     env_params.add_argument('--spatula', type=str, default=f"{repo_dir}/submodules/spatula/bin/spatula",  help='Path to spatula binary') # default=f"{repo_dir}/submodules/spatula/bin/spatula",
     env_params.add_argument('--pmpoint', type=str, default=f"{repo_dir}/submodules/pmpoint/bin/pmpoint",  help='Path to pmpoint binary') # default=f"{repo_dir}/submodules/pmpoint/bin/pmpoint",
+    env_params.add_argument('--ficture2', type=str, default=os.path.join(repo_dir, "submodules", "punkst"), help='Path to punkst (ficture2) repository (default: <cartloader_dir>/submodules/punkst)')
 
     if len(_args) == 0:
         parser.print_help()
         sys.exit(1)
-    
+
     args=parser.parse_args(_args)
 
     # dir
     if args.tmp_dir is None:
         args.tmp_dir = os.path.join(args.out_dir, "tmp")
-    
+
     # env
     scheck_app(args.spatula)
     scheck_app(args.tippecanoe)
     if not args.skip_raster:
         scheck_app(args.pmtiles)
-        scheck_app(args.gdal_translate)
-        scheck_app(args.gdaladdo)
+        if args.use_image_png2pmtiles:
+            scheck_app(args.gdal_translate)
+            scheck_app(args.gdaladdo)
 
     return args
 
@@ -121,9 +133,10 @@ def pick_sge_inputs(args):
     if args.fic_dir:
         fic_json = os.path.join(args.fic_dir, args.in_fic_params)
         fic = load_file_to_dict(fic_json).get("in_sge", {})
-        need = ("in_transcript", "in_feature", "in_minmax")
+        #need = ("in_transcript", "in_feature", "in_minmax")
+        need = ("in_tiled", "in_feature", "in_minmax")
         if all(k in fic for k in need):
-            return (fic["in_transcript"], fic["in_feature"], fic["in_minmax"], f"{fic_json} (provided by --fic-dir and --in-fic-params)")
+            return (fic["in_tiled"], fic["in_feature"], fic["in_minmax"], f"{fic_json} (provided by --fic-dir and --in-fic-params)")
         # has fic_dir but missing keys, concise error
         missing = ",".join(k for k in need if k not in fic)
         raise KeyError(f"Path not provided for SGE. Missing keys {missing} in FICTURE JSON {fic_json} (provided by --fic-dir and --in-fic-params)")
@@ -248,49 +261,69 @@ def run_cartload2(_args):
     logger = create_custom_logger(__name__, args.out_dir + "_cartload" + args.log_suffix if args.log else None)
     logger.info("Analysis started")
 
+    ficture2bin = os.path.join(args.ficture2, "bin/punkst")
+    assert os.path.exists(ficture2bin), f"File not found: {ficture2bin}. FICTURE2 Directory should include bin/punkst (--ficture2)"
+
     # start mm
     mm = minimake()
 
     # create output directory if needed
     os.makedirs(args.out_dir, exist_ok=True)
     os.makedirs(args.tmp_dir, exist_ok=True)
-    
+
     # output files/prefix
     out_catalog_f = os.path.join(args.out_dir,args.out_catalog)
     out_assets_f = os.path.join(args.out_dir, args.out_fic_assets)
     out_molecules_prefix=os.path.join(args.out_dir,args.out_molecules_id)
 
-    # 1. Load SGE metadata or FICTURE metadata to define and 
-    
-    in_molecules, in_features, in_minmax, src_hint = pick_sge_inputs(args)
-    assert os.path.exists(in_molecules), f"File not found: {in_molecules} (transcript) {src_hint}"
+    # 1. Load SGE metadata or FICTURE metadata to define and
+
+    #in_molecules, in_features, in_minmax, src_hint = pick_sge_inputs(args)
+    in_tiled, in_features, in_minmax, src_hint = pick_sge_inputs(args)
+    assert os.path.exists(f"{in_tiled}.tsv"), f"File not found: {in_tiled}.tsv (tiled transcript) {src_hint}"
+    assert os.path.exists(f"{in_tiled}.index"), f"File not found: {in_tiled}.index (tiled transcript) {src_hint}"
     assert os.path.exists(in_features), f"File not found: {in_features} (feature) {src_hint}"
     assert os.path.exists(in_minmax), f"File not found: {in_minmax} (minmax) {src_hint}"
-    
+
     # 2. deploy SGE
     if not args.skip_raster:
         ## create raster mono pmtiles for SGE
         cmds = cmd_separator([], f"Converting SGE counts into PMTiles")
-        cmd = " ".join([
-            "cartloader", "run_tsv2mono",
-            "--in-tsv", in_molecules,
-            "--in-minmax", in_minmax,
-            "--out-prefix", f"{args.out_dir}/sge-mono",
-            "--colname-count", args.colname_count,
-            "--main",
-            "--units-per-pixel", str(args.sge_scale),
-            f"--pmtiles '{args.pmtiles}'",
-            f"--gdal_translate '{args.gdal_translate}'",
-            f"--gdaladdo '{args.gdaladdo}'",
-            f"--spatula '{args.spatula}'",
-            "--keep-intermediate-files" if args.keep_intermediate_files else "",
-            # f"--sge-scale {args.sge_scale}" if args.sge_scale else "",
-        ])
+        if args.use_image_png2pmtiles:
+            cmd = " ".join([
+                "cartloader", "run_tsv2mono",
+                "--in-tsv", f"{in_tiled}.tsv",
+                "--in-minmax", in_minmax,
+                "--out-prefix", f"{args.out_dir}/sge-mono",
+                "--colname-count", args.colname_count,
+                "--main",
+                "--units-per-pixel", str(args.sge_scale),
+                f"--pmtiles '{args.pmtiles}'",
+                f"--gdal_translate '{args.gdal_translate}'",
+                f"--gdaladdo '{args.gdaladdo}'",
+                f"--spatula '{args.spatula}'",
+                "--keep-intermediate-files" if args.keep_intermediate_files else "",
+                "--use-gdal",
+            ])
+        else:
+            cmd = " ".join([
+                "cartloader", "run_tsv2mono",
+                "--in-tsv", f"{in_tiled}.tsv",
+                "--in-minmax", in_minmax,
+                "--out-prefix", f"{args.out_dir}/sge-mono",
+                "--colname-count", args.colname_count,
+                "--main",
+                "--units-per-pixel", str(args.sge_scale),
+                f"--spatula '{args.spatula}'",
+                f"--ficture2 '{args.ficture2}'",
+                "--keep-intermediate-files" if args.keep_intermediate_files else "",
+            ])
+
         cmds.append(cmd)
-        # Use a flag to make sure both light and dark pmtiles are done 
-        tsv2mono_flag = f"{args.out_dir}/sge-mono.done" 
+        # Use a flag to make sure both light and dark pmtiles are done
+        tsv2mono_flag = f"{args.out_dir}/sge-mono.done"
         cmds.append(f"[ -f {args.out_dir}/sge-mono-dark.pmtiles.done ] && [ -f {args.out_dir}/sge-mono-light.pmtiles.done ] && touch {tsv2mono_flag}")
-        mm.add_target(tsv2mono_flag, [in_molecules, in_minmax], cmds)
+        mm.add_target(tsv2mono_flag, [f"{in_tiled}.tsv", in_minmax], cmds)
 
     ## load cell parameters
     in_cell_params = []
@@ -300,8 +333,9 @@ def run_cartload2(_args):
         in_cell_params.append(cell_param_data["cell_params"])
 
     ## 3. deploy FICTURE results
-    join_pixel_tsvs = []
+    join_pixel_bins = []
     join_pixel_ids = []
+    join_pixel_res = []
     if args.fic_dir is not None:
         fic_jsonf = os.path.join(args.fic_dir, args.in_fic_params)
         fic_data = load_file_to_dict(fic_jsonf)
@@ -334,8 +368,7 @@ def run_cartload2(_args):
             shared_umap_ndjson = f"{out_prefix}-shared-umap.ndjson"
             shared_umap_pmtiles = f"{out_prefix}-shared-umap.pmtiles"
 
-
-            if "sample" in model_manifolds:
+            if not args.skip_umap and "sample" in model_manifolds:
                 sample_manifold = model_manifolds["sample"]
                 if "umap" in sample_manifold:
                     cmds = cmd_separator([], f"Converting sample UMAP for {model_id} into PMTiles and copying relevant files..")
@@ -385,7 +418,7 @@ def run_cartload2(_args):
                     cmds.append(touch_flag_cmd)
                     mm.add_target(f"{out_prefix}-umap.done", prerequisites, cmds)
 
-            if "shared" in model_manifolds:
+            if not args.skip_umap and "shared" in model_manifolds:
                 if "analysis_type" in cell_param and cell_param["analysis_type"] == "multi-sample":
                     shared_manifold = model_manifolds["shared"]
                     if "umap" in sample_manifold:
@@ -496,7 +529,9 @@ def run_cartload2(_args):
             cell_post_tsvf = cell_param["cluster_pseudobulk"]
             cell_heatmap_pdf = cell_param["cluster_model_heatmap_pdf"]
             cell_heatmap_tsv = cell_param["cluster_model_heatmap_tsv"]
-            cell_pixel_tsvf = cell_param["pixel_tsv_path"]
+            #cell_pixel_tsvf = cell_param["pixel_tsv_path"]
+            cell_pixel_bin_prefix = cell_param["pixel_bin_prefix"]
+            cell_pixel_res = cell_param["pixel_res"]
             cell_pixel_pngf = cell_param["pixel_png_path"]
             copy_rgb_tsv(model_rgb, f"{out_prefix}-rgb.tsv", restart=args.restart)
 
@@ -525,21 +560,35 @@ def run_cartload2(_args):
                 prerequisites += [shared_cell_de_tsvf, shared_cell_info_tsvf, shared_cell_post_tsvf, shared_cell_cluster_model_heatmap_pdf, shared_cell_cluster_model_heatmap_tsv]
                 outfiles += [f"{out_prefix}-shared-bulk-de.tsv", f"{out_prefix}-shared-info.tsv", f"{out_prefix}-shared-pseudobulk.tsv.gz", f"{out_prefix}-shared-heatmap.pdf", f"{out_prefix}-shared-heatmap.tsv"]
 
-            join_pixel_tsvs.append(cell_pixel_tsvf)
+            join_pixel_bins.append(cell_pixel_bin_prefix)
             join_pixel_ids.append(out_id)
+            join_pixel_res.append(float(cell_pixel_res))
 
             if not args.skip_raster:
-                cmd = " ".join([
-                    "cartloader", "image_png2pmtiles",
-                    "--georeference", "--geotif2mbtiles", "--mbtiles2pmtiles",
-                    "--in-img", cell_pixel_pngf,
-                    f'--georef-bounds="{xmin},{ymin},{xmax},{ymax}"',
-                    "--out-prefix", f"{out_prefix}-pixel-raster",
-                    f"--pmtiles '{args.pmtiles}'",
-                    f"--gdal_translate '{args.gdal_translate}'",
-                    f"--gdaladdo '{args.gdaladdo}'",
-                    "--keep-intermediate-files" if args.keep_intermediate_files else ""
-                ])
+                if args.use_image_png2pmtiles:
+                    cmd = " ".join([
+                        "cartloader", "image_png2pmtiles",
+                        "--georeference", "--geotif2mbtiles", "--mbtiles2pmtiles",
+                        "--in-img", cell_pixel_pngf,
+                        f'--georef-bounds="{xmin},{ymin},{xmax},{ymax}"',
+                        "--out-prefix", f"{out_prefix}-pixel-raster",
+                        f"--pmtiles '{args.pmtiles}'",
+                        f"--gdal_translate '{args.gdal_translate}'",
+                        f"--gdaladdo '{args.gdaladdo}'",
+                        "--keep-intermediate-files" if args.keep_intermediate_files else ""
+                    ])
+                else:
+                    cmd = " ".join([
+                        ficture2bin, "image2pmtiles",
+                        "--in-image", cell_pixel_pngf,
+                        "--id", out_id,
+                        "--min-zoom", str(args.raster_min_zoom),
+                        "--max-zoom", str(args.raster_max_zoom),
+                        "--offset-x-um", str(xmin),
+                        "--offset-y-um", str(ymin),
+                        "--microns-per-pixel", str(args.sge_scale),
+                        "--out-prefix", f"{out_prefix}-pixel-raster", "--overwrite"
+                    ])
                 cmds.append(cmd)
                 prerequisites.append(cell_pixel_pngf)
                 outfiles.append(f"{out_prefix}-pixel-raster.pmtiles")
@@ -557,7 +606,7 @@ def run_cartload2(_args):
 
             ## ?? what is factormap?
             factormap_path = train_param.get("factor_map", None)
-            
+
             out_id = model_id.replace("_", "-")
             out_prefix = f"{args.out_dir}/{out_id}"
 
@@ -597,16 +646,17 @@ def run_cartload2(_args):
             # umap
             umap = train_param.get("umap", {})
             # if umap is a dict,
-            if train_param.get("analysis_type") == "multi-sample":
-                process_umap(umap.get("shared"), mm, args, out_prefix+"-shared", model_id, fic_jsonf)
-                process_umap(umap.get("sample"), mm, args, out_prefix, model_id, fic_jsonf)
-            elif "sample" in umap:
-                process_umap(umap.get("sample"), mm, args, out_prefix, model_id, fic_jsonf)
-            else:
-                process_umap(umap, mm, args, out_prefix, model_id, fic_jsonf)
-                
+            if not args.skip_umap:
+                if train_param.get("analysis_type") == "multi-sample":
+                    process_umap(umap.get("shared"), mm, args, out_prefix+"-shared", model_id, fic_jsonf)
+                    process_umap(umap.get("sample"), mm, args, out_prefix, model_id, fic_jsonf)
+                elif "sample" in umap:
+                    process_umap(umap.get("sample"), mm, args, out_prefix, model_id, fic_jsonf)
+                else:
+                    process_umap(umap, mm, args, out_prefix, model_id, fic_jsonf)
+
             cmds = cmd_separator([], f"Converting LDA-trained factors {model_id} into PMTiles and copying relevant files..")
-            
+
             prerequisites = []
             outfiles=[]
 
@@ -632,7 +682,7 @@ def run_cartload2(_args):
                 cmds.append(cmd)
                 prerequisites.append(in_fit_tsvf)
                 outfiles.append(f"{out_prefix}.pmtiles")
-            
+
             # mode/rgb/de/posterior/info
             for key, val in train_inout.items():
                 if val["required"] or os.path.exists(val["in"]):
@@ -642,7 +692,7 @@ def run_cartload2(_args):
                     else:
                         cmds.append(f"cp {val['in']} {val['out']}")
                     outfiles.append(val["out"])
-            
+
             touch_flag_cmd=valid_and_touch_cmd(outfiles, f"{out_prefix}.done") # this only touch the flag file when all output files exist
             cmds.append(touch_flag_cmd)
 
@@ -656,7 +706,9 @@ def run_cartload2(_args):
             for decode_param in train_param["decode_params"]:
                 in_id = decode_param["decode_id"]
                 in_prefix = f"{args.fic_dir}/{in_id}"
-                in_pixel_tsvf = decode_param.get("pixel_tsv_path", f"{in_prefix}.tsv.gz")
+                #in_pixel_tsvf = decode_param.get("pixel_tsv_path", f"{in_prefix}.tsv.gz")
+                in_pixel_bin_prefix = decode_param.get("pixel_bin_prefix", f"{in_prefix}")
+                in_pixel_res = decode_param.get("pixel_res", 0.5)
                 in_pixel_png = decode_param.get("pixel_png_path", f"{in_prefix}.png")
                 in_de_tsvf  = decode_param.get("de_tsv_path", f"{in_prefix}.bulk_chisq.tsv")
                 in_post_tsvf = decode_param.get("pseudobulk_tsv_path", f"{in_prefix}.pseudobulk.tsv.gz")
@@ -665,36 +717,50 @@ def run_cartload2(_args):
                 out_id = in_id.replace("_", "-")
                 out_prefix = os.path.join(args.out_dir, out_id)
 
-                join_pixel_tsvs.append(in_pixel_tsvf)
+                join_pixel_bins.append(in_pixel_bin_prefix)
                 join_pixel_ids.append(out_id)
+                join_pixel_res.append(float(in_pixel_res))
 
                 cmds = cmd_separator([], f"Converting decoded factors {in_id} into PMTiles and copying relevant files.")
                 outfiles=[]
                 if not args.skip_raster:
-                    cmd = " ".join([
-                        "cartloader", "image_png2pmtiles",
-                        "--georeference", "--geotif2mbtiles", "--mbtiles2pmtiles",
-                        "--in-img", in_pixel_png,
-                        f'--georef-bounds="{xmin},{ymin},{xmax},{ymax}"',
-                        "--out-prefix", f"{out_prefix}-pixel-raster",
-                        f"--pmtiles '{args.pmtiles}'",
-                        f"--gdal_translate '{args.gdal_translate}'",
-                        f"--gdaladdo '{args.gdaladdo}'",
-                        "--keep-intermediate-files" if args.keep_intermediate_files else ""
-                    ])
+                    if args.use_image_png2pmtiles:
+                        cmd = " ".join([
+                            "cartloader", "image_png2pmtiles",
+                            "--georeference", "--geotif2mbtiles", "--mbtiles2pmtiles",
+                            "--in-img", in_pixel_png,
+                            f'--georef-bounds="{xmin},{ymin},{xmax},{ymax}"',
+                            "--out-prefix", f"{out_prefix}-pixel-raster",
+                            f"--pmtiles '{args.pmtiles}'",
+                            f"--gdal_translate '{args.gdal_translate}'",
+                            f"--gdaladdo '{args.gdaladdo}'",
+                            "--keep-intermediate-files" if args.keep_intermediate_files else ""
+                        ])
+                    else:
+                        cmd = " ".join([
+                            ficture2bin, "image2pmtiles",
+                            "--in-image", in_pixel_png,
+                            "--id", out_id,
+                            "--min-zoom", str(args.raster_min_zoom),
+                            "--max-zoom", str(args.raster_max_zoom),
+                            "--offset-x-um", str(xmin),
+                            "--offset-y-um", str(ymin),
+                            "--microns-per-pixel", str(args.sge_scale),
+                            "--out-prefix", f"{out_prefix}-pixel-raster"
+                        ])
                     cmds.append(cmd)
                     outfiles.append(f"{out_prefix}-pixel-raster.pmtiles")
 
                 cmds.append(f"cp {in_de_tsvf} {out_prefix}-bulk-de.tsv")
                 cmds.append(f"cp {in_post_tsvf} {out_prefix}-pseudobulk.tsv.gz")
                 cmds.append(f"cp {in_info_tsvf} {out_prefix}-info.tsv")
-                
+
                 outfiles.extend([f"{out_prefix}-bulk-de.tsv", f"{out_prefix}-pseudobulk.tsv.gz", f"{out_prefix}-info.tsv"])
-    
+
                 touch_flag_cmd=valid_and_touch_cmd(outfiles, f"{out_prefix}.done") # this only touch the flag file when all output files exist
                 cmds.append(touch_flag_cmd)
 
-                mm.add_target(f"{out_prefix}.done", [in_pixel_tsvf, in_pixel_png, in_de_tsvf, in_post_tsvf, model_rgb, in_info_tsvf], cmds)
+                mm.add_target(f"{out_prefix}.done", [f"{in_pixel_bin_prefix}.bin", f"{in_pixel_bin_prefix}.index", in_pixel_png, in_de_tsvf, in_post_tsvf, model_rgb, in_info_tsvf], cmds)
                 sources.append(f"{out_prefix}.done")
 
             cmds = cmd_separator([], f"Finishing up for train parameters {out_train_id}")
@@ -711,65 +777,117 @@ def run_cartload2(_args):
         logger.info("Writing a json file for expected FICTURE output assets")
         write_dict_to_file(out_fic_assets, out_assets_f, check_equal=True)
 
-    ## 4. If FICTURE is provided with decoding results, join pixel-level TSVs
-    molecules_f = in_molecules
-    if ( len(join_pixel_tsvs) > 0 ):
+    ## 4. Package transcript/factor molecules into PMTiles
+    sge_index_f = f"{out_molecules_prefix}_pmtiles_index.tsv"
+    sge_counts_f = f"{out_molecules_prefix}_bin_counts.json"
+    molecules_target = sge_index_f
+    molecules_f = f"{in_tiled}.tsv"
+
+    ## sort the pixel_bins by resolution (from low to high)
+    if len(join_pixel_bins) > 0:
+        sorted_indices = sorted(range(len(join_pixel_res)), key=lambda i: join_pixel_res[i])
+        join_pixel_bins = [join_pixel_bins[i] for i in sorted_indices]
+        join_pixel_ids = [join_pixel_ids[i] for i in sorted_indices]
+        join_pixel_res = [join_pixel_res[i] for i in sorted_indices]
+
+    if len(join_pixel_bins) > 0 and args.use_ficture2_direct_pmtiles:
+        if args.bin_count <= 0:
+            raise ValueError("--use-ficture2-direct-pmtiles requires positive --bin-count")
+
+        feature_count_tsv = in_features
+        if in_features.lower().endswith(".gz"):
+            feature_count_tsv = os.path.join(args.tmp_dir, Path(in_features).name[:-3])
+            cmds = cmd_separator([], "Preparing plain feature counts for direct punkst PMTiles packaging")
+            cmds.append(f"{args.gzip} -dc {shlex.quote(in_features)} > {shlex.quote(feature_count_tsv)}")
+            mm.add_target(feature_count_tsv, [in_features], cmds)
+
+        feature_count_nohdr_tsv = feature_count_tsv.replace(".hdr.tsv", ".tsv")
+
+        layout = infer_tiled_query_layout(in_tiled, args.colname_feature, args.colname_count)
+        direct_index_f = f"{out_molecules_prefix}.pmtiles_index.tsv"
+        direct_counts_f = f"{out_molecules_prefix}.bin_counts.json"
+        direct_done_f = f"{out_molecules_prefix}.direct_punkst_pmtiles.done"
+
+        cmds = cmd_separator([], "Packaging joined transcript-factor molecules directly with punkst tile-op")
+        cmds.append(make_direct_pmtiles_cmd(
+            args, ficture2bin, out_molecules_prefix, in_tiled, feature_count_nohdr_tsv,
+            join_pixel_bins, join_pixel_ids, layout
+        ))
+        #if args.use_ficture2_direct_pmtiles:
+        #cmds.append(make_direct_pmtiles_pyramid_cmd(args, args.out_dir, direct_index_f))
+        cmds.append(make_direct_pmtiles_pyramid_cmd(args, args.out_dir, direct_index_f, args.n_jobs))
+        cmds.append(f"cp {shlex.quote(direct_index_f)} {shlex.quote(sge_index_f)}")
+        cmds.append(f"cp {shlex.quote(direct_counts_f)} {shlex.quote(sge_counts_f)}")
+        direct_outputs = [sge_index_f, sge_counts_f, f"{out_molecules_prefix}_all.pmtiles"]
+        cmds.append(valid_and_touch_cmd(direct_outputs, direct_done_f))
+
+        direct_prerequisites = [f"{in_tiled}.tsv", f"{in_tiled}.index", feature_count_tsv]
+        for pref in join_pixel_bins:
+            direct_prerequisites.extend([f"{pref}.bin", f"{pref}.index"])
+        mm.add_target(direct_done_f, direct_prerequisites, cmds)
+        molecules_target = direct_done_f
+    elif ( len(join_pixel_bins) > 0 ):
         cmds = cmd_separator([], f"Joining pixel-level TSVs")
         out_join_pixel_prefix = f"{args.out_dir}/transcripts_pixel_joined"
-        # cmd = " ".join([
-        #         f"'{args.spatula}'", "paste-pixel-tsv",
-        #         f"--out-tsv {out_join_pixel_prefix}.tsv.gz",
-        #         f"--colname-x", args.rename_x.split(":")[0],
-        #         f"--colname-y", args.rename_y.split(":")[0]
-        #     ]
-        #     + [ f"--pix-prefix-tsv {join_pixel_ids[i]}_,{join_pixel_tsvs[i]}" for i in range(len(join_pixel_tsvs)) ]
-        # )
-        cmd = " ".join([
-                f"'{args.spatula}'", "join-pixel-decode",
-                f"--out-prefix {out_join_pixel_prefix}",
-                f"--mol-tsv {in_molecules}",
+        if ( len(join_pixel_bins) > 1):
+            cmd = " ".join([
+                f"'{ficture2bin}'", "tile-op",
+                f"--out {out_join_pixel_prefix}",
+                f"--annotate-pts {in_tiled} --icol-x 0 --icol-y 1 --icol-feature 2 --anno-keep-all --null-k NA --null-p NA",
                 f"--threads {args.threads}",
-                f"--max-dist {args.max_join_dist_um}",
-                f"--tile-size {args.join_tile_size}"
-            ]
-            + [ f"--decode-prefix-tsv {join_pixel_ids[i]}_,{join_pixel_tsvs[i]}" for i in range(len(join_pixel_tsvs)) ]
-        )
-        cmds.append(cmd)
-        cmds.append(f"{args.gzip} -f {out_join_pixel_prefix}.tsv")
-        mm.add_target(f"{out_join_pixel_prefix}.tsv.gz", [in_molecules]+join_pixel_tsvs, cmds)
-        molecules_f = f"{out_join_pixel_prefix}.tsv.gz"
+                f"--in {join_pixel_bins[0]} --binary",
+                f"--merge-emb " + " ".join([ join_pixel_bins[i] + ".bin" for i in range(1, len(join_pixel_bins)) ]),
+                f"--merge-keep-all",
+                f"--emb-prefix " + " ".join([ join_pixel_ids[i] for i in range(0, len(join_pixel_bins)) ])
+            ])
+            cmds.append(cmd)
+        else: ## len(join_pixel_bins) == 1, no need to merge, just annotate
+            cmd = " ".join([
+                f"'{ficture2bin}'", "tile-op",
+                f"--out {out_join_pixel_prefix}",
+                f"--annotate-pts {in_tiled} --icol-x 0 --icol-y 1 --icol-feature 2 --anno-keep-all --null-k NA --null-p NA",
+                f"--threads {args.threads}",
+                f"--in {join_pixel_bins[0]} --binary",
+                f"--emb-prefix " + join_pixel_ids[0]
+            ])
+            ## this is not
+            cmds.append(cmd)
+        #cmds.append(f"{args.gzip} -f {out_join_pixel_prefix}.tsv")
+        mm.add_target(f"{out_join_pixel_prefix}.tsv", [f"{in_tiled}.tsv", f"{in_tiled}.index"] + [f"{x}.bin" for x in join_pixel_bins], cmds)
+        molecules_f = f"{out_join_pixel_prefix}.tsv"
 
     ## 5. run tsv2pmtiles for the convert the joined pixel-level TSV to PMTiles
-    cmds = cmd_separator([], f"Converting the joined pixel-level TSV to PMTiles")
-    cmd = " ".join([
-        "cartloader", "run_tsv2pmtiles",
-        "--in-molecules", molecules_f,
-        "--in-features", in_features,
-        "--out-prefix", f"{out_molecules_prefix}",
-        "--threads", str(args.threads),
-        "--col-rename", args.rename_x, args.rename_y, f"feature:{args.colname_feature}", f"ct:{args.colname_count}",
-        "--colname-feature", args.colname_feature,
-        "--colname-count", args.colname_count,
-        "--max-tile-bytes", str(args.max_point_tile_bytes),
-        "--max-feature-counts", str(args.max_point_feature_counts),
-        "--preserve-point-density-thres", str(args.preserve_point_density_thres),
-        "--bin-count", str(args.bin_count),
-        "--all",
-        "--n-jobs", str(args.n_jobs),
-        f"--log --log-suffix '{args.log_suffix}'" if args.log else "",        
-        f"--use-pmpoint --pmpoint '{args.pmpoint}' --pmpoint-compression-scale {args.pmpoint_compression_scale}" if args.use_pmpoint else f"--tippecanoe '{args.tippecanoe}'",
-        f"--tmp-dir '{args.tmp_dir}'",
-        "--keep-intermediate-files" if args.keep_intermediate_files else ""
-    ])
-    cmds.append(cmd)
-    mm.add_target(f"{out_molecules_prefix}_pmtiles_index.tsv", [molecules_f], cmds)
+    if not (len(join_pixel_bins) > 0 and args.use_ficture2_direct_pmtiles):
+        cmds = cmd_separator([], f"Converting the joined pixel-level TSV to PMTiles")
+        cmd = " ".join([
+            "cartloader", "run_tsv2pmtiles",
+            "--in-molecules", molecules_f,
+            "--in-features", in_features,
+            "--out-prefix", f"{out_molecules_prefix}",
+            "--threads", str(args.threads),
+            "--col-rename", args.rename_x, args.rename_y, f"feature:{args.colname_feature}", f"ct:{args.colname_count}",
+            "--colname-feature", args.colname_feature,
+            "--colname-count", args.colname_count,
+            "--max-tile-bytes", str(args.max_point_tile_bytes),
+            "--max-feature-counts", str(args.max_point_feature_counts),
+            "--preserve-point-density-thres", str(args.preserve_point_density_thres),
+            "--bin-count", str(args.bin_count),
+            "--all",
+            "--n-jobs", str(args.n_jobs),
+            f"--log --log-suffix '{args.log_suffix}'" if args.log else "",
+            f"--use-pmpoint --pmpoint '{args.pmpoint}' --pmpoint-compression-scale {args.pmpoint_compression_scale} --tile-format-pmpoint {args.tile_format_pmpoint}" if args.use_pmpoint else f"--tippecanoe '{args.tippecanoe}'",
+            f"--tmp-dir '{args.tmp_dir}'",
+            "--keep-intermediate-files" if args.keep_intermediate_files else ""
+        ])
+        cmds.append(cmd)
+        mm.add_target(sge_index_f, [molecules_f], cmds)
 
     # 6. Create a yaml for all output assets
     cmds = cmd_separator([], f"Writing catalog YAML for all output assets")
     cmd = " ".join([
         "cartloader", "write_catalog_for_assets",
-        "--sge-index", f"{out_molecules_prefix}_pmtiles_index.tsv", 
-        "--sge-counts", f"{out_molecules_prefix}_bin_counts.json", 
+        "--sge-index", f"{sge_index_f}",
+        "--sge-counts", f"{sge_counts_f}",
         f"--fic-assets {out_assets_f}" if args.fic_dir else "",
         "--out-catalog", f"{out_catalog_f}",
         f"--log --log-suffix '{args.log_suffix}'" if args.log else ""
@@ -790,7 +908,7 @@ def run_cartload2(_args):
     if ( args.desc is not None ):
         cmd += f" --desc {args.desc}"
 
-    prerequisites_yaml=[f"{out_molecules_prefix}_pmtiles_index.tsv"]
+    prerequisites_yaml=[molecules_target]
     if args.fic_dir:
         prerequisites_yaml.append(out_assets_f)
     if not args.skip_raster:

@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 
 from cartloader.utils.minimake import minimake
-from cartloader.utils.utils import cmd_separator, scheck_app, create_custom_logger, read_minmax, execute_makefile
+from cartloader.utils.utils import cmd_separator, scheck_app, create_custom_logger, read_minmax, execute_makefile, flexopen
 
 def parse_arguments(_args):
     """
@@ -32,12 +32,16 @@ def parse_arguments(_args):
     aux_params = parser.add_argument_group("Auxiliary Parameters", "Auxiliary parameters (using default is recommended)")
     aux_params.add_argument('--spatula', type=str, default=f"{repo_dir}/submodules/spatula/bin/spatula", help='Path to spatula binary')
     aux_params.add_argument('--pmtiles', type=str, default=f"{repo_dir}/submodules/pmtiles/pmtiles", help='Path to pmtiles binary from go-pmtiles')
+    aux_params.add_argument('--ficture2', type=str, default=os.path.join(repo_dir, "submodules", "punkst"),  help='Path to punkst (ficture2) repository (default: <cartloader_dir>/submodules/punkst)')
     aux_params.add_argument('--gdal_translate', type=str, default=f"gdal_translate", help='Path to gdal_translate binary')
     aux_params.add_argument('--gdaladdo', type=str, default=f"gdaladdo", help='Path to gdaladdo binary')
     aux_params.add_argument('--keep-intermediate-files', action='store_true', default=False, help='Keep intermediate output files')
     aux_params.add_argument('--transparent-below', type=int, default=0, help='Threshold for transparent pixels below this value for dark background image (default: 0)')
     aux_params.add_argument('--transparent-above', type=int, default=255, help='Threshold for transparent pixels above this value for light background image (default: 255)')
     aux_params.add_argument('--units-per-pixel', type=int, default=1, help='scales input coordinates to pixels in the output image (default: 1)')
+    aux_params.add_argument('--use-gdal', action='store_true', default=False, help='Use gdal_translate to convert a georeferenced GeoTIFF to PMTiles without using geotiff2pmtiles. This option is only applicable when --method is set to "gdal".')
+    aux_params.add_argument('--raster-min-zoom', type=int, default=6, help='Minimum zoom for generated Raster PMTiles (default: 6)')
+    aux_params.add_argument('--raster-max-zoom', type=int, default=18, help='Maximum zoom for generated Raster PMTiles (default: 18)')
     
     run_params = parser.add_argument_group("Run Options", "Run options for FICTURE commands")
     run_params.add_argument('--restart', action='store_true', default=False, help='Restart the run. Ignore all intermediate files and start from the beginning')
@@ -69,14 +73,12 @@ def run_tsv2mono(_args):
     ## check the existence of the applications
     scheck_app(args.spatula)
     scheck_app(args.pmtiles)
-    scheck_app(args.gdal_translate)
-    scheck_app(args.gdaladdo)
     # scheck_app(args.magick)
 
     ## check input tsv file header and get the column indices
     icol_x, icol_y, icol_cnt = None, None, None
-    with gzip.open(args.in_tsv, 'rt') as f:
-        header = f.readline().strip().split("\t")
+    with flexopen(args.in_tsv, 'rt') as f:
+        header = f.readline().lstrip('#').rstrip().split("\t")
         col2idx = {x:i for i,x in enumerate(header)}
         icol_x = col2idx["X"]
         icol_y = col2idx["Y"]
@@ -127,51 +129,86 @@ def run_tsv2mono(_args):
     else:
         cmds_light.append(f"{cmd_drawxy} --invert --out {args.out_prefix}-light.png")
 
-    ## create TIF files
-    cmd_tif = " ".join([
-        f"'{args.gdal_translate}'", 
-        "-of", "GTiff", "-a_srs", args.srs,
-        f"-a_ullr {minmax['xmin']} {minmax['ymin']} {minmax['xmax']} {minmax['ymax']}"
-    ])
-    cmds_dark.append(f"{cmd_tif} {args.out_prefix}-dark.png {args.out_prefix}-dark.pmtiles.tif")
-    cmds_light.append(f"{cmd_tif} {args.out_prefix}-light.png {args.out_prefix}-light.pmtiles.tif")
+    if args.use_gdal:
+        scheck_app(args.gdal_translate)
+        scheck_app(args.gdaladdo)
 
-    ## create MBTiles files
-    cmd_mbt = " ".join([
-        f"'{args.gdal_translate}'", 
-        "-b 1 -b 2 -b 3 -b 4" if args.transparent_below > 0 else "-b 1",
-        "-strict",
-        "-co", "\"ZOOM_LEVEL_STRATEGY=UPPER\"",
-        "-co", f"\"RESAMPLING={args.resample.upper()}\"",
-        "-co", f"\"BLOCKSIZE={args.blocksize}\"",
-        "-ot", "Byte", "-scale", "-of", "mbtiles",
-        "-a_srs", args.srs
-    ])
-    cmds_dark.append(f"{cmd_mbt} {args.out_prefix}-dark.pmtiles.tif {args.out_prefix}-dark.pmtiles.mbtiles")
-    cmd_mbt = " ".join([
-        f"'{args.gdal_translate}'", 
-        "-b 1 -b 2 -b 3 -b 4" if args.transparent_above < 255 else "-b 1",
-        "-strict",
-        "-co", "\"ZOOM_LEVEL_STRATEGY=UPPER\"",
-        "-co", f"\"RESAMPLING={args.resample.upper()}\"",
-        "-co", f"\"BLOCKSIZE={args.blocksize}\"",
-        "-ot", "Byte", "-scale", "-of", "mbtiles",
-        "-a_srs", args.srs
-    ])
-    cmds_light.append(f"{cmd_mbt} {args.out_prefix}-light.pmtiles.tif {args.out_prefix}-light.pmtiles.mbtiles")
+        ## create TIF files
+        cmd_tif = " ".join([
+            f"'{args.gdal_translate}'", 
+            "-of", "GTiff", "-a_srs", args.srs,
+            f"-a_ullr {minmax['xmin']} {minmax['ymin']} {minmax['xmax']} {minmax['ymax']}"
+        ])
+        cmds_dark.append(f"{cmd_tif} {args.out_prefix}-dark.png {args.out_prefix}-dark.pmtiles.tif")
+        cmds_light.append(f"{cmd_tif} {args.out_prefix}-light.png {args.out_prefix}-light.pmtiles.tif")
 
-    cmds_dark.append(f"'{args.gdaladdo}' {args.out_prefix}-dark.pmtiles.mbtiles -r {args.resample.lower()} 2 4 8 16 32 64 128 256 512 1024 2048 4096 8192 16384 32768 65536")
-    cmds_light.append(f"'{args.gdaladdo}' {args.out_prefix}-light.pmtiles.mbtiles -r {args.resample.lower()} 2 4 8 16 32 64 128 256 512 1024 2048 4096 8192 16384 32768 65536")
+        ## create MBTiles files
+        cmd_mbt = " ".join([
+            f"'{args.gdal_translate}'", 
+            "-b 1 -b 2 -b 3 -b 4" if args.transparent_below > 0 else "-b 1",
+            "-strict",
+            "-co", "\"ZOOM_LEVEL_STRATEGY=UPPER\"",
+            "-co", f"\"RESAMPLING={args.resample.upper()}\"",
+            "-co", f"\"BLOCKSIZE={args.blocksize}\"",
+            "-ot", "Byte", "-scale", "-of", "mbtiles",
+            "-a_srs", args.srs
+        ])
+        cmds_dark.append(f"{cmd_mbt} {args.out_prefix}-dark.pmtiles.tif {args.out_prefix}-dark.pmtiles.mbtiles")
+        cmd_mbt = " ".join([
+            f"'{args.gdal_translate}'", 
+            "-b 1 -b 2 -b 3 -b 4" if args.transparent_above < 255 else "-b 1",
+            "-strict",
+            "-co", "\"ZOOM_LEVEL_STRATEGY=UPPER\"",
+            "-co", f"\"RESAMPLING={args.resample.upper()}\"",
+            "-co", f"\"BLOCKSIZE={args.blocksize}\"",
+            "-ot", "Byte", "-scale", "-of", "mbtiles",
+            "-a_srs", args.srs
+        ])
+        cmds_light.append(f"{cmd_mbt} {args.out_prefix}-light.pmtiles.tif {args.out_prefix}-light.pmtiles.mbtiles")
 
-    cmds_dark.append(f"'{args.pmtiles}' convert --force {args.out_prefix}-dark.pmtiles.mbtiles {args.out_prefix}-dark.pmtiles")
-    cmds_light.append(f"'{args.pmtiles}' convert --force {args.out_prefix}-light.pmtiles.mbtiles {args.out_prefix}-light.pmtiles")
+        cmds_dark.append(f"'{args.gdaladdo}' {args.out_prefix}-dark.pmtiles.mbtiles -r {args.resample.lower()} 2 4 8 16 32 64 128 256 512 1024 2048 4096 8192 16384 32768 65536")
+        cmds_light.append(f"'{args.gdaladdo}' {args.out_prefix}-light.pmtiles.mbtiles -r {args.resample.lower()} 2 4 8 16 32 64 128 256 512 1024 2048 4096 8192 16384 32768 65536")
 
-    if not args.keep_intermediate_files:
-        cmds_dark.append(f"rm -f {args.out_prefix}-dark.pmtiles.mbtiles {args.out_prefix}-dark.pmtiles.tif {args.out_prefix}-dark.png {args.out_prefix}-dark-opaque.png")
-        cmds_light.append(f"rm -f {args.out_prefix}-light.pmtiles.mbtiles {args.out_prefix}-light.pmtiles.tif {args.out_prefix}-light.png {args.out_prefix}-light-opaque.png")
+        cmds_dark.append(f"'{args.pmtiles}' convert --force {args.out_prefix}-dark.pmtiles.mbtiles {args.out_prefix}-dark.pmtiles")
+        cmds_light.append(f"'{args.pmtiles}' convert --force {args.out_prefix}-light.pmtiles.mbtiles {args.out_prefix}-light.pmtiles")
 
-    #cmds_dark.append(f"rm {args.out_prefix}-dark.pmtiles.mbtiles {args.out_prefix}-dark.pmtiles.tif")
-    #cmds_light.append(f"rm {args.out_prefix}-light.pmtiles.mbtiles {args.out_prefix}-light.pmtiles.tif")
+        if not args.keep_intermediate_files:
+            cmds_dark.append(f"rm -f {args.out_prefix}-dark.pmtiles.mbtiles {args.out_prefix}-dark.pmtiles.tif {args.out_prefix}-dark.png {args.out_prefix}-dark-opaque.png")
+            cmds_light.append(f"rm -f {args.out_prefix}-light.pmtiles.mbtiles {args.out_prefix}-light.pmtiles.tif {args.out_prefix}-light.png {args.out_prefix}-light-opaque.png")
+
+        #cmds_dark.append(f"rm {args.out_prefix}-dark.pmtiles.mbtiles {args.out_prefix}-dark.pmtiles.tif")
+        #cmds_light.append(f"rm {args.out_prefix}-light.pmtiles.mbtiles {args.out_prefix}-light.pmtiles.tif")
+    else:
+        ficture2bin = os.path.join(args.ficture2, "bin/punkst")
+        scheck_app(ficture2bin)
+
+        cmd = " ".join([
+            ficture2bin, "image2pmtiles",
+            "--in-image", f"{args.out_prefix}-dark.png",
+            "--id", f"{args.out_prefix}-dark",
+            "--min-zoom", str(args.raster_min_zoom),
+            "--max-zoom", str(args.raster_max_zoom),
+            "--offset-x-um", str(minmax['xmin']),
+            "--offset-y-um", str(minmax['ymin']),
+            "--microns-per-pixel", str(args.units_per_pixel),
+            "--out-prefix", f"{args.out_prefix}-dark", "--overwrite"
+        ])
+        cmds_dark.append(cmd)
+        cmd = " ".join([
+            ficture2bin, "image2pmtiles",
+            "--in-image", f"{args.out_prefix}-light.png",
+            "--id", f"{args.out_prefix}-light",
+            "--min-zoom", str(args.raster_min_zoom),
+            "--max-zoom", str(args.raster_max_zoom),
+            "--offset-x-um", str(minmax['xmin']),
+            "--offset-y-um", str(minmax['ymin']),
+            "--microns-per-pixel", str(args.units_per_pixel),
+            "--out-prefix", f"{args.out_prefix}-light", "--overwrite"
+        ])
+        cmds_light.append(cmd)
+        if not args.keep_intermediate_files:
+            cmds_dark.append(f"rm -f {args.out_prefix}-dark.png {args.out_prefix}-dark-opaque.png")
+            cmds_light.append(f"rm -f {args.out_prefix}-light.png {args.out_prefix}-light-opaque.png")
 
     cmds_dark.append(f"touch {args.out_prefix}-dark.pmtiles.done")
     cmds_light.append(f"touch {args.out_prefix}-light.pmtiles.done")
@@ -186,7 +223,6 @@ def run_tsv2mono(_args):
     mm.write_makefile(make_f)
 
     execute_makefile(make_f, dry_run=args.dry_run, restart=args.restart, n_jobs=args.n_jobs)
-
 
 if __name__ == "__main__":
     # Get the base file name without extension

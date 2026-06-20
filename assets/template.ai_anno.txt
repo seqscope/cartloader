@@ -1,0 +1,15 @@
+You are annotating latent factors from bulk differential expression.
+
+Task: Identify the single most likely cell type, subcellular transcriptional program, or known biological pathway represented by these ordered, top marker genes based on the following information
+
+Organism: {organism}
+Tissue: {tissue}
+Top marker genes (comma-separated): {top_marker_gene_list}
+
+Return ONLY a JSON object with this exact schema
+{"alias": "UpperCamelCaseInferredCellTypeOrProgramName"}
+
+Rules:
+  - alias must be terse and singular.
+  - Use informative shorthand when appropriate (e.g., CD4+T, CD8+T, NKCell, BCell, G2MPhaseCellCycle, CapillaryCaveolarTransportProgram, LipidTransportingCapillaryEndothelium, ImprintedGrowthMetabolicProgram).
+  - Avoid long phrases, parentheses, or multi-sentence explanations.

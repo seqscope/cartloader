@@ -39,3 +39,4 @@ cd ../
 
 ## download pmtiles CLI
 rm -rf ./pmtiles
+rm -rf ./geotiff2pmtiles

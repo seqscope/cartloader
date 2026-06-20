@@ -36,7 +36,7 @@ def parse_arguments(_args):
     key_params.add_argument('--width', type=str, required=True, help='Comma-separated hexagon flat-to-flat widths (in um) for LDA training')
     key_params.add_argument('--n-factor', type=str, help='Comma-separated list of factor counts for LDA training.')
     key_params.add_argument('--anchor-res', type=int, default=6, help='Anchor resolution for decoding (default: 6)')
-    key_params.add_argument('--cmap-file', type=str, default=os.path.join(repo_dir, "assets", "fixed_color_map_256.tsv"), help='Path to fixed color map TSV (default: <cartloader_dir>/assets/fixed_color_map_256.tsv)')
+    key_params.add_argument('--cmap-file', type=str, default=os.path.join(repo_dir, "assets", "default_color_map.tsv"), help='Path to fixed color map TSV (default: <cartloader_dir>/assets/default_color_map.tsv)')
 
     # aux params
     aux_params = parser.add_argument_group("Auxiliary Parameters", "Auxiliary parameters (using default is recommended)")
@@ -60,20 +60,21 @@ def parse_arguments(_args):
     #aux_params.add_argument('--fit-plot-um-per-pixel', type=float, default=1, help='Image resolution for fit coarse plot (default: 1)')  # in Scopeflow, this is set to 2
     aux_params.add_argument('--skip-umap', action='store_true', default=False, help='Skip creating umap')
     aux_params.add_argument('--decode-scale', type=int, default=1, help='Decode scale parameter for plotting')
+    aux_params.add_argument('--single-molecule', action='store_true', default=False, help='Turn on single-molecule mode for pixel decode')
+    aux_params.add_argument('--decode-pixel-res', type=float, default=0.5, help='Decode resolution (default: 0.5)')
 
     # others parameters shared across steps
     # aux_params.add_argument('--min-count-train', type=int, default=50, help='Minimum count for training (default: 50)') ## disabled due to lack of use
     aux_params.add_argument('--de-min-ct-per-feature', type=int, default=20, help='Minimum count per feature for differential expression (default: 20)')
     aux_params.add_argument('--de-max-pval', type=float, default=1e-3, help='P-value cutoff for differential expression (default: 1e-3)')
     aux_params.add_argument('--de-min-fold', type=float, default=1.5, help='Fold-change cutoff for differential expression (default: 1.5)')
-    aux_params.add_argument('--redo-pseudobulk-decode', action='store_true', default=False, help='Recompute pseudobulk decode with spatula. If set, the existing pseudobulk decode will be overwritten.')
-    aux_params.add_argument('--redo-merge-units', action='store_true', default=False, help='Recompute merge units. If set, the existing mergeed hexagons and LDA results will be overwritten.')
     # project from external model
     aux_params.add_argument('--pretrained-model', type=str, help='Path to a pre-trained model to use for projection. If provided, LDA training will be skipped, and the provided model will be used for projection.')
+    aux_params.add_argument('--model-id', type=str, help='Model ID used for naming the output files (works when only one model is trained or projected)')
     aux_params.add_argument('--retrain', action='store_true', default=False, help='If set, retain the pre-trained model. Only applicable when --pretrained-model is set.')
 
     # AUX gene-filtering params
-    aux_ftrfilter_params = parser.add_argument_group( "Feature Customizing Auxiliary Parameters", "Customize features (typically genes) used by FICTURE without altering the original feature TSV") # This ensures the original feature TSV file is retained in the output JSON file for downstream processing 
+    aux_ftrfilter_params = parser.add_argument_group( "Feature Customizing Auxiliary Parameters", "Customize features (typically genes) used by FICTURE without altering the original feature TSV") # This ensures the original feature TSV file is retained in the output JSON file for downstream processing
     aux_ftrfilter_params.add_argument('--include-feature-regex', type=str, default=None, help='Regex of feature names to include')
     aux_ftrfilter_params.add_argument('--exclude-feature-regex', type=str, default=None, help='Regex of feature names to exclude')
 
@@ -98,6 +99,7 @@ def add_multisample_prepare_targets(mm, args, ficture2bin, in_samples):
     widths = args.width.split(",")
 
     cmds = cmd_separator([], f"Creating tiled tsv from {os.path.basename(args.in_list)}...")
+    cmds.append(f"touch '{args.out_dir}/multi.begin'")
     cmd = " ".join([
         f"'{ficture2bin}'", "multisample-prepare",
         f"--in-tsv-list '{args.in_list}'",
@@ -107,7 +109,7 @@ def add_multisample_prepare_targets(mm, args, ficture2bin, in_samples):
         f"--icol-y {args.colidx_y-1}",
         f"--icol-feature {args.colidx_feature-1}",
         f"--icol-int {args.colidx_count-1}",
-        f"--skip 1",
+        f"--skip 1 --skip-last-is-header",
         f"--temp-dir '{args.out_dir}/tmp'",
         f"--tile-size {args.tile_size}",
         f"--tile-buffer {args.tile_buffer}",
@@ -120,47 +122,36 @@ def add_multisample_prepare_targets(mm, args, ficture2bin, in_samples):
     ])
     cmds.append(cmd)
 
-    if args.redo_merge_units:
-        for width in widths:
-            with flexopen(f"{args.out_dir}/multi.hex_{width}.list.tsv", "wt") as wf:
-                for sample in in_samples:
-                    wf.write(f"{sample}\t{args.out_dir}/samples/{sample}/{sample}.features.tsv\t{args.out_dir}/samples/{sample}/{sample}.hex_{width}.txt\t{args.out_dir}/samples/{sample}/{sample}.hex_{width}.json\t-2\n")
-            cmd = " ".join([
-                f"'{ficture2bin}'", "merge-units",
-                f"--in-list '{args.out_dir}/multi.hex_{width}.list.tsv'",
-                f"--min-total-count-per-sample {args.min_count_per_sample}",
-                f"--min-count-per-unit {args.min_ct_per_unit_hexagon}",
-                f"--out-pref '{args.out_dir}/multi.hex_{width}'",
-                f"--threads {args.threads}",
-                f"--temp-dir '{args.out_dir}/tmp/multi_hex_{width}'"])
-            cmds.append(cmd)
-
     cmd = f"[ -f '{args.out_dir}/multi.features.tsv' ]" + "".join([f" && [ -f '{args.out_dir}/multi.hex_{width}.txt' ]" for width in widths]) + f" && touch '{args.out_dir}/multi.done'"
     cmds.append(cmd)
+    ## remove multi.done if exists to support incremental running
+    if os.path.exists(f"{args.out_dir}/multi.done"):
+        os.remove(f"{args.out_dir}/multi.done")
     mm.add_target(f"{args.out_dir}/multi.done", [args.in_list], cmds)
 
 def add_lda_training_target(mm, args, ficture2bin, n_factor, train_width, model_prefix, hex_prefix, color_map, ficture2report):
     """Add Makefile target for training (or projecting) an LDA model."""
     cmds = cmd_separator([], f"LDA training for {train_width}um and {n_factor} factors...")
-    
+    cmds.append(f"touch '{model_prefix}.begin'")
+
     unsorted_prefix = f"{model_prefix}.unsorted"
     lda_model_matrix = f"{model_prefix}.model.tsv"
     lda_fit_tsv = f"{model_prefix}.results.tsv.gz"
     lda_de = f"{model_prefix}.bulk_chisq.tsv"
-    
+
     # copy model
     if args.pretrained_model is not None and not args.retrain:
         cmds.append(f"cp {args.pretrained_model} {unsorted_prefix}.model.tsv")
-    
+
     # configure parameters
     if args.pretrained_model is not None and args.retrain:
         model_prior_arg = f"--model-prior {args.pretrained_model}"
-        projection_only_arg = ""  
+        projection_only_arg = ""
         n_topics_arg = ""
         sort_topics_arg = ""
     elif args.pretrained_model is not None and not args.retrain:
         model_prior_arg = f"--model-prior {unsorted_prefix}.model.tsv"
-        projection_only_arg = "--projection-only"  
+        projection_only_arg = "--projection-only"
         n_topics_arg = ""
         sort_topics_arg = ""
     else:
@@ -168,7 +159,7 @@ def add_lda_training_target(mm, args, ficture2bin, n_factor, train_width, model_
         projection_only_arg = ""
         n_topics_arg = f"--n-topics {n_factor}"
         sort_topics_arg = "--sort-topics"
-    
+
     # 1) train LDA
     train_cmd = " ".join([
         f"'{ficture2bin}'", "lda4hex",
@@ -180,6 +171,8 @@ def add_lda_training_target(mm, args, ficture2bin, n_factor, train_width, model_
         n_topics_arg,
         sort_topics_arg,
         "--transform",
+        # "--append-topk",
+        # "--drop-random-key",
         f"--minibatch-size {args.minibatch_size}",
         f"--seed {args.seed}",
         f"--n-epochs {args.train_epoch}",
@@ -187,6 +180,7 @@ def add_lda_training_target(mm, args, ficture2bin, n_factor, train_width, model_
     ])
     cmds.append(train_cmd)
 
+#    cmds.append(f"sed '1s/^#//' '{unsorted_prefix}.results.tsv' | {args.gzip} > '{lda_fit_tsv}'")
     # 2) append topk
     append_cmd = " ".join([
         f"'{args.spatula}'", "append-topk-tsv",
@@ -237,6 +231,8 @@ def add_projection_target_per_sample(mm, args, ficture2bin, model_prefix, model_
     sample_lda_prefix = os.path.join(args.out_dir, "samples", sample, f"{sample}.{model_id}")
     sample_lda_fit_tsv = f"{sample_lda_prefix}.results.tsv.gz"
 
+    cmds.append(f"touch '{sample_lda_prefix}.begin'")
+
     cmd = " ".join([
         f"{ficture2bin}", "lda4hex",
         f"--in-data '{sample_hex_prefix}.txt'",
@@ -245,12 +241,17 @@ def add_projection_target_per_sample(mm, args, ficture2bin, model_prefix, model_
         f"--model-prior '{lda_model_matrix}'",
         f"--out-prefix '{sample_lda_prefix}.unsorted'",
         "--transform",
+        # "--append-topk",
+        # "--drop-random-key",
         f"--minibatch-size {args.minibatch_size}",
         f"--seed {args.seed}",
         f"--n-epochs {args.train_epoch}",
         f"--threads {args.threads}",
     ])
     cmds.append(cmd)
+
+    # cmd = f"sed '1s/^#//' '{sample_lda_prefix}.unsorted.results.tsv' | {args.gzip} > '{sample_lda_fit_tsv}'"
+    # cmds.append(cmd)
 
     cmd = " ".join([
         f"'{args.spatula}'", "append-topk-tsv",
@@ -263,6 +264,7 @@ def add_projection_target_per_sample(mm, args, ficture2bin, model_prefix, model_
         "--icol-random-key 0"
     ])
     cmds.append(cmd)
+    
     cmds.append(f"rm -f '{sample_lda_prefix}.unsorted.results.tsv'")
     cmds.append(f"[ -f '{sample_lda_fit_tsv}' ] && touch '{sample_lda_prefix}.done'")
     mm.add_target(f"{sample_lda_prefix}.done", [f"{model_prefix}.done", f"{args.out_dir}/multi.done"], cmds)
@@ -272,10 +274,12 @@ def add_pixel_decode_target_per_sample(mm, args, ficture2bin, ficture2report, mo
     """Add Makefile targets to pixel-decode and post-process results for a single sample."""
     decode_prefix = os.path.join(args.out_dir, "samples", sample, f"{sample}.{decode_id}")
     decode_postcount = f"{decode_prefix}.pseudobulk.tsv"
-    decode_fit_tsv = f"{decode_prefix}.tsv"
+    #decode_fit_bin = f"{decode_prefix}.bin"
+    #decode_fit_tsv = f"{decode_prefix}.tsv"
     decode_de = f"{decode_prefix}.bulk_chisq.tsv"
 
     cmds = cmd_separator([], f"Performing pixel-decode, ID {decode_id} for sample {sample}...")
+    cmds.append(f"touch '{decode_prefix}.bin.begin'")
     cmd = " ".join([
         f"'{ficture2bin}'", "pixel-decode",
         f"--model '{model_path}'",
@@ -289,27 +293,19 @@ def add_pixel_decode_target_per_sample(mm, args, ficture2bin, ficture2report, mo
         f"--icol-val 3",
         f"--hex-grid-dist {fit_width}",
         f"--n-moves {fit_n_move}",
-        f"--pixel-res 0.5",
+        f"--single-molecule" if args.single_molecule else f"--pixel-res {args.decode_pixel_res}",
+        f"--output-binary",
         f"--threads {args.threads}",
-        f"--seed {args.seed}",
-        f"--output-original"
+        f"--seed {args.seed}"
+        #f"--output-original"
     ])
     cmds.append(cmd)
 
-    if args.redo_pseudobulk_decode:
-        cmds.append(f"rm -f {decode_postcount}")
-        cmd = " ".join([
-            f"'{args.spatula}'", "pseudobulk-from-decode",
-            f"--tsv '{decode_fit_tsv}'",
-            f"--out '{decode_postcount}'",
-            f"--n-factors {n_factor}"
-        ])
-        cmds.append(cmd)
-
-    cmds.append(f"{args.gzip} -f '{decode_fit_tsv}'")
+    #cmds.append(f"{args.gzip} -f '{decode_fit_tsv}'")
     cmds.append(f"{args.gzip} -f '{decode_postcount}'")
-    cmds.append(f"[ -f '{decode_fit_tsv}.gz' ] && [ -f '{decode_postcount}.gz' ] && touch '{decode_prefix}.tsv.done'")
-    mm.add_target(f"{decode_prefix}.tsv.done", [cmap_path, f"{args.out_dir}/multi.done", f"{model_prefix}.done"], cmds)
+    #cmds.append(f"[ -f '{decode_fit_tsv}.gz' ] && [ -f '{decode_postcount}.gz' ] && touch '{decode_prefix}.tsv.done'")
+    cmds.append(f"[ -f '{decode_prefix}.bin' ] && [ -f '{decode_postcount}.gz' ] && touch '{decode_prefix}.bin.done'")
+    mm.add_target(f"{decode_prefix}.bin.done", [cmap_path, f"{args.out_dir}/multi.done", f"{model_prefix}.done"], cmds)
 
     cmds = cmd_separator([], f"Performing post-decode tasks, ID {decode_id} for sample {sample}...")
     cmds.append(f"'{args.spatula}' diffexp-model-matrix --tsv1 '{decode_postcount}.gz' --out '{decode_de}' --min-count {args.de_min_ct_per_feature} --max-pval {args.de_max_pval} --min-fc {args.de_min_fold}")
@@ -328,29 +324,31 @@ def add_pixel_decode_target_per_sample(mm, args, ficture2bin, ficture2report, mo
     cmds.append(cmd)
 
     #cmds.append(f"{args.gzip} -dc '{decode_fit_tsv}.gz' > '{decode_fit_tsv}'")
-    cmd = " ".join([
-        f"'{ficture2bin}'", "draw-pixel-factors",
-        #f"--in-tsv '{decode_fit_tsv}'",
-        f"--in-tsv '{decode_fit_tsv}.gz'",
-        f"--header-json '{decode_prefix}.json'",
-        f"--in-color '{cmap_path}'",
-        f"--out '{decode_prefix}.png'",
-        f"--scale {args.decode_scale}",
-        f"--range '{args.out_dir}/samples/{sample}/{sample}.tiled.coord_range.tsv'"
-    ])
+    cmd = f"'{ficture2bin}' draw-pixel-factors --in '{decode_prefix}' --binary --in-color '{cmap_path}' --out '{decode_prefix}.png' --scale {args.decode_scale}"
+    # cmd = " ".join([
+    #     f"'{ficture2bin}'", "draw-pixel-factors",
+    #     #f"--in-tsv '{decode_fit_tsv}'",
+    #     f"--in-tsv '{decode_fit_tsv}.gz'",
+    #     f"--header-json '{decode_prefix}.json'",
+    #     f"--in-color '{cmap_path}'",
+    #     f"--out '{decode_prefix}.png'",
+    #     f"--scale {args.decode_scale}",
+    #     f"--range '{args.out_dir}/samples/{sample}/{sample}.tiled.coord_range.tsv'"
+    # ])
     cmds.append(cmd)
     #cmds.append(f"rm -f '{decode_fit_tsv}'")
 
     cmds.append(f"[ -f '{decode_de}' ] && [ -f '{decode_prefix}.factor.info.html' ] && [ -f '{decode_prefix}.png' ] && touch '{decode_prefix}.done'")
-    mm.add_target(f"{decode_prefix}.done", [cmap_path, f"{decode_prefix}.tsv.done", f"{args.out_dir}/multi.done", f"{model_prefix}.done"], cmds)
+    mm.add_target(f"{decode_prefix}.done", [cmap_path, f"{decode_prefix}.bin.done", f"{args.out_dir}/multi.done", f"{model_prefix}.done"], cmds)
 
     return f"{decode_prefix}.done"
 
-def add_sample_json_target(mm, args, sample, sample_transcript, n_samples):
+def add_sample_json_target(mm, args, sample, sample_transcript, n_samples, sample_tsv_transcript):
     """Add Makefile target to write the output JSON for a single sample."""
     cmds = cmd_separator([], f"Writing output JSON file for sample {sample}...")
     sample_out_dir = os.path.join(args.out_dir, "samples", sample)
     sample_out_json = os.path.join(sample_out_dir, "ficture.params.json")
+    sample_tiled_prefix = os.path.join(sample_out_dir, f"{sample}.tiled")
     sample_feature_nohdr = os.path.join(sample_out_dir, f"{sample}.tiled.features.tsv")
     sample_feature_hdr = os.path.join(sample_out_dir, f"{sample}.tiled.features.hdr.tsv")
     sample_minmax = os.path.join(sample_out_dir, f"{sample}.tiled.coord_range.tsv")
@@ -384,7 +382,7 @@ def add_sample_json_target(mm, args, sample, sample_transcript, n_samples):
             f"{model_prefix}.cmap.tsv",
             f"{model_prefix}.model.tsv",
             f"{model_prefix}.results.tsv.gz",  # shared fit
-            f"{sample_prefix}.results.tsv.gz", # sample specific fit 
+            f"{sample_prefix}.results.tsv.gz", # sample specific fit
             f"{model_prefix}.bulk_chisq.tsv",
             f"{model_prefix}.factor.info.tsv"
         ])
@@ -395,14 +393,14 @@ def add_sample_json_target(mm, args, sample, sample_transcript, n_samples):
             umap_tsv = f"{model_prefix}.umap.tsv.gz"
             umap_png = f"{model_prefix}.umap.png"
             umap_single_prob_png = f"{model_prefix}.umap.single.prob.png"
-            
+
             sample_umap_tsv = f"{sample_prefix}.umap.tsv.gz"
             sample_umap_png = f"{sample_prefix}.umap.png"
             sample_umap_single_prob_png = f"{sample_prefix}.umap.single.prob.png"
 
             prerequisities.extend([umap_tsv, umap_png, umap_single_prob_png, sample_umap_tsv, sample_umap_png, sample_umap_single_prob_png])
             summary_aux_args_umap.append(f"lda,{model_id},{umap_tsv},{umap_png},{umap_single_prob_png},{sample_umap_tsv},{sample_umap_png},{sample_umap_single_prob_png}")
-    
+
     if len(summary_aux_args_models) > 1:
         summary_aux_args.append(" ".join(summary_aux_args_models))
     if not args.skip_umap and len(summary_aux_args_umap) > 1:
@@ -420,11 +418,13 @@ def add_sample_json_target(mm, args, sample, sample_transcript, n_samples):
             decode_id,
             str(decode_params["fit_width"]),
             str(args.anchor_res),
-            f"{decode_prefix}.tsv.gz",
+            f"{decode_prefix}",
             f"{decode_prefix}.png",
             f"{decode_prefix}.pseudobulk.tsv.gz",
             f"{decode_prefix}.bulk_chisq.tsv",
-            f"{decode_prefix}.factor.info.tsv"
+            f"{decode_prefix}.factor.info.tsv",
+            "0" if args.single_molecule else str(args.decode_pixel_res),
+            str(args.decode_scale),
         ])
         summary_aux_args_decodes.append(decode_arg)
         prerequisities.append(f"{decode_prefix}.done")
@@ -432,10 +432,13 @@ def add_sample_json_target(mm, args, sample, sample_transcript, n_samples):
     if len(summary_aux_args_decodes) > 1:
         summary_aux_args.append(" ".join(summary_aux_args_decodes))
 
+    # Rebuild the per-sample manifest from the current invocation so stale
+    # models from older runs in the same output directory do not persist.
     summary_cmd_parts = [
         "cartloader", "write_json_for_ficture2_multi",
         "--mode append",
-        f"--in-transcript '{sample_transcript}'",
+        f"--in-transcript '{sample_tsv_transcript}'",
+        f"--in-tiled '{sample_tiled_prefix}'",
         f"--in-feature '{sample_feature_hdr}'",
         f"--in-minmax '{sample_minmax}'",
         f"--out-dir '{sample_out_dir}'",
@@ -465,6 +468,11 @@ def run_ficture2_multi(_args):
     # validate args
     if args.n_factor is None and args.pretrained_model is None:
         raise ValueError("When --pretrained-model is not provided, --n-factor is required.")
+    if args.model_id is not None: ## model id is specified
+        if args.pretrained_model is None: ## pretrained_model is not specified
+            if args.n_factor.find(",") != -1 or args.width.find(",") != -1: ## multiple models are being trained
+                raise ValueError("When --model-id is provided, only a single width and single n-factor should be provided, or --pretrained-model should be provided. Found comma in --n-factor or --width, which suggests multiple models are being trained. Please provide a single value for --n-factor and --width, or do not provide --model-id.")
+
     #if "," in args.width:
     #    raise ValueError("In multi-sample pipeline, when --train-width is provided, it should be a single value, not a comma-separated list. Use --width instead.")
 
@@ -476,27 +484,29 @@ def run_ficture2_multi(_args):
 
     in_samples = []
     in_tsvs = []
+    sample2tsv = {}
     with flexopen(args.in_list, "rt") as f:
         for line in f:
             toks = line.strip().split("\t")
             in_samples.append(toks[0])
             in_tsvs.append(toks[1])
+            sample2tsv[toks[0]] = toks[1]
 
     n_samples = len(in_samples)
-    
+
     assert os.path.exists(args.cmap_file), f"File not found: {args.cmap_file} (--cmap-file)"
-    
+
     # apps/ficture2
     scheck_app(args.spatula)
     if not args.skip_umap:
         scheck_app(args.R)
     scheck_app(args.sort)
     scheck_app(args.gzip)
-    
+
     ficture2bin = os.path.join(args.ficture2, "bin/punkst")
     assert os.path.exists(ficture2bin), f"File not found: {ficture2bin}. FICTURE2 Directory should include bin/punkst (--ficture2)"
     ficture2report = args.python + " '" + os.path.join(args.ficture2, "ext/py/factor_report.py") + "'"
-    
+
     # start mm
     mm = minimake()
 
@@ -539,8 +549,8 @@ def run_ficture2_multi(_args):
                 out_prefix=model_prefix,
                 subtitle=f"{model_id} - shared"
             )
-        
-        # 3) Sample-specific LDA projection 
+
+        # 3) Sample-specific LDA projection
         lda_each_targets = []
         for sample in in_samples:
             sample_lda_prefix = os.path.join(args.out_dir, "samples", sample, f"{sample}.{model_id}")
@@ -557,10 +567,10 @@ def run_ficture2_multi(_args):
 
             # 4) Sample-specific UMAP
             if not args.skip_umap:
-                add_umap_targets(mm=mm, 
-                                input_tsv=f"{sample_lda_prefix}.results.tsv.gz", 
-                                color_map=color_map, 
-                                out_prefix=sample_lda_prefix, 
+                add_umap_targets(mm=mm,
+                                input_tsv=f"{sample_lda_prefix}.results.tsv.gz",
+                                color_map=color_map,
+                                out_prefix=sample_lda_prefix,
                                 subtitle=f"{model_id} - sample specific ({sample})")
         cmds = cmd_separator([], f"Finishing LDA projection for each sample for model {model_id}...")
         cmds.append(f"touch '{model_prefix}_each.done'")
@@ -569,7 +579,7 @@ def run_ficture2_multi(_args):
     ## step 3. multi-sample pixel-decode (perform pixel-decode for each sample)
 
     decode_runs = define_decode_runs(args, **LDA_CONFIG)
-    for decode_params in decode_runs:            
+    for decode_params in decode_runs:
         model_prefix = os.path.join(args.out_dir, decode_params["model_id"])
         fit_width = decode_params["fit_width"]
         decode_id = decode_params["decode_id"]
@@ -598,7 +608,7 @@ def run_ficture2_multi(_args):
     ## step 4. write the output JSON file for each sample
     json_each_targets = []
     for sample, sample_transcript in zip(in_samples, in_tsvs):
-        sample_out_json = add_sample_json_target(mm, args, sample, sample_transcript, n_samples)
+        sample_out_json = add_sample_json_target(mm, args, sample, sample_transcript, n_samples, sample2tsv.get(sample))
         json_each_targets.append(sample_out_json)
 
     cmds=cmd_separator([], f"Finishing writing the JSON file for each sample...")
@@ -609,7 +619,7 @@ def run_ficture2_multi(_args):
     if len(mm.targets) == 0:
         logging.error("There is no target to run. Please make sure that at least one run option was turned on")
         sys.exit(1)
-    
+
     make_f = os.path.join(args.out_dir, args.makefn)
     mm.write_makefile(make_f)
 

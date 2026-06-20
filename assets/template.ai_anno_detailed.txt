@@ -1,0 +1,27 @@
+You annotate latent factors derived from NMF or LDA on
+pseudobulk expression data from spatial transcriptomic datasets.
+
+Inputs:
+  organism: {organism}
+  tissue: {tissue}
+  contrast/source: {e.g., "factor 7 loadings, top positive"}
+  top marker genes (ordered by |loading|, highest first): {top_marker_gene_list}
+
+Task: Infer the single most likely label for this factor, preferring in
+order: (1) a specific cell type or state, (2) a coherent transcriptional
+program, (3) a canonical pathway. Weight the top 5 genes most heavily.
+
+Output: a JSON object, no markdown, no prose:
+{
+  "alias": "<UpperCamelCase, ≤30 chars, no symbols except digits>",
+  "category": "CellType" | "Program" | "Pathway" 
+  "confidence": "high" | "medium" | "low",
+  "rationale": "<≤200 chars, which genes drove the call>"
+}
+
+Naming conventions:
+  - Immune cell types: CD4T, CD8T, NK, Treg, BCell, PlasmaCell, ...
+  - States append a suffix: CD8TExhausted, MacrophageM2, ...
+  - Programs: <Function><Modifier>Program, e.g., G2MCellCycle,
+    OxidativePhosphorylation, InterferonResponseTypeI
+  - Pathways use Reactome/MSigDB-style short names

@@ -45,7 +45,7 @@ def parse_arguments(_args):
     key_params.add_argument('--n-factor', type=int, help='Number of factors for LDA training.')
     key_params.add_argument('--leiden-resolution', type=float, default=1.0, help='Resolution for Leiden clustering (default: 1.0)')
     key_params.add_argument('--anchor-resolution', type=int, default=6, help='Anchor resolution for decoding (default: 6)')
-    key_params.add_argument('--cmap-file', type=str, default=os.path.join(repo_dir, "assets", "fixed_color_map_256.tsv"), help='Path to fixed color map TSV (default: <cartloader_dir>/assets/fixed_color_map_256.tsv)')
+    key_params.add_argument('--cmap-file', type=str, default=os.path.join(repo_dir, "assets", "fixed_color_map_512.tsv"), help='Path to fixed color map TSV (default: <cartloader_dir>/assets/fixed_color_map_512.tsv)')
 
     # aux params
     aux_params = parser.add_argument_group("Auxiliary Parameters", "Auxiliary parameters (using default is recommended)")
@@ -61,6 +61,8 @@ def parse_arguments(_args):
     #aux_params.add_argument('--skip-umap', action='store_true', default=False, help='Skip creating umap')
     aux_params.add_argument('--decode-scale', type=int, default=1, help='Decode scale (default: 1)')
     aux_params.add_argument('--seed', type=int, default=1, help='Random seed for random number generation (default: 1)')
+    aux_params.add_argument('--single-molecule', action='store_true', default=False, help='Turn on single-molecule mode for pixel decode')
+    aux_params.add_argument('--decode-pixel-res', type=float, default=0.5, help='Decode resolution (default: 0.5)')
 
     # others parameters shared across steps
     aux_params.add_argument('--min-feature-count', type=int, default=20, help='Minimum feature count for LDA factorization')
@@ -78,6 +80,7 @@ def parse_arguments(_args):
     aux_params.add_argument('--xy-colname-cell-id', type=str, default="cell_id", help='Column name for cell IDs in the metadata file (default: cell_id)')
     aux_params.add_argument('--xy-colname-x', type=str, default="X", help='Column name for X coordinates in the metadata file (default: X)')
     aux_params.add_argument('--xy-colname-y', type=str, default="Y", help='Column name for Y coordinates in the metadata file (default: Y)')
+    aux_params.add_argument('--zero-based-clust-id', action='store_true', default=False, help='Whether the cluster IDs in the existing cluster files provided by --list-cluster are zero-based. By default, it is assumed that the cluster IDs are one-based and will be converted to zero-based by subtracting 1. If the cluster IDs are already zero-based, please turn on this option to avoid incorrect cluster ID conversion.')
 
     # AUX gene-filtering params
     aux_ftrfilter_params = parser.add_argument_group( "Feature Customizing Auxiliary Parameters", "Customize features (typically genes) used by FICTURE without altering the original feature TSV") # This ensures the original feature TSV file is retained in the output JSON file for downstream processing 
@@ -198,16 +201,8 @@ def run_ficture2_multi_cells(_args):
             raise ValueError("When --sptsv is ON, --sptsv-prefix should not be provided.")
         sptsv_prefix = os.path.join(args.out_dir, args.out_prefix) + ".sptsv"
         cmds = cmd_separator([], f"Creating cell-based SPTSV files...")
+        cmds.append(f"touch '{sptsv_prefix}.begin'")
         samp2sptsv = {} ## sample ID to SPTSV file mapping
-        ## if mex_dir is provided, create SPTSV from MEX files, assuming that MEX files contain cell-level data across all samples
-        # if args.mex_dir is not None:
-        #     if args.mex_list is not None:
-        #         raise ValueError("When --mex-dir is provided, --mex-list should not be provided.")
-        #     cmd = f"{args.spatula} mex2sptsv --in-dir {args.mex_dir} --bcd {args.mex_bcd} --ftr {args.mex_ftr} --mtx {args.mex_mtx} --out {sptsv_prefix} --min-feature-count {args.min_feature_count} {cmd_ftr_include_exclude}"
-
-        #     cmds.append(cmd)
-        #     ## in this case, we assume that merged SPTSV file already exists
-        # elif args.mex_list is not None:
         deps = []
         if args.mex_list is not None:
             with flexopen(args.mex_list, 'rt') as rf:
@@ -232,7 +227,6 @@ def run_ficture2_multi_cells(_args):
                     deps.extend([mex_bcd, mex_ftr, mex_mtx])
         else:
             for sample_id in in_samples:
-                #sample_id = in_samples[0]  ## use the first sample's tiled file to create SPTSV
                 pixelf = f"{args.in_dir}/samples/{sample_id}/{sample_id}.tiled"
                 sample_sptsv_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.sptsv"
                 cmd = f"{args.spatula} pixel2sptsv --min-cell-count {args.min_cell_count} --pixel {pixelf}.tsv --no-header --idx-col-x {args.colidx_x} --idx-col-y {args.colidx_y} --idx-col-ftr {args.colidx_feature} --idx-col-cnt {args.colidx_count} --idx-col-id {args.colidx_cell_id} --ignore-ids {args.ignore_ids} --out {sample_sptsv_prefix} --min-feature-count {args.min_feature_count} {cmd_ftr_include_exclude}"
@@ -247,16 +241,13 @@ def run_ficture2_multi_cells(_args):
             with flexopen(samp_listf, "wt") as wf:
                 for sample_id in samp2sptsv:
                     sample_sptsv_prefix = samp2sptsv[sample_id]
-                    #wf.write(f"{sample_id}\t{sample_sptsv_prefix}.feature.counts.tsv\t{sample_sptsv_prefix}.tsv\t{sample_sptsv_prefix}.json\t-2\n")
                     wf.write(f"{sample_id}\t{sample_sptsv_prefix}.feature.counts.tsv\t{sample_sptsv_prefix}.tsv\t{sample_sptsv_prefix}.json\n")
-            #cmd = f"{ficture2bin} merge-units --in-list {samp_listf} --out-pref {sptsv_prefix} --temp-dir {sptsv_prefix}.tmp --threads {args.threads}"
             cmd = f"{args.spatula} merge-sptsv --list {samp_listf} --out {sptsv_prefix}"
             cmds.append(cmd)
         ## randomize SPTSV file
         cmd = f"sort -k 1,1 {sptsv_prefix}.tsv > {sptsv_prefix}.randomized.tsv"
         cmds.append(cmd)
         cmds.append(f"[ -f {sptsv_prefix}.randomized.tsv ] && touch {sptsv_prefix}.done" )
-        #mm.add_target(f"{sptsv_prefix}.done", [f"{args.mex_dir}/{args.mex_bcd}", f"{args.mex_dir}/{args.mex_ftr}", f"{args.mex_dir}/{args.mex_mtx}"] if args.mex_dir is not None else [], cmds)
         mm.add_target(f"{sptsv_prefix}.done", deps, cmds)
     elif args.sptsv_prefix is not None:
         sptsv_prefix = args.sptsv_prefix
@@ -268,6 +259,7 @@ def run_ficture2_multi_cells(_args):
         lda_prefix = os.path.join(args.out_dir, args.out_prefix) + ".lda"
         if args.pretrained_model is None:  ## run LDA to generate model
             cmds = cmd_separator([], f"Performing LDA training/projection...")
+            cmds.append(f"touch {lda_prefix}.multi.begin")
             if args.n_factor is None:
                 raise ValueError("--n-factor must be specified when --model is not specified with --lda ON.")
             cmd = f"{ficture2bin} lda4hex --in-data {sptsv_prefix}.randomized.tsv --in-meta {sptsv_prefix}.json --out-prefix {lda_prefix} --sort-topics --n-topics {args.n_factor} --transform --minibatch-size 500 --seed {args.seed} --n-epochs 2 --threads {args.threads}"
@@ -276,6 +268,7 @@ def run_ficture2_multi_cells(_args):
             mm.add_target(f"{lda_prefix}.multi.done", [f"{sptsv_prefix}.done"], cmds)
         else:  ## use existing model
             cmds = cmd_separator([], f"Projecting existing LDA model...")
+            cmds.append(f"touch {lda_prefix}.multi.begin")
             ## copy the pretrained model to lda_prefix
             if args.pretrained_model.endswith(".gz"):
                 cmd = f"{args.gzip} -dc {args.pretrained_model} > {lda_prefix}.model.tsv"
@@ -292,6 +285,7 @@ def run_ficture2_multi_cells(_args):
             cmds = cmd_separator([], f"Performing LDA projection for {sample_id}...")
             sample_lda_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.lda"
             sample_sptsv_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.sptsv"
+            cmds.append(f"touch {sample_lda_prefix}.begin")
             cmd = f"{ficture2bin} lda4hex --model-prior {lda_prefix}.model.tsv --projection-only --in-data {sample_sptsv_prefix}.tsv --in-meta {sample_sptsv_prefix}.json --out-prefix {sample_lda_prefix} --transform --minibatch-size 500 --seed {args.seed} --n-epochs 2 --threads {args.threads}"
             cmds.append(cmd)
             cmds.append(f"[ -f {sample_lda_prefix}.results.tsv ] && touch {sample_lda_prefix}.done" )
@@ -307,6 +301,7 @@ def run_ficture2_multi_cells(_args):
         lda_prefix = os.path.join(args.out_dir, args.out_prefix) + ".lda"
         leiden_prefix = os.path.join(args.out_dir, args.out_prefix) + ".leiden"
         cmds = cmd_separator([], f"Generating Leiden clusters...")
+        cmds.append(f"touch '{leiden_prefix}.begin'")
         if args.list_cluster is None:
             cmd = f"cartloader lda_leiden_cluster_fast --offset-data 4 --tsv '{lda_prefix}.results.tsv' --out '{leiden_prefix}.tsv.gz' --resolution {args.leiden_resolution} --colname-cluster topK --key-ids sample_id cell_id"
             cmds.append(cmd)
@@ -355,9 +350,12 @@ def run_ficture2_multi_cells(_args):
                             cell_id = toks[0].replace('"', '')
                             cluster_id = toks[1].replace('"', '')
                             if nlines > 0 or cluster_id.isdigit():
-                                int_cluster_id = int(cluster_id)-1 ## convert to 0-based
+                                if args.zero_based_clust_id:
+                                    int_cluster_id = int(cluster_id)
+                                else:
+                                    int_cluster_id = int(cluster_id)-1 ## convert to 0-based
                                 if int_cluster_id < 0:
-                                    raise ValueError(f"Cluster ID must be >= 1 in existing cluster file. Found {cluster_id} in line: {line}")
+                                    raise ValueError(f"Cluster ID must be >= {0 if args.zero_based_clust_id else 1} in existing cluster file. Found {cluster_id} in line: {line}")
                                 wf.write(f"{sample_id}\t{cell_id}\t{int_cluster_id}\n")
                                 wf_sample.write(f"{cell_id}\t{int_cluster_id}\n")
                             nlines += 1
@@ -442,6 +440,7 @@ def run_ficture2_multi_cells(_args):
         leiden_prefix = os.path.join(args.out_dir, args.out_prefix) + ".leiden"
         tsne_prefix = os.path.join(args.out_dir, args.out_prefix) 
         cmds = cmd_separator([], f"Generating TSNE manifolds...")
+        cmds.append(f"touch {tsne_prefix}.tsne.begin")
         cmd = f"cartloader lda_tsne --offset-data 4 --tsv '{lda_prefix}.results.tsv' --out '{tsne_prefix}.tsne.tsv.gz' --key-ids sample_id cell_id"
         cmds.append(cmd)
 
@@ -480,6 +479,7 @@ def run_ficture2_multi_cells(_args):
         leiden_prefix = os.path.join(args.out_dir, args.out_prefix) + ".leiden"
         umap_prefix = os.path.join(args.out_dir, args.out_prefix) 
         cmds = cmd_separator([], f"Generating UMAP manifolds...")
+        cmds.append(f"touch {umap_prefix}.umap.begin")
         create_umap_rscript=f"{repo_dir}/cartloader/r/create_umap.r"
         cmd = f"{args.R} '{create_umap_rscript}' --input '{lda_prefix}.results.tsv' --out-prefix '{umap_prefix}' --tsv-colname-meta random_key sample_id cell_id"
         cmds.append(cmd)
@@ -520,6 +520,7 @@ def run_ficture2_multi_cells(_args):
         pseudobulk_prefix = os.path.join(args.out_dir, args.out_prefix) + ".leiden.pseudobulk"
 
         cmds = cmd_separator([], f"Generating pseudobulk matrix...")
+        cmds.append(f"touch {pseudobulk_prefix}.begin")
         cmd = f"{args.spatula} sptsv2model --min-count {args.min_feature_count} --tsv '{sptsv_prefix}.randomized.tsv' --clust '{leiden_prefix}.tsv.gz' --features '{sptsv_prefix}.feature.counts.tsv' --json '{sptsv_prefix}.json' --out '{pseudobulk_prefix}.tsv'"
         cmds.append(cmd)
 
@@ -556,6 +557,7 @@ def run_ficture2_multi_cells(_args):
         heatmap_prefix = os.path.join(args.out_dir, args.out_prefix) + ".heatmap"
 
         cmds = cmd_separator([], f"Generating heatmap between LDA factors and Leiden clusters...")
+        cmds.append(f"touch {heatmap_prefix}.begin")
         #model_tsv = args.pretrained_model if args.pretrained_model is not None else f"{lda_prefix}.model.tsv"
         model_tsv = f"{lda_prefix}.model.tsv"
         cmd = f"{args.spatula} diffexp-model-matrix --tsv1 '{model_tsv}' --out '{lda_prefix}.model' --min-count {args.de_min_ct_per_feature} --max-pval {args.de_max_pval} --min-fc {args.de_min_fold}"
@@ -635,6 +637,7 @@ def run_ficture2_multi_cells(_args):
             cmds = cmd_separator([], f"Performing pixel-level decoding for sample {sample_id}...")
             sample_prefix = f"{args.in_dir}/samples/{sample_id}/{sample_id}.tiled"
             decode_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.pixel"
+            cmds.append(f"touch '{decode_prefix}.begin'")
             fit_width = args.decode_fit_width  ## e.g., 18um
             fit_n_move = fit_width // args.anchor_resolution + 1
             decode_id = f"p{fit_width}_a{args.anchor_resolution}"
@@ -652,25 +655,28 @@ def run_ficture2_multi_cells(_args):
                 f"--icol-val 3",
                 f"--hex-grid-dist {fit_width}",
                 f"--n-moves {fit_n_move}",
-                f"--pixel-res 0.5",
+                f"--single-molecule" if args.single_molecule else f"--pixel-res {args.decode_pixel_res}",
+                f"--output-binary",
                 f"--threads {args.threads}",
-                f"--seed {args.seed}",
-                f"--output-original"
-                ])
+                f"--seed {args.seed}"
+                #f"--output-original"
+            ])
             cmds.append(cmd)
-            cmd = " ".join([
-                ficture2bin, "draw-pixel-factors",
-                f"--in-tsv '{decode_prefix}.tsv'",
-                f"--header-json '{decode_prefix}.json'",
-                f"--in-color '{args.cmap_file}'",
-                f"--out '{decode_prefix}.png'",
-                f"--scale {args.decode_scale}",
-                f"--range '{sample_prefix}.coord_range.tsv'"
-                ])
+            cmd = f"'{ficture2bin}' draw-pixel-factors --in '{decode_prefix}' --binary --in-color '{args.cmap_file}' --out '{decode_prefix}.png' --scale {args.decode_scale} --range '{sample_prefix}.coord_range.tsv'"
+            # cmd = " ".join([
+            #     ficture2bin, "draw-pixel-factors",
+            #     f"--in-tsv '{decode_prefix}.tsv'",
+            #     f"--header-json '{decode_prefix}.json'",
+            #     f"--in-color '{args.cmap_file}'",
+            #     f"--out '{decode_prefix}.png'",
+            #     f"--scale {args.decode_scale}",
+            #     f"--range '{sample_prefix}.coord_range.tsv'"
+            #     ])
             cmds.append(cmd)
-            cmd = f"{args.gzip} -f '{decode_prefix}.tsv'"
-            cmds.append(cmd)
-            cmd = f"[ -f '{decode_prefix}.tsv.gz' ] && touch '{decode_prefix}.done'"
+            # cmd = f"{args.gzip} -f '{decode_prefix}.tsv'"
+            # cmds.append(cmd)
+            #cmd = f"[ -f '{decode_prefix}.tsv.gz' ] && touch '{decode_prefix}.done'"
+            cmd = f"[ -f '{decode_prefix}.bin' ] && touch '{decode_prefix}.done'"
             cmds.append(cmd)
             mm.add_target(f"{decode_prefix}.done", [modelf_done], cmds)
             sample_decode_done_files.append(f"{decode_prefix}.done")
@@ -754,7 +760,10 @@ def run_ficture2_multi_cells(_args):
             
         if args.decode:
             out_cell_params["pixel_png_path"] = f"{sample_prefix}.pixel.png"
-            out_cell_params["pixel_tsv_path"] = f"{sample_prefix}.pixel.tsv.gz"
+            out_cell_params["pixel_bin_prefix"] = f"{sample_prefix}.pixel"
+            out_cell_params["pixel_res"] = "0" if args.single_molecule else str(args.decode_pixel_res) ## use 0 to indicate single-molecule decoding
+            out_cell_params["decode_scale"] = str(args.decode_scale)
+            #out_cell_params["pixel_tsv_path"] = f"{sample_prefix}.pixel.tsv.gz"
 
         if args.tsne or args.umap:
             out_cell_params["manifolds"] = out_manifolds
