@@ -77,19 +77,13 @@ RUN bash -x build.sh && cp pmtiles/pmtiles /usr/local/bin/ && \
     cp tippecanoe/tippecanoe /usr/local/bin/ && \
     cp spatula/bin/spatula /usr/local/bin/ && \
     cp pmpoint/bin/pmpoint /usr/local/bin/ && \
-    cp punkst/bin/punkst /usr/local/bin/
+    cp punkst/bin/punkst /usr/local/bin/ && \
+    cp geotiff2pmtiles/geotiff2pmtiles /usr/local/bin/ 
 
 WORKDIR /app/cartloader
 
 # Install Python dependencies
 RUN python3 -m pip install --no-cache-dir -r installation/requirements.txt
-
-# Install Python dependencies from ficture 
-# * Add this step due to missing python packages
-RUN cd assets && \
-    wget https://raw.githubusercontent.com/seqscope/ficture/refs/heads/main/requirements.txt --output-document ./ficture_requirements.txt && \
-    grep -v '^importlib' ficture_requirements.txt > ficture_requirements.fixed.txt && \
-    python3 -m pip install -r ./ficture_requirements.fixed.txt
 
 # Install R dependencies
 RUN Rscript installation/install_r_packages.R
