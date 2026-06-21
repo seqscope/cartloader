@@ -5,14 +5,17 @@ set -euo pipefail
 # Generic end-to-end example of running cartloader on arbitrary Xenium output data.
 #
 # USAGE:
-#   ./xenium_end_to_end.sh <URL> <ID> <SYSTEM> [OPTIONS]
+#   ./xenium_end_to_end.sh --id <ID> (--url <URL> | --in-dir <DIR>) [OPTIONS]
 #
-# REQUIRED POSITIONAL ARGUMENTS:
-#   URL        URL to the Xenium *_outs.zip file from 10x Genomics
-#   ID         Unique identifier for this dataset (used as the cartload --id)
-#   SYSTEM     Execution environment: "docker" or "local"
+# REQUIRED ARGUMENTS:
+#   --id <str>           Unique identifier for this dataset (used as the cartload --id)
+#   --url <url>          URL to the Xenium *_outs.zip file from 10x Genomics (downloaded
+#                        and unzipped automatically). Mutually exclusive with --in-dir.
+#   --in-dir <dir>       Directory containing already-downloaded/unzipped Xenium output
+#                        (e.g. transcripts.csv.gz, cells.csv.gz). Mutually exclusive with --url.
 #
-# OPTIONAL NAMED ARGUMENTS (override defaults, any order):
+# OPTIONAL ARGUMENTS (override defaults, any order):
+#   --docker             Run in docker mode (default: local).
 #   --width <int>        Hexagon width in um for FICTURE2     (default: 12)
 #   --n-factor <list>    Comma-separated list of factors      (default: 12,24,48)
 #   --threads <int>      Number of threads per job            (default: 4)
@@ -20,12 +23,10 @@ set -euo pipefail
 #   --bin-count <int>    Bin count for run_cartload2          (default: 500)
 #
 # EXAMPLES:
-#   ./xenium_end_to_end.sh \
-#       https://cf.10xgenomics.com/samples/xenium/1.0.2/Xenium_V1_FF_Mouse_Brain_Coronal_Subset_CTX_HP/Xenium_V1_FF_Mouse_Brain_Coronal_Subset_CTX_HP_outs.zip \
-#       xenium-v1-ff-mouse-brain-coronal-subset-ctx-hp \
-#       docker
+#   ./xenium_end_to_end.sh --id my-dataset \
+#       --url https://cf.10xgenomics.com/samples/xenium/1.0.2/Xenium_V1_FF_Mouse_Brain_Coronal_Subset_CTX_HP/Xenium_V1_FF_Mouse_Brain_Coronal_Subset_CTX_HP_outs.zip
 #
-#   ./xenium_end_to_end.sh ${URL} ${ID} local --threads 8 --jobs 4 --n-factor 12,24,48
+#   ./xenium_end_to_end.sh --id my-dataset --in-dir /path/to/xenium/outs --docker --threads 8 --jobs 4
 #
 # NOTE (local): set CARTLOADER below (or have `cartloader` on your PATH).
 # NOTE (docker): set IMAGE below to the docker image you want to use.
@@ -40,19 +41,14 @@ CARTLOADER="cartloader"                      # cartloader executable/path (only 
 ##########################################################################################################
 ## Parse arguments
 usage() {
-	echo "Usage: $0 <URL> <ID> <SYSTEM:docker|local> [--width N] [--n-factor LIST] [--threads N] [--jobs N] [--bin-count N]"
+	echo "Usage: $0 --id <ID> (--url <URL> | --in-dir <DIR>) [--docker] [--width N] [--n-factor LIST] [--threads N] [--jobs N] [--bin-count N]"
 }
 
-if [ "$#" -lt 3 ]; then
-	echo "ERROR: Missing required arguments."
-	usage
-	exit 1
-fi
-
-URL=$1
-ID=$2
-SYSTEM=$3
-shift 3
+## Required / mode arguments (no defaults)
+ID=""
+URL=""
+IN_DIR=""
+SYSTEM=local
 
 ## Optional parameters with default values
 WIDTH=12
@@ -61,9 +57,13 @@ THREADS=4
 JOBS=2
 BIN_COUNT=500
 
-## Parse optional named arguments (any order)
+## Parse named arguments (any order)
 while [ "$#" -gt 0 ]; do
 	case "$1" in
+		--id)        ID=$2;        shift 2 ;;
+		--url)       URL=$2;       shift 2 ;;
+		--in-dir)    IN_DIR=$2;    shift 2 ;;
+		--docker)    SYSTEM=docker; shift 1 ;;
 		--width)     WIDTH=$2;     shift 2 ;;
 		--n-factor)  N_FACTOR=$2;  shift 2 ;;
 		--threads)   THREADS=$2;   shift 2 ;;
@@ -78,8 +78,22 @@ while [ "$#" -gt 0 ]; do
 	esac
 done
 
-if [ "${SYSTEM}" != "docker" ] && [ "${SYSTEM}" != "local" ]; then
-	echo "ERROR: SYSTEM must be either 'docker' or 'local' (got '${SYSTEM}')"
+## Validate required arguments
+if [ -z "${ID}" ]; then
+	echo "ERROR: --id is required"
+	usage
+	exit 1
+fi
+
+if [ -z "${URL}" ] && [ -z "${IN_DIR}" ]; then
+	echo "ERROR: one of --url or --in-dir is required"
+	usage
+	exit 1
+fi
+
+if [ -n "${URL}" ] && [ -n "${IN_DIR}" ]; then
+	echo "ERROR: --url and --in-dir are mutually exclusive"
+	usage
 	exit 1
 fi
 
@@ -88,7 +102,7 @@ LARGEST_N_FACTOR=$(echo ${N_FACTOR} | tr ',' '\n' | sort -nr | head -n 1)
 
 ##########################################################################################################
 ## Common settings
-## Base directory for input/output:
+## Base directory for output:
 ##   local  -> current working directory (pwd)
 ##   docker -> the directory containing this script
 if [ "${SYSTEM}" == "docker" ]; then
@@ -96,8 +110,20 @@ if [ "${SYSTEM}" == "docker" ]; then
 else
 	WORKDIR="$(pwd)"
 fi
-REAL_INDIR="${WORKDIR}/data"    # host path holding the unzipped Xenium output
 REAL_OUTDIR="${WORKDIR}/out"    # host path holding all cartloader output
+
+## host path holding the Xenium input:
+##   --in-dir -> use the provided directory as-is (resolved to an absolute path)
+##   --url    -> ${WORKDIR}/data, where the archive will be downloaded and unzipped
+if [ -n "${IN_DIR}" ]; then
+	if [ ! -d "${IN_DIR}" ]; then
+		echo "ERROR: --in-dir '${IN_DIR}' is not a directory"
+		exit 1
+	fi
+	REAL_INDIR="$(cd "${IN_DIR}" && pwd)"
+else
+	REAL_INDIR="${WORKDIR}/data"
+fi
 
 COLNAME=count
 REGEX_STR="^(Unassigned|Neg|BLANK|Blank|Intergenic|Deprecated|System|Gm[0-9]|MT-|mt-|Rps|Rpl|NCS-|NCP-)"
@@ -124,15 +150,19 @@ fi
 ##########################################################################################################
 
 ##########################################################################################################
-## Download and unzip the Xenium output from 10x Genomics
-mkdir -p ${REAL_INDIR} ${REAL_OUTDIR}
-ZIPFILE="${WORKDIR}/$(basename ${URL})"
-if [ ! -e "${ZIPFILE}" ]; then
-	wget -O ${ZIPFILE} ${URL}
+## Download and unzip the Xenium output from 10x Genomics (only when --url is given;
+## with --in-dir the input directory is used as-is).
+mkdir -p ${REAL_OUTDIR}
+if [ -n "${URL}" ]; then
+	mkdir -p ${REAL_INDIR}
+	ZIPFILE="${WORKDIR}/$(basename ${URL})"
+	if [ ! -e "${ZIPFILE}" ]; then
+		wget -O ${ZIPFILE} ${URL}
+	fi
+	## Unzip into REAL_INDIR. Xenium *_outs.zip archives extract their files directly
+	## (no wrapping subfolder), so transcripts.* etc. land directly under REAL_INDIR.
+	unzip -o ${ZIPFILE} -d ${REAL_INDIR}
 fi
-## Unzip into REAL_INDIR. Xenium *_outs.zip archives extract their files directly
-## (no wrapping subfolder), so transcripts.* etc. land directly under REAL_INDIR.
-unzip -o ${ZIPFILE} -d ${REAL_INDIR}
 ##########################################################################################################
 
 ## convert the 10x-specific transcript file into generic TSV file compatible with cartloader

@@ -129,7 +129,7 @@ def parse_arguments(_args):
     # color map
     aux_params.add_argument('--cmap-name', type=str, default="turbo", help='Name of color map to generate a color map (default: turbo)')
     aux_params.add_argument('--cmap-static', action='store_true', default=False, help='Use a fixed color map for factor visualization')
-    aux_params.add_argument('--static-cmap-file', type=str, help='If --cmap-static, define the path to the fixed color map (default: <cartloader_dir>/assets/fixed_color_map_60.tsv)')
+    aux_params.add_argument('--static-cmap-file', type=str, help='If --cmap-static, define the path to the fixed color map (default: <cartloader_dir>/assets/default_color_map.tsv)')
     # others parameters shared across steps
     aux_params.add_argument('--min-ct-per-feature', type=int, default=20, help='Minimum count per feature during LDA training, transform and decoding (default: 20)')
     aux_params.add_argument('--de-max-pval', type=float, default=1e-3, help='p-value cutoff for differential expression (default: 1e-3)')
@@ -366,7 +366,7 @@ def run_ficture(_args):
     if args.cmap_static:
         if args.static_cmap_file is None:
             repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-            args.static_cmap_file = os.path.join(repo_dir, "assets", "fixed_color_map_60.tsv")
+            args.static_cmap_file = os.path.join(repo_dir, "assets", "default_color_map.tsv")
         assert os.path.exists(args.static_cmap_file), f"Static color map file {args.static_cmap_file} does not exist"
 
     # 1. sort 

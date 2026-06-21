@@ -45,7 +45,7 @@ def parse_arguments(_args):
     key_params.add_argument('--n-factor', type=int, help='Number of factors for LDA training.')
     key_params.add_argument('--leiden-resolution', type=float, default=1.0, help='Resolution for Leiden clustering (default: 1.0)')
     key_params.add_argument('--anchor-resolution', type=int, default=6, help='Anchor resolution for decoding (default: 6)')
-    key_params.add_argument('--cmap-file', type=str, default=os.path.join(repo_dir, "assets", "fixed_color_map_512.tsv"), help='Path to fixed color map TSV (default: <cartloader_dir>/assets/fixed_color_map_512.tsv)')
+    key_params.add_argument('--cmap-file', type=str, default=os.path.join(repo_dir, "assets", "default_color_map.tsv"), help='Path to fixed color map TSV (default: <cartloader_dir>/assets/default_color_map.tsv)')
 
     # aux params
     aux_params = parser.add_argument_group("Auxiliary Parameters", "Auxiliary parameters (using default is recommended)")
