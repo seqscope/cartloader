@@ -417,9 +417,12 @@ def run_ficture2_multi_cells(_args):
                             wf_sample.write(f"{cell_id}\t{x}\t{y}\n")
                         nlines += 1
             draw_manifold_rscript=f"{repo_dir}/cartloader/r/draw_manifold_clust.r"
-            cmd = f"{args.R} '{draw_manifold_rscript}' --tsv-manifold '{metaf}' --tsv-clust '{sample_leiden_prefix}.tsv.gz' --tsv-colname-x X --tsv-colname-y Y --out '{sample_leiden_prefix}.xy.png' --out-tsv '{sample_leiden_prefix}.xy.tsv.gz' --tsv-colname-clust topK"
-            merge_cmd += f"[ -f '{sample_leiden_prefix}.xy.done' ] && "
+            if sample_id in samp2clust:
+                cmd = f"{args.R} '{draw_manifold_rscript}' --tsv-manifold '{metaf}' --tsv-clust '{sample_leiden_prefix}.tsv.gz' --tsv-colname-x X --tsv-colname-y Y --out '{sample_leiden_prefix}.xy.png' --out-tsv '{sample_leiden_prefix}.xy.tsv.gz' --tsv-colname-clust topK"
+            else:
+                cmd = f"touch '{sample_leiden_prefix}.xy.tsv.gz' && touch '{sample_leiden_prefix}.xy.png'"
             cmds.append(cmd)
+            merge_cmd += f"[ -f '{sample_leiden_prefix}.xy.done' ] && "
             cmds.append(f"[ -f '{sample_leiden_prefix}.xy.tsv.gz' ] && [ -f '{sample_leiden_prefix}.xy.png' ] && touch '{sample_leiden_prefix}.xy.done'" )
         merge_cmd += f"[ -f '{leiden_prefix}.tsv.gz' ] && touch '{leiden_prefix}.done'"
         cmds.append(merge_cmd)
