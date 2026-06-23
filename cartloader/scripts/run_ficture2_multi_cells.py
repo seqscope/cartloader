@@ -328,6 +328,9 @@ def run_ficture2_multi_cells(_args):
                 wf.write("sample_id\tcell_id\ttopK\n")
                 for sample_id in in_samples: 
                     sample_leiden_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.leiden"
+                    if sample_id not in samp2clust:
+                        logger.warning(f"Sample {sample_id} not found in --list-cluster. Skipping...")
+                        continue
                     clustf = samp2clust[sample_id]
                     logger.info(f"Reformatting existing cluster file {clustf} for sample {sample_id}...")
                     with flexopen(clustf, "rt") as rf, flexopen(f"{sample_leiden_prefix}.tsv.gz", "wt") as wf_sample:
