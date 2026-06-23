@@ -329,39 +329,44 @@ def run_ficture2_multi_cells(_args):
                 for sample_id in in_samples: 
                     sample_leiden_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.leiden"
                     if sample_id not in samp2clust:
-                        logger.warning(f"Sample {sample_id} not found in --list-cluster. Skipping...")
-                        continue
-                    clustf = samp2clust[sample_id]
-                    logger.info(f"Reformatting existing cluster file {clustf} for sample {sample_id}...")
-                    with flexopen(clustf, "rt") as rf, flexopen(f"{sample_leiden_prefix}.tsv.gz", "wt") as wf_sample:
-                        delim = None
-                        nlines = 0
-                        wf_sample.write("cell_id\ttopK\n")
-                        for line in rf:
-                            if delim is None:
-                                if line.find("\t") != -1:
-                                    delim = "\t"
-                                elif line.find(",") != -1:
-                                    delim = ","
-                                elif line.find(" ") != -1:
-                                    delim = " "
-                                else:
-                                    raise ValueError(f"Cannot determine delimiter in existing cluster file based on the first line {line}.")
-                            toks = line.strip().split(delim)
-                            if len(toks) != 2:
-                                raise ValueError(f"Each line in existing cluster file must have exactly 2 columns. Found {len(toks)} columns in line: {line}")
-                            cell_id = toks[0].replace('"', '')
-                            cluster_id = toks[1].replace('"', '')
-                            if nlines > 0 or cluster_id.isdigit():
-                                if args.zero_based_clust_id:
-                                    int_cluster_id = int(cluster_id)
-                                else:
-                                    int_cluster_id = int(cluster_id)-1 ## convert to 0-based
-                                if int_cluster_id < 0:
-                                    raise ValueError(f"Cluster ID must be >= {0 if args.zero_based_clust_id else 1} in existing cluster file. Found {cluster_id} in line: {line}")
-                                wf.write(f"{sample_id}\t{cell_id}\t{int_cluster_id}\n")
-                                wf_sample.write(f"{cell_id}\t{int_cluster_id}\n")
-                            nlines += 1
+                        logger.warning(f"Sample {sample_id} not found in --list-cluster. Writing non-informative file")
+                        with flexopen(f"{sample_leiden_prefix}.tsv.gz", "wt") as wf_sample:
+                            dummy_cell_id = f"{sample_id}_dummy_cell_id"
+                            wf_sample.write("cell_id\ttopK\n")
+                            wf_sample.write(f"{dummy_cell_id}\tNA\n")
+                            wf.write(f"{sample_id}\t{dummy_cell_id}\tNA\n")
+                    else:
+                        clustf = samp2clust[sample_id]
+                        logger.info(f"Reformatting existing cluster file {clustf} for sample {sample_id}...")
+                        with flexopen(clustf, "rt") as rf, flexopen(f"{sample_leiden_prefix}.tsv.gz", "wt") as wf_sample:
+                            delim = None
+                            nlines = 0
+                            wf_sample.write("cell_id\ttopK\n")
+                            for line in rf:
+                                if delim is None:
+                                    if line.find("\t") != -1:
+                                        delim = "\t"
+                                    elif line.find(",") != -1:
+                                        delim = ","
+                                    elif line.find(" ") != -1:
+                                        delim = " "
+                                    else:
+                                        raise ValueError(f"Cannot determine delimiter in existing cluster file based on the first line {line}.")
+                                toks = line.strip().split(delim)
+                                if len(toks) != 2:
+                                    raise ValueError(f"Each line in existing cluster file must have exactly 2 columns. Found {len(toks)} columns in line: {line}")
+                                cell_id = toks[0].replace('"', '')
+                                cluster_id = toks[1].replace('"', '')
+                                if nlines > 0 or cluster_id.isdigit():
+                                    if args.zero_based_clust_id:
+                                        int_cluster_id = int(cluster_id)
+                                    else:
+                                        int_cluster_id = int(cluster_id)-1 ## convert to 0-based
+                                    if int_cluster_id < 0:
+                                        raise ValueError(f"Cluster ID must be >= {0 if args.zero_based_clust_id else 1} in existing cluster file. Found {cluster_id} in line: {line}")
+                                    wf.write(f"{sample_id}\t{cell_id}\t{int_cluster_id}\n")
+                                    wf_sample.write(f"{cell_id}\t{int_cluster_id}\n")
+                                nlines += 1
             ## write per-sample metadata file
 
         ## spatial visualization of leiden clusters
@@ -417,10 +422,7 @@ def run_ficture2_multi_cells(_args):
                             wf_sample.write(f"{cell_id}\t{x}\t{y}\n")
                         nlines += 1
             draw_manifold_rscript=f"{repo_dir}/cartloader/r/draw_manifold_clust.r"
-            if sample_id in samp2clust:
-                cmd = f"{args.R} '{draw_manifold_rscript}' --tsv-manifold '{metaf}' --tsv-clust '{sample_leiden_prefix}.tsv.gz' --tsv-colname-x X --tsv-colname-y Y --out '{sample_leiden_prefix}.xy.png' --out-tsv '{sample_leiden_prefix}.xy.tsv.gz' --tsv-colname-clust topK"
-            else:
-                cmd = f"touch '{sample_leiden_prefix}.xy.tsv.gz' && touch '{sample_leiden_prefix}.xy.png'"
+            cmd = f"{args.R} '{draw_manifold_rscript}' --tsv-manifold '{metaf}' --tsv-clust '{sample_leiden_prefix}.tsv.gz' --tsv-colname-x X --tsv-colname-y Y --out '{sample_leiden_prefix}.xy.png' --out-tsv '{sample_leiden_prefix}.xy.tsv.gz' --tsv-colname-clust topK"
             cmds.append(cmd)
             merge_cmd += f"[ -f '{sample_leiden_prefix}.xy.done' ] && "
             cmds.append(f"[ -f '{sample_leiden_prefix}.xy.tsv.gz' ] && [ -f '{sample_leiden_prefix}.xy.png' ] && touch '{sample_leiden_prefix}.xy.done'" )
