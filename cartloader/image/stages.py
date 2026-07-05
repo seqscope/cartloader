@@ -114,6 +114,31 @@ def _needs_rgb_expansion_cli(image_path: str, args) -> bool:
 #     print("Use: -expand rgb")
 # else:
 #     print("Do not use: -expand rgb")
+def _read_png_size(image_path: str) -> tuple[int, int]:
+    """Return (width, height) of a PNG by parsing its IHDR chunk (no gdal/PIL)."""
+    with open(image_path, "rb") as handle:
+        header = handle.read(24)
+    # 8-byte PNG signature, then 4-byte length + 'IHDR' type, then width/height (big-endian uint32)
+    if len(header) < 24 or header[:8] != b"\x89PNG\r\n\x1a\n" or header[12:16] != b"IHDR":
+        raise ValueError(f"Not a valid PNG file: {image_path}")
+    width = int.from_bytes(header[16:20], "big")
+    height = int.from_bytes(header[20:24], "big")
+    return width, height
+
+
+def _get_image_size(image_path: str) -> tuple[int, int]:
+    """Return (width, height) of a TIF or PNG image without relying on gdal."""
+    ext = os.path.splitext(image_path)[1].lower()
+    if ext in {".tif", ".tiff"}:
+        with tifffile.TiffFile(image_path) as tif:
+            page = tif.pages[0]
+            return int(page.imagewidth), int(page.imagelength)
+    if ext == ".png":
+        return _read_png_size(image_path)
+    raise ValueError(
+        f"Cannot determine image size for --georef-plain (unsupported extension '{ext}'): {image_path}"
+    )
+
 def _resolve_bounds_from_args(args, *, in_img: str) -> Optional[Dict[str, float]]:
 
     # only one should be provided and indicate that current georef_detect only supports ome.
@@ -121,10 +146,11 @@ def _resolve_bounds_from_args(args, *, in_img: str) -> Optional[Dict[str, float]
     georef_bounds_tsv=getattr(args, "georef_bounds_tsv", None)
     georef_pixel_tsv=getattr(args, "georef_pixel_tsv", None)
     georef_detect=getattr(args, "georef_detect", None)
+    georef_plain=getattr(args, "georef_plain", False)
 
-    georef_inputs = [georef_bounds is not None, georef_bounds_tsv is not None, georef_pixel_tsv is not None, georef_detect is not None]
+    georef_inputs = [georef_bounds is not None, georef_bounds_tsv is not None, georef_pixel_tsv is not None, georef_detect is not None, georef_plain]
     assert sum(georef_inputs) == 1, (
-        f"georeferencing bounds not found or ambiguous. Provide exactly one of --georef-bounds, --georef-bound-tsv, --georef-pixel-tsv, or georef_detect"
+        f"georeferencing bounds not found or ambiguous. Provide exactly one of --georef-bounds, --georef-bound-tsv, --georef-pixel-tsv, --georef-detect, or --georef-plain"
     )
 
     if georef_bounds:
@@ -181,6 +207,15 @@ def _resolve_bounds_from_args(args, *, in_img: str) -> Optional[Dict[str, float]
             lrx = ulx + float(physical_size_x) * int(size_x) + args.georef_offset_x
             lry = uly + float(physical_size_y) * int(size_y) + args.georef_offset_y
             return {"ulx": ulx, "uly": uly, "lrx": lrx, "lry": lry}
+
+    if georef_plain:
+        um_per_pixel = float(getattr(args, "um_per_pixel", 1.0))
+        size_x, size_y = _get_image_size(in_img)
+        ulx = args.georef_offset_x
+        uly = args.georef_offset_y
+        lrx = ulx + size_x * um_per_pixel
+        lry = uly + size_y * um_per_pixel
+        return {"ulx": ulx, "uly": uly, "lrx": lrx, "lry": lry}
 
     return None
 
