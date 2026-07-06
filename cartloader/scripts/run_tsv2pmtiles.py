@@ -91,6 +91,9 @@ def run_tsv2pmtiles(_args):
         args.col_rename.append("X:lon")
         args.col_rename.append("Y:lat")
 
+    if args.use_pmpoint:
+        args.col_rename.append("Feature:gene")
+
     # start mm
     mm = minimake()
 
@@ -109,6 +112,12 @@ def run_tsv2pmtiles(_args):
     if args.split:
         logger.info("Splitting the input cross-platform TSV file into CSV files")
 
+        pmpoint_arg = "--colname-feature Feature" if args.use_pmpoint else ""
+        col_rename_arg = ""
+        if args.col_rename is not None and len(args.col_rename) > 0:
+            for col_rename in args.col_rename:
+                col_rename_arg += f" --col-rename {col_rename}"
+
         cmd = f"""'{args.spatula}' split-molecule-counts \\
                 --mol-tsv '{args.in_molecules}' \\
                 --feature-tsv '{args.in_features}' \\
@@ -119,7 +128,7 @@ def run_tsv2pmtiles(_args):
                 --out-mol-tsv-delim '{args.out_molecules_delim}' \\
                 --out-feature-tsv-delim '{args.out_features_delim}' \\
                 --out-mol-suffix '{args.out_molecules_suffix}' \\
-                --out-feature-suffix '{args.out_features_suffix}'
+                --out-feature-suffix '{args.out_features_suffix}' {pmpoint_arg} {col_rename_arg}
         """ + ("--skip-original" if args.skip_original else "")
 
         print(cmd)
