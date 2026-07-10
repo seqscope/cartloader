@@ -10,6 +10,8 @@ This tutorial walks through the `CartLoader` workflow, all packaged inside a pre
 
     - Set up `Docker` on their system (see [Set Up Docker](#set-up-docker) guide).
 
+!!! question
+    - [I am not sure whether to run with Docker or run locally. Which one should I choose?](../../faq/choose_run_mode.md)
 ---
 
 ## Install Docker
@@ -111,19 +113,7 @@ The example dataset is already provided in `FICTURE`-compatible SGE format, so t
 %}
 
 {%
-  include-markdown "../../../includes/includemd_vigenettes_upload_aws_docker.md"
-%}
-
-{%
-  include-markdown "../../../includes/includemd_vigenettes_upload.md" start="<!--section2-start-->" end="<!--section2-end-->" preserve-includer-indent=false
-%}
-
-{%
-  include-markdown "../../../includes/includemd_vigenettes_upload_zenodo_docker.md"
-%}
-
-{%
-  include-markdown "../../../includes/includemd_vigenettes_upload.md" start="<!--section3-start-->" end="<!--section3-end-->" preserve-includer-indent=false
+  include-markdown "../../../includes/includemd_vigenettes_upload_docker.md" preserve-includer-indent=false
 %}
 
 ---

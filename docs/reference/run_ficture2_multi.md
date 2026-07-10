@@ -6,6 +6,10 @@
 
 Use this when processing multiple samples together to learn shared spatial factors and generate per‑sample outputs in a single, parallelizable pipeline.
 
+!!! question
+    - [What is `FICTURE` and `punkst`?](../faq/ficture.md)
+    - [Why use Multi‑Sample FICTURE Analysis?](../faq/why_multi-sample.md)
+
 ---
 ## Requirements
 

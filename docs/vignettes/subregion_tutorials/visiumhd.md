@@ -46,7 +46,7 @@ train_width=18                           # define LDA training hexagon width (co
 n_factor=6,12                            # define number of factors in LDA training (comma-separated if multiple n-factor values are provided)
 ```
 
-!!! info "How to Define Scaling Factors for Visium HD?"
+!!! question "How to define Scaling Factors for Visium HD?"
 
     10x Visium HD includes a `scalefactors_json.json` file that provides pixel-to-micrometer scaling information. `CartLoader` can directly accept this file via the `--scale-json` option and automatically compute the appropriate scaling factor, so you do not need to manually calculate and specify `--units-per-um`.
     
