@@ -1,0 +1,39 @@
+{
+  "platform": "10x_visium_hd",
+  "exclude_feature_regex": "^(Unassigned|Neg|BLANK|Blank|Intergenic|Deprecated|System|mt-|MT-|Gm\\d+)",
+  "ingest": {
+    "sge_platform": "10x_visium_hd",
+    "inputs": {
+      "--scale-json": "binned_outputs/square_002um/spatial/scalefactors_json.json",
+      "--in-mex": "binned_outputs/square_002um/filtered_feature_bc_matrix/",
+      "--pos-parquet": "binned_outputs/square_002um/spatial/tissue_positions.parquet"
+    },
+    "extra_flags": ["--sge-visual", "--scale-xy 2.0"]
+  },
+  "ficture": {
+    "width": "12",
+    "n_factor": "24,48,96",
+    "min_ct_per_unit_hexagon": 50,
+    "decode_scale": 2,
+    "single_molecule": true
+  },
+  "cartload": {
+    "use_pmpoint": true,
+    "bin_count": 500,
+    "sge_scale": 2
+  },
+  "squares": [
+    { "subdir": "binned_outputs/square_008um", "bin_size": 8, "suffix": "spaceranger-sq008" },
+    { "subdir": "binned_outputs/square_016um", "bin_size": 16, "suffix": "spaceranger-sq016" }
+  ],
+  "cell_import": {
+    "detect_dir": "segmented_outputs",
+    "suffix": "spaceranger"
+  },
+  "hne": {
+    "georef_plain": true,
+    "um_per_pixel_json": "binned_outputs/square_002um/spatial/scalefactors_json.json",
+    "um_per_pixel_key": "microns_per_pixel",
+    "out_id": "hne"
+  }
+}

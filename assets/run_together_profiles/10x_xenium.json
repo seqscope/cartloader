@@ -1,0 +1,40 @@
+{
+  "platform": "10x_xenium",
+  "exclude_feature_regex": "^(Unassigned|Neg|BLANK|Blank|Intergenic|Deprecated|System|Gm[0-9]|MT-|mt-|Rps|Rpl|NCS-|NCP-)",
+  "ingest": {
+    "sge_platform": "10x_xenium",
+    "autodetect": [
+      { "file": "transcripts.csv.gz", "flag": "--in-csv" },
+      { "file": "transcripts.parquet", "flag": "--in-parquet" },
+      { "file": "transcripts/transcripts.parquet", "flag": "--in-parquet" }
+    ],
+    "csv_colnames_others": ["cell_id", "z_location", "overlaps_nucleus", "nucleus_distance"],
+    "extra_flags": ["--sge-visual"]
+  },
+  "ficture": {
+    "width": "12",
+    "n_factor": "12,24,48",
+    "min_ct_per_unit_hexagon": 100,
+    "single_molecule": true
+  },
+  "cells": {
+    "boundaries": { "file": "cell_boundaries.csv.gz" },
+    "xy": { "file": "cells.csv.gz", "colname_x": "x_centroid", "colname_y": "y_centroid" },
+    "clusters": {
+      "file": "analysis/clustering/gene_expression_graphclust/clusters.csv",
+      "prefix": "xeniumranger"
+    }
+  },
+  "cartload": {
+    "use_pmpoint": true,
+    "bin_count": 500
+  },
+  "images": [
+    { "match": "morphology_focus/morphology_focus_0000.ome.tif", "id": "dapi",     "color": "0F73E6", "method": "ome2png" },
+    { "match": "morphology_focus/morphology_focus_0001.ome.tif", "id": "boundary", "color": "F300A5", "method": "ome2png" },
+    { "match": "morphology_focus/morphology_focus_0002.ome.tif", "id": "rna",      "color": "A4A400", "method": "ome2png" },
+    { "match": "morphology_focus/morphology_focus_0003.ome.tif", "id": "protein",  "color": "008A00", "method": "ome2png" },
+    { "match": "morphology_focus.ome.tif", "id": "dapi", "color": "0F73E6", "method": "ome2png" },
+    { "match": "morphology.ome.tif", "id": "dapi", "color": "0F73E6", "method": "ome2png", "extra_flags": ["--use-middle-page", "--high-memory"] }
+  ]
+}
