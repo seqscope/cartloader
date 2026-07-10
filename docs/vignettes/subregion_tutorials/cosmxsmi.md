@@ -46,7 +46,7 @@ n_factor=6,12                            # define number of factors in LDA train
 
 ```
 
-!!! info "How to Define Scaling Factors for CosMX SMI?"
+!!! question "How to define Scaling Factors for CosMX SMI?"
 
     According to the README.html provided with the example CosMX dataset, each pixel has an edge length of 120 nm. To calculate the number of pixels per micrometer, use the formula: scale = 1000 / 120.
 

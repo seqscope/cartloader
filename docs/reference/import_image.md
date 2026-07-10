@@ -5,6 +5,9 @@
 `import_image` loads a histology or background image and produces a web‑ready PMTiles layer.
 It supports OME‑TIFF/TIFF/PNG inputs and offers optional orientation transforms.
 
+!!! question
+    - [How do I decide orientation for background image import?](../faq/background_image_orientation.md)
+
 ---
 ## Requirements
 - Input image: OME‑TIFF/TIFF/PNG.

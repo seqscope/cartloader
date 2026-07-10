@@ -49,7 +49,7 @@ train_width=18                           # define LDA training hexagon width (co
 n_factor=6,12                            # define number of factors in LDA training (comma-separated if multiple n-factor values are provided)
 ```
 
-!!! info "How to Define Scaling Factors for Seq-Scope?"
+!!! question "How to define Scaling Factors for Seq-Scope?"
 
     The latest [SeqScope](https://www.nature.com/articles/s41596-024-01065-0) with an Illumina NovaSeq 6000 uses [`NovaScope`](https://seqscope.github.io/NovaScope/) pipeline to process sequencing data. [`NovaScope`](https://seqscope.github.io/NovaScope/) defaults to generate SGE at nanometer (nm) resolution, meaning each pixel corresponds to 1 nm.
 
