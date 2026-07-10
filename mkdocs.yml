@@ -83,6 +83,8 @@ nav:
         # - MERSCOPE Pipeline: vignettes/pipelines/merscope.md     # example placeholder
   - References:
       - Overview: reference/intro.md
+      - Unified Orchestrator:
+          - End-to-End Pipeline (run_together): reference/run_together.md
       - SGE Preparation:
           - SGE Format Conversion: reference/sge_convert.md
           - SGE Preparation Add-ons: reference/sge_addon.md
