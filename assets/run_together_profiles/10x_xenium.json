@@ -16,7 +16,6 @@
     "boundaries": { "file": "cell_boundaries.csv.gz" },
     "clusters":   { "file": "analysis/clustering/gene_expression_graphclust/clusters.csv" }
   },
-  "ficture_defaults": { "min_ct_per_unit_hexagon": 100, "single_molecule": true },
   "ficture": [
     { "id": "denovo", "mode": "train", "width": "12", "n_factor": "12,24,48" }
   ],

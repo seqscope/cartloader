@@ -91,7 +91,7 @@ Everything reduces to these sections. The three list sections are **assembled ac
   "platform": "10x_xenium", "out_dir": "...", "resources": { "n_jobs": 8, "threads": 16 },
   "samples": [ { "id": "s1", "in_dir": "..." } ],
   "exclude_feature_regex": "...",
-  "ficture_defaults": { "min_ct_per_unit_hexagon": 100, "single_molecule": true },
+  "ficture_defaults": { "decode_scale": 2 },
   "ficture":       [ /* analyses: each is a de-novo train OR a projection */ ],
   "cell_analyses": [ /* {id, uses:[roles], model_id?} */ ],
   "images":        [ /* {id, source|match, kind, color, convert} */ ],
@@ -119,7 +119,7 @@ Each entry is either de-novo or a projection:
 { "id": "ref",    "mode": "project", "model": "/models/ref.tsv", "width": 12 }
 ```
 
-`ficture_defaults` (decode params like `min_ct_per_unit_hexagon`, `single_molecule`, `decode_scale`) apply to **every** analysis, including projections; per-entry keys win.
+`ficture_defaults` (per-analysis decode params like `decode_scale`) apply to **every** analysis, including projections; per-entry keys win. The common `min_ct_per_unit_hexagon` and single-molecule behavior are instead controlled globally by the CLI flags below (`--min-ct-per-unit-hexagon`, `--always/never-single-molecule`).
 
 ### `cell_analyses`
 
@@ -202,6 +202,14 @@ This mirrors the FICTURE manifests: `run_ficture2_multi` writes a shared [`fictu
 **Input/output:** `--platform`, `--in-dir`, `--samples`, `--out-dir`, `--out-root`, `--id`, `--config`, `--profile`.
 
 **FICTURE mode:** `--width`, `--n-factor` (de-novo); `--project-models` (projection-only — existing FICTURE dir(s), comma-separated).
+
+**Common decode overrides** (else profile / built-in default):
+
+- `--exclude-feature-regex` — regex of features to exclude. Default: the profile's, else `^(Unassigned|Neg|BLANK|Blank|Intergenic|Deprecated|System|Gm[0-9]|MT-|mt-|Rps|Rpl|NCS-|NCP-)`.
+- `--min-ct-per-unit-hexagon` — minimum count per hexagon for FICTURE. Default: `50`.
+- `--always-single-molecule` / `--never-single-molecule` — force single-molecule ON (or OFF) for **both** pixel FICTURE and cell decode. Default (neither flag): **ON for pixel FICTURE, OFF for cell decode**.
+
+Precedence for the regex and min-count: an explicit CLI flag wins over a `--config`/profile value, which wins over the built-in default.
 
 ---
 ## Output

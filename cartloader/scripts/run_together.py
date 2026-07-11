@@ -6,6 +6,10 @@ from cartloader.utils.utils import execute_makefile
 repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 PROFILE_DIR = os.path.join(repo_dir, "assets", "run_together_profiles")
 
+# Global fallbacks (a profile or --config may override; a CLI flag wins over both).
+DEFAULT_EXCLUDE_REGEX = "^(Unassigned|Neg|BLANK|Blank|Intergenic|Deprecated|System|Gm[0-9]|MT-|mt-|Rps|Rpl|NCS-|NCP-)"
+DEFAULT_MIN_CT_PER_UNIT_HEXAGON = 50
+
 # Sample-level input roles. A sample provides these either explicitly (sample
 # sheet columns / JSON) or by auto-detection inside its `in_dir` (profile.roles).
 ROLE_KEYS = ["transcript", "xy", "boundaries", "clusters", "mex"]
@@ -206,6 +210,30 @@ def build_config(args):
     if "images" in cfg:
         prof["images"] = merge_images(prof["images"], cfg["images"])
 
+    # --- resolve common decode defaults (CLI > config/profile > hardcoded) ---
+    # exclude-feature regex
+    if args.exclude_feature_regex is not None:
+        prof["exclude_feature_regex"] = args.exclude_feature_regex
+    elif not prof.get("exclude_feature_regex"):
+        prof["exclude_feature_regex"] = DEFAULT_EXCLUDE_REGEX
+    # min count per unit hexagon (applies to the pixel FICTURE analyses)
+    fd = prof.setdefault("ficture_defaults", {})
+    if args.min_ct_per_unit_hexagon is not None:
+        fd["min_ct_per_unit_hexagon"] = args.min_ct_per_unit_hexagon
+    elif "min_ct_per_unit_hexagon" not in fd:
+        fd["min_ct_per_unit_hexagon"] = DEFAULT_MIN_CT_PER_UNIT_HEXAGON
+    # single-molecule: default ON for pixel FICTURE, OFF for cell decode;
+    # --always/--never force the same value for both.
+    if args.always_single_molecule and args.never_single_molecule:
+        sys.exit("ERROR: --always-single-molecule and --never-single-molecule are mutually exclusive.")
+    if args.always_single_molecule:
+        prof["_sm_pixel"], prof["_sm_cells"] = True, True
+    elif args.never_single_molecule:
+        prof["_sm_pixel"], prof["_sm_cells"] = False, False
+    else:
+        prof["_sm_pixel"], prof["_sm_cells"] = True, False
+    fd.pop("single_molecule", None)   # now controlled by _sm_pixel/_sm_cells
+
     # Apply ficture_defaults to every analysis (per-entry keys win).
     prof["ficture"] = [deep_merge(prof["ficture_defaults"], a) for a in prof["ficture"]]
 
@@ -312,7 +340,7 @@ def cmd_ficture_analysis(a, in_list, fic_dir, cfg):
         parts.append(f"--min-ct-per-unit-hexagon {a['min_ct_per_unit_hexagon']}")
     if a.get("decode_scale"):
         parts.append(f"--decode-scale {a['decode_scale']}")
-    if a.get("single_molecule"):
+    if cfg.get("_sm_pixel"):   # single-molecule for pixel FICTURE (default ON)
         parts.append("--single-molecule")
     if cfg.get("exclude_feature_regex"):
         parts.append(f"--exclude-feature-regex \"{cfg['exclude_feature_regex']}\"")
@@ -331,9 +359,7 @@ def cmd_cells(ca, list_files, fic_dir, model_path, cfg):
         if role == "xy":
             parts.append(f"--xy-colname-x {xy_cfg.get('colname_x', 'X')}")
             parts.append(f"--xy-colname-y {xy_cfg.get('colname_y', 'Y')}")
-    # decode params shared with the pixel analyses
-    fd = cfg.get("ficture_defaults", {})
-    if fd.get("single_molecule"):
+    if cfg.get("_sm_cells"):   # single-molecule for cell decode (default OFF)
         parts.append("--single-molecule")
     if cfg.get("exclude_feature_regex"):
         parts.append(f"--exclude-feature-regex \"{cfg['exclude_feature_regex']}\"")
@@ -655,6 +681,17 @@ def parse_arguments(_args):
     f.add_argument("--n-factor", type=str, help="De-novo: factor count(s) (comma-separated)")
     f.add_argument("--project-models", type=str, help="Projection-only: existing FICTURE dir(s) (comma-separated); "
                                                       "reads each ficture.params.json and reuses its models. No LDA training.")
+
+    d = p.add_argument_group("Common decode overrides (else profile / built-in defaults)")
+    d.add_argument("--exclude-feature-regex", type=str, default=None,
+                   help=f"Regex of features to exclude (default: profile's, else '{DEFAULT_EXCLUDE_REGEX}')")
+    d.add_argument("--min-ct-per-unit-hexagon", type=int, default=None,
+                   help=f"Minimum count per hexagon for FICTURE (default: {DEFAULT_MIN_CT_PER_UNIT_HEXAGON})")
+    d.add_argument("--always-single-molecule", action="store_true",
+                   help="Force single-molecule ON for both pixel FICTURE and cell decode")
+    d.add_argument("--never-single-molecule", action="store_true",
+                   help="Force single-molecule OFF for both pixel FICTURE and cell decode "
+                        "(default: ON for pixel FICTURE, OFF for cell decode)")
     return p.parse_args(_args)
 
 

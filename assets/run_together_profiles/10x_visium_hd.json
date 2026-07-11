@@ -11,7 +11,7 @@
     "extra_flags": ["--sge-visual", "--scale-xy 2.0"]
   },
   "roles": {},
-  "ficture_defaults": { "min_ct_per_unit_hexagon": 50, "decode_scale": 2, "single_molecule": true },
+  "ficture_defaults": { "decode_scale": 2 },
   "ficture": [
     { "id": "denovo", "mode": "train", "width": "12", "n_factor": "24,48,96" }
   ],
