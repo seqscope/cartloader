@@ -11,30 +11,26 @@
     "csv_colnames_others": ["cell_id", "z_location", "overlaps_nucleus", "nucleus_distance"],
     "extra_flags": ["--sge-visual"]
   },
-  "ficture": {
-    "width": "12",
-    "n_factor": "12,24,48",
-    "min_ct_per_unit_hexagon": 100,
-    "single_molecule": true
-  },
-  "cells": {
+  "roles": {
+    "xy":         { "file": "cells.csv.gz", "colname_x": "x_centroid", "colname_y": "y_centroid" },
     "boundaries": { "file": "cell_boundaries.csv.gz" },
-    "xy": { "file": "cells.csv.gz", "colname_x": "x_centroid", "colname_y": "y_centroid" },
-    "clusters": {
-      "file": "analysis/clustering/gene_expression_graphclust/clusters.csv",
-      "prefix": "xeniumranger"
-    }
+    "clusters":   { "file": "analysis/clustering/gene_expression_graphclust/clusters.csv" }
   },
-  "cartload": {
-    "use_pmpoint": true,
-    "bin_count": 500
-  },
+  "ficture_defaults": { "min_ct_per_unit_hexagon": 100, "single_molecule": true },
+  "ficture": [
+    { "id": "denovo", "mode": "train", "width": "12", "n_factor": "12,24,48" }
+  ],
+  "cell_analyses": [
+    { "id": "cartloader",   "uses": ["boundaries", "xy"] },
+    { "id": "xeniumranger", "uses": ["clusters", "boundaries", "xy"] }
+  ],
+  "cartload": { "use_pmpoint": true, "bin_count": 500 },
   "images": [
-    { "match": "morphology_focus/morphology_focus_0000.ome.tif", "id": "dapi",     "color": "0F73E6", "method": "ome2png" },
-    { "match": "morphology_focus/morphology_focus_0001.ome.tif", "id": "boundary", "color": "F300A5", "method": "ome2png" },
-    { "match": "morphology_focus/morphology_focus_0002.ome.tif", "id": "rna",      "color": "A4A400", "method": "ome2png" },
-    { "match": "morphology_focus/morphology_focus_0003.ome.tif", "id": "protein",  "color": "008A00", "method": "ome2png" },
-    { "match": "morphology_focus.ome.tif", "id": "dapi", "color": "0F73E6", "method": "ome2png" },
-    { "match": "morphology.ome.tif", "id": "dapi", "color": "0F73E6", "method": "ome2png", "extra_flags": ["--use-middle-page", "--high-memory"] }
+    { "id": "dapi",     "match": "morphology_focus/morphology_focus_0000.ome.tif", "kind": "single", "color": "0F73E6", "convert": "ome2png" },
+    { "id": "boundary", "match": "morphology_focus/morphology_focus_0001.ome.tif", "kind": "single", "color": "F300A5", "convert": "ome2png" },
+    { "id": "rna",      "match": "morphology_focus/morphology_focus_0002.ome.tif", "kind": "single", "color": "A4A400", "convert": "ome2png" },
+    { "id": "protein",  "match": "morphology_focus/morphology_focus_0003.ome.tif", "kind": "single", "color": "008A00", "convert": "ome2png" },
+    { "id": "dapi",     "match": "morphology_focus.ome.tif", "kind": "single", "color": "0F73E6", "convert": "ome2png" },
+    { "id": "dapi",     "match": "morphology.ome.tif", "kind": "single", "color": "0F73E6", "convert": "ome2png", "extra_flags": ["--use-middle-page", "--high-memory"] }
   ]
 }

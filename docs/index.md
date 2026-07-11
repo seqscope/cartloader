@@ -81,7 +81,7 @@ Together, they provide a unified solution for working with raw pixel-level spati
 
     If you use CartoScope in your research, please cite:
 
-    * CartoScope: [10.5281/zenodo.18739064]([placeholder](https://doi.org/10.5281/zenodo.18739064))
+    * CartoScope: [10.5281/zenodo.18739064](https://doi.org/10.5281/zenodo.18739064)
     * FICTURE: [doi.org/10.1038/s41592-024-02415-2](https://www.nature.com/articles/s41592-024-02415-2)
 
 --- 

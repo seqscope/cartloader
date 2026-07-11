@@ -1,4 +1,4 @@
-Compute spatial factors using `punkst` (FICTURE2). See more details on the [Reference page](../docs/reference/run_ficture2.md).
+Compute spatial factors using `punkst` (FICTURE2). See more details on the [Reference page](https://seqscope.github.io/cartloader/reference/run_ficture2/).
 
 <!-- ```bash
 cartloader run_ficture2 \
@@ -40,7 +40,7 @@ cartloader run_ficture2 \
 <!--parameter-start-->
 | Parameter                 | Required              | Type                        | Description                                                                                                     |
 |---------------------------|-----------------------|-----------------------------|-----------------------------------------------------------------------------------------------------------------|
-| `--main`                  | required <sup>1</sup> | flag                        | Enable `CartLoader` to run [all five steps](../../reference/run_ficture2.md#actions)                            |
+| `--main`                  | required <sup>1</sup> | flag                        | Enable `CartLoader` to run [all five steps](https://seqscope.github.io/cartloader/reference/run_ficture2/#actions)                            |
 | `--in-transcript`         | required              | string                      | Path to input transcript-level SGE file                                                                         |
 | `--out-dir`               | required              | string                      | Path to output directory                                                                                        |
 | `--width`                 | required              | int or comma-separated list | LDA training hexagon width(s)                                                                                   |

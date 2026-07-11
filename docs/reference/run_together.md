@@ -2,349 +2,225 @@
 
 ## Overview
 
-`run_together` runs a complete CartoScope pipeline — **ingest → FICTURE → cell decode → asset packaging → image import → (optional) publish** — across many spatial platforms (10x Xenium, 10x Visium HD, and more), for one or many samples, from a single command.
+`run_together` runs a complete CartoScope pipeline — **ingest → FICTURE → cell decode → asset packaging → image import → (optional) publish** — across many spatial platforms, for one or many samples, from a single command. It assembles the whole run as **one Makefile** (`run_together.mk`) and executes it, so the pipeline is **resumable**, **parallel**, and trains **one joint FICTURE model** across a multi-sample run.
 
-Instead of executing each step directly, `run_together` **emits one master `Makefile`** (`run_together.mk`) whose targets are per-stage flag files wired together with their true dependencies, then runs `make`. This gives you three things for free:
+The design has one guiding principle:
 
-- **Robustness / resume** — a failed or interrupted run continues from where it stopped; completed stages are not repeated.
-- **Parallelism** — independent samples and stages run concurrently under `make -j`.
-- **A joint FICTURE model** — for multi-sample runs, one model is trained on all samples together, then reused per sample.
+> **Convenience for the default case; full control in JSON.**
 
-The boilerplate that differs between platforms (which input files to read, exclusion regexes, coordinate scaling, morphology image naming, packaging flags) is captured in a **platform profile**, so simple runs need only a few arguments.
+A standard run needs only a few flags. Everything a run *can* express lives in a single canonical, list-based configuration that three layers assemble:
 
-For a two-sample run, the dependency graph fans in on a joint model, then fans back out per sample:
+1. **Profile** — per-platform defaults (auto-detected inputs, default analyses, image conventions).
+2. **Tier-1 CLI** — the common knobs (`--in-dir`/`--samples`, `--width`/`--n-factor` or `--project-models`, `--out-dir`).
+3. **Tier-2 JSON** (`--config`) — augments or fully specifies anything.
 
-```text
-ingest (sample 1) ─┐
-                   ├─► ficture (joint model) ─┬─► cartload 1 ─► images 1 ─► publish 1
-ingest (sample 2) ─┘                          └─► cartload 2 ─► images 2 ─► publish 2
-```
+The layers **compose**: you can set the base run on the CLI and add only the extra analyses/images in JSON.
 
 ---
 ## Requirements
 
-- Input data from a supported platform (see [Platform Profiles](#platform-profiles)).
 - `make` on the `PATH`.
-- The tools used by the underlying steps, depending on which stages run: `spatula`, `punkst`, `pigz`/`gzip`, `sort`, `python3`, `go-pmtiles`, `gdal`, `tippecanoe`, `parquet-tools`, `jq` (Visium HD H&E), and `aws` (publish).
+- Tools used by the stages: `spatula`, `punkst` (FICTURE2), `pigz`, `sort`, `python3`, `go-pmtiles`, `gdal`, `tippecanoe`, `parquet-tools`, `jq` (Visium HD H&E), and `aws` (publish). `run_together` delegates to the CartLoader modules, which find `spatula`/`punkst` as built repo submodules or on `PATH`.
 
 ---
-## Pipeline stages
+## Input: single vs. multi-sample
 
-`run_together` builds up to six stages. Each stage maps to an existing CartLoader module.
+One symmetric choice; everything else is identical:
 
-| Stage | Module | Purpose |
-|-------|--------|---------|
-| `ingest` | [`sge_convert`](./sge_convert.md) | Convert raw platform output to a unified transcript TSV |
-| `ficture` | [`run_ficture2_multi`](./run_ficture2_multi.md) | Train a joint FICTURE model (or project a pretrained model) |
-| `cells` | `run_ficture2_multi_cells` | Segmentation/cluster-based decode (only if the profile defines cells) |
-| `cartload` | [`run_cartload2`](./run_cartload2.md) | Package SGE + FICTURE results into PMTiles and `catalog.yaml` |
-| `images` | [`import_image`](./import_image.md), [`import_square`](./import_square.md), [`import_cell`](./import_cell.md), `image_png2pmtiles` | Import morphology / H&E / square / cell layers and append them to the catalog |
-| `publish` | annotation + `aws s3 cp` | **Opt-in.** AI annotation and upload of the catalog to S3 |
+| | Flag |
+|---|---|
+| Single sample | `--in-dir DIR` |
+| Multi-sample (joint model) | `--samples samples.tsv` |
 
-The stage names above are exactly what you pass to `--only` / `--skip`.
+Multi-sample defaults to a **joint model** (all samples share one `out_dir`). Independent per-sample models are an explicit opt-in with `--out-root` (each sample gets its own directory and model).
 
----
-## Platform Profiles
+### The sample sheet is a wide table of input roles
 
-A profile is a JSON file that tells `run_together` how to read a platform's output and how to package it. Built-in profiles live in `assets/run_together_profiles/`.
+Columns map to per-sample **input roles**. All are optional except `id`:
 
-!!! info "Available built-in profiles"
-    | `--platform` | Expected input directory | Notes |
-    |--------------|--------------------------|-------|
-    | `10x_xenium` | Xenium Ranger output | morphology images + cell/cluster decode wired automatically |
-    | `10x_visium_hd` | Space Ranger output | 2 µm binned SGE, square/cell imports, optional H&E |
+| Column | Meaning |
+|--------|---------|
+| `id` | Sample identifier (required) |
+| `in_dir` | Raw platform directory → the profile **auto-detects** every role inside it |
+| `transcript` | A pre-converted `transcripts.tsv.gz` → **skips ingest** for that sample |
+| `xy` | Cell centroids file |
+| `boundaries` | Cell boundaries file |
+| `clusters` | External cluster labels |
+| `mex` | MEX directory |
 
-    Additional platforms (MERSCOPE, CosMx, Stereo-seq, SeqScope) are supported by `sge_convert` today and profiles for them are planned; until then use a custom `--profile` file (see [Overriding a profile](#overriding-a-profile)).
+```
+id    in_dir            transcript                    boundaries
+s1    /data/s1
+s2                      /data/s2/transcripts.tsv.gz   /data/s2/bounds.csv.gz
+```
 
-### What each profile expects on disk
-
-The convenience of the simple invocation comes from these fixed-path assumptions. When testing on real data, verify your input directory matches.
-
-=== "`10x_xenium`"
-
-    Under `--in-dir` (the Xenium Ranger output directory):
-
-    | Purpose | Path (first match wins) |
-    |---------|-------------------------|
-    | Transcripts | `transcripts.csv.gz`, or `transcripts.parquet`, or `transcripts/transcripts.parquet` |
-    | Cell boundaries | `cell_boundaries.csv.gz` |
-    | Cell centroids | `cells.csv.gz` (columns `x_centroid`, `y_centroid`) |
-    | Cluster labels | `analysis/clustering/gene_expression_graphclust/clusters.csv` (imported under the `xeniumranger` prefix) |
-    | Morphology images | `morphology_focus/morphology_focus_000{0,1,2,3}.ome.tif` → `dapi`/`boundary`/`rna`/`protein`; or single `morphology_focus.ome.tif` / `morphology.ome.tif` → `dapi` |
-
-    Missing optional files are simply skipped.
-
-=== "`10x_visium_hd`"
-
-    Under `--in-dir` (the Space Ranger `outs/` directory):
-
-    | Purpose | Path |
-    |---------|------|
-    | Scale factors | `binned_outputs/square_002um/spatial/scalefactors_json.json` |
-    | Count matrix | `binned_outputs/square_002um/filtered_feature_bc_matrix/` |
-    | Bin positions | `binned_outputs/square_002um/spatial/tissue_positions.parquet` |
-    | Square layers | `binned_outputs/square_008um`, `binned_outputs/square_016um` (imported if present) |
-    | Segmented cells | `segmented_outputs/` (imported if present) |
-    | H&E image | Provided per sample via the `hne` field (µm/pixel read from the 2 µm `scalefactors_json.json`) |
-
-    Coordinates are scaled by 2 (`--scale-xy 2.0` at ingest, `--sge-scale 2` at packaging).
+Rules: an explicit column **overrides** auto-detection for that role; if `transcript` is given, `sge_convert` is skipped and the TSV feeds FICTURE directly; `--in-dir` is just a one-row sheet with only `in_dir`.
 
 ---
-## Usage
+## The two FICTURE modes
 
-`run_together` has three input tiers. Pick the simplest that fits.
+Tier-1 selects the base FICTURE work. Exactly one mode is the base (JSON can add more analyses on top).
 
-!!! warning "Replace placeholders"
-    Replace example paths and IDs before running. All examples use `--dry-run`; **remove it to execute**.
+=== "De-novo training (default)"
 
-### Tier 1 — single sample from the command line
-
-The minimal case. Everything not given comes from the platform profile.
-
-=== "Xenium"
+    Train new LDA models. `--width` and `--n-factor` accept comma lists → the cross-product is trained (**multiple widths supported**).
 
     ```bash
-    cartloader run_together \
-      --platform 10x_xenium \
-      --in-dir  /path/to/xenium_ranger/outs \
-      --out-dir /path/to/out/batch/collection/my-xenium-id \
-      --n-factor 12,24,48 \
-      -j 4 --threads 8 \
-      --dry-run
+    cartloader run_together --platform 10x_xenium --in-dir IN --out-dir OUT \
+        --width 12,18 --n-factor 24,48
     ```
 
-=== "Visium HD"
+=== "Projection-only"
+
+    Reuse **already-trained** models — no LDA training runs. Point `--project-models` at one or more **existing FICTURE directories**; `run_together` reads each `ficture.params.json` and re-projects every model it lists onto the current data.
 
     ```bash
-    cartloader run_together \
-      --platform 10x_visium_hd \
-      --in-dir  /path/to/spaceranger/outs \
-      --out-dir /path/to/out/batch/collection/my-visiumhd-id \
-      --n-factor 24,48,96 \
-      -j 4 --threads 8 \
-      --dry-run
+    cartloader run_together --platform 10x_xenium --in-dir IN --out-dir OUT \
+        --project-models /prev/run/fic --width 12
     ```
 
-=== "Project a pretrained model"
+    Ingest still runs (the *data* is current); only training is skipped.
 
-    Supplying `--pretrained-model` switches FICTURE from de-novo training to projection (`--n-factor` is ignored).
+---
+## The canonical configuration
 
-    ```bash
-    cartloader run_together \
-      --platform 10x_xenium \
-      --in-dir  /path/to/xenium_ranger/outs \
-      --out-dir /path/to/out/batch/collection/my-xenium-id \
-      --pretrained-model /path/to/model.tsv \
-      -j 4 --dry-run
-    ```
+Everything reduces to these sections. The three list sections are **assembled across the profile, CLI, and JSON layers**.
 
-!!! tip "ID / collection / batch inference"
-    For a single-sample run with no `--id`, the sample ID is the basename of `--out-dir`. If `--out-dir` follows the `.../<batch>/<collection>/<id>` convention, those parts are recognized as such.
-
-### Tier 2 — JSON configuration (multi-sample, joint model)
-
-Use a JSON config when you have several samples that should share one FICTURE model, or want to set defaults once and override per sample. See the [Configuration reference](#configuration-reference) for all keys.
-
-```json
+```jsonc
 {
-  "platform": "10x_visium_hd",
-  "out_dir": "/path/to/out/2026_07/vhd-prostate/poc",
-  "resources": { "n_jobs": 10, "threads": 24 },
-  "defaults": {
-    "ficture":  { "n_factor": "24,48,96" }
-  },
-  "samples": [
-    { "id": "38088", "in_dir": "/data/SI_38088/outs", "hne": "/data/HE_38088.tif" },
-    { "id": "39685", "in_dir": "/data/SI_39685/outs", "hne": "/data/HE_39685.tif" }
-  ]
+  "platform": "10x_xenium", "out_dir": "...", "resources": { "n_jobs": 8, "threads": 16 },
+  "samples": [ { "id": "s1", "in_dir": "..." } ],
+  "exclude_feature_regex": "...",
+  "ficture_defaults": { "min_ct_per_unit_hexagon": 100, "single_molecule": true },
+  "ficture":       [ /* analyses: each is a de-novo train OR a projection */ ],
+  "cell_analyses": [ /* {id, uses:[roles], model_id?} */ ],
+  "images":        [ /* {id, source|match, kind, color, convert} */ ],
+  "cartload":  { "use_pmpoint": true, "bin_count": 500 },
+  "publish":   { /* opt-in; see below */ }
 }
 ```
 
-```bash
-cartloader run_together --config run.json -j 10 --dry-run
+### List assembly rule (append-by-default, keyed by `id`)
+
+For `ficture`, `cell_analyses`, and `images`, JSON entries are **merged into** the profile/CLI-derived list:
+
+- entry with a **new `id`** → appended;
+- entry reusing an **existing `id`** → deep-merged (override);
+- to discard the base list entirely, write the section as `{ "replace": [ ... ] }`.
+
+This is what lets you set the base on the CLI and add only the extras in JSON.
+
+### `ficture` analyses
+
+Each entry is either de-novo or a projection:
+
+```jsonc
+{ "id": "denovo", "mode": "train",   "width": "12", "n_factor": "24,48,96" }
+{ "id": "ref",    "mode": "project", "model": "/models/ref.tsv", "width": 12 }
 ```
 
-All samples in a single `out_dir` share one joint FICTURE model; each sample is then packaged independently.
+`ficture_defaults` (decode params like `min_ct_per_unit_hexagon`, `single_molecule`, `decode_scale`) apply to **every** analysis, including projections; per-entry keys win.
 
-### Tier 3 — TSV sample sheet (batches)
+### `cell_analyses`
 
-For many independent samples, list them in a tab-separated sheet and give an output root. Each row becomes its own output directory under `--out-root` with its own (single-sample) model.
+Cell-level decode is **platform-default and automatic**: an analysis runs whenever every role in its `uses` list is available for a sample. Built-in profiles wire the standard ones (Xenium → `cartloader` + `xeniumranger`). Custom analyses (e.g. externally-clustered cells) are added in JSON:
 
-**`samples.tsv`**
-
-```tsv
-id      platform    in_dir                     pretrained_model    hne
-repA    10x_xenium  /data/xen/A                -                   -
-repB    10x_xenium  /data/xen/B                -                   -
-sc1     10x_xenium  /data/xen/C                /models/ref.tsv     -
+```jsonc
+{ "id": "spatch", "uses": ["xy", "boundaries", "clusters", "mex"], "model_id": "ref" }
 ```
 
-```bash
-cartloader run_together \
-  --sheet samples.tsv \
-  --config defaults.json \
-  --out-root /path/to/out/2026_07 \
-  -j 6 --dry-run
+`model_id` picks which FICTURE model decodes the cells (default: the largest-factor model). The role paths come from each sample's resolved roles (sheet columns / auto-detection).
+
+### `images`
+
+Profiles auto-detect standard modalities; per-sample/JSON entries append. Each declares a **kind**:
+
+| `kind` | Behavior | Typical use |
+|--------|----------|-------------|
+| `single` | grayscale → colorize with `color` | DAPI, protein/RNA stains (OME-TIFF) |
+| `rgb` | passthrough (no colorize), georeference | H&E histology |
+| `prebuilt` | copy an existing `.pmtiles` into the catalog | pre-rendered layers |
+
+```jsonc
+{ "id": "dapi", "match": "morphology_focus/..._0000.ome.tif", "kind": "single", "color": "0F73E6", "convert": "ome2png" }
+{ "id": "hne",  "source": "he.tif", "kind": "rgb", "convert": "png2pmtiles" }
+{ "id": "boundary", "source": "prebuilt/boundary.pmtiles", "kind": "prebuilt" }
 ```
 
-- A cell value of `-` (or blank) means "use the default / profile value".
-- Recognized columns: `id`, `platform`, `in_dir`, `hne`, `pretrained_model`, `model_id`, `n_factor`, `width` (the last four are folded into each sample's FICTURE settings). The flat scalar columns are a convenience; richer per-sample overrides belong in a `--config` file.
-- `--config` is optional and supplies shared defaults for every row.
+`source` is an explicit path (or `in_dir`-relative); `match` is an `in_dir`-relative pattern used for auto-detection. Same-`id` fallback entries are allowed — the first whose file exists is used.
 
 ---
-## Overriding a profile
+## Mixing CLI + JSON (the common pattern)
 
-Profile values can be overridden two ways; both are deep-merged, so you only specify the keys you change.
-
-=== "External profile file"
-
-    Point `--profile` at a JSON file that overrides the built-in profile for the platform.
-
-    ```bash
-    cartloader run_together --platform 10x_xenium \
-      --profile my_xenium_overrides.json \
-      --in-dir ... --out-dir ... --n-factor 12,24 --dry-run
-    ```
-
-=== "Inline in the config"
-
-    A top-level `profile` block in the JSON config is merged over the built-in profile for all samples.
-
-    ```json
-    {
-      "platform": "10x_xenium",
-      "out_dir": "...",
-      "profile": {
-        "ficture": { "width": "18" },
-        "exclude_feature_regex": "^(Custom|Neg)"
-      },
-      "samples": [ { "id": "id1", "in_dir": "..." } ]
-    }
-    ```
-
-**Merge order (later wins):** built-in profile → `--profile` file → config `profile` block → config `defaults` → per-sample overrides.
-
----
-## Selecting stages (resume / partial runs)
-
-Because everything is a `make` target keyed on flag files, you can re-run subsets safely.
-
-- `--only ingest,ficture` — run only these stages.
-- `--skip images,publish` — run everything except these.
-- `--restart` — ignore existing outputs and rebuild all selected stages (`make -B`).
-
-When an upstream stage is excluded, its dependency is dropped from downstream targets — `run_together` assumes that stage's outputs already exist on disk, so `make` will not error looking for a rule to build them. This is what makes "resume from cartload" work:
+Set the base run on the CLI; add only what's extra in JSON:
 
 ```bash
-# FICTURE already finished; just (re)build packaging and images
-cartloader run_together --config run.json --skip ingest,ficture,cells
+cartloader run_together --platform 10x_xenium --in-dir IN --out-dir OUT \
+    --width 12 --n-factor 24 --config extra.json
 ```
-
----
-## Publishing (opt-in)
-
-The `publish` stage (AI annotation + S3 upload) runs **only** when both a `publish` block is present in the config **and** the `--publish` flag is passed. It is never triggered by a Tier-1 command.
-
-```json
-"publish": {
-  "collection": "vhd-prostate",
-  "batch": "2026_07",
-  "annotate": { "tissue": "Prostate cancer", "organism": "human",
-                "api_type": "umgpt", "model": "claude-opus-4-7", "threads": 10 },
-  "upload":   { "s3_prefix": "s3://cartostore/data", "profile": "cartostore" }
+```jsonc
+// extra.json — de-novo base comes from the CLI; these are ADDED
+{
+  "ficture":       [ { "id": "ref", "mode": "project", "model": "/models/ref.tsv", "width": 12 } ],
+  "cell_analyses": [ { "id": "spatch", "uses": ["xy","boundaries","clusters","mex"], "model_id": "ref" } ],
+  "images":        [ { "id": "cd3", "source": "cd3.ome.tif", "kind": "single", "color": "FF0000" } ]
 }
 ```
 
-```bash
-cartloader run_together --config run.json --publish -j 10
-```
+---
+## Stage selection, resume, publish
 
-Assets are uploaded to `<s3_prefix>/batch=<batch>/<collection>/<id>/`.
+- **Resume:** re-run the same command (or `make -f OUT/run_together.mk -j N`); completed stages are skipped via flag files.
+- `--only ingest,ficture` / `--skip images` — run a subset; excluded upstream stages are assumed done (prereqs are pruned so `make` won't error).
+- `--restart` — rebuild everything (`make -B`).
+- `--dry-run` — write the Makefile and print commands (`make -n`) without executing.
+- **Publish (opt-in):** runs only with a `publish` block **and** `--publish`:
+  ```jsonc
+  "publish": {
+    "collection": "coh", "batch": "2026_07",
+    "annotate": { "tissue": "Kidney", "organism": "human" },
+    "upload":   { "s3_prefix": "s3://cartostore/data", "profile": "cartostore" }
+  }
+  ```
+  Assets upload to `<s3_prefix>/batch=<batch>/<collection>/<dir-id>/`, where `<dir-id>` is the sample's output directory name — `<sample_id>` for a single run, `<multi_id>-<sample_id>` for a joint run.
+
+**Packaging bundles everything produced** — every FICTURE pixel decode plus every cell analysis that ran.
 
 ---
-## Configuration reference
+## How samples are packaged
 
-Top-level keys of the JSON config:
+- **Single sample** → one `run_cartload2` call, output at `cartl/<id>/`.
+- **Joint multi-sample run** (several samples sharing one `--out-dir`) → a single [`run_cartload2_multi`](./run_cartload2_multi.md) call that packages every sample in parallel. Each sample is written to a **self-contained** `cartl/<multi_id>-<sample_id>/` directory (with `<multi_id>` defaulting to the `--out-dir` basename), and a **`cartl/multi-catalog.yaml`** is written that links every per-sample `catalog.yaml` and hoists the shared components (shared model, UMAP, DE/info) so `cartl/` uploads to S3 as one deployable unit.
 
-| Key | Type | Description |
-|-----|------|-------------|
-| `platform` | string | Default platform for all samples (overridable per sample). |
-| `out_dir` | string | Single output directory; all samples share one joint model. |
-| `out_root` | string | Output root for batches; each sample gets `<out_root>/<id>`. Set one of `out_dir`/`out_root`. |
-| `resources` | object | `{ "n_jobs": int, "threads": int }`. Defaults come from CLI `-j` / `--threads`. |
-| `profile` | object | Inline profile override, deep-merged over the built-in profile. |
-| `defaults` | object | Default `ficture` / `cartload` / `annotate` sub-objects applied to every sample. |
-| `samples` | array | One object per sample (see below). Required. |
-| `publish` | object | Publish settings (see [Publishing](#publishing-opt-in)). |
-
-**Sample object**
-
-| Key | Description |
-|-----|-------------|
-| `id` | Sample identifier (defaults to `basename(in_dir)`; or `basename(out_dir)` for a single-sample `out_dir` run). |
-| `in_dir` | Input directory for the sample. **Required.** |
-| `platform` | Overrides the top-level platform for this sample (enables mixed-platform batches). |
-| `hne` | Path to an H&E image (Visium HD). |
-| `ficture`, `cartload`, `annotate` | Per-sample override sub-objects. |
-| `exclude_feature_regex` | Per-sample feature-exclusion regex. |
-| `pretrained_model`, `model_id`, `n_factor`, `width` | Convenience scalars folded into this sample's `ficture` settings. |
-
-**`ficture` sub-object**: `width`, `n_factor`, `min_ct_per_unit_hexagon`, `decode_scale`, `single_molecule`, `pretrained_model`, `model_id`.
-
-**`cartload` sub-object**: `use_pmpoint`, `bin_count`, `sge_scale`.
+This mirrors the FICTURE manifests: `run_ficture2_multi` writes a shared [`ficture.multi.params.json`](./run_ficture2_multi.md#multi-sample-manifest) that `run_cartload2_multi` reads to discover samples and shared assets.
 
 ---
 ## Command-line parameters
 
-### Run options
+**Run:** `--dry-run`, `--restart`, `-j/--n-jobs`, `--threads`, `--makefn`, `--only`, `--skip`, `--publish`.
 
-- `--dry-run`: Write the Makefile and print the commands (`make -n`) without executing.
-- `--restart`: Ignore existing outputs and rebuild (`make -B`).
-- `-j`, `--n-jobs`: Parallel jobs for `make` and passed to sub-commands (default: 1).
-- `--threads`: Threads per job (default: 4).
-- `--makefn`: Master Makefile name (default: `run_together.mk`).
-- `--only`: Comma-separated stages to run exclusively.
-- `--skip`: Comma-separated stages to skip.
-- `--publish`: Enable the opt-in publish stage (requires a `publish` config block).
+**Input/output:** `--platform`, `--in-dir`, `--samples`, `--out-dir`, `--out-root`, `--id`, `--config`, `--profile`.
 
-### Input / output
-
-- `--config`: JSON run configuration (Tier 2).
-- `--sheet`: TSV sample sheet (Tier 3).
-- `--profile`: External JSON profile overriding the built-in one.
-- `--platform`: Platform preset (Tier 1), e.g. `10x_xenium`, `10x_visium_hd`.
-- `--in-dir`: Input directory for a single-sample Tier-1 run.
-- `--out-dir`: Output directory (single run / shared joint model).
-- `--out-root`: Output root under which each `--sheet` sample gets its own directory.
-- `--id`: Sample ID for a single-sample Tier-1 run.
-
-### Common FICTURE overrides
-
-- `--n-factor`: Comma-separated factor counts (overrides the profile).
-- `--width`: Hexagon width in µm (overrides the profile).
-- `--pretrained-model`: Pretrained model TSV → projection instead of de-novo training.
+**FICTURE mode:** `--width`, `--n-factor` (de-novo); `--project-models` (projection-only — existing FICTURE dir(s), comma-separated).
 
 ---
 ## Output
 
-Under each `out_dir`:
-
 ```
 out_dir/
-├── run_together.mk               # master Makefile (the pipeline)
-├── run_together.resolved.json    # fully-resolved per-sample settings (provenance)
-├── mk/                           # stage flag files (*.done) that drive make
-├── tsv/
-│   ├── in_list.tsv               # sample → transcript TSV (FICTURE input list)
-│   ├── in_{boundaries,xy,clust}.tsv   # cell-decode input lists (when applicable)
-│   └── <id>/transcripts.unsorted.tsv.gz
-├── fic/                          # FICTURE results; per-sample under fic/samples/<id>/
-└── cartl/samples/<id>/           # packaged PMTiles + catalog.yaml (per sample)
+├── run_together.mk               # the generated pipeline
+├── run_together.resolved.json    # fully-assembled config (provenance)
+├── mk/                           # per-stage flag files
+├── tsv/                          # per-sample SGE + role list files (in_list.tsv, in_<role>.<analysis>.tsv)
+├── fic/                          # FICTURE results; per sample under fic/samples/<id>/
+│   └── ficture.multi.params.json     # shared multi-sample manifest (joint runs)
+└── cartl/                        # ← deploy this directory
+    ├── multi-catalog.yaml            # joint runs only: links per-sample catalogs + shared assets
+    ├── <multi_id>-<sample_id>/       # joint run: one self-contained dir per sample
+    │   └── catalog.yaml + PMTiles
+    └── <id>/                         # single-sample run: catalog.yaml + PMTiles
 ```
 
-For a `--out-root` batch, this layout is created under `<out_root>/<id>/`, and the master Makefile and resolved config are written at `<out_root>/`.
+For a joint run, upload the whole `cartl/` directory: `multi-catalog.yaml` plus each self-contained `<multi_id>-<sample_id>/`. For `--out-root` batches (independent per-sample models), this layout is created under `<out_root>/<id>/`, and the master Makefile is written at `<out_root>/`.
 
-!!! tip "Inspect before running"
-    Run with `--dry-run` first and read `run_together.mk` and `run_together.resolved.json`. The Makefile shows the exact sub-commands and their dependencies; the resolved JSON shows the settings each sample was expanded to after all merges.
-
-See the individual module references for the format of each output ([`sge_convert`](./sge_convert.md#output), [`run_ficture2_multi`](./run_ficture2_multi.md#output), [`run_cartload2`](./run_cartload2.md#output)).
+See also: [Supported Platforms & Inputs](./supported_platforms.md), and the [single-sample](../vignettes/pipelines/run_together.md) and [multi-sample](../vignettes/pipelines/run_together_multi.md) tutorials.

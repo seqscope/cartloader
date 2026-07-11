@@ -112,5 +112,41 @@ Outputs are written under `--out-dir`.
 
 - Per‑sample JSONs
     - `samples/<sample>/ficture.params.json`: Consolidates sample feature paths, LDA and decode outputs for downstream steps.
- 
+
+- Shared multi‑sample manifest
+    - `ficture.multi.params.json`: see below.
+
 See `run_ficture2.md` for single‑sample formats and file details.
+
+---
+## Multi-sample manifest
+
+Alongside the per‑sample JSONs, `run_ficture2_multi` writes a top‑level **`ficture.multi.params.json`** that ties the run together. It (a) points to each per‑sample manifest by **relative path**, and (b) records the **shared** components — the joint LDA models, shared UMAPs, and multi‑sample hexagon files — so other tools (notably [`run_cartload2_multi`](./run_cartload2_multi.md)) can discover the samples and shared assets without re‑deriving paths. All paths are relative to `--out-dir`, so the directory is self‑contained.
+
+```jsonc
+{
+  "analysis_type": "multi-sample",
+  "n_samples": 2,
+  "samples": {
+    "s1": "samples/s1/ficture.params.json",
+    "s2": "samples/s2/ficture.params.json"
+  },
+  "shared": {
+    "multi_hexagon": { "features": "multi.features.tsv",
+                       "hex":  { "12": "multi.hex_12.txt" },
+                       "json": { "12": "multi.hex_12.json" } },
+    "train_params": [
+      { "model_type": "lda", "model_id": "t12_f24", "train_width": 12, "n_factor": 24,
+        "cmap": "t12_f24.cmap.tsv", "model_path": "t12_f24.model.tsv",
+        "fit_path": "t12_f24.results.tsv.gz",
+        "de_path": "t12_f24.bulk_chisq.tsv", "info_path": "t12_f24.factor.info.tsv",
+        "umap": { "tsv": "t12_f24.umap.tsv.gz", "png": "t12_f24.umap.png",
+                  "ind_png": "t12_f24.umap.single.prob.png" } }
+    ]
+  }
+}
+```
+
+### Cell analyses
+
+`run_ficture2_multi_cells` (the cell/segmentation‑based decode) writes the analogous **`ficture.multi.<prefix>.params.json`** for each output prefix (e.g. `ficture.multi.cartloader.params.json`). It points to each `samples/<sample>/ficture.<prefix>.params.json` and records the shared cell components — shared cluster pseudobulk/DE/info, shared heatmap, and shared UMAP/TSNE manifolds — for whichever steps ran.

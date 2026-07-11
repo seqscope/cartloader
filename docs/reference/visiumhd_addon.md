@@ -75,7 +75,7 @@ cartloader load_space_ranger \
 
 Writes a JSON manifest at `--out-json`.
 
-Example: [`includes/visiumhd_space_ranger_assets.visiumhd_3prime_mouse_brain.json`](../../includes/visiumhd_space_ranger_assets.visiumhd_3prime_mouse_brain.json)
+Example (`includes/visiumhd_space_ranger_assets.visiumhd_3prime_mouse_brain.json`):
 
 ```json
 {% include-markdown "../../includes/visiumhd_space_ranger_assets.visiumhd_3prime_mouse_brain.json" %}

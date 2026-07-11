@@ -1,4 +1,4 @@
-import sys, os, gzip, argparse, logging, shutil, subprocess, inspect
+import sys, os, gzip, argparse, logging, shutil, subprocess, inspect, json
 import pandas as pd
 from cartloader.utils.minimake import minimake
 from cartloader.utils.utils import cmd_separator, scheck_app, add_param_to_cmd, read_minmax, flexopen, execute_makefile
@@ -453,6 +453,55 @@ def add_sample_json_target(mm, args, sample, sample_transcript, n_samples, sampl
     mm.add_target(sample_out_json, prerequisities, cmds)
     return sample_out_json
 
+def write_multi_params_json(args, in_samples):
+    """Write the shared multi-sample manifest (ficture.multi.params.json).
+
+    Points to each per-sample manifest (relative path) and records the shared
+    components — shared LDA models, shared UMAPs, and the multi-sample hexagon
+    files — as paths relative to --out-dir so the directory is self-contained.
+    """
+    widths = args.width.split(",")
+    shared_train = []
+    for lda in define_lda_runs(args, **LDA_CONFIG):
+        model_id = lda["model_id"]
+        entry = {
+            "model_type": lda["model_type"],
+            "model_id": model_id,
+            "train_width": lda["train_width"],
+            "n_factor": lda["n_factor"],
+            "cmap": f"{model_id}.cmap.tsv",
+            "model_path": f"{model_id}.model.tsv",
+            "fit_path": f"{model_id}.results.tsv.gz",   # shared/joint fit
+            "de_path": f"{model_id}.bulk_chisq.tsv",
+            "info_path": f"{model_id}.factor.info.tsv",
+        }
+        if not args.skip_umap:
+            entry["umap"] = {
+                "tsv": f"{model_id}.umap.tsv.gz",
+                "png": f"{model_id}.umap.png",
+                "ind_png": f"{model_id}.umap.single.prob.png",
+            }
+        shared_train.append(entry)
+
+    manifest = {
+        "analysis_type": "multi-sample",
+        "n_samples": len(in_samples),
+        "samples": {s: os.path.join("samples", s, "ficture.params.json") for s in in_samples},
+        "shared": {
+            "multi_hexagon": {
+                "features": "multi.features.tsv",
+                "hex": {w: f"multi.hex_{w}.txt" for w in widths},
+                "json": {w: f"multi.hex_{w}.json" for w in widths},
+            },
+            "train_params": shared_train,
+        },
+    }
+    out_path = os.path.join(args.out_dir, "ficture.multi.params.json")
+    with open(out_path, "wt") as f:
+        json.dump(manifest, f, indent=4)
+    return out_path
+
+
 def run_ficture2_multi(_args):
     """Run all functions in FICTURE2 with multi-sample pipeline
     This function is meant to be used in a local environment that has sufficient resources to run all functions in FICTURE at once.
@@ -614,6 +663,9 @@ def run_ficture2_multi(_args):
     cmds=cmd_separator([], f"Finishing writing the JSON file for each sample...")
     cmds.append(f"touch '{args.out_dir}/multi_json_each.done'")
     mm.add_target(f"{args.out_dir}/multi_json_each.done", json_each_targets, cmds)
+
+    ## write the shared multi-sample manifest (points to per-sample JSONs + shared components)
+    write_multi_params_json(args, in_samples)
 
     ## write makefile
     if len(mm.targets) == 0:

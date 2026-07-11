@@ -1,4 +1,4 @@
-Compute spatial factors using `punkst` (FICTURE2). See more details in [Reference page](../docs/reference/run_ficture2.md).
+Compute spatial factors using `punkst` (FICTURE2). See more details in [Reference page](https://seqscope.github.io/cartloader/reference/run_ficture2/).
 
 ```bash
 docker run -it --rm \

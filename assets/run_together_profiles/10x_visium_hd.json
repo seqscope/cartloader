@@ -10,26 +10,19 @@
     },
     "extra_flags": ["--sge-visual", "--scale-xy 2.0"]
   },
-  "ficture": {
-    "width": "12",
-    "n_factor": "24,48,96",
-    "min_ct_per_unit_hexagon": 50,
-    "decode_scale": 2,
-    "single_molecule": true
-  },
-  "cartload": {
-    "use_pmpoint": true,
-    "bin_count": 500,
-    "sge_scale": 2
-  },
+  "roles": {},
+  "ficture_defaults": { "min_ct_per_unit_hexagon": 50, "decode_scale": 2, "single_molecule": true },
+  "ficture": [
+    { "id": "denovo", "mode": "train", "width": "12", "n_factor": "24,48,96" }
+  ],
+  "cell_analyses": [],
+  "cartload": { "use_pmpoint": true, "bin_count": 500, "sge_scale": 2 },
+  "images": [],
   "squares": [
     { "subdir": "binned_outputs/square_008um", "bin_size": 8, "suffix": "spaceranger-sq008" },
     { "subdir": "binned_outputs/square_016um", "bin_size": 16, "suffix": "spaceranger-sq016" }
   ],
-  "cell_import": {
-    "detect_dir": "segmented_outputs",
-    "suffix": "spaceranger"
-  },
+  "cell_import": { "detect_dir": "segmented_outputs", "suffix": "spaceranger" },
   "hne": {
     "georef_plain": true,
     "um_per_pixel_json": "binned_outputs/square_002um/spatial/scalefactors_json.json",

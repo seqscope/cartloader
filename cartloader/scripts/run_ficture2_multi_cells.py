@@ -784,6 +784,37 @@ def run_ficture2_multi_cells(_args):
         out_json_path = sample_out_json
         json.dump(out_json, flexopen(out_json_path, "wt"), indent=4)
 
+    ## write the shared multi-sample cell manifest (points to per-sample JSONs + shared cell components)
+    sp = args.out_prefix   # paths relative to --out-dir
+    shared = {"model_type": "lda", "model_id": args.out_prefix}
+    if args.lda:
+        shared["shared_model_path"] = f"{sp}.lda.model.tsv"
+    if args.pseudobulk:
+        shared["shared_cmap"] = f"{sp}.leiden.pseudobulk.cmap.tsv"
+        shared["shared_cluster_pseudobulk"] = f"{sp}.leiden.pseudobulk.tsv"
+        shared["shared_cluster_de"] = f"{sp}.leiden.pseudobulk.de.tsv"
+        shared["shared_cluster_info"] = f"{sp}.leiden.pseudobulk.factor.info.tsv"
+    if args.heatmap:
+        shared["shared_cluster_model_heatmap_pdf"] = f"{sp}.heatmap.pdf"
+        shared["shared_cluster_model_heatmap_tsv"] = f"{sp}.heatmap.normfrac.tsv"
+    shared_manifolds = {}
+    if args.tsne:
+        shared_manifolds["tsne"] = {"tsv": f"{sp}.tsne.leiden.tsv.gz", "png": f"{sp}.tsne.png"}
+    if args.umap:
+        shared_manifolds["umap"] = {"tsv": f"{sp}.umap.leiden.tsv.gz", "png": f"{sp}.umap.png"}
+    if shared_manifolds:
+        shared["manifolds"] = shared_manifolds
+
+    multi_manifest = {
+        "analysis_type": "multi-sample",
+        "n_samples": n_samples,
+        "out_prefix": args.out_prefix,
+        "samples": {s: os.path.join("samples", s, f"ficture.{args.out_prefix}.params.json") for s in in_samples},
+        "shared": shared,
+    }
+    multi_json_path = os.path.join(args.out_dir, f"ficture.multi.{args.out_prefix}.params.json")
+    json.dump(multi_manifest, flexopen(multi_json_path, "wt"), indent=4)
+
     ## write makefile
     if len(mm.targets) == 0:
         logging.error("There is no target to run. Please make sure that at least one run option was turned on")
