@@ -95,10 +95,11 @@ Everything reduces to these sections. The three list sections are **assembled ac
   "ficture":       [ /* analyses: each is a de-novo train OR a projection */ ],
   "cell_analyses": [ /* {id, uses:[roles], model_id?} */ ],
   "images":        [ /* {id, source|match, kind, color, convert} */ ],
-  "cartload":  { "use_pmpoint": true, "bin_count": 500 },
-  "publish":   { /* opt-in; see below */ }
+  "cartload":  { "use_pmpoint": true, "bin_count": 500 }
 }
 ```
+
+Publishing (annotation + S3 upload) is **not** part of this config — it is driven entirely by CLI flags (see [Publish](#publishing)).
 
 ### List assembly rule (append-by-default, keyed by `id`)
 
@@ -168,23 +169,38 @@ cartloader run_together --platform 10x_xenium --in-dir IN --out-dir OUT \
 ```
 
 ---
-## Stage selection, resume, publish
+## Stage selection & resume
 
 - **Resume:** re-run the same command (or `make -f OUT/run_together.mk -j N`); completed stages are skipped via flag files.
-- `--only ingest,ficture` / `--skip images` — run a subset; excluded upstream stages are assumed done (prereqs are pruned so `make` won't error).
+- `--only ingest,ficture` / `--skip images` — run a subset (stages: `ingest,ficture,cells,cartload,images,anno,upload`); excluded upstream stages are assumed done (prereqs are pruned so `make` won't error).
 - `--restart` — rebuild everything (`make -B`).
 - `--dry-run` — write the Makefile and print commands (`make -n`) without executing.
-- **Publish (opt-in):** runs only with a `publish` block **and** `--publish`:
-  ```jsonc
-  "publish": {
-    "collection": "coh", "batch": "2026_07",
-    "annotate": { "tissue": "Kidney", "organism": "human" },
-    "upload":   { "s3_prefix": "s3://cartostore/data", "profile": "cartostore" }
-  }
-  ```
-  Assets upload to `<s3_prefix>/batch=<batch>/<collection>/<dir-id>/`, where `<dir-id>` is the sample's output directory name — `<sample_id>` for a single run, `<multi_id>-<sample_id>` for a joint run.
 
 **Packaging bundles everything produced** — every FICTURE pixel decode plus every cell analysis that ran.
+
+---
+## Publishing
+
+Publishing is **opt-in** and **entirely CLI-driven** (no config block). It has two independent actions — enable either or both:
+
+- **`--anno`** — AI-annotate each packaged sample directory. **Requires `--tissue` and `--organism`** (no defaults); `--anno-api-type` (default `umgpt`), `--anno-model` (default `claude-opus-4-7`), and `--anno-threads` (default `10`) are overridable.
+- **`--s3-upload`** — upload each self-contained sample directory to S3.
+
+When both run, `upload` waits on `anno` (which edits `catalog.yaml`).
+
+**S3 destination:** `<s3-prefix>/batch=<batch>/<collection>/<dir-id>/`, where `<dir-id>` is the sample's output directory name (`<sample_id>` for a single run, `<multi_id>-<sample_id>` for a joint run).
+
+- `--s3-prefix` — default `s3://cartostore/data`
+- `--batch` — default: the **current** `YYYY_MM`
+- `--collection` — default: the **out-dir basename** (the run id)
+- `--aws-profile` — AWS CLI profile (default `cartostore`); `--aws` — path to the `aws` binary (default `aws`)
+
+```bash
+cartloader run_together --platform 10x_xenium --samples samples.tsv --out-dir OUT \
+    --width 12 --n-factor 24 \
+    --anno --tissue "Kidney" --organism human \
+    --s3-upload --collection my-collection
+```
 
 ---
 ## How samples are packaged
@@ -197,9 +213,11 @@ This mirrors the FICTURE manifests: `run_ficture2_multi` writes a shared [`fictu
 ---
 ## Command-line parameters
 
-**Run:** `--dry-run`, `--restart`, `-j/--n-jobs`, `--threads`, `--makefn`, `--only`, `--skip`, `--publish`.
+**Run:** `--dry-run`, `--restart`, `-j/--n-jobs`, `--threads`, `--makefn`, `--only`, `--skip`.
 
-**Input/output:** `--platform`, `--in-dir`, `--samples`, `--out-dir`, `--out-root`, `--id`, `--config`, `--profile`.
+**Input/output:** `--platform`, `--in-dir`, `--samples`, `--out-dir`, `--out-root`, `--id`, `--config`, `--platform-json` (external profile override).
+
+**Publish:** `--anno`, `--s3-upload`, `--tissue`, `--organism`, `--anno-api-type`, `--anno-model`, `--anno-threads`, `--collection`, `--batch`, `--s3-prefix`, `--aws-profile`, `--aws` (see [Publish](#publishing)).
 
 **FICTURE mode:** `--width`, `--n-factor` (de-novo); `--project-models` (projection-only — existing FICTURE dir(s), comma-separated).
 

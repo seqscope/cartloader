@@ -114,7 +114,7 @@ The `cartl/<id>/catalog.yaml` plus its PMTiles is the deployable CartoScope asse
 - **Resume after a failure:** just re-run the same command (or `make -f .../run_together.mk -j N`). Completed stages are skipped via their flag files.
 - **Run part of the pipeline:** `--only ingest,ficture` or `--skip images`. Excluded upstream stages are assumed already done.
 - **Force a clean rebuild:** `--restart` (`make -B`).
-- **Publish (opt-in):** annotation + S3 upload run only with a `publish` block in a `--config` file **and** the `--publish` flag. See the [multi-sample tutorial](./run_together_multi.md) and the [reference](../../reference/run_together.md#publishing-opt-in).
+- **Publish (opt-in):** annotation and S3 upload are separate CLI flags — `--anno` (with `--tissue`/`--organism`) and `--s3-upload` (with `--collection`). See the [reference → Publish](../../reference/run_together.md#publishing).
 
 ---
 ## Next steps

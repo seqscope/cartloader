@@ -1,6 +1,6 @@
 # End-to-End with `run_together` (multi-sample)
 
-When you have several sections that should share **one FICTURE model**, describe them in a JSON configuration and `run_together` will:
+When you have several sections that should share **one FICTURE model**, list them in a sample sheet and `run_together` will:
 
 1. ingest every sample,
 2. train a **single joint model** on all of them together,
@@ -85,24 +85,16 @@ cartloader run_together --platform 10x_visium_hd \
 ---
 ## Publishing (opt-in)
 
-To annotate and upload every sample, add a `publish` block and pass `--publish`:
-
-```json
-"publish": {
-  "collection": "kidney-cohort",
-  "batch": "2026_07",
-  "annotate": { "tissue": "Kidney", "organism": "human" },
-  "upload":   { "s3_prefix": "s3://cartostore/data", "profile": "cartostore" }
-}
-```
+Publishing is CLI-driven — no config block. Enable annotation (`--anno`, needs `--tissue`/`--organism`) and/or S3 upload (`--s3-upload`) for every sample:
 
 ```bash
 cartloader run_together --platform 10x_xenium \
-    --samples samples.tsv --out-dir OUT --width 18 --n-factor 24 \
-    --config publish.json --publish -j 10
+    --samples samples.tsv --out-dir OUT --width 18 --n-factor 24 -j 10 \
+    --anno --tissue "Kidney" --organism human \
+    --s3-upload --collection kidney-cohort
 ```
 
-Assets upload to `<s3_prefix>/batch=<batch>/<collection>/<id>/`. The publish stage never runs without both the block and the flag.
+Each sample uploads to `s3://cartostore/data/batch=<YYYY_MM>/<collection>/<multi_id>-<sample_id>/`, where `<YYYY_MM>` defaults to the current date (override `--batch`) and `<collection>` defaults to the out-dir basename (override `--collection`). See the [reference → Publish](../../reference/run_together.md#publishing) for all flags (`--s3-prefix`, `--aws-profile`, annotation model/threads, …).
 
 ---
 ## Batches of independent samples

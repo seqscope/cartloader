@@ -1,4 +1,4 @@
-import sys, os, argparse, inspect, json, copy, csv
+import sys, os, argparse, inspect, json, copy, csv, datetime
 
 from cartloader.utils.minimake import minimake
 from cartloader.utils.utils import execute_makefile
@@ -9,6 +9,10 @@ PROFILE_DIR = os.path.join(repo_dir, "assets", "run_together_profiles")
 # Global fallbacks (a profile or --config may override; a CLI flag wins over both).
 DEFAULT_EXCLUDE_REGEX = "^(Unassigned|Neg|BLANK|Blank|Intergenic|Deprecated|System|Gm[0-9]|MT-|mt-|Rps|Rpl|NCS-|NCP-)"
 DEFAULT_MIN_CT_PER_UNIT_HEXAGON = 50
+
+# Publish (S3 upload) defaults for the CartoStore project.
+DEFAULT_S3_PREFIX = "s3://cartostore/data"
+DEFAULT_S3_PROFILE = "cartostore"
 
 # Sample-level input roles. A sample provides these either explicitly (sample
 # sheet columns / JSON) or by auto-detection inside its `in_dir` (profile.roles).
@@ -175,8 +179,8 @@ def build_config(args):
 
     # Layer 0: profile
     prof = load_builtin_profile(platform)
-    if args.profile:
-        prof = deep_merge(prof, load_json(args.profile))
+    if args.platform_json:
+        prof = deep_merge(prof, load_json(args.platform_json))
     prof["platform"] = platform
     prof.setdefault("ficture_defaults", {})
     prof.setdefault("ficture", [])
@@ -487,32 +491,25 @@ def _cmd_rgb_image(cfg, s, iid, src, cart_dir, settings):
     return cmds
 
 
-def plan_publish(s, cart_dir, publish):
-    cmds = []
-    anno = publish.get("annotate")
-    if anno:
-        parts = [f"cartloader anno_cartostore_folder --cartl-dir {cart_dir}"]
-        if anno.get("tissue"):
-            parts.append(f"--tissue \"{anno['tissue']}\"")
-        if anno.get("organism"):
-            parts.append(f"--organism {anno['organism']}")
-        for k in ("api_type", "model", "threads"):
-            if anno.get(k):
-                parts.append(f"--{k.replace('_', '-')} {anno[k]}")
-        cmds.append(" ".join(parts))
-    up = publish.get("upload")
-    if up:
-        # Upload id matches the (self-contained) output directory name, i.e.
-        # <sample_id> for a single run and <multi_id>-<sample_id> for a joint run.
-        dest_id = os.path.basename(os.path.normpath(cart_dir))
-        dest = f"{up['s3_prefix'].rstrip('/')}/batch={publish.get('batch','')}/{publish.get('collection','')}/{dest_id}"
-        catalog = os.path.join(cart_dir, "catalog.yaml")
-        profile = f"--profile {up['profile']}" if up.get("profile") else ""
-        aws = up.get("aws", "aws")
-        cmds.append("(grep -E \"\\.\" " + catalog + " | perl -lane 'print $F[$#F]' | sort | uniq; "
-                    "echo catalog.yaml;) | xargs -I {} " + aws + " s3 cp " + cart_dir + "/{} "
-                    + dest + "/{} " + profile)
-    return cmds
+def cmd_anno(cart_dir, args):
+    """AI-annotate one sample's packaged directory."""
+    return (f"cartloader anno_cartostore_folder --cartl-dir {cart_dir} "
+            f"--tissue \"{args.tissue}\" --organism {args.organism} "
+            f"--api-type {args.anno_api_type} --model {args.anno_model} --threads {args.anno_threads}")
+
+
+def cmd_upload(cart_dir, args, batch):
+    """Upload one sample's packaged directory to S3.
+
+    Destination: <s3_prefix>/batch=<YYYY_MM>/<collection>/<dir>, where <dir> is the
+    self-contained sample directory name (<sample_id> or <multi_id>-<sample_id>).
+    """
+    dest_id = os.path.basename(os.path.normpath(cart_dir))
+    dest = f"{args.s3_prefix.rstrip('/')}/batch={batch}/{args.collection}/{dest_id}"
+    catalog = os.path.join(cart_dir, "catalog.yaml")
+    return ("(grep -E \"\\.\" " + catalog + " | perl -lane 'print $F[$#F]' | sort | uniq; "
+            "echo catalog.yaml;) | xargs -I {} " + args.aws + " s3 cp " + cart_dir + "/{} "
+            + dest + "/{} --profile " + args.aws_profile)
 
 
 # ---------------------------------------------------------------------------
@@ -610,11 +607,18 @@ def add_targets(mm, samples, cfg, args):
             if img_cmds and on("images"):
                 mm.add_target(img_flag, [img_prereq], img_cmds + [f"touch {img_flag}"])
 
-            if args.publish and cfg.get("publish") and on("publish"):
-                pub_flag = os.path.join(mkdir, f"publish.{s['id']}.done")
-                prereq = img_flag if (img_cmds and on("images")) else img_prereq
-                mm.add_target(pub_flag, [prereq],
-                              plan_publish(s, cart_dir, cfg["publish"]) + [f"touch {pub_flag}"])
+            # publish actions (opt-in): annotate, then upload (upload waits on
+            # annotation when both are requested, since annotation edits catalog.yaml)
+            base_prereq = img_flag if (img_cmds and on("images")) else img_prereq
+            anno_flag = None
+            if args.anno and on("anno"):
+                anno_flag = os.path.join(mkdir, f"anno.{s['id']}.done")
+                mm.add_target(anno_flag, [base_prereq],
+                              [cmd_anno(cart_dir, args), f"touch {anno_flag}"])
+            if args.s3_upload and on("upload"):
+                up_flag = os.path.join(mkdir, f"upload.{s['id']}.done")
+                mm.add_target(up_flag, [anno_flag or base_prereq],
+                              [cmd_upload(cart_dir, args, args.batch), f"touch {up_flag}"])
 
 
 def _sample_in_cell(s, cfg, cid, active_cells):
@@ -662,9 +666,8 @@ def parse_arguments(_args):
     r.add_argument("-j", "--n-jobs", type=int, default=1, help="Parallel jobs (default: 1)")
     r.add_argument("--threads", type=int, default=4, help="Threads per job (default: 4)")
     r.add_argument("--makefn", type=str, default="run_together.mk", help="Master Makefile name")
-    r.add_argument("--only", type=str, help="Comma-separated stages to run exclusively (ingest,ficture,cells,cartload,images,publish)")
+    r.add_argument("--only", type=str, help="Comma-separated stages to run exclusively (ingest,ficture,cells,cartload,images,anno,upload)")
     r.add_argument("--skip", type=str, help="Comma-separated stages to skip")
-    r.add_argument("--publish", action="store_true", help="Enable the opt-in publish stage (needs a 'publish' config block)")
 
     io = p.add_argument_group("Input/Output")
     io.add_argument("--platform", type=str, help="Platform preset, e.g. 10x_xenium, 10x_visium_hd")
@@ -674,7 +677,7 @@ def parse_arguments(_args):
     io.add_argument("--out-root", type=str, help="Output root; each sample gets its own dir and an independent model")
     io.add_argument("--id", type=str, help="Sample id for a single --in-dir run")
     io.add_argument("--config", type=str, help="JSON config that augments the profile/CLI (full spec for complex runs)")
-    io.add_argument("--profile", type=str, help="External JSON profile that overrides the built-in one")
+    io.add_argument("--platform-json", type=str, help="External JSON profile that overrides the built-in platform profile")
 
     f = p.add_argument_group("FICTURE mode (choose one; default de-novo from the profile)")
     f.add_argument("--width", type=str, help="De-novo: hexagon width(s) in um (comma-separated)")
@@ -692,12 +695,38 @@ def parse_arguments(_args):
     d.add_argument("--never-single-molecule", action="store_true",
                    help="Force single-molecule OFF for both pixel FICTURE and cell decode "
                         "(default: ON for pixel FICTURE, OFF for cell decode)")
+
+    pub = p.add_argument_group("Publish (opt-in; enable with --anno and/or --s3-upload)")
+    pub.add_argument("--anno", action="store_true", help="AI-annotate each sample (requires --tissue and --organism)")
+    pub.add_argument("--s3-upload", action="store_true", help="Upload each sample to S3 (requires --collection)")
+    # annotation (tissue/organism required; the rest default)
+    pub.add_argument("--tissue", type=str, default=None, help="Tissue for --anno (required for --anno)")
+    pub.add_argument("--organism", type=str, default=None, help="Organism/species for --anno (required for --anno)")
+    pub.add_argument("--anno-api-type", type=str, default="umgpt", help="AI annotation API type (default: umgpt)")
+    pub.add_argument("--anno-model", type=str, default="claude-opus-4-7", help="AI annotation model (default: claude-opus-4-7)")
+    pub.add_argument("--anno-threads", type=int, default=10, help="AI annotation threads (default: 10)")
+    # S3 upload
+    pub.add_argument("--collection", type=str, default=None, help="Collection name (required for --s3-upload)")
+    pub.add_argument("--batch", type=str, default=None, help="Batch segment (default: current YYYY_MM)")
+    pub.add_argument("--s3-prefix", type=str, default=DEFAULT_S3_PREFIX, help=f"S3 destination prefix (default: {DEFAULT_S3_PREFIX})")
+    pub.add_argument("--aws-profile", type=str, default=DEFAULT_S3_PROFILE, help=f"AWS CLI profile (default: {DEFAULT_S3_PROFILE})")
+    pub.add_argument("--aws", type=str, default="aws", help="Path to the aws CLI binary (default: aws)")
     return p.parse_args(_args)
 
 
 def run_together(_args):
     args = parse_arguments(_args)
     cfg = build_config(args)
+
+    # Publish is opt-in per action. Each action requires its mandatory inputs.
+    if args.anno and not (args.tissue and args.organism):
+        sys.exit("ERROR: --anno requires --tissue and --organism (no defaults).")
+    # Collection defaults to the run id (the out-dir basename), matching the
+    # <multi_id>-<sample_id> per-sample naming; override with --collection.
+    if args.s3_upload and not args.collection:
+        args.collection = os.path.basename(os.path.normpath(cfg.get("out_dir") or cfg.get("out_root") or "."))
+    if not args.batch:
+        args.batch = datetime.date.today().strftime("%Y_%m")
 
     samples = [resolve_sample(raw, cfg) for raw in cfg["_raw_samples"]]
 

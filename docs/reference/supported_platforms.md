@@ -19,7 +19,7 @@ For the profile mechanics (the canonical config, layer merging, custom profiles)
 | `generic` (custom CSV/TSV) | via custom profile | ✅ |
 
 - **built-in** — `run_together --platform <name>` works with no extra configuration.
-- **planned** — `sge_convert` already supports ingest for these platforms; a `run_together` profile is not yet shipped. Use them today either through [`sge_convert`](./sge_convert.md) + the individual modules, or by supplying your own `--profile` file (see the [canonical config](./run_together.md#the-canonical-configuration)).
+- **planned** — `sge_convert` already supports ingest for these platforms; a `run_together` profile is not yet shipped. Use them today either through [`sge_convert`](./sge_convert.md) + the individual modules, or by supplying your own `--platform-json` file (see the [canonical config](./run_together.md#the-canonical-configuration)).
 
 ---
 ## Built-in profiles
@@ -59,7 +59,7 @@ Defaults: FICTURE `width=12`, `n_factor=24,48,96`, `decode_scale=2`; packaging w
 `sge_convert` converts all of the platforms in the status table to the unified transcript TSV that FICTURE and packaging consume — the per-platform column names, delimiters, and scaling are already encoded there (see the [`sge_convert` reference](./sge_convert.md)). Two ways to run them end-to-end today:
 
 1. **Modules directly** — `sge_convert` → [`run_ficture2`](./run_ficture2.md) → [`run_cartload2`](./run_cartload2.md). See the platform starter tutorials for worked examples.
-2. **A custom `run_together` profile** — copy a built-in profile (`assets/run_together_profiles/10x_xenium.json`), set `ingest.sge_platform` to the target platform and adjust the input paths / exclusion regex, then pass it with `--profile`. See the [canonical config](./run_together.md#the-canonical-configuration).
+2. **A custom `run_together` profile** — copy a built-in profile (`assets/run_together_profiles/10x_xenium.json`), set `ingest.sge_platform` to the target platform and adjust the input paths / exclusion regex, then pass it with `--platform-json`. See the [canonical config](./run_together.md#the-canonical-configuration).
 
 ---
 ## See also
