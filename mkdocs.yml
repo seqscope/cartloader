@@ -105,6 +105,8 @@ nav:
       - Upload:
           - AWS Upload: reference/upload_aws.md
           - Zenodo Upload: reference/upload_zenodo.md
+      - AI Annotation:
+          - Annotate CartLoad Folder: reference/anno_cartload_folder.md
       - Platform-specific Modules:
           - Xenium:
               - Pipeline Orchestrator : reference/run_xenium.md

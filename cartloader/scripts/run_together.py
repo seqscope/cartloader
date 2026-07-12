@@ -491,10 +491,12 @@ def _cmd_rgb_image(cfg, s, iid, src, cart_dir, settings):
     return cmds
 
 
-def cmd_anno(cart_dir, args):
-    """AI-annotate one sample's packaged directory."""
-    return (f"cartloader anno_cartostore_folder --cartl-dir {cart_dir} "
-            f"--tissue \"{args.tissue}\" --organism {args.organism} "
+def cmd_anno(cart_dir, args, multi=False):
+    """AI-annotate a packaged directory. For a joint run (multi=True) point at the
+    cartl/ root: shared factors are annotated once and reused into every sample."""
+    return (f"cartloader anno_cartload_folder --cartl-dir {cart_dir} "
+            + ("--multi-sample " if multi else "")
+            + f"--tissue \"{args.tissue}\" --organism {args.organism} "
             f"--api-type {args.anno_api_type} --model {args.anno_model} --threads {args.anno_threads}")
 
 
@@ -598,7 +600,8 @@ def add_targets(mm, samples, cfg, args):
                 cmd_cartload_multi(fic_dir, cart_root, multi_id, cfg),
                 f"touch {multi_cart_flag}"])
 
-        upload_flags = []
+        # --- cartload + images (per sample); collect each sample's post-images flag ---
+        sample_ctx = []   # (sample, cart_dir, base_prereq)
         for s in grp:
             fic_sample_dir = os.path.join(fic_dir, "samples", s["id"])
             if multi:
@@ -620,27 +623,39 @@ def add_targets(mm, samples, cfg, args):
             img_cmds = plan_images(cfg, s, cart_dir)
             if img_cmds and on("images"):
                 mm.add_target(img_flag, [img_prereq], img_cmds + [f"touch {img_flag}"])
-
-            # publish actions (opt-in): annotate, then upload (upload waits on
-            # annotation when both are requested, since annotation edits catalog.yaml)
             base_prereq = img_flag if (img_cmds and on("images")) else img_prereq
-            anno_flag = None
-            if args.anno and on("anno"):
-                anno_flag = os.path.join(mkdir, f"anno.{s['id']}.done")
-                mm.add_target(anno_flag, [base_prereq],
-                              [cmd_anno(cart_dir, args), f"touch {anno_flag}"])
-            if args.s3_upload and on("upload"):
+            sample_ctx.append((s, cart_dir, base_prereq))
+
+        # --- annotate (opt-in) ---
+        # A joint run annotates the shared factors once at the cartl/ root
+        # (--multi-sample) and reuses them into every sample; a single run
+        # annotates its one directory. `anno_prereq[sid]` is what upload waits on.
+        anno_prereq = {}
+        if args.anno and on("anno"):
+            if multi:
+                anno_flag = os.path.join(mkdir, "anno.done")
+                mm.add_target(anno_flag, [bp for (_, _, bp) in sample_ctx],
+                              [cmd_anno(cart_root, args, multi=True), f"touch {anno_flag}"])
+                anno_prereq = {s["id"]: anno_flag for (s, _, _) in sample_ctx}
+            else:
+                for (s, cart_dir, bp) in sample_ctx:
+                    anno_flag = os.path.join(mkdir, f"anno.{s['id']}.done")
+                    mm.add_target(anno_flag, [bp], [cmd_anno(cart_dir, args), f"touch {anno_flag}"])
+                    anno_prereq[s["id"]] = anno_flag
+
+        # --- S3 upload (opt-in); upload waits on annotation when both run ---
+        if args.s3_upload and on("upload"):
+            upload_flags = []
+            for (s, cart_dir, bp) in sample_ctx:
                 up_flag = os.path.join(mkdir, f"upload.{s['id']}.done")
-                mm.add_target(up_flag, [anno_flag or base_prereq],
+                mm.add_target(up_flag, [anno_prereq.get(s["id"], bp)],
                               [cmd_upload(cart_dir, args, args.batch), f"touch {up_flag}"])
                 upload_flags.append(up_flag)
-
-        # For a joint run, also upload multi-catalog.yaml + the shared factor files
-        # (the cartl/ root) to the parent S3 dir, after the per-sample uploads.
-        if multi and args.s3_upload and on("upload"):
-            mc_flag = os.path.join(mkdir, "upload.multi-catalog.done")
-            mm.add_target(mc_flag, upload_flags or [multi_cart_flag],
-                          [cmd_upload_multi_catalog(cart_root, args, args.batch), f"touch {mc_flag}"])
+            # joint run: also upload multi-catalog.yaml + shared files to the parent dir
+            if multi:
+                mc_flag = os.path.join(mkdir, "upload.multi-catalog.done")
+                mm.add_target(mc_flag, upload_flags,
+                              [cmd_upload_multi_catalog(cart_root, args, args.batch), f"touch {mc_flag}"])
 
 
 def _sample_in_cell(s, cfg, cid, active_cells):

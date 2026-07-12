@@ -183,7 +183,7 @@ cartloader run_together --platform 10x_xenium --in-dir IN --out-dir OUT \
 
 Publishing is **opt-in** and **entirely CLI-driven** (no config block). It has two independent actions — enable either or both:
 
-- **`--anno`** — AI-annotate each packaged sample directory. **Requires `--tissue` and `--organism`** (no defaults); `--anno-api-type` (default `umgpt`), `--anno-model` (default `claude-opus-4-7`), and `--anno-threads` (default `10`) are overridable.
+- **`--anno`** — AI-annotate each packaged sample directory (via [`anno_cartload_folder`](./anno_cartload_folder.md)). **Requires `--tissue` and `--organism`** (no defaults); `--anno-api-type` (default `umgpt`), `--anno-model` (default `claude-opus-4-7`), and `--anno-threads` (default `10`) are overridable. For a joint multi-sample run the shared factors are annotated **once** at the `cartl/` root and reused into every sample sub-folder.
 - **`--s3-upload`** — upload each self-contained sample directory to S3.
 
 When both run, `upload` waits on `anno` (which edits `catalog.yaml`).
