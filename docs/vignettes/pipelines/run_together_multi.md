@@ -40,7 +40,7 @@ cartloader run_together --platform 10x_xenium \
 All rows share one `--out-dir`, so they train **one joint model**. Everything else (FICTURE mode, images, cell analyses) is assembled exactly as in the single-sample run and applied to every sample. Add `--dry-run` to inspect `run_together.mk` and `run_together.resolved.json` first.
 
 !!! info "Output layout"
-    Packaging is delegated to [`run_cartload2_multi`](../../reference/run_cartload2_multi.md): each sample is written to a self-contained `cartl/<multi_id>-<sample_id>/` directory (with `<multi_id>` defaulting to the `--out-dir` basename), plus a `cartl/multi-catalog.yaml` that links every per-sample `catalog.yaml` and hoists the shared model/UMAP/DE assets. Upload the whole `cartl/` directory to S3 as one unit.
+    Packaging is delegated to [`run_cartload2_multi`](../../reference/run_cartload2_multi.md): each sample is written to a self-contained `cartl/<multi_id>-<sample_id>/` directory (with `<multi_id>` defaulting to the `--out-dir` basename), plus a `cartl/multi-catalog.yaml` that links every per-sample `catalog.yaml` and copies the shared factor files (`post`/`rgb`/`de`/`info`/`umap`) into the `cartl/` root as a unified `factors:` map. Upload the whole `cartl/` directory to S3 as one unit.
 
 !!! tip "Extra role columns"
     The sheet can also carry per-sample inputs — `transcript` (skip ingest), `xy`, `boundaries`, `clusters`, `mex`:

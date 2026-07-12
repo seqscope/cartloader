@@ -190,7 +190,7 @@ cartloader run_together --platform 10x_xenium --in-dir IN --out-dir OUT \
 ## How samples are packaged
 
 - **Single sample** → one `run_cartload2` call, output at `cartl/<id>/`.
-- **Joint multi-sample run** (several samples sharing one `--out-dir`) → a single [`run_cartload2_multi`](./run_cartload2_multi.md) call that packages every sample in parallel. Each sample is written to a **self-contained** `cartl/<multi_id>-<sample_id>/` directory (with `<multi_id>` defaulting to the `--out-dir` basename), and a **`cartl/multi-catalog.yaml`** is written that links every per-sample `catalog.yaml` and hoists the shared components (shared model, UMAP, DE/info) so `cartl/` uploads to S3 as one deployable unit.
+- **Joint multi-sample run** (several samples sharing one `--out-dir`) → a single [`run_cartload2_multi`](./run_cartload2_multi.md) call that packages every sample in parallel. Each sample is written to a **self-contained** `cartl/<multi_id>-<sample_id>/` directory (with `<multi_id>` defaulting to the `--out-dir` basename), and a **`cartl/multi-catalog.yaml`** is written that links every per-sample `catalog.yaml` and copies the shared factor files (`post`/`rgb`/`de`/`info`/`umap`) into the `cartl/` root as a unified `factors:` map, so `cartl/` uploads to S3 as one deployable unit.
 
 This mirrors the FICTURE manifests: `run_ficture2_multi` writes a shared [`ficture.multi.params.json`](./run_ficture2_multi.md#multi-sample-manifest) that `run_cartload2_multi` reads to discover samples and shared assets.
 

@@ -4,7 +4,7 @@ from pathlib import Path
 
 from cartloader.utils.minimake import minimake
 from cartloader.utils.utils import cmd_separator, scheck_app, create_custom_logger, load_file_to_dict, write_dict_to_file, read_minmax, flexopen, execute_makefile, valid_and_touch_cmd
-from cartloader.utils.color_helper import normalize_rgb
+from cartloader.utils.cartload_helper import copy_rgb_tsv, render_umap_cmd, umap_tippecanoe_cmd
 from cartloader.utils.ficture2_helper import ficture2_params_to_factor_assets
 from cartloader.utils.ficture2_helper_patch import infer_tiled_query_layout, make_direct_pmtiles_cmd, make_direct_pmtiles_pyramid_cmd
 
@@ -143,46 +143,6 @@ def pick_sge_inputs(args):
     # neither source provided, actionable error
     raise KeyError("Path not provided for SGE. Provide using --sge-dir with --in-sge-assets or --fic-dir with --in-fic-params")
 
-def copy_rgb_tsv(in_rgb, out_rgb, restart=False):
-    def _get_content(path):
-        with open(path, 'r') as f:
-            hdrs = f.readline().rstrip().split("\t")
-            col2idx = {hdr: i for i, hdr in enumerate(hdrs)}
-            lines = ["\t".join(["Name", "Color_index", "R", "G", "B"])]
-            for line in f:
-                toks = line.rstrip().split("\t")
-                if len(toks) != len(hdrs):
-                    raise ValueError(f"Input RGB file {path} has inconsistent number of columns")
-                rgb_r = float(toks[col2idx["R"]])
-                rgb_g = float(toks[col2idx["G"]])
-                rgb_b = float(toks[col2idx["B"]])
-                rgb_r, rgb_g, rgb_b = normalize_rgb(rgb_r, rgb_g, rgb_b)
-                name = toks[col2idx["Name"]]
-                lines.append(f"{name}\t{name}\t{rgb_r:.5f}\t{rgb_g:.5f}\t{rgb_b:.5f}")
-        return "\n".join(lines) + "\n"
-
-    # Desired behavior:
-    # - If restart is True OR output file does not exist: (re)generate the file.
-    # - Otherwise: compare to expected output and skip rewrite if identical.
-    expected_content = _get_content(in_rgb)
-
-    if restart or not os.path.exists(out_rgb):
-        with open(out_rgb, 'w') as f:
-            f.write(expected_content)
-        return
-
-    try:
-        with open(out_rgb, 'r') as f:
-            existing_content = f.read()
-        if existing_content == expected_content:
-            return  # up-to-date; no rewrite needed
-    except Exception:
-        # On read/compare failure, fall through to regenerate
-        pass
-
-    with open(out_rgb, 'w') as f:
-        f.write(expected_content)
-
 def process_umap(umap, mm, args, out_prefix, model_id, fic_jsonf):
     """Add Makefile target to convert a UMAP bundle into PMTiles and copies."""
     if not umap:
@@ -214,32 +174,12 @@ def process_umap(umap, mm, args, out_prefix, model_id, fic_jsonf):
 
     umap_ndjson = f"{out_prefix}-umap.ndjson"
     umap_pmtiles = f"{out_prefix}-umap.pmtiles"
-    convert_cmd = " ".join([
-        "cartloader", "render_umap",
-        f"--input {umap_tsv_out}",
-        f"--out {umap_ndjson}",
-        f"--colname-factor {args.umap_colname_factor}",
-        f"--colname-x {args.umap_colname_x}",
-        f"--colname-y {args.umap_colname_y}"
-    ])
-    cmds.append(convert_cmd)
-
-    tippecanoe_cmd = " ".join([
-        f"TIPPECANOE_MAX_THREADS={args.threads}",
-        f"'{args.tippecanoe}'",
-        f"-t {args.tmp_dir}",
-        f"-o {umap_pmtiles}",
-        "-Z", str(args.umap_min_zoom),
-        "-z", str(args.umap_max_zoom),
-        "-l", "umap",
-        "--force",
-        "--drop-densest-as-needed",
-        "--extend-zooms-if-still-dropping",
-        "--no-duplication",
-        f"--preserve-point-density-threshold={args.preserve_point_density_thres}",
-        umap_ndjson
-    ])
-    cmds.append(tippecanoe_cmd)
+    cmds.append(render_umap_cmd(umap_tsv_out, umap_ndjson,
+                                args.umap_colname_factor, args.umap_colname_x, args.umap_colname_y))
+    cmds.append(umap_tippecanoe_cmd(umap_pmtiles, umap_ndjson, args.tippecanoe, args.tmp_dir,
+                                    threads=args.threads, min_zoom=args.umap_min_zoom,
+                                    max_zoom=args.umap_max_zoom,
+                                    preserve_thres=args.preserve_point_density_thres))
     if not args.keep_intermediate_files:
         cmds.append(f"rm -f {umap_ndjson}")
     outfiles.append(umap_pmtiles)

@@ -22,7 +22,7 @@ With `--id <multi_id>` (default: the `--out-dir` basename), each sample is packa
 
 ```
 out_dir/
-├── multi-catalog.yaml              # links per-sample catalogs + hoisted shared assets
+├── multi-catalog.yaml              # links per-sample catalogs + shared factors (copied to root)
 ├── <multi_id>-<sample1>/           # self-contained: catalog.yaml + PMTiles
 ├── <multi_id>-<sample2>/
 └── run_cartload2_multi.mk
@@ -30,8 +30,33 @@ out_dir/
 
 The `multi-catalog.yaml` records:
 
-- `samples:` — a relative pointer to each `<multi_id>-<sample_id>/catalog.yaml`;
-- `shared:` — the shared model / UMAP / cell DE / info assets (which `run_cartload2` deploys identically into every sample), referencing sample‑1's copies so the pointer stays inside `out_dir`.
+- `samples:` — a relative pointer to each `<multi_id>-<sample_id>/catalog.yaml` (the **only** pointers into sample subdirectories);
+- `factors:` — one entry per shared factor set, **model-derived and cell-derived alike** (e.g. `t12_f24`, `cartloader`), all with the same keys: `post` (factor×feature matrix — the LDA `model.tsv` or the cell pseudobulk), `rgb`, `de`, `info`, `umap` (`{pmtiles, png, tsv}`), and `heatmap` (`{pdf, tsv}`, cell factors only).
+
+Those shared files are **copied into the `out_dir` root** next to `multi-catalog.yaml` (materialized once from sample‑1's already-processed outputs), so the catalog references only local basenames and `out_dir` is fully self‑contained.
+
+```yaml
+id: <multi_id>
+analysis_type: multi-sample
+n_samples: 2
+samples:
+  s1: <multi_id>-s1/catalog.yaml
+  s2: <multi_id>-s2/catalog.yaml
+factors:
+  t12_f24:                        # model-derived factor set
+    post: t12-f24-post.tsv
+    rgb:  t12-f24-rgb.tsv
+    de:   t12-f24-de.tsv
+    info: t12-f24-info.tsv
+    umap: { pmtiles: t12-f24-umap.pmtiles, png: t12-f24-umap.png, tsv: t12-f24-umap.tsv.gz }
+  cartloader:                     # cell-derived factor set (same keys)
+    post: cartloader-post.tsv.gz
+    rgb:  cartloader-rgb.tsv
+    de:   cartloader-de.tsv
+    info: cartloader-info.tsv
+    umap: { pmtiles: cartloader-umap.pmtiles, png: cartloader-umap.png, tsv: cartloader-umap.tsv.gz }
+    heatmap: { pdf: cartloader-heatmap.pdf, tsv: cartloader-heatmap.tsv }
+```
 
 ---
 ## Example Usage

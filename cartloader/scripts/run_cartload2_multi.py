@@ -3,6 +3,9 @@ import yaml
 
 from cartloader.utils.minimake import minimake
 from cartloader.utils.utils import cmd_separator, add_param_to_cmd, execute_makefile
+from cartloader.utils.cartload_helper import render_umap_cmd, umap_tippecanoe_cmd
+
+repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 # run_cartload2 options forwarded to each per-sample invocation
@@ -89,54 +92,104 @@ def parse_arguments(_args):
     return parser.parse_args(_args)
 
 
-def build_multi_catalog(manifest, cells_manifests, samples, multi_id, out_catalog):
-    """Assemble the multi-sample catalog: pointers to each self-contained per-sample
-    catalog plus a `shared` section referencing sample-1's deployed shared copies
-    (which run_cartload2 writes identically into every sample)."""
-    s1 = f"{multi_id}-{samples[0]}"
-    shared = {"models": {}, "cells": {}}
+def build_multi_catalog(mm, args, manifest, cells_manifests, samples, multi_id):
+    """Assemble the multi-sample catalog and add targets that materialize the shared
+    factor files at the out_dir root, sourced from the FICTURE output (via the
+    manifests) with run_cartload2-consistent naming. Returns (catalog, shared_flags)."""
+    out_catalog = args.out_catalog
+    fic, root = args.fic_dir, args.out_dir
+    gzip = args.gzip or "gzip"
+    factors = {}
+    shared_flags = []
 
+    def cp(src_rel, dst):
+        return f'cp -f "{os.path.join(fic, src_rel)}" "{os.path.join(root, dst)}"'
+
+    def rgb(src_rel, dst):   # normalize the FICTURE cmap into an rgb.tsv (as run_cartload2 does)
+        s = os.path.join(fic, src_rel); d = os.path.join(root, dst)
+        return (f'python3 -c "from cartloader.utils.cartload_helper import copy_rgb_tsv; '
+                f"copy_rgb_tsv('{s}', '{d}', restart=True)\"")
+
+    def umap_cmds(src_tsv_rel, src_png_rel, oid):
+        tip = args.tippecanoe or f"{repo_dir}/submodules/tippecanoe/tippecanoe"
+        ndjson = os.path.join(args.tmp_dir, f"{oid}-umap.ndjson")
+        out_tsv = os.path.join(root, f"{oid}-umap.tsv.gz")
+        out_pmt = os.path.join(root, f"{oid}-umap.pmtiles")
+        return [
+            cp(src_tsv_rel, f"{oid}-umap.tsv.gz"),
+            cp(src_png_rel, f"{oid}-umap.png"),
+            render_umap_cmd(out_tsv, ndjson,
+                            args.umap_colname_factor or "topK",
+                            args.umap_colname_x or "UMAP1",
+                            args.umap_colname_y or "UMAP2"),
+            umap_tippecanoe_cmd(out_pmt, ndjson, tip, args.tmp_dir,
+                                threads=args.threads or 4,
+                                min_zoom=args.umap_min_zoom if args.umap_min_zoom is not None else 0,
+                                max_zoom=args.umap_max_zoom if args.umap_max_zoom is not None else 18,
+                                preserve_thres=args.preserve_point_density_thres or 1024),
+            f"rm -f {ndjson}",
+        ]
+
+    # --- model-derived factors (from the joint LDA models) ---
     for tp in manifest.get("shared", {}).get("train_params", []):
         oid = tp["model_id"].replace("_", "-")
-        entry = {
-            "model": f"{s1}/{oid}-model.tsv",
-            "cmap":  f"{s1}/{oid}-rgb.tsv",
-            "de":    f"{s1}/{oid}-bulk-de.tsv",
-            "info":  f"{s1}/{oid}-info.tsv",
-        }
-        if "umap" in tp:
-            entry["shared_umap"] = {
-                "pmtiles": f"{s1}/{oid}-shared-umap.pmtiles",
-                "png":     f"{s1}/{oid}-shared.umap.png",
-                "tsv":     f"{s1}/{oid}-shared-umap.tsv.gz",
-            }
-        shared["models"][tp["model_id"]] = entry
+        cmds = cmd_separator([], f"Materializing shared factor {tp['model_id']}")
+        cmds += [cp(tp["model_path"], f"{oid}-post.tsv"),
+                 rgb(tp["cmap"], f"{oid}-rgb.tsv"),
+                 cp(tp["de_path"], f"{oid}-de.tsv"),
+                 cp(tp["info_path"], f"{oid}-info.tsv")]
+        entry = {"post": f"{oid}-post.tsv", "rgb": f"{oid}-rgb.tsv",
+                 "de": f"{oid}-de.tsv", "info": f"{oid}-info.tsv"}
+        u = tp.get("umap")
+        if u:
+            cmds += umap_cmds(u["tsv"], u["png"], oid)
+            entry["umap"] = {"pmtiles": f"{oid}-umap.pmtiles", "png": f"{oid}-umap.png",
+                             "tsv": f"{oid}-umap.tsv.gz"}
+        flag = os.path.join(root, f"{oid}.shared.done")
+        cmds.append(f"touch {flag}")
+        mm.add_target(flag, [os.path.join(fic, tp["model_path"])], cmds)
+        shared_flags.append(flag)
+        factors[tp["model_id"]] = entry
 
+    # --- cell-derived factors (same keys) ---
     for cm in cells_manifests:
-        prefix = cm.get("out_prefix")
-        oid = prefix.replace("_", "-")
+        prefix = cm.get("out_prefix"); oid = prefix.replace("_", "-")
         csh = cm.get("shared", {})
-        entry = {}
-        if "shared_cluster_de" in csh:
-            entry["shared_de"] = f"{s1}/{oid}-shared-bulk-de.tsv"
-        if "shared_cluster_info" in csh:
-            entry["shared_info"] = f"{s1}/{oid}-shared-info.tsv"
+        cmds = cmd_separator([], f"Materializing shared cell factor {prefix}")
+        entry, prereqs = {}, []
         if "shared_cluster_pseudobulk" in csh:
-            entry["shared_pseudobulk"] = f"{s1}/{oid}-shared-pseudobulk.tsv.gz"
+            src = csh["shared_cluster_pseudobulk"]
+            cmds.append(f'{gzip} -c "{os.path.join(fic, src)}" > "{os.path.join(root, oid + "-post.tsv.gz")}"')
+            entry["post"] = f"{oid}-post.tsv.gz"; prereqs.append(os.path.join(fic, src))
+        if "shared_cmap" in csh:
+            cmds.append(rgb(csh["shared_cmap"], f"{oid}-rgb.tsv")); entry["rgb"] = f"{oid}-rgb.tsv"
+        if "shared_cluster_de" in csh:
+            cmds.append(cp(csh["shared_cluster_de"], f"{oid}-de.tsv")); entry["de"] = f"{oid}-de.tsv"
+        if "shared_cluster_info" in csh:
+            cmds.append(cp(csh["shared_cluster_info"], f"{oid}-info.tsv")); entry["info"] = f"{oid}-info.tsv"
+        um = csh.get("manifolds", {}).get("umap")
+        if um:
+            cmds += umap_cmds(um["tsv"], um["png"], oid)
+            entry["umap"] = {"pmtiles": f"{oid}-umap.pmtiles", "png": f"{oid}-umap.png",
+                             "tsv": f"{oid}-umap.tsv.gz"}
         if "shared_cluster_model_heatmap_pdf" in csh:
-            entry["shared_heatmap_pdf"] = f"{s1}/{oid}-shared-heatmap.pdf"
-        if "shared_cluster_model_heatmap_tsv" in csh:
-            entry["shared_heatmap_tsv"] = f"{s1}/{oid}-shared-heatmap.tsv"
-        if entry:
-            shared["cells"][prefix] = entry
+            cmds.append(cp(csh["shared_cluster_model_heatmap_pdf"], f"{oid}-heatmap.pdf"))
+            cmds.append(cp(csh["shared_cluster_model_heatmap_tsv"], f"{oid}-heatmap.tsv"))
+            entry["heatmap"] = {"pdf": f"{oid}-heatmap.pdf", "tsv": f"{oid}-heatmap.tsv"}
+        flag = os.path.join(root, f"{oid}.shared.done")
+        cmds.append(f"touch {flag}")
+        mm.add_target(flag, prereqs, cmds)
+        shared_flags.append(flag)
+        factors[prefix] = entry
 
-    return {
+    catalog = {
         "id": multi_id,
         "analysis_type": "multi-sample",
         "n_samples": len(samples),
         "samples": {sid: os.path.join(f"{multi_id}-{sid}", out_catalog) for sid in samples},
-        "shared": shared,
+        "factors": factors,
     }
+    return catalog, shared_flags
 
 
 def run_cartload2_multi(_args):
@@ -168,12 +221,14 @@ def run_cartload2_multi(_args):
     multi_id = args.id if args.id is not None else os.path.basename(os.path.normpath(args.out_dir))
 
     mm = minimake()
+    sample_catalogs = {}
     for sid in samples:
         sample_rel = manifest["samples"][sid]                     # e.g. samples/<sid>/ficture.params.json
         sample_fic_dir = os.path.join(args.fic_dir, os.path.dirname(sample_rel))
         out_id = f"{multi_id}-{sid}"
         cart_dir = os.path.join(args.out_dir, out_id)
         catalog_yaml = os.path.join(cart_dir, args.out_catalog)
+        sample_catalogs[sid] = catalog_yaml
 
         # Auto-detect per-sample cell analyses (ficture.<prefix>.params.json, excluding the base)
         cell_params = [p for p in sorted(glob.glob(os.path.join(sample_fic_dir, "ficture.*.params.json")))
@@ -199,8 +254,12 @@ def run_cartload2_multi(_args):
     if len(mm.targets) == 0:
         raise ValueError("No tasks were generated. Check inputs and parameters.")
 
-    # Write the multi-catalog (pointers to per-sample catalogs + hoisted shared section)
-    multi_catalog = build_multi_catalog(manifest, cells_manifests, samples, multi_id, args.out_catalog)
+    os.makedirs(args.tmp_dir, exist_ok=True)
+
+    # Build the multi-catalog and add targets that materialize the shared factor
+    # files at the out_dir root — sourced from the FICTURE output (via the
+    # manifests) and processed with run_cartload2-consistent naming.
+    multi_catalog, _shared_flags = build_multi_catalog(mm, args, manifest, cells_manifests, samples, multi_id)
     with open(os.path.join(args.out_dir, args.multi_catalog), "w") as f:
         yaml.safe_dump(multi_catalog, f, sort_keys=False)
 
