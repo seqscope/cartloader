@@ -12,7 +12,7 @@ DEFAULT_MIN_CT_PER_UNIT_HEXAGON = 50
 
 # Publish (S3 upload) defaults for the CartoStore project.
 DEFAULT_S3_PREFIX = "s3://cartostore/data"
-DEFAULT_S3_PROFILE = "cartostore"
+DEFAULT_S3_PROFILE = "default"
 
 # Sample-level input roles. A sample provides these either explicitly (sample
 # sheet columns / JSON) or by auto-detection inside its `in_dir` (profile.roles).
@@ -508,7 +508,20 @@ def cmd_upload(cart_dir, args, batch):
     dest = f"{args.s3_prefix.rstrip('/')}/batch={batch}/{args.collection}/{dest_id}"
     catalog = os.path.join(cart_dir, "catalog.yaml")
     return ("(grep -E \"\\.\" " + catalog + " | perl -lane 'print $F[$#F]' | sort | uniq; "
-            "echo catalog.yaml;) | xargs -I {} " + args.aws + " s3 cp " + cart_dir + "/{} "
+            "echo catalog.yaml;) | xargs -I {} -P " + str(args.s3_jobs) + " " + args.aws + " s3 cp " + cart_dir + "/{} "
+            + dest + "/{} --profile " + args.aws_profile)
+
+
+def cmd_upload_multi_catalog(cart_root, args, batch):
+    """Upload multi-catalog.yaml and the shared factor files at the cartl/ root to
+    <s3_prefix>/batch=<YYYY_MM>/<collection>/ — the parent of the per-sample dirs,
+    so the catalog's relative pointers resolve on S3."""
+    mc = os.path.join(cart_root, "multi-catalog.yaml")
+    dest = f"{args.s3_prefix.rstrip('/')}/batch={batch}/{args.collection}"
+    # Shared files are the flat (no-slash) basenames in multi-catalog.yaml; the
+    # per-sample 'samples:' entries contain '/' and are already uploaded elsewhere.
+    return ("(grep -E \"\\.\" " + mc + " | perl -lane 'print $F[$#F]' | grep -v / | sort | uniq; "
+            "echo multi-catalog.yaml;) | xargs -I {} -P " + str(args.s3_jobs) + " " + args.aws + " s3 cp " + cart_root + "/{} "
             + dest + "/{} --profile " + args.aws_profile)
 
 
@@ -585,6 +598,7 @@ def add_targets(mm, samples, cfg, args):
                 cmd_cartload_multi(fic_dir, cart_root, multi_id, cfg),
                 f"touch {multi_cart_flag}"])
 
+        upload_flags = []
         for s in grp:
             fic_sample_dir = os.path.join(fic_dir, "samples", s["id"])
             if multi:
@@ -619,6 +633,14 @@ def add_targets(mm, samples, cfg, args):
                 up_flag = os.path.join(mkdir, f"upload.{s['id']}.done")
                 mm.add_target(up_flag, [anno_flag or base_prereq],
                               [cmd_upload(cart_dir, args, args.batch), f"touch {up_flag}"])
+                upload_flags.append(up_flag)
+
+        # For a joint run, also upload multi-catalog.yaml + the shared factor files
+        # (the cartl/ root) to the parent S3 dir, after the per-sample uploads.
+        if multi and args.s3_upload and on("upload"):
+            mc_flag = os.path.join(mkdir, "upload.multi-catalog.done")
+            mm.add_target(mc_flag, upload_flags or [multi_cart_flag],
+                          [cmd_upload_multi_catalog(cart_root, args, args.batch), f"touch {mc_flag}"])
 
 
 def _sample_in_cell(s, cfg, cid, active_cells):
@@ -711,6 +733,7 @@ def parse_arguments(_args):
     pub.add_argument("--s3-prefix", type=str, default=DEFAULT_S3_PREFIX, help=f"S3 destination prefix (default: {DEFAULT_S3_PREFIX})")
     pub.add_argument("--aws-profile", type=str, default=DEFAULT_S3_PROFILE, help=f"AWS CLI profile (default: {DEFAULT_S3_PROFILE})")
     pub.add_argument("--aws", type=str, default="aws", help="Path to the aws CLI binary (default: aws)")
+    pub.add_argument("--s3-jobs", type=int, default=4, help="Parallel S3 copies (xargs -P) per upload (default: 4)")
     return p.parse_args(_args)
 
 

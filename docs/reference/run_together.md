@@ -188,12 +188,13 @@ Publishing is **opt-in** and **entirely CLI-driven** (no config block). It has t
 
 When both run, `upload` waits on `anno` (which edits `catalog.yaml`).
 
-**S3 destination:** `<s3-prefix>/batch=<batch>/<collection>/<dir-id>/`, where `<dir-id>` is the sample's output directory name (`<sample_id>` for a single run, `<multi_id>-<sample_id>` for a joint run).
+**S3 destination:** `<s3-prefix>/batch=<batch>/<collection>/<dir-id>/`, where `<dir-id>` is the sample's output directory name (`<sample_id>` for a single run, `<multi_id>-<sample_id>` for a joint run). For a **joint run**, `multi-catalog.yaml` and the shared factor files (`cartl/` root) are additionally uploaded to the **parent** `<s3-prefix>/batch=<batch>/<collection>/`, so the catalog's relative pointers resolve on S3.
 
 - `--s3-prefix` — default `s3://cartostore/data`
 - `--batch` — default: the **current** `YYYY_MM`
 - `--collection` — default: the **out-dir basename** (the run id)
 - `--aws-profile` — AWS CLI profile (default `cartostore`); `--aws` — path to the `aws` binary (default `aws`)
+- `--s3-jobs` — parallel copies per upload (`xargs -P`; default `4`)
 
 ```bash
 cartloader run_together --platform 10x_xenium --samples samples.tsv --out-dir OUT \
@@ -217,7 +218,7 @@ This mirrors the FICTURE manifests: `run_ficture2_multi` writes a shared [`fictu
 
 **Input/output:** `--platform`, `--in-dir`, `--samples`, `--out-dir`, `--out-root`, `--id`, `--config`, `--platform-json` (external profile override).
 
-**Publish:** `--anno`, `--s3-upload`, `--tissue`, `--organism`, `--anno-api-type`, `--anno-model`, `--anno-threads`, `--collection`, `--batch`, `--s3-prefix`, `--aws-profile`, `--aws` (see [Publish](#publishing)).
+**Publish:** `--anno`, `--s3-upload`, `--tissue`, `--organism`, `--anno-api-type`, `--anno-model`, `--anno-threads`, `--collection`, `--batch`, `--s3-prefix`, `--aws-profile`, `--aws`, `--s3-jobs` (see [Publish](#publishing)).
 
 **FICTURE mode:** `--width`, `--n-factor` (de-novo); `--project-models` (projection-only — existing FICTURE dir(s), comma-separated).
 
