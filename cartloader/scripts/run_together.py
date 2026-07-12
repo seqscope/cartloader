@@ -497,7 +497,7 @@ def cmd_anno(cart_dir, args, multi=False):
     return (f"cartloader anno_cartload_folder --cartl-dir {cart_dir} "
             + ("--multi-sample " if multi else "")
             + f"--tissue \"{args.tissue}\" --organism {args.organism} "
-            f"--api-type {args.anno_api_type} --model {args.anno_model} --threads {args.anno_threads}")
+            f"--api-type {args.anno_api_type} --model {args.anno_model} --threads {args.anno_threads} --profile {args.aws_profile}")
 
 
 def cmd_upload(cart_dir, args, batch):

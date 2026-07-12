@@ -15,8 +15,8 @@ def parse_arguments(_args):
     parser.add_argument('--tmp-dir', type=str, help='Temporary directory (S3 mode only; defaults under the current dir)')
     parser.add_argument('--tissue', type=str, required=True, help='Tissue name (passed to the annotation prompt)')
     parser.add_argument('--organism', type=str, required=True, help='Organism/species name (passed to the annotation prompt)')
-    parser.add_argument('--api-type', type=str, default='umgpt', help='Generative-AI API type (default: umgpt)')
-    parser.add_argument('--model', type=str, default='claude-opus-4-7', help='Model name (default: claude-opus-4-7)')
+    parser.add_argument('--api-type', type=str, default='claude', help='Generative-AI API type (default: claude)')
+    parser.add_argument('--model', type=str, default='claude-opus-4-8', help='Model name (default: claude-opus-4-8)')
     parser.add_argument('--threads', type=int, default=1, help='Threads for annotation (default: 1)')
     # multi-sample
     parser.add_argument('--multi-sample', action='store_true', help='Annotate the shared factors in the multi-catalog, then propagate (reuse) the annotations into every per-sample sub-folder')
@@ -29,7 +29,7 @@ def parse_arguments(_args):
     parser.add_argument('--yaml-key-skip', type=str, nargs='+', default=['alias', 'alias_ai'], help='Factor keys that mark an existing alias (skip if present)')
     parser.add_argument('--yaml-key-store', type=str, default='alias_ai', help='Factor key under which the alias file is recorded (default: alias_ai)')
     # S3
-    parser.add_argument('--profile', type=str, default='cartostore', help='AWS profile for S3 upload (default: cartostore)')
+    parser.add_argument('--profile', type=str, default='default', help='AWS profile for S3 upload (default: cartostore)')
     parser.add_argument('--skip-upload', action='store_true', help='S3 mode: do not upload alias files / updated catalog back to S3')
 
     if len(_args) == 0:
