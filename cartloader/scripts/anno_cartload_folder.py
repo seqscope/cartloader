@@ -51,10 +51,13 @@ def iter_factors(catalog):
     return [(f["id"], f) for f in catalog.get("assets", {}).get("factors", [])]
 
 
-def annotate_catalog(cat_dir, cat_name, args, reuse_from=None):
+def annotate_catalog(cat_dir, cat_name, args, reuse_from=None, reuse_missing_ok=False):
     """Annotate every factor of one catalog in place. When ``reuse_from`` is given,
-    alias files are copied from there instead of being (re)generated. Returns the
-    loaded catalog dict (so the caller can read e.g. its `samples`)."""
+    alias files are copied from there instead of being (re)generated. With
+    ``reuse_missing_ok`` a factor absent from ``reuse_from`` (e.g. a sample-specific
+    factor that was never part of the shared multi-catalog) is annotated afresh in
+    this folder rather than raising. Returns the loaded catalog dict (so the caller
+    can read e.g. its `samples`)."""
     cat_path = os.path.join(cat_dir, cat_name)
     with open(cat_path) as f:
         catalog = yaml.safe_load(f)
@@ -73,10 +76,15 @@ def annotate_catalog(cat_dir, cat_name, args, reuse_from=None):
         alias_tsv = f"{factor_id.replace('_', '-')}{args.alias_suffix}"
         alias_path = os.path.join(cat_dir, alias_tsv)
 
-        if reuse_from is not None:
-            src = os.path.join(reuse_from, alias_tsv)
-            if not os.path.exists(src):
+        src = os.path.join(reuse_from, alias_tsv) if reuse_from is not None else None
+        if src is not None and not os.path.exists(src):
+            if not reuse_missing_ok:
                 raise FileNotFoundError(f"Cannot reuse annotation for factor '{factor_id}': {src} not found")
+            # Sample-specific factor with no shared annotation: annotate it here.
+            logger.info(f"Factor {factor_id} not among shared annotations; annotating locally")
+            src = None
+
+        if src is not None:
             logger.info(f"Reusing annotation for {factor_id} from {src}")
             _run(f"cp -f {src} {alias_path}")
         else:
@@ -110,7 +118,7 @@ def anno_cartload_folder(_args):
             for sid, rel in (mc.get("samples") or {}).items():
                 sub_dir = os.path.join(cartl, os.path.dirname(rel))
                 logger.info(f"Propagating shared annotations to sample '{sid}' ({sub_dir})")
-                annotate_catalog(sub_dir, os.path.basename(rel), args, reuse_from=cartl)
+                annotate_catalog(sub_dir, os.path.basename(rel), args, reuse_from=cartl, reuse_missing_ok=True)
         else:
             annotate_catalog(cartl, args.catalog, args, reuse_from=args.reuse_results_from)
         logger.info("Annotation complete (local; no upload).")
