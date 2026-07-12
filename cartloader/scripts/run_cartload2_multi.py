@@ -134,11 +134,12 @@ def build_multi_catalog(mm, args, manifest, cells_manifests, samples, multi_id):
     for tp in manifest.get("shared", {}).get("train_params", []):
         oid = tp["model_id"].replace("_", "-")
         cmds = cmd_separator([], f"Materializing shared factor {tp['model_id']}")
-        cmds += [cp(tp["model_path"], f"{oid}-post.tsv"),
+        # `post` keeps its provenance suffix: -model.tsv for an LDA model.
+        cmds += [cp(tp["model_path"], f"{oid}-model.tsv"),
                  rgb(tp["cmap"], f"{oid}-rgb.tsv"),
                  cp(tp["de_path"], f"{oid}-de.tsv"),
                  cp(tp["info_path"], f"{oid}-info.tsv")]
-        entry = {"post": f"{oid}-post.tsv", "rgb": f"{oid}-rgb.tsv",
+        entry = {"post": f"{oid}-model.tsv", "rgb": f"{oid}-rgb.tsv",
                  "de": f"{oid}-de.tsv", "info": f"{oid}-info.tsv"}
         u = tp.get("umap")
         if u:
@@ -159,8 +160,9 @@ def build_multi_catalog(mm, args, manifest, cells_manifests, samples, multi_id):
         entry, prereqs = {}, []
         if "shared_cluster_pseudobulk" in csh:
             src = csh["shared_cluster_pseudobulk"]
-            cmds.append(f'{gzip} -c "{os.path.join(fic, src)}" > "{os.path.join(root, oid + "-post.tsv.gz")}"')
-            entry["post"] = f"{oid}-post.tsv.gz"; prereqs.append(os.path.join(fic, src))
+            # `post` keeps its provenance suffix: -pseudobulk.tsv.gz for cell clusters.
+            cmds.append(f'{gzip} -c "{os.path.join(fic, src)}" > "{os.path.join(root, oid + "-pseudobulk.tsv.gz")}"')
+            entry["post"] = f"{oid}-pseudobulk.tsv.gz"; prereqs.append(os.path.join(fic, src))
         if "shared_cmap" in csh:
             cmds.append(rgb(csh["shared_cmap"], f"{oid}-rgb.tsv")); entry["rgb"] = f"{oid}-rgb.tsv"
         if "shared_cluster_de" in csh:
