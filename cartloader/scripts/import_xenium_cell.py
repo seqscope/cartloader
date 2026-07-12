@@ -403,7 +403,7 @@ def import_xenium_cell(_args):
             "CLUSTER": f"{args.in_dir}/{args.csv_clust}",
             "DE": f"{args.in_dir}/{args.csv_diffexp}",
             "UMAP_PROJ": f"{args.in_dir}/{args.csv_umap}",
-            "CELL_FEATURE_MEX": f"{args.in_dir}/{args.mex_dir}",
+            # "CELL_FEATURE_MEX": f"{args.in_dir}/{args.mex_dir}",  # unused
             # "MEX_BCD": os.path.join(args.in_dir, args.mex_dir, args.mex_bcd),
             # "MEX_FTR": os.path.join(args.in_dir, args.mex_dir, args.mex_ftr),
             # "MEX_MTX": os.path.join(args.in_dir, args.mex_dir, args.mex_mtx),

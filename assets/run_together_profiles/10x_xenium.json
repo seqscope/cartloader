@@ -21,7 +21,7 @@
   ],
   "cell_analyses": [
     { "id": "cartloader",   "uses": ["boundaries", "xy"] },
-    { "id": "xeniumranger", "uses": ["clusters", "boundaries", "xy"] }
+    { "id": "xeniumranger", "uses": ["clusters", "boundaries", "xy"], "multi_import": "import_xenium_cell" }
   ],
   "cartload": { "use_pmpoint": true, "bin_count": 500 },
   "images": [

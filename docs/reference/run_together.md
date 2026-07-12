@@ -132,6 +132,8 @@ Cell-level decode is **platform-default and automatic**: an analysis runs whenev
 
 `model_id` picks which FICTURE model decodes the cells (default: the largest-factor model). The role paths come from each sample's resolved roles (sheet columns / auto-detection).
 
+An analysis may carry a **`multi_import`** command (e.g. Xenium's `xeniumranger` → `import_xenium_cell`). Such an analysis relies on **sample-specific** cluster labels, so it cannot be jointly decoded: on a single-sample run it goes through `run_ficture2_multi_cells` as usual, but on a **joint run** it is instead imported **per sample** (via `import_xenium_cell`, appended to each sample's catalog). Sheet-provided role paths (`xy`, `boundaries`, `clusters`) are forwarded as `--csv-*` overrides, so GEO-style Ranger outputs (non-standard filenames or scattered paths) work uniformly on joint runs. The joint `cartloader` decode, whose clustering is recomputed on the shared SGE, runs jointly in both cases.
+
 ### `images`
 
 Profiles auto-detect standard modalities; per-sample/JSON entries append. Each declares a **kind**:

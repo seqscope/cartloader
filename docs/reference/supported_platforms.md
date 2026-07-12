@@ -33,7 +33,7 @@ Point `--in-dir` at the Xenium Ranger output directory. First match wins where s
 | Transcripts | `transcripts.csv.gz`, or `transcripts.parquet`, or `transcripts/transcripts.parquet` |
 | Cell boundaries | `cell_boundaries.csv.gz` |
 | Cell centroids | `cells.csv.gz` (columns `x_centroid`, `y_centroid`) |
-| Cluster labels | `analysis/clustering/gene_expression_graphclust/clusters.csv` → imported under the `xeniumranger` prefix |
+| Cluster labels | `analysis/clustering/gene_expression_graphclust/clusters.csv` → `xeniumranger` factor. Single-sample: decoded via `run_ficture2_multi_cells`. Joint run: these clusters are sample-specific, so each sample is imported per-sample via `import_xenium_cell` (sheet columns `xy`/`boundaries`/`clusters` are forwarded as `--csv-*` overrides, so GEO-style Ranger outputs with non-standard filenames also work). |
 | Morphology images | `morphology_focus/morphology_focus_000{0,1,2,3}.ome.tif` → `dapi`/`boundary`/`rna`/`protein`; or a single `morphology_focus.ome.tif` / `morphology.ome.tif` → `dapi` |
 
 Defaults: FICTURE `width=12`, `n_factor=12,24,48`, single-molecule mode; packaging with `--use-pmpoint --bin-count 500`.

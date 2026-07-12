@@ -102,8 +102,12 @@ def infer_meta_from_outdir(out_dir):
     return parts[-1] if parts else out_dir
 
 
+SHEET_UNSET = {"", "-", ".", "NA"}
+
+
 def read_sheet(path):
-    """Read a wide sample sheet (TSV). Columns are input roles; '-'/'' = unset."""
+    """Read a wide sample sheet (TSV). Columns are input roles; the values
+    '', '-', '.', 'NA' all mean unset."""
     rows = []
     with open(path, newline="") as f:
         for row in csv.DictReader(f, delimiter="\t"):
@@ -112,7 +116,7 @@ def read_sheet(path):
                 if k is None:
                     continue
                 v = (v or "").strip()
-                if v and v != "-":
+                if v not in SHEET_UNSET:
                     clean[k.strip()] = v
             if clean:
                 rows.append(clean)
@@ -435,7 +439,7 @@ def resolve_image_ops(cfg, s):
     return ops
 
 
-def plan_images(cfg, s, cart_dir):
+def plan_images(cfg, s, cart_dir, multi):
     cmds = []
     catalog = os.path.join(cart_dir, "catalog.yaml")
 
@@ -471,6 +475,34 @@ def plan_images(cfg, s, cart_dir):
     if ci and s.get("in_dir") and os.path.exists(os.path.join(s["in_dir"], ci["detect_dir"])):
         cmds.append(f"cartloader import_visiumhd_cell --in-dir {s['in_dir']} "
                     f"--outprefix {os.path.join(cart_dir, ci['suffix'])} --all --update-catalog")
+
+    # Per-sample cluster imports for joint runs (e.g. Xenium Ranger clusters):
+    # a cell analysis flagged with `multi_import` is imported per sample here
+    # instead of being jointly decoded by run_ficture2_multi_cells. Sheet-provided
+    # role paths are forwarded as --csv-* overrides so GEO-style layouts (with
+    # non-standard filenames or scattered paths) also work on joint runs.
+    IMPORT_ROLE_FLAG = {"xy": "--csv-cells", "boundaries": "--csv-boundaries",
+                        "clusters": "--csv-clust"}
+    if multi:
+        for ca in cfg.get("cell_analyses", []):
+            imp = ca.get("multi_import")
+            if not imp:
+                continue
+            # A sample can supply inputs via a Ranger-style --in-dir or via sheet
+            # role columns (or both). Emit only when at least one is present.
+            has_indir = bool(s.get("in_dir"))
+            role_paths = {r: s["roles"][r] for r in ca.get("uses", []) if s["roles"].get(r)}
+            if not (has_indir or role_paths):
+                continue
+            parts = [f"cartloader {imp}",
+                     f"--in-dir {s['in_dir'] if has_indir else '.'}",
+                     f"--outprefix {os.path.join(cart_dir, ca['id'])}",
+                     "--all --update-catalog"]
+            for role, path in role_paths.items():
+                flag = IMPORT_ROLE_FLAG.get(role)
+                if flag:
+                    parts.append(f"{flag} {path}")
+            cmds.append(" ".join(parts))
     return cmds
 
 
@@ -482,8 +514,9 @@ def _cmd_rgb_image(cfg, s, iid, src, cart_dir, settings):
     if jrel and s.get("in_dir"):
         jpath = os.path.join(s["in_dir"], jrel)
         key = settings.get("um_per_pixel_key", "microns_per_pixel")
-        cmds.append(f'UPP=$(jq -r ".{key}" {jpath})')
-        upp = '--um-per-pixel "$UPP"'
+        # Inline the substitution: make runs each recipe line in its own shell,
+        # so a UPP=... on a separate line would not survive to this command.
+        upp = f"--um-per-pixel \"$(jq -r '.{key}' {jpath})\""
     plain = "--georef-plain" if settings.get("georef_plain") else ""
     cmds.append(f"cartloader image_png2pmtiles --in-img {src} --out-prefix {prefix} "
                 f"--geotif2mbtiles --mbtiles2pmtiles --georeference {plain} {upp}".strip())
@@ -578,21 +611,21 @@ def add_targets(mm, samples, cfg, args):
             cmds = [cmd_ficture_analysis(a, in_list, fic_dir, cfg) for a in cfg["ficture"]]
             mm.add_target(fic_flag, list(sge_flags), cmds + [f"touch {fic_flag}"])
 
+        # A joint run (>1 sample sharing out_dir) packages every sample with a
+        # single run_cartload2_multi call, laid out as <multi_id>-<sample_id>/ plus
+        # a multi-catalog.yaml. A single sample uses run_cartload2 directly.
+        multi = len(grp) > 1
+        multi_id = os.path.basename(os.path.normpath(out_dir))
+
         # --- cell analyses (platform default; run those whose roles are present) ---
         cells_flag = os.path.join(mkdir, "cells.done")
-        active_cells = plan_cell_analyses(grp, sge_root, cfg, fic_dir, default_model_id)
+        active_cells = plan_cell_analyses(grp, sge_root, cfg, fic_dir, default_model_id, multi)
         if active_cells and on("cells"):
             cmds = [c["cmd"] for c in active_cells]
             mm.add_target(cells_flag, [fic_flag], cmds + [f"touch {cells_flag}"])
 
         cart_prereq = cells_flag if (active_cells and on("cells")) else fic_flag
         active_ids = [c["id"] for c in active_cells]
-
-        # A joint run (>1 sample sharing out_dir) packages every sample with a
-        # single run_cartload2_multi call, laid out as <multi_id>-<sample_id>/ plus
-        # a multi-catalog.yaml. A single sample uses run_cartload2 directly.
-        multi = len(grp) > 1
-        multi_id = os.path.basename(os.path.normpath(out_dir))
         multi_cart_flag = os.path.join(mkdir, "cartload.done")
         if multi and on("cartload"):
             mm.add_target(multi_cart_flag, [cart_prereq], [
@@ -620,7 +653,7 @@ def add_targets(mm, samples, cfg, args):
 
             img_prereq = cart_flag if on("cartload") else cart_prereq
             img_flag = os.path.join(mkdir, f"images.{s['id']}.done")
-            img_cmds = plan_images(cfg, s, cart_dir)
+            img_cmds = plan_images(cfg, s, cart_dir, multi)
             if img_cmds and on("images"):
                 mm.add_target(img_flag, [img_prereq], img_cmds + [f"touch {img_flag}"])
             base_prereq = img_flag if (img_cmds and on("images")) else img_prereq
@@ -665,10 +698,17 @@ def _sample_in_cell(s, cfg, cid, active_cells):
     return all(s["roles"].get(r) for r in ca.get("uses", []))
 
 
-def plan_cell_analyses(grp, sge_root, cfg, fic_dir, default_model_id):
-    """Write per-cell-analysis role lists; return the analyses that have inputs."""
+def plan_cell_analyses(grp, sge_root, cfg, fic_dir, default_model_id, multi):
+    """Write per-cell-analysis role lists; return the analyses that have inputs.
+
+    An analysis with a ``multi_import`` command is a per-sample import for joint
+    runs (e.g. Xenium Ranger clusters, which are sample-specific and cannot be
+    jointly decoded) — it is skipped here for multi and handled in the image stage.
+    """
     active = []
     for ca in cfg.get("cell_analyses", []):
+        if multi and ca.get("multi_import"):
+            continue
         uses = ca.get("uses", [])
         # samples that have every required role for this analysis
         contributing = [s for s in grp if all(s["roles"].get(r) for r in uses)]
