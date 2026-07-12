@@ -22,7 +22,7 @@ aux_args = {
         "transparent_below", "transparent_above",
     ],
     "env": ["gzip", "pmtiles", "gdal_translate", "gdaladdo", "tippecanoe", "spatula", "pmpoint", "ficture2"],
-    "run": ["restart", "threads", "log", "log_suffix"],
+    "run": ["restart", "threads", "log", "log_suffix", "n_jobs"],
 }
 
 
@@ -36,7 +36,7 @@ def parse_arguments(_args):
     run_params.add_argument('--dry-run', action='store_true', default=False, help='Generate the Makefile but do not execute it')
     run_params.add_argument('--restart', action='store_true', default=False, help='Ignore existing outputs and re-run all steps')
     run_params.add_argument('--makefn', type=str, default="run_cartload2_multi.mk", help='Name of the generated Makefile')
-    run_params.add_argument('-j', '--n-jobs', type=int, default=1, help='Number of samples to package in parallel (default: 1)')
+    run_params.add_argument('-j', '--n-jobs', type=int, default=1, help='Parallel jobs, applied to both samples (outer) and each per-sample run_cartload2 (inner, e.g. parallel bins in run_tsv2pmtiles); lower it if this oversubscribes (default: 1)')
     run_params.add_argument('--threads', type=int, default=None, help='Threads per job (forwarded to run_cartload2)')
     run_params.add_argument('--log', action='store_true', default=False, help='Write logs to a file under the output directory')
     run_params.add_argument('--log-suffix', type=str, default=None, help='Suffix for the log filename')
@@ -267,6 +267,9 @@ def run_cartload2_multi(_args):
 
     make_f = os.path.join(args.out_dir, args.makefn)
     mm.write_makefile(make_f)
+    # --n-jobs applies to both the outer (samples in parallel) and inner
+    # (per-sample run_cartload2) make. Effective concurrency is usually capped
+    # by local bottlenecks; if it does oversubscribe, lower --n-jobs.
     execute_makefile(make_f, dry_run=args.dry_run, restart=args.restart, n_jobs=args.n_jobs)
 
 
