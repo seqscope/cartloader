@@ -425,7 +425,7 @@ def import_xenium_cell(_args):
         if args.pixel is not None:
             logger.info(f"  * Generating spTSV from pixel TSV file")
             pixelf = cell_data.get("PIXEL", None)
-            cmd = f"{args.spatula} pixel2sptsv --pixel {pixelf} --out {args.outprefix}.sptsv --in-col-id {args.pixel_colname_cell_id} --in-col-gene {args.pixel_colname_gene} --in-col-count {args.pixel_colname_count} --gzip {args.gzip} --sort {args.sort}"
+            cmd = f"{args.spatula} pixel2sptsv --pixel {pixelf} --out {args.outprefix}.sptsv --in-col-id {args.pixel_colname_cell_id} --in-col-ftr {args.pixel_colname_gene} --in-col-cnt {args.pixel_colname_count}"
             result = subprocess.run(cmd, shell=True, capture_output=True)
             if result.returncode != 0:
                 logger.error(f"Command {cmd}\nfailed with error: {result.stderr.decode()}")
