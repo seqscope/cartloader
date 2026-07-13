@@ -685,16 +685,17 @@ def import_xenium_cell(_args):
         tile_csv_into_pmtiles(bound_out, bound_pmtiles, args, logger, no_dup=False)
         #temp_fs.append(bound_out)
     
-    # UMAP
-    if args.umap:
+    # UMAP (best-effort: many datasets, e.g. some GEO deposits, ship no UMAP
+    # projection, so skip with a warning rather than failing the whole import)
+    umap_in = cell_data.get("UMAP_PROJ", None)
+    if args.umap and (umap_in is None or not os.path.exists(umap_in)):
+        logger.warning("Skipping UMAP generation: projection source not found "
+                       f"({umap_in if umap_in is not None else '--csv-umap not provided'})")
+    elif args.umap:
         scheck_app(args.R)
 
-        umap_in = cell_data.get("UMAP_PROJ", None)
         umap_tsv_out = f"{args.outprefix}-umap.tsv.gz"
         umap_pmtiles = f"{args.outprefix}-umap.pmtiles"
-
-        assert umap_in is not None, ('Path not provided: "UMAP_PROJ" in --in-json' if args.in_json is not None else 'Path not provided: --csv-umap')
-        assert os.path.exists(umap_in), (f'File not found: {umap_in} ("UMAP_PROJ" in --in-json)' if args.in_json is not None else f'File not found: {umap_in} (--csv-umap)')
 
         logger.info(f"Processing UMAP projection from {umap_in}")
         write_umap_tsv(umap_in, umap_tsv_out, bcd2clusteridx, args)
