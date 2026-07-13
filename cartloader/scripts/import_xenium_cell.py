@@ -10,14 +10,34 @@ from cartloader.utils.color_helper import normalize_rgb, rgb_to_hex
 
 repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+def _resolve_column(fieldnames, preferred, aliases):
+    """Resolve a column name against a CSV header: prefer the configured name, then
+    known aliases, then a case-insensitive match. Returns None if nothing matches.
+    Lets standard 10x headers (Barcode/Cluster) and GEO variants (cell_id/cluster)
+    both work without per-dataset configuration."""
+    fields = list(fieldnames or [])
+    for cand in [preferred, *aliases]:
+        if cand in fields:
+            return cand
+    lower = {c.lower(): c for c in fields}
+    for cand in [preferred, *aliases]:
+        if cand.lower() in lower:
+            return lower[cand.lower()]
+    return None
+
+
 def process_cluster_csv(clust_csv, barcode_col="Barcode", cluster_col="Cluster", output_filename=None):
     bcd2cluster = {}
     cluster2cnt = {}
     with flexopen(clust_csv, "rt") as f:
         reader = csv.DictReader(f)
+        bcol = _resolve_column(reader.fieldnames, barcode_col, ["cell_id", "cell", "barcode"])
+        ccol = _resolve_column(reader.fieldnames, cluster_col, ["cluster", "graphclust", "kmeans"])
+        assert bcol is not None, f"Cannot find a barcode/cell-id column in {clust_csv} (tried '{barcode_col}' and common aliases); header: {reader.fieldnames}"
+        assert ccol is not None, f"Cannot find a cluster column in {clust_csv} (tried '{cluster_col}' and common aliases); header: {reader.fieldnames}"
         for row in reader:
-            bcd = unquote_str(row[barcode_col])
-            clust = row[cluster_col]
+            bcd = unquote_str(row[bcol])
+            clust = row[ccol]
             bcd2cluster[bcd] = clust
             cluster2cnt[clust] = cluster2cnt.get(clust, 0) + 1
     
