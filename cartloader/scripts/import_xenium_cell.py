@@ -397,21 +397,25 @@ def import_xenium_cell(_args):
         raw_data=load_file_to_dict(args.in_json)
         cell_data=raw_data.get("CELLS", raw_data) # # use raw_data as default to support the flat dict build in the old scripts
     else:
+        # os.path.join keeps each --csv-* relative to --in-dir (as documented) but
+        # honors an absolute override as-is (e.g. scattered GEO-style paths forwarded
+        # by run_together), avoiding a doubled <in_dir>/<abs_path>.
         cell_data={
-            "CELL": f"{args.in_dir}/{args.csv_cells}",
-            "BOUNDARY": f"{args.in_dir}/{args.csv_boundaries}",
-            "CLUSTER": f"{args.in_dir}/{args.csv_clust}",
-            "DE": f"{args.in_dir}/{args.csv_diffexp}",
-            "UMAP_PROJ": f"{args.in_dir}/{args.csv_umap}",
+            "CELL": os.path.join(args.in_dir, args.csv_cells),
+            "BOUNDARY": os.path.join(args.in_dir, args.csv_boundaries),
+            "CLUSTER": os.path.join(args.in_dir, args.csv_clust),
+            "DE": os.path.join(args.in_dir, args.csv_diffexp),
+            "UMAP_PROJ": os.path.join(args.in_dir, args.csv_umap),
         }
         # spTSV for pseudobulk/DE regeneration comes from the raw transcript pixel TSV
-        # (--pixel, the default source, e.g. transcripts.tsv.gz from run_together) or,
-        # only when explicitly requested, the cell-feature MEX (--mex-dir). MEX_BCD/FTR/MTX
-        # are derived from CELL_FEATURE_MEX below, mirroring import_visiumhd_cell.
+        # (--pixel, the default source, e.g. transcripts.tsv.gz from run_together; used
+        # as given, not under --in-dir) or, only when explicitly requested, the
+        # cell-feature MEX (--mex-dir). MEX_BCD/FTR/MTX are derived from CELL_FEATURE_MEX
+        # below, mirroring import_visiumhd_cell.
         if args.pixel is not None:
             cell_data["PIXEL"] = args.pixel
         elif args.mex_dir is not None:
-            cell_data["CELL_FEATURE_MEX"] = f"{args.in_dir}/{args.mex_dir}"
+            cell_data["CELL_FEATURE_MEX"] = os.path.join(args.in_dir, args.mex_dir)
 
     if cell_data.get("CELL_FEATURE_MEX") is not None:
         mex_ftr_dir = cell_data["CELL_FEATURE_MEX"]
