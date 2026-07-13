@@ -439,7 +439,7 @@ def resolve_image_ops(cfg, s):
     return ops
 
 
-def plan_images(cfg, s, cart_dir, multi):
+def plan_images(cfg, s, cart_dir, multi, transcript=None):
     cmds = []
     catalog = os.path.join(cart_dir, "catalog.yaml")
 
@@ -502,6 +502,11 @@ def plan_images(cfg, s, cart_dir, multi):
                 flag = IMPORT_ROLE_FLAG.get(role)
                 if flag:
                     parts.append(f"{flag} {path}")
+            # Regenerate pseudobulk/DE from the run_together transcript TSV (carries
+            # cell_id + gene + count, matching the importer's --pixel defaults) so a
+            # separate cell-feature MEX directory is not required.
+            if imp == "import_xenium_cell" and transcript:
+                parts.append(f"--pixel {transcript}")
             cmds.append(" ".join(parts))
     return cmds
 
@@ -653,7 +658,7 @@ def add_targets(mm, samples, cfg, args):
 
             img_prereq = cart_flag if on("cartload") else cart_prereq
             img_flag = os.path.join(mkdir, f"images.{s['id']}.done")
-            img_cmds = plan_images(cfg, s, cart_dir, multi)
+            img_cmds = plan_images(cfg, s, cart_dir, multi, transcript.get(s["id"]))
             if img_cmds and on("images"):
                 mm.add_target(img_flag, [img_prereq], img_cmds + [f"touch {img_flag}"])
             base_prereq = img_flag if (img_cmds and on("images")) else img_prereq

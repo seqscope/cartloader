@@ -291,7 +291,7 @@ def parse_arguments(_args):
     aux_inout_params.add_argument('--csv-clust', type=str, default="analysis/clustering/gene_expression_graphclust/clusters.csv", help='Location of CSV with cell cluster assignments under --in-dir (default: analysis/clustering/gene_expression_graphclust/clusters.csv)')
     aux_inout_params.add_argument('--csv-diffexp', type=str, default="analysis/diffexp/gene_expression_graphclust/differential_expression.csv", help='Location of CSV with differential expression results under --in-dir (default: analysis/diffexp/gene_expression_graphclust/differential_expression.csv)')
     ## cell-level MEX format files
-    aux_inout_params.add_argument('--mex-dir', type=str, default="cell_feature_matrix", help='Directory location of 10x Genomic MatrixMarket files under --in-dir (default: cell_feature_matrix)')
+    aux_inout_params.add_argument('--mex-dir', type=str, default=None, help='Directory location of 10x Genomic MatrixMarket files under --in-dir, used as an alternative source for pseudobulk/DE when --pixel is not given (e.g. cell_feature_matrix). Default: None (regenerate from --pixel transcripts)')
     aux_inout_params.add_argument('--mex-bcd', type=str, default="barcodes.tsv.gz", help='Filename for barcodes in the MatrixMarket directory (default: barcodes.tsv.gz)')
     aux_inout_params.add_argument('--mex-ftr', type=str, default="features.tsv.gz", help='Filename for features in the MatrixMarket directory (default: features.tsv.gz)')
     aux_inout_params.add_argument('--mex-mtx', type=str, default="matrix.mtx.gz", help='Filename for matrix in the MatrixMarket directory (default: matrix.mtx.gz)')
@@ -403,13 +403,15 @@ def import_xenium_cell(_args):
             "CLUSTER": f"{args.in_dir}/{args.csv_clust}",
             "DE": f"{args.in_dir}/{args.csv_diffexp}",
             "UMAP_PROJ": f"{args.in_dir}/{args.csv_umap}",
-            # "CELL_FEATURE_MEX": f"{args.in_dir}/{args.mex_dir}",  # unused
-            # "MEX_BCD": os.path.join(args.in_dir, args.mex_dir, args.mex_bcd),
-            # "MEX_FTR": os.path.join(args.in_dir, args.mex_dir, args.mex_ftr),
-            # "MEX_MTX": os.path.join(args.in_dir, args.mex_dir, args.mex_mtx),
         }
+        # spTSV for pseudobulk/DE regeneration comes from the raw transcript pixel TSV
+        # (--pixel, the default source, e.g. transcripts.tsv.gz from run_together) or,
+        # only when explicitly requested, the cell-feature MEX (--mex-dir). MEX_BCD/FTR/MTX
+        # are derived from CELL_FEATURE_MEX below, mirroring import_visiumhd_cell.
         if args.pixel is not None:
             cell_data["PIXEL"] = args.pixel
+        elif args.mex_dir is not None:
+            cell_data["CELL_FEATURE_MEX"] = f"{args.in_dir}/{args.mex_dir}"
 
     if cell_data.get("CELL_FEATURE_MEX") is not None:
         mex_ftr_dir = cell_data["CELL_FEATURE_MEX"]
@@ -436,7 +438,9 @@ def import_xenium_cell(_args):
             mex_ftr = cell_data.get("MEX_FTR", None)
             mex_mtx = cell_data.get("MEX_MTX", None)
 
-            assert mex_bcd is not None and os.path.exists(mex_bcd), (f'Path not provided or file not found: "MEX_BCD" in --in-json' if args.in_json is not None else f'Path not provided or file not found: --mex-bcd')
+            assert mex_bcd is not None, ('No expression source for pseudobulk/DE: provide --pixel (raw transcript TSV) '
+                                         'or --mex-dir (cell-feature MEX), or skip with --skip-redo-pseudobulk --skip-redo-diffexp')
+            assert os.path.exists(mex_bcd), (f'Path not provided or file not found: "MEX_BCD" in --in-json' if args.in_json is not None else f'Path not provided or file not found: --mex-bcd')
             assert mex_ftr is not None and os.path.exists(mex_ftr), (f'Path not provided or file not found: "MEX_FTR" in --in-json' if args.in_json is not None else f'Path not provided or file not found: --mex-ftr')
             assert mex_mtx is not None and os.path.exists(mex_mtx), (f'Path not provided or file not found: "MEX_MTX" in --in-json' if args.in_json is not None else f'Path not provided or file not found: --mex-mtx')
 
