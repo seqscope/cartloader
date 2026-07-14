@@ -10,12 +10,16 @@
     },
     "extra_flags": ["--sge-visual", "--scale-xy 2.0"]
   },
-  "roles": {},
+  "roles": {
+    "mex": { "file": "segmented_outputs/filtered_feature_cell_matrix" }
+  },
   "ficture_defaults": { "decode_scale": 2 },
   "ficture": [
     { "id": "denovo", "mode": "train", "width": "12", "n_factor": "24,48,96" }
   ],
-  "cell_analyses": [],
+  "cell_analyses": [
+    { "id": "cartloader", "uses": ["mex"], "require_all": true }
+  ],
   "cartload": { "use_pmpoint": true, "bin_count": 500, "sge_scale": 2 },
   "images": [],
   "squares": [

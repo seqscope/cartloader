@@ -719,6 +719,10 @@ def plan_cell_analyses(grp, sge_root, cfg, fic_dir, default_model_id, multi):
         contributing = [s for s in grp if all(s["roles"].get(r) for r in uses)]
         if not contributing:
             continue
+        # Some analyses (e.g. Visium HD mex-based cell clustering) only make sense when
+        # every sample in the group contributes; skip entirely if any sample lacks it.
+        if ca.get("require_all") and len(contributing) < len(grp):
+            continue
         list_files = {}
         for role in uses:
             path = os.path.join(sge_root, f"in_{role}.{ca['id']}.tsv")

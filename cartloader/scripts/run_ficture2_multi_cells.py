@@ -421,6 +421,13 @@ def run_ficture2_multi_cells(_args):
                             y = toks[idx_y]
                             wf_sample.write(f"{cell_id}\t{x}\t{y}\n")
                         nlines += 1
+            elif args.mex_list is not None:
+                # MEX-based clustering carries no cell coordinates (mex2sptsv writes no
+                # per-cell metadata), so there is nothing to place spatially; skip the
+                # per-cell leiden-cluster scatter for this sample rather than failing on
+                # a missing metadata file. Spatial cell/boundary rendering is handled
+                # elsewhere (e.g. import_visiumhd_cell for Visium HD segmented cells).
+                continue
             draw_manifold_rscript=f"{repo_dir}/cartloader/r/draw_manifold_clust.r"
             cmd = f"{args.R} '{draw_manifold_rscript}' --tsv-manifold '{metaf}' --tsv-clust '{sample_leiden_prefix}.tsv.gz' --tsv-colname-x X --tsv-colname-y Y --out '{sample_leiden_prefix}.xy.png' --out-tsv '{sample_leiden_prefix}.xy.tsv.gz' --tsv-colname-clust topK"
             cmds.append(cmd)
@@ -757,7 +764,11 @@ def run_ficture2_multi_cells(_args):
             out_cell_params["sptsv_prefix"] = f"{sample_prefix}.sptsv"
             
         if args.leiden:
-            out_cell_params["cell_xy_path"] = f"{sample_prefix}.leiden.xy.tsv.gz"
+            # cell_xy_path is only produced when the per-cell scatter ran (i.e. cell
+            # coordinates were available); omit it for coordinate-less MEX clustering so
+            # run_cartload2 skips cell-point PMTiles instead of failing on a missing file.
+            if not (args.mex_list is not None and sample not in samp2xy):
+                out_cell_params["cell_xy_path"] = f"{sample_prefix}.leiden.xy.tsv.gz"
             out_cell_params["cluster_path"] = f"{sample_prefix}.leiden.tsv.gz"
             
         if args.heatmap:

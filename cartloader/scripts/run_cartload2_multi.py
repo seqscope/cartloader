@@ -150,7 +150,8 @@ def build_multi_catalog(mm, args, manifest, cells_manifests, samples, multi_id):
         cmds.append(f"touch {flag}")
         mm.add_target(flag, [os.path.join(fic, tp["model_path"])], cmds)
         shared_flags.append(flag)
-        factors[tp["model_id"]] = entry
+        # Key the factor by the hyphenated id (oid) so it matches the file names.
+        factors[oid] = entry
 
     # --- cell-derived factors (same keys) ---
     for cm in cells_manifests:
@@ -182,7 +183,8 @@ def build_multi_catalog(mm, args, manifest, cells_manifests, samples, multi_id):
         cmds.append(f"touch {flag}")
         mm.add_target(flag, prereqs, cmds)
         shared_flags.append(flag)
-        factors[prefix] = entry
+        # Key the factor by the hyphenated id (oid) so it matches the file names.
+        factors[oid] = entry
 
     catalog = {
         "id": multi_id,
