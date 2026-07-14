@@ -225,6 +225,11 @@ def run_cartload2_multi(_args):
     multi_id = args.id if args.id is not None else os.path.basename(os.path.normpath(args.out_dir))
 
     mm = minimake()
+    # Shared joint feature list from the FICTURE multi output. Its path is recorded in the
+    # multi manifest (shared.multi_hexagon.features); passing it to every sample's
+    # run_cartload2 keeps point PMTiles gene-to-bin assignment identical across samples.
+    multi_features_rel = manifest.get("shared", {}).get("multi_hexagon", {}).get("features")
+    multi_features = os.path.join(args.fic_dir, multi_features_rel) if multi_features_rel else None
     sample_catalogs = {}
     for sid in samples:
         sample_rel = manifest["samples"][sid]                     # e.g. samples/<sid>/ficture.params.json
@@ -239,6 +244,8 @@ def run_cartload2_multi(_args):
                        if os.path.basename(p) != "ficture.params.json"]
 
         prereqs = [manifest_path, os.path.join(args.fic_dir, sample_rel)]
+        if multi_features:
+            prereqs.append(multi_features)
 
         cmds = cmd_separator([], f"Packaging sample {sid} (run_cartload2)")
         cmd = " ".join([
@@ -246,6 +253,7 @@ def run_cartload2_multi(_args):
             f"--out-dir {cart_dir}",
             f"--fic-dir {sample_fic_dir}",
             f"--id {out_id}",
+            (f"--replace-features {multi_features}" if multi_features else ""),
             ("--in-cell-params " + " ".join(cell_params)) if cell_params else "",
             "--makefn run_cartload2.mk",
         ])

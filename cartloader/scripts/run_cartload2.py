@@ -54,6 +54,7 @@ def parse_arguments(_args):
     aux_params.add_argument('--rename-y', type=str, default='y:lat', help='Column rename mapping for Y axis in tippecanoe, format old:new (default: y:lat)')
     aux_params.add_argument('--colname-feature', type=str, default='gene', help='Column name for feature/gene (default: gene)')
     aux_params.add_argument('--colname-count', type=str, default='count', help='Column name for molecule counts (default: count)')
+    aux_params.add_argument('--replace-features', type=str, default=None, help='Path to a shared feature list (e.g. multi.features.tsv from the FICTURE multi output). When set, a header-normalized copy (multi.features.rehdr.tsv) is written and used as --in-features when packaging point PMTiles, so gene-to-bin assignment is identical across all batches that share this feature list (default: use the per-dataset feature list)')
     aux_params.add_argument('--out-molecules-id', type=str, default='genes', help='Base name for output molecules PMTiles files (no directory)')
     aux_params.add_argument('--max-join-dist-um', type=float, default=0.1, help='Max distance (in µm) to associate molecules with decoded pixels (default: 0.1)')
     aux_params.add_argument('--join-tile-size', type=float, default=500, help='Tile size (in µm) when joining molecules with decoded pixels (default: 500)')
@@ -798,11 +799,27 @@ def run_cartload2(_args):
 
     ## 5. run tsv2pmtiles for the convert the joined pixel-level TSV to PMTiles
     if not (len(join_pixel_bins) > 0 and args.use_ficture2_direct_pmtiles):
+        # By default each batch bins genes using its own feature list, so the same gene
+        # can land in a different bin/PMTiles layer across datasets (inconsistent lookups).
+        # With --replace-features, use a shared feature list (e.g. FICTURE multi.features.tsv)
+        # so every batch bins genes identically.
+        features_for_points = in_features
+        pmtiles_prereqs = [molecules_f]
+        if args.replace_features is not None:
+            assert os.path.exists(args.replace_features), f"File not found: {args.replace_features} (--replace-features)"
+            features_for_points = os.path.join(args.out_dir, "multi.features.rehdr.tsv")
+            rehdr_cmds = cmd_separator([], "Normalizing shared feature list header (multi.features.rehdr.tsv) for consistent gene-to-bin assignment")
+            # Replace the source header line (e.g. "#feature<TAB>total_count") with the
+            # column names run_tsv2pmtiles expects.
+            rehdr_cmds.append(f"(printf '{args.colname_feature}\\t{args.colname_count}\\n'; tail -n +2 {shlex.quote(args.replace_features)}) > {shlex.quote(features_for_points)}")
+            mm.add_target(features_for_points, [args.replace_features], rehdr_cmds)
+            pmtiles_prereqs.append(features_for_points)
+
         cmds = cmd_separator([], f"Converting the joined pixel-level TSV to PMTiles")
         cmd = " ".join([
             "cartloader", "run_tsv2pmtiles",
             "--in-molecules", molecules_f,
-            "--in-features", in_features,
+            "--in-features", features_for_points,
             "--out-prefix", f"{out_molecules_prefix}",
             "--threads", str(args.threads),
             "--col-rename", args.rename_x, args.rename_y, f"feature:{args.colname_feature}", f"ct:{args.colname_count}",
@@ -820,7 +837,7 @@ def run_cartload2(_args):
             "--keep-intermediate-files" if args.keep_intermediate_files else ""
         ])
         cmds.append(cmd)
-        mm.add_target(sge_index_f, [molecules_f], cmds)
+        mm.add_target(sge_index_f, pmtiles_prereqs, cmds)
 
     # 6. Create a yaml for all output assets
     cmds = cmd_separator([], f"Writing catalog YAML for all output assets")
