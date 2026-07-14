@@ -18,7 +18,7 @@ aux_args = {
         "umap_colname_factor", "umap_colname_x", "umap_colname_y", "umap_min_zoom", "umap_max_zoom",
         "sge_scale", "use_pmpoint", "tile_format_pmpoint",
         "skip_umap", "skip_raster",
-        "tmp_dir", "keep_intermediate_files",
+        "keep_intermediate_files",
         "transparent_below", "transparent_above",
     ],
     "env": ["gzip", "pmtiles", "gdal_translate", "gdaladdo", "tippecanoe", "spatula", "pmpoint", "ficture2"],
