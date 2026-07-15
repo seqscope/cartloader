@@ -72,6 +72,7 @@ def parse_arguments(_args):
     aux_params.add_argument('--umap-min-zoom', type=int, default=0, help='Minimum zoom for generated UMAP PMTiles (default: 0)')
     aux_params.add_argument('--umap-max-zoom', type=int, default=18, help='Maximum zoom for generated UMAP PMTiles (default: 18)')
     aux_params.add_argument('--skip-umap', action='store_true', default=False, help='Skip UMAP PMTiles and copied UMAP assets even when UMAP inputs are present')
+    aux_params.add_argument('--reuse-shared-umap-dir', type=str, default=None, help='Directory holding pre-built shared UMAP PMTiles named <factor>-umap.pmtiles (e.g. the run_cartload2_multi output root). When set, each factor\'s shared UMAP PMTiles is copied from here instead of re-running tippecanoe per sample (the shared UMAP is identical across samples)')
     # ?
     aux_params.add_argument('--skip-raster', action='store_true', default=False, help='Skip raster image generation (no GDAL/go-pmtiles required)')
     # tmp
@@ -144,8 +145,12 @@ def pick_sge_inputs(args):
     # neither source provided, actionable error
     raise KeyError("Path not provided for SGE. Provide using --sge-dir with --in-sge-assets or --fic-dir with --in-fic-params")
 
-def process_umap(umap, mm, args, out_prefix, model_id, fic_jsonf):
-    """Add Makefile target to convert a UMAP bundle into PMTiles and copies."""
+def process_umap(umap, mm, args, out_prefix, model_id, fic_jsonf, reuse_pmtiles=None):
+    """Add Makefile target to convert a UMAP bundle into PMTiles and copies.
+
+    When ``reuse_pmtiles`` is given, the PMTiles are copied from that pre-built file
+    (e.g. a shared UMAP already materialized once by run_cartload2_multi) instead of
+    re-running tippecanoe. The cheap tsv/png copies are still made locally."""
     if not umap:
         return None
 
@@ -175,14 +180,19 @@ def process_umap(umap, mm, args, out_prefix, model_id, fic_jsonf):
 
     umap_ndjson = f"{out_prefix}-umap.ndjson"
     umap_pmtiles = f"{out_prefix}-umap.pmtiles"
-    cmds.append(render_umap_cmd(umap_tsv_out, umap_ndjson,
-                                args.umap_colname_factor, args.umap_colname_x, args.umap_colname_y))
-    cmds.append(umap_tippecanoe_cmd(umap_pmtiles, umap_ndjson, args.tippecanoe, args.tmp_dir,
-                                    threads=args.threads, min_zoom=args.umap_min_zoom,
-                                    max_zoom=args.umap_max_zoom,
-                                    preserve_thres=args.preserve_point_density_thres))
-    if not args.keep_intermediate_files:
-        cmds.append(f"rm -f {umap_ndjson}")
+    if reuse_pmtiles is not None:
+        # Reuse the shared UMAP PMTiles built once upstream instead of re-tippecanoe-ing.
+        cmds.append(f"cp {reuse_pmtiles} {umap_pmtiles}")
+        prerequisites.append(reuse_pmtiles)
+    else:
+        cmds.append(render_umap_cmd(umap_tsv_out, umap_ndjson,
+                                    args.umap_colname_factor, args.umap_colname_x, args.umap_colname_y))
+        cmds.append(umap_tippecanoe_cmd(umap_pmtiles, umap_ndjson, args.tippecanoe, args.tmp_dir,
+                                        threads=args.threads, min_zoom=args.umap_min_zoom,
+                                        max_zoom=args.umap_max_zoom,
+                                        preserve_thres=args.preserve_point_density_thres))
+        if not args.keep_intermediate_files:
+            cmds.append(f"rm -f {umap_ndjson}")
     outfiles.append(umap_pmtiles)
 
     touch_flag_cmd=valid_and_touch_cmd(outfiles, f"{out_prefix}-umap.done") # this only touch the flag file when all output files exist
@@ -370,35 +380,42 @@ def run_cartload2(_args):
                         prerequisites = [umap_tsv, umap_png]
                         outfiles=[]
 
-                        convert_cmd = " ".join([
-                            "cartloader", "render_umap",
-                            f"--input {umap_tsv}",
-                            f"--out {shared_umap_ndjson}",
-                            f"--colname-factor {args.umap_colname_factor}",
-                            f"--colname-x {args.umap_colname_x}",
-                            f"--colname-y {args.umap_colname_y}"
-                        ])
-                        cmds.append(convert_cmd)
+                        if args.reuse_shared_umap_dir:
+                            # Reuse the shared UMAP PMTiles built once by run_cartload2_multi
+                            # instead of re-running tippecanoe for every sample.
+                            reuse_pmtiles = os.path.join(args.reuse_shared_umap_dir, f"{out_id}-umap.pmtiles")
+                            cmds.append(f"cp {reuse_pmtiles} {shared_umap_pmtiles}")
+                            prerequisites.append(reuse_pmtiles)
+                        else:
+                            convert_cmd = " ".join([
+                                "cartloader", "render_umap",
+                                f"--input {umap_tsv}",
+                                f"--out {shared_umap_ndjson}",
+                                f"--colname-factor {args.umap_colname_factor}",
+                                f"--colname-x {args.umap_colname_x}",
+                                f"--colname-y {args.umap_colname_y}"
+                            ])
+                            cmds.append(convert_cmd)
 
-                        # 2) ndjson to pmtiles
-                        tippecanoe_cmd = " ".join([
-                            f"TIPPECANOE_MAX_THREADS={args.threads}",
-                            f"'{args.tippecanoe}'",
-                            f"-t {args.tmp_dir}",
-                            f"-o {shared_umap_pmtiles}",
-                            "-Z", str(args.umap_min_zoom),
-                            "-z", str(args.umap_max_zoom),
-                            "-l", "umap",
-                            "--force",
-                            "--drop-densest-as-needed",
-                            "--extend-zooms-if-still-dropping",
-                            "--no-duplication",
-                            f"--preserve-point-density-threshold={args.preserve_point_density_thres}",
-                            shared_umap_ndjson
-                        ])
-                        cmds.append(tippecanoe_cmd)
-                        if not args.keep_intermediate_files:
-                            cmds.append(f"rm -f {shared_umap_ndjson}")
+                            # 2) ndjson to pmtiles
+                            tippecanoe_cmd = " ".join([
+                                f"TIPPECANOE_MAX_THREADS={args.threads}",
+                                f"'{args.tippecanoe}'",
+                                f"-t {args.tmp_dir}",
+                                f"-o {shared_umap_pmtiles}",
+                                "-Z", str(args.umap_min_zoom),
+                                "-z", str(args.umap_max_zoom),
+                                "-l", "umap",
+                                "--force",
+                                "--drop-densest-as-needed",
+                                "--extend-zooms-if-still-dropping",
+                                "--no-duplication",
+                                f"--preserve-point-density-threshold={args.preserve_point_density_thres}",
+                                shared_umap_ndjson
+                            ])
+                            cmds.append(tippecanoe_cmd)
+                            if not args.keep_intermediate_files:
+                                cmds.append(f"rm -f {shared_umap_ndjson}")
                         outfiles.append(shared_umap_pmtiles)
 
                         cmds.append(f"cp {umap_tsv} {out_prefix}-shared-umap.tsv.gz")
@@ -589,7 +606,10 @@ def run_cartload2(_args):
             # if umap is a dict,
             if not args.skip_umap:
                 if train_param.get("analysis_type") == "multi-sample":
-                    process_umap(umap.get("shared"), mm, args, out_prefix+"-shared", model_id, fic_jsonf)
+                    shared_reuse = (os.path.join(args.reuse_shared_umap_dir, f"{out_id}-umap.pmtiles")
+                                    if args.reuse_shared_umap_dir else None)
+                    process_umap(umap.get("shared"), mm, args, out_prefix+"-shared", model_id, fic_jsonf,
+                                 reuse_pmtiles=shared_reuse)
                     process_umap(umap.get("sample"), mm, args, out_prefix, model_id, fic_jsonf)
                 elif "sample" in umap:
                     process_umap(umap.get("sample"), mm, args, out_prefix, model_id, fic_jsonf)

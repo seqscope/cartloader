@@ -230,6 +230,17 @@ def run_cartload2_multi(_args):
     # run_cartload2 keeps point PMTiles gene-to-bin assignment identical across samples.
     multi_features_rel = manifest.get("shared", {}).get("multi_hexagon", {}).get("features")
     multi_features = os.path.join(args.fic_dir, multi_features_rel) if multi_features_rel else None
+
+    os.makedirs(args.tmp_dir, exist_ok=True)
+
+    # Build the shared factor targets first — this materializes the shared factor files
+    # (including the shared UMAP PMTiles) once at the out_dir root. Each per-sample
+    # run_cartload2 then depends on these flags and reuses the shared UMAP instead of
+    # re-running tippecanoe for every sample.
+    multi_catalog, shared_flags = build_multi_catalog(mm, args, manifest, cells_manifests, samples, multi_id)
+    with open(os.path.join(args.out_dir, args.multi_catalog), "w") as f:
+        yaml.safe_dump(multi_catalog, f, sort_keys=False)
+
     sample_catalogs = {}
     for sid in samples:
         sample_rel = manifest["samples"][sid]                     # e.g. samples/<sid>/ficture.params.json
@@ -243,7 +254,9 @@ def run_cartload2_multi(_args):
         cell_params = [p for p in sorted(glob.glob(os.path.join(sample_fic_dir, "ficture.*.params.json")))
                        if os.path.basename(p) != "ficture.params.json"]
 
-        prereqs = [manifest_path, os.path.join(args.fic_dir, sample_rel)]
+        # Depend on the shared factor targets so the shared UMAP PMTiles exist before
+        # this sample's run_cartload2 copies (rather than recomputes) them.
+        prereqs = [manifest_path, os.path.join(args.fic_dir, sample_rel)] + shared_flags
         if multi_features:
             prereqs.append(multi_features)
 
@@ -254,6 +267,7 @@ def run_cartload2_multi(_args):
             f"--fic-dir {sample_fic_dir}",
             f"--id {out_id}",
             (f"--replace-features {multi_features}" if multi_features else ""),
+            f"--reuse-shared-umap-dir {args.out_dir}",
             ("--in-cell-params " + " ".join(cell_params)) if cell_params else "",
             "--makefn run_cartload2.mk",
         ])
@@ -265,15 +279,6 @@ def run_cartload2_multi(_args):
 
     if len(mm.targets) == 0:
         raise ValueError("No tasks were generated. Check inputs and parameters.")
-
-    os.makedirs(args.tmp_dir, exist_ok=True)
-
-    # Build the multi-catalog and add targets that materialize the shared factor
-    # files at the out_dir root — sourced from the FICTURE output (via the
-    # manifests) and processed with run_cartload2-consistent naming.
-    multi_catalog, _shared_flags = build_multi_catalog(mm, args, manifest, cells_manifests, samples, multi_id)
-    with open(os.path.join(args.out_dir, args.multi_catalog), "w") as f:
-        yaml.safe_dump(multi_catalog, f, sort_keys=False)
 
     make_f = os.path.join(args.out_dir, args.makefn)
     mm.write_makefile(make_f)
