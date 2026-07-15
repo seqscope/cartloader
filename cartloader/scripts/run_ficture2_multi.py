@@ -459,9 +459,26 @@ def write_multi_params_json(args, in_samples):
     Points to each per-sample manifest (relative path) and records the shared
     components — shared LDA models, shared UMAPs, and the multi-sample hexagon
     files — as paths relative to --out-dir so the directory is self-contained.
+
+    Merges into an existing manifest by ``model_id`` (mirroring the per-sample
+    ``write_json_for_ficture2_multi --mode append`` semantics). This is required
+    because projection mode invokes run_ficture2_multi once per model against the
+    same --out-dir (each --model-id yields a single define_lda_runs entry); an
+    overwrite would leave only the last model in shared.train_params, so
+    run_cartload2_multi would materialize shared factors/UMAPs for only that model
+    while each per-sample run_cartload2 still expects all of them.
     """
     widths = args.width.split(",")
+    out_path = os.path.join(args.out_dir, "ficture.multi.params.json")
+
+    # Existing shared train_params, keyed by model_id (order preserved).
     shared_train = []
+    if os.path.exists(out_path):
+        with open(out_path, "rt") as f:
+            old_manifest = json.load(f)
+        shared_train = old_manifest.get("shared", {}).get("train_params", [])
+    index = {e["model_id"]: i for i, e in enumerate(shared_train) if "model_id" in e}
+
     for lda in define_lda_runs(args, **LDA_CONFIG):
         model_id = lda["model_id"]
         entry = {
@@ -481,7 +498,11 @@ def write_multi_params_json(args, in_samples):
                 "png": f"{model_id}.umap.png",
                 "ind_png": f"{model_id}.umap.single.prob.png",
             }
-        shared_train.append(entry)
+        if model_id in index:
+            shared_train[index[model_id]] = entry
+        else:
+            index[model_id] = len(shared_train)
+            shared_train.append(entry)
 
     manifest = {
         "analysis_type": "multi-sample",
@@ -496,7 +517,6 @@ def write_multi_params_json(args, in_samples):
             "train_params": shared_train,
         },
     }
-    out_path = os.path.join(args.out_dir, "ficture.multi.params.json")
     with open(out_path, "wt") as f:
         json.dump(manifest, f, indent=4)
     return out_path
