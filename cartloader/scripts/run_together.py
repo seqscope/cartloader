@@ -242,6 +242,9 @@ def build_config(args):
         prof["_sm_pixel"], prof["_sm_cells"] = True, False
     fd.pop("single_molecule", None)   # now controlled by _sm_pixel/_sm_cells
 
+    # Tolerate corrupt histology images in the images stage (opt-in; see plan_images).
+    prof["_skip_image_errors"] = args.skip_image_errors
+
     # Apply ficture_defaults to every analysis (per-entry keys win).
     prof["ficture"] = [deep_merge(prof["ficture_defaults"], a) for a in prof["ficture"]]
 
@@ -439,9 +442,21 @@ def resolve_image_ops(cfg, s):
     return ops
 
 
+def catalog_image_line(cfg, catalog, iid, cart_dir):
+    """Append an image entry to the catalog. When --skip-image-errors is on, only
+    add it if the PMTiles actually exists, so a skipped corrupt image is left out
+    of the catalog instead of leaving a dangling reference."""
+    line = f"echo '    {iid}: {iid}.pmtiles' >> {catalog}"
+    if cfg.get("_skip_image_errors"):
+        pmt = os.path.join(cart_dir, f"{iid}.pmtiles")
+        return f"[ -f {pmt} ] && {line} || echo 'WARNING: image {iid} skipped; omitted from catalog' >&2"
+    return line
+
+
 def plan_images(cfg, s, cart_dir, multi, transcript=None):
     cmds = []
     catalog = os.path.join(cart_dir, "catalog.yaml")
+    skip_img = "--skip-image-errors " if cfg.get("_skip_image_errors") else ""
 
     for op in resolve_image_ops(cfg, s):
         iid, kind, src = op["id"], op.get("kind", "single"), op["source"]
@@ -454,11 +469,11 @@ def plan_images(cfg, s, cart_dir, multi, transcript=None):
             conv = "--ome2png " if op.get("convert", "ome2png") == "ome2png" else ""
             extra = " ".join(op.get("extra_flags", []))
             cmds.append(
-                f"cartloader import_image {conv}--png2pmtiles --georeference "
+                f"cartloader import_image {conv}{skip_img}--png2pmtiles --georeference "
                 f"--in-img {src} --out-dir {cart_dir} --img-id {iid} "
                 f"--upper-thres-quantile 0.95 --level 0 --colorize {op['color']} "
                 f"--transparent-below 5 {extra}".strip())
-        cmds.append(f"echo '    {iid}: {iid}.pmtiles' >> {catalog}")
+        cmds.append(catalog_image_line(cfg, catalog, iid, cart_dir))
 
     # Visium HD H&E (rgb via a per-sample path + profile hne settings)
     if s.get("hne") and cfg.get("hne"):
@@ -525,7 +540,7 @@ def _cmd_rgb_image(cfg, s, iid, src, cart_dir, settings):
     plain = "--georef-plain" if settings.get("georef_plain") else ""
     cmds.append(f"cartloader image_png2pmtiles --in-img {src} --out-prefix {prefix} "
                 f"--geotif2mbtiles --mbtiles2pmtiles --georeference {plain} {upp}".strip())
-    cmds.append(f"echo '    {iid}: {iid}.pmtiles' >> {catalog}")
+    cmds.append(catalog_image_line(cfg, catalog, iid, cart_dir))
     return cmds
 
 
@@ -754,6 +769,10 @@ def parse_arguments(_args):
     r.add_argument("--makefn", type=str, default="run_together.mk", help="Master Makefile name")
     r.add_argument("--only", type=str, help="Comma-separated stages to run exclusively (ingest,ficture,cells,cartload,images,anno,upload)")
     r.add_argument("--skip", type=str, help="Comma-separated stages to skip")
+    r.add_argument("--skip-image-errors", action="store_true",
+                   help="Tolerate an unreadable/corrupt OME-TIFF in the images stage: the image is "
+                        "warned-and-skipped (and omitted from the catalog) instead of failing the run. "
+                        "Re-run with this flag to regenerate the Makefile and resume past a corrupt image.")
 
     io = p.add_argument_group("Input/Output")
     io.add_argument("--platform", type=str, help="Platform preset, e.g. 10x_xenium, 10x_visium_hd")

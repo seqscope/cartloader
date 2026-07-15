@@ -34,6 +34,7 @@ def parse_arguments(_args):
     cmd_params.add_argument('--flip-vertical', action='store_true', default=False, help='Flip vertically (around X axis); applied after rotation')
     cmd_params.add_argument('--flip-horizontal', action='store_true', default=False, help='Flip horizontally (around Y axis); applied after rotation')
     cmd_params.add_argument('--update-catalog', action='store_true', default=False, help='Update catalog.yaml with the generated PMTiles')
+    cmd_params.add_argument('--skip-image-errors', action='store_true', default=False, help='Tolerate an unreadable/corrupt OME-TIFF during --ome2png: image_ome2png is run with --skip-if-invalid, and if it skips (writes a .skipped sentinel), the PMTiles/catalog steps are skipped with a warning instead of failing. Lets a pipeline continue past a corrupt histology image.')
 
     inout_params = parser.add_argument_group(
         "Input/Output Parameters",
@@ -196,12 +197,20 @@ def import_image(_args):
             f"--page {args.page}" if args.page is not None else "",
             f"--level {args.level}" if args.level is not None else "",
             f"--series {args.series}" if args.series is not None else "",
+            "--skip-if-invalid" if args.skip_image_errors else "",
             f"--write-color-mode"
         ])
         cmd = add_param_to_cmd(cmd, args, aux_image_arg["ome2png"])
         cmds.append(cmd)
-        # >1 output: transform_f, transform_prefix.bounds 
-        cmds.append(f"[ -f {transform_f} ] && [ -f {transform_bounds_tsv} ] && touch {transform_prefix}.done")
+        # >1 output: transform_f, transform_prefix.bounds
+        skipped_sentinel = f"{transform_prefix}.skipped"
+        if args.skip_image_errors:
+            # image_ome2png writes <prefix>.skipped when it gracefully skips a corrupt
+            # image; still touch .done so downstream targets can no-op instead of erroring.
+            cmds.append(f"if [ -f {skipped_sentinel} ]; then touch {transform_prefix}.done; "
+                        f"else [ -f {transform_f} ] && [ -f {transform_bounds_tsv} ] && touch {transform_prefix}.done; fi")
+        else:
+            cmds.append(f"[ -f {transform_f} ] && [ -f {transform_bounds_tsv} ] && touch {transform_prefix}.done")
         mm.add_target(f"{transform_prefix}.done", prereq, cmds)
 
         # update for georeference and bounds
@@ -252,7 +261,14 @@ def import_image(_args):
         ])
         cmd = add_param_to_cmd(cmd, args, list(set(aux_image_arg["png2pmtiles"] + aux_image_arg["georeference"])))
         cmd = add_param_to_cmd(cmd, args, ["restart", "n_jobs"])
-        cmds.append(cmd)
+        if args.skip_image_errors and args.ome2png:
+            # If the OME→PNG step gracefully skipped a corrupt image, there is no PNG to
+            # tile; warn and leave no PMTiles (recipe still exits 0 so make continues).
+            cmds.append(f"if [ -f {transform_prefix}.skipped ]; then "
+                        f"echo 'WARNING: {args.img_id}: corrupt image skipped, not building PMTiles' >&2; "
+                        f"else {cmd}; fi")
+        else:
+            cmds.append(cmd)
         mm.add_target(pmtiles_f, prereq, cmds)
 
     # 3. Update the catalog.yaml file with the new pmtiles and upload to AWS
@@ -267,7 +283,13 @@ def import_image(_args):
             f"--basemap {args.img_id}:{args.img_id}.pmtiles",
             f"--basemap-dir {args.out_dir}"
         ])
-        cmds.append(cmd)
+        if args.skip_image_errors and args.ome2png:
+            # No PMTiles were produced for a skipped corrupt image; do not add it to the catalog.
+            cmds.append(f"if [ -f {transform_prefix}.skipped ] || [ ! -f {pmtiles_f} ]; then "
+                        f"echo 'WARNING: {args.img_id}: corrupt image skipped, catalog not updated' >&2; "
+                        f"else {cmd}; fi")
+        else:
+            cmds.append(cmd)
         cmds.append(f"touch {pmtiles_f}.yaml.done")
         mm.add_target(f"{pmtiles_f}.yaml.done", prereq, cmds)
 

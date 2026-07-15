@@ -43,6 +43,7 @@ def parse_arguments(_args):
     inout_params.add_argument('--shrink-factor', type=float, default=None, help='Downsample the image by this factor in both dimensions before processing (e.g., 2.0 = half resolution). Reduces memory when used with --high-memory.')
     inout_params.add_argument('--high-memory', action='store_true', default=False)
     inout_params.add_argument('--write-color-mode', action='store_true', default=False,  help='Save the color mode into a file (<out_prefix>.color.csv). This argument is specifically designed for "cartloader import_image"')
+    inout_params.add_argument('--skip-if-invalid', action='store_true', default=False, help='If the OME-TIFF cannot be opened, or is an OME file whose georeferencing metadata is missing/corrupt and no manual pixel size (--px-per-um-x/y or --csv) was given, log a warning, write a <out-prefix>.skipped sentinel, and exit 0 instead of failing. Intended for pipeline use via "import_image --skip-image-errors".')
 
     # memory_params = parser.add_argument_group("Memory Management")
     # memory_params.add_argument('--max-memory-gb', type=float, default=4.0,
@@ -126,6 +127,19 @@ def compute_quantiles_from_histogram(histogram, total_count, quantile):
     # The corresponding integer value is:
     return sorted_keys[idx]
 
+def write_skip_sentinel(logger, out_prefix, reason):
+    """Record that an image was skipped (invalid/corrupt) and clean up any temp
+    files. Writes <out_prefix>.skipped so callers can detect the skip and continue."""
+    logger.warning(f"Skipping image (invalid/corrupt): {reason}")
+    for tmp in (f"{out_prefix}_output.npy", f"{out_prefix}_transformed.npy"):
+        if os.path.exists(tmp):
+            try:
+                os.remove(tmp)
+            except OSError:
+                pass
+    with open(f"{out_prefix}.skipped", "w") as f:
+        f.write(reason + "\n")
+
 def image_ome2png(_args):
     args = parse_arguments(_args)
     logger = create_custom_logger(__name__, args.out_prefix + args.log_suffix if args.log else None)
@@ -133,7 +147,12 @@ def image_ome2png(_args):
 
     out_dir=os.path.dirname(args.out_prefix)
     os.makedirs(out_dir, exist_ok=True)
-    
+
+    # Clear any stale skip sentinel so this run's outcome (skipped vs produced) is
+    # unambiguous to a caller inspecting <out_prefix>.skipped.
+    if os.path.exists(f"{args.out_prefix}.skipped"):
+        os.remove(f"{args.out_prefix}.skipped")
+
     is_ome = True
     px_per_um_x = None
     px_per_um_y = None
@@ -160,7 +179,14 @@ def image_ome2png(_args):
         offset_px_y = args.offset_px_y if args.offset_px_y is not None else 0
 
     # [CSV processing and metadata extraction remain the same]
-    with tifffile.TiffFile(args.tif, _multifile=False) as tif:
+    try:
+        tif = tifffile.TiffFile(args.tif, _multifile=False)
+    except (tifffile.TiffFileError, OSError, ValueError) as e:
+        if args.skip_if_invalid:
+            write_skip_sentinel(logger, args.out_prefix, f"could not open OME-TIFF {args.tif}: {e}")
+            return
+        raise
+    with tif:
         logger.info(f"Loaded OME-TIFF file {args.tif}")
         
         n_pages = len(tif.pages)
@@ -213,11 +239,25 @@ def image_ome2png(_args):
                 px_size_x = px_size_x * scale_factor_x
                 px_size_y = px_size_y * scale_factor_y
                 logger.info(f"Rescaling the pixel size level {args.level} by ({scale_factor_x},{scale_factor_y})...")
-        else:
+        elif not is_ome:
+            # Manual / CSV mode: pixel size and offset came from --csv or --px-per-um-*.
             px_size_x = 1/px_per_um_x
             px_size_y = 1/px_per_um_y
             offset_um_x = 0 - offset_px_x / px_per_um_x
             offset_um_y = 0 - offset_px_y / px_per_um_y
+        else:
+            # OME mode, but the OME-XML/ImageDescription metadata is missing or corrupt
+            # (tif.ome_metadata is None) and no manual pixel size was provided, so the
+            # image cannot be georeferenced.
+            msg = (f"OME metadata could not be read from {args.tif} (the OME-XML / "
+                   f"ImageDescription tag is missing or corrupt) and no manual pixel size "
+                   f"was provided. Provide --px-per-um-x/--px-per-um-y (with optional "
+                   f"--offset-px-x/--offset-px-y) or a --csv, or pass --skip-if-invalid to "
+                   f"skip this image.")
+            if args.skip_if_invalid:
+                write_skip_sentinel(logger, args.out_prefix, msg)
+                return
+            raise ValueError(msg)
             
         ul = [offset_um_x, offset_um_y]
         lr = [offset_um_x + px_size_x * page.shape[1], offset_um_y + px_size_y * page.shape[0]]
