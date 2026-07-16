@@ -17,6 +17,15 @@ DEFAULT_S3_PROFILE = "default"
 # Sample-level input roles. A sample provides these either explicitly (sample
 # sheet columns / JSON) or by auto-detection inside its `in_dir` (profile.roles).
 ROLE_KEYS = ["transcript", "xy", "boundaries", "clusters", "mex"]
+# Friendly sample-sheet column aliases (the generic platform advertises these
+# names; each maps onto a canonical role key above).
+ROLE_ALIASES = {
+    "tsv": "transcript",
+    "cell_xy": "xy",
+    "cell_boundary": "boundaries",
+    "cell_boundaries": "boundaries",
+    "mex_dir": "mex",
+}
 # role -> the run_ficture2_multi_cells flag that consumes it
 ROLE_LIST_FLAG = {
     "boundaries": "--list-boundaries",
@@ -245,6 +254,11 @@ def build_config(args):
     # Tolerate corrupt histology images in the images stage (opt-in; see plan_images).
     prof["_skip_image_errors"] = args.skip_image_errors
 
+    # Explicit cell-analysis selection for the generic platform (see plan_cell_analyses):
+    # --colname-cell names the transcript's cell-id column and turns on cell_id-based
+    # clustering; mex columns turn on mex-based clustering; neither -> cells skipped.
+    prof["colname_cell"] = args.colname_cell or cfg.get("colname_cell")
+
     # Apply ficture_defaults to every analysis (per-entry keys win).
     prof["ficture"] = [deep_merge(prof["ficture_defaults"], a) for a in prof["ficture"]]
 
@@ -272,6 +286,30 @@ def build_config(args):
     return prof
 
 
+def _abs_in_dir(path, in_dir):
+    """Resolve a possibly-relative sheet path against the sample's in_dir."""
+    if in_dir and not os.path.isabs(path) and not os.path.exists(path):
+        cand = os.path.join(in_dir, path)
+        return cand if os.path.exists(cand) else path
+    return path
+
+
+def sheet_image_specs(raw, in_dir, cfg):
+    """Turn friendly single-file image columns (dapi/hne) into image specs the
+    image stage understands. `dapi` is a single-channel colorized layer; `hne` is
+    an RGB layer (unless the profile already provides a dedicated hne handler,
+    e.g. Visium HD, which needs scale metadata and is left to that path)."""
+    specs = []
+    if raw.get("dapi"):
+        src = _abs_in_dir(raw["dapi"], in_dir)
+        is_ome = src.lower().endswith((".ome.tif", ".ome.tiff"))
+        specs.append({"id": "dapi", "source": src, "kind": "single",
+                      "color": "0F73E6", "convert": "ome2png" if is_ome else "none"})
+    if raw.get("hne") and not cfg.get("hne"):
+        specs.append({"id": "hne", "source": _abs_in_dir(raw["hne"], in_dir), "kind": "rgb"})
+    return specs
+
+
 def resolve_sample(raw, cfg):
     """Resolve one sample's id, out_dir, and input roles."""
     n = len(cfg["_raw_samples"])
@@ -285,24 +323,38 @@ def resolve_sample(raw, cfg):
     out_dir = cfg["out_dir"] if cfg.get("out_dir") else os.path.join(cfg["out_root"], sid)
     in_dir = raw.get("in_dir")
 
-    # Resolve roles: explicit column/JSON value wins; else auto-detect in in_dir.
+    def sheet_value(role):
+        # explicit role column wins, else a friendly alias column (e.g. tsv -> transcript)
+        if raw.get(role):
+            return raw[role]
+        for alias, target in ROLE_ALIASES.items():
+            if target == role and raw.get(alias):
+                return raw[alias]
+        return None
+
+    # Resolve roles: explicit column/alias/JSON value wins; else auto-detect in in_dir.
     roles = {}
     role_specs = cfg.get("roles", {})
     for role in ROLE_KEYS:
-        if raw.get(role):
-            path = raw[role]
-            if in_dir and not os.path.isabs(path) and not os.path.exists(path):
-                path = os.path.join(in_dir, path)
-            roles[role] = path
+        val = sheet_value(role)
+        if val:
+            roles[role] = _abs_in_dir(val, in_dir)
         elif role in role_specs and in_dir:
             cand = os.path.join(in_dir, role_specs[role]["file"])
             if os.path.exists(cand):
                 roles[role] = cand
+
+    # The mex role may instead be given as an explicit bcd/ftr/mtx triple (a dict
+    # value, written as a 4-column --mex-list line) when a single directory does
+    # not apply. An explicit `mex`/`mex_dir` column (handled above) takes precedence.
+    if "mex" not in roles and all(raw.get(k) for k in ("mex_bcd", "mex_ftr", "mex_mtx")):
+        roles["mex"] = {k: _abs_in_dir(raw[f"mex_{k}"], in_dir) for k in ("bcd", "ftr", "mtx")}
+
     return {
         "id": sid, "in_dir": in_dir, "out_dir": out_dir,
         "roles": roles,
         "hne": raw.get("hne"),
-        "images": raw.get("images", []),
+        "images": list(raw.get("images", [])) + sheet_image_specs(raw, in_dir, cfg),
     }
 
 
@@ -370,6 +422,8 @@ def cmd_cells(ca, list_files, fic_dir, model_path, cfg):
         if role == "xy":
             parts.append(f"--xy-colname-x {xy_cfg.get('colname_x', 'X')}")
             parts.append(f"--xy-colname-y {xy_cfg.get('colname_y', 'Y')}")
+            if cfg.get("colname_cell"):
+                parts.append(f"--xy-colname-cell-id {cfg['colname_cell']}")
     if cfg.get("_sm_cells"):   # single-molecule for cell decode (default OFF)
         parts.append("--single-molecule")
     if cfg.get("exclude_feature_regex"):
@@ -645,7 +699,6 @@ def add_targets(mm, samples, cfg, args):
             mm.add_target(cells_flag, [fic_flag], cmds + [f"touch {cells_flag}"])
 
         cart_prereq = cells_flag if (active_cells and on("cells")) else fic_flag
-        active_ids = [c["id"] for c in active_cells]
         multi_cart_flag = os.path.join(mkdir, "cartload.done")
         if multi and on("cartload"):
             mm.add_target(multi_cart_flag, [cart_prereq], [
@@ -663,8 +716,8 @@ def add_targets(mm, samples, cfg, args):
             else:
                 cart_dir = os.path.join(cart_root, s["id"])
                 cart_flag = os.path.join(mkdir, f"cartload.{s['id']}.done")
-                cell_params = [os.path.join(fic_sample_dir, f"ficture.{cid}.params.json")
-                               for cid in active_ids if _sample_in_cell(s, cfg, cid, active_cells)]
+                cell_params = [os.path.join(fic_sample_dir, f"ficture.{c['id']}.params.json")
+                               for c in active_cells if s["id"] in c["sids"]]
                 if on("cartload"):
                     mm.add_target(cart_flag, [cart_prereq], [
                         f"mkdir -p {cart_dir}",
@@ -711,15 +764,62 @@ def add_targets(mm, samples, cfg, args):
                               [cmd_upload_multi_catalog(cart_root, args, args.batch), f"touch {mc_flag}"])
 
 
-def _sample_in_cell(s, cfg, cid, active_cells):
-    ca = next((a for a in cfg["cell_analyses"] if a["id"] == cid), None)
-    if not ca:
-        return False
-    return all(s["roles"].get(r) for r in ca.get("uses", []))
+def _role_list_line(sid, role, val):
+    """One --list-* line: a 4-column bcd/ftr/mtx triple for an explicit mex dict,
+    else the usual `id<TAB>path`."""
+    if role == "mex" and isinstance(val, dict):
+        return f"{sid}\t{val['bcd']}\t{val['ftr']}\t{val['mtx']}\n"
+    return f"{sid}\t{val}\n"
+
+
+def _resolve_cell_inputs(ca, grp, cfg):
+    """Decide whether a cell analysis runs for this group and which file roles feed
+    it. Returns (contributing_samples, required_list_roles) or (None, None) if it
+    should not run.
+
+    A `generic_cell` analysis is selected explicitly (generic platform):
+      (a) --colname-cell given      -> cell_id-based (cell_id read positionally from
+                                        the tiled transcript; no file role required),
+      (b) mex present in every sample -> mex-based clustering,
+      (c) neither                   -> skipped.
+    Otherwise the analysis is role-driven: it runs for the samples that provide all
+    of `uses` (and `require_all` demands every sample in the group provide them).
+    """
+    if ca.get("generic_cell"):
+        mex_ok = all(s["roles"].get("mex") for s in grp)
+        cellid_ok = bool(cfg.get("colname_cell"))
+        if mex_ok and cellid_ok:
+            sys.exit("ERROR: ambiguous cell analysis for the generic platform: both "
+                     "--colname-cell and mex inputs are present. Provide only one.")
+        if mex_ok:
+            required = ["mex"]
+        elif cellid_ok:
+            required = []          # cell_id comes from the tiled transcript, no list file
+        else:
+            return None, None
+        contributing = list(grp)   # applies to every sample in the group
+    else:
+        uses = list(ca.get("uses", []))
+        contributing = [s for s in grp if all(s["roles"].get(r) for r in uses)]
+        if not contributing:
+            return None, None
+        # Analyses that decode all samples jointly need every sample to contribute.
+        if ca.get("require_all") and len(contributing) < len(grp):
+            return None, None
+        required = uses
+
+    list_roles = [r for r in required if r in ROLE_LIST_FLAG]
+    # optional roles (e.g. cell_xy/cell_boundary) are added only when every
+    # contributing sample supplies them (a joint --list must cover all samples).
+    for r in ca.get("optional_uses", []):
+        if r in ROLE_LIST_FLAG and all(s["roles"].get(r) for s in contributing):
+            list_roles.append(r)
+    return contributing, list_roles
 
 
 def plan_cell_analyses(grp, sge_root, cfg, fic_dir, default_model_id, multi):
-    """Write per-cell-analysis role lists; return the analyses that have inputs.
+    """Write per-cell-analysis role lists; return the analyses that have inputs, each
+    tagged with the sample ids that contribute (`sids`).
 
     An analysis with a ``multi_import`` command is a per-sample import for joint
     runs (e.g. Xenium Ranger clusters, which are sample-specific and cannot be
@@ -729,25 +829,19 @@ def plan_cell_analyses(grp, sge_root, cfg, fic_dir, default_model_id, multi):
     for ca in cfg.get("cell_analyses", []):
         if multi and ca.get("multi_import"):
             continue
-        uses = ca.get("uses", [])
-        # samples that have every required role for this analysis
-        contributing = [s for s in grp if all(s["roles"].get(r) for r in uses)]
-        if not contributing:
-            continue
-        # Some analyses (e.g. Visium HD mex-based cell clustering) only make sense when
-        # every sample in the group contributes; skip entirely if any sample lacks it.
-        if ca.get("require_all") and len(contributing) < len(grp):
+        contributing, list_roles = _resolve_cell_inputs(ca, grp, cfg)
+        if contributing is None:
             continue
         list_files = {}
-        for role in uses:
+        for role in list_roles:
             path = os.path.join(sge_root, f"in_{role}.{ca['id']}.tsv")
             with open(path, "w") as f:
                 for s in contributing:
-                    f.write(f"{s['id']}\t{s['roles'][role]}\n")
+                    f.write(_role_list_line(s["id"], role, s["roles"][role]))
             list_files[role] = path
         model_id = ca.get("model_id", default_model_id)
         model_path = os.path.join(fic_dir, f"{model_id}.model.tsv")
-        active.append({"id": ca["id"],
+        active.append({"id": ca["id"], "sids": [s["id"] for s in contributing],
                        "cmd": cmd_cells(ca, list_files, fic_dir, model_path, cfg)})
     return active
 
@@ -800,6 +894,11 @@ def parse_arguments(_args):
     d.add_argument("--never-single-molecule", action="store_true",
                    help="Force single-molecule OFF for both pixel FICTURE and cell decode "
                         "(default: ON for pixel FICTURE, OFF for cell decode)")
+    d.add_argument("--colname-cell", type=str, default=None,
+                   help="Name of the cell-id column in the transcript TSV (generic platform). "
+                        "Providing it turns on cell_id-based cell clustering; the column must be "
+                        "the 5th TSV column (X, Y, gene, count, cell_id). Mutually exclusive with "
+                        "mex inputs. Omit it (and provide no mex inputs) to skip cell analysis.")
 
     pub = p.add_argument_group("Publish (opt-in; enable with --anno and/or --s3-upload)")
     pub.add_argument("--anno", action="store_true", help="AI-annotate each sample (requires --tissue and --organism)")

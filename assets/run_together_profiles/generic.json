@@ -1,0 +1,16 @@
+{
+  "platform": "generic",
+  "roles": {
+    "transcript": { "file": "transcripts.tsv.gz" },
+    "xy":         { "file": "cells.csv.gz", "colname_x": "X", "colname_y": "Y" },
+    "boundaries": { "file": "cell_boundaries.csv.gz" }
+  },
+  "ficture": [
+    { "id": "denovo", "mode": "train", "width": "12", "n_factor": "12,24,48" }
+  ],
+  "cell_analyses": [
+    { "id": "cartloader", "generic_cell": true, "optional_uses": ["xy", "boundaries"] }
+  ],
+  "cartload": { "use_pmpoint": true, "bin_count": 500 },
+  "images": []
+}
