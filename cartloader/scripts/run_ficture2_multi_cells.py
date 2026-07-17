@@ -262,7 +262,7 @@ def run_ficture2_multi_cells(_args):
             cmds.append(f"touch {lda_prefix}.multi.begin")
             if args.n_factor is None:
                 raise ValueError("--n-factor must be specified when --model is not specified with --lda ON.")
-            cmd = f"{ficture2bin} lda4hex --in-data {sptsv_prefix}.randomized.tsv --in-meta {sptsv_prefix}.json --out-prefix {lda_prefix} --sort-topics --n-topics {args.n_factor} --transform --minibatch-size 500 --seed {args.seed} --n-epochs 2 --threads {args.threads}"
+            cmd = f"{ficture2bin} lda4hex --in-data {sptsv_prefix}.randomized.tsv --in-meta {sptsv_prefix}.json --out-prefix {lda_prefix} --sort-topics --n-topics {args.n_factor} --transform --residuals--minibatch-size 500 --seed {args.seed} --n-epochs 2 --threads {args.threads}"
             cmds.append(cmd)
             cmds.append(f"[ -f {lda_prefix}.model.tsv ] && [ -f {lda_prefix}.results.tsv ] && touch {lda_prefix}.multi.done" )
             mm.add_target(f"{lda_prefix}.multi.done", [f"{sptsv_prefix}.done"], cmds)
@@ -275,7 +275,7 @@ def run_ficture2_multi_cells(_args):
             else:
                 cmd = f"cp {args.pretrained_model} {lda_prefix}.model.tsv"
             cmds.append(cmd)
-            cmd = f"{ficture2bin} lda4hex --model-prior {lda_prefix}.model.tsv --projection-only --in-data {sptsv_prefix}.randomized.tsv --in-meta {sptsv_prefix}.json --out-prefix {lda_prefix} --transform --minibatch-size 500 --seed {args.seed} --n-epochs 2 --threads {args.threads}"
+            cmd = f"{ficture2bin} lda4hex --model-prior {lda_prefix}.model.tsv --projection-only --in-data {sptsv_prefix}.randomized.tsv --in-meta {sptsv_prefix}.json --out-prefix {lda_prefix} --transform --residuals --minibatch-size 500 --seed {args.seed} --n-epochs 2 --threads {args.threads}"
             cmds.append(cmd)
             cmds.append(f"[ -f '{lda_prefix}.results.tsv' ] && touch '{lda_prefix}.multi.done'" )
             mm.add_target(f"{lda_prefix}.multi.done", [f"{sptsv_prefix}.done"], cmds)
@@ -286,7 +286,7 @@ def run_ficture2_multi_cells(_args):
             sample_lda_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.lda"
             sample_sptsv_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.sptsv"
             cmds.append(f"touch {sample_lda_prefix}.begin")
-            cmd = f"{ficture2bin} lda4hex --model-prior {lda_prefix}.model.tsv --projection-only --in-data {sample_sptsv_prefix}.tsv --in-meta {sample_sptsv_prefix}.json --out-prefix {sample_lda_prefix} --transform --minibatch-size 500 --seed {args.seed} --n-epochs 2 --threads {args.threads}"
+            cmd = f"{ficture2bin} lda4hex --model-prior {lda_prefix}.model.tsv --projection-only --in-data {sample_sptsv_prefix}.tsv --in-meta {sample_sptsv_prefix}.json --out-prefix {sample_lda_prefix} --transform --residuals --minibatch-size 500 --seed {args.seed} --n-epochs 2 --threads {args.threads}"
             cmds.append(cmd)
             cmds.append(f"[ -f {sample_lda_prefix}.results.tsv ] && touch {sample_lda_prefix}.done" )
             mm.add_target(f"{sample_lda_prefix}.done", [f"{lda_prefix}.multi.done"], cmds)
