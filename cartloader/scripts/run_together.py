@@ -398,9 +398,19 @@ def cmd_reformat_cosmx(cfg, sge_dir, sid, in_dir):
         sys.exit("ERROR: cosmx ingest requires a sample 'in_dir'.")
     parts = ["cartloader", "reformat_cosmx"]
     for flag, pattern in ing.get("inputs", {}).items():
+        if not pattern:      # a config may null out an optional input to drop it
+            continue
         matches = sorted(glob.glob(os.path.join(in_dir, pattern)))
         if not matches:
-            sys.exit(f"ERROR: cosmx ingest: no file matching '{pattern}' in {in_dir}")
+            avail = ", ".join(sorted(os.listdir(in_dir))) if os.path.isdir(in_dir) else "(not a directory)"
+            sys.exit(f"ERROR: cosmx ingest: no file matching '{pattern}' for {flag} in {in_dir}.\n"
+                     f"       Files present: {avail}\n"
+                     f"       Override the glob via the config 'ingest.inputs' block (e.g. "
+                     f"{{\"ingest\": {{\"inputs\": {{\"{flag}\": \"*your_suffix.csv.gz\"}}}}}}).")
+        if len(matches) > 1:
+            names = ", ".join(os.path.basename(m) for m in matches)
+            sys.exit(f"ERROR: cosmx ingest: pattern '{pattern}' for {flag} matched multiple files in "
+                     f"{in_dir}: {names}.\n       Make the pattern more specific in 'ingest.inputs'.")
         parts.append(f"{flag} {matches[0]}")
     parts.append(f"--out {os.path.join(sge_dir, sid)}")
     parts.extend(ing.get("extra_flags", []))

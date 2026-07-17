@@ -5,7 +5,7 @@
     "method": "reformat_cosmx",
     "inputs": {
       "--tx": "*tx_file.csv.gz",
-      "--meta": "*metadata_file.csv.gz",
+      "--meta": "*metadata*.csv.gz",
       "--poly": "*polygons.csv.gz"
     },
     "produces": {

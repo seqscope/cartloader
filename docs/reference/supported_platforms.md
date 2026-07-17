@@ -57,13 +57,30 @@ Defaults: FICTURE `width=12`, `n_factor=24,48,96`, `decode_scale=2`; packaging w
 
 Point `--in-dir` at the AtoMx / CosMx SMI flat-file export directory. Unlike the other platforms, ingest does not run `sge_convert`: a dedicated [`reformat_cosmx`](./reformat_cosmx.md) step reads the three raw CSVs and, converting global-pixel coordinates to microns (`0.12028 µm/px`), writes the transcript TSV plus the cell-metadata (xy) and polygon (boundaries) files that FICTURE and cell decode consume. Filenames are matched by glob (first match wins).
 
-| Purpose | Path under `--in-dir` |
-|---------|-----------------------|
-| Transcripts | `*tx_file.csv.gz` (columns `fov`, `cell_ID`, `target`, `x_global_px`, `y_global_px`, `z`) → `*.transcripts.tsv.gz` |
-| Cell centroids | `*metadata_file.csv.gz` (columns `fov`, `cell_ID`, `CenterX_global_px`, `CenterY_global_px`) → `*.metadata.csv.gz` (xy role, columns `X`/`Y`) |
-| Cell boundaries | `*polygons.csv.gz` (columns `fov`, `cellID`, `x_global_px`, `y_global_px`) → `*.polygons.csv.gz` |
+| Purpose | Default glob under `--in-dir` | reformat flag |
+|---------|-----------------------|:---:|
+| Transcripts | `*tx_file.csv.gz` (columns `fov`, `cell_ID`, `target`, `x_global_px`, `y_global_px`, `z`) → `*.transcripts.tsv.gz` | `--tx` |
+| Cell centroids | `*metadata*.csv.gz` (columns `fov`, `cell_ID`, `CenterX_global_px`, `CenterY_global_px`) → `*.metadata.csv.gz` (xy role, columns `X`/`Y`) | `--meta` |
+| Cell boundaries | `*polygons.csv.gz` (columns `fov`, `cellID`, `x_global_px`, `y_global_px`) → `*.polygons.csv.gz` | `--poly` |
 
 Cell ids are formed as `<fov>_<cell_ID>`; transcripts with `cell_ID = 0` are kept but tagged `UNASSIGNED`, and `System*` control probes are dropped at ingest. The `cartloader` cell factor is decoded from the metadata + polygon files via `run_ficture2_multi_cells`. For a joint multi-sample run of already-reformatted samples, supply the `transcript`/`cell_xy`/`cell_boundary` columns in the sample sheet (pointing at the `*.transcripts.tsv.gz` / `*.metadata.csv.gz` / `*.polygons.csv.gz` files) to skip re-ingest.
+
+#### Overriding the input file patterns
+
+CosMx exports don't always use the standard suffixes. Each input is matched by a **glob pattern** (exactly one file must match — zero or multiple is an error that lists what's present), and any pattern can be overridden with a small JSON config whose `ingest.inputs` block **deep-merges** over the profile — you only restate the patterns that differ:
+
+```json
+{
+  "platform": "cosmx_smi",
+  "ingest": { "inputs": { "--tx": "*tx_unique.csv.gz" } }
+}
+```
+
+```bash
+cartloader run_together --config cosmx_touchstone.json --in-dir IN --out-dir OUT
+```
+
+For example, an export with `..._tx.csv.gz`, `..._tx_unique.csv.gz`, `..._metadata.csv.gz`, and `..._polygons.csv.gz` needs only the `--tx` override above to pick `tx_unique` (the default `--meta`/`--poly` globs already match `_metadata`/`_polygons`); override `--meta`/`--poly` the same way when their names differ.
 
 Defaults: FICTURE `width=12`, `n_factor=12,24,48`, `min_ct_per_unit_hexagon=100`, single-molecule mode; packaging with `--use-pmpoint --bin-count 500`.
 
