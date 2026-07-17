@@ -768,14 +768,22 @@ def add_targets(mm, samples, cfg, args):
                 cart_dir = os.path.join(cart_root, f"{multi_id}-{s['id']}")
                 cart_flag = multi_cart_flag
             else:
-                cart_dir = os.path.join(cart_root, s["id"])
+                # Compose the sample directory name and catalog id/title as
+                # <out_dir>-<sample>, matching the <multi_id>-<sample_id> layout and ids
+                # used in multi-sample runs, so a single-sample output carries the
+                # collection context rather than just the bare sample name. When the
+                # out_dir basename already equals the sample id (e.g. --out-root, or an id
+                # inferred from out_dir), keep the bare id to avoid a redundant
+                # "rep1-rep1".
+                catalog_id = s["id"] if multi_id == s["id"] else f"{multi_id}-{s['id']}"
+                cart_dir = os.path.join(cart_root, catalog_id)
                 cart_flag = os.path.join(mkdir, f"cartload.{s['id']}.done")
                 cell_params = [os.path.join(fic_sample_dir, f"ficture.{c['id']}.params.json")
                                for c in active_cells if s["id"] in c["sids"]]
                 if on("cartload"):
                     mm.add_target(cart_flag, [cart_prereq], [
                         f"mkdir -p {cart_dir}",
-                        cmd_cartload(fic_sample_dir, cart_dir, s["id"], cfg, cell_params),
+                        cmd_cartload(fic_sample_dir, cart_dir, catalog_id, cfg, cell_params),
                         f"touch {cart_flag}"])
 
             img_prereq = cart_flag if on("cartload") else cart_prereq

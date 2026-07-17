@@ -55,6 +55,7 @@ def parse_arguments(_args):
     aux_params.add_argument('--colname-feature', type=str, default='gene', help='Column name for feature/gene (default: gene)')
     aux_params.add_argument('--colname-count', type=str, default='count', help='Column name for molecule counts (default: count)')
     aux_params.add_argument('--replace-features', type=str, default=None, help='Path to a shared feature list (e.g. multi.features.tsv from the FICTURE multi output). When set, a header-normalized copy (multi.features.rehdr.tsv) is written and used as --in-features when packaging point PMTiles, so gene-to-bin assignment is identical across all batches that share this feature list (default: use the per-dataset feature list)')
+    aux_params.add_argument('--in-bin-json', type=str, default=None, help='Optional precomputed gene->bin assignment JSON (spatula assign-feature2bin output / _bin_counts.json). When set, it is forwarded to run_tsv2pmtiles so point PMTiles reuse this shared assignment instead of deriving one from the per-sample feature list. Typically supplied by run_cartload2_multi so all samples share one gene-to-bin assignment and one unified counts view. Takes precedence over --replace-features for point binning.')
     aux_params.add_argument('--out-molecules-id', type=str, default='genes', help='Base name for output molecules PMTiles files (no directory)')
     aux_params.add_argument('--max-join-dist-um', type=float, default=0.1, help='Max distance (in µm) to associate molecules with decoded pixels (default: 0.1)')
     aux_params.add_argument('--join-tile-size', type=float, default=500, help='Tile size (in µm) when joining molecules with decoded pixels (default: 500)')
@@ -825,6 +826,10 @@ def run_cartload2(_args):
         # so every batch bins genes identically.
         features_for_points = in_features
         pmtiles_prereqs = [molecules_f]
+        if args.in_bin_json is not None:
+            # A shared gene->bin assignment is supplied (e.g. by run_cartload2_multi);
+            # run_tsv2pmtiles reuses it instead of deriving one from features_for_points.
+            pmtiles_prereqs.append(args.in_bin_json)
         if args.replace_features is not None:
             assert os.path.exists(args.replace_features), f"File not found: {args.replace_features} (--replace-features)"
             features_for_points = os.path.join(args.out_dir, "multi.features.rehdr.tsv")
@@ -849,6 +854,7 @@ def run_cartload2(_args):
             "--max-feature-counts", str(args.max_point_feature_counts),
             "--preserve-point-density-thres", str(args.preserve_point_density_thres),
             "--bin-count", str(args.bin_count),
+            (f"--in-bin-json '{args.in_bin_json}'" if args.in_bin_json is not None else ""),
             "--all",
             "--n-jobs", str(args.n_jobs),
             f"--log --log-suffix '{args.log_suffix}'" if args.log else "",

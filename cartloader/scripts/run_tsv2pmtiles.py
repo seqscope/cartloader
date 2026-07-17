@@ -21,6 +21,7 @@ def parse_arguments(_args):
     inout_params = parser.add_argument_group("Input/Output Parameters", "Input/output directory/files.")
     inout_params.add_argument('--in-molecules', type=str, help='Input Long Format TSV/CSV (possibly gzipped) file containing the X/Y coordinates and gene expression counts per spot')
     inout_params.add_argument('--in-features', type=str, help='Input TSV/CSV (possibly gzipped) file containing the gene name and total count for each gene')
+    inout_params.add_argument('--in-bin-json', type=str, default=None, help='Optional precomputed gene->bin assignment JSON (spatula assign-feature2bin output, i.e. a _bin_counts.json). When provided, the gene-to-bin assignment is reused from this file instead of being derived from --in-features, so assignment is identical across all datasets that share it. A copy is written to <out-prefix>_bin_counts.json.')
     inout_params.add_argument('--out-prefix', required= True, type=str, help='The output prefix. New directory will be created if needed')  
     inout_params.add_argument('--colname-feature', type=str, default='gene', help='Input/output Column name for gene name (default: gene)')
     inout_params.add_argument('--colname-count', type=str, default='gn', help='Column name for feature counts')
@@ -110,7 +111,7 @@ def run_tsv2pmtiles(_args):
     
     # 1. Perform split without running makefile
     if args.split:
-        logger.info("Splitting the input cross-platform TSV file into CSV files")
+        logger.info("Splitting the input cross-platform TSV file into per-bin files")
 
         pmpoint_arg = "--colname-feature Feature" if args.use_pmpoint else ""
         col_rename_arg = ""
@@ -118,24 +119,44 @@ def run_tsv2pmtiles(_args):
             for col_rename in args.col_rename:
                 col_rename_arg += f" --col-rename {col_rename}"
 
-        cmd = f"""'{args.spatula}' split-molecule-counts \\
+        # The gene->bin assignment is produced by 'assign-feature2bin' and consumed by
+        # 'split-mol2bin'. When --in-bin-json is given (e.g. a shared assignment from
+        # run_cartload2_multi), reuse it so gene-to-bin assignment is identical across
+        # samples; otherwise derive it from this dataset's own feature counts.
+        bin_json = f"{args.out_prefix}_bin_counts.json"
+        if args.in_bin_json is not None:
+            logger.info(f"Reusing gene->bin assignment from {args.in_bin_json}")
+            if os.path.abspath(args.in_bin_json) != os.path.abspath(bin_json):
+                shutil.copyfile(args.in_bin_json, bin_json)
+        else:
+            assign_cmd = f"""'{args.spatula}' assign-feature2bin \\
+                    --feature-tsv '{args.in_features}' \\
+                    --out-json '{bin_json}' \\
+                    --bin-count {args.bin_count} \\
+                    --in-feature-tsv-delim '{args.in_features_delim}'
+            """
+            print(assign_cmd)
+            result = subprocess.run(assign_cmd, shell=True)
+            if result.returncode != 0:
+                logger.error("Error in assigning features to bins (assign-feature2bin)")
+                sys.exit(1)
+
+        cmd = f"""'{args.spatula}' split-mol2bin \\
                 --mol-tsv '{args.in_molecules}' \\
-                --feature-tsv '{args.in_features}' \\
+                --bin-json '{bin_json}' \\
                 --out-prefix '{args.out_prefix}' \\
-                --bin-count {args.bin_count} \\
                 --in-mol-tsv-delim '{args.in_molecules_delim}' \\
-                --in-feature-tsv-delim '{args.in_features_delim}' \\
                 --out-mol-tsv-delim '{args.out_molecules_delim}' \\
                 --out-feature-tsv-delim '{args.out_features_delim}' \\
                 --out-mol-suffix '{args.out_molecules_suffix}' \\
-                --out-feature-suffix '{args.out_features_suffix}' {pmpoint_arg} {col_rename_arg}
-        """ + ("--skip-original" if args.skip_original else "")
+                --out-feature-suffix '{args.out_features_suffix}' {pmpoint_arg} {col_rename_arg} \\
+                """ + ("--skip-original" if args.skip_original else "")
 
         print(cmd)
         result = subprocess.run(cmd, shell=True)
 
         if result.returncode != 0:
-            logger.error("Error in splitting the input TSV file into CSV files")
+            logger.error("Error in splitting the input TSV file into per-bin files")
             sys.exit(1)
 
     # 2. Perform conversion:

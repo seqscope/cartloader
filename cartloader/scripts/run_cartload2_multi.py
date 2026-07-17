@@ -191,7 +191,12 @@ def build_multi_catalog(mm, args, manifest, cells_manifests, samples, multi_id):
         "analysis_type": "multi-sample",
         "n_samples": len(samples),
         "samples": {sid: os.path.join(f"{multi_id}-{sid}", out_catalog) for sid in samples},
-        "factors": factors,
+        # Mirror the per-sample catalog.yaml layout: layers live under "assets"
+        # (assets.sge, assets.factors, ...). The unified sge counts are added by
+        # run_cartload2_multi once the shared gene->bin assignment path is known.
+        "assets": {
+            "factors": factors,
+        },
     }
     return catalog, shared_flags
 
@@ -233,11 +238,34 @@ def run_cartload2_multi(_args):
 
     os.makedirs(args.tmp_dir, exist_ok=True)
 
+    # Shared gene->bin assignment for the unified counts view. When the FICTURE multi
+    # output provides a joint feature list, compute one gene->bin assignment (with the
+    # per-gene aggregate counts) once via 'assign-feature2bin'. This single _bin_counts.json
+    # is referenced by the multi catalog and handed to every per-sample run_cartload2
+    # (--in-bin-json), so all samples share an identical gene-to-bin assignment and one
+    # unified per-gene counts view across samples.
+    spatula = args.spatula or os.path.join(repo_dir, "submodules", "spatula", "bin", "spatula")
+    counts_oid = args.out_molecules_id or "genes"
+    shared_bin_json = None
+    if multi_features:
+        shared_bin_json = os.path.join(args.out_dir, f"{counts_oid}_bin_counts.json")
+        bin_count = args.bin_count if args.bin_count is not None else 50
+        cmds = cmd_separator([], "Assigning shared gene->bin bins (assign-feature2bin) for the unified counts view")
+        cmds.append(f"'{spatula}' assign-feature2bin --feature-tsv {multi_features} "
+                    f"--out-json {shared_bin_json} --bin-count {bin_count} --in-feature-tsv-delim '\\t'")
+        mm.add_target(shared_bin_json, [multi_features], cmds)
+
     # Build the shared factor targets first — this materializes the shared factor files
     # (including the shared UMAP PMTiles) once at the out_dir root. Each per-sample
     # run_cartload2 then depends on these flags and reuses the shared UMAP instead of
     # re-running tippecanoe for every sample.
     multi_catalog, shared_flags = build_multi_catalog(mm, args, manifest, cells_manifests, samples, multi_id)
+    if shared_bin_json is not None:
+        # The unified per-gene counts / gene->bin assignment for multi-sample CartoScope,
+        # placed at assets.sge.counts to match the per-sample catalog.yaml layout. Keep
+        # sge ahead of factors, as in the per-sample catalog.
+        assets = multi_catalog.get("assets", {})
+        multi_catalog["assets"] = {"sge": {"counts": os.path.basename(shared_bin_json)}, **assets}
     with open(os.path.join(args.out_dir, args.multi_catalog), "w") as f:
         yaml.safe_dump(multi_catalog, f, sort_keys=False)
 
@@ -255,10 +283,11 @@ def run_cartload2_multi(_args):
                        if os.path.basename(p) != "ficture.params.json"]
 
         # Depend on the shared factor targets so the shared UMAP PMTiles exist before
-        # this sample's run_cartload2 copies (rather than recomputes) them.
+        # this sample's run_cartload2 copies (rather than recomputes) them, and on the
+        # shared gene->bin assignment so it is materialized before this sample reuses it.
         prereqs = [manifest_path, os.path.join(args.fic_dir, sample_rel)] + shared_flags
-        if multi_features:
-            prereqs.append(multi_features)
+        if shared_bin_json:
+            prereqs.append(shared_bin_json)
 
         cmds = cmd_separator([], f"Packaging sample {sid} (run_cartload2)")
         cmd = " ".join([
@@ -266,7 +295,7 @@ def run_cartload2_multi(_args):
             f"--out-dir {cart_dir}",
             f"--fic-dir {sample_fic_dir}",
             f"--id {out_id}",
-            (f"--replace-features {multi_features}" if multi_features else ""),
+            (f"--in-bin-json {shared_bin_json}" if shared_bin_json else ""),
             f"--reuse-shared-umap-dir {args.out_dir}",
             ("--in-cell-params " + " ".join(cell_params)) if cell_params else "",
             "--makefn run_cartload2.mk",
