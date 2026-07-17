@@ -1,0 +1,16 @@
+{
+  "platform": "illumina",
+  "exclude_feature_regex": "^(Unassigned|Neg|BLANK|Blank|Intergenic|Deprecated|System|mt-|MT-|Gm\\d+)",
+  "ingest": {
+    "sge_platform": "illumina",
+    "input_roles": { "--in-mex": "mex" },
+    "extra_flags": ["--sge-visual"]
+  },
+  "roles": {},
+  "ficture": [
+    { "id": "denovo", "mode": "train", "width": "12", "n_factor": "24,48,96" }
+  ],
+  "cell_analyses": [],
+  "cartload": { "use_pmpoint": true, "bin_count": 500 },
+  "images": []
+}
