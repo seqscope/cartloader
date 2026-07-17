@@ -29,10 +29,10 @@ def parse_arguments(_args):
     
     # Input/output/key params
     inout_params = parser.add_argument_group("Input/Output Parameters", "Input/output paths and core settings.")
-    inout_params.add_argument('--platform', type=str, choices=["10x_visium_hd", "seqscope", "10x_xenium", "bgi_stereoseq", "cosmx_smi", "vizgen_merscope", "pixel_seq", "nova_st", "generic"], required=True, help='Input platform. Use "generic" for CSV/TSV from unsupported or custom sources')
+    inout_params.add_argument('--platform', type=str, choices=["10x_visium_hd", "seqscope", "illumina", "10x_xenium", "bgi_stereoseq", "cosmx_smi", "vizgen_merscope", "pixel_seq", "nova_st", "generic"], required=True, help='Input platform. Use "generic" for CSV/TSV from unsupported or custom sources')
     # - input
     inout_params.add_argument('--in-json', type=str, default=None, help='Path to input manifest JSON. If set, omits --in-parquet/--in-csv/--pos-parquet/--scale-json (platform: 10x_xenium, 10x_visium_hd)')
-    inout_params.add_argument('--in-mex', type=str, default=os.getcwd(), help='Path to input MEX directory (platform: 10x Visium HD, SeqScope; default: current working directory)') # 10x_visium_hd, seqscope 
+    inout_params.add_argument('--in-mex', type=str, default=os.getcwd(), help='Path to input MEX directory (platform: 10x Visium HD, SeqScope, Illumina; default: current working directory)') # 10x_visium_hd, seqscope, illumina
     inout_params.add_argument('--in-csv', type=str, default=None, help='Path to input CSV/TSV (platform: 10x Xenium, BGI Stereo-seq, CosMx SMI, Vizgen MERSCOPE, Pixel-seq, Nova-ST)') 
     inout_params.add_argument('--in-parquet', type=str, default=None, help='Path to input transcript parquet (platform: 10x Xenium)') 
     # - additional pos
@@ -57,8 +57,9 @@ def parse_arguments(_args):
     aux_in_mex_params.add_argument('--icol-ftr-id', type=int, default=1, help='1-based column index of feature ID in --mex-ftr (default: 1)')
     aux_in_mex_params.add_argument('--icol-ftr-name', type=int, default=2, help='1-based column index of feature name in --mex-ftr (default: 2)')
     aux_in_mex_params.add_argument('--icol-bcd-barcode', type=int, default=1, help='1-based column index of barcode in --mex-bcd (platform: SeqScope; default: 1)')
-    aux_in_mex_params.add_argument('--icol-bcd-x', type=int, default=6, help='1-based column index of x coordinate in --mex-bcd (platform: SeqScope; default: 6)')
-    aux_in_mex_params.add_argument('--icol-bcd-y', type=int, default=7, help='1-based column index of y coordinate in --mex-bcd (platform: SeqScope; default: 7)')
+    aux_in_mex_params.add_argument('--icol-bcd-x', type=int, default=6, help='1-based column index of x coordinate in --mex-bcd (platform: SeqScope; default: 6, Illumina: 3)')
+    aux_in_mex_params.add_argument('--icol-bcd-y', type=int, default=7, help='1-based column index of y coordinate in --mex-bcd (platform: SeqScope; default: 7, Illumina: 2)')
+    aux_in_mex_params.add_argument('--bcd-delim', type=str, default=None, help='Delimiter used to split the barcode into spatial coordinates (platform: Illumina; default: ":")')
     aux_in_mex_params.add_argument('--pos-colname-barcode', type=str, default='barcode', help='Column name for barcode in --pos-parquet (platform: 10x Visium HD; default: barcode)')
     aux_in_mex_params.add_argument('--pos-colname-x', type=str, default='pxl_col_in_fullres', help='Column name for X coordinates in --pos-parquet (platform: 10x Visium HD; default: pxl_row_in_fullres)')
     aux_in_mex_params.add_argument('--pos-colname-y', type=str, default='pxl_row_in_fullres', help='Column name for Y coordinates in --pos-parquet (platform: 10x Visium HD; default: pxl_col_in_fullres)')
@@ -220,6 +221,29 @@ def convert_seqscope(cmds, args):
     if not args.keep_mismatches:   
         drop_cmd = f"cartloader sge_drop_mismatches --in-dir {args.out_dir} --transcript {args.out_transcript} --feature {args.out_feature} --minmax {args.out_minmax} --gzip {args.gzip}"    
         cmds.append(drop_cmd)
+    return cmds
+
+def convert_illumina(cmds, args):
+    ## tools:
+    scheck_app(args.spatula)
+    ## input: in_mex (spatial coordinates are embedded in the barcode, so no --pos-parquet/--scale-json needed)
+    ## output: out_transcript, out_minmax, out_feature
+    # * convert sge to tsv (output: out_transcript, out_minmax, out_feature)
+    cmd = " ".join([f"'{args.spatula}' convert-sge",
+                f"--in-sge '{args.in_mex}'",
+                f"--out-tsv '{args.out_dir}'",
+                f"--tsv-mtx '{args.out_transcript}'",
+                f"--tsv-ftr '{args.out_feature}'",
+                f"--tsv-minmax '{args.out_minmax}'",
+                f"--bcd-delim '{args.bcd_delim}'",
+                f"--icol-bcd-x {args.icol_bcd_x}",
+                f"--icol-bcd-y {args.icol_bcd_y}",
+                f"--icols-mtx {args.icols_mtx}",
+                f"--units-per-um {args.units_per_um}",
+                f"--jitter-xy {args.jitter_xy}" if args.jitter_xy > 0 else "",
+                f"--colnames-count {args.colname_count}" if args.colname_count else ""])
+    cmd = add_mexparam_to_cmd(cmd, args, mexarg_mapping)
+    cmds.append(cmd)
     return cmds
 
 #================================================================================================
@@ -397,7 +421,19 @@ def sge_convert(_args):
             #   UnassignedCodeword_*
             args.exclude_feature_regex = "^(BLANK|Blank-|Deprecated|Intergenic|NegCon|Unassigned)"
             print(f"Using --exclude-feature-regex: {args.exclude_feature_regex }")
-    
+
+    #  * illumina: spatial coordinates are embedded in the barcode; apply platform-specific defaults
+    if args.platform == "illumina":
+        if args.bcd_delim is None:
+            args.bcd_delim = ":"
+        # override the SeqScope-oriented defaults unless the user set them explicitly
+        if "--icol-bcd-x" not in _args:
+            args.icol_bcd_x = 3
+        if "--icol-bcd-y" not in _args:
+            args.icol_bcd_y = 2
+        if "--units-per-um" not in _args:
+            args.units_per_um = 1000
+
     # mm
     mm = minimake()
 
@@ -424,6 +460,8 @@ def sge_convert(_args):
         cmds = convert_visiumhd(cmds, args)
     elif args.platform == "seqscope":
         cmds = convert_seqscope(cmds, args)
+    elif args.platform == "illumina":
+        cmds = convert_illumina(cmds, args)
     elif args.platform in ["cosmx_smi", "bgi_stereoseq", "vizgen_merscope", "pixel_seq", "nova_st", "generic", "10x_xenium"]:
         cmds = convert_tsv(cmds, args)
     cmds.append(f"[ -f {out_transcript_f} ] && [ -f {out_feature_f} ] && [ -f {out_minmax_f} ] && touch {sge_convert_flag}")

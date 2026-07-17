@@ -46,7 +46,7 @@ def input_by_platform(args):
             "mex_mtx": os.path.join(args.in_mex, args.mex_mtx),
             "pos_parquet": args.pos_parquet,
         }
-    elif args.platform == "seqscope":
+    elif args.platform in ["seqscope", "illumina"]:
         in_dict = {
             "mex_bcd": os.path.join(args.in_mex, args.mex_bcd),
             "mex_ftr": os.path.join(args.in_mex, args.mex_ftr),

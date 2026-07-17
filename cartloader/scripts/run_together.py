@@ -362,15 +362,27 @@ def resolve_sample(raw, cfg):
 # Command builders
 # ---------------------------------------------------------------------------
 
-def cmd_sge_convert(cfg, sge_dir, in_dir):
+def cmd_sge_convert(cfg, sge_dir, s):
     ing = cfg.get("ingest", {})
     res = cfg["resources"]
+    in_dir = s.get("in_dir")
     parts = ["cartloader", "sge_convert",
              f"--platform {ing.get('sge_platform', cfg['platform'])}",
              f"--out-dir {sge_dir}", f"--n-jobs {res['n_jobs']}",
              f"--pigz-threads {res['threads']}", "--gzip pigz"]
     if cfg.get("exclude_feature_regex"):
         parts.append(f"--exclude-feature-regex \"{cfg['exclude_feature_regex']}\"")
+    # inputs taken from resolved sample roles, e.g. illumina's --in-mex from the
+    # `mex` role (a mex_dir sample-sheet column) since its layout is not standardized.
+    for flag, role in ing.get("input_roles", {}).items():
+        val = s["roles"].get(role)
+        if not val:
+            sys.exit(f"ERROR: {cfg['platform']} ingest needs the '{role}' role for {flag}; "
+                     f"provide it as a sample-sheet column (e.g. {role}_dir/{role}) or in_dir.")
+        if isinstance(val, dict):
+            sys.exit(f"ERROR: {cfg['platform']} ingest expects a single path for the '{role}' role "
+                     f"for {flag}, not a bcd/ftr/mtx triple.")
+        parts.append(f"{flag} {val}")
     if "autodetect" in ing:
         chosen = None
         for cand in ing["autodetect"]:
@@ -710,7 +722,7 @@ def add_targets(mm, samples, cfg, args):
                 ingest_cmd = cmd_reformat_cosmx(cfg, sge_dir, s["id"], s["in_dir"])
             else:
                 transcript[s["id"]] = os.path.join(sge_dir, "transcripts.unsorted.tsv.gz")
-                ingest_cmd = cmd_sge_convert(cfg, sge_dir, s["in_dir"])
+                ingest_cmd = cmd_sge_convert(cfg, sge_dir, s)
             flag = os.path.join(mkdir, f"sge.{s['id']}.done")
             sge_flags.append(flag)
             if on("ingest"):
