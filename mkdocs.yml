@@ -90,6 +90,7 @@ nav:
           - Supported Platforms & Inputs: reference/supported_platforms.md
       - SGE Preparation:
           - SGE Format Conversion: reference/sge_convert.md
+          - CosMx Reformatting: reference/reformat_cosmx.md
           - SGE Stitching: reference/sge_stitch.md
           - SGE Reorientation: reference/sge_orientate.md
       - Analysis:

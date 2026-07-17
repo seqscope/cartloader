@@ -1,4 +1,4 @@
-import sys, os, argparse, inspect, json, copy, csv, datetime
+import sys, os, argparse, inspect, json, copy, csv, datetime, glob
 
 from cartloader.utils.minimake import minimake
 from cartloader.utils.utils import execute_makefile
@@ -339,7 +339,7 @@ def resolve_sample(raw, cfg):
         val = sheet_value(role)
         if val:
             roles[role] = _abs_in_dir(val, in_dir)
-        elif role in role_specs and in_dir:
+        elif role in role_specs and role_specs[role].get("file") and in_dir:
             cand = os.path.join(in_dir, role_specs[role]["file"])
             if os.path.exists(cand):
                 roles[role] = cand
@@ -387,6 +387,24 @@ def cmd_sge_convert(cfg, sge_dir, in_dir):
         parts.append("--csv-colnames-others " + " ".join(ing["csv_colnames_others"]))
     parts.extend(ing.get("extra_flags", []))
     return " ".join(p for p in parts if p)
+
+
+def cmd_reformat_cosmx(cfg, sge_dir, sid, in_dir):
+    """Custom CosMx ingest: reformat raw *_tx_file/*_metadata_file/*-polygons CSVs into
+    the transcript TSV + cell metadata (xy) + polygon (boundaries) files. Input patterns
+    are globbed against the sample's in_dir at plan time so a missing file fails early."""
+    ing = cfg.get("ingest", {})
+    if not in_dir:
+        sys.exit("ERROR: cosmx ingest requires a sample 'in_dir'.")
+    parts = ["cartloader", "reformat_cosmx"]
+    for flag, pattern in ing.get("inputs", {}).items():
+        matches = sorted(glob.glob(os.path.join(in_dir, pattern)))
+        if not matches:
+            sys.exit(f"ERROR: cosmx ingest: no file matching '{pattern}' in {in_dir}")
+        parts.append(f"{flag} {matches[0]}")
+    parts.append(f"--out {os.path.join(sge_dir, sid)}")
+    parts.extend(ing.get("extra_flags", []))
+    return " ".join(parts)
 
 
 def cmd_ficture_analysis(a, in_list, fic_dir, cfg):
@@ -660,19 +678,33 @@ def add_targets(mm, samples, cfg, args):
         os.makedirs(sge_root, exist_ok=True)
 
         # --- ingest (skipped for samples that already provide a transcript) ---
+        # An ingest 'method' of "reformat_cosmx" replaces sge_convert with a custom
+        # step that emits multiple role files (transcript + xy + boundaries); their
+        # produced paths are injected as this sample's roles so the cells stage picks
+        # them up (unless the sample already supplies that role explicitly).
+        ing = cfg.get("ingest", {})
+        method = ing.get("method", "sge_convert")
+        produces = ing.get("produces", {})
         sge_flags, transcript = [], {}
         for s in grp:
             if s["roles"].get("transcript"):
                 transcript[s["id"]] = s["roles"]["transcript"]
                 continue
             sge_dir = os.path.join(sge_root, s["id"])
-            transcript[s["id"]] = os.path.join(sge_dir, "transcripts.unsorted.tsv.gz")
+            if method == "reformat_cosmx":
+                prefix = os.path.join(sge_dir, s["id"])
+                transcript[s["id"]] = prefix + produces["transcript"]
+                for role, suffix in produces.items():
+                    if role != "transcript" and not s["roles"].get(role):
+                        s["roles"][role] = prefix + suffix
+                ingest_cmd = cmd_reformat_cosmx(cfg, sge_dir, s["id"], s["in_dir"])
+            else:
+                transcript[s["id"]] = os.path.join(sge_dir, "transcripts.unsorted.tsv.gz")
+                ingest_cmd = cmd_sge_convert(cfg, sge_dir, s["in_dir"])
             flag = os.path.join(mkdir, f"sge.{s['id']}.done")
             sge_flags.append(flag)
             if on("ingest"):
-                mm.add_target(flag, [], [f"mkdir -p {sge_dir}",
-                                         cmd_sge_convert(cfg, sge_dir, s["in_dir"]),
-                                         f"touch {flag}"])
+                mm.add_target(flag, [], [f"mkdir -p {sge_dir}", ingest_cmd, f"touch {flag}"])
 
         in_list = os.path.join(sge_root, "in_list.tsv")
         with open(in_list, "w") as f:
@@ -869,7 +901,7 @@ def parse_arguments(_args):
                         "Re-run with this flag to regenerate the Makefile and resume past a corrupt image.")
 
     io = p.add_argument_group("Input/Output")
-    io.add_argument("--platform", type=str, help="Platform preset, e.g. 10x_xenium, 10x_visium_hd")
+    io.add_argument("--platform", type=str, help="Platform preset, e.g. 10x_xenium, 10x_visium_hd, cosmx_smi, generic")
     io.add_argument("--in-dir", type=str, help="Input directory for a single sample")
     io.add_argument("--samples", type=str, help="TSV sample sheet (wide table of input roles) for a joint multi-sample run")
     io.add_argument("--out-dir", type=str, help="Output directory (single sample / shared joint model)")

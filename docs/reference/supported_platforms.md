@@ -11,8 +11,8 @@ For the profile mechanics (the canonical config, layer merging, custom profiles)
 |--------------|:----------------------:|:------------------------:|
 | `10x_xenium` | ✅ built-in | ✅ |
 | `10x_visium_hd` | ✅ built-in | ✅ |
+| `cosmx_smi` | ✅ built-in | via `reformat_cosmx` |
 | `vizgen_merscope` | ⏳ planned | ✅ |
-| `cosmx_smi` | ⏳ planned | ✅ |
 | `bgi_stereoseq` | ⏳ planned | ✅ |
 | `seqscope` | ⏳ planned | ✅ |
 | `pixel_seq`, `nova_st` | ⏳ planned | ✅ |
@@ -52,6 +52,20 @@ Point `--in-dir` at the Space Ranger `outs/` directory. Coordinates are scaled b
 | H&E image | Provided per sample via the config `hne` field; µm/pixel read from the 2 µm `scalefactors_json.json` |
 
 Defaults: FICTURE `width=12`, `n_factor=24,48,96`, `decode_scale=2`; packaging with `--use-pmpoint --bin-count 500 --sge-scale 2`.
+
+### `cosmx_smi`
+
+Point `--in-dir` at the AtoMx / CosMx SMI flat-file export directory. Unlike the other platforms, ingest does not run `sge_convert`: a dedicated [`reformat_cosmx`](./reformat_cosmx.md) step reads the three raw CSVs and, converting global-pixel coordinates to microns (`0.12028 µm/px`), writes the transcript TSV plus the cell-metadata (xy) and polygon (boundaries) files that FICTURE and cell decode consume. Filenames are matched by glob (first match wins).
+
+| Purpose | Path under `--in-dir` |
+|---------|-----------------------|
+| Transcripts | `*tx_file.csv.gz` (columns `fov`, `cell_ID`, `target`, `x_global_px`, `y_global_px`, `z`) → `*.transcripts.tsv.gz` |
+| Cell centroids | `*metadata_file.csv.gz` (columns `fov`, `cell_ID`, `CenterX_global_px`, `CenterY_global_px`) → `*.metadata.csv.gz` (xy role, columns `X`/`Y`) |
+| Cell boundaries | `*polygons.csv.gz` (columns `fov`, `cellID`, `x_global_px`, `y_global_px`) → `*.polygons.csv.gz` |
+
+Cell ids are formed as `<fov>_<cell_ID>`; transcripts with `cell_ID = 0` are kept but tagged `UNASSIGNED`, and `System*` control probes are dropped at ingest. The `cartloader` cell factor is decoded from the metadata + polygon files via `run_ficture2_multi_cells`. For a joint multi-sample run of already-reformatted samples, supply the `transcript`/`cell_xy`/`cell_boundary` columns in the sample sheet (pointing at the `*.transcripts.tsv.gz` / `*.metadata.csv.gz` / `*.polygons.csv.gz` files) to skip re-ingest.
+
+Defaults: FICTURE `width=12`, `n_factor=12,24,48`, `min_ct_per_unit_hexagon=100`, single-molecule mode; packaging with `--use-pmpoint --bin-count 500`.
 
 ---
 ## Platforms without a built-in profile yet
