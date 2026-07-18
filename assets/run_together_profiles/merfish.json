@@ -1,0 +1,29 @@
+{
+  "platform": "merfish",
+  "exclude_feature_regex": "^(Blank-|BLANK|Blank|Unassigned|Neg|Intergenic|Deprecated|System|MT-|mt-).*",
+  "ingest": {
+    "sge_platform": "vizgen_merscope",
+    "assign_cell_id": true,
+    "raw_input_flag": "--in-csv",
+    "autodetect": [
+      { "file": "detected_transcripts.csv.gz", "flag": "--in-csv" },
+      { "file": "detected_transcripts.csv", "flag": "--in-csv" },
+      { "file": "transcripts.csv.gz", "flag": "--in-csv" },
+      { "file": "transcripts.csv", "flag": "--in-csv" }
+    ]
+  },
+  "roles": {
+    "xy":         { "file": "cell_metadata.csv", "colname_cell": "", "colname_x": "center_x", "colname_y": "center_y" },
+    "boundaries": { "file": "cell_boundaries.csv", "colname_cell": "cell_id", "colname_x": "vertex_x", "colname_y": "vertex_y" }
+  },
+  "ficture": [
+    { "id": "denovo", "mode": "train", "width": "12", "n_factor": "12,24,48" }
+  ],
+  "cell_analyses": [
+    { "id": "cartloader", "uses": ["boundaries"], "optional_uses": ["xy"] }
+  ],
+  "cartload": { "use_pmpoint": true, "bin_count": 500 },
+  "image_transform": { "column": "merfish_csv", "flag": "--micron2pixel-csv" },
+  "image_defaults": { "shrink_factor": 5.0, "high_memory": true },
+  "images": []
+}
