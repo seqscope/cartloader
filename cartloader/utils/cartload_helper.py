@@ -5,7 +5,43 @@ colormap normalization and the UMAP -> PMTiles command must match so that
 per-sample catalogs and the multi-sample catalog agree).
 """
 import os
+import gzip
+import json
 from cartloader.utils.color_helper import normalize_rgb
+
+
+def update_bin_counts_json(in_bin_json, in_features, out_bin_json, strip_comment_char="#"):
+    """Rewrite a gene->bin assignment JSON so each gene's ``count`` reflects this
+    sample's own feature totals, while keeping the shared ``bin`` assignment intact.
+
+    When a shared _bin_counts.json (from spatula assign-feature2bin on the joint
+    feature list) is reused across samples, its gene->bin routing must stay identical
+    everywhere, but the per-gene ``count`` is the multi-sample aggregate. This reads
+    the per-sample feature totals from ``in_features`` (column 0 = gene, column 1 =
+    total count; comment/header rows are skipped) and replaces each record's ``count``
+    with that sample's value. Genes absent from ``in_features`` get count 0.
+    """
+    counts = {}
+    opener = gzip.open if in_features.endswith(".gz") else open
+    with opener(in_features, "rt") as f:
+        for line in f:
+            if not line or line[0] == strip_comment_char:
+                continue
+            toks = line.rstrip("\n").split("\t")
+            if len(toks) < 2:
+                continue
+            try:
+                counts[toks[0]] = int(toks[1])
+            except ValueError:
+                # non-numeric second column (e.g. a "gene<TAB>count" text header): skip
+                continue
+
+    with open(in_bin_json) as f:
+        records = json.load(f)
+    for rec in records:
+        rec["count"] = counts.get(rec.get("gene"), 0)
+    with open(out_bin_json, "w") as f:
+        json.dump(records, f)
 
 
 def copy_rgb_tsv(in_rgb, out_rgb, restart=False):

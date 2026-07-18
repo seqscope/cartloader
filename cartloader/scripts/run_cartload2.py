@@ -826,10 +826,21 @@ def run_cartload2(_args):
         # so every batch bins genes identically.
         features_for_points = in_features
         pmtiles_prereqs = [molecules_f]
+        point_bin_json = args.in_bin_json
         if args.in_bin_json is not None:
-            # A shared gene->bin assignment is supplied (e.g. by run_cartload2_multi);
-            # run_tsv2pmtiles reuses it instead of deriving one from features_for_points.
-            pmtiles_prereqs.append(args.in_bin_json)
+            # A shared gene->bin assignment is supplied (e.g. by run_cartload2_multi).
+            # Reuse its gene->bin routing (identical across samples), but refresh each
+            # gene's `count` from this sample's own feature totals (in_features) so the
+            # per-sample _bin_counts.json reports per-sample counts. Genes absent from
+            # this sample get count 0.
+            point_bin_json = f"{out_molecules_prefix}.sample_bin_counts.json"
+            rebin_cmds = cmd_separator([], "Refreshing shared gene->bin counts with per-sample feature totals")
+            rebin_cmds.append(
+                "python3 -c \"from cartloader.utils.cartload_helper import update_bin_counts_json; "
+                f"update_bin_counts_json('{args.in_bin_json}', '{in_features}', '{point_bin_json}')\""
+            )
+            mm.add_target(point_bin_json, [args.in_bin_json, in_features], rebin_cmds)
+            pmtiles_prereqs.append(point_bin_json)
         if args.replace_features is not None:
             assert os.path.exists(args.replace_features), f"File not found: {args.replace_features} (--replace-features)"
             features_for_points = os.path.join(args.out_dir, "multi.features.rehdr.tsv")
@@ -854,7 +865,7 @@ def run_cartload2(_args):
             "--max-feature-counts", str(args.max_point_feature_counts),
             "--preserve-point-density-thres", str(args.preserve_point_density_thres),
             "--bin-count", str(args.bin_count),
-            (f"--in-bin-json '{args.in_bin_json}'" if args.in_bin_json is not None else ""),
+            (f"--in-bin-json '{point_bin_json}'" if args.in_bin_json is not None else ""),
             "--all",
             "--n-jobs", str(args.n_jobs),
             f"--log --log-suffix '{args.log_suffix}'" if args.log else "",

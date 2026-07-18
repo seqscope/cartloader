@@ -252,7 +252,7 @@ def run_cartload2_multi(_args):
         bin_count = args.bin_count if args.bin_count is not None else 50
         cmds = cmd_separator([], "Assigning shared gene->bin bins (assign-feature2bin) for the unified counts view")
         cmds.append(f"'{spatula}' assign-feature2bin --feature-tsv {multi_features} "
-                    f"--out-json {shared_bin_json} --bin-count {bin_count} --in-feature-tsv-delim '\\t'")
+                    f"--out-json {shared_bin_json} --bin-count {bin_count}")
         mm.add_target(shared_bin_json, [multi_features], cmds)
 
     # Build the shared factor targets first — this materializes the shared factor files
