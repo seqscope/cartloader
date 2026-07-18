@@ -12,7 +12,7 @@ For the profile mechanics (the canonical config, layer merging, custom profiles)
 | `10x_xenium` | ✅ built-in | ✅ |
 | `10x_visium_hd` | ✅ built-in | ✅ |
 | `cosmx_smi` | ✅ built-in | via `reformat_cosmx` |
-| `vizgen_merscope` | ⏳ planned | ✅ |
+| `merfish` (Vizgen MERSCOPE) | ✅ built-in | ✅ (`vizgen_merscope` preset) |
 | `bgi_stereoseq` | ⏳ planned | ✅ |
 | `seqscope` | ⏳ planned | ✅ |
 | `pixel_seq`, `nova_st` | ⏳ planned | ✅ |
@@ -83,6 +83,63 @@ cartloader run_together --config cosmx_touchstone.json --in-dir IN --out-dir OUT
 For example, an export with `..._tx.csv.gz`, `..._tx_unique.csv.gz`, `..._metadata.csv.gz`, and `..._polygons.csv.gz` needs only the `--tx` override above to pick `tx_unique` (the default `--meta`/`--poly` globs already match `_metadata`/`_polygons`); override `--meta`/`--poly` the same way when their names differ.
 
 Defaults: FICTURE `width=12`, `n_factor=12,24,48`, `min_ct_per_unit_hexagon=100`, single-molecule mode; packaging with `--use-pmpoint --bin-count 500`.
+
+### `merfish`
+
+For MERFISH / Vizgen MERSCOPE. The inputs are **individual files that may be arbitrarily named and need not share a directory**, so point at each one explicitly (a single sample, no sample sheet needed):
+
+```bash
+cartloader run_together --platform merfish \
+  --in-transcript   path/to/transcripts.csv \
+  --in-cell-xy      path/to/cell_metadata.csv \
+  --in-cell-boundary path/to/cell_boundaries.csv \
+  --id  MYSAMPLE --out-dir OUT
+```
+
+| Flag | File | Expected columns (defaults) |
+|------|------|-----------------------------|
+| `--in-transcript` (required) | Raw transcript CSV, ingested through `sge_convert` (the `vizgen_merscope` preset) | `global_x`, `global_y`, `gene` (`global_z` optional) |
+| `--in-cell-xy` (optional) | Cell metadata / centroids → xy role | `center_x`, `center_y`; the unnamed pandas-index first column holds the cell id |
+| `--in-cell-boundary` (optional) | Cell boundary polygons → boundaries role | `cell_id`, `vertex_x`, `vertex_y` |
+
+**Column names may be overridden per file** when they differ from the defaults above: `--colname-transcript-x/-y/-feature/-count`, `--colname-xy-cell/-x/-y` (use `--colname-xy-cell ''` for an unnamed index column), and `--colname-boundary-cell/-x/-y`.
+
+Only `--in-transcript` is required; with just it, the run is pixel-level (FICTURE → packaging). Supplying `--in-cell-boundary` enables cell-level decode: unlike CosMx, MERFISH transcripts carry **no per-transcript cell assignment**, so ingest runs [`spatula tsv-add-cell-id`](../../submodules/spatula) after `sge_convert` to assign each transcript to the polygon that contains it (point-in-polygon; transcripts inside no cell are tagged `UNASSIGNED`), appending a `cell_id` column so the standard `cartloader` cell factor decodes via `run_ficture2_multi_cells` — exactly as for CosMx. `--in-cell-xy` adds the per-cell spatial cluster scatter. Coordinates are already in microns and are not shifted, so the three files stay aligned. Set nearest-cell fallback assignment (assign an outside-all-cells transcript to the closest cell within a distance) with `{ "ingest": { "assign_cell_id": { "expand_um": <µm> } } }`.
+
+A standard MERSCOPE export directory also works via `--in-dir OUT`, which auto-detects `detected_transcripts.csv[.gz]`, `cell_metadata.csv`, and `cell_boundaries.csv`. For a joint multi-sample run, give `--samples` a sheet with an `in_dir` column per sample (each directory auto-detected as above); a per-row `cell_xy` / `cell_boundary` column overrides the auto-detected cell files. (Raw transcripts are auto-detected from `in_dir`, not passed as a sheet column — the sheet's `transcript` column means an *already-ingested* TSV and would skip `sge_convert`.)
+
+Defaults: FICTURE `width=12`, `n_factor=12,24,48`, single-molecule mode; packaging with `--use-pmpoint --bin-count 500`.
+
+#### Images
+
+Morphology images also have non-standard paths, so they are given as a **separate image TSV** (`--images images.tsv`), one row per image, attached to samples by the `sample` column. This keeps the sample sheet from blowing up while staying flexible; the same records can equivalently be written as the config-JSON `images` list.
+
+```
+sample    type      source            merfish_csv           color
+MYSAMPLE  dapi      /p/dapi.tif       /p/transform.csv      -
+MYSAMPLE  protein   /p/protein.png    /p/transform.csv      008A00
+```
+
+| Column | Meaning |
+|--------|---------|
+| `sample` (required) | Sample id this image belongs to; `*` or blank = every sample |
+| `type` (required) | Modality — sets the **default color** and kind. Registry: `dapi`→`0F73E6`, `boundary`→`F300A5`, `rna`→`A4A400`, `protein`→`008A00` (colorized single-channel); `hne` → multi-channel RGB passthrough (no color) |
+| `source` / `src` (required) | Image path, `.tif` or `.png` (`--ome2png` is applied automatically for `.tif`, skipped for `.png`) |
+| `id` | Catalog key / output basename; **defaults to `type`** |
+| `color` | Hex, **overrides** the type's default. An unregistered `type` with no `color` is an error (no silent wrong color) |
+| `merfish_csv` | The MERSCOPE `micron_to_mosaic_pixel_transform.csv` → `import_image --micron2pixel-csv`. The transform column name and flag are declared per platform by the profile's `image_transform` |
+
+Each row runs `cartloader import_image --ome2png --png2pmtiles --georeference --colorize <color> --micron2pixel-csv <merfish_csv> …`. `--shrink-factor 5.0` and `--high-memory` are applied from the profile's `image_defaults` (large MERSCOPE mosaics); override per image with `shrink_factor` / `high_memory` columns.
+
+For a single sample, the images can also be given **directly on the command line** with a repeatable `--image` — one image per flag, as comma-separated `key=value` pairs (the same fields as a TSV row; no `sample` needed). The transform accepts either the platform column name (`merfish_csv=`) or a generic `transform=`:
+
+```bash
+cartloader run_together --platform merfish \
+  --in-transcript /p/molecules.csv --in-cell-boundary /p/polys.csv \
+  --image type=dapi,source=/p/dapi.tif,merfish_csv=/p/transform.csv \
+  --image type=protein,source=/p/protein.png,color=008A00,transform=/p/transform.csv \
+  --id MYSAMPLE --out-dir OUT
+```
 
 ---
 ## Platforms without a built-in profile yet

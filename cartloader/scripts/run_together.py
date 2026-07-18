@@ -5,6 +5,7 @@ from cartloader.utils.utils import execute_makefile
 
 repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 PROFILE_DIR = os.path.join(repo_dir, "assets", "run_together_profiles")
+SPATULA_BIN = os.path.join(repo_dir, "submodules", "spatula", "bin", "spatula")
 
 # Global fallbacks (a profile or --config may override; a CLI flag wins over both).
 DEFAULT_EXCLUDE_REGEX = "^(Unassigned|Neg|BLANK|Blank|Intergenic|Deprecated|System|Gm[0-9]|MT-|mt-|Rps|Rpl|NCS-|NCP-)"
@@ -32,6 +33,23 @@ ROLE_LIST_FLAG = {
     "xy": "--list-xy",
     "clusters": "--list-cluster",
     "mex": "--mex-list",
+}
+# transcript column-override key -> the sge_convert flag that names that input column
+CSV_COLNAME_FLAGS = {
+    "x": "--csv-colname-x",
+    "y": "--csv-colname-y",
+    "feature": "--csv-colname-feature-name",
+    "count": "--csv-colname-count",
+}
+# Image modality registry: `type` -> its default colorize hex and kind. A single
+# (colorized) type's `color` is overridable per image; `hne` is a multi-channel RGB
+# passthrough (no colorize, converted via the rgb path). More types are added here.
+IMAGE_TYPES = {
+    "dapi":     {"color": "0F73E6", "kind": "single"},
+    "boundary": {"color": "F300A5", "kind": "single"},
+    "rna":      {"color": "A4A400", "kind": "single"},
+    "protein":  {"color": "008A00", "kind": "single"},
+    "hne":      {"kind": "rgb"},
 }
 
 # ---------------------------------------------------------------------------
@@ -217,7 +235,8 @@ def build_config(args):
 
     # Layer 2: tier-2 JSON augments (lists append/override-by-id by default)
     for k in ("exclude_feature_regex", "ingest", "roles", "cartload", "ficture_defaults",
-              "squares", "cell_import", "hne", "publish", "resources"):
+              "squares", "cell_import", "hne", "image_transform", "image_defaults",
+              "publish", "resources"):
         if k in cfg:
             prof[k] = deep_merge(prof.get(k), cfg[k]) if isinstance(cfg[k], dict) else cfg[k]
     if "ficture" in cfg:
@@ -259,6 +278,30 @@ def build_config(args):
     # clustering; mex columns turn on mex-based clustering; neither -> cells skipped.
     prof["colname_cell"] = args.colname_cell or cfg.get("colname_cell")
 
+    # Per-file column-name overrides (CLI). The inputs may be arbitrarily-named
+    # individual files, so their column names are not fixed by the profile: the
+    # transcript columns flow to sge_convert, the xy/boundary columns into their
+    # roles (consumed by run_ficture2_multi_cells / spatula tsv-add-cell-id).
+    tx_cols = {"x": args.colname_transcript_x, "y": args.colname_transcript_y,
+               "feature": args.colname_transcript_feature, "count": args.colname_transcript_count}
+    tx_cols = {k: v for k, v in tx_cols.items() if v}
+    if tx_cols:
+        prof.setdefault("ingest", {}).setdefault("csv_colnames", {}).update(tx_cols)
+    # cell-id colnames use `is not None` because "" is meaningful (an unnamed
+    # pandas-index first column, e.g. MERFISH cell metadata).
+    xy_over = {}
+    if args.colname_xy_cell is not None: xy_over["colname_cell"] = args.colname_xy_cell
+    if args.colname_xy_x: xy_over["colname_x"] = args.colname_xy_x
+    if args.colname_xy_y: xy_over["colname_y"] = args.colname_xy_y
+    if xy_over:
+        prof.setdefault("roles", {}).setdefault("xy", {}).update(xy_over)
+    bnd_over = {}
+    if args.colname_boundary_cell is not None: bnd_over["colname_cell"] = args.colname_boundary_cell
+    if args.colname_boundary_x: bnd_over["colname_x"] = args.colname_boundary_x
+    if args.colname_boundary_y: bnd_over["colname_y"] = args.colname_boundary_y
+    if bnd_over:
+        prof.setdefault("roles", {}).setdefault("boundaries", {}).update(bnd_over)
+
     # Apply ficture_defaults to every analysis (per-entry keys win).
     prof["ficture"] = [deep_merge(prof["ficture_defaults"], a) for a in prof["ficture"]]
 
@@ -268,18 +311,32 @@ def build_config(args):
     prof["resources"].setdefault("n_jobs", args.n_jobs)
     prof["resources"].setdefault("threads", args.threads)
 
-    # Samples: --in-dir (one), --samples sheet (many), or JSON 'samples'.
+    # Samples: --in-dir / explicit per-file flags (one), --samples sheet (many),
+    # or JSON 'samples'. The single-sample CLI accepts either a directory (--in-dir,
+    # roles auto-detected inside it) or individual files by explicit path
+    # (--in-transcript raw CSV to ingest, --in-cell-xy, --in-cell-boundary) which
+    # need not share a directory or use any standard filename.
     raw_samples = list(cfg.get("samples", []))
     if args.samples:
         raw_samples += read_sheet(args.samples)
-    if args.in_dir:
-        s = {"in_dir": args.in_dir}
-        if args.id:
-            s["id"] = args.id
+    if args.in_dir or args.in_transcript or args.in_cell_xy or args.in_cell_boundary:
+        s = {}
+        if args.in_dir: s["in_dir"] = args.in_dir
+        if args.id: s["id"] = args.id
+        if args.in_transcript: s["raw_transcript"] = args.in_transcript
+        if args.in_cell_xy: s["xy"] = args.in_cell_xy
+        if args.in_cell_boundary: s["boundaries"] = args.in_cell_boundary
         raw_samples.append(s)
     if not raw_samples:
-        sys.exit("ERROR: no samples. Use --in-dir, --samples <sheet>, or a 'samples' config block.")
+        sys.exit("ERROR: no samples. Use --in-dir, the --in-transcript/--in-cell-xy/--in-cell-boundary "
+                 "file flags, --samples <sheet>, or a 'samples' config block.")
     prof["_raw_samples"] = raw_samples
+
+    # Per-image specs: the --images TSV (one row per image) plus any repeatable
+    # --image CLI entries (each a comma-separated key=value row, for the single-sample
+    # case). Both attach to samples by the `sample` column during resolve_sample.
+    prof["_image_rows"] = read_sheet(args.images) if args.images else []
+    prof["_image_rows"] += [parse_image_arg(s) for s in (args.image or [])]
 
     if not prof["out_dir"] and not prof["out_root"]:
         sys.exit("ERROR: --out-dir (or --out-root for independent per-sample models) is required.")
@@ -308,6 +365,69 @@ def sheet_image_specs(raw, in_dir, cfg):
     if raw.get("hne") and not cfg.get("hne"):
         specs.append({"id": "hne", "source": _abs_in_dir(raw["hne"], in_dir), "kind": "rgb"})
     return specs
+
+
+def image_row_to_spec(row, cfg, in_dir):
+    """Turn one --images TSV row into an image spec. The `type` sets the default
+    color and kind (from IMAGE_TYPES); `id` defaults to `type`; `source`/`src` is
+    the image path (.tif or .png). A platform's transform column (declared by the
+    profile's `image_transform`, e.g. MERFISH `merfish_csv` -> --micron2pixel-csv)
+    is carried as transform_flag/transform_path. Blank cells were already dropped
+    by read_sheet, so any present key is meaningful."""
+    itype = row.get("type")
+    if not itype:
+        sys.exit(f"ERROR: --images row is missing the required 'type' column: {row}")
+    reg = IMAGE_TYPES.get(itype, {})
+    kind = row.get("kind") or reg.get("kind", "single")
+    src = row.get("source") or row.get("src") or row.get("tif")
+    if not src:
+        sys.exit(f"ERROR: --images row for type '{itype}' is missing an image path "
+                 f"('source'/'src' column): {row}")
+    spec = {"id": row.get("id") or row.get("img_id") or itype, "type": itype,
+            "kind": kind, "source": _abs_in_dir(src, in_dir)}
+    if kind != "rgb":
+        # colorized single-channel: explicit column wins, else the type's default.
+        color = row.get("color") or reg.get("color")
+        if not color:
+            sys.exit(f"ERROR: image type '{itype}' has no default color and the --images row "
+                     f"gives none. Add a 'color' column (hex) or register the type in IMAGE_TYPES.")
+        spec["color"] = color
+    # Platform-specific geometric transform: the profile declares its column name
+    # and import_image flag; a generic `transform` key is also accepted so the same
+    # spelling works across platforms (the platform-named column wins).
+    tr = cfg.get("image_transform")
+    if tr:
+        val = row.get(tr["column"]) or row.get("transform")
+        if val:
+            spec["transform_flag"] = tr["flag"]
+            spec["transform_path"] = _abs_in_dir(val, in_dir)
+    for k in ("shrink_factor", "high_memory", "convert"):
+        if row.get(k):
+            spec[k] = row[k]
+    # A plain .png needs no OME->PNG conversion; a .tif/.ome.tif does (default).
+    spec.setdefault("convert", "none" if spec["source"].lower().endswith(".png") else "ome2png")
+    return spec
+
+
+def _truthy(v):
+    """Coerce a sheet string ('true'/'1'/…) or a JSON bool to a boolean."""
+    return str(v).strip().lower() in ("1", "true", "yes", "t", "y") if v is not None else False
+
+
+def parse_image_arg(s):
+    """Parse one --image value (comma-separated key=value pairs) into an image row,
+    the CLI equivalent of a single --images TSV row (same field vocabulary)."""
+    row = {}
+    for tok in s.split(","):
+        tok = tok.strip()
+        if not tok:
+            continue
+        k, sep, v = tok.partition("=")
+        if not sep:
+            sys.exit(f"ERROR: --image expects comma-separated key=value pairs (e.g. "
+                     f"type=dapi,source=/p/dapi.tif,transform=/p/x.csv); got '{tok}' in '{s}'.")
+        row[k.strip()] = v.strip()
+    return row
 
 
 def resolve_sample(raw, cfg):
@@ -350,11 +470,20 @@ def resolve_sample(raw, cfg):
     if "mex" not in roles and all(raw.get(k) for k in ("mex_bcd", "mex_ftr", "mex_mtx")):
         roles["mex"] = {k: _abs_in_dir(raw[f"mex_{k}"], in_dir) for k in ("bcd", "ftr", "mtx")}
 
+    # Images from the --images TSV whose `sample` targets this sample (an exact id,
+    # or '*'/blank meaning every sample).
+    tsv_images = [image_row_to_spec(row, cfg, in_dir)
+                  for row in cfg.get("_image_rows", [])
+                  if (row.get("sample") or row.get("sample_id") or "*") in ("*", sid)]
+
     return {
         "id": sid, "in_dir": in_dir, "out_dir": out_dir,
         "roles": roles,
+        # raw transcript CSV to ingest (sge_convert --in-csv); distinct from the
+        # `transcript` role, which is an already-ingested TSV that skips ingest.
+        "raw_transcript": raw.get("raw_transcript"),
         "hne": raw.get("hne"),
-        "images": list(raw.get("images", [])) + sheet_image_specs(raw, in_dir, cfg),
+        "images": list(raw.get("images", [])) + tsv_images + sheet_image_specs(raw, in_dir, cfg),
     }
 
 
@@ -372,6 +501,11 @@ def cmd_sge_convert(cfg, sge_dir, s):
              f"--pigz-threads {res['threads']}", "--gzip pigz"]
     if cfg.get("exclude_feature_regex"):
         parts.append(f"--exclude-feature-regex \"{cfg['exclude_feature_regex']}\"")
+    # An explicit raw transcript CSV (single-sample --in-transcript) is ingested
+    # directly and takes precedence over in_dir autodetection.
+    raw_tx = s.get("raw_transcript")
+    if raw_tx:
+        parts.append(f"{ing.get('raw_input_flag', '--in-csv')} {raw_tx}")
     # inputs taken from resolved sample roles, e.g. illumina's --in-mex from the
     # `mex` role (a mex_dir sample-sheet column) since its layout is not standardized.
     for flag, role in ing.get("input_roles", {}).items():
@@ -383,7 +517,12 @@ def cmd_sge_convert(cfg, sge_dir, s):
             sys.exit(f"ERROR: {cfg['platform']} ingest expects a single path for the '{role}' role "
                      f"for {flag}, not a bcd/ftr/mtx triple.")
         parts.append(f"{flag} {val}")
-    if "autodetect" in ing:
+    if not raw_tx and "autodetect" in ing:
+        if not in_dir:
+            names = ", ".join(c["file"] for c in ing["autodetect"])
+            sys.exit(f"ERROR: {cfg['platform']} ingest needs a transcript input. Provide it explicitly "
+                     f"with --in-transcript <raw CSV>, or point --in-dir at a directory containing one "
+                     f"of: {names}.")
         chosen = None
         for cand in ing["autodetect"]:
             p = os.path.join(in_dir, cand["file"])
@@ -394,7 +533,13 @@ def cmd_sge_convert(cfg, sge_dir, s):
             chosen = (cand["flag"], os.path.join(in_dir, cand["file"]))
         parts.append(f"{chosen[0]} {chosen[1]}")
     for flag, rel in ing.get("inputs", {}).items():
-        parts.append(f"{flag} {os.path.join(in_dir, rel)}")
+        if in_dir:
+            parts.append(f"{flag} {os.path.join(in_dir, rel)}")
+    # Per-input-column name overrides (the input files may use non-standard column names).
+    for key, val in ing.get("csv_colnames", {}).items():
+        flag = CSV_COLNAME_FLAGS.get(key)
+        if flag and val:
+            parts.append(f"{flag} {val}")
     if ing.get("csv_colnames_others"):
         parts.append("--csv-colnames-others " + " ".join(ing["csv_colnames_others"]))
     parts.extend(ing.get("extra_flags", []))
@@ -426,6 +571,34 @@ def cmd_reformat_cosmx(cfg, sge_dir, sid, in_dir):
         parts.append(f"{flag} {matches[0]}")
     parts.append(f"--out {os.path.join(sge_dir, sid)}")
     parts.extend(ing.get("extra_flags", []))
+    return " ".join(parts)
+
+
+def cmd_tsv_add_cell_id(cfg, in_tsv, out_tsv, boundaries):
+    """Append a cell_id column to the ingested transcript by assigning each transcript
+    to the cell-boundary polygon that contains it (point-in-polygon). MERFISH
+    transcripts carry no per-transcript cell assignment (unlike CosMx, whose reformat
+    writes one), so this reproduces the CosMx transcript contract (X, Y, gene, count,
+    cell_id) that the standard cell decode (run_ficture2_multi_cells) consumes. The
+    boundary CSV's cell-id/vertex columns come from the profile's roles.boundaries."""
+    ing = cfg.get("ingest", {})
+    ac = ing.get("assign_cell_id")
+    ac = ac if isinstance(ac, dict) else {}
+    bnd = cfg.get("roles", {}).get("boundaries", {})
+    res = cfg["resources"]
+    parts = [SPATULA_BIN, "tsv-add-cell-id",
+             f"--tsv {in_tsv}", f"--out {out_tsv}",
+             f"--boundaries-csv {boundaries}",
+             f"--colname-x {ac.get('colname_x', 'X')}",
+             f"--colname-y {ac.get('colname_y', 'Y')}",
+             f"--csv-colname-cell-id {bnd.get('colname_cell', 'cell_id')}",
+             f"--csv-colname-x {bnd.get('colname_x', 'vertex_x')}",
+             f"--csv-colname-y {bnd.get('colname_y', 'vertex_y')}",
+             f"--threads {res['threads']}"]
+    if ac.get("expand_um"):
+        # assign a transcript outside every polygon to the nearest cell within this
+        # distance (µm); off by default (transcripts outside all cells stay UNASSIGNED).
+        parts.append(f"--expand-um {ac['expand_um']}")
     return " ".join(parts)
 
 
@@ -462,8 +635,12 @@ def cmd_cells(ca, list_files, fic_dir, model_path, cfg):
         if role == "xy":
             parts.append(f"--xy-colname-x {xy_cfg.get('colname_x', 'X')}")
             parts.append(f"--xy-colname-y {xy_cfg.get('colname_y', 'Y')}")
-            if cfg.get("colname_cell"):
-                parts.append(f"--xy-colname-cell-id {cfg['colname_cell']}")
+            # Cell-id column of the xy metadata file: a role-level colname_cell wins
+            # (may be "" for an unnamed pandas-index first column, e.g. MERFISH cell
+            # metadata), else the global --colname-cell, else the tool default (cell_id).
+            cell_col = xy_cfg.get("colname_cell", cfg.get("colname_cell"))
+            if cell_col is not None:
+                parts.append(f"--xy-colname-cell-id '{cell_col}'")
     if cfg.get("_sm_cells"):   # single-molecule for cell decode (default OFF)
         parts.append("--single-molecule")
     if cfg.get("exclude_feature_regex"):
@@ -561,12 +738,19 @@ def plan_images(cfg, s, cart_dir, multi, transcript=None):
             continue  # _cmd_rgb_image appends its own catalog line
         else:  # single-channel colorized
             conv = "--ome2png " if op.get("convert", "ome2png") == "ome2png" else ""
+            idef = cfg.get("image_defaults", {})
+            # platform geometric transform (e.g. MERFISH --micron2pixel-csv), and
+            # shrink/high-memory (per-image, else profile image_defaults for big mosaics).
+            transform = f"{op['transform_flag']} {op['transform_path']} " if op.get("transform_path") else ""
+            sfval = op.get("shrink_factor", idef.get("shrink_factor"))
+            sf = f"--shrink-factor {sfval} " if sfval is not None else ""
+            hm = "--high-memory " if _truthy(op.get("high_memory", idef.get("high_memory"))) else ""
             extra = " ".join(op.get("extra_flags", []))
             cmds.append(
                 f"cartloader import_image {conv}{skip_img}--png2pmtiles --georeference "
                 f"--in-img {src} --out-dir {cart_dir} --img-id {iid} "
                 f"--upper-thres-quantile 0.95 --level 0 --colorize {op['color']} "
-                f"--transparent-below 5 {extra}".strip())
+                f"--transparent-below 5 {transform}{sf}{hm}{extra}".strip())
         cmds.append(catalog_image_line(cfg, catalog, iid, cart_dir))
 
     # Visium HD H&E (rgb via a per-sample path + profile hne settings)
@@ -719,14 +903,24 @@ def add_targets(mm, samples, cfg, args):
                 for role, suffix in produces.items():
                     if role != "transcript" and not s["roles"].get(role):
                         s["roles"][role] = prefix + suffix
-                ingest_cmd = cmd_reformat_cosmx(cfg, sge_dir, s["id"], s["in_dir"])
+                ingest_cmds = [cmd_reformat_cosmx(cfg, sge_dir, s["id"], s["in_dir"])]
             else:
-                transcript[s["id"]] = os.path.join(sge_dir, "transcripts.unsorted.tsv.gz")
-                ingest_cmd = cmd_sge_convert(cfg, sge_dir, s)
+                base_tx = os.path.join(sge_dir, "transcripts.unsorted.tsv.gz")
+                ingest_cmds = [cmd_sge_convert(cfg, sge_dir, s)]
+                # Optionally assign each transcript to its overlapping cell boundary so
+                # the transcript gains a cell_id column (MERFISH ships no per-transcript
+                # cell assignment). Only when the sample supplies a boundaries role;
+                # without it the run stays pixel-level (no cell decode).
+                if ing.get("assign_cell_id") and s["roles"].get("boundaries"):
+                    tx_cellid = os.path.join(sge_dir, "transcripts.cell_id.tsv.gz")
+                    ingest_cmds.append(cmd_tsv_add_cell_id(cfg, base_tx, tx_cellid, s["roles"]["boundaries"]))
+                    transcript[s["id"]] = tx_cellid
+                else:
+                    transcript[s["id"]] = base_tx
             flag = os.path.join(mkdir, f"sge.{s['id']}.done")
             sge_flags.append(flag)
             if on("ingest"):
-                mm.add_target(flag, [], [f"mkdir -p {sge_dir}", ingest_cmd, f"touch {flag}"])
+                mm.add_target(flag, [], [f"mkdir -p {sge_dir}"] + ingest_cmds + [f"touch {flag}"])
 
         in_list = os.path.join(sge_root, "in_list.tsv")
         with open(in_list, "w") as f:
@@ -931,14 +1125,37 @@ def parse_arguments(_args):
                         "Re-run with this flag to regenerate the Makefile and resume past a corrupt image.")
 
     io = p.add_argument_group("Input/Output")
-    io.add_argument("--platform", type=str, help="Platform preset, e.g. 10x_xenium, 10x_visium_hd, cosmx_smi, generic")
-    io.add_argument("--in-dir", type=str, help="Input directory for a single sample")
+    io.add_argument("--platform", type=str, help="Platform preset, e.g. 10x_xenium, 10x_visium_hd, cosmx_smi, merfish, generic")
+    io.add_argument("--in-dir", type=str, help="Input directory for a single sample (roles auto-detected inside it)")
+    io.add_argument("--in-transcript", type=str, help="Single sample: raw transcript CSV to ingest (goes through sge_convert). "
+                                                      "Use instead of --in-dir when the file is arbitrarily named / not in a standard directory.")
+    io.add_argument("--in-cell-xy", type=str, help="Single sample: cell metadata (centroids) file for the xy role (optional)")
+    io.add_argument("--in-cell-boundary", type=str, help="Single sample: cell boundary polygon file for the boundaries role (optional)")
     io.add_argument("--samples", type=str, help="TSV sample sheet (wide table of input roles) for a joint multi-sample run")
+    io.add_argument("--images", type=str, help="TSV of per-image specs, one row per image (columns: sample, type, id, "
+                                              "source/src, color, and the platform transform column e.g. merfish_csv). "
+                                              "Images attach to samples by the `sample` column ('*'/blank = all samples).")
+    io.add_argument("--image", action="append", metavar="type=..,source=..,..",
+                    help="Single-sample image as comma-separated key=value pairs (keys: type, source/src, id, color, "
+                         "transform (or the platform column e.g. merfish_csv), shrink_factor, high_memory). Same fields "
+                         "as a --images TSV row; repeat --image per image.")
     io.add_argument("--out-dir", type=str, help="Output directory (single sample / shared joint model)")
     io.add_argument("--out-root", type=str, help="Output root; each sample gets its own dir and an independent model")
-    io.add_argument("--id", type=str, help="Sample id for a single --in-dir run")
+    io.add_argument("--id", type=str, help="Sample id for a single-sample run (--in-dir or explicit --in-* files)")
     io.add_argument("--config", type=str, help="JSON config that augments the profile/CLI (full spec for complex runs)")
     io.add_argument("--platform-json", type=str, help="External JSON profile that overrides the built-in platform profile")
+
+    c = p.add_argument_group("Single-sample input column overrides (else profile / platform defaults)")
+    c.add_argument("--colname-transcript-x", type=str, default=None, help="X column name in --in-transcript")
+    c.add_argument("--colname-transcript-y", type=str, default=None, help="Y column name in --in-transcript")
+    c.add_argument("--colname-transcript-feature", type=str, default=None, help="Gene/feature column name in --in-transcript")
+    c.add_argument("--colname-transcript-count", type=str, default=None, help="Count column name in --in-transcript (default: none, count of 1 per row)")
+    c.add_argument("--colname-xy-cell", type=str, default=None, help="Cell-id column name in --in-cell-xy (use '' for an unnamed pandas-index first column)")
+    c.add_argument("--colname-xy-x", type=str, default=None, help="X (centroid) column name in --in-cell-xy")
+    c.add_argument("--colname-xy-y", type=str, default=None, help="Y (centroid) column name in --in-cell-xy")
+    c.add_argument("--colname-boundary-cell", type=str, default=None, help="Cell-id column name in --in-cell-boundary")
+    c.add_argument("--colname-boundary-x", type=str, default=None, help="Vertex X column name in --in-cell-boundary")
+    c.add_argument("--colname-boundary-y", type=str, default=None, help="Vertex Y column name in --in-cell-boundary")
 
     f = p.add_argument_group("FICTURE mode (choose one; default de-novo from the profile)")
     f.add_argument("--width", type=str, help="De-novo: hexagon width(s) in um (comma-separated)")
