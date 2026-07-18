@@ -44,11 +44,16 @@ def _run(cmd):
 
 
 def iter_factors(catalog):
-    """Yield (factor_id, factor_dict) pairs for either a multi-catalog (top-level
-    `factors` map) or a per-sample catalog (`assets.factors` list)."""
-    if isinstance(catalog.get("factors"), dict):
-        return list(catalog["factors"].items())
-    return [(f["id"], f) for f in catalog.get("assets", {}).get("factors", [])]
+    """Yield (factor_id, factor_dict) pairs. `factors` is a map keyed by id in a
+    multi-catalog and a list of dicts (each with an `id`) in a per-sample catalog.
+    It lives under `assets` in the current layout; a legacy multi-catalog kept the
+    map at the top level, which is still supported."""
+    factors = catalog.get("assets", {}).get("factors")
+    if factors is None:
+        factors = catalog.get("factors")  # legacy multi-catalog: top-level map
+    if isinstance(factors, dict):
+        return list(factors.items())
+    return [(f["id"], f) for f in (factors or [])]
 
 
 def annotate_catalog(cat_dir, cat_name, args, reuse_from=None, reuse_missing_ok=False):
