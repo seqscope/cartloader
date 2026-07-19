@@ -1,5 +1,5 @@
 {
-  "platform": "bgi_stereoseq",
+  "platform": "stereoseq",
   "exclude_feature_regex": "^(Unassigned|Neg|BLANK|Blank|Intergenic|Deprecated|System|Gm[0-9]|MT-|mt-|Rps|Rpl|NCS-|NCP-)",
   "ingest": {
     "method": "stereoseq",

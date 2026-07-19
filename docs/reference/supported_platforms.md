@@ -14,7 +14,7 @@ For the profile mechanics (input modes, the canonical config, layer merging), se
 | `cosmx_smi` | ✅ built-in | `reformat_cosmx` | [CosMx SMI page](./platforms/cosmx_smi.md) |
 | `merfish` (Vizgen MERSCOPE) | ✅ built-in | `sge_convert` (`vizgen_merscope`) | [MERSCOPE page](./platforms/merscope.md) |
 | `illumina` (Illumina StrataMap) | ✅ built-in | `sge_convert` (`illumina`) | [Illumina StrataMap page](./platforms/illumina.md) |
-| `bgi_stereoseq` (BGI Stereo-seq) | ✅ built-in | SAW `gef2gem` + `sge_convert` (`bgi_stereoseq`) | [Stereo-seq page](./platforms/stereoseq.md) |
+| `stereoseq` (BGI Stereo-seq) | ✅ built-in | SAW `gef2gem` + `sge_convert` (`bgi_stereoseq`) | [Stereo-seq page](./platforms/stereoseq.md) |
 | `seqscope` | ⏳ planned | `sge_convert` | [below](#platforms-without-a-built-in-profile-yet) |
 | `pixel_seq`, `nova_st` | ⏳ planned | `sge_convert` | [below](#platforms-without-a-built-in-profile-yet) |
 | `generic` (custom CSV/TSV) | via custom profile | `sge_convert` | [below](#platforms-without-a-built-in-profile-yet) |

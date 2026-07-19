@@ -1,4 +1,4 @@
-# Platform: BGI Stereo-seq (`--platform bgi_stereoseq`)
+# Platform: BGI Stereo-seq (`--platform stereoseq`)
 
 Built-in profile for BGI Stereo-seq / SAW output. Unlike every other platform, the inputs are **binary GEF files that only SAW can read**, so this profile shells out to the SAW binary (`--saw`) to expand them into text GEMs before the ordinary ingest runs.
 
@@ -24,7 +24,7 @@ Missing files are simply skipped. Naming is not always consistent across SAW ver
 ## 1. Single sample
 
 ```bash
-cartloader run_together --platform bgi_stereoseq \
+cartloader run_together --platform stereoseq \
     --saw /path/to/saw \
     --in-prefix /data/C04687E314 \
     --out-dir OUT --width 12 --n-factor 24
@@ -42,7 +42,7 @@ Y40320NA      /data/chipB/Y40320NA       /data/alt/Y40320NA.cellbin.gef
 ```
 
 ```bash
-cartloader run_together --platform bgi_stereoseq --saw /path/to/saw \
+cartloader run_together --platform stereoseq --saw /path/to/saw \
     --samples samples.tsv --out-dir OUT -j 8
 ```
 
@@ -96,7 +96,7 @@ Cell analysis runs only when `{prefix}.cellbin.gef` is present; without it the r
 The registered TIFs are plain (non-OME) TIFFs with no pixel-size metadata, so the scale is stated rather than detected. The profile handles the three standard suffixes automatically; declare anything else explicitly:
 
 ```bash
-cartloader run_together --platform bgi_stereoseq --saw /path/to/saw \
+cartloader run_together --platform stereoseq --saw /path/to/saw \
   --in-prefix /data/C04687E314 --out-dir OUT \
   --image type=hne,source=/data/odd_name_HE.tif,um_per_pixel=0.5,georef_plain=true
 ```

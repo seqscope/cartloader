@@ -1331,7 +1331,7 @@ def parse_arguments(_args):
     io.add_argument("--id", type=str, help="Sample id for a single-sample run (--in-dir or explicit --in-* files)")
     io.add_argument("--config", type=str, help="JSON config that augments the profile/CLI (full spec for complex runs)")
     io.add_argument("--platform-json", type=str, help="External JSON profile that overrides the built-in platform profile")
-    io.add_argument("--saw", type=str, help="Path to the SAW binary (required for --platform bgi_stereoseq: the "
+    io.add_argument("--saw", type=str, help="Path to the SAW binary (required for --platform stereoseq: the "
                                             ".gef inputs are binary and only SAW can expand them into text GEMs)")
 
     c = p.add_argument_group("Single-sample input column overrides (else profile / platform defaults)")
