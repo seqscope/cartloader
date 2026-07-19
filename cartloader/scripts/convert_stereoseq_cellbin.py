@@ -41,7 +41,7 @@ def parse_arguments(_args):
                           '--units-per-um used by sge_convert for the bin1 GEM.')
     key.add_argument('--precision-um', type=int, default=2, help='Digits kept for the output coordinates (default: 2)')
     key.add_argument('--check-features', type=str, default=None,
-                     help="Path to the pixel run's feature file (sge_convert's features.clean.tsv.gz). "
+                     help="Path to the pixel run's feature file (sge_convert's feature.clean.tsv.gz). "
                           'The cell clusters are projected onto a model trained on those features, so '
                           'this run fails if fewer than --min-feature-overlap of them appear here.')
     key.add_argument('--min-feature-overlap', type=float, default=0.5,
@@ -68,6 +68,11 @@ def parse_arguments(_args):
 def read_check_features(path, colname_feature):
     """Read the feature names from sge_convert's feature file (a TSV whose first
     column is the feature name, matching --colname-feature of the bin1 ingest)."""
+    if not os.path.exists(path):
+        sys.exit(f"ERROR: --check-features file not found: {path}\n"
+                 f"       This should be the feature file sge_convert wrote for the bin1 GEM "
+                 f"(--out-feature, default 'feature.clean.tsv.gz'). Point --check-features at it, "
+                 f"or drop the flag to skip the feature-naming check.")
     names = set()
     with flexopen(path, "rt") as f:
         header = f.readline().rstrip("\n").split("\t")

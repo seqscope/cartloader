@@ -18,7 +18,7 @@ def sge_format_generic(_args):
     inout_params.add_argument('--out-dir', required= True, type=str, help='Path to output directory')
     inout_params.add_argument('--out-transcript', type=str, default="transcripts.unsorted.tsv", help='File name of output transcript-indexed SGE TSV (default: transcripts.unsorted.tsv)')
     inout_params.add_argument('--out-minmax', type=str, default="coordinate_minmax.tsv", help='File name of output coordinate min/max TSV (default: coordinate_minmax.tsv)')
-    inout_params.add_argument('--out-feature', type=str, default="features.clean.tsv.gz", help='File name of output per-feature UMI count TSV (default: features.clean.tsv.gz)')
+    inout_params.add_argument('--out-feature', type=str, default="feature.clean.tsv.gz", help='File name of output per-feature UMI count TSV (default: feature.clean.tsv.gz, matching sge_convert)')
     
     key_params = parser.add_argument_group("Key Parameters")
     key_params.add_argument('--precision-um', type=int, default=2, help='Number of digits for transcript coordinates in micrometers (default: 2)')

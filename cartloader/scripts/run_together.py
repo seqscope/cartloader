@@ -662,7 +662,8 @@ def cmds_stereoseq_ingest(cfg, sge_dir, s):
     # rather than letting it surface as a decode over near-empty cells.
     cellbin_gem = os.path.join(sge_dir, "cellbin.gem")
     cell_tsv = os.path.join(sge_dir, "cellbin.tsv")
-    feature_f = os.path.join(sge_dir, ing.get("feature_file", "features.clean.tsv.gz"))
+    # Must match sge_convert's --out-feature default (singular "feature.clean.tsv.gz").
+    feature_f = os.path.join(sge_dir, ing.get("feature_file", "feature.clean.tsv.gz"))
     conv = ["cartloader", "convert_stereoseq_cellbin",
             f"--in-gem {cellbin_gem}", f"--out {cell_tsv}",
             f"--units-per-um {ing.get('units_per_um', 2)}",
