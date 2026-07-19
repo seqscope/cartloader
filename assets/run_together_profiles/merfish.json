@@ -21,7 +21,7 @@
     { "id": "denovo", "mode": "train", "width": "12", "n_factor": "12,24,48" }
   ],
   "cell_analyses": [
-    { "id": "cartloader", "any_uses": ["boundaries", "mex"], "optional_uses": ["xy"] }
+    { "id": "cartloader", "any_uses": ["boundaries", "mex", "tx_cell_id"], "optional_uses": ["xy"] }
   ],
   "cartload": { "use_pmpoint": true, "bin_count": 500 },
   "image_transform": { "column": "merfish_csv", "flag": "--micron2pixel-csv" },

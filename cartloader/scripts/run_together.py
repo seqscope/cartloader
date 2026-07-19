@@ -290,6 +290,13 @@ def build_config(args):
     tx_cols = {k: v for k, v in tx_cols.items() if v}
     if tx_cols:
         prof.setdefault("ingest", {}).setdefault("csv_colnames", {}).update(tx_cols)
+    # A transcript CSV that already carries a per-molecule cell-id column (rare for
+    # MERFISH): naming it here carries the column through ingest to transcript column 5
+    # (X, Y, gene, count, cell_id) and turns on cell analysis from that column, so
+    # spatula tsv-add-cell-id is not needed. A cellxgene MEX, if also present, still
+    # drives the clustering (mex2sptsv). Applies to every sge_convert sample in the run.
+    if args.colname_transcript_cell:
+        prof.setdefault("ingest", {})["csv_colname_cell"] = args.colname_transcript_cell
     # cell-id colnames use `is not None` because "" is meaningful (an unnamed
     # pandas-index first column, e.g. MERFISH cell metadata).
     xy_over = {}
@@ -483,6 +490,10 @@ def resolve_sample(raw, cfg):
     return {
         "id": sid, "in_dir": in_dir, "out_dir": out_dir,
         "roles": roles,
+        # The transcript already carries a cell-id column (declared via
+        # ingest.csv_colname_cell / --colname-transcript-cell): use it directly for cell
+        # analysis and skip tsv-add-cell-id. See build_config / add_targets.
+        "has_tx_cell_id": bool(cfg.get("ingest", {}).get("csv_colname_cell")),
         # raw transcript CSV to ingest (sge_convert --in-csv); distinct from the
         # `transcript` role, which is an already-ingested TSV that skips ingest.
         "raw_transcript": raw.get("raw_transcript"),
@@ -544,8 +555,14 @@ def cmd_sge_convert(cfg, sge_dir, s):
         flag = CSV_COLNAME_FLAGS.get(key)
         if flag and val:
             parts.append(f"{flag} {val}")
-    if ing.get("csv_colnames_others"):
-        parts.append("--csv-colnames-others " + " ".join(ing["csv_colnames_others"]))
+    # Columns to carry through beyond X/Y/gene/count. A declared transcript cell-id
+    # column is kept first so it lands at column 5 (X, Y, gene, count, cell_id) — the
+    # position the cell decode reads (run_ficture2_multi_cells --colidx-cell-id 5).
+    others = list(ing.get("csv_colnames_others", []))
+    if ing.get("csv_colname_cell"):
+        others = [ing["csv_colname_cell"]] + [c for c in others if c != ing["csv_colname_cell"]]
+    if others:
+        parts.append("--csv-colnames-others " + " ".join(others))
     parts.extend(ing.get("extra_flags", []))
     return " ".join(p for p in parts if p)
 
@@ -926,11 +943,15 @@ def add_targets(mm, samples, cfg, args):
             else:
                 base_tx = os.path.join(sge_dir, "transcripts.unsorted.tsv.gz")
                 ingest_cmds = [cmd_sge_convert(cfg, sge_dir, s)]
-                # Optionally assign each transcript to its overlapping cell boundary so
-                # the transcript gains a cell_id column (MERFISH ships no per-transcript
-                # cell assignment). Only when the sample supplies a boundaries role;
-                # without it the run stays pixel-level (no cell decode).
-                if ing.get("assign_cell_id") and s["roles"].get("boundaries"):
+                # The transcript already carries a cell_id column (carried to column 5 by
+                # sge_convert): use it directly and skip boundary assignment.
+                if s.get("has_tx_cell_id"):
+                    transcript[s["id"]] = base_tx
+                # Otherwise optionally assign each transcript to its overlapping cell
+                # boundary so the transcript gains a cell_id column (MERFISH ships no
+                # per-transcript cell assignment). Only when the sample supplies a
+                # boundaries role; without it the run stays pixel-level (no cell decode).
+                elif ing.get("assign_cell_id") and s["roles"].get("boundaries"):
                     tx_cellid = os.path.join(sge_dir, "transcripts.cell_id.tsv.gz")
                     ingest_cmds.append(cmd_tsv_add_cell_id(cfg, base_tx, tx_cellid, s["roles"]["boundaries"]))
                     transcript[s["id"]] = tx_cellid
@@ -1070,8 +1091,13 @@ def _resolve_cell_inputs(ca, grp, cfg):
     Otherwise the analysis is role-driven: a sample contributes when it provides all of
     `uses` and (if `any_uses` is set) at least one of `any_uses` — so an analysis can
     accept alternative cell-count sources (e.g. MERSCOPE: boundaries OR a cellxgene MEX).
-    `require_all` demands every sample in the group contribute.
+    `require_all` demands every sample in the group contribute. The pseudo-role
+    ``tx_cell_id`` matches a sample whose transcript already carries a cell_id column
+    (has_tx_cell_id); it feeds no --list file (cell_id is read positionally from the
+    tiled transcript, like the generic platform's --colname-cell path).
     """
+    def _has(s, r):
+        return bool(s.get("has_tx_cell_id")) if r == "tx_cell_id" else bool(s["roles"].get(r))
     if ca.get("generic_cell"):
         mex_ok = all(s["roles"].get("mex") for s in grp)
         cellid_ok = bool(cfg.get("colname_cell"))
@@ -1090,9 +1116,9 @@ def _resolve_cell_inputs(ca, grp, cfg):
         uses = list(ca.get("uses", []))
         any_uses = list(ca.get("any_uses", []))
         def _contributes(s):
-            if not all(s["roles"].get(r) for r in uses):
+            if not all(_has(s, r) for r in uses):
                 return False
-            if any_uses and not any(s["roles"].get(r) for r in any_uses):
+            if any_uses and not any(_has(s, r) for r in any_uses):
                 return False
             return True
         contributing = [s for s in grp if _contributes(s)]
@@ -1198,6 +1224,10 @@ def parse_arguments(_args):
     c.add_argument("--colname-transcript-y", type=str, default=None, help="Y column name in --in-transcript")
     c.add_argument("--colname-transcript-feature", type=str, default=None, help="Gene/feature column name in --in-transcript")
     c.add_argument("--colname-transcript-count", type=str, default=None, help="Count column name in --in-transcript (default: none, count of 1 per row)")
+    c.add_argument("--colname-transcript-cell", type=str, default=None,
+                   help="Cell-id column name already present in the transcript CSV (rare). Carries the column "
+                        "through ingest to transcript column 5 and runs cell analysis from it, skipping "
+                        "spatula tsv-add-cell-id. A cellxgene MEX, if present, still drives clustering.")
     c.add_argument("--colname-xy-cell", type=str, default=None, help="Cell-id column name in --in-cell-xy (use '' for an unnamed pandas-index first column)")
     c.add_argument("--colname-xy-x", type=str, default=None, help="X (centroid) column name in --in-cell-xy")
     c.add_argument("--colname-xy-y", type=str, default=None, help="Y (centroid) column name in --in-cell-xy")
