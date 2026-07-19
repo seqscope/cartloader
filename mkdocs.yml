@@ -86,8 +86,16 @@ nav:
   - References:
       - Overview: reference/intro.md
       - Unified Orchestrator:
-          - End-to-End Pipeline (run_together): reference/run_together.md
-          - Supported Platforms & Inputs: reference/supported_platforms.md
+          - Overview (run_together): reference/run_together.md
+          - Specifying Inputs: reference/run_together_inputs.md
+          - Image Modalities: reference/run_together_images.md
+          - Platforms:
+              - Overview & Status: reference/supported_platforms.md
+              - 10x Xenium: reference/platforms/xenium.md
+              - 10x Visium HD: reference/platforms/visium_hd.md
+              - CosMx SMI: reference/platforms/cosmx_smi.md
+              - MERSCOPE (MERFISH): reference/platforms/merscope.md
+              - Illumina StrataMap: reference/platforms/illumina.md
       - SGE Preparation:
           - SGE Format Conversion: reference/sge_convert.md
           - CosMx Reformatting: reference/reformat_cosmx.md

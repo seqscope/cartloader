@@ -23,7 +23,7 @@ ${work_dir}/raw/
 └── morphology_focus/morphology_focus_000{0,1,2,3}.ome.tif        # dapi/boundary/rna/protein
 ```
 
-See the full [expected-input reference](../../reference/supported_platforms.md#10x_xenium) for every path the profile looks for.
+See the full [Xenium platform page](../../reference/platforms/xenium.md) for every path the profile looks for.
 
 ---
 ## Define ID and parameters

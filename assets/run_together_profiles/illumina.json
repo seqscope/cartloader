@@ -4,13 +4,19 @@
   "ingest": {
     "sge_platform": "illumina",
     "input_roles": { "--in-mex": "mex" },
+    "assign_cell_id": true,
     "extra_flags": ["--sge-visual"]
   },
-  "roles": {},
+  "roles": {
+    "xy":         { "colname_cell": "cell_id", "colname_x": "X", "colname_y": "Y" },
+    "boundaries": { "colname_cell": "cell_id", "colname_x": "vertex_x", "colname_y": "vertex_y" }
+  },
   "ficture": [
     { "id": "denovo", "mode": "train", "width": "12", "n_factor": "24,48,96" }
   ],
-  "cell_analyses": [],
+  "cell_analyses": [
+    { "id": "cartloader", "uses": ["boundaries"], "optional_uses": ["xy"] }
+  ],
   "cartload": { "use_pmpoint": true, "bin_count": 500 },
   "images": []
 }

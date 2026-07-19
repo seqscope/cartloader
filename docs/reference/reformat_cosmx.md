@@ -14,7 +14,7 @@ Global-pixel coordinates are converted to microns (`--um-per-px`, default `0.120
 Cell ids are formed as `<fov>_<cell_ID>`. Transcripts with `cell_ID = 0` are kept but tagged
 `UNASSIGNED`; `System*` control probes are dropped.
 
-It is invoked automatically by the [`cosmx_smi` profile of `run_together`](./supported_platforms.md#cosmx_smi);
+It is invoked automatically by the [`cosmx_smi` profile of `run_together`](./platforms/cosmx_smi.md);
 run it directly only for standalone reformatting.
 
 ---

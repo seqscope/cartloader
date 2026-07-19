@@ -43,12 +43,14 @@ All rows share one `--out-dir`, so they train **one joint model**. Everything el
     Packaging is delegated to [`run_cartload2_multi`](../../reference/run_cartload2_multi.md): each sample is written to a self-contained `cartl/<multi_id>-<sample_id>/` directory (with `<multi_id>` defaulting to the `--out-dir` basename), plus a `cartl/multi-catalog.yaml` that links every per-sample `catalog.yaml` and copies the shared factor files (`post`/`rgb`/`de`/`info`/`umap`) into the `cartl/` root as a unified `factors:` map. Upload the whole `cartl/` directory to S3 as one unit.
 
 !!! tip "Extra role columns"
-    The sheet can also carry per-sample inputs — `transcript` (skip ingest), `xy`, `boundaries`, `clusters`, `mex`:
+    The sheet can also carry per-sample inputs — `raw_transcript` (a raw CSV to ingest), `transcript` (pre-converted TSV, skips ingest), `xy`, `boundaries`, `clusters`, `mex`, `cellxgene` (a cell×gene matrix CSV, e.g. MERSCOPE `cell_by_gene.csv`):
     ```
-    id    in_dir       transcript                     boundaries
+    id    in_dir       transcript                     boundaries               cellxgene
     rep1  /data/rep1
     rep2               /data/rep2/transcripts.tsv.gz  /data/rep2/bounds.csv.gz
+    rep3  /data/rep3                                                            /data/rep3/cell_by_gene.csv
     ```
+    See the [reference → sample sheet](../../reference/run_together_inputs.md#the-sample-sheet-is-a-wide-table-of-input-roles) for the full column list, aliases, and the three transcript sources.
 
 ### When to use JSON instead
 
@@ -64,7 +66,7 @@ Escalate to a `--config` JSON when samples need **different** settings, or to ad
 }
 ```
 
-See the [configuration reference](../../reference/run_together.md#the-canonical-configuration) for every key.
+See the [configuration reference](../../reference/run_together_inputs.md#mode-3-full-config-json) for every key.
 
 ---
 ## Visium HD example
@@ -106,7 +108,7 @@ cartloader run_together --platform 10x_xenium \
     --samples samples.tsv --out-root /path/to/output/2026_07 -j 6
 ```
 
-Each row becomes its own `<out_root>/<id>/` with an independent model. See the [`run_together` reference](../../reference/run_together.md#input-single-vs-multi-sample).
+Each row becomes its own `<out_root>/<id>/` with an independent model. See [Specifying Inputs → Multi-sample](../../reference/run_together_inputs.md#mode-2-multi-sample-sample-sheet).
 
 ---
 ## Next steps
