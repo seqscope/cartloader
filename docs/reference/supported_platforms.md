@@ -14,7 +14,7 @@ For the profile mechanics (input modes, the canonical config, layer merging), se
 | `cosmx_smi` | ✅ built-in | `reformat_cosmx` | [CosMx SMI page](./platforms/cosmx_smi.md) |
 | `merfish` (Vizgen MERSCOPE) | ✅ built-in | `sge_convert` (`vizgen_merscope`) | [MERSCOPE page](./platforms/merscope.md) |
 | `illumina` (Illumina StrataMap) | ✅ built-in | `sge_convert` (`illumina`) | [Illumina StrataMap page](./platforms/illumina.md) |
-| `bgi_stereoseq` | ⏳ planned | `sge_convert` | [below](#platforms-without-a-built-in-profile-yet) |
+| `bgi_stereoseq` (BGI Stereo-seq) | ✅ built-in | SAW `gef2gem` + `sge_convert` (`bgi_stereoseq`) | [Stereo-seq page](./platforms/stereoseq.md) |
 | `seqscope` | ⏳ planned | `sge_convert` | [below](#platforms-without-a-built-in-profile-yet) |
 | `pixel_seq`, `nova_st` | ⏳ planned | `sge_convert` | [below](#platforms-without-a-built-in-profile-yet) |
 | `generic` (custom CSV/TSV) | via custom profile | `sge_convert` | [below](#platforms-without-a-built-in-profile-yet) |
@@ -32,6 +32,7 @@ Each page documents the expected input files/columns, the FICTURE/packaging defa
 - [**CosMx SMI**](./platforms/cosmx_smi.md) — AtoMx flat-file export via `reformat_cosmx`; glob-based file matching with overrides.
 - [**MERSCOPE / MERFISH**](./platforms/merscope.md) — individual files or a standard export dir; cell analysis from boundaries, a cell×gene matrix, or an existing `cell_id` (incl. mixed joint runs).
 - [**Illumina StrataMap**](./platforms/illumina.md) — MEX input with spatial coordinates embedded in the barcode; optional cell boundaries enable cell-level analysis.
+- [**BGI Stereo-seq**](./platforms/stereoseq.md) — prefix-addressed binary GEFs expanded by SAW (`--saw`); cell-bin segmentation clustered from its own pixel TSV; registered histology at 0.5 µm/pixel.
 
 ---
 ## Platforms without a built-in profile yet

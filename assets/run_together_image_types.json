@@ -8,5 +8,6 @@
   "cellbound2":  { "color": "E69F00", "kind": "single" },
   "cellbound3":  { "color": "CC79A7", "kind": "single" },
   "polyt":       { "color": "00FFFF", "kind": "single" },
+  "ssdna":       { "color": "F0F0F0", "kind": "single" },
   "hne":         { "kind": "rgb" }
 }

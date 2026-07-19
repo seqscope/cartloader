@@ -96,6 +96,7 @@ nav:
               - CosMx SMI: reference/platforms/cosmx_smi.md
               - MERSCOPE (MERFISH): reference/platforms/merscope.md
               - Illumina StrataMap: reference/platforms/illumina.md
+              - BGI Stereo-seq: reference/platforms/stereoseq.md
       - SGE Preparation:
           - SGE Format Conversion: reference/sge_convert.md
           - CosMx Reformatting: reference/reformat_cosmx.md

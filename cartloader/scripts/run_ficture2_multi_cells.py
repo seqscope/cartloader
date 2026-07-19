@@ -39,6 +39,7 @@ def parse_arguments(_args):
     inout_params.add_argument('--mex-ftr', type=str, default="features.tsv.gz", help='Feature files in MEX format')
     inout_params.add_argument('--mex-mtx', type=str, default="matrix.mtx.gz", help='Matrix files in MEX format')
     inout_params.add_argument('--mex-list', type=str, help='TSV file containing sample IDs and paths to MEX files')
+    inout_params.add_argument('--tsv-list', type=str, help='TSV file of [SAMPLE_ID] [PIXEL_TSV] naming an external headerless pixel TSV that carries a cell-id column. Use when the cell assignment lives in a separate file that cannot be mapped onto the tiled transcript (e.g. a Stereo-seq cell-bin GEM). The file is read with the same --colidx-* columns as the tiled transcript (X, Y, gene, count, cell_id).')
     inout_params.add_argument('--sptsv-prefix', type=str, help='Prefix for SPTSV files')
 
     key_params = parser.add_argument_group("Key Parameters", "Key parameters that requires user's attention")
@@ -183,6 +184,23 @@ def run_ficture2_multi_cells(_args):
                 else:
                     raise ValueError(f"Each line in --mex-list must have 2 or 4 columns. Found {len(toks)} columns in line: {line}")
 
+    ## parse the external pixel-TSV list into samp2tsv: sample_id -> pixel TSV path.
+    ## Such a sample is clustered from that file's cell-id column instead of the tiled
+    ## transcript's, for platforms whose cell assignment cannot be mapped back onto the
+    ## pixel-level data (Stereo-seq cell bins). --mex-list wins if a sample is in both.
+    samp2tsv = {}
+    if args.tsv_list is not None:
+        with flexopen(args.tsv_list, 'rt') as rf:
+            for line in rf:
+                toks = line.strip().split("\t")
+                if len(toks) == 0 or toks[0] == "":
+                    continue
+                if len(toks) != 2:
+                    raise ValueError(f"Each line in --tsv-list must have exactly 2 columns containing [SAMPLE_ID] [PIXEL_TSV]. Found {len(toks)} columns in line: {line}")
+                if not os.path.exists(toks[1]):
+                    raise FileNotFoundError(f"File not found: {toks[1]} (from --tsv-list)")
+                samp2tsv[toks[0]] = toks[1]
+
     # cmap
     assert os.path.exists(args.cmap_file), f"File not found: {args.cmap_file} (--cmap-file)"
     
@@ -227,19 +245,31 @@ def run_ficture2_multi_cells(_args):
         samp2sptsv = {} ## sample ID to SPTSV file mapping
         deps = []
         ## Resolve the cell-count source per sample: a sample listed in --mex-list is
-        ## clustered from its MEX matrix (mex2sptsv), any other sample from the tiled
-        ## transcript's cell_id column (pixel2sptsv). This mix lets a joint run combine
+        ## clustered from its MEX matrix (mex2sptsv); one listed in --tsv-list from that
+        ## external pixel TSV's cell_id column; any other from the tiled transcript's
+        ## cell_id column (both via pixel2sptsv). This mix lets a joint run combine
         ## MEX-based samples (e.g. MERSCOPE cell_by_gene without boundaries) with
-        ## transcript/boundary-based samples in a single decode.
+        ## transcript/boundary-based samples in a single decode. Every branch writes the
+        ## same per-sample sptsv prefix, so the steps below are source-agnostic.
+        def cmd_pixel2sptsv(pixel_tsv, out_prefix):
+            return (f"{args.spatula} pixel2sptsv --min-cell-count {args.min_cell_count} --pixel {pixel_tsv} "
+                    f"--no-header --idx-col-x {args.colidx_x} --idx-col-y {args.colidx_y} "
+                    f"--idx-col-ftr {args.colidx_feature} --idx-col-cnt {args.colidx_count} "
+                    f"--idx-col-id {args.colidx_cell_id} --ignore-ids {args.ignore_ids} "
+                    f"--out {out_prefix} --min-feature-count {args.min_feature_count} {cmd_ftr_include_exclude}")
+
         for sample_id in in_samples:
             sample_sptsv_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.sptsv"
             if sample_id in samp2mex:
                 mex_bcd, mex_ftr, mex_mtx = samp2mex[sample_id]
                 cmd = f"{args.spatula} mex2sptsv --bcd {mex_bcd} --ftr {mex_ftr} --mtx {mex_mtx} --out {sample_sptsv_prefix} --min-feature-count {args.min_feature_count} {cmd_ftr_include_exclude}"
                 deps.extend([mex_bcd, mex_ftr, mex_mtx])
+            elif sample_id in samp2tsv:
+                cmd = cmd_pixel2sptsv(samp2tsv[sample_id], sample_sptsv_prefix)
+                deps.append(samp2tsv[sample_id])
             else:
                 pixelf = f"{args.in_dir}/samples/{sample_id}/{sample_id}.tiled"
-                cmd = f"{args.spatula} pixel2sptsv --min-cell-count {args.min_cell_count} --pixel {pixelf}.tsv --no-header --idx-col-x {args.colidx_x} --idx-col-y {args.colidx_y} --idx-col-ftr {args.colidx_feature} --idx-col-cnt {args.colidx_count} --idx-col-id {args.colidx_cell_id} --ignore-ids {args.ignore_ids} --out {sample_sptsv_prefix} --min-feature-count {args.min_feature_count} {cmd_ftr_include_exclude}"
+                cmd = cmd_pixel2sptsv(f"{pixelf}.tsv", sample_sptsv_prefix)
                 deps.append(f"{pixelf}.tsv")
             cmds.append(cmd)
             samp2sptsv[sample_id] = sample_sptsv_prefix

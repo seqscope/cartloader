@@ -1,0 +1,29 @@
+{
+  "platform": "bgi_stereoseq",
+  "exclude_feature_regex": "^(Unassigned|Neg|BLANK|Blank|Intergenic|Deprecated|System|Gm[0-9]|MT-|mt-|Rps|Rpl|NCS-|NCP-)",
+  "ingest": {
+    "method": "stereoseq",
+    "sge_platform": "bgi_stereoseq",
+    "units_per_um": 2,
+    "csv_colnames": { "feature": "geneID", "count": "MIDCount" },
+    "extra_flags": ["--csv-comment", "--units-per-um 2"]
+  },
+  "roles": {
+    "gef":         { "suffix": ".tissue.gef" },
+    "cellbin_gef": { "suffix": ".cellbin.gef" }
+  },
+  "ficture": [
+    { "id": "denovo", "mode": "train", "width": "12", "n_factor": "12,24,48" }
+  ],
+  "cell_analyses": [
+    { "id": "cartloader", "uses": ["cell_tsv"] }
+  ],
+  "cartload": { "use_pmpoint": true, "bin_count": 500 },
+  "image_defaults": { "um_per_pixel": 0.5 },
+  "images": [
+    { "id": "hne",   "type": "hne",   "kind": "rgb",    "suffix": "_HE_regist.tif",
+      "georef_plain": true, "um_per_pixel": 0.5 },
+    { "id": "ssdna", "type": "ssdna", "kind": "single", "suffix": "_ssDNA_regist.tif", "color": "F0F0F0" },
+    { "id": "dapi",  "type": "dapi",  "kind": "single", "suffix": "_DAPI_regist.tif",  "color": "0F73E6" }
+  ]
+}

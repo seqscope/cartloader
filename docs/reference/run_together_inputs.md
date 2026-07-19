@@ -36,11 +36,12 @@ cartloader run_together --platform merfish \
 | Flag | Sample-sheet column | Meaning |
 |------|--------------------|---------|
 | `--in-dir` | `in_dir` | Raw platform directory → every role auto-detected inside it |
+| `--in-prefix` | `in_prefix` | Raw platform **path prefix** → roles auto-detected by suffix (Stereo-seq) |
 | `--in-transcript` | `raw_transcript` | Raw transcript CSV/TSV to ingest (through `sge_convert`) |
 | `--in-cell-xy` | `xy` | Cell centroids / metadata file |
 | `--in-cell-boundary` | `boundaries` | Cell boundary polygons |
 | `--in-cellxgene` | `cellxgene` | Cell×gene matrix CSV → converted to a MEX (drives cell clustering) |
-| `--id` | `id` | Sample id (defaults to the `--in-dir` basename) |
+| `--id` | `id` | Sample id (defaults to the `--in-dir` / `--in-prefix` basename) |
 
 `--in-dir` is just a one-row sample sheet with only `in_dir`; the explicit `--in-*` flags are a one-row sheet with those columns.
 
@@ -69,8 +70,9 @@ Columns map to per-sample **input roles**. Every column is optional except that 
 
 | Column (aliases) | Role | Meaning |
 |---|---|---|
-| `id` | — | Sample identifier. Optional when `in_dir` is given (defaults to its basename). |
+| `id` | — | Sample identifier. Optional when `in_dir` or `in_prefix` is given (defaults to its basename). |
 | `in_dir` | — | Raw platform directory → the profile **auto-detects** every role inside it. |
+| `in_prefix` | — | Raw platform path prefix → the profile auto-detects roles by **suffix** (`{prefix}.tissue.gef`, …). For platforms whose files share a name rather than a directory; see [BGI Stereo-seq](./platforms/stereoseq.md). |
 | `raw_transcript` | — | Explicit path to a **raw** transcript file to ingest (e.g. MERSCOPE `detected_transcripts.csv`). Runs through `sge_convert`. Sheet equivalent of `--in-transcript`. |
 | `transcript` (`tsv`) | transcript | A **pre-converted** `transcripts.tsv.gz` (the *output* of `sge_convert`) → **skips ingest**. Not for raw CSVs. |
 | `xy` (`cell_xy`) | xy | Cell centroids file. |
@@ -78,6 +80,8 @@ Columns map to per-sample **input roles**. Every column is optional except that 
 | `clusters` | clusters | External cluster labels. |
 | `mex` (`mex_dir`) | mex | MEX directory. Or give the explicit triple `mex_bcd` / `mex_ftr` / `mex_mtx` when one directory does not apply. |
 | `cellxgene` (`cell_by_gene`) | cellxgene | Cell×gene matrix CSV (e.g. MERSCOPE `cell_by_gene.csv`) → converted to a MEX that drives cell clustering (works without boundaries). |
+| `gef` / `cellbin_gef` | gef, cellbin_gef | Stereo-seq binary GEFs, when they do not match `in_prefix` + the standard suffix. |
+| `cell_tsv` | cell_tsv | A standalone pixel TSV (`X`, `Y`, gene, count, cell_id) that supplies cell counts on its own, for platforms whose cell assignment cannot be carried on the transcript (Stereo-seq cell bins). |
 | `hne` | — | H&E image (Visium HD adds the layer automatically). |
 
 Images are **not** sample-sheet columns (except `hne`) — they are a separate concern; see [Image Modalities](./run_together_images.md).

@@ -27,6 +27,8 @@ All three share the **same field vocabulary**. Built-in profiles also **auto-det
 | `shrink_factor` | | Downscale factor for very large mosaics (else the profile's `image_defaults`). |
 | `high_memory` | | `true` to allow a high-memory import path for big images. |
 | `convert` | | `ome2png` \| `png2pmtiles` \| `none`. Defaults from the source extension (`.png` → none; `.tif` → `ome2png`). |
+| `um_per_pixel` | | Microns per pixel, for a plain (non-OME) image that carries no pixel-size metadata. Sets `--px-per-um-x/y` (single-channel) or `--um-per-pixel` (rgb). E.g. `0.5` for a Stereo-seq `*_regist.tif`. |
+| `georef_plain` | | `true` to map the upper-left corner to (0,0) and the lower-right to the image size, scaled by `um_per_pixel` (`rgb` images). |
 
 Blank cells (`` / `-` / `.` / `NA`) mean *unset*.
 

@@ -17,8 +17,10 @@ DEFAULT_S3_PREFIX = "s3://cartostore/data"
 DEFAULT_S3_PROFILE = "default"
 
 # Sample-level input roles. A sample provides these either explicitly (sample
-# sheet columns / JSON) or by auto-detection inside its `in_dir` (profile.roles).
-ROLE_KEYS = ["transcript", "xy", "boundaries", "clusters", "mex", "cellxgene"]
+# sheet columns / JSON), by auto-detection inside its `in_dir` (a profile role's
+# `file`), or by suffixing its `in_prefix` (a profile role's `suffix`).
+ROLE_KEYS = ["transcript", "xy", "boundaries", "clusters", "mex", "cellxgene",
+             "cell_tsv", "gef", "cellbin_gef"]
 # Friendly sample-sheet column aliases (the generic platform advertises these
 # names; each maps onto a canonical role key above).
 ROLE_ALIASES = {
@@ -35,6 +37,7 @@ ROLE_LIST_FLAG = {
     "xy": "--list-xy",
     "clusters": "--list-cluster",
     "mex": "--mex-list",
+    "cell_tsv": "--tsv-list",
 }
 # transcript column-override key -> the sge_convert flag that names that input column
 CSV_COLNAME_FLAGS = {
@@ -326,12 +329,21 @@ def build_config(args):
     # roles auto-detected inside it) or individual files by explicit path
     # (--in-transcript raw CSV to ingest, --in-cell-xy, --in-cell-boundary) which
     # need not share a directory or use any standard filename.
+    # The SAW binary (Stereo-seq): the GEF inputs are binary and only SAW can read
+    # them, so an ingest method that shells out to it needs the path up front.
+    prof["saw"] = args.saw or cfg.get("saw")
+    if prof.get("ingest", {}).get("method") == "stereoseq" and not prof["saw"]:
+        sys.exit("ERROR: the stereo-seq ingest converts the binary .gef inputs with SAW; "
+                 "provide the binary via --saw <path to saw>.")
+
     raw_samples = list(cfg.get("samples", []))
     if args.samples:
         raw_samples += read_sheet(args.samples)
-    if args.in_dir or args.in_transcript or args.in_cell_xy or args.in_cell_boundary or args.in_cellxgene:
+    if (args.in_dir or args.in_prefix or args.in_transcript or args.in_cell_xy
+            or args.in_cell_boundary or args.in_cellxgene):
         s = {}
         if args.in_dir: s["in_dir"] = args.in_dir
+        if args.in_prefix: s["in_prefix"] = args.in_prefix
         if args.id: s["id"] = args.id
         if args.in_transcript: s["raw_transcript"] = args.in_transcript
         if args.in_cell_xy: s["xy"] = args.in_cell_xy
@@ -339,8 +351,9 @@ def build_config(args):
         if args.in_cellxgene: s["cellxgene"] = args.in_cellxgene
         raw_samples.append(s)
     if not raw_samples:
-        sys.exit("ERROR: no samples. Use --in-dir, the --in-transcript/--in-cell-xy/--in-cell-boundary "
-                 "file flags, --samples <sheet>, or a 'samples' config block.")
+        sys.exit("ERROR: no samples. Use --in-dir, --in-prefix, the "
+                 "--in-transcript/--in-cell-xy/--in-cell-boundary file flags, "
+                 "--samples <sheet>, or a 'samples' config block.")
     prof["_raw_samples"] = raw_samples
 
     # Per-image specs: the --images TSV (one row per image) plus any repeatable
@@ -412,7 +425,7 @@ def image_row_to_spec(row, cfg, in_dir):
         if val:
             spec["transform_flag"] = tr["flag"]
             spec["transform_path"] = _abs_in_dir(val, in_dir)
-    for k in ("shrink_factor", "high_memory", "convert"):
+    for k in ("shrink_factor", "high_memory", "convert", "um_per_pixel", "georef_plain"):
         if row.get(k):
             spec[k] = row[k]
     # A plain .png needs no OME->PNG conversion; a .tif/.ome.tif does (default).
@@ -447,12 +460,19 @@ def resolve_sample(raw, cfg):
     if cfg.get("out_dir") and n == 1 and "id" not in raw:
         sid = infer_meta_from_outdir(cfg["out_dir"])
     else:
-        sid = raw.get("id") or (os.path.basename(os.path.normpath(raw["in_dir"])) if raw.get("in_dir") else None)
+        sid = raw.get("id")
+        if not sid and raw.get("in_dir"):
+            sid = os.path.basename(os.path.normpath(raw["in_dir"]))
+        # A prefix-addressed sample (Stereo-seq) has no directory of its own; its
+        # trailing path component is the chip/sample name (e.g. .../C04687E314).
+        if not sid and raw.get("in_prefix"):
+            sid = os.path.basename(raw["in_prefix"])
     if not sid:
         sys.exit(f"ERROR: cannot determine id for sample {raw}")
 
     out_dir = cfg["out_dir"] if cfg.get("out_dir") else os.path.join(cfg["out_root"], sid)
     in_dir = raw.get("in_dir")
+    in_prefix = raw.get("in_prefix")
 
     def sheet_value(role):
         # explicit role column wins, else a friendly alias column (e.g. tsv -> transcript)
@@ -463,17 +483,23 @@ def resolve_sample(raw, cfg):
                 return raw[alias]
         return None
 
-    # Resolve roles: explicit column/alias/JSON value wins; else auto-detect in in_dir.
+    # Resolve roles: explicit column/alias/JSON value wins; else auto-detect, either as
+    # a named `file` inside in_dir or as a `suffix` appended to in_prefix.
     roles = {}
     role_specs = cfg.get("roles", {})
     for role in ROLE_KEYS:
         val = sheet_value(role)
         if val:
             roles[role] = _abs_in_dir(val, in_dir)
-        elif role in role_specs and role_specs[role].get("file") and in_dir:
-            cand = os.path.join(in_dir, role_specs[role]["file"])
-            if os.path.exists(cand):
-                roles[role] = cand
+            continue
+        spec = role_specs.get(role, {})
+        cand = None
+        if spec.get("file") and in_dir:
+            cand = os.path.join(in_dir, spec["file"])
+        elif spec.get("suffix") and in_prefix:
+            cand = in_prefix + spec["suffix"]
+        if cand and os.path.exists(cand):
+            roles[role] = cand
 
     # The mex role may instead be given as an explicit bcd/ftr/mtx triple (a dict
     # value, written as a 4-column --mex-list line) when a single directory does
@@ -488,7 +514,7 @@ def resolve_sample(raw, cfg):
                   if (row.get("sample") or row.get("sample_id") or "*") in ("*", sid)]
 
     return {
-        "id": sid, "in_dir": in_dir, "out_dir": out_dir,
+        "id": sid, "in_dir": in_dir, "in_prefix": in_prefix, "out_dir": out_dir,
         "roles": roles,
         # The transcript already carries a cell-id column (declared via
         # ingest.csv_colname_cell / --colname-transcript-cell): use it directly for cell
@@ -593,6 +619,61 @@ def cmd_reformat_cosmx(cfg, sge_dir, sid, in_dir):
     parts.append(f"--out {os.path.join(sge_dir, sid)}")
     parts.extend(ing.get("extra_flags", []))
     return " ".join(parts)
+
+
+def cmds_stereoseq_ingest(cfg, sge_dir, s):
+    """Stereo-seq ingest: SAW expands the binary GEFs into text GEMs, which are then
+    read by the ordinary pixel path. Returns (commands, cell_tsv or None).
+
+    Two GEMs are produced from the same run:
+
+      * `{prefix}.tissue.gef` -> a bin1 GEM (one row per 0.5um position per gene). This
+        is the pixel-level transcript; sge_convert ingests it with --units-per-um 2 so
+        the 0.5um grid lands in um.
+      * `{prefix}.cellbin.gef` -> a cell-bin GEM, the subset of MIDs that segmentation
+        placed inside a cell. Its coordinates cannot be mapped back onto the bin1 rows,
+        so it is NOT merged into the transcript: it becomes a standalone pixel TSV that
+        the cells stage feeds to run_ficture2_multi_cells as a --tsv-list entry.
+
+    The GEMs are tens of GB of text, so each is deleted as soon as it has been read.
+    A re-run therefore re-invokes SAW; that is the tradeoff for not parking the
+    intermediates on disk for the life of the output tree.
+    """
+    ing = cfg.get("ingest", {})
+    saw = cfg["saw"]
+    gef = s["roles"].get("gef")
+    if not gef:
+        sys.exit(f"ERROR: stereo-seq ingest for sample '{s['id']}' found no "
+                 f"{ing.get('gef_suffix', '.tissue.gef')} input. Point --in-prefix at the "
+                 f"sample prefix (e.g. --in-prefix /data/C04687E314), or give the path in a "
+                 f"'gef' sample-sheet column.")
+
+    bin1_gem = os.path.join(sge_dir, "bin1.gem")
+    cmds = [f"{saw} convert gef2gem --bin-size 1 --gef {gef} --gem {bin1_gem}",
+            cmd_sge_convert(cfg, sge_dir, {**s, "raw_transcript": bin1_gem}),
+            f"rm -f {bin1_gem}"]
+
+    cellbin_gef = s["roles"].get("cellbin_gef")
+    if not cellbin_gef:
+        return cmds, None
+
+    # The cell clusters are projected onto the model trained from the bin1 features, so
+    # --check-features fails the run on a feature-naming mismatch between the two GEMs
+    # rather than letting it surface as a decode over near-empty cells.
+    cellbin_gem = os.path.join(sge_dir, "cellbin.gem")
+    cell_tsv = os.path.join(sge_dir, "cellbin.tsv")
+    feature_f = os.path.join(sge_dir, ing.get("feature_file", "features.clean.tsv.gz"))
+    conv = ["cartloader", "convert_stereoseq_cellbin",
+            f"--in-gem {cellbin_gem}", f"--out {cell_tsv}",
+            f"--units-per-um {ing.get('units_per_um', 2)}",
+            f"--check-features {feature_f}"]
+    feature_col = ing.get("csv_colnames", {}).get("feature")
+    if feature_col:
+        conv.append(f"--colname-feature {feature_col}")
+    cmds += [f"{saw} convert gef2gem --cellbin-gef {cellbin_gef} --gef {gef} --cellbin-gem {cellbin_gem}",
+             " ".join(conv),
+             f"rm -f {cellbin_gem}"]
+    return cmds, cell_tsv
 
 
 def cmd_tsv_add_cell_id(cfg, in_tsv, out_tsv, boundaries):
@@ -740,6 +821,10 @@ def resolve_image_ops(cfg, s):
                 src = cand if os.path.exists(cand) else src
             if not os.path.exists(src):
                 continue
+        elif "suffix" in spec:   # appended to the sample's in_prefix
+            src = first_existing(s["in_prefix"] + spec["suffix"]) if s.get("in_prefix") else None
+            if not src:
+                continue
         else:  # match relative to in_dir
             src = first_existing(os.path.join(s["in_dir"], spec["match"])) if s.get("in_dir") else None
             if not src:
@@ -781,6 +866,12 @@ def plan_images(cfg, s, cart_dir, multi, transcript=None):
             sfval = op.get("shrink_factor", idef.get("shrink_factor"))
             sf = f"--shrink-factor {sfval} " if sfval is not None else ""
             hm = "--high-memory " if _truthy(op.get("high_memory", idef.get("high_memory"))) else ""
+            # A plain (non-OME) TIFF carries no pixel size, so state the scale directly:
+            # a Stereo-seq *_regist.tif at 0.5 um/pixel georeferences as px_per_um = 2.
+            upp = op.get("um_per_pixel", idef.get("um_per_pixel"))
+            if upp:
+                ppu = 1.0 / float(upp)
+                transform += f"--px-per-um-x {ppu:g} --px-per-um-y {ppu:g} "
             extra = " ".join(op.get("extra_flags", []))
             cmds.append(
                 f"cartloader import_image {conv}{skip_img}--png2pmtiles --georeference "
@@ -851,6 +942,10 @@ def _cmd_rgb_image(cfg, s, iid, src, cart_dir, settings):
         # Inline the substitution: make runs each recipe line in its own shell,
         # so a UPP=... on a separate line would not survive to this command.
         upp = f"--um-per-pixel \"$(jq -r '.{key}' {jpath})\""
+    elif settings.get("um_per_pixel"):
+        # A fixed scale, for a registered image whose um/pixel is a property of the
+        # platform rather than of the run (e.g. Stereo-seq *_regist.tif at 0.5).
+        upp = f"--um-per-pixel {settings['um_per_pixel']}"
     plain = "--georef-plain" if settings.get("georef_plain") else ""
     cmds.append(f"cartloader image_png2pmtiles --in-img {src} --out-prefix {prefix} "
                 f"--geotif2mbtiles --mbtiles2pmtiles --georeference {plain} {upp}".strip())
@@ -943,6 +1038,15 @@ def add_targets(mm, samples, cfg, args):
                     if role != "transcript" and not s["roles"].get(role):
                         s["roles"][role] = prefix + suffix
                 ingest_cmds = [cmd_reformat_cosmx(cfg, sge_dir, s["id"], s["in_dir"])]
+            elif method == "stereoseq":
+                # SAW-driven ingest. The bin1 GEM becomes the ordinary pixel transcript;
+                # the cell-bin GEM, when present, becomes a standalone `cell_tsv` role
+                # that the cells stage passes as --tsv-list (the cell assignment cannot
+                # be carried on the transcript itself). An explicit role still wins.
+                transcript[s["id"]] = os.path.join(sge_dir, "transcripts.unsorted.tsv.gz")
+                ingest_cmds, cell_tsv = cmds_stereoseq_ingest(cfg, sge_dir, s)
+                if cell_tsv and not s["roles"].get("cell_tsv"):
+                    s["roles"]["cell_tsv"] = cell_tsv
             else:
                 base_tx = os.path.join(sge_dir, "transcripts.unsorted.tsv.gz")
                 ingest_cmds = [cmd_sge_convert(cfg, sge_dir, s)]
@@ -1201,6 +1305,12 @@ def parse_arguments(_args):
     io = p.add_argument_group("Input/Output")
     io.add_argument("--platform", type=str, help="Platform preset, e.g. 10x_xenium, 10x_visium_hd, cosmx_smi, merfish, generic")
     io.add_argument("--in-dir", type=str, help="Input directory for a single sample (roles auto-detected inside it)")
+    io.add_argument("--in-prefix", type=str,
+                    help="Input path prefix for a single sample, for platforms whose files are named by "
+                         "suffix rather than laid out in a directory (Stereo-seq). E.g. --in-prefix "
+                         "/data/C04687E314 picks up C04687E314.tissue.gef, C04687E314.cellbin.gef and "
+                         "C04687E314_{HE,ssDNA,DAPI}_regist.tif. Missing files are skipped; --image and "
+                         "the role flags override any of them. The sample id defaults to the basename.")
     io.add_argument("--in-transcript", type=str, help="Single sample: raw transcript CSV to ingest (goes through sge_convert). "
                                                       "Use instead of --in-dir when the file is arbitrarily named / not in a standard directory.")
     io.add_argument("--in-cell-xy", type=str, help="Single sample: cell metadata (centroids) file for the xy role (optional)")
@@ -1221,6 +1331,8 @@ def parse_arguments(_args):
     io.add_argument("--id", type=str, help="Sample id for a single-sample run (--in-dir or explicit --in-* files)")
     io.add_argument("--config", type=str, help="JSON config that augments the profile/CLI (full spec for complex runs)")
     io.add_argument("--platform-json", type=str, help="External JSON profile that overrides the built-in platform profile")
+    io.add_argument("--saw", type=str, help="Path to the SAW binary (required for --platform bgi_stereoseq: the "
+                                            ".gef inputs are binary and only SAW can expand them into text GEMs)")
 
     c = p.add_argument_group("Single-sample input column overrides (else profile / platform defaults)")
     c.add_argument("--colname-transcript-x", type=str, default=None, help="X column name in --in-transcript")
