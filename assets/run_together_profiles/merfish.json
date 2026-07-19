@@ -14,13 +14,14 @@
   },
   "roles": {
     "xy":         { "file": "cell_metadata.csv", "colname_cell": "", "colname_x": "center_x", "colname_y": "center_y" },
-    "boundaries": { "file": "cell_boundaries.csv", "colname_cell": "cell_id", "colname_x": "vertex_x", "colname_y": "vertex_y" }
+    "boundaries": { "file": "cell_boundaries.csv", "colname_cell": "cell_id", "colname_x": "vertex_x", "colname_y": "vertex_y" },
+    "cellxgene":  { "file": "cell_by_gene.csv" }
   },
   "ficture": [
     { "id": "denovo", "mode": "train", "width": "12", "n_factor": "12,24,48" }
   ],
   "cell_analyses": [
-    { "id": "cartloader", "uses": ["boundaries"], "optional_uses": ["xy"] }
+    { "id": "cartloader", "any_uses": ["boundaries", "mex"], "optional_uses": ["xy"] }
   ],
   "cartload": { "use_pmpoint": true, "bin_count": 500 },
   "image_transform": { "column": "merfish_csv", "flag": "--micron2pixel-csv" },

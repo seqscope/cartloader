@@ -18,7 +18,7 @@ DEFAULT_S3_PROFILE = "default"
 
 # Sample-level input roles. A sample provides these either explicitly (sample
 # sheet columns / JSON) or by auto-detection inside its `in_dir` (profile.roles).
-ROLE_KEYS = ["transcript", "xy", "boundaries", "clusters", "mex"]
+ROLE_KEYS = ["transcript", "xy", "boundaries", "clusters", "mex", "cellxgene"]
 # Friendly sample-sheet column aliases (the generic platform advertises these
 # names; each maps onto a canonical role key above).
 ROLE_ALIASES = {
@@ -27,6 +27,7 @@ ROLE_ALIASES = {
     "cell_boundary": "boundaries",
     "cell_boundaries": "boundaries",
     "mex_dir": "mex",
+    "cell_by_gene": "cellxgene",
 }
 # role -> the run_ficture2_multi_cells flag that consumes it
 ROLE_LIST_FLAG = {
@@ -321,13 +322,14 @@ def build_config(args):
     raw_samples = list(cfg.get("samples", []))
     if args.samples:
         raw_samples += read_sheet(args.samples)
-    if args.in_dir or args.in_transcript or args.in_cell_xy or args.in_cell_boundary:
+    if args.in_dir or args.in_transcript or args.in_cell_xy or args.in_cell_boundary or args.in_cellxgene:
         s = {}
         if args.in_dir: s["in_dir"] = args.in_dir
         if args.id: s["id"] = args.id
         if args.in_transcript: s["raw_transcript"] = args.in_transcript
         if args.in_cell_xy: s["xy"] = args.in_cell_xy
         if args.in_cell_boundary: s["boundaries"] = args.in_cell_boundary
+        if args.in_cellxgene: s["cellxgene"] = args.in_cellxgene
         raw_samples.append(s)
     if not raw_samples:
         sys.exit("ERROR: no samples. Use --in-dir, the --in-transcript/--in-cell-xy/--in-cell-boundary "
@@ -601,6 +603,21 @@ def cmd_tsv_add_cell_id(cfg, in_tsv, out_tsv, boundaries):
         # assign a transcript outside every polygon to the nearest cell within this
         # distance (µm); off by default (transcripts outside all cells stay UNASSIGNED).
         parts.append(f"--expand-um {ac['expand_um']}")
+    return " ".join(parts)
+
+
+def cmd_convert_cellxgene(cfg, csv_path, mex_dir):
+    """Convert a cell-by-gene matrix CSV (e.g. MERSCOPE cell_by_gene.csv) into a MEX
+    directory (barcodes/features/matrix). The produced dir becomes the sample's `mex`
+    role, which drives the cell decode's clustering (mex2sptsv) — independent of, and
+    taking precedence over, the transcript/boundary cell-count path."""
+    res = cfg["resources"]
+    ing = cfg.get("ingest", {})
+    parts = ["cartloader", "convert_cellxgene",
+             f"--csv {csv_path}", f"--out-dir {mex_dir}",
+             "--gzip pigz", f"--threads {res['threads']}"]
+    if ing.get("cellxgene_blank_prefix"):
+        parts.append(f"--blank-prefix {ing['cellxgene_blank_prefix']}")
     return " ".join(parts)
 
 
@@ -919,6 +936,16 @@ def add_targets(mm, samples, cfg, args):
                     transcript[s["id"]] = tx_cellid
                 else:
                     transcript[s["id"]] = base_tx
+                # A cell-by-gene matrix CSV (e.g. MERSCOPE cell_by_gene.csv) is converted
+                # to a MEX directory that becomes this sample's `mex` role. It drives the
+                # cell decode's clustering (mex2sptsv), so cell-based analysis works with
+                # no cell boundaries; when boundaries are also present they still supply
+                # the transcript cell_id column (above) and polygon rendering, while the
+                # MEX overrides the clustering source. An explicit mex role wins.
+                if s["roles"].get("cellxgene") and not s["roles"].get("mex"):
+                    mex_dir = os.path.join(sge_dir, "cellxgene_mex")
+                    ingest_cmds.append(cmd_convert_cellxgene(cfg, s["roles"]["cellxgene"], mex_dir))
+                    s["roles"]["mex"] = mex_dir
             flag = os.path.join(mkdir, f"sge.{s['id']}.done")
             sge_flags.append(flag)
             if on("ingest"):
@@ -1040,8 +1067,10 @@ def _resolve_cell_inputs(ca, grp, cfg):
                                         the tiled transcript; no file role required),
       (b) mex present in every sample -> mex-based clustering,
       (c) neither                   -> skipped.
-    Otherwise the analysis is role-driven: it runs for the samples that provide all
-    of `uses` (and `require_all` demands every sample in the group provide them).
+    Otherwise the analysis is role-driven: a sample contributes when it provides all of
+    `uses` and (if `any_uses` is set) at least one of `any_uses` — so an analysis can
+    accept alternative cell-count sources (e.g. MERSCOPE: boundaries OR a cellxgene MEX).
+    `require_all` demands every sample in the group contribute.
     """
     if ca.get("generic_cell"):
         mex_ok = all(s["roles"].get("mex") for s in grp)
@@ -1056,21 +1085,32 @@ def _resolve_cell_inputs(ca, grp, cfg):
         else:
             return None, None
         contributing = list(grp)   # applies to every sample in the group
+        candidate_roles = required + list(ca.get("optional_uses", []))
     else:
         uses = list(ca.get("uses", []))
-        contributing = [s for s in grp if all(s["roles"].get(r) for r in uses)]
+        any_uses = list(ca.get("any_uses", []))
+        def _contributes(s):
+            if not all(s["roles"].get(r) for r in uses):
+                return False
+            if any_uses and not any(s["roles"].get(r) for r in any_uses):
+                return False
+            return True
+        contributing = [s for s in grp if _contributes(s)]
         if not contributing:
             return None, None
         # Analyses that decode all samples jointly need every sample to contribute.
         if ca.get("require_all") and len(contributing) < len(grp):
             return None, None
-        required = uses
+        candidate_roles = uses + any_uses + list(ca.get("optional_uses", []))
 
-    list_roles = [r for r in required if r in ROLE_LIST_FLAG]
-    # optional roles (e.g. cell_xy/cell_boundary) are added only when every
-    # contributing sample supplies them (a joint --list must cover all samples).
-    for r in ca.get("optional_uses", []):
-        if r in ROLE_LIST_FLAG and all(s["roles"].get(r) for s in contributing):
+    # A role feeds a --list file when at least one contributing sample supplies it; the
+    # list then contains only those samples. run_ficture2_multi_cells resolves each
+    # sample's cell-count source per-sample (MEX vs tiled transcript) and tolerates
+    # partial xy/boundaries/cluster coverage, so a mixed joint run (some samples with
+    # boundaries, some with a cellxgene MEX) is packaged from one call.
+    list_roles = []
+    for r in candidate_roles:
+        if r in ROLE_LIST_FLAG and r not in list_roles and any(s["roles"].get(r) for s in contributing):
             list_roles.append(r)
     return contributing, list_roles
 
@@ -1092,9 +1132,12 @@ def plan_cell_analyses(grp, sge_root, cfg, fic_dir, default_model_id, multi):
             continue
         list_files = {}
         for role in list_roles:
+            # Only the contributing samples that actually supply this role (a mixed run
+            # lists, e.g., boundaries for some samples and mex for others).
+            samples_with = [s for s in contributing if s["roles"].get(role)]
             path = os.path.join(sge_root, f"in_{role}.{ca['id']}.tsv")
             with open(path, "w") as f:
-                for s in contributing:
+                for s in samples_with:
                     f.write(_role_list_line(s["id"], role, s["roles"][role]))
             list_files[role] = path
         model_id = ca.get("model_id", default_model_id)
@@ -1133,6 +1176,9 @@ def parse_arguments(_args):
                                                       "Use instead of --in-dir when the file is arbitrarily named / not in a standard directory.")
     io.add_argument("--in-cell-xy", type=str, help="Single sample: cell metadata (centroids) file for the xy role (optional)")
     io.add_argument("--in-cell-boundary", type=str, help="Single sample: cell boundary polygon file for the boundaries role (optional)")
+    io.add_argument("--in-cellxgene", type=str, help="Single sample: cell-by-gene matrix CSV (e.g. MERSCOPE cell_by_gene.csv). "
+                                                     "Converted to a MEX directory that drives cell clustering, so cell-based "
+                                                     "analysis works without cell boundaries (optional).")
     io.add_argument("--samples", type=str, help="TSV sample sheet (wide table of input roles) for a joint multi-sample run")
     io.add_argument("--images", type=str, help="TSV of per-image specs, one row per image (columns: sample, type, id, "
                                               "source/src, color, and the platform transform column e.g. merfish_csv). "

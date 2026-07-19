@@ -161,6 +161,28 @@ def run_ficture2_multi_cells(_args):
 
     n_samples = len(in_samples)
 
+    ## parse the MEX list (cell x gene matrices) into samp2mex: sample_id -> (bcd, ftr, mtx).
+    ## A sample present here is clustered from its MEX counts (mex2sptsv); a sample absent
+    ## here is clustered from the tiled transcript's cell_id column (pixel2sptsv). This is
+    ## resolved per sample so a mixed run (some samples MEX, some transcript-based) works.
+    samp2mex = {}
+    if args.mex_list is not None:
+        with flexopen(args.mex_list, 'rt') as rf:
+            for line in rf:
+                toks = line.strip().split("\t")
+                if len(toks) == 0 or toks[0] == "":
+                    continue
+                sample_id = toks[0]
+                if len(toks) == 2:
+                    mex_dir = toks[1]
+                    samp2mex[sample_id] = (os.path.join(mex_dir, args.mex_bcd),
+                                           os.path.join(mex_dir, args.mex_ftr),
+                                           os.path.join(mex_dir, args.mex_mtx))
+                elif len(toks) == 4:
+                    samp2mex[sample_id] = (toks[1], toks[2], toks[3])
+                else:
+                    raise ValueError(f"Each line in --mex-list must have 2 or 4 columns. Found {len(toks)} columns in line: {line}")
+
     # cmap
     assert os.path.exists(args.cmap_file), f"File not found: {args.cmap_file} (--cmap-file)"
     
@@ -204,35 +226,23 @@ def run_ficture2_multi_cells(_args):
         cmds.append(f"touch '{sptsv_prefix}.begin'")
         samp2sptsv = {} ## sample ID to SPTSV file mapping
         deps = []
-        if args.mex_list is not None:
-            with flexopen(args.mex_list, 'rt') as rf:
-                for line in rf:
-                    toks = line.strip().split("\t")
-                    sample_id = toks[0]
-                    if len(toks) == 2:
-                        mex_dir = toks[1]
-                        mex_bcd = os.path.join(mex_dir, args.mex_bcd)
-                        mex_ftr = os.path.join(mex_dir, args.mex_ftr)
-                        mex_mtx = os.path.join(mex_dir, args.mex_mtx)
-                    elif len(toks) == 4:
-                        mex_bcd = toks[1]
-                        mex_ftr = toks[2]
-                        mex_mtx = toks[3]
-                    else:
-                        raise ValueError(f"Each line in --mex-list must have 2 or 4 columns. Found {len(toks)} columns in line: {line}")
-                    sample_sptsv_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.sptsv"
-                    cmd = f"{args.spatula} mex2sptsv --bcd {mex_bcd} --ftr {mex_ftr} --mtx {mex_mtx} --out {sample_sptsv_prefix} --min-feature-count {args.min_feature_count} {cmd_ftr_include_exclude}"
-                    cmds.append(cmd)
-                    samp2sptsv[sample_id] = sample_sptsv_prefix
-                    deps.extend([mex_bcd, mex_ftr, mex_mtx])
-        else:
-            for sample_id in in_samples:
+        ## Resolve the cell-count source per sample: a sample listed in --mex-list is
+        ## clustered from its MEX matrix (mex2sptsv), any other sample from the tiled
+        ## transcript's cell_id column (pixel2sptsv). This mix lets a joint run combine
+        ## MEX-based samples (e.g. MERSCOPE cell_by_gene without boundaries) with
+        ## transcript/boundary-based samples in a single decode.
+        for sample_id in in_samples:
+            sample_sptsv_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.sptsv"
+            if sample_id in samp2mex:
+                mex_bcd, mex_ftr, mex_mtx = samp2mex[sample_id]
+                cmd = f"{args.spatula} mex2sptsv --bcd {mex_bcd} --ftr {mex_ftr} --mtx {mex_mtx} --out {sample_sptsv_prefix} --min-feature-count {args.min_feature_count} {cmd_ftr_include_exclude}"
+                deps.extend([mex_bcd, mex_ftr, mex_mtx])
+            else:
                 pixelf = f"{args.in_dir}/samples/{sample_id}/{sample_id}.tiled"
-                sample_sptsv_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.sptsv"
                 cmd = f"{args.spatula} pixel2sptsv --min-cell-count {args.min_cell_count} --pixel {pixelf}.tsv --no-header --idx-col-x {args.colidx_x} --idx-col-y {args.colidx_y} --idx-col-ftr {args.colidx_feature} --idx-col-cnt {args.colidx_count} --idx-col-id {args.colidx_cell_id} --ignore-ids {args.ignore_ids} --out {sample_sptsv_prefix} --min-feature-count {args.min_feature_count} {cmd_ftr_include_exclude}"
-                cmds.append(cmd)
-                samp2sptsv[sample_id] = sample_sptsv_prefix
                 deps.append(f"{pixelf}.tsv")
+            cmds.append(cmd)
+            samp2sptsv[sample_id] = sample_sptsv_prefix
         
         ## merge SPTSV files if needed
         if len(samp2sptsv) > 0:
@@ -421,12 +431,12 @@ def run_ficture2_multi_cells(_args):
                             y = toks[idx_y]
                             wf_sample.write(f"{cell_id}\t{x}\t{y}\n")
                         nlines += 1
-            elif args.mex_list is not None:
+            elif sample_id in samp2mex:
                 # MEX-based clustering carries no cell coordinates (mex2sptsv writes no
-                # per-cell metadata), so there is nothing to place spatially; skip the
-                # per-cell leiden-cluster scatter for this sample rather than failing on
-                # a missing metadata file. Spatial cell/boundary rendering is handled
-                # elsewhere (e.g. import_visiumhd_cell for Visium HD segmented cells).
+                # per-cell metadata), so a MEX sample without an xy file has nothing to
+                # place spatially; skip its per-cell leiden-cluster scatter rather than
+                # failing on a missing metadata file. A transcript/boundary-based sample
+                # (not in samp2mex) still has pixel2sptsv metadata and is drawn below.
                 continue
             draw_manifold_rscript=f"{repo_dir}/cartloader/r/draw_manifold_clust.r"
             cmd = f"{args.R} '{draw_manifold_rscript}' --tsv-manifold '{metaf}' --tsv-clust '{sample_leiden_prefix}.tsv.gz' --tsv-colname-x X --tsv-colname-y Y --out '{sample_leiden_prefix}.xy.png' --out-tsv '{sample_leiden_prefix}.xy.tsv.gz' --tsv-colname-clust topK"
@@ -767,7 +777,7 @@ def run_ficture2_multi_cells(_args):
             # cell_xy_path is only produced when the per-cell scatter ran (i.e. cell
             # coordinates were available); omit it for coordinate-less MEX clustering so
             # run_cartload2 skips cell-point PMTiles instead of failing on a missing file.
-            if not (args.mex_list is not None and sample not in samp2xy):
+            if not (sample in samp2mex and sample not in samp2xy):
                 out_cell_params["cell_xy_path"] = f"{sample_prefix}.leiden.xy.tsv.gz"
             out_cell_params["cluster_path"] = f"{sample_prefix}.leiden.tsv.gz"
             

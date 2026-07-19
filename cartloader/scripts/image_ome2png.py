@@ -226,10 +226,15 @@ def image_ome2png(_args):
             px_size_x = meta['PhysicalSizeX']
             px_size_y = meta['PhysicalSizeY']
             px_size_unit = meta.get('PhysicalSizeXUnit', 'um')
-            if px_size_unit != 'um' and px_size_unit != 'µm':
-                raise ValueError(f"Physical size unit is not in um: {px_size_unit}")
             offset_um_x = meta.get('OffsetX', 0)
             offset_um_y = meta.get('OffsetY', 0)
+            if px_size_unit == 'nm':
+                px_size_x /= 1000.0
+                px_size_y /= 1000.0
+                offset_um_x /= 1000.0
+                offset_um_y /= 1000.0
+            elif px_size_unit != 'um' and px_size_unit != 'µm':
+                raise ValueError(f"Physical size unit is not in um or nm: {px_size_unit}")
 
             level_0_shape = tif.series[0].levels[0].pages[args.page].shape
             current_page_shape = page.shape
