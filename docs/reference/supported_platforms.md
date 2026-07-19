@@ -123,7 +123,7 @@ MYSAMPLE  protein   /p/protein.png    /p/transform.csv      008A00
 | Column | Meaning |
 |--------|---------|
 | `sample` (required) | Sample id this image belongs to; `*` or blank = every sample |
-| `type` (required) | Modality — sets the **default color** and kind. Registry: `dapi`→`0F73E6`, `boundary`→`F300A5`, `rna`→`A4A400`, `protein`→`008A00` (colorized single-channel); `hne` → multi-channel RGB passthrough (no color) |
+| `type` (required) | Modality — sets the **default color** and kind. Registry: `dapi`→`0F73E6`, `boundary`→`F300A5`, `rna`→`A4A400`, `protein`→`008A00` (colorized single-channel); `hne` → multi-channel RGB passthrough (no color). The registry lives in `assets/run_together_image_types.json` — edit it to add or change types |
 | `source` / `src` (required) | Image path, `.tif` or `.png` (`--ome2png` is applied automatically for `.tif`, skipped for `.png`) |
 | `id` | Catalog key / output basename; **defaults to `type`** |
 | `color` | Hex, **overrides** the type's default. An unregistered `type` with no `color` is an error (no silent wrong color) |

@@ -1,6 +1,6 @@
 {
   "platform": "illumina",
-  "exclude_feature_regex": "^(Unassigned|Neg|BLANK|Blank|Intergenic|Deprecated|System|mt-|MT-|Gm\\d+)",
+  "exclude_feature_regex": "^(Unassigned|Neg|BLANK|Blank|Intergenic|Deprecated|System|Gm[0-9]|MT-|mt-|Rps|Rpl|NCS-|NCP-)",
   "ingest": {
     "sge_platform": "illumina",
     "input_roles": { "--in-mex": "mex" },

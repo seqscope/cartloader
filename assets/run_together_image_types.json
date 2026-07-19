@@ -1,0 +1,12 @@
+{
+  "_comment": "Image modality registry for run_together: `type` -> its default colorize hex (`color`) and `kind`. kind=single is a colorized single-channel layer (its `color` is overridable per image); kind=rgb is a multi-channel passthrough (e.g. H&E) with no color. Edit this file to add or adjust image types; keys beginning with '_' are ignored.",
+  "dapi":        { "color": "0F73E6", "kind": "single" },
+  "boundary":    { "color": "F300A5", "kind": "single" },
+  "rna":         { "color": "A4A400", "kind": "single" },
+  "protein":     { "color": "008A00", "kind": "single" },
+  "cellbound1":  { "color": "009E73", "kind": "single" },
+  "cellbound2":  { "color": "E69F00", "kind": "single" },
+  "cellbound3":  { "color": "CC79A7", "kind": "single" },
+  "polyt":       { "color": "00FFFF", "kind": "single" },
+  "hne":         { "kind": "rgb" }
+}

@@ -6,6 +6,7 @@ from cartloader.utils.utils import execute_makefile
 repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 PROFILE_DIR = os.path.join(repo_dir, "assets", "run_together_profiles")
 SPATULA_BIN = os.path.join(repo_dir, "submodules", "spatula", "bin", "spatula")
+IMAGE_TYPES_FILE = os.path.join(repo_dir, "assets", "run_together_image_types.json")
 
 # Global fallbacks (a profile or --config may override; a CLI flag wins over both).
 DEFAULT_EXCLUDE_REGEX = "^(Unassigned|Neg|BLANK|Blank|Intergenic|Deprecated|System|Gm[0-9]|MT-|mt-|Rps|Rpl|NCS-|NCP-)"
@@ -42,15 +43,16 @@ CSV_COLNAME_FLAGS = {
     "count": "--csv-colname-count",
 }
 # Image modality registry: `type` -> its default colorize hex and kind. A single
-# (colorized) type's `color` is overridable per image; `hne` is a multi-channel RGB
-# passthrough (no colorize, converted via the rgb path). More types are added here.
-IMAGE_TYPES = {
-    "dapi":     {"color": "0F73E6", "kind": "single"},
-    "boundary": {"color": "F300A5", "kind": "single"},
-    "rna":      {"color": "A4A400", "kind": "single"},
-    "protein":  {"color": "008A00", "kind": "single"},
-    "hne":      {"kind": "rgb"},
-}
+# (colorized) type's `color` is overridable per image; an `rgb` type (e.g. hne) is a
+# multi-channel passthrough (no colorize). Loaded from assets/ so it can be edited
+# without touching code; keys beginning with '_' (e.g. "_comment") are ignored.
+def load_image_types():
+    if not os.path.exists(IMAGE_TYPES_FILE):
+        sys.exit(f"ERROR: image type registry not found: {IMAGE_TYPES_FILE}")
+    with open(IMAGE_TYPES_FILE) as f:
+        return {k: v for k, v in json.load(f).items() if not k.startswith("_")}
+
+IMAGE_TYPES = load_image_types()
 
 # ---------------------------------------------------------------------------
 # Merge helpers (the three-layer assembly: profile -> CLI -> JSON)
