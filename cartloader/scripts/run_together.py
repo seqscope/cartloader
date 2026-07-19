@@ -872,6 +872,9 @@ def cmd_upload(cart_dir, args, batch):
 
     Destination: <s3_prefix>/batch=<YYYY_MM>/<collection>/<dir>, where <dir> is the
     self-contained sample directory name (<sample_id> or <multi_id>-<sample_id>).
+    For a joint --out-dir run <collection> is the out-dir basename; for a
+    single-sample --out-dir run it is the out-dir's PARENT basename, so the
+    sample dir does not repeat as <collection>/<collection>. See run_together().
     """
     dest_id = os.path.basename(os.path.normpath(cart_dir))
     dest = f"{args.s3_prefix.rstrip('/')}/batch={batch}/{args.collection}/{dest_id}"
@@ -1283,10 +1286,21 @@ def run_together(_args):
     # Publish is opt-in per action. Each action requires its mandatory inputs.
     if args.anno and not (args.tissue and args.organism):
         sys.exit("ERROR: --anno requires --tissue and --organism (no defaults).")
-    # Collection defaults to the run id (the out-dir basename), matching the
-    # <multi_id>-<sample_id> per-sample naming; override with --collection.
+    # Collection defaults to the run id, matching the <multi_id>-<sample_id>
+    # per-sample naming; override with --collection. This only affects the S3
+    # destination (<s3_prefix>/batch=/<collection>/<dir>), not the local layout.
+    #
+    # For a single-sample --out-dir run the out-dir basename is the SAMPLE name
+    # (and the per-sample dir), so its PARENT dir is the collection; using the
+    # out-dir basename here would produce a redundant <dir>/<dir>. A joint
+    # --out-dir run (>1 sample) or an --out-root batch keeps the out-dir/out-root
+    # basename as the collection.
     if args.s3_upload and not args.collection:
-        args.collection = os.path.basename(os.path.normpath(cfg.get("out_dir") or cfg.get("out_root") or "."))
+        single_outdir = bool(cfg.get("out_dir")) and len(cfg["_raw_samples"]) == 1
+        if single_outdir:
+            args.collection = os.path.basename(os.path.dirname(os.path.abspath(cfg["out_dir"])))
+        else:
+            args.collection = os.path.basename(os.path.normpath(cfg.get("out_dir") or cfg.get("out_root") or "."))
     if not args.batch:
         args.batch = datetime.date.today().strftime("%Y_%m")
 
