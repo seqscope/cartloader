@@ -862,10 +862,13 @@ def run_cartload2(_args):
         tiled_direct = len(join_pixel_bins) == 0
         col_renames = [args.rename_x, args.rename_y,
                        f"feature:{args.colname_feature}", f"ct:{args.colname_count}"]
-        in_colnames = []
+        tiled_flags = []
         if tiled_direct:
             col_renames.append(f"Feature:{args.colname_feature}")
-            in_colnames = ["--in-colname-feature", "Feature"]
+            # --skip-original: the unsplit "all" point layer is not used when no factor
+            # layers are packaged. Skipping it also drops its row from the PMTiles index,
+            # so the catalog does not advertise a file that was never built.
+            tiled_flags = ["--in-colname-feature", "Feature", "--skip-original"]
 
         cmds = cmd_separator([], "Converting the tiled transcript TSV to PMTiles" if tiled_direct
                                  else "Converting the joined pixel-level TSV to PMTiles")
@@ -875,7 +878,7 @@ def run_cartload2(_args):
             "--in-features", features_for_points,
             "--out-prefix", f"{out_molecules_prefix}",
             "--threads", str(args.threads),
-            "--col-rename"] + col_renames + in_colnames + [
+            "--col-rename"] + col_renames + tiled_flags + [
             "--colname-feature", args.colname_feature,
             "--colname-count", args.colname_count,
             "--max-tile-bytes", str(args.max_point_tile_bytes),
