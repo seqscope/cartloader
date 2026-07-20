@@ -139,6 +139,56 @@ def _get_image_size(image_path: str) -> tuple[int, int]:
         f"Cannot determine image size for --georef-plain (unsupported extension '{ext}'): {image_path}"
     )
 
+# Conversion factors from an OME PhysicalSize unit to microns (um).
+_OME_LENGTH_TO_UM = {
+    "nm": 1e-3,
+    "µm": 1.0,
+    "um": 1.0,
+    "micron": 1.0,
+    "microns": 1.0,
+    "mm": 1e3,
+    "cm": 1e4,
+    "m": 1e6,
+}
+
+
+def _ome_physical_size_um(pixels: dict, axis: str) -> float:
+    """Return PhysicalSize<axis> from an OME Pixels dict, converted to microns."""
+    size = pixels.get(f"PhysicalSize{axis}")
+    if size is None:
+        raise ValueError(
+            f"OME metadata has no PhysicalSize{axis}; cannot use --georef-detect=ome"
+        )
+    unit = pixels.get(f"PhysicalSize{axis}Unit", "µm")
+    scale = _OME_LENGTH_TO_UM.get(unit)
+    if scale is None:
+        raise ValueError(
+            f"Unsupported OME PhysicalSize{axis}Unit '{unit}' for --georef-detect=ome "
+            f"(supported: {', '.join(sorted(_OME_LENGTH_TO_UM))})"
+        )
+    return float(size) * scale
+
+
+def _select_ome_pixels(ome: dict, *, in_img: str) -> dict:
+    """Pick the OME Pixels block matching the input image among one or more Images.
+
+    An OME-TIFF may embed multiple <Image> elements (e.g. a full-resolution
+    pyramid plus derived masks/downsamples), so ``xml2dict`` yields a list. Match
+    the Image whose pixel dimensions equal the actual raster, falling back to the
+    first Image when none matches.
+    """
+    images = ome["Image"]
+    if isinstance(images, dict):
+        images = [images]
+
+    actual_x, actual_y = _get_image_size(in_img)
+    for image in images:
+        pixels = image["Pixels"]
+        if int(pixels["SizeX"]) == actual_x and int(pixels["SizeY"]) == actual_y:
+            return pixels
+    return images[0]["Pixels"]
+
+
 def _resolve_bounds_from_args(args, *, in_img: str) -> Optional[Dict[str, float]]:
 
     # only one should be provided and indicate that current georef_detect only supports ome.
@@ -192,20 +242,16 @@ def _resolve_bounds_from_args(args, *, in_img: str) -> Optional[Dict[str, float]
         if detect_mode != "ome":
             raise ValueError(f"Unsupported --georef-detect mode: {georef_detect}")
         with tifffile.TiffFile(in_img) as tif:
-            meta = tifffile.xml2dict(tif.ome_metadata)["OME"]["Image"]["Pixels"]
-            physical_size_x = meta["PhysicalSizeX"]
-            physical_size_y = meta["PhysicalSizeY"]
-            size_x = meta["SizeX"]
-            size_y = meta["SizeY"]
-            px_size_unit = meta.get("PhysicalSizeXUnit", "um")
-            if px_size_unit not in {"um", "µm"}:
-                raise ValueError(
-                    f"Physical size unit is not supported for --georef-detect=ome: {px_size_unit}"
-                )
+            ome = tifffile.xml2dict(tif.ome_metadata)["OME"]
+            meta = _select_ome_pixels(ome, in_img=in_img)
+            size_x = int(meta["SizeX"])
+            size_y = int(meta["SizeY"])
+            um_per_x = _ome_physical_size_um(meta, "X")
+            um_per_y = _ome_physical_size_um(meta, "Y")
             ulx = float(meta.get("OffsetX", 0)) + args.georef_offset_x
             uly = float(meta.get("OffsetY", 0)) + args.georef_offset_y
-            lrx = ulx + float(physical_size_x) * int(size_x) + args.georef_offset_x
-            lry = uly + float(physical_size_y) * int(size_y) + args.georef_offset_y
+            lrx = ulx + um_per_x * size_x
+            lry = uly + um_per_y * size_y
             return {"ulx": ulx, "uly": uly, "lrx": lrx, "lry": lry}
 
     if georef_plain:
