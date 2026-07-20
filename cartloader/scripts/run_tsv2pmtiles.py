@@ -186,8 +186,10 @@ def run_tsv2pmtiles(_args):
 
     # 2. Perform conversion:
     if args.convert:
-        ## open index file
-        df = pd.read_csv(f"{args.out_prefix}_index.tsv", sep="\t")
+        ## open index file. bin_id is read as text: it is "all" plus the numbered bins,
+        ## but with --skip-original there is no "all" row and pandas would otherwise
+        ## infer an integer column, which the name-building below cannot concatenate.
+        df = pd.read_csv(f"{args.out_prefix}_index.tsv", sep="\t", dtype={"bin_id": str})
 
         ## add targets for each bin
         for i, row in df.iterrows():
@@ -227,7 +229,7 @@ def run_tsv2pmtiles(_args):
     if not args.keep_intermediate_files:
         logger.info("Cleaning intermediate files")
 
-        df = pd.read_csv(f"{args.out_prefix}_index.tsv", sep="\t")
+        df = pd.read_csv(f"{args.out_prefix}_index.tsv", sep="\t", dtype={"bin_id": str})
         for i, row in df.iterrows():
             bin_id = row["bin_id"]
             csv_path = out_dir + "/" + row["molecules_path"]
