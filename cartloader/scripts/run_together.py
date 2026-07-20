@@ -444,7 +444,7 @@ def image_row_to_spec(row, cfg, in_dir):
             spec["transform_flag"] = tr["flag"]
             spec["transform_path"] = _abs_in_dir(val, in_dir)
     for k in ("shrink_factor", "high_memory", "convert", "um_per_pixel",
-              "georef_plain", "georeferenced"):
+              "georef_plain", "georeferenced", "georef_detect"):
         if row.get(k):
             spec[k] = row[k]
     # A plain .png needs no OME->PNG conversion; a .tif/.ome.tif does (default).
@@ -971,12 +971,28 @@ def _cmd_rgb_image(cfg, s, iid, src, cart_dir, settings):
     catalog = os.path.join(cart_dir, "catalog.yaml")
     prefix = os.path.join(cart_dir, iid)
     cmds, upp = [], ""
+    idef = cfg.get("image_defaults", {})
     # An image that already carries a CRS/geotransform (e.g. a Seq-Scope H&E TIF
     # registered upstream) is tiled as-is: no bounds have to be synthesized, so the
     # georeference step — and with it --georef-plain/--um-per-pixel — is skipped.
-    if _truthy(settings.get("georeferenced", cfg.get("image_defaults", {}).get("georeferenced"))):
+    if _truthy(settings.get("georeferenced", idef.get("georeferenced"))):
         cmds.append(f"cartloader image_png2pmtiles --in-img {src} --out-prefix {prefix} "
                     f"--geotif2mbtiles --mbtiles2pmtiles")
+        cmds.append(catalog_image_line(cfg, catalog, iid, cart_dir))
+        return cmds
+    # Bounds source. An OME-TIFF carries its pixel size in embedded metadata, so the
+    # bounds are read from it (--georef-detect ome) — this is the default for an
+    # .ome.tif(f) RGB image (e.g. an Illumina registered H&E) unless the profile/sheet
+    # gives an explicit scale instead. A plain image has no such metadata and needs
+    # --georef-plain with a stated um/pixel below.
+    detect = settings.get("georef_detect", idef.get("georef_detect"))
+    if (not detect and not settings.get("georef_plain")
+            and not settings.get("um_per_pixel") and not settings.get("um_per_pixel_json")
+            and src.lower().endswith((".ome.tif", ".ome.tiff"))):
+        detect = "ome"
+    if detect:
+        cmds.append(f"cartloader image_png2pmtiles --in-img {src} --out-prefix {prefix} "
+                    f"--geotif2mbtiles --mbtiles2pmtiles --georeference --georef-detect {detect}")
         cmds.append(catalog_image_line(cfg, catalog, iid, cart_dir))
         return cmds
     jrel = settings.get("um_per_pixel_json")
