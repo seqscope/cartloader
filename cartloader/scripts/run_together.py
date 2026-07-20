@@ -287,6 +287,10 @@ def build_config(args):
         prof["_sm_pixel"], prof["_sm_cells"] = True, False
     fd.pop("single_molecule", None)   # now controlled by _sm_pixel/_sm_cells
 
+    # Packaging knobs: a CLI flag wins over the profile's `cartload` block.
+    if args.bin_count is not None:
+        prof.setdefault("cartload", {})["bin_count"] = args.bin_count
+
     # Packaging without any factor analysis (tiling only; see cmd_ficture_analysis).
     prof["_no_ficture"] = args.no_ficture
 
@@ -1416,6 +1420,11 @@ def parse_arguments(_args):
                         "Providing it turns on cell_id-based cell clustering; the column must be "
                         "the 5th TSV column (X, Y, gene, count, cell_id). Mutually exclusive with "
                         "mex inputs. Omit it (and provide no mex inputs) to skip cell analysis.")
+
+    k = p.add_argument_group("Packaging overrides (else profile / run_cartload2 defaults)")
+    k.add_argument("--bin-count", type=int, default=None,
+                   help="Number of gene bins for the point PMTiles layers (profile default: "
+                        "500 on most platforms)")
 
     pub = p.add_argument_group("Publish (opt-in; enable with --anno and/or --s3-upload)")
     pub.add_argument("--anno", action="store_true", help="AI-annotate each sample (requires --tissue and --organism)")

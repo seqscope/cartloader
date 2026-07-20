@@ -90,6 +90,8 @@ This mirrors the FICTURE manifests: `run_ficture2_multi` writes a shared [`fictu
 
 **Common decode overrides:** `--exclude-feature-regex`, `--min-ct-per-unit-hexagon` (default `50`), `--always-single-molecule` / `--never-single-molecule` (default: single-molecule ON for pixel FICTURE, OFF for cell decode). An explicit CLI flag wins over a `--config`/profile value, which wins over the built-in default.
 
+**Packaging overrides:** `--bin-count` — number of gene bins for the point PMTiles layers (profile default `500`). Equivalent to `{"cartload": {"bin_count": N}}` in a `--config`; the flag wins.
+
 **Publish:** `--anno`, `--s3-upload`, `--tissue`, `--organism`, `--anno-api-type`, `--anno-model`, `--anno-threads`, `--collection`, `--batch`, `--s3-prefix`, `--aws-profile`, `--aws`, `--s3-jobs` (see [Publishing](#publishing)).
 
 ---
