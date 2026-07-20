@@ -119,6 +119,15 @@ cartloader run_together --platform stereoseq --saw /path/to/saw \
 
 Override the scale per image with `um_per_pixel` when a TIF is at a different resolution (e.g. `um_per_pixel=1.0` for a 2× downsampled export).
 
+!!! warning "16-bit H&E TIFs need a rescale range"
+    Some SAW versions export the registered H&E as **16-bit** RGB (e.g. the V1.2 `*_HE_regist.tif`). `geotiff2pmtiles` rejects 16-bit input without an explicit value range, and the pipeline fails at the tiling step (the error may surface as a misleading `possibly OOM-killed` message). Supply a linear rescale — the range is given as `rescale_min` + `rescale_max` on a `--image` value (they survive the comma split; a `--images` TSV or config can use `rescale_range` directly):
+
+    ```bash
+    --image "type=hne,source=/data/HE_regist.tif,um_per_pixel=0.5,georef_plain=true,rescale=linear,rescale_min=0,rescale_max=65535"
+    ```
+
+    `0,65535` maps the full 16-bit range; if the H&E then looks washed out, read the true per-band range with `gdalinfo -stats` and pass that instead. 8-bit H&E (e.g. the V1.3 eyeball demo) needs none of this.
+
 ## See also
 
 - [Specifying Inputs](../run_together_inputs.md) · [Image Modalities](../run_together_images.md) · [Overview](../run_together.md)

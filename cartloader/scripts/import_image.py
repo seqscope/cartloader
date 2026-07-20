@@ -74,6 +74,12 @@ def parse_arguments(_args):
     aux_params2.add_argument('--min-zoom', type=int, default=6, help='Minimum zoom level for PMTiles (default: 6)')
     aux_params2.add_argument('--max-zoom', type=int, help='Maximum zoom level for PMTiles (default: 20)')
     aux_params2.add_argument('--tile-format', type=str, default='png', choices=['png', 'webp'], help='Tile image format for PMTiles (default: png)')
+    aux_params2.add_argument('--rescale', type=str, default=None, choices=['auto', 'linear', 'log', 'none'],
+                             help='Rescale mode for geotiff2pmtiles; needed for 16-bit imagery (e.g. some '
+                                  'Stereo-seq H&E TIFs), which the tool rejects without an explicit range. '
+                                  'Use "linear" with --rescale-range.')
+    aux_params2.add_argument('--rescale-range', type=str, default=None,
+                             help='Input value range "min,max" for --rescale (required for 16-bit data; e.g. "0,65535").')
     aux_params2.add_argument('--gdal-only', action='store_true', default=False, help='If set, only run gdal_translate to convert a georeferenced GeoTIFF to PMTileswithout using geotiff2pmtiles')
 
     aux_params3 = parser.add_argument_group("Auxiliary parameters for --georeference", "Pick one of the following three ways to provide georeferencing bounds")
@@ -105,7 +111,7 @@ def parse_arguments(_args):
 
 aux_image_arg={
     "ome2png": ["page", "level", "series", "upper_thres_quantile", "upper_thres_intensity", "lower_thres_quantile", "lower_thres_intensity", "transparent_below", "colorize", "high_memory", "shrink_factor", "px_per_um_x", "px_per_um_y", "offset_px_x", "offset_px_y"],
-    "png2pmtiles": ["srs", "mono", "rgba", "resample", "blocksize", "pmtiles", "gdaladdo", "gdal_only", "min_zoom", "max_zoom", "tile_format", "geotiff2pmtiles"],
+    "png2pmtiles": ["srs", "mono", "rgba", "resample", "blocksize", "pmtiles", "gdaladdo", "gdal_only", "min_zoom", "max_zoom", "tile_format", "geotiff2pmtiles", "rescale", "rescale_range"],
     "georeference": ["georef_pixel_tsv", "georef_bounds_tsv", "georef_bounds", "srs"],
     "orientate": ["gdalinfo"]
 }

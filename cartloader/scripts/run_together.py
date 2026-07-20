@@ -444,7 +444,8 @@ def image_row_to_spec(row, cfg, in_dir):
             spec["transform_flag"] = tr["flag"]
             spec["transform_path"] = _abs_in_dir(val, in_dir)
     for k in ("shrink_factor", "high_memory", "convert", "um_per_pixel",
-              "georef_plain", "georeferenced", "georef_detect"):
+              "georef_plain", "georeferenced", "georef_detect",
+              "rescale", "rescale_range", "rescale_min", "rescale_max"):
         if row.get(k):
             spec[k] = row[k]
     # A plain .png needs no OME->PNG conversion; a .tif/.ome.tif does (default).
@@ -972,12 +973,29 @@ def _cmd_rgb_image(cfg, s, iid, src, cart_dir, settings):
     prefix = os.path.join(cart_dir, iid)
     cmds, upp = [], ""
     idef = cfg.get("image_defaults", {})
+    # Rescale controls for 16-bit imagery (e.g. some Stereo-seq H&E TIFs), forwarded to
+    # image_png2pmtiles -> geotiff2pmtiles, which rejects 16-bit input without a range.
+    # The range is either rescale_range ("min,max", for JSON/TSV) or rescale_min +
+    # rescale_max (so it survives the comma split in a --image CLI value). Applies to
+    # every branch below (all run geotiff2pmtiles).
+    rs = settings.get("rescale", idef.get("rescale"))
+    rrange = settings.get("rescale_range", idef.get("rescale_range"))
+    if not rrange:
+        rmin = settings.get("rescale_min", idef.get("rescale_min"))
+        rmax = settings.get("rescale_max", idef.get("rescale_max"))
+        if rmin is not None and rmax is not None:
+            rrange = f"{rmin},{rmax}"
+    rescale = ""
+    if rs:
+        rescale += f" --rescale {rs}"
+    if rrange:
+        rescale += f" --rescale-range {rrange}"
     # An image that already carries a CRS/geotransform (e.g. a Seq-Scope H&E TIF
     # registered upstream) is tiled as-is: no bounds have to be synthesized, so the
     # georeference step — and with it --georef-plain/--um-per-pixel — is skipped.
     if _truthy(settings.get("georeferenced", idef.get("georeferenced"))):
         cmds.append(f"cartloader image_png2pmtiles --in-img {src} --out-prefix {prefix} "
-                    f"--geotif2mbtiles --mbtiles2pmtiles")
+                    f"--geotif2mbtiles --mbtiles2pmtiles{rescale}")
         cmds.append(catalog_image_line(cfg, catalog, iid, cart_dir))
         return cmds
     # Bounds source. An OME-TIFF carries its pixel size in embedded metadata, so the
@@ -992,7 +1010,7 @@ def _cmd_rgb_image(cfg, s, iid, src, cart_dir, settings):
         detect = "ome"
     if detect:
         cmds.append(f"cartloader image_png2pmtiles --in-img {src} --out-prefix {prefix} "
-                    f"--geotif2mbtiles --mbtiles2pmtiles --georeference --georef-detect {detect}")
+                    f"--geotif2mbtiles --mbtiles2pmtiles --georeference --georef-detect {detect}{rescale}")
         cmds.append(catalog_image_line(cfg, catalog, iid, cart_dir))
         return cmds
     jrel = settings.get("um_per_pixel_json")
@@ -1008,7 +1026,7 @@ def _cmd_rgb_image(cfg, s, iid, src, cart_dir, settings):
         upp = f"--um-per-pixel {settings['um_per_pixel']}"
     plain = "--georef-plain" if settings.get("georef_plain") else ""
     cmds.append(f"cartloader image_png2pmtiles --in-img {src} --out-prefix {prefix} "
-                f"--geotif2mbtiles --mbtiles2pmtiles --georeference {plain} {upp}".strip())
+                f"--geotif2mbtiles --mbtiles2pmtiles --georeference {plain} {upp}{rescale}".strip())
     cmds.append(catalog_image_line(cfg, catalog, iid, cart_dir))
     return cmds
 

@@ -559,8 +559,16 @@ def register_geotiff2pmtiles_stage(
 
     pmtiles_f = f"{out_prefix}.pmtiles"
 
+    # Rescale controls for 16-bit imagery: geotiff2pmtiles errors on 16-bit input
+    # unless given an explicit --rescale-range (e.g. some Stereo-seq H&E TIFs).
+    rescale = ""
+    if getattr(args, "rescale", None):
+        rescale += f"--rescale {args.rescale} "
+    if getattr(args, "rescale_range", None):
+        rescale += f"--rescale-range {args.rescale_range} "
+
     cmds = cmd_separator([], f"Converting from geotiff to pmtiles: {src_tif}")
-    cmds.append(f"'{args.geotiff2pmtiles}' --format {args.tile_format} --min-zoom {args.min_zoom} " + (f"--max-zoom {args.max_zoom} " if args.max_zoom is not None else "") + f"{src_tif} {pmtiles_f}")
+    cmds.append(f"'{args.geotiff2pmtiles}' --format {args.tile_format} --min-zoom {args.min_zoom} " + (f"--max-zoom {args.max_zoom} " if args.max_zoom is not None else "") + rescale + f"{src_tif} {pmtiles_f}")
     mm.add_target(pmtiles_f, [src_tif], cmds)
 
     return pmtiles_f

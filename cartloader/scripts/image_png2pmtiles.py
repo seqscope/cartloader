@@ -63,6 +63,13 @@ def parse_arguments(_args):
     aux_params.add_argument('--min-zoom', type=int, default=6, help='Minimum zoom level for PMTiles (default: 6)')
     aux_params.add_argument('--max-zoom', type=int, help='Maximum zoom level for PMTiles (default: 20)')
     aux_params.add_argument('--tile-format', type=str, default='png', choices=['png', 'webp'], help='Tile image format for PMTiles (default: png)')
+    aux_params.add_argument('--rescale', type=str, default=None, choices=['auto', 'linear', 'log', 'none'],
+                            help='Rescale mode passed to geotiff2pmtiles (--method geotiff2pmtiles). Needed for '
+                                 '16-bit imagery (e.g. some Stereo-seq H&E TIFs): geotiff2pmtiles refuses 16-bit '
+                                 'without an explicit range. Use "linear" with --rescale-range (default: the '
+                                 "binary's own default, which errors on 16-bit input).")
+    aux_params.add_argument('--rescale-range', type=str, default=None,
+                            help='Input value range "min,max" for --rescale (required for 16-bit data; e.g. "0,65535").')
 
     if len(_args) == 0:
         parser.print_help()

@@ -30,6 +30,8 @@ All three share the **same field vocabulary**. Built-in profiles also **auto-det
 | `um_per_pixel` | | Microns per pixel, for a plain (non-OME) image that carries no pixel-size metadata. Sets `--px-per-um-x/y` (single-channel) or `--um-per-pixel` (rgb). E.g. `0.5` for a Stereo-seq `*_regist.tif`. |
 | `georef_plain` | | `true` to map the upper-left corner to (0,0) and the lower-right to the image size, scaled by `um_per_pixel` (`rgb` images). |
 | `georeferenced` | | `true` if the image already carries its own CRS/geotransform (e.g. a Seq-Scope H&E TIF registered upstream): it is tiled as-is, skipping georeferencing and therefore `georef_plain`/`um_per_pixel` (`rgb` images; else the profile's `image_defaults`). |
+| `rescale` | | Rescale mode for **16-bit** `rgb` imagery (`auto` \| `linear` \| `log` \| `none`), forwarded to `geotiff2pmtiles`, which rejects 16-bit input without a range. Use `linear` with the range below. |
+| `rescale_range` / `rescale_min` + `rescale_max` | | Input value range for `rescale` (e.g. `0,65535`). Give `rescale_range` in a `--images` TSV or config; on a `--image` CLI value use `rescale_min`/`rescale_max` instead, since the range's comma would split the value. |
 
 Blank cells (`` / `-` / `.` / `NA`) mean *unset*.
 
