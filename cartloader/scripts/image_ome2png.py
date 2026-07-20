@@ -187,7 +187,7 @@ def image_ome2png(_args):
             return
         raise
     with tif:
-        logger.info(f"Loaded OME-TIFF file {args.tif}")
+        logger.info(f"Loaded {'OME-TIFF' if is_ome else 'TIFF'} file {args.tif}")
         
         n_pages = len(tif.pages)
         n_series = len(tif.series)
@@ -202,9 +202,18 @@ def image_ome2png(_args):
         page = tif.series[args.series].levels[args.level].pages[args.page]
         
         #assert page.is_tiled, "Only tiled TIFF files are supported"
+        # Chunked/segment processing needs a tiled TIFF. A striped TIFF (e.g. a
+        # Stereo-seq *_regist.tif written by tifffile) has no 2D tiles, so fall back
+        # to whole-image mode automatically rather than forcing the caller to know
+        # to pass --high-memory. This loads the full page into memory; if that runs
+        # out of memory, re-run with --shrink-factor to downsample first.
         if not args.high_memory and not page.is_tiled:
-            logger.error("When the TIFF file is not tiled, please use the --high-memory flag")
-            sys.exit(1)
+            logger.warning(
+                "TIFF is not tiled (striped); enabling --high-memory automatically to "
+                "process it. This loads the full image into memory -- if it runs out "
+                "of memory, re-run with --shrink-factor to downsample."
+            )
+            args.high_memory = True
         
         if len(page.shape) == 3:
             if page.shape[2] != 3:
