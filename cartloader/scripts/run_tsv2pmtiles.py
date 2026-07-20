@@ -26,6 +26,14 @@ def parse_arguments(_args):
     inout_params.add_argument('--colname-feature', type=str, default='gene', help='Input/output Column name for gene name (default: gene)')
     inout_params.add_argument('--colname-count', type=str, default='gn', help='Column name for feature counts')
     inout_params.add_argument('--col-rename', type=str, nargs='+', help='Columns to rename in the output file. Format: old_name1:new_name1 old_name2:new_name2 ...')
+    # Column names AS THEY APPEAR IN --in-molecules. split-mol2bin looks its columns up
+    # by the input name (--col-rename only rewrites the output header), so an input whose
+    # header differs from the defaults (X/Y/gene) must name them here. E.g. a punkst tiled
+    # TSV has the header "#x y Feature count" -> --in-colname-x x --in-colname-y y
+    # --in-colname-feature Feature. Unset = leave split-mol2bin's own defaults in place.
+    inout_params.add_argument('--in-colname-x', type=str, default=None, help='Column name for X in --in-molecules (default: split-mol2bin default, X)')
+    inout_params.add_argument('--in-colname-y', type=str, default=None, help='Column name for Y in --in-molecules (default: split-mol2bin default, Y)')
+    inout_params.add_argument('--in-colname-feature', type=str, default=None, help='Column name for the feature/gene in --in-molecules (default: Feature with --use-pmpoint, else split-mol2bin default, gene)')
 
     key_params = parser.add_argument_group("Key Parameters", "Key parameters frequently used by users")
     key_params.add_argument('--bin-count', type=int, default=50, help='Number of bins to equally divide the genes into (default: 50)')
@@ -92,7 +100,7 @@ def run_tsv2pmtiles(_args):
         args.col_rename.append("X:lon")
         args.col_rename.append("Y:lat")
 
-    if args.use_pmpoint:
+    if args.use_pmpoint and "Feature:gene" not in args.col_rename:
         args.col_rename.append("Feature:gene")
 
     # start mm
@@ -113,7 +121,12 @@ def run_tsv2pmtiles(_args):
     if args.split:
         logger.info("Splitting the input cross-platform TSV file into per-bin files")
 
-        pmpoint_arg = "--colname-feature Feature" if args.use_pmpoint else ""
+        in_colname_feature = args.in_colname_feature or ("Feature" if args.use_pmpoint else None)
+        pmpoint_arg = f"--colname-feature {in_colname_feature}" if in_colname_feature else ""
+        if args.in_colname_x:
+            pmpoint_arg += f" --colname-x {args.in_colname_x}"
+        if args.in_colname_y:
+            pmpoint_arg += f" --colname-y {args.in_colname_y}"
         col_rename_arg = ""
         if args.col_rename is not None and len(args.col_rename) > 0:
             for col_rename in args.col_rename:
@@ -159,6 +172,17 @@ def run_tsv2pmtiles(_args):
             logger.error("Error in splitting the input TSV file into per-bin files")
             sys.exit(1)
 
+    # pmpoint reads the SPLIT output, whose header has already been rewritten by
+    # --col-rename, so its X/Y column names are the renamed ones.
+    def _renamed(name):
+        for r in args.col_rename:
+            old, sep, new = r.partition(":")
+            if sep and old == name:
+                return new
+        return name
+    pmpoint_colname_x = _renamed(args.in_colname_x or "X")
+    pmpoint_colname_y = _renamed(args.in_colname_y or "Y")
+
     # 2. Perform conversion:
     if args.convert:
         ## open index file
@@ -177,7 +201,7 @@ def run_tsv2pmtiles(_args):
             cmds = cmd_separator([], f"Converting bin {bin_id} to pmtiles")
             if args.use_pmpoint:
                 cmds.append(f"mkdir -p {args.tmp_dir}/{bin_id}")
-                cmds.append(f"'{args.pmpoint}' build-point-pmtiles --tmp-dir {args.tmp_dir}/{bin_id} --in {csv_path} --out {pmtiles_prefix}.z{args.max_zoom}.pmtiles --zoom {args.max_zoom} --colname-x X --colname-y Y --delim ',' --threads {args.threads} --format {args.tile_format_pmpoint}")
+                cmds.append(f"'{args.pmpoint}' build-point-pmtiles --tmp-dir {args.tmp_dir}/{bin_id} --in {csv_path} --out {pmtiles_prefix}.z{args.max_zoom}.pmtiles --zoom {args.max_zoom} --colname-x {pmpoint_colname_x} --colname-y {pmpoint_colname_y} --delim ',' --threads {args.threads} --format {args.tile_format_pmpoint}")
                 cmds.append(f"'{args.pmpoint}' build-pyramid-pmtiles --scale-factor-compression {args.pmpoint_compression_scale} --tmp-dir {args.tmp_dir}/{bin_id} --in {pmtiles_prefix}.z{args.max_zoom}.pmtiles --out {pmtiles_prefix}.pmtiles --min-zoom {args.min_zoom} --max-tile-bytes {args.max_tile_bytes} --max-tile-features {args.max_feature_counts} --threads {args.threads}")
                 cmds.append(f"rm {pmtiles_prefix}.z{args.max_zoom}.pmtiles")
                 cmds.append(f"rm -rf {args.tmp_dir}/{bin_id}")

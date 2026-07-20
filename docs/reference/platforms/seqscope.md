@@ -58,6 +58,18 @@ cartloader run_together --platform seqscope \
 ```
 
 ---
+## Hosting without FICTURE
+
+Seq-Scope datasets are often published without factor analysis. Add `--no-ficture` to any of the commands above:
+
+```bash
+cartloader run_together --platform seqscope --in-dir /data/mex --out-dir OUT --no-ficture \
+    --image type=hne,source=/data/HE.tif
+```
+
+Only FICTURE's tiling step runs; the packaged output carries the transcript points, the SGE raster basemap, and the histology, with no factor layers. Nothing about this is Seq-Scope specific — it works on every platform. See [FICTURE mode](../run_together_inputs.md#ficture-mode-de-novo-vs-projection).
+
+---
 ## Coordinates and count columns
 
 Barcode X/Y are in **nanometers**, so ingest passes `--units-per-um 1000`. Columns 6 and 7 of `barcodes.tsv.gz` are read as X and Y (the `sge_convert` defaults `--icol-bcd-x 6 --icol-bcd-y 7`); a different layout is set through the config:

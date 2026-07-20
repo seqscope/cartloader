@@ -144,6 +144,16 @@ Independent of how inputs are specified, Tier-1 selects the base FICTURE work. E
 
     Ingest still runs (the *data* is current); only training is skipped.
 
+=== "No factor analysis"
+
+    Host a dataset with **no FICTURE at all** — transcripts, the SGE raster, and histology, with no factor layers. `--no-ficture` runs only FICTURE's tiling step (`run_ficture2_multi --prepare-only`), and packaging reads the resulting tiled TSV directly.
+
+    ```bash
+    cartloader run_together --platform seqscope --in-dir IN --out-dir OUT --no-ficture
+    ```
+
+    Applies to **every** platform, not just Seq-Scope. Cell analyses are skipped too (they decode against a model). Cannot be combined with `--n-factor` or `--project-models`. The hexagon files are still built alongside the tiles, so adding factors later re-uses them instead of re-tiling — rerun without `--no-ficture` in the same `--out-dir`.
+
 **Common decode overrides** (else profile / built-in default): `--exclude-feature-regex`, `--min-ct-per-unit-hexagon` (default `50`), and `--always-single-molecule` / `--never-single-molecule` (default: single-molecule **ON** for pixel FICTURE, **OFF** for cell decode). An explicit CLI flag wins over a `--config`/profile value, which wins over the built-in default.
 
 ---

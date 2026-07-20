@@ -292,8 +292,11 @@ def run_cartload2(_args):
         fic_jsonf = os.path.join(args.fic_dir, args.in_fic_params)
         fic_data = load_file_to_dict(fic_jsonf)
         in_fic_params = fic_data.get("train_params", [])
-        if len(in_fic_params) == 0:  # parameters are empty
-            logger.error(f"FICTURE 'train_params' is empty after loading {fic_jsonf} (provided by --fic-dir and --in-fic-params)")
+        if len(in_fic_params) == 0:
+            # Expected for a manifest written by run_ficture2_multi --prepare-only: the
+            # dataset is packaged with no factor layers (transcripts + raster + images).
+            logger.warning(f"FICTURE 'train_params' is empty in {fic_jsonf} (provided by --fic-dir and "
+                           f"--in-fic-params); packaging without any factor layers")
 
         # create the output assets json
         out_fic_assets = ficture2_params_to_factor_assets(in_fic_params, args.skip_raster, in_cell_params)
@@ -851,14 +854,28 @@ def run_cartload2(_args):
             mm.add_target(features_for_points, [args.replace_features], rehdr_cmds)
             pmtiles_prereqs.append(features_for_points)
 
-        cmds = cmd_separator([], f"Converting the joined pixel-level TSV to PMTiles")
+        # With no decoded factors to join, the molecules are the tiled transcript itself,
+        # whose punkst header is "#x  y  Feature  count" rather than the joined file's
+        # column names. split-mol2bin resolves columns by their INPUT name, so state them
+        # (--col-rename only rewrites the output header, where Feature must become gene).
+        tiled_direct = len(join_pixel_bins) == 0
+        col_renames = [args.rename_x, args.rename_y,
+                       f"feature:{args.colname_feature}", f"ct:{args.colname_count}"]
+        in_colnames = []
+        if tiled_direct:
+            col_renames.append(f"Feature:{args.colname_feature}")
+            in_colnames = ["--in-colname-x", "x", "--in-colname-y", "y",
+                           "--in-colname-feature", "Feature"]
+
+        cmds = cmd_separator([], "Converting the tiled transcript TSV to PMTiles" if tiled_direct
+                                 else "Converting the joined pixel-level TSV to PMTiles")
         cmd = " ".join([
             "cartloader", "run_tsv2pmtiles",
             "--in-molecules", molecules_f,
             "--in-features", features_for_points,
             "--out-prefix", f"{out_molecules_prefix}",
             "--threads", str(args.threads),
-            "--col-rename", args.rename_x, args.rename_y, f"feature:{args.colname_feature}", f"ct:{args.colname_count}",
+            "--col-rename"] + col_renames + in_colnames + [
             "--colname-feature", args.colname_feature,
             "--colname-count", args.colname_count,
             "--max-tile-bytes", str(args.max_point_tile_bytes),

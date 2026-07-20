@@ -26,6 +26,8 @@ All actions run by default (UMAPs can be skipped with `--skip-umap`):
 - Decode: applies trained models per sample; produces pixel‑level factors and summaries
 - Write per‑sample JSON: consolidates paths and metadata for downstream consumption
 
+`--prepare-only` stops after the first action: it tiles the inputs and builds the hex grids, then writes each sample's `ficture.params.json` with only `in_sge` (tiled prefix, feature list, coordinate range) and an empty `train_params`. No model is trained, projected, or decoded, and no UMAP is built. This is what lets a dataset be **packaged without any factor analysis** — `run_cartload2` reads the tiled TSV as its molecule source, so it produces transcripts + raster + images and a catalog with no factor layers. Re-running without `--prepare-only` in the same `--out-dir` adds models later and re-uses the existing tiles/hexagons. See [`run_together --no-ficture`](./run_together_inputs.md#ficture-mode-de-novo-vs-projection).
+
 ---
 ## Example Usage
 
@@ -66,6 +68,7 @@ Below are the core arguments you’ll typically set. Flag names and behavior fol
 - `--min-total-count-per-sample` (int): Minimum per‑sample transcript count to retain in the joint set.
 - `--include-feature-regex` / `--exclude-feature-regex` (str): Feature filters.
 - `--redo-merge-units` (flag): Rebuild merged units per width (temporary bug workaround).
+- `--prepare-only` (flag): Tile and build hexagons only; write manifests with no models (`--n-factor` not required, UMAP forced off).
 
 ### Training / Decoding
 

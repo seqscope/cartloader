@@ -190,6 +190,8 @@ def resolved_models(analyses):
     """
     models = []
     for a in analyses:
+        if a.get("mode") == "prepare":
+            continue           # tiling only (--no-ficture): no models exist
         if a.get("mode") == "project":
             models.append({"model_id": a["id"], "n_factor": int(a.get("n_factor") or 0)})
         else:
@@ -225,7 +227,17 @@ def build_config(args):
     prof.setdefault("roles", {})
 
     # Layer 1: tier-1 CLI selects the base FICTURE mode
-    if args.project_models:
+    if args.no_ficture:
+        if args.project_models or args.n_factor:
+            sys.exit("ERROR: --no-ficture runs no factor analysis, so it cannot be combined "
+                     "with --project-models or --n-factor.")
+        # Only the tiling step runs. A width is still needed: prepare builds the hexagon
+        # files alongside the tiles, so a later full FICTURE run in the same directory
+        # resumes from them instead of re-tiling.
+        width = args.width or next((str(a["width"]) for a in prof["ficture"] if a.get("width")), "12")
+        prof["ficture"] = [{"id": "prepare", "mode": "prepare", "width": width}]
+        prof["cell_analyses"] = []
+    elif args.project_models:
         prof["ficture"] = build_projection_analyses(args.project_models, args.width)
     elif args.n_factor or args.width:
         # override the (single) de-novo entry, or create one
@@ -274,6 +286,9 @@ def build_config(args):
     else:
         prof["_sm_pixel"], prof["_sm_cells"] = True, False
     fd.pop("single_molecule", None)   # now controlled by _sm_pixel/_sm_cells
+
+    # Packaging without any factor analysis (tiling only; see cmd_ficture_analysis).
+    prof["_no_ficture"] = args.no_ficture
 
     # Tolerate corrupt histology images in the images stage (opt-in; see plan_images).
     prof["_skip_image_errors"] = args.skip_image_errors
@@ -738,7 +753,11 @@ def cmd_ficture_analysis(a, in_list, fic_dir, cfg):
              f"--in-list {in_list}", f"--out-dir {fic_dir}",
              f"--width {a['width']}", f"--threads {res['threads']}",
              f"--n-jobs {res['n_jobs']}", "--gzip pigz"]
-    if a.get("mode") == "project":
+    if a.get("mode") == "prepare":
+        # Tiling only: no model is trained or projected, and the manifest it writes
+        # carries just the tiled transcript for packaging (--no-ficture).
+        parts.append("--prepare-only")
+    elif a.get("mode") == "project":
         parts += [f"--pretrained-model {a['model']}", f"--model-id {a['id']}"]
     else:
         parts.append(f"--n-factor {a['n_factor']}")
@@ -1119,7 +1138,9 @@ def add_targets(mm, samples, cfg, args):
 
         # --- cell analyses (platform default; run those whose roles are present) ---
         cells_flag = os.path.join(mkdir, "cells.done")
-        active_cells = plan_cell_analyses(grp, sge_root, cfg, fic_dir, default_model_id, multi)
+        # Cell analyses decode against a trained model, so they cannot run without one.
+        active_cells = [] if cfg.get("_no_ficture") else \
+            plan_cell_analyses(grp, sge_root, cfg, fic_dir, default_model_id, multi)
         if active_cells and on("cells"):
             cmds = [c["cmd"] for c in active_cells]
             mm.add_target(cells_flag, [fic_flag], cmds + [f"touch {cells_flag}"])
@@ -1376,6 +1397,9 @@ def parse_arguments(_args):
     f.add_argument("--n-factor", type=str, help="De-novo: factor count(s) (comma-separated)")
     f.add_argument("--project-models", type=str, help="Projection-only: existing FICTURE dir(s) (comma-separated); "
                                                       "reads each ficture.params.json and reuses its models. No LDA training.")
+    f.add_argument("--no-ficture", action="store_true",
+                   help="No factor analysis at all: run only FICTURE's tiling step and package the tiled "
+                        "transcripts (points + raster + images, no factor layers). Cell analyses are skipped too.")
 
     d = p.add_argument_group("Common decode overrides (else profile / built-in defaults)")
     d.add_argument("--exclude-feature-regex", type=str, default=None,

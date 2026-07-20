@@ -35,6 +35,7 @@ def parse_arguments(_args):
     key_params = parser.add_argument_group("Key Parameters", "Key parameters that requires user's attention")
     key_params.add_argument('--width', type=str, required=True, help='Comma-separated hexagon flat-to-flat widths (in um) for LDA training')
     key_params.add_argument('--n-factor', type=str, help='Comma-separated list of factor counts for LDA training.')
+    key_params.add_argument('--prepare-only', action='store_true', default=False, help='Run only the multi-sample tiling/hexagon step and write the manifests with no models. Produces the tiled TSV/index that packaging (run_cartload2) reads, so a dataset can be hosted without any factor analysis.')
     key_params.add_argument('--anchor-res', type=int, default=6, help='Anchor resolution for decoding (default: 6)')
     key_params.add_argument('--cmap-file', type=str, default=os.path.join(repo_dir, "assets", "default_color_map.tsv"), help='Path to fixed color map TSV (default: <cartloader_dir>/assets/default_color_map.tsv)')
 
@@ -368,7 +369,9 @@ def add_sample_json_target(mm, args, sample, sample_transcript, n_samples, sampl
 
     summary_aux_args_models = ["--lda-model"]
     summary_aux_args_umap = ["--umap"] if not args.skip_umap else []
-    lda_runs = define_lda_runs(args, **LDA_CONFIG)
+    # --prepare-only stops after tiling: the manifest records only `in_sge` (the tiled
+    # transcript, feature, and minmax paths) so packaging can read it, with no models.
+    lda_runs = [] if args.prepare_only else define_lda_runs(args, **LDA_CONFIG)
     for lda_params in lda_runs:
         train_width = lda_params["train_width"]
         n_factor = lda_params["n_factor"]
@@ -409,7 +412,7 @@ def add_sample_json_target(mm, args, sample, sample_transcript, n_samples, sampl
         summary_aux_args.append(" ".join(summary_aux_args_umap))
 
     summary_aux_args_decodes = ["--decode"]
-    decode_runs = define_decode_runs(args, **LDA_CONFIG)
+    decode_runs = [] if args.prepare_only else define_decode_runs(args, **LDA_CONFIG)
     for decode_params in decode_runs:
         decode_id = decode_params["decode_id"]
         decode_prefix = os.path.join(args.out_dir, "samples", sample, f"{sample}.{decode_id}")
@@ -438,7 +441,10 @@ def add_sample_json_target(mm, args, sample, sample_transcript, n_samples, sampl
     # models from older runs in the same output directory do not persist.
     summary_cmd_parts = [
         "cartloader", "write_json_for_ficture2_multi",
-        "--mode append",
+        # append merges this invocation's models into any existing manifest; a
+        # prepare-only run has none, so it overwrites instead — otherwise models from
+        # an earlier full run in the same directory would survive as dangling entries.
+        "--mode write" if args.prepare_only else "--mode append",
         f"--in-transcript '{sample_tsv_transcript}'",
         f"--in-tiled '{sample_tiled_prefix}'",
         f"--in-feature '{sample_feature_hdr}'",
@@ -475,13 +481,13 @@ def write_multi_params_json(args, in_samples):
 
     # Existing shared train_params, keyed by model_id (order preserved).
     shared_train = []
-    if os.path.exists(out_path):
+    if os.path.exists(out_path) and not args.prepare_only:
         with open(out_path, "rt") as f:
             old_manifest = json.load(f)
         shared_train = old_manifest.get("shared", {}).get("train_params", [])
     index = {e["model_id"]: i for i, e in enumerate(shared_train) if "model_id" in e}
 
-    for lda in define_lda_runs(args, **LDA_CONFIG):
+    for lda in ([] if args.prepare_only else define_lda_runs(args, **LDA_CONFIG)):
         model_id = lda["model_id"]
         entry = {
             "model_type": lda["model_type"],
@@ -537,8 +543,11 @@ def run_ficture2_multi(_args):
     args=parse_arguments(_args)
 
     # validate args
-    if args.n_factor is None and args.pretrained_model is None:
+    if args.n_factor is None and args.pretrained_model is None and not args.prepare_only:
         raise ValueError("When --pretrained-model is not provided, --n-factor is required.")
+    if args.prepare_only:
+        # No models are trained, so there is nothing to embed — and R is not needed.
+        args.skip_umap = True
     if args.model_id is not None: ## model id is specified
         if args.pretrained_model is None: ## pretrained_model is not specified
             if args.n_factor.find(",") != -1 or args.width.find(",") != -1: ## multiple models are being trained
@@ -584,8 +593,8 @@ def run_ficture2_multi(_args):
     # step 1. multi-sample tiling and hexagon:
     add_multisample_prepare_targets(mm, args, ficture2bin, in_samples)
 
-    # step 2. multi-sample LDA training
-    lda_runs = define_lda_runs(args, **LDA_CONFIG)
+    # step 2. multi-sample LDA training (none in --prepare-only: tiling is the whole run)
+    lda_runs = [] if args.prepare_only else define_lda_runs(args, **LDA_CONFIG)
     for lda_params in lda_runs:
         # params & prefix
         train_width = lda_params["train_width"]
@@ -649,7 +658,7 @@ def run_ficture2_multi(_args):
 
     ## step 3. multi-sample pixel-decode (perform pixel-decode for each sample)
 
-    decode_runs = define_decode_runs(args, **LDA_CONFIG)
+    decode_runs = [] if args.prepare_only else define_decode_runs(args, **LDA_CONFIG)
     for decode_params in decode_runs:
         model_prefix = os.path.join(args.out_dir, decode_params["model_id"])
         fit_width = decode_params["fit_width"]
