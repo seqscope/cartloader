@@ -29,8 +29,9 @@ def parse_arguments(_args):
     # Column names AS THEY APPEAR IN --in-molecules. split-mol2bin looks its columns up
     # by the input name (--col-rename only rewrites the output header), so an input whose
     # header differs from the defaults (X/Y/gene) must name them here. E.g. a punkst tiled
-    # TSV has the header "#x y Feature count" -> --in-colname-x x --in-colname-y y
-    # --in-colname-feature Feature. Unset = leave split-mol2bin's own defaults in place.
+    # TSV has the header "#X Y Feature count", so its X/Y/count already match but its
+    # feature column needs --in-colname-feature Feature. Unset = leave split-mol2bin's
+    # own defaults in place.
     inout_params.add_argument('--in-colname-x', type=str, default=None, help='Column name for X in --in-molecules (default: split-mol2bin default, X)')
     inout_params.add_argument('--in-colname-y', type=str, default=None, help='Column name for Y in --in-molecules (default: split-mol2bin default, Y)')
     inout_params.add_argument('--in-colname-feature', type=str, default=None, help='Column name for the feature/gene in --in-molecules (default: Feature with --use-pmpoint, else split-mol2bin default, gene)')
