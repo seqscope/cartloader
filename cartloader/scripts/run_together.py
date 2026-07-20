@@ -11,6 +11,10 @@ IMAGE_TYPES_FILE = os.path.join(repo_dir, "assets", "run_together_image_types.js
 # Global fallbacks (a profile or --config may override; a CLI flag wins over both).
 DEFAULT_EXCLUDE_REGEX = "^(Unassigned|Neg|BLANK|Blank|Intergenic|Deprecated|System|Gm[0-9]|MT-|mt-|Rps|Rpl|NCS-|NCP-)"
 DEFAULT_MIN_CT_PER_UNIT_HEXAGON = 50
+# Sample id for a single-sample --out-dir run that names no id. Deliberately generic:
+# the descriptive name lives in --out-dir, and the packaged directory / catalog id
+# compose as <out_dir_basename>-<sample_id>, matching joint runs (see resolve_sample).
+DEFAULT_SAMPLE_ID = "rep1"
 
 # Publish (S3 upload) defaults for the CartoStore project.
 DEFAULT_S3_PREFIX = "s3://cartostore/data"
@@ -128,11 +132,6 @@ def first_existing(*paths):
         if p and os.path.exists(p):
             return p
     return None
-
-
-def infer_meta_from_outdir(out_dir):
-    parts = os.path.normpath(out_dir).split(os.sep)
-    return parts[-1] if parts else out_dir
 
 
 SHEET_UNSET = {"", "-", ".", "NA"}
@@ -459,7 +458,12 @@ def resolve_sample(raw, cfg):
     """Resolve one sample's id, out_dir, and input roles."""
     n = len(cfg["_raw_samples"])
     if cfg.get("out_dir") and n == 1 and "id" not in raw:
-        sid = infer_meta_from_outdir(cfg["out_dir"])
+        # A lone --out-dir sample takes the generic id rather than the out-dir basename,
+        # which is typically a long collection-style name and uninformative as a sample
+        # id. The out-dir name is not lost: the packaged directory and catalog id become
+        # <out_dir_basename>-rep1. An --out-root run keeps naming each sample after its
+        # input instead, since those ids distinguish samples from one another.
+        sid = DEFAULT_SAMPLE_ID
     else:
         sid = raw.get("id")
         if not sid and raw.get("in_dir"):
@@ -1139,10 +1143,10 @@ def add_targets(mm, samples, cfg, args):
                 # Compose the sample directory name and catalog id/title as
                 # <out_dir>-<sample>, matching the <multi_id>-<sample_id> layout and ids
                 # used in multi-sample runs, so a single-sample output carries the
-                # collection context rather than just the bare sample name. When the
-                # out_dir basename already equals the sample id (e.g. --out-root, or an id
-                # inferred from out_dir), keep the bare id to avoid a redundant
-                # "rep1-rep1".
+                # collection context rather than just the bare sample name (e.g.
+                # my-collection-rep1). When the out_dir basename already equals the
+                # sample id — an --out-root run, or an --out-dir whose basename happens
+                # to be the id — keep the bare id to avoid a redundant "rep1-rep1".
                 catalog_id = s["id"] if multi_id == s["id"] else f"{multi_id}-{s['id']}"
                 cart_dir = os.path.join(cart_root, catalog_id)
                 cart_flag = os.path.join(mkdir, f"cartload.{s['id']}.done")
@@ -1345,7 +1349,7 @@ def parse_arguments(_args):
                          "as a --images TSV row; repeat --image per image.")
     io.add_argument("--out-dir", type=str, help="Output directory (single sample / shared joint model)")
     io.add_argument("--out-root", type=str, help="Output root; each sample gets its own dir and an independent model")
-    io.add_argument("--id", type=str, help="Sample id for a single-sample run (--in-dir or explicit --in-* files)")
+    io.add_argument("--id", type=str, help=f"Sample id for a single-sample run (default: {DEFAULT_SAMPLE_ID}). The packaged directory and catalog id become <out-dir basename>-<id>, so the descriptive name lives in --out-dir. With --out-root instead, each sample is named after its input directory/prefix.")
     io.add_argument("--config", type=str, help="JSON config that augments the profile/CLI (full spec for complex runs)")
     io.add_argument("--platform-json", type=str, help="External JSON profile that overrides the built-in platform profile")
     io.add_argument("--saw", type=str, help="Path to the SAW binary (required for --platform stereoseq: the "
@@ -1419,11 +1423,11 @@ def run_together(_args):
     # per-sample naming; override with --collection. This only affects the S3
     # destination (<s3_prefix>/batch=/<collection>/<dir>), not the local layout.
     #
-    # For a single-sample --out-dir run the out-dir basename is the SAMPLE name
-    # (and the per-sample dir), so its PARENT dir is the collection; using the
-    # out-dir basename here would produce a redundant <dir>/<dir>. A joint
-    # --out-dir run (>1 sample) or an --out-root batch keeps the out-dir/out-root
-    # basename as the collection.
+    # For a single-sample --out-dir run the out-dir basename names the RUN, and the
+    # per-sample dir is <out-dir basename>-<sample id>; using the out-dir basename as
+    # the collection too would produce a redundant <name>/<name>-rep1, so its PARENT
+    # dir is the collection. A joint --out-dir run (>1 sample) or an --out-root batch
+    # keeps the out-dir/out-root basename as the collection.
     if args.s3_upload and not args.collection:
         single_outdir = bool(cfg.get("out_dir")) and len(cfg["_raw_samples"]) == 1
         if single_outdir:

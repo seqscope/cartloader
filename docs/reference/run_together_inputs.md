@@ -41,7 +41,7 @@ cartloader run_together --platform merfish \
 | `--in-cell-xy` | `xy` | Cell centroids / metadata file |
 | `--in-cell-boundary` | `boundaries` | Cell boundary polygons |
 | `--in-cellxgene` | `cellxgene` | Cell×gene matrix CSV → converted to a MEX (drives cell clustering) |
-| `--id` | `id` | Sample id (defaults to the `--in-dir` / `--in-prefix` basename) |
+| `--id` | `id` | Sample id. With `--out-dir`, defaults to **`rep1`** (the packaged dir/catalog id becomes `<out-dir basename>-rep1`); with `--out-root`, defaults to the `in_dir`/`in_prefix` basename |
 
 `--in-dir` is just a one-row sample sheet with only `in_dir`; the explicit `--in-*` flags are a one-row sheet with those columns.
 
@@ -70,7 +70,7 @@ Columns map to per-sample **input roles**. Every column is optional except that 
 
 | Column (aliases) | Role | Meaning |
 |---|---|---|
-| `id` | — | Sample identifier. Optional when `in_dir` or `in_prefix` is given (defaults to its basename). |
+| `id` | — | Sample identifier. Optional: defaults to the `in_dir`/`in_prefix` basename, or to `rep1` for a lone `--out-dir` sample with no named input. |
 | `in_dir` | — | Raw platform directory → the profile **auto-detects** every role inside it. |
 | `in_prefix` | — | Raw platform path prefix → the profile auto-detects roles by **suffix** (`{prefix}.tissue.gef`, …). For platforms whose files share a name rather than a directory; see [BGI Stereo-seq](./platforms/stereoseq.md). |
 | `raw_transcript` | — | Explicit path to a **raw** transcript file to ingest (e.g. MERSCOPE `detected_transcripts.csv`). Runs through `sge_convert`. Sheet equivalent of `--in-transcript`. |
