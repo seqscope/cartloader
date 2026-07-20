@@ -47,6 +47,22 @@ cartloader run_together --platform stereoseq --saw /path/to/saw \
 ```
 
 ---
+## Counts and gene names
+
+Both ingests read **`ExonCount`** (the exonic subset of the MIDs), not `MIDCount`, and **rows with a zero count are dropped** — a large share of rows, since many MIDs have no exonic overlap.
+
+!!! note "The count column is resolved by name, not position"
+    `ExonCount` is the last column of the bin1 GEM but **not** of the cell-bin GEM, where `CellID` follows it. A positional filter (`grep -v -w 0$`) is therefore wrong on cellbin in both directions: it keeps zero-count rows whose `CellID` is non-zero, and discards real counts whose `CellID` is `0`. Both ingests read the header and select the named column, so layout differences between GEM variants are handled. A `CellID` of `0` is preserved and treated as unassigned later by `pixel2sptsv --ignore-ids`.
+
+Features are read from **`geneName`** (the gene symbol), not `geneID` (Ensembl id). Symbols are what CartoScope displays, and they are what the exclude-feature regexes are written against — `Gm[0-9]`, `mt-`, `Rps`, `Rpl` match nothing at all against Ensembl ids, so using `geneID` would silently disable that filtering.
+
+Override both together if a GEM variant differs:
+
+```json
+{ "ingest": { "csv_colnames": { "feature": "geneID", "count": "MIDCount" } } }
+```
+
+---
 ## Coordinates
 
 Stereo-seq GEM coordinates are on a **0.5 µm grid**, so ingest passes `--units-per-um 2` to convert them to microns. The registered histology is at the same 0.5 µm/pixel, so it is georeferenced with `--px-per-um-x/y 2` (single-channel) or `--um-per-pixel 0.5` (RGB) and lands in the same frame with no further transform.
@@ -84,10 +100,10 @@ which the cells stage passes to `run_ficture2_multi_cells --tsv-list`. Cells are
 Cell analysis runs only when `{prefix}.cellbin.gef` is present; without it the run is pixel-level (FICTURE → packaging).
 
 !!! danger "Feature naming must match between the two GEMs"
-    The cell clusters are projected onto a model trained from the bin1 features. If the two GEMs name genes differently (`geneID` vs `geneName`, symbol vs Ensembl id), the projection yields **near-empty cells rather than an error**. The converter therefore checks its features against the pixel run's feature file and fails the run if fewer than 50% overlap. Both ingests read `geneID` by default; to use symbols instead, set both together:
+    The cell clusters are projected onto a model trained from the bin1 features. If the two GEMs name genes differently (`geneID` vs `geneName`, Ensembl id vs symbol), the projection yields **near-empty cells rather than an error**. The converter therefore checks its features against the pixel run's feature file and fails the run if fewer than 50% overlap. Both ingests read `geneName` by default; to switch, set both together:
 
     ```json
-    { "ingest": { "csv_colnames": { "feature": "geneName" } } }
+    { "ingest": { "csv_colnames": { "feature": "geneID" } } }
     ```
 
 ---

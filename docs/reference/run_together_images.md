@@ -29,6 +29,7 @@ All three share the **same field vocabulary**. Built-in profiles also **auto-det
 | `convert` | | `ome2png` \| `png2pmtiles` \| `none`. Defaults from the source extension (`.png` → none; `.tif` → `ome2png`). |
 | `um_per_pixel` | | Microns per pixel, for a plain (non-OME) image that carries no pixel-size metadata. Sets `--px-per-um-x/y` (single-channel) or `--um-per-pixel` (rgb). E.g. `0.5` for a Stereo-seq `*_regist.tif`. |
 | `georef_plain` | | `true` to map the upper-left corner to (0,0) and the lower-right to the image size, scaled by `um_per_pixel` (`rgb` images). |
+| `georeferenced` | | `true` if the image already carries its own CRS/geotransform (e.g. a Seq-Scope H&E TIF registered upstream): it is tiled as-is, skipping georeferencing and therefore `georef_plain`/`um_per_pixel` (`rgb` images; else the profile's `image_defaults`). |
 
 Blank cells (`` / `-` / `.` / `NA`) mean *unset*.
 

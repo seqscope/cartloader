@@ -35,7 +35,7 @@ cartloader run_together --platform merfish \
 
 | Flag | Sample-sheet column | Meaning |
 |------|--------------------|---------|
-| `--in-dir` | `in_dir` | Raw platform directory → every role auto-detected inside it |
+| `--in-dir` | `in_dir` | Raw platform directory → every role auto-detected inside it. A platform may instead consume the directory whole (Seq-Scope: it *is* the MEX directory) |
 | `--in-prefix` | `in_prefix` | Raw platform **path prefix** → roles auto-detected by suffix (Stereo-seq) |
 | `--in-transcript` | `raw_transcript` | Raw transcript CSV/TSV to ingest (through `sge_convert`) |
 | `--in-cell-xy` | `xy` | Cell centroids / metadata file |

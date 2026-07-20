@@ -425,7 +425,8 @@ def image_row_to_spec(row, cfg, in_dir):
         if val:
             spec["transform_flag"] = tr["flag"]
             spec["transform_path"] = _abs_in_dir(val, in_dir)
-    for k in ("shrink_factor", "high_memory", "convert", "um_per_pixel", "georef_plain"):
+    for k in ("shrink_factor", "high_memory", "convert", "um_per_pixel",
+              "georef_plain", "georeferenced"):
         if row.get(k):
             spec[k] = row[k]
     # A plain .png needs no OME->PNG conversion; a .tif/.ome.tif does (default).
@@ -558,6 +559,13 @@ def cmd_sge_convert(cfg, sge_dir, s):
             sys.exit(f"ERROR: {cfg['platform']} ingest expects a single path for the '{role}' role "
                      f"for {flag}, not a bcd/ftr/mtx triple.")
         parts.append(f"{flag} {val}")
+    # A platform whose whole input IS the directory (SeqScope: --in-dir is the MEX
+    # directory holding barcodes/features/matrix, with no standard parent layout).
+    if ing.get("in_dir_flag"):
+        if not in_dir:
+            sys.exit(f"ERROR: {cfg['platform']} ingest reads its input directory directly; "
+                     f"provide it with --in-dir <dir> (or an 'in_dir' sample-sheet column).")
+        parts.append(f"{ing['in_dir_flag']} {in_dir}")
     if not raw_tx and "autodetect" in ing:
         if not in_dir:
             names = ", ".join(c["file"] for c in ing["autodetect"])
@@ -936,6 +944,14 @@ def _cmd_rgb_image(cfg, s, iid, src, cart_dir, settings):
     catalog = os.path.join(cart_dir, "catalog.yaml")
     prefix = os.path.join(cart_dir, iid)
     cmds, upp = [], ""
+    # An image that already carries a CRS/geotransform (e.g. a Seq-Scope H&E TIF
+    # registered upstream) is tiled as-is: no bounds have to be synthesized, so the
+    # georeference step — and with it --georef-plain/--um-per-pixel — is skipped.
+    if _truthy(settings.get("georeferenced", cfg.get("image_defaults", {}).get("georeferenced"))):
+        cmds.append(f"cartloader image_png2pmtiles --in-img {src} --out-prefix {prefix} "
+                    f"--geotif2mbtiles --mbtiles2pmtiles")
+        cmds.append(catalog_image_line(cfg, catalog, iid, cart_dir))
+        return cmds
     jrel = settings.get("um_per_pixel_json")
     if jrel and s.get("in_dir"):
         jpath = os.path.join(s["in_dir"], jrel)

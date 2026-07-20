@@ -15,7 +15,7 @@ For the profile mechanics (input modes, the canonical config, layer merging), se
 | `merfish` (Vizgen MERSCOPE) | ✅ built-in | `sge_convert` (`vizgen_merscope`) | [MERSCOPE page](./platforms/merscope.md) |
 | `illumina` (Illumina StrataMap) | ✅ built-in | `sge_convert` (`illumina`) | [Illumina StrataMap page](./platforms/illumina.md) |
 | `stereoseq` (BGI Stereo-seq) | ✅ built-in | SAW `gef2gem` + `sge_convert` (`bgi_stereoseq`) | [Stereo-seq page](./platforms/stereoseq.md) |
-| `seqscope` | ⏳ planned | `sge_convert` | [below](#platforms-without-a-built-in-profile-yet) |
+| `seqscope` (Seq-Scope) | ✅ built-in | `sge_convert` (`seqscope`) | [Seq-Scope page](./platforms/seqscope.md) |
 | `pixel_seq`, `nova_st` | ⏳ planned | `sge_convert` | [below](#platforms-without-a-built-in-profile-yet) |
 | `generic` (custom CSV/TSV) | via custom profile | `sge_convert` | [below](#platforms-without-a-built-in-profile-yet) |
 
@@ -33,6 +33,7 @@ Each page documents the expected input files/columns, the FICTURE/packaging defa
 - [**MERSCOPE / MERFISH**](./platforms/merscope.md) — individual files or a standard export dir; cell analysis from boundaries, a cell×gene matrix, or an existing `cell_id` (incl. mixed joint runs).
 - [**Illumina StrataMap**](./platforms/illumina.md) — MEX input with spatial coordinates embedded in the barcode; optional cell boundaries enable cell-level analysis.
 - [**BGI Stereo-seq**](./platforms/stereoseq.md) — prefix-addressed binary GEFs expanded by SAW (`--saw`); cell-bin segmentation clustered from its own pixel TSV; registered histology at 0.5 µm/pixel.
+- [**Seq-Scope**](./platforms/seqscope.md) — `--in-dir` *is* the MEX directory; nanometer barcode coordinates, five-column counts (gene-exon by default); pixel-level only (no segmentation); pre-georeferenced H&E.
 
 ---
 ## Platforms without a built-in profile yet

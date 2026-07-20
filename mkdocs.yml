@@ -97,6 +97,7 @@ nav:
               - MERSCOPE (MERFISH): reference/platforms/merscope.md
               - Illumina StrataMap: reference/platforms/illumina.md
               - BGI Stereo-seq: reference/platforms/stereoseq.md
+              - Seq-Scope: reference/platforms/seqscope.md
       - SGE Preparation:
           - SGE Format Conversion: reference/sge_convert.md
           - CosMx Reformatting: reference/reformat_cosmx.md

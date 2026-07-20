@@ -93,8 +93,13 @@ def update_csvformat_by_platform(args):
         "bgi_stereoseq": {
             "x": "x",
             "y": "y",
-            "feature_name": "geneID",
-            "count": "MIDCounts",
+            # Gene symbol, not the Ensembl id in geneID: symbols are what CartoScope
+            # displays and what the exclude-feature regexes (Gm[0-9], mt-, Rps, Rpl)
+            # are written against.
+            "feature_name": "geneName",
+            # Exonic subset of the MIDs, not the raw MIDCount. Zero-count rows are
+            # dropped downstream by sge_format_generic.
+            "count": "ExonCount",
             "delim": None,
             "comment": False
         },

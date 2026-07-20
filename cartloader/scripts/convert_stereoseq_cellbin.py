@@ -13,11 +13,14 @@ import sys, os, gzip, argparse, inspect
 # which run_together hands to run_ficture2_multi_cells as a `--tsv-list` entry. That
 # column order matches the tool's --colidx-* defaults (1,2,3,4,5).
 #
+# Counts come from `ExonCount` (the exonic subset of the MIDs), matching the bin1
+# ingest; zero-count rows are dropped rather than carried through as empty entries.
+#
 # The cell clusters derived from this file are projected onto the pixel-level model
 # trained from the bin1 transcript, so the feature names here MUST match the ones
-# sge_convert wrote for bin1 (both default to the GEM's `geneID` column). Pass
-# --check-features to verify that against the pixel run's feature file instead of
-# discovering the mismatch as a run of near-empty cells.
+# sge_convert wrote for bin1 (both default to the GEM's `geneName` column, i.e. the
+# gene symbol). Pass --check-features to verify that against the pixel run's feature
+# file instead of discovering the mismatch as a run of near-empty cells.
 
 
 def flexopen(path, mode="rt"):
@@ -46,17 +49,25 @@ def parse_arguments(_args):
                           'this run fails if fewer than --min-feature-overlap of them appear here.')
     key.add_argument('--min-feature-overlap', type=float, default=0.5,
                      help='Fraction of --check-features features that must be present (default: 0.5)')
+    key.add_argument('--check-features-colname', type=str, default='gene',
+                     help="Feature-name column in --check-features (default: gene). This is "
+                          "sge_convert's OUTPUT column name (--colname-feature-name), not the GEM's "
+                          "input column; falls back to the first column if absent.")
     key.add_argument('--allow-offset', action='store_true', default=False,
                      help='Proceed even when the GEM header declares a non-zero OffsetX/OffsetY. By '
                           'default a non-zero offset is an error: the offset would shift the cells '
                           'relative to the pixel transcript and the registered histology.')
 
     incol = parser.add_argument_group("Input Column Parameters")
-    incol.add_argument('--colname-feature', type=str, default='geneID',
-                       help='Feature column in --in-gem (default: geneID; must match the bin1 ingest)')
+    incol.add_argument('--colname-feature', type=str, default='geneName',
+                       help='Feature column in --in-gem (default: geneName, the gene symbol; must match '
+                            'the bin1 ingest). Symbols are what CartoScope displays and what the '
+                            'exclude-feature regexes match, so prefer them over geneID (Ensembl ids).')
     incol.add_argument('--colname-x', type=str, default='x', help='X column in --in-gem (default: x)')
     incol.add_argument('--colname-y', type=str, default='y', help='Y column in --in-gem (default: y)')
-    incol.add_argument('--colname-count', type=str, default='MIDCount', help='Count column in --in-gem (default: MIDCount)')
+    incol.add_argument('--colname-count', type=str, default='ExonCount',
+                       help='Count column in --in-gem (default: ExonCount, the exonic subset of the '
+                            'MIDs; must match the bin1 ingest). Rows whose count is zero are dropped.')
     incol.add_argument('--colname-cell', type=str, default='CellID', help='Cell-id column in --in-gem (default: CellID)')
 
     if len(_args) == 0:
@@ -66,8 +77,8 @@ def parse_arguments(_args):
 
 
 def read_check_features(path, colname_feature):
-    """Read the feature names from sge_convert's feature file (a TSV whose first
-    column is the feature name, matching --colname-feature of the bin1 ingest)."""
+    """Read the feature names from sge_convert's feature file (a TSV whose header
+    names the feature column with sge_convert's OUTPUT name, 'gene' by default)."""
     if not os.path.exists(path):
         sys.exit(f"ERROR: --check-features file not found: {path}\n"
                  f"       This should be the feature file sge_convert wrote for the bin1 GEM "
@@ -93,7 +104,7 @@ def convert_stereoseq_cellbin(_args):
         os.makedirs(out_dir, exist_ok=True)
 
     seen_features = set()
-    n_in = n_out = 0
+    n_in = n_out = n_zero = 0
 
     with flexopen(args.in_gem, "rt") as rf:
         # The '#Key=Value' preamble carries the coordinate origin. A non-zero offset
@@ -131,8 +142,12 @@ def convert_stereoseq_cellbin(_args):
                 if len(toks) < ncol:
                     continue
                 n_in += 1
+                # Drop zero-count rows. With ExonCount as the count column a large
+                # share of rows are 0 (a MID with no exonic overlap); carrying them
+                # through would add cells and features made entirely of empty counts.
                 cnt = toks[col["cnt"]]
-                if cnt == "0":
+                if not float(cnt) > 0:
+                    n_zero += 1
                     continue
                 gene = toks[col["ftr"]]
                 seen_features.add(gene)
@@ -141,13 +156,13 @@ def convert_stereoseq_cellbin(_args):
                 wf.write(f"{x}\t{y}\t{gene}\t{cnt}\t{toks[col['cell']]}\n")
                 n_out += 1
 
-    print(f"Converted {args.in_gem}: {n_in} rows read, {n_out} written, "
-          f"{len(seen_features)} distinct features -> {args.out}")
+    print(f"Converted {args.in_gem}: {n_in} rows read, {n_zero} dropped as zero-count, "
+          f"{n_out} written, {len(seen_features)} distinct features -> {args.out}")
 
     # The cell counts are projected onto a model trained on the bin1 features; a naming
     # mismatch between the two GEMs produces empty cells rather than an error, so check.
     if args.check_features:
-        want = read_check_features(args.check_features, args.colname_feature)
+        want = read_check_features(args.check_features, args.check_features_colname)
         if not want:
             sys.exit(f"ERROR: no features read from {args.check_features} (--check-features).")
         overlap = len(want & seen_features) / len(want)
@@ -162,7 +177,7 @@ def convert_stereoseq_cellbin(_args):
                      f"use different feature naming, which would silently yield empty cells.\n"
                      f"       pixel features: {examples_pixel}\n"
                      f"       cell features:  {examples_cell}\n"
-                     f"       Set --colname-feature (e.g. geneName) so both ingests use the same column.")
+                     f"       Set --colname-feature (geneName or geneID) so both ingests use the same column.")
         print(f"Feature check: {overlap:.1%} of {len(want)} pixel-level features present.")
 
 
