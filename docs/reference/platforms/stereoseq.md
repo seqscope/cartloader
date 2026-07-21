@@ -87,6 +87,27 @@ saw convert gef2gem --cellbin-gef {prefix}.cellbin.gef \
     The GEMs are removed after ingest, so `--restart` (or deleting `mk/sge.*.done`) pays the SAW conversion again. Use `--skip ingest` to resume from a completed ingest.
 
 ---
+## Skipping SAW: supplying pre-processed inputs
+
+To test alternative filtering, or when SAW output is already on hand, you can bypass the GEFs (and SAW) entirely and feed the pipeline the two files ingest would otherwise produce. Provide them as **roles** in a `--samples` sheet or a `--config` JSON — there are no CLI flags for these — and `--saw` is then not required.
+
+| Role | Replaces | Format |
+|------|----------|--------|
+| `transcript` (alias `tsv`) | `tissue.gef` → bin1 | **gzipped** TSV with header `X<TAB>Y<TAB>gene<TAB>count`, coordinates in **µm** (i.e. already divided by 2). Skips ingest, so no feature filtering / scaling is applied — do it yourself. |
+| `cell_tsv` | `cellbin.gef` | **headerless** TSV, columns `X Y gene count cell_id` (µm). This is exactly what `convert_stereoseq_cellbin` emits; it feeds `run_ficture2_multi_cells --tsv-list`. |
+
+```
+id    transcript                 cell_tsv
+C1    /data/C1.tx.tsv.gz         /data/C1.cells.tsv
+```
+
+```bash
+cartloader run_together --platform stereoseq --samples samples.tsv --out-dir OUT --width 12 --n-factor 24
+```
+
+Giving a `transcript` role skips **all** ingest for that sample, including the cell-bin conversion — so pair it with an explicit `cell_tsv` if you want cell analysis (a `cellbin_gef` is ignored once `transcript` is present). Omit `cell_tsv` for a pixel-only run. Mixing is fine: some samples from GEFs (with `--saw`), others from pre-processed roles, in one sheet.
+
+---
 ## Cell-level analysis
 
 Stereo-seq is the one platform where cell identity **cannot be attached to the pixel-level transcript**: the cell-bin GEM's rows cannot be mapped back onto the bin1 GEM. So instead of a `cell_id` column on the transcript, the cell-bin GEM becomes a standalone pixel TSV:

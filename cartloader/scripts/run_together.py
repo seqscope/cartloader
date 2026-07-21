@@ -43,6 +43,20 @@ ROLE_LIST_FLAG = {
     "mex": "--mex-list",
     "cell_tsv": "--tsv-list",
 }
+# Recognized top-level keys in a --config JSON. Anything else aborts build_config
+# (unless --allow-unknown-config-keys), since unknown keys are otherwise silently
+# dropped. Nested/per-file overrides (e.g. csv_colnames) live under these, not here.
+KNOWN_CONFIG_KEYS = frozenset({
+    # sample selection / output
+    "platform", "samples", "out_dir", "out_root", "saw",
+    # scalar decode override consumed directly from cfg
+    "colname_cell", "exclude_feature_regex",
+    # dict blocks deep-merged into the profile (Layer 2)
+    "ingest", "roles", "cartload", "ficture_defaults", "squares", "cell_import",
+    "hne", "image_transform", "image_defaults", "publish", "resources",
+    # list blocks merged by id
+    "ficture", "cell_analyses", "images",
+})
 # transcript column-override key -> the sge_convert flag that names that input column
 CSV_COLNAME_FLAGS = {
     "x": "--csv-colname-x",
@@ -211,6 +225,17 @@ def resolved_models(analyses):
 def build_config(args):
     cfg = load_json(args.config) if args.config else {}
 
+    # Reject unrecognized top-level config keys: they are otherwise silently dropped,
+    # so a misplaced key (e.g. a top-level "csv_colnames" that belongs under "ingest")
+    # looks applied but has no effect. --allow-unknown-config-keys downgrades this to
+    # the old ignore-and-continue behavior.
+    unknown = [k for k in cfg if k not in KNOWN_CONFIG_KEYS]
+    if unknown and not args.allow_unknown_config_keys:
+        sys.exit(f"ERROR: unrecognized top-level key(s) in --config: {', '.join(sorted(unknown))}. "
+                 f"Recognized keys: {', '.join(sorted(KNOWN_CONFIG_KEYS))}. "
+                 f"(Per-file column overrides like 'csv_colnames' go under 'ingest'.) "
+                 f"Pass --allow-unknown-config-keys to ignore unknown keys instead of failing.")
+
     platform = args.platform or cfg.get("platform")
     if not platform:
         sys.exit("ERROR: --platform (or a 'platform' field in --config) is required.")
@@ -348,11 +373,10 @@ def build_config(args):
     # (--in-transcript raw CSV to ingest, --in-cell-xy, --in-cell-boundary) which
     # need not share a directory or use any standard filename.
     # The SAW binary (Stereo-seq): the GEF inputs are binary and only SAW can read
-    # them, so an ingest method that shells out to it needs the path up front.
+    # them. It is required only when a GEF is actually being converted, so the check
+    # lives in cmds_stereoseq_ingest (a sample that supplies a pre-converted transcript
+    # + cell_tsv skips SAW entirely, and should not need the binary).
     prof["saw"] = args.saw or cfg.get("saw")
-    if prof.get("ingest", {}).get("method") == "stereoseq" and not prof["saw"]:
-        sys.exit("ERROR: the stereo-seq ingest converts the binary .gef inputs with SAW; "
-                 "provide the binary via --saw <path to saw>.")
 
     raw_samples = list(cfg.get("samples", []))
     if args.samples:
@@ -678,7 +702,14 @@ def cmds_stereoseq_ingest(cfg, sge_dir, s):
         sys.exit(f"ERROR: stereo-seq ingest for sample '{s['id']}' found no "
                  f"{ing.get('gef_suffix', '.tissue.gef')} input. Point --in-prefix at the "
                  f"sample prefix (e.g. --in-prefix /data/C04687E314), or give the path in a "
-                 f"'gef' sample-sheet column.")
+                 f"'gef' sample-sheet column. To skip SAW entirely, supply a pre-converted "
+                 f"'transcript' TSV (and a 'cell_tsv' for cell analysis) instead.")
+    # SAW is needed only here, where a GEF is actually converted; a sample that
+    # supplies a pre-converted transcript never reaches this function.
+    if not saw:
+        sys.exit(f"ERROR: converting the .gef inputs for sample '{s['id']}' needs the SAW "
+                 f"binary; provide it via --saw <path to saw>. To skip SAW, supply a "
+                 f"pre-converted 'transcript' TSV (and 'cell_tsv') instead of a GEF.")
 
     bin1_gem = os.path.join(sge_dir, "bin1.gem")
     cmds = [f"{saw} convert gef2gem --bin-size 1 --gef {gef} --gem {bin1_gem}",
@@ -700,9 +731,15 @@ def cmds_stereoseq_ingest(cfg, sge_dir, s):
             f"--in-gem {cellbin_gem}", f"--out {cell_tsv}",
             f"--units-per-um {ing.get('units_per_um', 2)}",
             f"--check-features {feature_f}"]
+    # Carry the same feature/count column overrides sge_convert used for bin1 so the
+    # cellbin GEM is read with matching columns (e.g. protein GEFs use MIDCount, not
+    # the ExonCount default).
     feature_col = ing.get("csv_colnames", {}).get("feature")
     if feature_col:
         conv.append(f"--colname-feature {feature_col}")
+    count_col = ing.get("csv_colnames", {}).get("count")
+    if count_col:
+        conv.append(f"--colname-count {count_col}")
     cmds += [f"{saw} convert gef2gem --cellbin-gef {cellbin_gef} --gef {gef} --cellbin-gem {cellbin_gem}",
              " ".join(conv),
              f"rm -f {cellbin_gem}"]
@@ -1381,6 +1418,10 @@ def parse_arguments(_args):
                    help="Tolerate an unreadable/corrupt OME-TIFF in the images stage: the image is "
                         "warned-and-skipped (and omitted from the catalog) instead of failing the run. "
                         "Re-run with this flag to regenerate the Makefile and resume past a corrupt image.")
+    r.add_argument("--allow-unknown-config-keys", action="store_true",
+                   help="Do not fail on unrecognized top-level keys in --config (they are ignored). "
+                        "By default an unknown key aborts the run, since a misplaced key (e.g. a "
+                        "top-level 'csv_colnames' that belongs under 'ingest') is silently dropped otherwise.")
 
     io = p.add_argument_group("Input/Output")
     io.add_argument("--platform", type=str, help="Platform preset, e.g. 10x_xenium, 10x_visium_hd, cosmx_smi, merfish, generic")
