@@ -84,6 +84,39 @@ def copy_rgb_tsv(in_rgb, out_rgb, restart=False):
         f.write(expected_content)
 
 
+def record_catalog_alias(catalog_path, factor_id, alias_filename, key="alias"):
+    """Record ``key: alias_filename`` on the factor whose id is ``factor_id`` in a
+    CartoScope catalog YAML, editing it in place.
+
+    Handles both catalog shapes: ``assets.factors`` as a list of dicts (the
+    per-sample catalog.yaml) and as a map keyed by hyphenated id (the
+    multi-catalog.yaml). Raises if the factor id is not present, so a mistyped
+    projection id fails the run rather than silently deploying an unreferenced file.
+    """
+    import yaml
+    with open(catalog_path) as f:
+        catalog = yaml.safe_load(f)
+    factors = catalog.get("assets", {}).get("factors")
+    if factors is None:
+        factors = catalog.get("factors")  # legacy top-level map
+    matched = False
+    if isinstance(factors, dict):
+        entry = factors.get(factor_id)
+        if entry is not None:
+            entry[key] = alias_filename
+            matched = True
+    elif isinstance(factors, list):
+        for entry in factors:
+            if entry.get("id") == factor_id:
+                entry[key] = alias_filename
+                matched = True
+                break
+    if not matched:
+        raise ValueError(f"record_catalog_alias: factor '{factor_id}' not found in {catalog_path}")
+    with open(catalog_path, "w") as f:
+        yaml.dump(catalog, f, Dumper=yaml.SafeDumper, default_flow_style=False, sort_keys=False)
+
+
 def render_umap_cmd(in_tsv, out_ndjson, colname_factor="topK", colname_x="UMAP1", colname_y="UMAP2"):
     """Command to convert a UMAP TSV into NDJSON points (via cartloader render_umap)."""
     return " ".join([

@@ -857,6 +857,19 @@ def cmd_cartload(fic_sample_dir, cart_dir, sid, cfg, cell_params):
     return " ".join(parts)
 
 
+def cmd_record_alias(cart_dir, catalog_path, oid, alias_path):
+    """Deploy a companion alias (manual factor labels) beside a projection model:
+    copy it into `cart_dir` as `<oid>-alias.tsv` and record it under the factor's
+    `alias` key in `catalog_path`. Distinct from the AI-generated `alias_ai` that
+    anno_cartload_folder writes; supplied via an `alias` field on a ficture entry."""
+    dst = f"{oid}-alias.tsv"
+    return [
+        f"cp {alias_path} {os.path.join(cart_dir, dst)}",
+        f"python3 -c \"from cartloader.utils.cartload_helper import record_catalog_alias; "
+        f"record_catalog_alias('{catalog_path}', '{oid}', '{dst}')\"",
+    ]
+
+
 def cmd_cartload_multi(fic_dir, cart_root, multi_id, cfg):
     """Package all samples of a joint run via run_cartload2_multi (one call,
     parallel internally, writes per-sample dirs + multi-catalog.yaml)."""
@@ -1211,6 +1224,13 @@ def add_targets(mm, samples, cfg, args):
         multi = len(grp) > 1
         multi_id = os.path.basename(os.path.normpath(out_dir))
 
+        # Companion alias files supplied on ficture entries (e.g. a curated label set
+        # shipped with a projection model): each is deployed beside its factor as
+        # <oid>-alias.tsv and recorded under the catalog's `alias` key. oid is the
+        # hyphenated model id, matching the factor ids in the deployed catalog(s).
+        alias_specs = [(str(a["id"]).replace("_", "-"), a["alias"])
+                       for a in cfg["ficture"] if a.get("alias")]
+
         # --- cell analyses (platform default; run those whose roles are present) ---
         cells_flag = os.path.join(mkdir, "cells.done")
         # Cell analyses decode against a trained model, so they cannot run without one.
@@ -1223,10 +1243,16 @@ def add_targets(mm, samples, cfg, args):
         cart_prereq = cells_flag if (active_cells and on("cells")) else fic_flag
         multi_cart_flag = os.path.join(mkdir, "cartload.done")
         if multi and on("cartload"):
-            mm.add_target(multi_cart_flag, [cart_prereq], [
-                f"mkdir -p {cart_root}",
-                cmd_cartload_multi(fic_dir, cart_root, multi_id, cfg),
-                f"touch {multi_cart_flag}"])
+            cmds = [f"mkdir -p {cart_root}",
+                    cmd_cartload_multi(fic_dir, cart_root, multi_id, cfg)]
+            # Record each alias in the shared multi-catalog and in every per-sample
+            # catalog (run_cartload2_multi has written all of them by this point).
+            for oid, alias_path in alias_specs:
+                cmds += cmd_record_alias(cart_root, os.path.join(cart_root, "multi-catalog.yaml"), oid, alias_path)
+                for s in grp:
+                    sample_cart = os.path.join(cart_root, f"{multi_id}-{s['id']}")
+                    cmds += cmd_record_alias(sample_cart, os.path.join(sample_cart, "catalog.yaml"), oid, alias_path)
+            mm.add_target(multi_cart_flag, [cart_prereq], cmds + [f"touch {multi_cart_flag}"])
 
         # --- cartload + images (per sample); collect each sample's post-images flag ---
         sample_ctx = []   # (sample, cart_dir, base_prereq)
@@ -1249,10 +1275,11 @@ def add_targets(mm, samples, cfg, args):
                 cell_params = [os.path.join(fic_sample_dir, f"ficture.{c['id']}.params.json")
                                for c in active_cells if s["id"] in c["sids"]]
                 if on("cartload"):
-                    mm.add_target(cart_flag, [cart_prereq], [
-                        f"mkdir -p {cart_dir}",
-                        cmd_cartload(fic_sample_dir, cart_dir, catalog_id, cfg, cell_params),
-                        f"touch {cart_flag}"])
+                    cmds = [f"mkdir -p {cart_dir}",
+                            cmd_cartload(fic_sample_dir, cart_dir, catalog_id, cfg, cell_params)]
+                    for oid, alias_path in alias_specs:
+                        cmds += cmd_record_alias(cart_dir, os.path.join(cart_dir, "catalog.yaml"), oid, alias_path)
+                    mm.add_target(cart_flag, [cart_prereq], cmds + [f"touch {cart_flag}"])
 
             img_prereq = cart_flag if on("cartload") else cart_prereq
             img_flag = os.path.join(mkdir, f"images.{s['id']}.done")
