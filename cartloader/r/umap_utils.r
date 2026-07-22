@@ -56,6 +56,18 @@ prepare_topic_matrix <- function(df, meta_cols, sqrt_transform = TRUE, zero_fill
 
 run_umap_embedding <- function(mat, n_neighbors = 50, threads = 8, pca_dims = 0, metric = "cosine") {
   pca_arg <- if (pca_dims > 0) pca_dims else NULL
+
+  # uwot's multithreaded Annoy search writes the NN index to a temp file under
+  # tempdir() and memory-maps it from each worker thread. On shared/HPC nodes the
+  # R session temp dir can be cleaned up mid-run; ann$save() then fails silently
+  # ("Unable to open: No such file or directory"), file.size() returns NA, and
+  # uwot dies with "missing value where TRUE/FALSE needed" in its `fsize` check.
+  # Recreate the temp dir if it has gone missing before running the embedding.
+  tdir <- tempdir(check = TRUE)
+  if (!dir.exists(tdir)) {
+    dir.create(tdir, recursive = TRUE, showWarnings = FALSE)
+  }
+
   uwot::umap2(
     X            = mat,
     metric       = metric,
