@@ -832,6 +832,19 @@ def cmd_cells(ca, list_files, fic_dir, model_path, cfg):
             cell_col = xy_cfg.get("colname_cell", cfg.get("colname_cell"))
             if cell_col is not None:
                 parts.append(f"--xy-colname-cell-id '{cell_col}'")
+        if role == "boundaries":
+            # A boundaries `format` opts the decode into deriving per-cell centroids from
+            # the polygons (for samples that have boundaries but no cell XY, e.g. default
+            # Visium HD segmentation). Without it, boundaries stay pass-through.
+            bnd = cfg.get("roles", {}).get("boundaries", {})
+            if bnd.get("format"):
+                parts.append(f"--boundaries-format {bnd['format']}")
+                if bnd.get("cell_id_format"):
+                    parts.append(f"--boundaries-cell-id-format '{bnd['cell_id_format']}'")
+                if bnd.get("cell_id_prop"):
+                    parts.append(f"--boundaries-cell-id-prop {bnd['cell_id_prop']}")
+                if bnd.get("units_key"):
+                    parts.append(f"--boundaries-units-key {bnd['units_key']}")
     if cfg.get("_sm_cells"):   # single-molecule for cell decode (default OFF)
         parts.append("--single-molecule")
     if cfg.get("exclude_feature_regex"):
@@ -1407,6 +1420,7 @@ def plan_cell_analyses(grp, sge_root, cfg, fic_dir, default_model_id, multi):
         contributing, list_roles = _resolve_cell_inputs(ca, grp, cfg)
         if contributing is None:
             continue
+        bnd = cfg.get("roles", {}).get("boundaries", {})
         list_files = {}
         for role in list_roles:
             # Only the contributing samples that actually supply this role (a mixed run
@@ -1415,7 +1429,14 @@ def plan_cell_analyses(grp, sge_root, cfg, fic_dir, default_model_id, multi):
             path = os.path.join(sge_root, f"in_{role}.{ca['id']}.tsv")
             with open(path, "w") as f:
                 for s in samples_with:
-                    f.write(_role_list_line(s["id"], role, s["roles"][role]))
+                    # For geojson boundaries, append the sample's scale JSON as a third
+                    # column so the decode can rescale polygon coords into microns when
+                    # deriving centroids (units_json is relative to the sample's in_dir).
+                    if role == "boundaries" and bnd.get("units_json") and s.get("in_dir"):
+                        scale_json = _abs_in_dir(bnd["units_json"], s["in_dir"])
+                        f.write(f"{s['id']}\t{s['roles'][role]}\t{scale_json}\n")
+                    else:
+                        f.write(_role_list_line(s["id"], role, s["roles"][role]))
             list_files[role] = path
         model_id = ca.get("model_id", default_model_id)
         model_path = os.path.join(fic_dir, f"{model_id}.model.tsv")

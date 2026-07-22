@@ -3,6 +3,7 @@ from venv import logger
 import pandas as pd
 from cartloader.utils.minimake import minimake
 from cartloader.utils.utils import cmd_separator, scheck_app, add_param_to_cmd, read_minmax, flexopen, execute_makefile
+from cartloader.utils.geometry_helper import iter_geojson_cell_centroids, CENTROID_SUPPORTED_FORMATS
 
 repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -77,10 +78,14 @@ def parse_arguments(_args):
     aux_params.add_argument('--list-samples', type=str, help='Path to a TSV file containing sample IDs and paths to their transcript TSV files for multi-sample analysis. If provided, the samples listed in the file will be used for analysis.')
     aux_params.add_argument('--list-cluster', type=str, help='Path to a existing cluster files to create pseudobulk matrix in the format of [SAMPLE_ID] [CLUSTER_FILE]. If provided, Leiden clustering will be skipped, and the provided cluster files will be used for pseudobulk generation.')
     aux_params.add_argument('--list-xy', type=str, help='Path to a existing file containing X/Y locations of each cell. If provided, X/Y locations will be read from the provided file instead of computing from pixel file.')
-    aux_params.add_argument('--list-boundaries', type=str, help='Path to a existing file containing cell boundaries. This file will simply be stored in the output JSON for future use.')
+    aux_params.add_argument('--list-boundaries', type=str, help='Path to an existing file containing cell boundaries, as [SAMPLE_ID] [BOUNDARIES_FILE] or [SAMPLE_ID] [BOUNDARIES_FILE] [SCALE_JSON]. The path is stored in the output JSON; when a sample has boundaries but no --list-xy entry and --boundaries-format supports it, per-cell centroids are derived from the polygons (rescaled into microns using microns_per_pixel from the optional third-column SCALE_JSON).')
     aux_params.add_argument('--xy-colname-cell-id', type=str, default="cell_id", help='Column name for cell IDs in the metadata file (default: cell_id)')
     aux_params.add_argument('--xy-colname-x', type=str, default="X", help='Column name for X coordinates in the metadata file (default: X)')
     aux_params.add_argument('--xy-colname-y', type=str, default="Y", help='Column name for Y coordinates in the metadata file (default: Y)')
+    aux_params.add_argument('--boundaries-format', type=str, default=None, choices=[None, "geojson"], help='Format of the --list-boundaries files. Set (e.g. "geojson") to enable deriving per-cell centroids from the boundary polygons for samples that have boundaries but no --list-xy entry (default: None, i.e. boundaries are pass-through only).')
+    aux_params.add_argument('--boundaries-cell-id-format', type=str, default="cellid_{:09d}-1", help='Python format string applied to each boundary feature cell id so the derived centroid id matches the cell barcode convention used for clustering (default: "cellid_{:09d}-1", the Visium HD segmented convention). Use "{}" to keep the raw id.')
+    aux_params.add_argument('--boundaries-cell-id-prop', type=str, default="cell_id", help='GeoJSON feature property holding the cell id (default: cell_id)')
+    aux_params.add_argument('--boundaries-units-key', type=str, default="microns_per_pixel", help='Key in the third-column SCALE_JSON giving microns per pixel; centroids are rescaled by this value into microns (default: microns_per_pixel)')
     aux_params.add_argument('--zero-based-clust-id', action='store_true', default=False, help='Whether the cluster IDs in the existing cluster files provided by --list-cluster are zero-based. By default, it is assumed that the cluster IDs are one-based and will be converted to zero-based by subtracting 1. If the cluster IDs are already zero-based, please turn on this option to avoid incorrect cluster ID conversion.')
 
     # AUX gene-filtering params
@@ -337,6 +342,7 @@ def run_ficture2_multi_cells(_args):
         mm.add_target(f"{lda_prefix}.done", deps, cmds);
 
     samp2boundaries = {}
+    xy_samples = set()   # sample ids for which a per-cell scatter (cell.xy) was produced
     if args.leiden:
         lda_prefix = os.path.join(args.out_dir, args.out_prefix) + ".lda"
         leiden_prefix = os.path.join(args.out_dir, args.out_prefix) + ".leiden"
@@ -422,6 +428,35 @@ def run_ficture2_multi_cells(_args):
                     if not os.path.exists(xy_file):
                         raise FileNotFoundError(f"File not found: {xy_file} (from --list-xy)")
                     samp2xy[sample_id] = xy_file
+        # Boundary files (optional 3rd column = per-sample scale JSON for unit rescaling).
+        # Parsed before the scatter loop so that centroids can be derived for samples that
+        # have boundaries but no --list-xy entry (e.g. default Visium HD segmentation).
+        samp2boundaries_scale = {}
+        if args.list_boundaries is not None:
+            with flexopen(args.list_boundaries, "rt") as rf:
+                for line in rf:
+                    toks = line.strip().split("\t")
+                    if len(toks) not in (2, 3):
+                        raise ValueError("Each line in --list-boundaries must have 2 or 3 columns: [SAMPLE_ID] [BOUNDARIES_FILE] [SCALE_JSON (optional)]")
+                    if not os.path.exists(toks[1]):
+                        raise FileNotFoundError(f"File not found: {toks[1]} (from --list-boundaries)")
+                    samp2boundaries[toks[0]] = toks[1]
+                    if len(toks) == 3 and toks[2]:
+                        samp2boundaries_scale[toks[0]] = toks[2]
+
+        def _boundary_units_per_um(sid):
+            # units_per_um = coordinate units per micron = 1 / microns_per_pixel, so the
+            # shared helper rescales polygon coordinates (pixels) into microns. No scale
+            # JSON => assume coordinates are already in microns (units_per_um = 1).
+            sj = samp2boundaries_scale.get(sid)
+            if not sj:
+                return 1.0
+            with open(sj) as jf:
+                mpp = json.load(jf).get(args.boundaries_units_key)
+            if not mpp:
+                raise ValueError(f"'{args.boundaries_units_key}' missing or zero in scale JSON {sj} (from --list-boundaries)")
+            return 1.0 / float(mpp)
+
         merge_cmd = ""
         for sample_id in in_samples:
             sample_lda_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.lda"
@@ -461,13 +496,45 @@ def run_ficture2_multi_cells(_args):
                             y = toks[idx_y]
                             wf_sample.write(f"{cell_id}\t{x}\t{y}\n")
                         nlines += 1
+            elif sample_id in samp2boundaries and args.boundaries_format in CENTROID_SUPPORTED_FORMATS:
+                # No pre-computed cell XY, but boundary polygons are available (e.g. the
+                # default Visium HD segmentation, which ships cell polygons but no
+                # centroids): derive per-cell centroids from the polygons so the
+                # leiden-cluster scatter and cell-point PMTiles can still be produced.
+                metaf = f"{sample_sptsv_prefix}.cell.xy.tsv"
+                upp = _boundary_units_per_um(sample_id)
+                derived_ids = []
+                with flexopen(metaf, "wt") as wf_sample:
+                    wf_sample.write("cell_id\tX\tY\n")
+                    for cid, cx, cy in iter_geojson_cell_centroids(
+                            samp2boundaries[sample_id], upp,
+                            args.boundaries_cell_id_format, args.boundaries_cell_id_prop):
+                        wf_sample.write(f"{cid}\t{cx}\t{cy}\n")
+                        derived_ids.append(cid)
+                # Sanity check (printed so it is visible in the run log): how many derived
+                # centroid ids match the cell barcodes that drive clustering? Leiden ids
+                # are a subset of these, so a low/zero match ratio means the cell_id
+                # conventions disagree and the cell-point layer will be (near) empty --
+                # verify --boundaries-cell-id-format / --boundaries-cell-id-prop.
+                msg = (f"[boundaries->centroids] sample {sample_id}: derived "
+                       f"{len(derived_ids)} centroids (units_per_um={upp:g})")
+                if sample_id in samp2mex:
+                    with flexopen(samp2mex[sample_id][0], "rt") as bf:
+                        barcodes = {ln.split("\t")[0].strip().strip('"') for ln in bf if ln.strip()}
+                    matched = len(set(derived_ids) & barcodes)
+                    pct = (100.0 * matched / len(barcodes)) if barcodes else 0.0
+                    msg += f"; matched {matched}/{len(barcodes)} MEX barcodes ({pct:.1f}%)"
+                    if barcodes and matched == 0:
+                        msg += "  <-- WARNING: ZERO matches; cell-point layer will be empty"
+                print(msg, file=sys.stderr, flush=True)
             elif sample_id in samp2mex:
                 # MEX-based clustering carries no cell coordinates (mex2sptsv writes no
-                # per-cell metadata), so a MEX sample without an xy file has nothing to
-                # place spatially; skip its per-cell leiden-cluster scatter rather than
-                # failing on a missing metadata file. A transcript/boundary-based sample
-                # (not in samp2mex) still has pixel2sptsv metadata and is drawn below.
+                # per-cell metadata), so a MEX sample without an xy file or boundaries has
+                # nothing to place spatially; skip its per-cell leiden-cluster scatter
+                # rather than failing on a missing metadata file. A transcript/boundary-
+                # based sample (not in samp2mex) still has pixel2sptsv metadata, drawn below.
                 continue
+            xy_samples.add(sample_id)   # a per-cell scatter (cell.xy) is produced below
             draw_manifold_rscript=f"{repo_dir}/cartloader/r/draw_manifold_clust.r"
             cmd = f"{args.R} '{draw_manifold_rscript}' --tsv-manifold '{metaf}' --tsv-clust '{sample_leiden_prefix}.tsv.gz' --tsv-colname-x X --tsv-colname-y Y --out '{sample_leiden_prefix}.xy.png' --out-tsv '{sample_leiden_prefix}.xy.tsv.gz' --tsv-colname-clust topK"
             cmds.append(cmd)
@@ -476,19 +543,6 @@ def run_ficture2_multi_cells(_args):
         merge_cmd += f"[ -f '{leiden_prefix}.tsv.gz' ] && touch '{leiden_prefix}.done'"
         cmds.append(merge_cmd)
         mm.add_target(f"{leiden_prefix}.done", [f"{lda_prefix}.done"], cmds)
-
-        ## spatial visualization of leiden clusters
-        if args.list_boundaries is not None:
-            with flexopen(args.list_boundaries, "rt") as rf:
-                for line in rf:
-                    toks = line.strip().split("\t")
-                    if len(toks) != 2:
-                        raise ValueError(f"Each line in --list-boundaries must have exactly 2 columns containing [SAMPLE_ID] [BOUNDARIES_FILE]")
-                    sample_id = toks[0]
-                    boundaries_file = toks[1]
-                    if not os.path.exists(boundaries_file):
-                        raise FileNotFoundError(f"File not found: {boundaries_file} (from --list-boundaries)")
-                    samp2boundaries[sample_id] = boundaries_file
     if args.tsne:
         ## generate TSNE manifolds
         lda_prefix = os.path.join(args.out_dir, args.out_prefix) + ".lda"
@@ -804,10 +858,11 @@ def run_ficture2_multi_cells(_args):
             out_cell_params["sptsv_prefix"] = f"{sample_prefix}.sptsv"
             
         if args.leiden:
-            # cell_xy_path is only produced when the per-cell scatter ran (i.e. cell
-            # coordinates were available); omit it for coordinate-less MEX clustering so
-            # run_cartload2 skips cell-point PMTiles instead of failing on a missing file.
-            if not (sample in samp2mex and sample not in samp2xy):
+            # cell_xy_path is only produced when the per-cell scatter actually ran — i.e.
+            # the sample had cell XY (--list-xy) or centroids derived from its boundary
+            # polygons. Coordinate-less MEX clustering produces none, so run_cartload2
+            # skips cell-point PMTiles instead of failing on a missing file.
+            if sample in xy_samples:
                 out_cell_params["cell_xy_path"] = f"{sample_prefix}.leiden.xy.tsv.gz"
             out_cell_params["cluster_path"] = f"{sample_prefix}.leiden.tsv.gz"
             
@@ -828,7 +883,11 @@ def run_ficture2_multi_cells(_args):
             out_cell_params["manifolds"] = out_manifolds
         if n_samples > 1:
             out_cell_params["analysis_type"] = "multi-sample"
-        if sample in samp2boundaries:
+        # Advertise the boundary path for the cell-boundaries PMTiles layer only for
+        # formats run_cartload2 can tile (vertex CSV). A geojson consumed here is used
+        # solely to derive centroids (its boundaries layer is produced separately, e.g.
+        # by import_visiumhd_cell), so it must not be passed on as cell_boundaries_path.
+        if sample in samp2boundaries and args.boundaries_format not in CENTROID_SUPPORTED_FORMATS:
             out_cell_params["cell_boundaries_path"] = samp2boundaries[sample]
         out_json = { "cell_params": out_cell_params }
 

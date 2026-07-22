@@ -271,7 +271,11 @@ def ficture2_params_to_factor_assets(params, skip_raster=False, cell_params = No
         for cell_param in cell_params:
             model_id = cell_param["model_id"]
             model_rgb = cell_param["cmap"]
-            cell_xy_f = cell_param["cell_xy_path"]
+            # cell_xy_path is optional: it is omitted for coordinate-less MEX
+            # clustering (e.g. standard Visium HD segmented cells), in which case
+            # run_cartload2 skips the cell-point PMTiles. Match that tolerance here
+            # instead of failing with a KeyError.
+            cell_xy_f = cell_param.get("cell_xy_path", None)
             cell_boundaries_f = cell_param.get("cell_boundaries_path", None)
             cell_clust_f = cell_param.get("cluster_path", None)
             cell_info_f = cell_param.get("cluster_info", None)
@@ -296,7 +300,10 @@ def ficture2_params_to_factor_assets(params, skip_raster=False, cell_params = No
                 "heatmap_pdf": model_id + suffix_heatmap_pdf,
                 "heatmap_tsv": model_id + suffix_heatmap_tsv,
                 "pmtiles": {
-                    "cells": model_id + suffix_cells_pmtiles,
+                    # cell-point PMTiles are only built when cell coordinates exist,
+                    # so only advertise them here when cell_xy_path was provided
+                    # (mirrors the `if cell_xy_f is not None` guard in run_cartload2).
+                    **({"cells": model_id + suffix_cells_pmtiles} if cell_xy_f is not None else {}),
                     **({"boundaries": model_id + suffix_boundaries_pmtiles} if cell_boundaries_f is not None else {}),
                     **({"raster": model_id + suffix_raster} if not skip_raster else {})
                 }
