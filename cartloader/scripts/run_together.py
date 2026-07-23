@@ -57,6 +57,36 @@ KNOWN_CONFIG_KEYS = frozenset({
     # list blocks merged by id
     "ficture", "cell_analyses", "images",
 })
+# Recognized keys inside a `samples[]` entry. Anything else is a typo that would be
+# silently dropped (a misspelled role looks provided but is never read), so build_config
+# rejects it unless --allow-unknown-config-keys is set. Covers the canonical roles, their
+# friendly aliases, the explicit mex triple, per-sample images, and the addressing keys.
+KNOWN_SAMPLE_KEYS = frozenset(
+    {"id", "in_dir", "in_prefix", "raw_transcript", "images", "dapi", "hne",
+     "mex_bcd", "mex_ftr", "mex_mtx"}
+    | set(ROLE_KEYS) | set(ROLE_ALIASES)
+)
+# Recognized sub-keys for the closed-schema nested config blocks. An unknown key here is
+# deep_merged into the profile and then never read, so a typo (e.g. "bin_counts") looks
+# applied but has no effect; build_config rejects it (same --allow-unknown-config-keys
+# escape hatch). Only blocks with a fixed key schema are listed: open maps whose sub-keys
+# are data, not schema (roles, csv_colnames, ficture_defaults per-entry fields, publish,
+# hne, image_transform, cell_import, squares), are deliberately omitted.
+KNOWN_SUBKEYS = {
+    "ingest": frozenset({
+        "method", "sge_platform", "units_per_um", "gef_suffix", "feature_file",
+        "in_dir_flag", "raw_input_flag", "input_roles", "inputs", "produces",
+        "autodetect", "assign_cell_id", "csv_colname_cell", "csv_colnames",
+        "csv_colnames_others", "cellxgene_blank_prefix", "extra_flags",
+    }),
+    "cartload": frozenset({"use_pmpoint", "sge_scale", "bin_count"}),
+    "resources": frozenset({"threads", "n_jobs"}),
+    "image_defaults": frozenset({
+        "um_per_pixel", "um_per_pixel_json", "um_per_pixel_key", "georeferenced",
+        "georef_detect", "shrink_factor", "high_memory", "rescale", "rescale_range",
+        "rescale_min", "rescale_max",
+    }),
+}
 # transcript column-override key -> the sge_convert flag that names that input column
 CSV_COLNAME_FLAGS = {
     "x": "--csv-colname-x",
@@ -222,6 +252,31 @@ def resolved_models(analyses):
 # Configuration assembly
 # ---------------------------------------------------------------------------
 
+def _consumable_roles(ingest, cell_analyses):
+    """Roles this platform can consume, given its ingest method and cell analyses. A
+    sample role outside this set is read by no code path on this platform, so it is inert.
+
+    Deliberately a question of platform *capability*, not of one run: `cell_analyses` here
+    is the platform's (profile + config) declared set, NOT the run-mode-mutated one, so a
+    --no-ficture / prepare-only run (which skips cells) does not make its cell roles look
+    invalid. Verified against every role consumption site to be exact for a normal run
+    (never under-reports), which is what lets the caller treat a miss as a hard error."""
+    method = ingest.get("method")
+    roles = {"transcript"}                                  # always the pixel transcript
+    roles |= set(ingest.get("input_roles", {}).values())   # e.g. illumina mex -> --in-mex
+    if method == "stereoseq":
+        roles |= {"gef", "cellbin_gef", "cell_tsv"}         # SAW ingest + its cellbin cells
+    if ingest.get("assign_cell_id"):
+        roles.add("boundaries")                             # tsv-add-cell-id
+    if method not in ("stereoseq", "reformat_cosmx"):
+        roles.add("cellxgene")                              # cellxgene -> mex on the generic path
+    for ca in cell_analyses:
+        roles |= set(ca.get("uses", [])) | set(ca.get("any_uses", [])) | set(ca.get("optional_uses", []))
+        if ca.get("generic_cell"):
+            roles.add("mex")
+    return roles & set(ROLE_KEYS)
+
+
 def build_config(args):
     cfg = load_json(args.config) if args.config else {}
 
@@ -235,6 +290,26 @@ def build_config(args):
                  f"Recognized keys: {', '.join(sorted(KNOWN_CONFIG_KEYS))}. "
                  f"(Per-file column overrides like 'csv_colnames' go under 'ingest'.) "
                  f"Pass --allow-unknown-config-keys to ignore unknown keys instead of failing.")
+
+    # Reject unknown keys one level down, in the same spirit: a misspelled key inside a
+    # sample entry or a closed-schema block is deep_merged in and then never read, so it
+    # looks applied but silently does nothing.
+    if not args.allow_unknown_config_keys:
+        for block, allowed in KNOWN_SUBKEYS.items():
+            bad = [k for k in (cfg.get(block) or {}) if k not in allowed]
+            if bad:
+                sys.exit(f"ERROR: unrecognized key(s) in --config '{block}': {', '.join(sorted(bad))}. "
+                         f"Recognized keys: {', '.join(sorted(allowed))}. "
+                         f"Pass --allow-unknown-config-keys to ignore unknown keys instead of failing.")
+        for i, samp in enumerate(cfg.get("samples") or []):
+            if not isinstance(samp, dict):
+                sys.exit(f"ERROR: --config 'samples[{i}]' must be an object, got {type(samp).__name__}.")
+            bad = [k for k in samp if k not in KNOWN_SAMPLE_KEYS]
+            if bad:
+                sid = samp.get("id", f"index {i}")
+                sys.exit(f"ERROR: unrecognized key(s) in --config sample '{sid}': {', '.join(sorted(bad))}. "
+                         f"Recognized keys: {', '.join(sorted(KNOWN_SAMPLE_KEYS))}. "
+                         f"Pass --allow-unknown-config-keys to ignore unknown keys instead of failing.")
 
     platform = args.platform or cfg.get("platform")
     if not platform:
@@ -250,6 +325,11 @@ def build_config(args):
     prof.setdefault("cell_analyses", [])
     prof.setdefault("images", [])
     prof.setdefault("roles", {})
+    # The platform's structural cell analyses, captured before Layer 1 can wipe them
+    # (--no-ficture). Used only for the inert-role capability check, so a prepare-only run
+    # does not make otherwise-valid cell roles look invalid. The actual run still uses the
+    # (possibly cleared) prof["cell_analyses"].
+    _profile_cell_analyses = list(prof["cell_analyses"])
 
     # Layer 1: tier-1 CLI selects the base FICTURE mode
     if args.no_ficture:
@@ -287,6 +367,28 @@ def build_config(args):
         prof["cell_analyses"] = merge_id_list(prof["cell_analyses"], cfg["cell_analyses"])
     if "images" in cfg:
         prof["images"] = merge_images(prof["images"], cfg["images"])
+
+    # Reject explicit sample roles the platform can never consume (e.g. cell_tsv on
+    # 10x_xenium): the value resolves but no ingest step or cell analysis on this platform
+    # reads it, so it silently has no effect — almost always a wrong --platform, a copy-paste
+    # leftover, or a typo. Judged by platform *capability* (profile + config cell analyses,
+    # not the run-mode-mutated set) so a --no-ficture / prepare-only run does not fail on
+    # cell roles it merely skips. Checks explicit JSON `samples` keys only (auto-detected
+    # roles are not second-guessed). Same --allow-unknown-config-keys escape hatch.
+    if not args.allow_unknown_config_keys:
+        cap_cas = (merge_id_list(_profile_cell_analyses, cfg["cell_analyses"])
+                   if "cell_analyses" in cfg else _profile_cell_analyses)
+        consumable = _consumable_roles(prof.get("ingest", {}), cap_cas)
+        role_of = {**{r: r for r in ROLE_KEYS}, **ROLE_ALIASES}
+        for samp in (cfg.get("samples") or []):
+            inert = sorted({role_of[k] for k in samp
+                            if k in role_of and role_of[k] not in consumable})
+            if inert:
+                sys.exit(f"ERROR: sample '{samp.get('id', '?')}' provides role(s) "
+                         f"{', '.join(inert)} that platform '{platform}' cannot consume; they "
+                         f"would have no effect (wrong --platform, or a leftover/misplaced role?). "
+                         f"Recognized roles for this platform: {', '.join(sorted(consumable))}. "
+                         f"Pass --allow-unknown-config-keys to ignore instead of failing.")
 
     # --- resolve common decode defaults (CLI > config/profile > hardcoded) ---
     # exclude-feature regex
@@ -1467,9 +1569,11 @@ def parse_arguments(_args):
                         "warned-and-skipped (and omitted from the catalog) instead of failing the run. "
                         "Re-run with this flag to regenerate the Makefile and resume past a corrupt image.")
     r.add_argument("--allow-unknown-config-keys", action="store_true",
-                   help="Do not fail on unrecognized top-level keys in --config (they are ignored). "
-                        "By default an unknown key aborts the run, since a misplaced key (e.g. a "
-                        "top-level 'csv_colnames' that belongs under 'ingest') is silently dropped otherwise.")
+                   help="Do not fail on unrecognized keys in --config (they are ignored). By default an "
+                        "unknown key aborts the run, since a misplaced key (e.g. a top-level 'csv_colnames' "
+                        "that belongs under 'ingest') is silently dropped otherwise. Checks top-level keys, "
+                        "sample entries, the closed-schema blocks (ingest, cartload, resources, "
+                        "image_defaults), and sample roles the platform cannot consume.")
 
     io = p.add_argument_group("Input/Output")
     io.add_argument("--platform", type=str, help="Platform preset, e.g. 10x_xenium, 10x_visium_hd, cosmx_smi, merfish, generic")
