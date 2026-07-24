@@ -1,5 +1,7 @@
 import sys, os, argparse, gzip, inspect, datetime
 
+from cartloader.utils.feature_filter import FeatureFilter
+
 
 def flexopen(filename, mode='rt'):
     if filename.endswith('.gz'):
@@ -46,11 +48,16 @@ def parse_arguments(_args):
     parser.add_argument('--out-suffix-meta', type=str, default='.metadata.csv.gz', help='Suffix for the output metadata CSV (default: .metadata.csv.gz)')
     parser.add_argument('--offset-x', type=float, default=0.0, help='Global x offset to add to all x coordinates (in microns)')
     parser.add_argument('--offset-y', type=float, default=0.0, help='Global y offset to add to all y coordinates (in microns)')
+    # Feature filtering happens as the transcript TSV is written, so a dropped feature is
+    # absent from every downstream product of this ingest.
+    ftr = parser.add_argument_group("Feature Filtering Parameters")
+    FeatureFilter.add_arguments(ftr, "the output transcript TSV")
     return parser.parse_args(_args)
 
 
 def reformat_cosmx(_args):
     args = parse_arguments(_args)
+    ftr_filter = FeatureFilter.from_args(args)
 
     custom_log(f"Processing transcript file: {args.tx}")
     with flexopen(args.tx, 'rt') as rf, flexopen(f"{args.out}{args.out_suffix_tx}", 'wt') as wf:
@@ -72,6 +79,8 @@ def reformat_cosmx(_args):
             gene = toks[icol_gene].replace(' ', '-').replace('"', '').replace("'", '')
             if gene.startswith('System'):
                 continue
+            if not ftr_filter.keep(gene):
+                continue
             x_um = float(toks[icol_x]) * args.um_per_px + args.offset_x
             y_um = float(toks[icol_y]) * args.um_per_px + args.offset_y
             z = toks[icol_z]
@@ -80,6 +89,8 @@ def reformat_cosmx(_args):
             if nlines % 1000000 == 0:
                 custom_log(f"  Processed {nlines} transcript lines...")
     custom_log(f"Wrote transcripts to: {args.out}{args.out_suffix_tx}")
+    if ftr_filter.active:
+        custom_log(f"  Dropped {ftr_filter.n_dropped} transcript rows by the feature filters")
 
     if args.poly is not None:
         custom_log(f"Processing polygon file: {args.poly}")

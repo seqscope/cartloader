@@ -1,6 +1,5 @@
 {
   "platform": "10x_visium_hd",
-  "exclude_feature_regex": "^(Unassigned|Neg|BLANK|Blank|Intergenic|Deprecated|System|Gm[0-9]|MT-|mt-|Rps|Rpl|NCS-|NCP-)",
   "ingest": {
     "sge_platform": "10x_visium_hd",
     "inputs": {

@@ -154,7 +154,43 @@ Independent of how inputs are specified, Tier-1 selects the base FICTURE work. E
 
     Applies to **every** platform, not just Seq-Scope. Cell analyses are skipped too (they decode against a model). Cannot be combined with `--n-factor` or `--project-models`. The hexagon files are still built alongside the tiles, so adding factors later re-uses them instead of re-tiling — rerun without `--no-ficture` in the same `--out-dir`.
 
-**Common decode overrides** (else profile / built-in default): `--exclude-feature-regex`, `--min-ct-per-unit-hexagon` (default `50`), and `--always-single-molecule` / `--never-single-molecule` (default: single-molecule **ON** for pixel FICTURE, **OFF** for cell decode). An explicit CLI flag wins over a `--config`/profile value, which wins over the built-in default.
+**Common decode overrides** (else profile / built-in default): `--exclude-feature-regex`, `--include-feature-list` / `--exclude-feature-list`, the `--ingest-*-feature-*` family, `--min-ct-per-unit-hexagon` (default `50`), `--min-ct-per-unit-train`, `--cell-min-cell-count` / `--cell-min-feature-count`, and `--always-single-molecule` / `--never-single-molecule` (default: single-molecule **ON** for pixel FICTURE, **OFF** for cell decode). An explicit CLI flag wins over a `--config`/profile value, which wins over the built-in default.
+
+### Feature filtering: two independent layers
+
+Feature filters come in two flavours that do **not** interact. Each takes a regex and/or a plain text file of feature names (one per line), and each has a default that applies to **every** platform:
+
+| | default regex | rationale |
+|---|---|---|
+| ingest | `^(Unassigned\|Neg\|BLANK\|Blank\|Intergenic\|Deprecated\|System\|NCS-\|NCP-)` | technical artifacts — not genes, so they never enter the data |
+| analysis | `^(Gm[0-9]\|MT-\|mt-\|Rps\|Rpl)` | real genes that distort a factorization — kept in the data, kept out of the models |
+
+Pass `''` to either flag to disable its default; a profile or `--config` value overrides it.
+
+**1. Analysis (FICTURE) filters** — `--include-feature-list` / `--exclude-feature-list` / `--exclude-feature-regex`. These restrict the **factor model only** (`lda4hex --features`); the data — counts, pseudobulk, DE — keep every gene. `--include-feature-list` is the natural place for a highly-variable-gene set: the model is built on those genes, but all genes are still emitted afterwards.
+
+| stage | affected |
+|---|---|
+| ingest, tiled transcripts, feature list, packaged tiles | **no** — every gene is kept |
+| pixel FICTURE: the LDA/projection **model** (and hence pixel decoding, which reads that model) | yes |
+| cell clustering: the LDA is a projection onto the pixel model, so it inherits the same restriction | yes (via the model) |
+| cell **counts, pseudobulk, DE** | **no** — excluded/non-HVG genes stay in and reappear here |
+
+A list and the regex **combine**: the regex narrows what the list leaves. The features the pixel model was trained on are written to `fic/multi.selected_features.tsv` and recorded per model as `feature` in `ficture.params.json`.
+
+Because the restriction lives in the model (not the counts), the cell **pseudobulk and DE report every gene**, and the pixel decode — which reads the restricted model — reports only the model's genes. That asymmetry is intentional: the pixel decode *is* the model, the cell pseudobulk is an independent aggregate of the raw counts.
+
+**2. Ingest filters** — `--ingest-include-feature-list` / `--ingest-exclude-feature-list` / `--ingest-include-feature-regex` / `--ingest-exclude-feature-regex`. These drop features from the transcript TSV as it is written, so a filtered feature is gone from **everything** downstream: the feature list, the packaged tiles, the browser's gene list and every analysis. Use them for features that should not be part of the dataset at all (negative-control probes, blanks); use the analysis filters for features that should be visible but not drive the factorization.
+
+The ingest regex always replaces `sge_convert`'s per-platform default (e.g. Xenium's negative-probe pattern), so one pattern governs every platform.
+
+- Applied by whichever step writes the transcript: `sge_convert`, `reformat_cosmx` (CosMx), and the Stereo-seq cell-bin conversion.
+- Also applied to the **cell count matrices** (`mex2sptsv` / `pixel2sptsv`), so a MEX-derived cell source (a `cell_by_gene` matrix or an external `mex` role) — which never passes through `sge_convert` — drops the same technical artifacts. This is the *only* feature filter on the cell counts; the FICTURE filters deliberately are not applied there (see above), so the cell pseudobulk keeps every real gene.
+- **Ignored, with a warning, for a sample that supplies an already-ingested `transcript`** — that file is used as given. Filter it beforehand, or supply the raw input.
+- On the MEX-based platforms (`10x_visium_hd`, `seqscope`, `illumina`) filtering happens inside `spatula convert-sge`, which accepts only **one** include-type and **one** exclude-type filter; a list and a regex of the same polarity is an error there. Resolve them into one list with `cartloader feature_select`.
+
+!!! warning "Count thresholds are applied before the analysis filter"
+    `--min-ct-per-unit-hexagon` (hexagons) and the cell analysis's minimum cell count are applied over **all** genes, while the model is fit over the **restricted** set. Restricting to a small panel therefore leaves units/cells whose surviving counts are low; lower `--min-ct-per-unit-train` and `--cell-min-cell-count` accordingly. Ingest filters do not have this problem — they run before any counting.
 
 ---
 ## Mode 3 — Full config (JSON)
@@ -166,7 +202,10 @@ Escalate to `--config run.json` when samples need **different** settings, or to 
   "platform": "10x_xenium", "out_dir": "...", "resources": { "n_jobs": 8, "threads": 16 },
   "samples": [ { "id": "s1", "in_dir": "..." } ],   // same fields as sheet columns: in_dir, raw_transcript, transcript, xy, boundaries, clusters, mex, cellxgene
   "exclude_feature_regex": "...",
+  "include_feature_list": "...",                    // or "exclude_feature_list"; factor analyses only
+  "ingest_exclude_feature_regex": "...",            // ingest_{include,exclude}_feature_{regex,list}: drops from the data
   "ficture_defaults": { "decode_scale": 2 },
+  "cell_defaults":    { "min_cell_count": 20 },
   "ficture":       [ /* analyses: each is a de-novo train OR a projection */ ],
   "cell_analyses": [ /* {id, uses:[roles], any_uses?:[roles], optional_uses?:[roles], model_id?} */ ],
   "images":        [ /* see Image Modalities */ ],
@@ -208,7 +247,7 @@ Each entry is either de-novo or a projection:
 { "id": "ref",    "mode": "project", "model": "/models/ref.tsv", "width": 12 }
 ```
 
-`ficture_defaults` (per-analysis decode params like `decode_scale`) apply to **every** analysis, including projections; per-entry keys win.
+`ficture_defaults` (per-analysis decode params like `decode_scale`, `min_ct_per_unit_hexagon`, `min_ct_per_unit_train`) apply to **every** analysis, including projections; per-entry keys win. `cell_defaults` does the same for `cell_analyses` entries (`min_cell_count`, `min_feature_count`).
 
 ### `cell_analyses`
 

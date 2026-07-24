@@ -1,6 +1,5 @@
 {
   "platform": "generic",
-  "exclude_feature_regex": "^(Unassigned|Neg|BLANK|Blank|Intergenic|Deprecated|System|Gm[0-9]|MT-|mt-|Rps|Rpl|NCS-|NCP-)",
   "roles": {
     "transcript": { "file": "transcripts.tsv.gz" },
     "xy":         { "file": "cells.csv.gz", "colname_x": "X", "colname_y": "Y" },

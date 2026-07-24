@@ -96,7 +96,9 @@ def parse_arguments(_args):
     # AUX gene-filtering params
     aux_ftrfilter_params = parser.add_argument_group("Feature Filtering Parameters")
     aux_ftrfilter_params.add_argument('--include-feature-regex', type=str, default=None, help='A regex pattern of feature/gene names to be included')
-    aux_ftrfilter_params.add_argument('--exclude-feature-regex', type=str, default=None, help='A regex pattern of feature/gene names to be excluded (default: "^(BLANK_|Blank-|DeprecatedCodeword_|NegCon|UnassignedCodeword_)" for 10_xenium, None for the rest)')
+    aux_ftrfilter_params.add_argument('--exclude-feature-regex', type=str, default=None, help='A regex pattern of feature/gene names to be excluded (default: "^(BLANK_|Blank-|DeprecatedCodeword_|NegCon|UnassignedCodeword_)" for 10_xenium, None for the rest). Pass "" to filter nothing, including on platforms that have a default.')
+    aux_ftrfilter_params.add_argument('--include-feature-list', type=str, default=None, help='Path to a file listing the feature/gene names (one per line) to be included')
+    aux_ftrfilter_params.add_argument('--exclude-feature-list', type=str, default=None, help='Path to a file listing the feature/gene names (one per line) to be excluded')
 
     # AUX polygon-filtering params
     aux_polyfilter_params = parser.add_argument_group('Density/Polygon Filtering Parameters')
@@ -242,6 +244,7 @@ def convert_illumina(cmds, args):
                 f"--units-per-um {args.units_per_um}",
                 f"--jitter-xy {args.jitter_xy}" if args.jitter_xy > 0 else "",
                 f"--colnames-count {args.colname_count}" if args.colname_count else ""])
+    cmd = add_param_to_cmd(cmd, args, set(aux_sge_args["ftrname"]))
     cmd = add_mexparam_to_cmd(cmd, args, mexarg_mapping)
     cmds.append(cmd)
     return cmds
@@ -364,8 +367,25 @@ def sge_visual_northup(mm, xy_f, xy_northup_f, minmax_f, prereq, srs="EPSG:3857"
 def sge_convert(_args):
     # args
     args=parse_arguments(_args)
-    if args.exclude_feature_regex == "":
+    # An explicitly empty regex means "filter nothing", which also switches off the
+    # per-platform default below; omitting the flag entirely leaves that default in place.
+    no_exclude_feature_regex = args.exclude_feature_regex == ""
+    if no_exclude_feature_regex:
         args.exclude_feature_regex = None
+    for flag, path in (("--include-feature-list", args.include_feature_list),
+                       ("--exclude-feature-list", args.exclude_feature_list)):
+        if path is not None and not os.path.exists(path):
+            raise FileNotFoundError(f"File not found: {path} ({flag})")
+    # The MEX platforms convert through spatula convert-sge, which takes at most one
+    # include-type and one exclude-type feature filter. The generic CSV route (every other
+    # platform) evaluates each filter independently, so there a list and a regex combine.
+    if args.platform in ("10x_visium_hd", "seqscope", "illumina"):
+        for pol in ("include", "exclude"):
+            if getattr(args, f"{pol}_feature_list") and getattr(args, f"{pol}_feature_regex"):
+                sys.exit(f"ERROR: --{pol}-feature-list and --{pol}-feature-regex cannot be combined on "
+                         f"platform '{args.platform}', which filters features inside spatula convert-sge. "
+                         f"Use one of them (or resolve both into a single list with 'cartloader "
+                         f"feature_select').")
     scheck_app(args.gzip)
 
     # input
@@ -412,7 +432,7 @@ def sge_convert(_args):
 
     # params
     if args.platform == "10x_xenium":
-        if args.exclude_feature_regex is None:
+        if args.exclude_feature_regex is None and not no_exclude_feature_regex:
             # Negative probe patterns:
             #   BLANK_*
             #   DeprecatedCodeword_*

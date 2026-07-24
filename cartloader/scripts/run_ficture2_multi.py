@@ -53,6 +53,7 @@ def parse_arguments(_args):
     # segmentation - ficture
     aux_params.add_argument('--min-count-per-sample', type=int, default=50, help='Minimum count per sample in the tiled SGE (default: 50)')
     aux_params.add_argument('--min-ct-per-unit-hexagon', type=int, default=50, help='Minimum count per hexagon in hexagon segmentation in FICTURE compatible format (default: 50)')
+    aux_params.add_argument('--min-ct-per-unit-train', type=int, default=None, help='Minimum count per hexagon during LDA training/projection, counted over the features the analysis actually uses (default: punkst default). Worth raising/lowering when the feature filters below restrict the analysis to a small panel, since --min-ct-per-unit-hexagon is applied earlier, over all features.')
     # minibatch
     aux_params.add_argument('--minibatch-size', type=int, default=500, help='Batch size used in minibatch processing (default: 500)')
     # train
@@ -75,9 +76,15 @@ def parse_arguments(_args):
     aux_params.add_argument('--retrain', action='store_true', default=False, help='If set, retain the pre-trained model. Only applicable when --pretrained-model is set.')
 
     # AUX gene-filtering params
+    # The filters below restrict the features that LDA training/projection (and hence pixel
+    # decoding, whose model carries only the trained features) uses. They are deliberately NOT
+    # passed to multisample-prepare: tiling, the per-sample feature lists and the shared
+    # feature list stay complete, so the tiled TSV and everything packaging reads keep all genes.
     aux_ftrfilter_params = parser.add_argument_group( "Feature Customizing Auxiliary Parameters", "Customize features (typically genes) used by FICTURE without altering the original feature TSV") # This ensures the original feature TSV file is retained in the output JSON file for downstream processing
-    aux_ftrfilter_params.add_argument('--include-feature-regex', type=str, default=None, help='Regex of feature names to include')
-    aux_ftrfilter_params.add_argument('--exclude-feature-regex', type=str, default=None, help='Regex of feature names to exclude')
+    aux_ftrfilter_params.add_argument('--include-feature-regex', type=str, default=None, help='Regex of feature names to include in the FICTURE analysis')
+    aux_ftrfilter_params.add_argument('--exclude-feature-regex', type=str, default=None, help='Regex of feature names to exclude from the FICTURE analysis')
+    aux_ftrfilter_params.add_argument('--include-feature-list', type=str, default=None, help='Path to a file listing the feature names (one per line) to include in the FICTURE analysis. Names absent from the data are ignored. Combines with the regexes above.')
+    aux_ftrfilter_params.add_argument('--exclude-feature-list', type=str, default=None, help='Path to a file listing the feature names (one per line) to exclude from the FICTURE analysis. Combines with the regexes above.')
 
     # env params
     env_params = parser.add_argument_group("ENV Parameters", "Environment parameters, e.g., tools.")
@@ -118,8 +125,9 @@ def add_multisample_prepare_targets(mm, args, ficture2bin, in_samples):
         f"--hex-grid-dist {args.width.replace(',', ' ')}",
         f"--min-total-count-per-sample {args.min_count_per_sample}",
         f"--min-count {args.min_ct_per_unit_hexagon}",
-        f"--include-feature-regex '{args.include_feature_regex}'" if args.include_feature_regex is not None else "",
-        f"--exclude-feature-regex '{args.exclude_feature_regex}'" if args.exclude_feature_regex is not None else "",
+        # No feature filter here on purpose: this step writes the tiled TSV, the per-sample
+        # feature lists and multi.features.tsv, all of which packaging reads and which must
+        # therefore keep every gene. Filtering happens at LDA time (see add_feature_select_target).
     ])
     cmds.append(cmd)
 
@@ -130,7 +138,39 @@ def add_multisample_prepare_targets(mm, args, ficture2bin, in_samples):
         os.remove(f"{args.out_dir}/multi.done")
     mm.add_target(f"{args.out_dir}/multi.done", [args.in_list], cmds)
 
-def add_lda_training_target(mm, args, ficture2bin, n_factor, train_width, model_prefix, hex_prefix, color_map, ficture2report):
+def add_feature_select_target(mm, args):
+    """Add the Makefile target resolving the feature filters into one feature list, and
+    return its path (None when no filter was requested).
+
+    The list is resolved against multi.union_features.tsv (every feature seen in any
+    sample, with counts), which is a superset of both the joint and the per-sample hexagon
+    dictionaries, so the same file can be handed to every lda4hex call. Feeding it as
+    `--features` restricts the model's feature space, and the pixel decode inherits the
+    restriction because it maps pixels through the model's features. Nothing else reads
+    it, which is what keeps the tiled TSV and the packaged feature list complete.
+    """
+    if not any([args.include_feature_list, args.exclude_feature_list,
+                args.include_feature_regex, args.exclude_feature_regex]):
+        return None
+
+    union_features = f"{args.out_dir}/multi.union_features.tsv"
+    selected = f"{args.out_dir}/multi.selected_features.tsv"
+    cmds = cmd_separator([], "Selecting the features to use for the FICTURE analysis...")
+    parts = ["cartloader", "feature_select", "--mode include",
+             f"--in-features '{union_features}'", f"--out '{selected}'"]
+    if args.include_feature_list:
+        parts.append(f"--include-list '{args.include_feature_list}'")
+    if args.exclude_feature_list:
+        parts.append(f"--exclude-list '{args.exclude_feature_list}'")
+    if args.include_feature_regex:
+        parts.append(f"--include-regex '{args.include_feature_regex}'")
+    if args.exclude_feature_regex:
+        parts.append(f"--exclude-regex '{args.exclude_feature_regex}'")
+    cmds.append(" ".join(parts))
+    mm.add_target(selected, [f"{args.out_dir}/multi.done"], cmds)
+    return selected
+
+def add_lda_training_target(mm, args, ficture2bin, n_factor, train_width, model_prefix, hex_prefix, color_map, ficture2report, selected_features=None):
     """Add Makefile target for training (or projecting) an LDA model."""
     cmds = cmd_separator([], f"LDA training for {train_width}um and {n_factor} factors...")
     cmds.append(f"touch '{model_prefix}.begin'")
@@ -175,6 +215,8 @@ def add_lda_training_target(mm, args, ficture2bin, n_factor, train_width, model_
         "--residuals",
         # "--append-topk",
         # "--drop-random-key",
+        f"--features '{selected_features}'" if selected_features else "",
+        f"--min-count-train {args.min_ct_per_unit_train}" if args.min_ct_per_unit_train is not None else "",
         f"--minibatch-size {args.minibatch_size}",
         f"--seed {args.seed}",
         f"--n-epochs {args.train_epoch}",
@@ -198,7 +240,7 @@ def add_lda_training_target(mm, args, ficture2bin, n_factor, train_width, model_
     cmds.append(f"cp '{unsorted_prefix}.model.tsv' '{lda_model_matrix}'")
     cmds.append(f"rm -f '{unsorted_prefix}.model.tsv' '{unsorted_prefix}.results.tsv'")
     cmds.append(f"[ -f '{lda_fit_tsv}' ] && [ -f '{lda_model_matrix}' ] && touch '{model_prefix}.done'")
-    mm.add_target(f"{model_prefix}.done", [f"{args.out_dir}/multi.done"], cmds)
+    mm.add_target(f"{model_prefix}.done", [f"{args.out_dir}/multi.done"] + ([selected_features] if selected_features else []), cmds)
 
     # 3) create color table
     cmds = cmd_separator([], f"Generate the color map ")
@@ -224,7 +266,7 @@ def add_lda_training_target(mm, args, ficture2bin, n_factor, train_width, model_
     cmds.append(f"[ -f '{lda_de}' ] && [ -f '{model_prefix}.factor.info.html' ] && touch '{model_prefix}_summary.done'")
     mm.add_target(f"{model_prefix}_summary.done", [f"{model_prefix}.done", color_map], cmds)
 
-def add_projection_target_per_sample(mm, args, ficture2bin, model_prefix, model_id, sample, train_width):
+def add_projection_target_per_sample(mm, args, ficture2bin, model_prefix, model_id, sample, train_width, selected_features=None):
     """Add Makefile target that projects a trained LDA model onto a single sample."""
     cmds = cmd_separator([], f"Creating projection for sample {sample}...")
 
@@ -246,6 +288,8 @@ def add_projection_target_per_sample(mm, args, ficture2bin, model_prefix, model_
         "--residuals",
         # "--append-topk",
         # "--drop-random-key",
+        f"--features '{selected_features}'" if selected_features else "",
+        f"--min-count-train {args.min_ct_per_unit_train}" if args.min_ct_per_unit_train is not None else "",
         f"--minibatch-size {args.minibatch_size}",
         f"--seed {args.seed}",
         f"--n-epochs {args.train_epoch}",
@@ -270,7 +314,8 @@ def add_projection_target_per_sample(mm, args, ficture2bin, model_prefix, model_
     
     cmds.append(f"rm -f '{sample_lda_prefix}.unsorted.results.tsv'")
     cmds.append(f"[ -f '{sample_lda_fit_tsv}' ] && touch '{sample_lda_prefix}.done'")
-    mm.add_target(f"{sample_lda_prefix}.done", [f"{model_prefix}.done", f"{args.out_dir}/multi.done"], cmds)
+    mm.add_target(f"{sample_lda_prefix}.done",
+                  [f"{model_prefix}.done", f"{args.out_dir}/multi.done"] + ([selected_features] if selected_features else []), cmds)
     return f"{sample_lda_prefix}.done"
 
 def add_pixel_decode_target_per_sample(mm, args, ficture2bin, ficture2report, model_prefix, model_path, cmap_path, decode_id, fit_width, n_factor, fit_n_move, sample):
@@ -346,7 +391,7 @@ def add_pixel_decode_target_per_sample(mm, args, ficture2bin, ficture2report, mo
 
     return f"{decode_prefix}.done"
 
-def add_sample_json_target(mm, args, sample, sample_transcript, n_samples, sample_tsv_transcript):
+def add_sample_json_target(mm, args, sample, sample_transcript, n_samples, sample_tsv_transcript, selected_features=None):
     """Add Makefile target to write the output JSON for a single sample."""
     cmds = cmd_separator([], f"Writing output JSON file for sample {sample}...")
     sample_out_dir = os.path.join(args.out_dir, "samples", sample)
@@ -366,6 +411,8 @@ def add_sample_json_target(mm, args, sample, sample_transcript, n_samples, sampl
 
     summary_aux_args = []
     prerequisities = [f"{args.out_dir}/multi.done"]
+    if selected_features:
+        prerequisities.append(selected_features)
 
     summary_aux_args_models = ["--lda-model"]
     summary_aux_args_umap = ["--umap"] if not args.skip_umap else []
@@ -453,8 +500,10 @@ def add_sample_json_target(mm, args, sample, sample_transcript, n_samples, sampl
         f"--out-json '{sample_out_json}'",
         f"--n-samples {n_samples}"
     ]
-    if sample_feature_hdr:
-        summary_cmd_parts.append(f"--in-feature-ficture {sample_feature_hdr}")
+    # `in_feature` is the sample's complete feature list (what packaging reads); the
+    # ficture feature file records the subset the models were actually trained on, which
+    # differs only when a feature filter was applied.
+    summary_cmd_parts.append(f"--in-feature-ficture {selected_features or sample_feature_hdr}")
     summary_cmd_parts.extend(arg for arg in summary_aux_args if arg)
     cmd = " ".join(summary_cmd_parts)
     cmds.append(cmd)
@@ -548,6 +597,10 @@ def run_ficture2_multi(_args):
     if args.prepare_only:
         # No models are trained, so there is nothing to embed — and R is not needed.
         args.skip_umap = True
+    for flag, path in (("--include-feature-list", args.include_feature_list),
+                       ("--exclude-feature-list", args.exclude_feature_list)):
+        if path is not None and not os.path.exists(path):
+            raise FileNotFoundError(f"File not found: {path} ({flag})")
     if args.model_id is not None: ## model id is specified
         if args.pretrained_model is None: ## pretrained_model is not specified
             if args.n_factor.find(",") != -1 or args.width.find(",") != -1: ## multiple models are being trained
@@ -593,6 +646,10 @@ def run_ficture2_multi(_args):
     # step 1. multi-sample tiling and hexagon:
     add_multisample_prepare_targets(mm, args, ficture2bin, in_samples)
 
+    # step 1.5. the feature subset the factor analysis is restricted to (None if unfiltered).
+    # A --prepare-only run trains nothing, so there is nothing to restrict.
+    selected_features = None if args.prepare_only else add_feature_select_target(mm, args)
+
     # step 2. multi-sample LDA training (none in --prepare-only: tiling is the whole run)
     lda_runs = [] if args.prepare_only else define_lda_runs(args, **LDA_CONFIG)
     for lda_params in lda_runs:
@@ -617,7 +674,8 @@ def run_ficture2_multi(_args):
             model_prefix=model_prefix,
             hex_prefix=hex_prefix,
             color_map=color_map,
-            ficture2report=ficture2report
+            ficture2report=ficture2report,
+            selected_features=selected_features
         )
 
         # 2) shared UMAP
@@ -642,6 +700,7 @@ def run_ficture2_multi(_args):
                 model_id=model_id,
                 sample=sample,
                 train_width=train_width,
+                selected_features=selected_features,
             )
             lda_each_targets.append(target)
 
@@ -688,7 +747,8 @@ def run_ficture2_multi(_args):
     ## step 4. write the output JSON file for each sample
     json_each_targets = []
     for sample, sample_transcript in zip(in_samples, in_tsvs):
-        sample_out_json = add_sample_json_target(mm, args, sample, sample_transcript, n_samples, sample2tsv.get(sample))
+        sample_out_json = add_sample_json_target(mm, args, sample, sample_transcript, n_samples, sample2tsv.get(sample),
+                                                 selected_features=selected_features)
         json_each_targets.append(sample_out_json)
 
     cmds=cmd_separator([], f"Finishing writing the JSON file for each sample...")

@@ -1,5 +1,7 @@
 import sys, os, gzip, argparse, inspect
 
+from cartloader.utils.feature_filter import FeatureFilter
+
 # Stereo-seq cell-bin GEM -> the pixel TSV that `spatula pixel2sptsv` consumes.
 #
 # `saw convert gef2gem --cellbin-gef ... --cellbin-gem ...` writes a text GEM whose
@@ -70,6 +72,11 @@ def parse_arguments(_args):
                             'MIDs; must match the bin1 ingest). Rows whose count is zero are dropped.')
     incol.add_argument('--colname-cell', type=str, default='CellID', help='Cell-id column in --in-gem (default: CellID)')
 
+    # Applied as the TSV is written, so it must match the filters the bin1 ingest used —
+    # otherwise the cells carry features the pixel-level model was never trained on.
+    ftr = parser.add_argument_group("Feature Filtering Parameters")
+    FeatureFilter.add_arguments(ftr, "the output cell TSV")
+
     if len(_args) == 0:
         parser.print_help()
         sys.exit(1)
@@ -103,6 +110,7 @@ def convert_stereoseq_cellbin(_args):
     if out_dir:
         os.makedirs(out_dir, exist_ok=True)
 
+    ftr_filter = FeatureFilter.from_args(args)
     seen_features = set()
     n_in = n_out = n_zero = 0
 
@@ -150,13 +158,16 @@ def convert_stereoseq_cellbin(_args):
                     n_zero += 1
                     continue
                 gene = toks[col["ftr"]]
+                if not ftr_filter.keep(gene):
+                    continue
                 seen_features.add(gene)
                 x = fmt % (float(toks[col["x"]]) / args.units_per_um)
                 y = fmt % (float(toks[col["y"]]) / args.units_per_um)
                 wf.write(f"{x}\t{y}\t{gene}\t{cnt}\t{toks[col['cell']]}\n")
                 n_out += 1
 
-    print(f"Converted {args.in_gem}: {n_in} rows read, {n_zero} dropped as zero-count, "
+    filtered = f", {ftr_filter.n_dropped} dropped by the feature filters" if ftr_filter.active else ""
+    print(f"Converted {args.in_gem}: {n_in} rows read, {n_zero} dropped as zero-count{filtered}, "
           f"{n_out} written, {len(seen_features)} distinct features -> {args.out}")
 
     # The cell counts are projected onto a model trained on the bin1 features; a naming

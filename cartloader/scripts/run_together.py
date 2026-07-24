@@ -9,7 +9,15 @@ SPATULA_BIN = os.path.join(repo_dir, "submodules", "spatula", "bin", "spatula")
 IMAGE_TYPES_FILE = os.path.join(repo_dir, "assets", "run_together_image_types.json")
 
 # Global fallbacks (a profile or --config may override; a CLI flag wins over both).
-DEFAULT_EXCLUDE_REGEX = "^(Unassigned|Neg|BLANK|Blank|Intergenic|Deprecated|System|Gm[0-9]|MT-|mt-|Rps|Rpl|NCS-|NCP-)"
+# The two feature-exclusion defaults split the work by what the feature is:
+#  * technical artifacts (negative controls, blanks, unassigned/deprecated codewords) have
+#    no biological meaning at all, so they are dropped at ingest and never enter the data;
+#  * genes that are real but dominate or distort a factorization (predicted Gm* models,
+#    mitochondrial, ribosomal) stay in the data — visible in the browser, packaged in the
+#    tiles — and are only kept out of the model fitting.
+# Both apply to every platform; a profile or --config may override either per run.
+DEFAULT_INGEST_EXCLUDE_REGEX = "^(Unassigned|Neg|BLANK|Blank|Intergenic|Deprecated|System|NCS-|NCP-)"
+DEFAULT_EXCLUDE_REGEX = "^(Gm[0-9]|MT-|mt-|Rps|Rpl)"
 DEFAULT_MIN_CT_PER_UNIT_HEXAGON = 50
 # Sample id for a single-sample --out-dir run that names no id. Deliberately generic:
 # the descriptive name lives in --out-dir, and the packaged directory / catalog id
@@ -50,9 +58,11 @@ KNOWN_CONFIG_KEYS = frozenset({
     # sample selection / output
     "platform", "samples", "out_dir", "out_root", "saw",
     # scalar decode override consumed directly from cfg
-    "colname_cell", "exclude_feature_regex",
+    "colname_cell", "exclude_feature_regex", "include_feature_list", "exclude_feature_list",
+    "ingest_include_feature_regex", "ingest_exclude_feature_regex",
+    "ingest_include_feature_list", "ingest_exclude_feature_list",
     # dict blocks deep-merged into the profile (Layer 2)
-    "ingest", "roles", "cartload", "ficture_defaults", "squares", "cell_import",
+    "ingest", "roles", "cartload", "ficture_defaults", "cell_defaults", "squares", "cell_import",
     "hne", "image_transform", "image_defaults", "publish", "resources",
     # list blocks merged by id
     "ficture", "cell_analyses", "images",
@@ -321,6 +331,7 @@ def build_config(args):
         prof = deep_merge(prof, load_json(args.platform_json))
     prof["platform"] = platform
     prof.setdefault("ficture_defaults", {})
+    prof.setdefault("cell_defaults", {})
     prof.setdefault("ficture", [])
     prof.setdefault("cell_analyses", [])
     prof.setdefault("images", [])
@@ -356,7 +367,10 @@ def build_config(args):
             train["n_factor"] = args.n_factor
 
     # Layer 2: tier-2 JSON augments (lists append/override-by-id by default)
-    for k in ("exclude_feature_regex", "ingest", "roles", "cartload", "ficture_defaults",
+    for k in ("exclude_feature_regex", "include_feature_list", "exclude_feature_list",
+              "ingest_include_feature_regex", "ingest_exclude_feature_regex",
+              "ingest_include_feature_list", "ingest_exclude_feature_list",
+              "ingest", "roles", "cartload", "ficture_defaults", "cell_defaults",
               "squares", "cell_import", "hne", "image_transform", "image_defaults",
               "publish", "resources"):
         if k in cfg:
@@ -391,17 +405,56 @@ def build_config(args):
                          f"Pass --allow-unknown-config-keys to ignore instead of failing.")
 
     # --- resolve common decode defaults (CLI > config/profile > hardcoded) ---
-    # exclude-feature regex
+    # Feature filters. These apply to the factor analyses only (pixel FICTURE and the
+    # cell-based analysis): ingest keeps every gene, so the transcript TSV, the feature
+    # list and the packaged tiles stay complete regardless of what is filtered here.
+    # Passing an empty string turns the default off without substituting anything.
     if args.exclude_feature_regex is not None:
         prof["exclude_feature_regex"] = args.exclude_feature_regex
-    elif not prof.get("exclude_feature_regex"):
+    elif "exclude_feature_regex" not in prof:
         prof["exclude_feature_regex"] = DEFAULT_EXCLUDE_REGEX
-    # min count per unit hexagon (applies to the pixel FICTURE analyses)
+    # Ingest-level filters are a separate, independent knob: they drop features from the
+    # transcript TSV itself (the "very first process"), so a feature removed here is gone
+    # from every later stage, packaging included.
+    # Which of them this run actually asked for (rather than inherited from the default),
+    # so that "these had no effect" is reported only for a filter someone chose. Recorded
+    # here because `cfg` is merged into `prof` and the two become indistinguishable after.
+    prof["_ingest_filters_explicit"] = [
+        f"--{k.replace('_', '-')}"
+        for k in ("ingest_include_feature_list", "ingest_exclude_feature_list",
+                  "ingest_include_feature_regex", "ingest_exclude_feature_regex")
+        if getattr(args, k) is not None or k in cfg]
+    if args.ingest_exclude_feature_regex is not None:
+        prof["ingest_exclude_feature_regex"] = args.ingest_exclude_feature_regex
+    elif "ingest_exclude_feature_regex" not in prof:
+        prof["ingest_exclude_feature_regex"] = DEFAULT_INGEST_EXCLUDE_REGEX
+    if args.ingest_include_feature_regex is not None:
+        prof["ingest_include_feature_regex"] = args.ingest_include_feature_regex
+    for key, val in (("include_feature_list", args.include_feature_list),
+                     ("exclude_feature_list", args.exclude_feature_list),
+                     ("ingest_include_feature_list", args.ingest_include_feature_list),
+                     ("ingest_exclude_feature_list", args.ingest_exclude_feature_list)):
+        if val is not None:
+            prof[key] = val
+        if prof.get(key):
+            path = os.path.abspath(os.path.expanduser(prof[key]))
+            if not os.path.exists(path):
+                sys.exit(f"ERROR: file not found: {prof[key]} (--{key.replace('_', '-')})")
+            prof[key] = path
+    # min count per unit hexagon / per unit trained (both apply to the pixel FICTURE analyses)
     fd = prof.setdefault("ficture_defaults", {})
     if args.min_ct_per_unit_hexagon is not None:
         fd["min_ct_per_unit_hexagon"] = args.min_ct_per_unit_hexagon
     elif "min_ct_per_unit_hexagon" not in fd:
         fd["min_ct_per_unit_hexagon"] = DEFAULT_MIN_CT_PER_UNIT_HEXAGON
+    if args.min_ct_per_unit_train is not None:
+        fd["min_ct_per_unit_train"] = args.min_ct_per_unit_train
+    # per-cell count thresholds (applied by the cell analyses after feature filtering)
+    cd = prof.setdefault("cell_defaults", {})
+    if args.cell_min_cell_count is not None:
+        cd["min_cell_count"] = args.cell_min_cell_count
+    if args.cell_min_feature_count is not None:
+        cd["min_feature_count"] = args.cell_min_feature_count
     # single-molecule: default ON for pixel FICTURE, OFF for cell decode;
     # --always/--never force the same value for both.
     if args.always_single_molecule and args.never_single_molecule:
@@ -460,8 +513,9 @@ def build_config(args):
     if bnd_over:
         prof.setdefault("roles", {}).setdefault("boundaries", {}).update(bnd_over)
 
-    # Apply ficture_defaults to every analysis (per-entry keys win).
+    # Apply ficture_defaults / cell_defaults to every analysis (per-entry keys win).
     prof["ficture"] = [deep_merge(prof["ficture_defaults"], a) for a in prof["ficture"]]
+    prof["cell_analyses"] = [deep_merge(prof["cell_defaults"], ca) for ca in prof["cell_analyses"]]
 
     prof["out_dir"] = args.out_dir or cfg.get("out_dir")
     prof["out_root"] = args.out_root or cfg.get("out_root")
@@ -683,6 +737,30 @@ def resolve_sample(raw, cfg):
 # Command builders
 # ---------------------------------------------------------------------------
 
+def ingest_feature_filter_flags(cfg):
+    """Feature filters for the ingest step (sge_convert / reformat_cosmx / the Stereo-seq
+    cell-bin conversion), i.e. the step that writes the transcript TSV.
+
+    A feature dropped here never reaches any later stage — it is absent from the transcript
+    TSV, the feature list, the packaged tiles and the browser's gene list. That is the whole
+    difference from the factor-analysis filters (see feature_filter_flags), which leave the
+    data complete and narrow only the model fitting; the two are independent.
+
+    With no ingest filter set, an empty exclude regex is passed explicitly so that
+    sge_convert's per-platform default (e.g. Xenium's negative-probe pattern) does not
+    silently reintroduce filtering.
+    """
+    keys = {"--include-feature-list": "ingest_include_feature_list",
+            "--exclude-feature-list": "ingest_exclude_feature_list",
+            "--include-feature-regex": "ingest_include_feature_regex",
+            "--exclude-feature-regex": "ingest_exclude_feature_regex"}
+    parts = [f'{flag} "{cfg[key]}"' if "regex" in flag else f"{flag} {cfg[key]}"
+             for flag, key in keys.items() if cfg.get(key)]
+    if not cfg.get("ingest_exclude_feature_regex"):
+        parts.append('--exclude-feature-regex ""')
+    return parts
+
+
 def cmd_sge_convert(cfg, sge_dir, s):
     ing = cfg.get("ingest", {})
     res = cfg["resources"]
@@ -691,8 +769,7 @@ def cmd_sge_convert(cfg, sge_dir, s):
              f"--platform {ing.get('sge_platform', cfg['platform'])}",
              f"--out-dir {sge_dir}", f"--n-jobs {res['n_jobs']}",
              f"--pigz-threads {res['threads']}", "--gzip pigz"]
-    if cfg.get("exclude_feature_regex"):
-        parts.append(f"--exclude-feature-regex \"{cfg['exclude_feature_regex']}\"")
+    parts.extend(ingest_feature_filter_flags(cfg))
     # An explicit raw transcript CSV (single-sample --in-transcript) is ingested
     # directly and takes precedence over in_dir autodetection.
     raw_tx = s.get("raw_transcript")
@@ -775,6 +852,10 @@ def cmd_reformat_cosmx(cfg, sge_dir, sid, in_dir):
                      f"{in_dir}: {names}.\n       Make the pattern more specific in 'ingest.inputs'.")
         parts.append(f"{flag} {matches[0]}")
     parts.append(f"--out {os.path.join(sge_dir, sid)}")
+    # Same ingest-level feature filters as sge_convert; this step writes the transcript TSV
+    # for CosMx, so a filtered feature never enters the run. (No platform default to
+    # suppress here, so an empty exclude regex is simply a no-op.)
+    parts.extend(ingest_feature_filter_flags(cfg))
     parts.extend(ing.get("extra_flags", []))
     return " ".join(parts)
 
@@ -833,6 +914,10 @@ def cmds_stereoseq_ingest(cfg, sge_dir, s):
             f"--in-gem {cellbin_gem}", f"--out {cell_tsv}",
             f"--units-per-um {ing.get('units_per_um', 2)}",
             f"--check-features {feature_f}"]
+    # The cell-bin GEM is a second ingest product of the same run, so it takes the same
+    # ingest filters as bin1: without them the cells would carry features the pixel-level
+    # transcript (and the model trained on it) no longer has.
+    conv.extend(ingest_feature_filter_flags(cfg))
     # Carry the same feature/count column overrides sge_convert used for bin1 so the
     # cellbin GEM is read with matching columns (e.g. protein GEFs use MIDCount, not
     # the ExonCount default).
@@ -891,6 +976,51 @@ def cmd_convert_cellxgene(cfg, csv_path, mex_dir):
     return " ".join(parts)
 
 
+def feature_filter_flags(cfg):
+    """FICTURE feature restriction for the pixel factor analysis (run_ficture2_multi).
+
+    run_ficture2_multi resolves these into a feature list and passes it to `lda4hex
+    --features`, so they restrict the *model* only: the tiled transcript, the packaged
+    feature list, and the hexagon counts keep every gene. A list and a regex combine.
+
+    Deliberately NOT forwarded to the cell path. There the same FICTURE restriction reaches
+    clustering through projection onto this (already --features-restricted) pixel model,
+    while the cell *counts* get the ingest filter instead (see cells_count_filter_flags), so
+    FICTURE-excluded and non-HVG genes stay in the cell pseudobulk and DE.
+    """
+    parts = []
+    if cfg.get("include_feature_list"):
+        parts.append(f"--include-feature-list {cfg['include_feature_list']}")
+    if cfg.get("exclude_feature_list"):
+        parts.append(f"--exclude-feature-list {cfg['exclude_feature_list']}")
+    if cfg.get("exclude_feature_regex"):
+        parts.append(f"--exclude-feature-regex \"{cfg['exclude_feature_regex']}\"")
+    return parts
+
+
+def cells_count_filter_flags(cfg):
+    """Ingest-level feature filters for the cell count matrices (run_ficture2_multi_cells).
+
+    These flags reach `mex2sptsv` / `pixel2sptsv`, i.e. the per-cell COUNTS, so they must be
+    the *ingest* exclusions (technical artifacts), never the FICTURE ones. Two reasons:
+      * a MEX-derived cell (cell_by_gene, or an external mex role) never passes through
+        sge_convert, so this is the only place its Neg/BLANK/etc. are removed — closing the
+        gap where the transcript was ingest-filtered but the MEX was not;
+      * omitting the FICTURE exclude/include keeps those genes in the cell counts, so they
+        reappear in the pseudobulk (sptsv2model, unrestricted) and DE, per design. The
+        FICTURE restriction still governs clustering, via the projected pixel model.
+    """
+    keys = {"--include-feature-list": "ingest_include_feature_list",
+            "--exclude-feature-list": "ingest_exclude_feature_list",
+            "--include-feature-regex": "ingest_include_feature_regex",
+            "--exclude-feature-regex": "ingest_exclude_feature_regex"}
+    parts = []
+    for flag, key in keys.items():
+        if cfg.get(key):
+            parts.append(f'{flag} "{cfg[key]}"' if "regex" in flag else f"{flag} {cfg[key]}")
+    return parts
+
+
 def cmd_ficture_analysis(a, in_list, fic_dir, cfg):
     res = cfg["resources"]
     parts = ["cartloader", "run_ficture2_multi",
@@ -907,12 +1037,13 @@ def cmd_ficture_analysis(a, in_list, fic_dir, cfg):
         parts.append(f"--n-factor {a['n_factor']}")
     if a.get("min_ct_per_unit_hexagon") is not None:
         parts.append(f"--min-ct-per-unit-hexagon {a['min_ct_per_unit_hexagon']}")
+    if a.get("min_ct_per_unit_train") is not None:
+        parts.append(f"--min-ct-per-unit-train {a['min_ct_per_unit_train']}")
     if a.get("decode_scale"):
         parts.append(f"--decode-scale {a['decode_scale']}")
     if cfg.get("_sm_pixel"):   # single-molecule for pixel FICTURE (default ON)
         parts.append("--single-molecule")
-    if cfg.get("exclude_feature_regex"):
-        parts.append(f"--exclude-feature-regex \"{cfg['exclude_feature_regex']}\"")
+    parts.extend(feature_filter_flags(cfg))
     return " ".join(parts)
 
 
@@ -949,8 +1080,16 @@ def cmd_cells(ca, list_files, fic_dir, model_path, cfg):
                     parts.append(f"--boundaries-units-key {bnd['units_key']}")
     if cfg.get("_sm_cells"):   # single-molecule for cell decode (default OFF)
         parts.append("--single-molecule")
-    if cfg.get("exclude_feature_regex"):
-        parts.append(f"--exclude-feature-regex \"{cfg['exclude_feature_regex']}\"")
+    # Count thresholds are applied after feature filtering, so a run restricted to a small
+    # panel usually wants them lowered (see cell_defaults / --cell-min-*-count).
+    if ca.get("min_cell_count") is not None:
+        parts.append(f"--min-cell-count {ca['min_cell_count']}")
+    if ca.get("min_feature_count") is not None:
+        parts.append(f"--min-feature-count {ca['min_feature_count']}")
+    # Cell counts get the ingest filter, NOT the FICTURE filter: FICTURE-excluded / non-HVG
+    # genes must survive into the cell pseudobulk and DE (the FICTURE restriction reaches
+    # clustering via the projected pixel model instead). See cells_count_filter_flags.
+    parts.extend(cells_count_filter_flags(cfg))
     return " ".join(parts)
 
 
@@ -1269,9 +1408,11 @@ def add_targets(mm, samples, cfg, args):
         method = ing.get("method", "sge_convert")
         produces = ing.get("produces", {})
         sge_flags, transcript = [], {}
+        preingested = []
         for s in grp:
             if s["roles"].get("transcript"):
                 transcript[s["id"]] = s["roles"]["transcript"]
+                preingested.append(s["id"])
                 continue
             sge_dir = os.path.join(sge_root, s["id"])
             if method == "reformat_cosmx":
@@ -1321,6 +1462,17 @@ def add_targets(mm, samples, cfg, args):
             sge_flags.append(flag)
             if on("ingest"):
                 mm.add_target(flag, [], [f"mkdir -p {sge_dir}"] + ingest_cmds + [f"touch {flag}"])
+
+        # The ingest filters act while the transcript TSV is written, so a sample that
+        # supplies a ready-made transcript never sees them: its TSV is taken as given.
+        # Only filters this run explicitly asked for are worth reporting; the built-in
+        # default not applying to a pre-ingested file is unremarkable.
+        ingest_filters = cfg.get("_ingest_filters_explicit", [])
+        if ingest_filters and preingested:
+            print(f"WARNING: {', '.join(ingest_filters)} had no effect on sample(s) "
+                  f"{', '.join(preingested)}: they provide an already-ingested transcript, which is "
+                  f"used as-is. Filter the file beforehand, or supply the raw input instead so it "
+                  f"goes through ingest.", file=sys.stderr)
 
         in_list = os.path.join(sge_root, "in_list.tsv")
         with open(in_list, "w") as f:
@@ -1634,9 +1786,51 @@ def parse_arguments(_args):
 
     d = p.add_argument_group("Common decode overrides (else profile / built-in defaults)")
     d.add_argument("--exclude-feature-regex", type=str, default=None,
-                   help=f"Regex of features to exclude (default: profile's, else '{DEFAULT_EXCLUDE_REGEX}')")
+                   help=f"Regex of features to exclude from the factor analyses (default: "
+                        f"'{DEFAULT_EXCLUDE_REGEX}' — predicted, mitochondrial and ribosomal genes, "
+                        f"which stay in the data but out of the models). Ingest and packaging are "
+                        f"unaffected. Pass '' to disable.")
+    d.add_argument("--include-feature-list", type=str, default=None,
+                   help="File listing the feature names (one per line) the factor analyses are restricted "
+                        "to — pixel FICTURE (LDA training and pixel decoding) and the cell-based analysis. "
+                        "Ingest, the tiled transcripts, the feature list and the packaged tiles keep every "
+                        "gene. Combines with --exclude-feature-regex.")
+    d.add_argument("--exclude-feature-list", type=str, default=None,
+                   help="File listing the feature names (one per line) to drop from the factor analyses. "
+                        "Same scope as --include-feature-list.")
+    g = p.add_argument_group("Ingest feature filters (drop features from the data itself)")
+    g.add_argument("--ingest-include-feature-regex", type=str, default=None,
+                   help="Regex of features to keep when the transcript TSV is written. Unlike the "
+                        "options above, these act on the very first step, so a dropped feature is "
+                        "absent from the transcript TSV, the feature list, the packaged tiles and "
+                        "every analysis. Independent of the factor-analysis filters. Ignored (with a "
+                        "warning) for samples that supply an already-ingested transcript.")
+    g.add_argument("--ingest-exclude-feature-regex", type=str, default=None,
+                   help=f"Regex of features to drop when the transcript TSV is written (default: "
+                        f"'{DEFAULT_INGEST_EXCLUDE_REGEX}' — negative controls, blanks and unassigned/"
+                        f"deprecated codewords, which are technical artifacts rather than genes). "
+                        f"Replaces sge_convert's per-platform default. Pass '' to disable.")
+    g.add_argument("--ingest-include-feature-list", type=str, default=None,
+                   help="File listing the feature names (one per line) to keep when the transcript TSV "
+                        "is written. Same scope as --ingest-include-feature-regex.")
+    g.add_argument("--ingest-exclude-feature-list", type=str, default=None,
+                   help="File listing the feature names (one per line) to drop when the transcript TSV "
+                        "is written. Same scope as --ingest-exclude-feature-regex.")
+
     d.add_argument("--min-ct-per-unit-hexagon", type=int, default=None,
                    help=f"Minimum count per hexagon for FICTURE (default: {DEFAULT_MIN_CT_PER_UNIT_HEXAGON})")
+    d.add_argument("--min-ct-per-unit-train", type=int, default=None,
+                   help="Minimum count per hexagon during LDA training, counted over the features the "
+                        "analysis uses (default: FICTURE2's own). Worth lowering when a feature list "
+                        "restricts the analysis to a small panel, since --min-ct-per-unit-hexagon is "
+                        "applied earlier, over all genes.")
+    d.add_argument("--cell-min-cell-count", type=int, default=None,
+                   help="Minimum count per cell in the cell-based analysis, counted over the features it "
+                        "uses (default: run_ficture2_multi_cells' own). Same rationale as "
+                        "--min-ct-per-unit-train.")
+    d.add_argument("--cell-min-feature-count", type=int, default=None,
+                   help="Minimum total count per feature in the cell-based analysis "
+                        "(default: run_ficture2_multi_cells' own)")
     d.add_argument("--always-single-molecule", action="store_true",
                    help="Force single-molecule ON for both pixel FICTURE and cell decode")
     d.add_argument("--never-single-molecule", action="store_true",

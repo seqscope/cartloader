@@ -4,6 +4,7 @@ import pandas as pd
 from cartloader.utils.minimake import minimake
 from cartloader.utils.utils import cmd_separator, scheck_app, add_param_to_cmd, read_minmax, flexopen, execute_makefile
 from cartloader.utils.geometry_helper import iter_geojson_cell_centroids, CENTROID_SUPPORTED_FORMATS
+from cartloader.scripts.feature_select import feature_select
 
 repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -89,9 +90,21 @@ def parse_arguments(_args):
     aux_params.add_argument('--zero-based-clust-id', action='store_true', default=False, help='Whether the cluster IDs in the existing cluster files provided by --list-cluster are zero-based. By default, it is assumed that the cluster IDs are one-based and will be converted to zero-based by subtracting 1. If the cluster IDs are already zero-based, please turn on this option to avoid incorrect cluster ID conversion.')
 
     # AUX gene-filtering params
-    aux_ftrfilter_params = parser.add_argument_group( "Feature Customizing Auxiliary Parameters", "Customize features (typically genes) used by FICTURE without altering the original feature TSV") # This ensures the original feature TSV file is retained in the output JSON file for downstream processing 
-    aux_ftrfilter_params.add_argument('--include-feature-regex', type=str, default=None, help='Regex of feature names to include')
-    aux_ftrfilter_params.add_argument('--exclude-feature-regex', type=str, default=None, help='Regex of feature names to exclude')
+    # The filters below restrict the features used to build the per-cell count matrices
+    # (SPTSV), and therefore everything derived from them: LDA, Leiden, the pseudobulk
+    # matrix and the cell-based pixel decode. The tiled transcript they are read from is
+    # left untouched, so packaging still sees every gene.
+    # These are COUNT-level (data) filters: a gene removed here is gone from the pseudobulk
+    # and DE too. To keep a gene in the counts but out of the factorization only, restrict
+    # the model instead (e.g. project onto a --pretrained-model whose feature space is
+    # already restricted) rather than dropping it here. run_together drives exactly that:
+    # it passes only the ingest (technical-artifact) exclusions here, and lets the projected
+    # pixel model carry the FICTURE restriction.
+    aux_ftrfilter_params = parser.add_argument_group( "Feature Customizing Auxiliary Parameters", "Customize features (typically genes) used by FICTURE without altering the original feature TSV") # This ensures the original feature TSV file is retained in the output JSON file for downstream processing
+    aux_ftrfilter_params.add_argument('--include-feature-regex', type=str, default=None, help='Regex of feature names to include in the cell-based analysis')
+    aux_ftrfilter_params.add_argument('--exclude-feature-regex', type=str, default=None, help='Regex of feature names to exclude from the cell-based analysis')
+    aux_ftrfilter_params.add_argument('--include-feature-list', type=str, default=None, help='Path to a file listing the feature names (one per line) to include in the cell-based analysis. Combines with the regexes above.')
+    aux_ftrfilter_params.add_argument('--exclude-feature-list', type=str, default=None, help='Path to a file listing the feature names (one per line) to exclude from the cell-based analysis. Combines with the regexes above.')
 
     # env params
     env_params = parser.add_argument_group("ENV Parameters", "Environment parameters, e.g., tools.")
@@ -109,6 +122,60 @@ def parse_arguments(_args):
         sys.exit(1)
 
     return parser.parse_args(_args)
+
+def resolve_feature_filter_flags(args):
+    """Build the feature-filter flags shared by mex2sptsv / pixel2sptsv.
+
+    spatula takes at most one include-type and one exclude-type feature filter, so a list
+    and a regex of the same polarity cannot both be handed to it. Such a pair is folded
+    into a single list first:
+
+      * include list + include regex -> the list filtered by the regex (the list is its
+        own universe, so no dataset-wide feature file is needed);
+      * exclude list + exclude regex -> the list unioned with the features the regex
+        matches in `multi.union_features.tsv` (every feature seen in any sample, written
+        by run_ficture2_multi). A feature that exists only in a MEX matrix and never in
+        the transcripts is consequently not reachable by the regex half of that pair.
+
+    Both derived files are written into --out-dir, so a run records exactly which features
+    it filtered on.
+    """
+    inc_list, exc_list = args.include_feature_list, args.exclude_feature_list
+    inc_regex, exc_regex = args.include_feature_regex, args.exclude_feature_regex
+
+    for flag, path in (("--include-feature-list", inc_list), ("--exclude-feature-list", exc_list)):
+        if path is not None and not os.path.exists(path):
+            raise FileNotFoundError(f"File not found: {path} ({flag})")
+
+    if inc_list is not None and inc_regex is not None:
+        derived = os.path.join(args.out_dir, f"{args.out_prefix}.include_features.tsv")
+        feature_select(["--mode", "include", "--in-features", inc_list,
+                        "--include-regex", inc_regex, "--out", derived])
+        inc_list, inc_regex = derived, None
+
+    if exc_list is not None and exc_regex is not None:
+        universe = os.path.join(args.in_dir, "multi.union_features.tsv")
+        if not os.path.exists(universe):
+            raise FileNotFoundError(
+                f"File not found: {universe}. Combining --exclude-feature-list with "
+                f"--exclude-feature-regex needs the feature list written by run_ficture2_multi "
+                f"to resolve which features the regex matches.")
+        derived = os.path.join(args.out_dir, f"{args.out_prefix}.exclude_features.tsv")
+        feature_select(["--mode", "exclude", "--in-features", universe,
+                        "--exclude-list", exc_list, "--exclude-regex", exc_regex, "--out", derived])
+        exc_list, exc_regex = derived, None
+
+    parts = []
+    if inc_list is not None:
+        parts.append(f"--include-feature-list '{inc_list}'")
+    if exc_list is not None:
+        parts.append(f"--exclude-feature-list '{exc_list}'")
+    if inc_regex is not None:
+        parts.append(f"--include-feature-regex '{inc_regex}'")
+    if exc_regex is not None:
+        parts.append(f"--exclude-feature-regex '{exc_regex}'")
+    return (" " + " ".join(parts)) if parts else ""
+
 
 def run_ficture2_multi_cells(_args):
     """Run all functions in FICTURE2 cell clustering with multi-sample pipeline
@@ -234,14 +301,11 @@ def run_ficture2_multi_cells(_args):
         args.heatmap = True
         args.decode = True
 
-    cmd_ftr_include_exclude = ""
-    if args.include_feature_regex is not None:
-        cmd_ftr_include_exclude += f" --include-feature-regex '{args.include_feature_regex}'"
-    if args.exclude_feature_regex is not None:
-        cmd_ftr_include_exclude += f" --exclude-feature-regex '{args.exclude_feature_regex}'"
-
     ## create cell-based SPTSV files
     if args.sptsv:
+        # Feature filtering applies where the per-cell counts are built; a run that reuses
+        # an existing --sptsv-prefix inherits whatever the run that built it filtered on.
+        cmd_ftr_include_exclude = resolve_feature_filter_flags(args)
         if args.sptsv_prefix is not None:
             raise ValueError("When --sptsv is ON, --sptsv-prefix should not be provided.")
         sptsv_prefix = os.path.join(args.out_dir, args.out_prefix) + ".sptsv"

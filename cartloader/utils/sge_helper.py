@@ -30,7 +30,7 @@ aux_sge_args = {
         'allow_duplicate_gene_names' #, 'print_feature_id'
     ],
     "ftrname": [
-       # 'include_feature_list', 'exclude_feature_list','include_feature_regex', 'exclude_feature_regex'
+       'include_feature_list', 'exclude_feature_list',
        'include_feature_regex', 'exclude_feature_regex'
     ],
     # "ftrtype": [
