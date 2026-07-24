@@ -537,20 +537,30 @@ def build_config(args):
     raw_samples = list(cfg.get("samples", []))
     if args.samples:
         raw_samples += read_sheet(args.samples)
-    if (args.in_dir or args.in_prefix or args.in_transcript or args.in_cell_xy
-            or args.in_cell_boundary or args.in_cellxgene):
+    if args.in_transcript and args.raw_transcript:
+        sys.exit("ERROR: --in-transcript (a pre-converted transcript that skips ingest) and "
+                 "--raw-transcript (a raw CSV that goes through sge_convert) are mutually "
+                 "exclusive; provide only one.")
+    if (args.in_dir or args.in_prefix or args.in_transcript or args.raw_transcript
+            or args.in_cell_xy or args.in_cell_boundary or args.in_cellxgene):
         s = {}
         if args.in_dir: s["in_dir"] = args.in_dir
         if args.in_prefix: s["in_prefix"] = args.in_prefix
         if args.id: s["id"] = args.id
-        if args.in_transcript: s["raw_transcript"] = args.in_transcript
+        # --in-transcript is an already-converted pixel transcript (the transcripts.unsorted.tsv.gz
+        # layout: X, Y, gene, count[, cell_id]); it skips ingest entirely via the `transcript`
+        # role, on every platform. A raw platform CSV that still needs sge_convert is passed with
+        # --raw-transcript instead (raw_transcript). Stereo-seq has no raw-CSV path (SAW expands
+        # the binary GEF), so only --in-transcript applies there.
+        if args.in_transcript: s["transcript"] = args.in_transcript
+        if args.raw_transcript: s["raw_transcript"] = args.raw_transcript
         if args.in_cell_xy: s["xy"] = args.in_cell_xy
         if args.in_cell_boundary: s["boundaries"] = args.in_cell_boundary
         if args.in_cellxgene: s["cellxgene"] = args.in_cellxgene
         raw_samples.append(s)
     if not raw_samples:
         sys.exit("ERROR: no samples. Use --in-dir, --in-prefix, the "
-                 "--in-transcript/--in-cell-xy/--in-cell-boundary file flags, "
+                 "--in-transcript/--raw-transcript/--in-cell-xy/--in-cell-boundary file flags, "
                  "--samples <sheet>, or a 'samples' config block.")
     prof["_raw_samples"] = raw_samples
 
@@ -1736,8 +1746,15 @@ def parse_arguments(_args):
                          "/data/C04687E314 picks up C04687E314.tissue.gef, C04687E314.cellbin.gef and "
                          "C04687E314_{HE,ssDNA,DAPI}_regist.tif. Missing files are skipped; --image and "
                          "the role flags override any of them. The sample id defaults to the basename.")
-    io.add_argument("--in-transcript", type=str, help="Single sample: raw transcript CSV to ingest (goes through sge_convert). "
-                                                      "Use instead of --in-dir when the file is arbitrarily named / not in a standard directory.")
+    io.add_argument("--in-transcript", type=str, help="Single sample: a pre-converted (already ingested) transcript TSV in the "
+                                                      "transcripts.unsorted.tsv.gz layout (X, Y, gene, count[, cell_id]). It skips ingest entirely "
+                                                      "(the `transcript` role) on every platform — use it to re-run analysis on a filtered/edited "
+                                                      "transcript without re-ingesting. For a RAW platform CSV that still needs sge_convert, use "
+                                                      "--raw-transcript instead.")
+    io.add_argument("--raw-transcript", type=str, help="Single sample: a raw transcript CSV to ingest through sge_convert. Use instead of --in-dir "
+                                                      "when the raw file is arbitrarily named / not in a standard directory. Pair with the "
+                                                      "--colname-transcript-* flags if its columns are non-standard. Not applicable to "
+                                                      "--platform stereoseq (which ingests binary GEFs via SAW, not a raw CSV).")
     io.add_argument("--in-cell-xy", type=str, help="Single sample: cell metadata (centroids) file for the xy role (optional)")
     io.add_argument("--in-cell-boundary", type=str, help="Single sample: cell boundary polygon file for the boundaries role (optional)")
     io.add_argument("--in-cellxgene", type=str, help="Single sample: cell-by-gene matrix CSV (e.g. MERSCOPE cell_by_gene.csv). "
@@ -1760,12 +1777,12 @@ def parse_arguments(_args):
                                             ".gef inputs are binary and only SAW can expand them into text GEMs)")
 
     c = p.add_argument_group("Single-sample input column overrides (else profile / platform defaults)")
-    c.add_argument("--colname-transcript-x", type=str, default=None, help="X column name in --in-transcript")
-    c.add_argument("--colname-transcript-y", type=str, default=None, help="Y column name in --in-transcript")
-    c.add_argument("--colname-transcript-feature", type=str, default=None, help="Gene/feature column name in --in-transcript")
-    c.add_argument("--colname-transcript-count", type=str, default=None, help="Count column name in --in-transcript (default: none, count of 1 per row)")
+    c.add_argument("--colname-transcript-x", type=str, default=None, help="X column name in --raw-transcript")
+    c.add_argument("--colname-transcript-y", type=str, default=None, help="Y column name in --raw-transcript")
+    c.add_argument("--colname-transcript-feature", type=str, default=None, help="Gene/feature column name in --raw-transcript")
+    c.add_argument("--colname-transcript-count", type=str, default=None, help="Count column name in --raw-transcript (default: none, count of 1 per row)")
     c.add_argument("--colname-transcript-cell", type=str, default=None,
-                   help="Cell-id column name already present in the transcript CSV (rare). Carries the column "
+                   help="Cell-id column name already present in the raw transcript CSV (rare). Carries the column "
                         "through ingest to transcript column 5 and runs cell analysis from it, skipping "
                         "spatula tsv-add-cell-id. A cellxgene MEX, if present, still drives clustering.")
     c.add_argument("--colname-xy-cell", type=str, default=None, help="Cell-id column name in --in-cell-xy (use '' for an unnamed pandas-index first column)")

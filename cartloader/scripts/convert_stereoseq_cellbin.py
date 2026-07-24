@@ -10,10 +10,12 @@ from cartloader.utils.feature_filter import FeatureFilter
 # onto the bin1 GEM row-by-row, so this file is NOT merged into the pixel transcript;
 # it is converted here into a standalone 5-column TSV
 #
-#     X <TAB> Y <TAB> gene <TAB> count <TAB> cell_id        (no header)
+#     X <TAB> Y <TAB> gene <TAB> count <TAB> cell_id        (with a header row)
 #
-# which run_together hands to run_ficture2_multi_cells as a `--tsv-list` entry. That
-# column order matches the tool's --colidx-* defaults (1,2,3,4,5).
+# which run_together hands to run_ficture2_multi_cells as a `--tsv-list` entry. The
+# header lets pixel2sptsv select columns by name (X/Y/gene/count/cell_id, its defaults)
+# and, just as importantly, lets `cartloader filter_molecules` be applied to this file
+# the same way it is to the pixel transcript (that tool requires a named feature column).
 #
 # Counts come from `ExonCount` (the exonic subset of the MIDs), matching the bin1
 # ingest; zero-count rows are dropped rather than carried through as empty entries.
@@ -25,6 +27,13 @@ from cartloader.utils.feature_filter import FeatureFilter
 # file instead of discovering the mismatch as a run of near-empty cells.
 
 
+# Output columns, in order. The names are the cartloader pixel-transcript conventions
+# (sge_convert's --colname-* defaults) so that pixel2sptsv reads them by its default
+# --in-col-* names and filter_molecules finds the feature column ('gene') by default.
+# run_ficture2_multi_cells reads this file by these same names; keep the two in sync.
+OUT_HEADER = ["X", "Y", "gene", "count", "cell_id"]
+
+
 def flexopen(path, mode="rt"):
     return gzip.open(path, mode) if path.endswith(".gz") else open(path, mode)
 
@@ -33,11 +42,11 @@ def parse_arguments(_args):
     parser = argparse.ArgumentParser(
         prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}",
         description="Convert a Stereo-seq cell-bin GEM (from 'saw convert gef2gem --cellbin-gem') "
-                    "into the headerless X/Y/gene/count/cell_id TSV used for cell-level analysis.")
+                    "into the X/Y/gene/count/cell_id TSV (with a header row) used for cell-level analysis.")
 
     inout = parser.add_argument_group("Input/Output Parameters")
     inout.add_argument('--in-gem', required=True, type=str, help='Path to the input cell-bin GEM (.gem or .gem.gz)')
-    inout.add_argument('--out', required=True, type=str, help='Path to the output TSV (headerless; X, Y, gene, count, cell_id)')
+    inout.add_argument('--out', required=True, type=str, help='Path to the output TSV (header row X, Y, gene, count, cell_id)')
 
     key = parser.add_argument_group("Key Parameters")
     key.add_argument('--units-per-um', type=float, default=2.0,
@@ -145,6 +154,7 @@ def convert_stereoseq_cellbin(_args):
         ncol = max(col.values()) + 1
 
         with open(args.out, "wt") as wf:
+            wf.write("\t".join(OUT_HEADER) + "\n")
             for line in rf:
                 toks = line.rstrip("\n").split("\t")
                 if len(toks) < ncol:

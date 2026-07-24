@@ -41,7 +41,7 @@ def parse_arguments(_args):
     inout_params.add_argument('--mex-ftr', type=str, default="features.tsv.gz", help='Feature files in MEX format')
     inout_params.add_argument('--mex-mtx', type=str, default="matrix.mtx.gz", help='Matrix files in MEX format')
     inout_params.add_argument('--mex-list', type=str, help='TSV file containing sample IDs and paths to MEX files')
-    inout_params.add_argument('--tsv-list', type=str, help='TSV file of [SAMPLE_ID] [PIXEL_TSV] naming an external headerless pixel TSV that carries a cell-id column. Use when the cell assignment lives in a separate file that cannot be mapped onto the tiled transcript (e.g. a Stereo-seq cell-bin GEM). The file is read with the same --colidx-* columns as the tiled transcript (X, Y, gene, count, cell_id).')
+    inout_params.add_argument('--tsv-list', type=str, help='TSV file of [SAMPLE_ID] [PIXEL_TSV] naming an external pixel TSV that carries a cell-id column. Use when the cell assignment lives in a separate file that cannot be mapped onto the tiled transcript (e.g. a Stereo-seq cell-bin GEM). Unlike the tiled transcript, this file has a header row and its columns are read by name (X, Y, gene, count, cell_id) so that filter_molecules can be applied to it beforehand.')
     inout_params.add_argument('--sptsv-prefix', type=str, help='Prefix for SPTSV files')
 
     key_params = parser.add_argument_group("Key Parameters", "Key parameters that requires user's attention")
@@ -320,11 +320,21 @@ def run_ficture2_multi_cells(_args):
         ## MEX-based samples (e.g. MERSCOPE cell_by_gene without boundaries) with
         ## transcript/boundary-based samples in a single decode. Every branch writes the
         ## same per-sample sptsv prefix, so the steps below are source-agnostic.
-        def cmd_pixel2sptsv(pixel_tsv, out_prefix):
+        def cmd_pixel2sptsv(pixel_tsv, out_prefix, has_header=False):
+            # The tiled transcript is headerless, so its columns are selected by fixed
+            # position (--idx-col-*). An external --tsv-list file (e.g. the Stereo-seq
+            # cellbin.tsv) carries a X/Y/gene/count/cell_id header row so that
+            # filter_molecules can be applied to it beforehand; select those columns by
+            # name (pixel2sptsv's --in-col-* defaults already match these names).
+            if has_header:
+                col_flags = ("--in-col-x X --in-col-y Y --in-col-ftr gene "
+                             "--in-col-cnt count --in-col-id cell_id")
+            else:
+                col_flags = (f"--no-header --idx-col-x {args.colidx_x} --idx-col-y {args.colidx_y} "
+                             f"--idx-col-ftr {args.colidx_feature} --idx-col-cnt {args.colidx_count} "
+                             f"--idx-col-id {args.colidx_cell_id}")
             return (f"{args.spatula} pixel2sptsv --min-cell-count {args.min_cell_count} --pixel {pixel_tsv} "
-                    f"--no-header --idx-col-x {args.colidx_x} --idx-col-y {args.colidx_y} "
-                    f"--idx-col-ftr {args.colidx_feature} --idx-col-cnt {args.colidx_count} "
-                    f"--idx-col-id {args.colidx_cell_id} --ignore-ids {args.ignore_ids} "
+                    f"{col_flags} --ignore-ids {args.ignore_ids} "
                     f"--out {out_prefix} --min-feature-count {args.min_feature_count} {cmd_ftr_include_exclude}")
 
         for sample_id in in_samples:
@@ -334,7 +344,7 @@ def run_ficture2_multi_cells(_args):
                 cmd = f"{args.spatula} mex2sptsv --bcd {mex_bcd} --ftr {mex_ftr} --mtx {mex_mtx} --out {sample_sptsv_prefix} --min-feature-count {args.min_feature_count} {cmd_ftr_include_exclude}"
                 deps.extend([mex_bcd, mex_ftr, mex_mtx])
             elif sample_id in samp2tsv:
-                cmd = cmd_pixel2sptsv(samp2tsv[sample_id], sample_sptsv_prefix)
+                cmd = cmd_pixel2sptsv(samp2tsv[sample_id], sample_sptsv_prefix, has_header=True)
                 deps.append(samp2tsv[sample_id])
             else:
                 pixelf = f"{args.in_dir}/samples/{sample_id}/{sample_id}.tiled"
