@@ -277,13 +277,29 @@ def register_georeference_stage(
 
     #print(f"args.mono = {args.mono}, args.rgba = {args.rgba}, {in_img.endswith('.png')} {getattr(args, 'mono', False)}")
 
+    georef_f = f"{out_prefix}.georef.tif"
+
+    # --georef-detect gtiff: the input already carries the geotransform we want (e.g. a
+    # Seq-Scope H&E TIF registered upstream, whose corner coordinates are already the
+    # transcript um extent), but no CRS. That combination is not "already georeferenced"
+    # as far as the tilers are concerned: geotiff2pmtiles resolves the max zoom from the
+    # CRS, so without one it settles on 0, writes an empty PMTiles and still exits 0.
+    # Stamp --srs on and leave the geotransform alone -- no -a_ullr, so the corner
+    # coordinates are not round-tripped through a decimal rendering of themselves.
+    if str(getattr(args, "georef_detect", "") or "").lower() == "gtiff":
+        cmds = cmd_separator([], f"Assigning {args.srs} to the existing geotransform of {in_img}")
+        cmds.append(
+            " ".join([args.gdal_translate, "-of GTiff", f"-a_srs {args.srs}", in_img, georef_f])
+        )
+        mm.add_target(georef_f, [in_img], cmds)
+        return georef_f
+
     bounds = _resolve_bounds_from_args(args, in_img=in_img)
     if bounds is None:
         raise ValueError(
             "Georeferencing requested but no bounds provided via --georef-*, or --georef-detect"
         )
 
-    georef_f = f"{out_prefix}.georef.tif"
     cmds = cmd_separator([], f"Geo-referencing {in_img} to {georef_f}")
     ullr = "{ulx} {uly} {lrx} {lry}".format(**bounds)
     ## check if rgb expansion is needed
@@ -568,6 +584,15 @@ def register_geotiff2pmtiles_stage(
         rescale += f"--rescale-range {args.rescale_range} "
 
     cmds = cmd_separator([], f"Converting from geotiff to pmtiles: {src_tif}")
+    # geotiff2pmtiles derives its zoom range from the CRS, and on an input that has none it
+    # resolves the max zoom to 0 -- below --min-zoom -- so it writes an empty PMTiles and
+    # still exits 0. Catch that here rather than letting an empty layer reach the catalog.
+    cmds.append(
+        f"if ! '{getattr(args, 'gdalinfo', 'gdalinfo')}' {src_tif} | grep -q 'Coordinate System is'; then "
+        f"echo 'ERROR: {src_tif} has no CRS, so geotiff2pmtiles would write an empty PMTiles. "
+        f"Re-run with --georeference plus a --georef-* mode (use --georef-detect gtiff to keep "
+        f"an existing geotransform and only assign the CRS).' >&2; exit 1; fi"
+    )
     cmds.append(f"'{args.geotiff2pmtiles}' --format {args.tile_format} --min-zoom {args.min_zoom} " + (f"--max-zoom {args.max_zoom} " if args.max_zoom is not None else "") + rescale + f"{src_tif} {pmtiles_f}")
     mm.add_target(pmtiles_f, [src_tif], cmds)
 
