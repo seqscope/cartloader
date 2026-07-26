@@ -33,7 +33,7 @@ def parse_arguments(_args):
     # - input
     inout_params.add_argument('--in-json', type=str, default=None, help='Path to input manifest JSON. If set, omits --in-parquet/--in-csv/--pos-parquet/--scale-json (platform: 10x_xenium, 10x_visium_hd)')
     inout_params.add_argument('--in-mex', type=str, default=os.getcwd(), help='Path to input MEX directory (platform: 10x Visium HD, SeqScope, Illumina; default: current working directory)') # 10x_visium_hd, seqscope, illumina
-    inout_params.add_argument('--in-csv', type=str, default=None, help='Path to input CSV/TSV (platform: 10x Xenium, BGI Stereo-seq, CosMx SMI, Vizgen MERSCOPE, Pixel-seq, Nova-ST)') 
+    inout_params.add_argument('--in-csv', type=str, default=None, help='Path to input CSV/TSV (platform: 10x Xenium, BGI Stereo-seq, CosMx SMI, Vizgen MERSCOPE, Pixel-seq, Nova-ST, SeqScope). For SeqScope this is the raw per-molecule TSV (#lane/tile/X/Y/gene_id/gene/gn/...) and selects the TSV route instead of --in-mex')
     inout_params.add_argument('--in-parquet', type=str, default=None, help='Path to input transcript parquet (platform: 10x Xenium)') 
     # - additional pos
     inout_params.add_argument('--pos-parquet', type=str, default=None, help='Path to input position parquet providing spatial coordinates (platform: 10x Visium HD; typical: tissue_positions.parquet)') # 10x_visium_hd
@@ -78,6 +78,7 @@ def parse_arguments(_args):
     aux_in_csv_params.add_argument('--csv-colname-feature-name', type=str, default=None, help='Column name for gene name in --in-csv (default: feature_name for 10x_xenium, geneName for bgi_stereoseq, target for cosmx_smi, gene for vizgen_merscope, geneName for pixel_seq, geneID for nova_st)')
     # aux_in_csv_params.add_argument('--csv-colname-feature-id', type=str, default=None, help='Column name for gene id')
     aux_in_csv_params.add_argument('--csv-colnames-others', nargs='*', default=[], help='Columns names to keep in --in-csv (e.g., cell_id, overlaps_nucleus)')
+    aux_in_csv_params.add_argument('--csv-colnames-positive', nargs='*', default=[], help='Column names in --in-csv whose value must be strictly positive; rows with a zero, negative or non-numeric value in any of them are discarded as malformed (default: "lane tile X Y" for seqscope, none for the rest). The columns are not carried into the output')
     aux_in_csv_params.add_argument('--csv-colname-phredscore', type=str, default=None, help='Column name for Phred-scaled quality value in --in-csv. This is also named as Q-Score, which estimates the probability of incorrect call (default: qv for 10x_xenium and None for the rest platforms)') # qv
     aux_in_csv_params.add_argument('--min-phred-score', type=float, default=None, help='Phred-scaled quality score cutoff (default: 20 for 10x_xenium and None for the rest platforms).')
     #aux_in_csv_params.add_argument('--add-molecule-id', action='store_true', default=False, help='If enabled, a column of "molecule_id" will be added to the output file to track the index of the original input will be stored in.')
@@ -376,10 +377,13 @@ def sge_convert(_args):
                        ("--exclude-feature-list", args.exclude_feature_list)):
         if path is not None and not os.path.exists(path):
             raise FileNotFoundError(f"File not found: {path} ({flag})")
+    # SeqScope reads either a MEX triple or a raw per-molecule TSV; --in-csv selects the latter,
+    # which is handled by the same generic CSV route as the other transcript-indexed platforms.
+    seqscope_csv = args.platform == "seqscope" and args.in_csv is not None
     # The MEX platforms convert through spatula convert-sge, which takes at most one
     # include-type and one exclude-type feature filter. The generic CSV route (every other
     # platform) evaluates each filter independently, so there a list and a regex combine.
-    if args.platform in ("10x_visium_hd", "seqscope", "illumina"):
+    if args.platform in ("10x_visium_hd", "illumina") or (args.platform == "seqscope" and not seqscope_csv):
         for pol in ("include", "exclude"):
             if getattr(args, f"{pol}_feature_list") and getattr(args, f"{pol}_feature_regex"):
                 sys.exit(f"ERROR: --{pol}-feature-list and --{pol}-feature-regex cannot be combined on "
@@ -454,6 +458,10 @@ def sge_convert(_args):
         if "--units-per-um" not in _args:
             args.units_per_um = 1000
 
+    #  * seqscope (raw TSV route): X/Y are in nanometers
+    if seqscope_csv and "--units-per-um" not in _args:
+        args.units_per_um = 1000
+
     # mm
     mm = minimake()
 
@@ -479,7 +487,7 @@ def sge_convert(_args):
     if args.platform == "10x_visium_hd":
         cmds = convert_visiumhd(cmds, args)
     elif args.platform == "seqscope":
-        cmds = convert_seqscope(cmds, args)
+        cmds = convert_tsv(cmds, args) if seqscope_csv else convert_seqscope(cmds, args)
     elif args.platform == "illumina":
         cmds = convert_illumina(cmds, args)
     elif args.platform in ["cosmx_smi", "bgi_stereoseq", "vizgen_merscope", "pixel_seq", "nova_st", "generic", "10x_xenium"]:

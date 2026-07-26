@@ -35,6 +35,7 @@ def sge_format_generic(_args):
     incol_params.add_argument('--csv-colname-feature-name', type=str, default=None, required=True, help='Column name of gene name in --input')
     incol_params.add_argument('--csv-colname-count', type=str, default=None, help='Column name of UMI count in --input. If not provided, each feature is assigned a count of 1 per pixel')
     incol_params.add_argument('--csv-colnames-others', nargs='+', default=[], help='Column names to keep from --input (e.g., cell_id, overlaps_nucleus). Affects aggregation')
+    incol_params.add_argument('--csv-colnames-positive', nargs='+', default=[], help='Column names in --input whose value must be strictly positive; rows with a zero, negative or non-numeric value in any of them are dropped. Used to discard malformed records (e.g., SeqScope reads that failed to map carry lane/tile/X/Y of 0). The columns themselves are not carried into the output')
     incol_params.add_argument('--csv-colname-feature-id', type=str, default=None, help='Column name of gene ID in --input, if available')
     incol_params.add_argument('--csv-colname-phredscore', type=str, default=None, help='Column name of Phred-scaled quality score (Q-Score) in --input. Use with --min-phred-score (platform: 10x_xenium; default: None)')
 
@@ -87,10 +88,22 @@ def sge_format_generic(_args):
     print(f"csv_comment: {csv_comment}")
     
     icols_count = [args.csv_colname_count] if args.csv_colname_count is not None else []
-    icols = [args.csv_colname_x, args.csv_colname_y, args.csv_colname_feature_name, *args.csv_colnames_others, *icols_count] + [c for c in [args.csv_colname_feature_id, args.csv_colname_feature_type, args.csv_colname_phredscore] if c]
-    
+    icols = [args.csv_colname_x, args.csv_colname_y, args.csv_colname_feature_name, *args.csv_colnames_others, *icols_count, *args.csv_colnames_positive] + [c for c in [args.csv_colname_feature_id, args.csv_colname_feature_type, args.csv_colname_phredscore] if c]
+
     iheader = pd.read_csv(args.input, nrows=1, sep=args.csv_delim, comment=csv_comment).columns.tolist()
-    
+
+    # A '#'-prefixed header line (e.g. the SeqScope raw TSV "#lane<TAB>tile<TAB>X<TAB>...") is a
+    # header, not a comment: reading it with comment="#" would drop it and promote the first data
+    # row to the header instead. It is therefore read as data, which leaves the '#' glued to the
+    # first column name. Strip it here, and read every later pass with the corrected names, so the
+    # column can be addressed by its plain name (--csv-colnames-positive lane ...).
+    read_names = None
+    if iheader and str(iheader[0]).startswith("#"):
+        iheader[0] = str(iheader[0]).lstrip("#")
+        read_names = iheader
+        print(f"Stripped '#' from the first column of the input header; reading it as: {iheader[0]}")
+    name_args = {"names": read_names} if read_names is not None else {}
+
     # * output header and output columns
     ocols_count = [args.colname_count]
     ocols_ftrs = [args.colname_feature_name] if args.csv_colname_feature_id is None else [args.colname_feature_name, args.colname_feature_id]
@@ -129,7 +142,7 @@ def sge_format_generic(_args):
     # 4) feature preprocessing, read all features from the input and apply all ftr-related filters. 
     #   This returns a df with columns [feature, filtering]. For a keep feature, the filtering column is na
     if any([args.include_feature_list, args.exclude_feature_list, args.include_feature_regex, args.exclude_feature_regex, args.include_feature_type_regex]):
-        df_ftrinfo = pd.read_csv(args.input, usecols=[args.csv_colname_feature_name], sep=args.csv_delim, index_col=None, header=0, comment=csv_comment)
+        df_ftrinfo = pd.read_csv(args.input, usecols=[args.csv_colname_feature_name], sep=args.csv_delim, index_col=None, header=0, comment=csv_comment, **name_args)
         feature_filter_args = {
             "include_feature_list": args.include_feature_list,
             "exclude_feature_list": args.exclude_feature_list,
@@ -166,7 +179,7 @@ def sge_format_generic(_args):
     filtered_out_rows = []
 
     # processing
-    for chunk in pd.read_csv(args.input, header=0, chunksize=500000, index_col=None, sep=args.csv_delim, comment=csv_comment):
+    for chunk in pd.read_csv(args.input, header=0, chunksize=500000, index_col=None, sep=args.csv_delim, comment=csv_comment, **name_args):
 
         Rraw=chunk.shape[0]
         if len(icols_count) > 0:
@@ -174,24 +187,38 @@ def sge_format_generic(_args):
         else:
             Craw=Rraw
         
-        # filter by feature 
+        # drop malformed records: rows carrying a zero/negative/non-numeric value in any column
+        # declared positive-only (e.g. SeqScope lane/tile/X/Y, which are 0 when a read failed to
+        # map to a spatial position). Applied first, since on such platforms it removes the bulk
+        # of the rows before any of the more expensive per-row work below.
+        if args.csv_colnames_positive:
+            keep = chunk[args.csv_colnames_positive].apply(pd.to_numeric, errors='coerce').gt(0).all(axis=1)
+            if args.print_removed_transcripts:
+                removed = chunk[~keep].copy()
+                removed['reason'] = 'nonpositive:' + ','.join(args.csv_colnames_positive)
+                filtered_out_rows.append(removed)
+            chunk = chunk[keep]
+
+        # filter by feature
         # if ftr2filter is not empty
         if ftr2filter:
             # add ftr2filter value to removed by key == csv_colname_feature_name
-            removed = chunk.copy()
-            removed["reason"] = removed[args.csv_colname_feature_name].map(ftr2filter)
-            # drop the rows that the reason is na
-            removed = removed[removed["reason"].notna()]
-            filtered_out_rows.append(removed)
+            if args.print_removed_transcripts:
+                removed = chunk.copy()
+                removed["reason"] = removed[args.csv_colname_feature_name].map(ftr2filter)
+                # drop the rows that the reason is na
+                removed = removed[removed["reason"].notna()]
+                filtered_out_rows.append(removed)
             chunk = chunk[chunk[args.csv_colname_feature_name].map(ftr2filter).isna()]
 
         # filter by phred scores (low-quality reads)
         if args.csv_colname_phredscore is not None and args.min_phred_score is not None:
-            removed = chunk[chunk[args.csv_colname_phredscore] < args.min_phred_score].copy()
-            removed['reason'] = 'min_phred_score'
-            filtered_out_rows.append(removed)
+            if args.print_removed_transcripts:
+                removed = chunk[chunk[args.csv_colname_phredscore] < args.min_phred_score].copy()
+                removed['reason'] = 'min_phred_score'
+                filtered_out_rows.append(removed)
             chunk = chunk[chunk[args.csv_colname_phredscore] >= args.min_phred_score]
-        
+
         # rename columns
         chunk.rename(columns = col_dict, inplace=True)
         

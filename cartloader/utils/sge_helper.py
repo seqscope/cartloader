@@ -23,7 +23,7 @@ aux_sge_args = {
     ],
     "incsv": [
         'csv_comment', 'csv_delim', 'csv_colname_x', 'csv_colname_y', 'csv_colname_feature_name',
-        'csv_colname_count',  'csv_colnames_others', # 'csv_colname_feature_id',
+        'csv_colname_count',  'csv_colnames_others', 'csv_colnames_positive', # 'csv_colname_feature_id',
         'csv_colname_phredscore', 'min_phred_score' #, 'add_molecule_id'
     ],
     "spatula": [
@@ -47,11 +47,18 @@ def input_by_platform(args):
             "pos_parquet": args.pos_parquet,
         }
     elif args.platform in ["seqscope", "illumina"]:
-        in_dict = {
-            "mex_bcd": os.path.join(args.in_mex, args.mex_bcd),
-            "mex_ftr": os.path.join(args.in_mex, args.mex_ftr),
-            "mex_mtx": os.path.join(args.in_mex, args.mex_mtx),
-        }
+        # SeqScope has two input routes: the MEX triple (barcodes/features/matrix), or a raw
+        # per-molecule TSV (#lane/tile/X/Y/gene_id/gene/gn/...) given with --in-csv.
+        if args.platform == "seqscope" and args.in_csv is not None:
+            in_dict = {
+                "in_csv": args.in_csv
+            }
+        else:
+            in_dict = {
+                "mex_bcd": os.path.join(args.in_mex, args.mex_bcd),
+                "mex_ftr": os.path.join(args.in_mex, args.mex_ftr),
+                "mex_mtx": os.path.join(args.in_mex, args.mex_mtx),
+            }
     elif args.platform in ["10x_xenium", "cosmx_smi", "bgi_stereoseq", "vizgen_merscope", "pixel_seq", "nova_st", "generic"]:
         if args.in_csv is not None:
             in_dict={
@@ -102,6 +109,21 @@ def update_csvformat_by_platform(args):
             "count": "ExonCount",
             "delim": None,
             "comment": False
+        },
+        # Raw per-molecule TSV route (--in-csv). The header line is '#'-prefixed
+        # ("#lane<TAB>tile<TAB>X<TAB>Y<TAB>gene_id<TAB>gene<TAB>gn<TAB>gt<TAB>spl<TAB>unspl<TAB>ambig"),
+        # which sge_format_generic reads as a header and de-hashes; "gn" is the primary count
+        # (gt/spl/unspl/ambig are alternatives, selectable via --csv-colname-count). Coordinates are
+        # in nanometers (see the --units-per-um default of 1000 in sge_convert), and a record that
+        # failed to map carries lane/tile/X/Y of 0, so those four are required to be positive.
+        "seqscope": {
+            "x": "X",
+            "y": "Y",
+            "feature_name": "gene",
+            "count": "gn",
+            "delim": None,
+            "comment": False,
+            "positive": ["lane", "tile", "X", "Y"]
         },
         "cosmx_smi": {
             "x": "x_global_px",
@@ -158,6 +180,8 @@ def update_csvformat_by_platform(args):
         args.csv_delim = platform_settings["delim"]
     if args.csv_comment is False:
         args.csv_comment = platform_settings["comment"]
+    if not args.csv_colnames_positive:
+        args.csv_colnames_positive = platform_settings.get("positive", [])
     return args
 
 # def read_minmax(minmax_f):

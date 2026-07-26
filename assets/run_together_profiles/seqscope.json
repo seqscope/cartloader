@@ -3,6 +3,7 @@
   "ingest": {
     "sge_platform": "seqscope",
     "in_dir_flag": "--in-mex",
+    "raw_input_flag": "--in-csv",
     "extra_flags": ["--units-per-um 1000", "--icols-mtx 2", "--sge-visual"]
   },
   "roles": {},

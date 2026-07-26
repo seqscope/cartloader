@@ -798,7 +798,10 @@ def cmd_sge_convert(cfg, sge_dir, s):
         parts.append(f"{flag} {val}")
     # A platform whose whole input IS the directory (SeqScope: --in-dir is the MEX
     # directory holding barcodes/features/matrix, with no standard parent layout).
-    if ing.get("in_dir_flag"):
+    # Skipped when the sample names a raw transcript instead: that is a second, complete
+    # input route (SeqScope's raw per-molecule TSV via --raw-transcript), not a supplement
+    # to the directory, so requiring --in-dir as well would be wrong.
+    if ing.get("in_dir_flag") and not raw_tx:
         if not in_dir:
             sys.exit(f"ERROR: {cfg['platform']} ingest reads its input directory directly; "
                      f"provide it with --in-dir <dir> (or an 'in_dir' sample-sheet column).")
