@@ -647,14 +647,26 @@ def register_png2pmtiles_pipeline(
         if getattr(args, "georeference", False):
             georef_f = register_georeference_stage(mm, args, in_img=src_img, out_prefix=prefix)
 
-        gdalwarp_f = register_gdalwarp_stage(mm, args, src_tif=georef_f, out_prefix=prefix)
+        # Rotate/flip, including the x/y transpose (--rotate 90 --flip-vertical, which
+        # orient2axisorder maps to the gdalwarp axisswap order "2,1"). Registered here as well
+        # as in the gdal branch: this is the default method, and without it those flags parse
+        # and are then silently dropped -- the image tiles, just in the wrong orientation.
+        oriented_f = register_orientation_stage(mm, args, src_tif=georef_f, out_prefix=prefix)
 
-        pmtiles_f = register_geotiff2pmtiles_stage(mm, args, src_tif=gdalwarp_f, out_prefix=prefix)
+        # The plain warp exists to hand the tiler a normalized GeoTIFF. When the orientation
+        # stage ran it has already produced exactly that, so re-warping only costs a second
+        # full-raster resample of a large image.
+        if oriented_f != georef_f:
+            src_for_tiles = oriented_f
+        else:
+            src_for_tiles = register_gdalwarp_stage(mm, args, src_tif=georef_f, out_prefix=prefix)
+
+        pmtiles_f = register_geotiff2pmtiles_stage(mm, args, src_tif=src_for_tiles, out_prefix=prefix)
 
         return Png2PmtilesResult(
             georef_tif=georef_f,
-            oriented_tif=gdalwarp_f,
-            final_tif=gdalwarp_f,
+            oriented_tif=src_for_tiles,
+            final_tif=src_for_tiles,
             mbtile_flag=None,
             mbtile_path=None,
             pmtiles_path=pmtiles_f

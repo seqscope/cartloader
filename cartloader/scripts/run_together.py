@@ -95,6 +95,7 @@ KNOWN_SUBKEYS = {
         "um_per_pixel", "um_per_pixel_json", "um_per_pixel_key", "georeferenced",
         "georef_detect", "shrink_factor", "high_memory", "rescale", "rescale_range",
         "rescale_min", "rescale_max",
+        "swapxy", "rotate", "flip_vertical", "flip_horizontal",
     }),
 }
 # transcript column-override key -> the sge_convert flag that names that input column
@@ -635,6 +636,7 @@ def image_row_to_spec(row, cfg, in_dir):
             spec["transform_path"] = _abs_in_dir(val, in_dir)
     for k in ("shrink_factor", "high_memory", "convert", "um_per_pixel",
               "georef_plain", "georeferenced", "georef_detect",
+              "swapxy", "rotate", "flip_vertical", "flip_horizontal",
               "rescale", "rescale_range", "rescale_min", "rescale_max"):
         if row.get(k):
             spec[k] = row[k]
@@ -646,6 +648,38 @@ def image_row_to_spec(row, cfg, in_dir):
 def _truthy(v):
     """Coerce a sheet string ('true'/'1'/…) or a JSON bool to a boolean."""
     return str(v).strip().lower() in ("1", "true", "yes", "t", "y") if v is not None else False
+
+
+def _image_orient_flags(settings, idef):
+    """Rotate/flip flags for image_png2pmtiles, from a per-image spec (else image_defaults).
+
+    `swapxy` is the friendly spelling of an x/y transpose — a reflection about the main
+    diagonal, which is what a histology image needs when its axes are stored swapped relative
+    to the transcript coordinates. The rotate/flip vocabulary already expresses it as a 90
+    degree rotation followed by a vertical flip (orient_helper's orient2axisorder maps that
+    pair to the gdalwarp axisswap order "2,1"), so it is expanded here rather than carried
+    any further: downstream there stays exactly one orientation mechanism.
+    """
+    def get(k):
+        return settings.get(k, idef.get(k))
+
+    rotate = get("rotate")
+    vflip = _truthy(get("flip_vertical"))
+    hflip = _truthy(get("flip_horizontal"))
+    if _truthy(get("swapxy")):
+        if rotate or vflip or hflip:
+            sys.exit("ERROR: image 'swapxy' is shorthand for rotate=90 plus flip_vertical, so it "
+                     "cannot be combined with an explicit rotate/flip_vertical/flip_horizontal. "
+                     "Drop swapxy and spell the orientation out instead.")
+        rotate, vflip = "90", True
+    parts = []
+    if rotate:
+        parts.append(f"--rotate {rotate}")
+    if vflip:
+        parts.append("--flip-vertical")
+    if hflip:
+        parts.append("--flip-horizontal")
+    return (" " + " ".join(parts)) if parts else ""
 
 
 def parse_image_arg(s):
@@ -1307,6 +1341,9 @@ def _cmd_rgb_image(cfg, s, iid, src, cart_dir, settings):
         rescale += f" --rescale {rs}"
     if rrange:
         rescale += f" --rescale-range {rrange}"
+    # Rotate/flip (incl. swapxy, the x/y transpose). Orthogonal to how the bounds are
+    # obtained, so it applies to every branch below.
+    orient = _image_orient_flags(settings, idef)
     # An image that already carries the geotransform we want (e.g. a Seq-Scope H&E TIF
     # registered upstream, whose corner coordinates are already the transcript um extent):
     # its bounds are taken as-is, so no bounds have to be synthesized and --georef-plain/
@@ -1317,7 +1354,7 @@ def _cmd_rgb_image(cfg, s, iid, src, cart_dir, settings):
     if _truthy(settings.get("georeferenced", idef.get("georeferenced"))):
         cmds.append(f"cartloader image_png2pmtiles --in-img {src} --out-prefix {prefix} "
                     f"--geotif2mbtiles --mbtiles2pmtiles --georeference "
-                    f"--georef-detect gtiff{rescale}")
+                    f"--georef-detect gtiff{orient}{rescale}")
         cmds.append(catalog_image_line(cfg, catalog, iid, cart_dir))
         return cmds
     # Bounds source. An OME-TIFF carries its pixel size in embedded metadata, so the
@@ -1332,7 +1369,8 @@ def _cmd_rgb_image(cfg, s, iid, src, cart_dir, settings):
         detect = "ome"
     if detect:
         cmds.append(f"cartloader image_png2pmtiles --in-img {src} --out-prefix {prefix} "
-                    f"--geotif2mbtiles --mbtiles2pmtiles --georeference --georef-detect {detect}{rescale}")
+                    f"--geotif2mbtiles --mbtiles2pmtiles --georeference --georef-detect {detect}"
+                    f"{orient}{rescale}")
         cmds.append(catalog_image_line(cfg, catalog, iid, cart_dir))
         return cmds
     jrel = settings.get("um_per_pixel_json")
@@ -1348,7 +1386,7 @@ def _cmd_rgb_image(cfg, s, iid, src, cart_dir, settings):
         upp = f"--um-per-pixel {settings['um_per_pixel']}"
     plain = "--georef-plain" if settings.get("georef_plain") else ""
     cmds.append(f"cartloader image_png2pmtiles --in-img {src} --out-prefix {prefix} "
-                f"--geotif2mbtiles --mbtiles2pmtiles --georeference {plain} {upp}{rescale}".strip())
+                f"--geotif2mbtiles --mbtiles2pmtiles --georeference {plain} {upp}{orient}{rescale}".strip())
     cmds.append(catalog_image_line(cfg, catalog, iid, cart_dir))
     return cmds
 
@@ -1774,8 +1812,10 @@ def parse_arguments(_args):
                                               "Images attach to samples by the `sample` column ('*'/blank = all samples).")
     io.add_argument("--image", action="append", metavar="type=..,source=..,..",
                     help="Single-sample image as comma-separated key=value pairs (keys: type, source/src, id, color, "
-                         "transform (or the platform column e.g. merfish_csv), shrink_factor, high_memory). Same fields "
-                         "as a --images TSV row; repeat --image per image.")
+                         "transform (or the platform column e.g. merfish_csv), shrink_factor, high_memory, and the "
+                         "orientation keys swapxy / rotate / flip_vertical / flip_horizontal — swapxy=true transposes "
+                         "the image, for histology stored with its axes swapped relative to the transcript "
+                         "coordinates). Same fields as a --images TSV row; repeat --image per image.")
     io.add_argument("--out-dir", type=str, help="Output directory (single sample / shared joint model)")
     io.add_argument("--out-root", type=str, help="Output root; each sample gets its own dir and an independent model")
     io.add_argument("--id", type=str, help=f"Sample id for a single-sample run (default: {DEFAULT_SAMPLE_ID}). The packaged directory and catalog id become <out-dir basename>-<id>, so the descriptive name lives in --out-dir. With --out-root instead, each sample is named after its input directory/prefix.")
