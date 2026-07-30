@@ -51,6 +51,23 @@ ROLE_LIST_FLAG = {
     "mex": "--mex-list",
     "cell_tsv": "--tsv-list",
 }
+
+
+def explicit_lists(ca):
+    """Ready-made --list-* files named for a cell analysis, as role -> path. run_together
+    normally derives each list from the samples' resolved roles; naming one supplies it
+    verbatim instead, either per analysis (`lists` in a cell_analyses entry) or run-wide
+    (top-level `cell_lists` / the --list-* CLI flags, merged in by build_config).
+
+    An explicitly named list also satisfies that role's requirement in the analysis's
+    uses/any_uses gating, and is passed even for a role the analysis does not declare at
+    all: the list was supplied directly, so no sample has to carry the role on disk. That
+    is what makes externally assigned cluster labels reachable on a multi-sample run —
+    without --list-cluster, run_ficture2_multi_cells computes Leiden clusters on demand,
+    which is not always what the run wants. Same escape hatch for a curated xy/boundaries
+    list that should replace the auto-detected per-sample files.
+    """
+    return ca.get("lists") or {}
 # Recognized top-level keys in a --config JSON. Anything else aborts build_config
 # (unless --allow-unknown-config-keys), since unknown keys are otherwise silently
 # dropped. Nested/per-file overrides (e.g. csv_colnames) live under these, not here.
@@ -61,6 +78,8 @@ KNOWN_CONFIG_KEYS = frozenset({
     "colname_cell", "exclude_feature_regex", "include_feature_list", "exclude_feature_list",
     "ingest_include_feature_regex", "ingest_exclude_feature_regex",
     "ingest_include_feature_list", "ingest_exclude_feature_list",
+    # ready-made --list-* files applied to every cell analysis (role -> path)
+    "cell_lists",
     # dict blocks deep-merged into the profile (Layer 2)
     "ingest", "roles", "cartload", "ficture_defaults", "cell_defaults", "squares", "cell_import",
     "hne", "image_transform", "image_defaults", "publish", "resources",
@@ -517,6 +536,37 @@ def build_config(args):
     # Apply ficture_defaults / cell_defaults to every analysis (per-entry keys win).
     prof["ficture"] = [deep_merge(prof["ficture_defaults"], a) for a in prof["ficture"]]
     prof["cell_analyses"] = [deep_merge(prof["cell_defaults"], ca) for ca in prof["cell_analyses"]]
+
+    # Ready-made --list-* files (see explicit_lists). A run-wide default comes from the
+    # top-level `cell_lists` block or the --list-* CLI flags (CLI wins) and applies to
+    # every cell analysis; a per-analysis `lists` entry overrides it role by role.
+    run_lists = dict(cfg.get("cell_lists") or {})
+    for role, val in (("clusters", args.list_cluster), ("xy", args.list_xy),
+                      ("boundaries", args.list_boundaries), ("mex", args.list_mex),
+                      ("cell_tsv", args.list_cell_tsv)):
+        if val:
+            run_lists[role] = val
+    # Validate the merged overrides in one place, before any planning: an unknown role
+    # would otherwise be a --list-* flag that never appears, and a missing file would
+    # surface as a make failure deep inside the cells stage. Paths are made absolute here
+    # so they do not depend on where make is invoked from.
+    for ca in prof["cell_analyses"]:
+        if run_lists:
+            ca["lists"] = {**run_lists, **explicit_lists(ca)}
+        lists = explicit_lists(ca)
+        if not isinstance(lists, dict):
+            sys.exit(f"ERROR: 'lists' in cell analysis '{ca.get('id', '?')}' must be a map "
+                     f"of role -> list file path (got {type(lists).__name__}).")
+        for role, path in lists.items():
+            if role not in ROLE_LIST_FLAG:
+                sys.exit(f"ERROR: cell analysis '{ca.get('id', '?')}' names a list for role "
+                         f"'{role}', which feeds no --list-* flag. Roles that take a list: "
+                         f"{', '.join(sorted(ROLE_LIST_FLAG))}.")
+            full = os.path.abspath(os.path.expanduser(path))
+            if not os.path.exists(full):
+                sys.exit(f"ERROR: file not found: {path} (cell analysis "
+                         f"'{ca.get('id', '?')}', lists.{role})")
+            lists[role] = full
 
     prof["out_dir"] = args.out_dir or cfg.get("out_dir")
     prof["out_root"] = args.out_root or cfg.get("out_root")
@@ -1137,6 +1187,10 @@ def cmd_cells(ca, list_files, fic_dir, model_path, cfg):
     # genes must survive into the cell pseudobulk and DE (the FICTURE restriction reaches
     # clustering via the projected pixel model instead). See cells_count_filter_flags.
     parts.extend(cells_count_filter_flags(cfg))
+    # Escape hatch for run_ficture2_multi_cells flags this builder does not model. Needed
+    # in practice by `lists`-supplied clusters: cluster ids are assumed 1-based and are
+    # decremented, so externally assigned 0-based labels need --zero-based-clust-id here.
+    parts.extend(ca.get("extra_flags", []))
     return " ".join(parts)
 
 
@@ -1442,6 +1496,9 @@ def add_targets(mm, samples, cfg, args):
         return stage not in skip and (stages is None or stage in stages)
 
     _, default_model_id = resolved_models(cfg["ficture"])
+    # Every sample id in the run (not just this group's): a user-supplied list file may
+    # legitimately cover the whole run while each --out-root group sees one sample.
+    cfg["_all_sids"] = [s["id"] for s in samples]
 
     groups = {}
     for s in samples:
@@ -1652,6 +1709,38 @@ def _role_list_line(sid, role, val):
     return f"{sid}\t{val}\n"
 
 
+def _check_list_ids(path, role, ca_id, grp_sids, all_sids):
+    """Sanity-check a user-supplied --list-* file against the run's sample ids.
+
+    The first column is the join key that ties each listed file to a sample's ingested
+    transcript, FICTURE subdir and packaged output, so an id matching nothing in this
+    analysis's group is a hard error (a typo, or a list written for a different sample
+    set). Everything else is only reported: incomplete coverage is legitimate (a run may
+    carry labels for some samples only), and an id outside the group but inside the run is
+    normal for an --out-root run, where one list can serve every per-sample group."""
+    ids = []
+    with open(path) as f:
+        for line in f:
+            line = line.strip()
+            if line:
+                ids.append(line.split("\t")[0])
+    if not ids:
+        sys.exit(f"ERROR: empty list file: {path} (cell analysis '{ca_id}', lists.{role})")
+    grp, seen = set(grp_sids), set(ids)
+    if not (seen & grp):
+        sys.exit(f"ERROR: none of the sample ids in {path} (cell analysis '{ca_id}', "
+                 f"lists.{role}) match the samples it applies to. Listed: "
+                 f"{', '.join(sorted(seen))}. Expected one or more of: {', '.join(sorted(grp))}.")
+    unknown = sorted(seen - set(all_sids))
+    if unknown:
+        print(f"WARNING: {path} (cell analysis '{ca_id}', lists.{role}) lists sample id(s) "
+              f"not in this run, which will be ignored: {', '.join(unknown)}", file=sys.stderr)
+    missing = sorted(grp - seen)
+    if missing:
+        print(f"WARNING: {path} (cell analysis '{ca_id}', lists.{role}) has no entry for "
+              f"sample(s): {', '.join(missing)}", file=sys.stderr)
+
+
 def _resolve_cell_inputs(ca, grp, cfg):
     """Decide whether a cell analysis runs for this group and which file roles feed
     it. Returns (contributing_samples, required_list_roles) or (None, None) if it
@@ -1669,8 +1758,16 @@ def _resolve_cell_inputs(ca, grp, cfg):
     ``tx_cell_id`` matches a sample whose transcript already carries a cell_id column
     (has_tx_cell_id); it feeds no --list file (cell_id is read positionally from the
     tiled transcript, like the generic platform's --colname-cell path).
+
+    A role named in the analysis's `lists` override counts as present for every sample:
+    the list was supplied directly, so no sample has to carry that role on disk for the
+    analysis to run (see explicit_lists).
     """
+    explicit = explicit_lists(ca)
+
     def _has(s, r):
+        if r in explicit:
+            return True
         return bool(s.get("has_tx_cell_id")) if r == "tx_cell_id" else bool(s["roles"].get(r))
     if ca.get("generic_cell"):
         mex_ok = all(s["roles"].get("mex") for s in grp)
@@ -1708,9 +1805,14 @@ def _resolve_cell_inputs(ca, grp, cfg):
     # sample's cell-count source per-sample (MEX vs tiled transcript) and tolerates
     # partial xy/boundaries/cluster coverage, so a mixed joint run (some samples with
     # boundaries, some with a cellxgene MEX) is packaged from one call.
+    # An explicitly named list is always passed, including for a role the analysis does
+    # not declare in uses/any_uses/optional_uses (e.g. adding cluster labels to an
+    # analysis that would otherwise cluster on demand).
     list_roles = []
-    for r in candidate_roles:
-        if r in ROLE_LIST_FLAG and r not in list_roles and any(s["roles"].get(r) for s in contributing):
+    for r in list(explicit) + candidate_roles:
+        if r not in ROLE_LIST_FLAG or r in list_roles:
+            continue
+        if r in explicit or any(s["roles"].get(r) for s in contributing):
             list_roles.append(r)
     return contributing, list_roles
 
@@ -1721,7 +1823,9 @@ def plan_cell_analyses(grp, sge_root, cfg, fic_dir, default_model_id, multi):
 
     An analysis with a ``multi_import`` command is a per-sample import for joint
     runs (e.g. Xenium Ranger clusters, which are sample-specific and cannot be
-    jointly decoded) — it is skipped here for multi and handled in the image stage.
+    jointly decoded) — it is skipped here for multi and handled in the image stage. A
+    `lists` override does not change that routing: such an analysis is per-sample by
+    nature, so a joint list belongs on one of the jointly decoded analyses instead.
     """
     active = []
     for ca in cfg.get("cell_analyses", []):
@@ -1731,8 +1835,17 @@ def plan_cell_analyses(grp, sge_root, cfg, fic_dir, default_model_id, multi):
         if contributing is None:
             continue
         bnd = cfg.get("roles", {}).get("boundaries", {})
+        explicit = explicit_lists(ca)
         list_files = {}
         for role in list_roles:
+            # A list named in `lists` is passed through verbatim — the sample ids in it
+            # are the join key for every later stage, so they are checked against the
+            # run's own ids rather than trusted blindly.
+            if role in explicit:
+                list_files[role] = explicit[role]
+                _check_list_ids(explicit[role], role, ca["id"],
+                                [s["id"] for s in contributing], cfg.get("_all_sids", []))
+                continue
             # Only the contributing samples that actually supply this role (a mixed run
             # lists, e.g., boundaries for some samples and mex for others).
             samples_with = [s for s in contributing if s["roles"].get(role)]
@@ -1823,6 +1936,27 @@ def parse_arguments(_args):
     io.add_argument("--platform-json", type=str, help="External JSON profile that overrides the built-in platform profile")
     io.add_argument("--saw", type=str, help="Path to the SAW binary (required for --platform stereoseq: the "
                                             ".gef inputs are binary and only SAW can expand them into text GEMs)")
+
+    l = p.add_argument_group(
+        "Ready-made cell input lists (override what run_together derives from the samples)")
+    l.add_argument("--list-cluster", type=str, default=None,
+                   help="TSV of externally assigned cell clusters, '[SAMPLE_ID] [CLUSTER_FILE]' per "
+                        "line, passed to run_ficture2_multi_cells as --list-cluster. Without it the "
+                        "cells stage computes Leiden clusters on demand. Each cluster file is 2 "
+                        "columns (cell_id, cluster id; 1-based unless the analysis passes "
+                        "--zero-based-clust-id via extra_flags).")
+    l.add_argument("--list-xy", type=str, default=None,
+                   help="TSV of cell metadata (centroid) files, '[SAMPLE_ID] [XY_FILE]' per line, "
+                        "replacing the per-sample xy role files")
+    l.add_argument("--list-boundaries", type=str, default=None,
+                   help="TSV of cell boundary files, '[SAMPLE_ID] [BOUNDARY_FILE]' per line, "
+                        "replacing the per-sample boundaries role files")
+    l.add_argument("--list-mex", type=str, default=None,
+                   help="TSV of cell-feature MEX dirs, '[SAMPLE_ID] [MEX_DIR]' (or a 4-column "
+                        "bcd/ftr/mtx triple) per line, replacing the per-sample mex role files")
+    l.add_argument("--list-cell-tsv", type=str, default=None,
+                   help="TSV of standalone cell-level TSVs, '[SAMPLE_ID] [CELL_TSV]' per line, "
+                        "replacing the per-sample cell_tsv role files")
 
     c = p.add_argument_group("Single-sample input column overrides (else profile / platform defaults)")
     c.add_argument("--colname-transcript-x", type=str, default=None, help="X column name in --raw-transcript")

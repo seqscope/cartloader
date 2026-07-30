@@ -207,7 +207,8 @@ Escalate to `--config run.json` when samples need **different** settings, or to 
   "ficture_defaults": { "decode_scale": 2 },
   "cell_defaults":    { "min_cell_count": 20 },
   "ficture":       [ /* analyses: each is a de-novo train OR a projection */ ],
-  "cell_analyses": [ /* {id, uses:[roles], any_uses?:[roles], optional_uses?:[roles], model_id?} */ ],
+  "cell_analyses": [ /* {id, uses:[roles], any_uses?:[roles], optional_uses?:[roles], model_id?, lists?, extra_flags?} */ ],
+  "cell_lists":    { "clusters": "..." },           // ready-made --list-* file(s) for every cell analysis
   "images":        [ /* see Image Modalities */ ],
   "cartload":  { "use_pmpoint": true, "bin_count": 500 }
 }
@@ -260,6 +261,43 @@ Cell-level decode is **platform-default and automatic**: an analysis runs whenev
 `any_uses` lets an analysis accept **alternative** cell-count sources — e.g. MERSCOPE runs cell analysis from **either** boundaries **or** a `cellxgene` MEX, and a **mixed joint run** (some samples with boundaries, some with a MEX) is resolved per sample and packaged from one call. See the [MERSCOPE page](./platforms/merscope.md) for the source-precedence rules.
 
 An analysis may carry a **`multi_import`** command (e.g. Xenium's `xeniumranger` → `import_xenium_cell`). Such an analysis relies on **sample-specific** cluster labels: on a single-sample run it goes through `run_ficture2_multi_cells` as usual; on a **joint run** it is imported **per sample** instead (sheet-provided `xy`/`boundaries`/`clusters` paths are forwarded as `--csv-*` overrides). See the [Xenium page](./platforms/xenium.md).
+
+`extra_flags` is a list of raw flags appended to this analysis's `run_ficture2_multi_cells` call, for options `run_together` does not model (e.g. `["--zero-based-clust-id"]`).
+
+### Supplying your own `--list-*` files
+
+By default `run_together` **derives** each `--list-*` file that `run_ficture2_multi_cells` consumes, writing `<out_dir>/tsv/in_<role>.<analysis_id>.tsv` from the samples' resolved roles. To supply one yourself instead — most often **externally assigned cell clusters**, since without `--list-cluster` the cells stage computes Leiden clusters on demand — name it per role, either run-wide or per analysis:
+
+| role | flag it feeds | CLI flag | line format |
+|---|---|---|---|
+| `clusters` | `--list-cluster` | `--list-cluster` | `SAMPLE_ID<TAB>CLUSTER_FILE` |
+| `xy` | `--list-xy` | `--list-xy` | `SAMPLE_ID<TAB>XY_FILE` |
+| `boundaries` | `--list-boundaries` | `--list-boundaries` | `SAMPLE_ID<TAB>BOUNDARY_FILE` |
+| `mex` | `--mex-list` | `--list-mex` | `SAMPLE_ID<TAB>MEX_DIR` (or a bcd/ftr/mtx triple) |
+| `cell_tsv` | `--tsv-list` | `--list-cell-tsv` | `SAMPLE_ID<TAB>CELL_TSV` |
+
+```bash
+# run-wide, from the CLI (applies to every cell analysis)
+cartloader run_together --platform 10x_xenium --samples samples.tsv --out-dir OUT \
+    --list-cluster /work/clust/list.tsv
+```
+```jsonc
+// run-wide, in JSON: same effect as the CLI flags (a CLI flag wins)
+{ "cell_lists": { "clusters": "/work/clust/list.tsv" } }
+
+// per analysis: overrides the run-wide default role by role
+{ "cell_analyses": [ { "id": "cartloader",
+                       "lists": { "clusters": "/work/clust/list.tsv" },
+                       "extra_flags": ["--zero-based-clust-id"] } ] }
+```
+
+A named list is passed **verbatim** (no file is generated for that role) and:
+
+- **satisfies that role's gating** — no sample has to carry the role on disk, and the role need not appear in the analysis's `uses` at all, so a cluster list can be attached to an analysis that would otherwise cluster on demand;
+- is **validated at plan time** — unknown role name, missing file, empty file, and a first column matching none of the run's sample ids are hard errors; partial coverage and ids outside the run are warnings;
+- does **not** change `multi_import` routing — that path is per-sample by nature, so on a joint Xenium run attach the list to the jointly decoded `cartloader` analysis, and `xeniumranger` keeps its per-sample import.
+
+Cluster ids are read as **1-based** and decremented; for 0-based labels add `"extra_flags": ["--zero-based-clust-id"]`.
 
 ---
 ## See also
