@@ -84,14 +84,14 @@ def copy_rgb_tsv(in_rgb, out_rgb, restart=False):
         f.write(expected_content)
 
 
-def record_catalog_alias(catalog_path, factor_id, alias_filename, key="alias"):
-    """Record ``key: alias_filename`` on the factor whose id is ``factor_id`` in a
-    CartoScope catalog YAML, editing it in place.
+def set_catalog_factor_field(catalog_path, factor_id, key, value):
+    """Set ``key: value`` on the factor whose id is ``factor_id`` in a CartoScope catalog
+    YAML, editing it in place. The factor id is never changed.
 
     Handles both catalog shapes: ``assets.factors`` as a list of dicts (the
     per-sample catalog.yaml) and as a map keyed by hyphenated id (the
     multi-catalog.yaml). Raises if the factor id is not present, so a mistyped
-    projection id fails the run rather than silently deploying an unreferenced file.
+    id fails the run rather than silently editing nothing.
     """
     import yaml
     with open(catalog_path) as f:
@@ -103,18 +103,31 @@ def record_catalog_alias(catalog_path, factor_id, alias_filename, key="alias"):
     if isinstance(factors, dict):
         entry = factors.get(factor_id)
         if entry is not None:
-            entry[key] = alias_filename
+            entry[key] = value
             matched = True
     elif isinstance(factors, list):
         for entry in factors:
             if entry.get("id") == factor_id:
-                entry[key] = alias_filename
+                entry[key] = value
                 matched = True
                 break
     if not matched:
-        raise ValueError(f"record_catalog_alias: factor '{factor_id}' not found in {catalog_path}")
+        raise ValueError(f"set_catalog_factor_field: factor '{factor_id}' not found in {catalog_path}")
     with open(catalog_path, "w") as f:
         yaml.dump(catalog, f, Dumper=yaml.SafeDumper, default_flow_style=False, sort_keys=False)
+
+
+def record_catalog_alias(catalog_path, factor_id, alias_filename, key="alias"):
+    """Point a factor's ``alias`` key at a deployed manual-label file. A distinct concept
+    from the factor's display ``name``: this names a companion TSV of factor labels that
+    ships beside the model, not a label for the layer itself."""
+    set_catalog_factor_field(catalog_path, factor_id, key, alias_filename)
+
+
+def record_catalog_name(catalog_path, factor_id, name):
+    """Set a factor's human-readable ``name`` — the label shown for the layer. The factor
+    id and every file named after it are untouched."""
+    set_catalog_factor_field(catalog_path, factor_id, "name", name)
 
 
 def render_umap_cmd(in_tsv, out_ndjson, colname_factor="topK", colname_x="UMAP1", colname_y="UMAP2"):

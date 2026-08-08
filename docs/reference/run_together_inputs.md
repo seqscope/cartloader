@@ -264,6 +264,14 @@ An analysis may carry a **`multi_import`** command (e.g. Xenium's `xeniumranger`
 
 `extra_flags` is a list of raw flags appended to this analysis's `run_ficture2_multi_cells` call, for options `run_together` does not model (e.g. `["--zero-based-clust-id"]`).
 
+`name` sets the factor's human-readable **`name:`** in `catalog.yaml` and `multi-catalog.yaml` — the label shown for the layer. The factor **`id`** is unchanged (it still names every file and asset key), so this is purely cosmetic:
+
+```jsonc
+{ "id": "published", "name": "Published cell types (Banovich 2025)", "uses": ["boundaries", "xy"] }
+```
+
+Without it, a cell analysis displays its bare id (`published`), and the multi-catalog's cell factors carry no `name` at all. The name is written after packaging, into the shared multi-catalog and every contributing sample's catalog. Plain text only — quotes, `$`, backticks and backslashes are rejected up front, since the name travels through a generated make recipe. Unrelated to `alias`, which points a factor at a companion factor-label TSV.
+
 ### Supplying your own `--list-*` files
 
 By default `run_together` **derives** each `--list-*` file that `run_ficture2_multi_cells` consumes, writing `<out_dir>/tsv/in_<role>.<analysis_id>.tsv` from the samples' resolved roles. To supply one yourself instead — most often **externally assigned cell clusters**, since without `--list-cluster` the cells stage computes Leiden clusters on demand — name it per role, either run-wide or per analysis:

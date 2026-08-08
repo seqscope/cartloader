@@ -551,6 +551,16 @@ def build_config(args):
     # surface as a make failure deep inside the cells stage. Paths are made absolute here
     # so they do not depend on where make is invoked from.
     for ca in prof["cell_analyses"]:
+        # A display `name` is recorded into the catalogs by a generated make recipe, so
+        # reject the characters that would break out of its quoting (or be eaten by make)
+        # rather than emitting a recipe that fails or, worse, runs something else.
+        name = ca.get("name")
+        if name is not None:
+            bad = [c for c in "'\"$`\\\n" if c in str(name)]
+            if bad:
+                sys.exit(f"ERROR: cell analysis '{ca.get('id', '?')}' has a name containing "
+                         f"unsupported character(s) {' '.join(repr(c) for c in bad)}: {name!r}. "
+                         f"Plain text (letters, digits, spaces, -_.,()/:) only.")
         if run_lists:
             ca["lists"] = {**run_lists, **explicit_lists(ca)}
         lists = explicit_lists(ca)
@@ -1225,6 +1235,21 @@ def cmd_record_alias(cart_dir, catalog_path, oid, alias_path):
     ]
 
 
+def cmd_record_catalog_name(catalog_path, fid, name):
+    """Set a factor's human-readable `name` in a catalog. The factor **id** is untouched —
+    every file name, asset key and cross-reference keeps using it; this is only the label
+    shown for the layer. Without it a cell analysis displays its bare id (factor_id_to_name
+    passes a non-FICTURE id through), and the multi-catalog's cell factors carry no name at
+    all. Unrelated to `alias`, which points at a companion factor-label TSV."""
+    return (f"python3 -c \"from cartloader.utils.cartload_helper import record_catalog_name; "
+            f"record_catalog_name('{catalog_path}', '{fid}', '{name}')\"")
+
+
+def cell_display_names(active_cells):
+    """(analysis_id, name) for the active cell analyses that declare a display name."""
+    return [(c["id"], c["name"]) for c in active_cells if c.get("name")]
+
+
 def cmd_cartload_multi(fic_dir, cart_root, multi_id, cfg):
     """Package all samples of a joint run via run_cartload2_multi (one call,
     parallel internally, writes per-sample dirs + multi-catalog.yaml)."""
@@ -1632,6 +1657,20 @@ def add_targets(mm, samples, cfg, args):
                 for s in grp:
                     sample_cart = os.path.join(cart_root, f"{multi_id}-{s['id']}")
                     cmds += cmd_record_alias(sample_cart, os.path.join(sample_cart, "catalog.yaml"), oid, alias_path)
+            # Display names for cell analyses that declare one, in the shared multi-catalog
+            # (whose factor keys are hyphenated) and in each contributing sample's catalog
+            # (whose factor ids are the analysis id verbatim). run_cartload2_multi has
+            # written all of them by this point.
+            for cid, cname in cell_display_names(active_cells):
+                cmds.append(cmd_record_catalog_name(
+                    os.path.join(cart_root, "multi-catalog.yaml"), cid.replace("_", "-"), cname))
+                for c in active_cells:
+                    if c["id"] != cid:
+                        continue
+                    for sid in c["sids"]:
+                        sample_cart = os.path.join(cart_root, f"{multi_id}-{sid}")
+                        cmds.append(cmd_record_catalog_name(
+                            os.path.join(sample_cart, "catalog.yaml"), cid, cname))
             mm.add_target(multi_cart_flag, [cart_prereq], cmds + [f"touch {multi_cart_flag}"])
 
         # --- cartload + images (per sample); collect each sample's post-images flag ---
@@ -1659,6 +1698,10 @@ def add_targets(mm, samples, cfg, args):
                             cmd_cartload(fic_sample_dir, cart_dir, catalog_id, cfg, cell_params)]
                     for oid, alias_path in alias_specs:
                         cmds += cmd_record_alias(cart_dir, os.path.join(cart_dir, "catalog.yaml"), oid, alias_path)
+                    for cid, cname in cell_display_names(active_cells):
+                        if s["id"] in next(c["sids"] for c in active_cells if c["id"] == cid):
+                            cmds.append(cmd_record_catalog_name(
+                                os.path.join(cart_dir, "catalog.yaml"), cid, cname))
                     mm.add_target(cart_flag, [cart_prereq], cmds + [f"touch {cart_flag}"])
 
             img_prereq = cart_flag if on("cartload") else cart_prereq
@@ -1864,6 +1907,7 @@ def plan_cell_analyses(grp, sge_root, cfg, fic_dir, default_model_id, multi):
         model_id = ca.get("model_id", default_model_id)
         model_path = os.path.join(fic_dir, f"{model_id}.model.tsv")
         active.append({"id": ca["id"], "sids": [s["id"] for s in contributing],
+                       "name": ca.get("name"),
                        "cmd": cmd_cells(ca, list_files, fic_dir, model_path, cfg)})
     return active
 
