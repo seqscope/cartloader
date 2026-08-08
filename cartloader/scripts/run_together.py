@@ -106,7 +106,7 @@ KNOWN_SUBKEYS = {
         "method", "sge_platform", "units_per_um", "gef_suffix", "feature_file",
         "in_dir_flag", "raw_input_flag", "input_roles", "inputs", "produces",
         "autodetect", "assign_cell_id", "csv_colname_cell", "csv_colnames",
-        "csv_colnames_others", "cellxgene_blank_prefix", "extra_flags",
+        "csv_colnames_others", "cellxgene_blank_prefix", "jitter_xy", "extra_flags",
     }),
     "cartload": frozenset({"use_pmpoint", "sge_scale", "bin_count"}),
     "resources": frozenset({"threads", "n_jobs"}),
@@ -461,6 +461,44 @@ def build_config(args):
             if not os.path.exists(path):
                 sys.exit(f"ERROR: file not found: {prof[key]} (--{key.replace('_', '-')})")
             prof[key] = path
+    # Ingest-time coordinate jitter, in um: each transcript's X and Y independently get a
+    # uniform random offset in [-jitter, +jitter] as the transcript TSV is written. It is for
+    # coarse-resolution platforms whose molecules all land on the same lattice points (e.g.
+    # Visium HD's 2um bins): without it every transcript in a bin shares one coordinate, and
+    # hexagon/pixel-level analysis and rendering see a grid rather than a distribution. Like
+    # the ingest filters this changes the data itself, so every later stage sees the jittered
+    # coordinates. A CLI flag wins over `ingest.jitter_xy` from the profile/config.
+    if args.jitter_xy is not None:
+        prof.setdefault("ingest", {})["jitter_xy"] = args.jitter_xy
+    jitter = prof.get("ingest", {}).get("jitter_xy")
+    if jitter is not None:
+        try:
+            jitter = float(jitter)
+        except (TypeError, ValueError):
+            sys.exit(f"ERROR: 'ingest.jitter_xy' (--jitter-xy) must be a number, got {jitter!r}.")
+        if jitter < 0:
+            sys.exit(f"ERROR: --jitter-xy is a half-width in um and must be >= 0 (got {jitter}).")
+        prof["ingest"]["jitter_xy"] = jitter
+    # Only the sge_convert ingest path can apply jitter. The CosMx reformat writes its
+    # transcript TSV itself and has no jitter option, so asking for it there is an error
+    # rather than a flag that is silently dropped.
+    ingest_method = prof.get("ingest", {}).get("method", "sge_convert")
+    if jitter and ingest_method == "reformat_cosmx":
+        sys.exit(f"ERROR: --jitter-xy is not supported on platform '{platform}': its ingest "
+                 f"('{ingest_method}') writes the transcript TSV without going through "
+                 f"sge_convert. Drop the flag, or jitter the transcript yourself and supply it "
+                 f"with --in-transcript.")
+    # Stereo-seq ingests bin1 through sge_convert (so jitter applies) but writes its cell-bin
+    # TSV with convert_stereoseq_cellbin, which has no jitter option.
+    if jitter and ingest_method == "stereoseq":
+        print("WARNING: --jitter-xy applies to the Stereo-seq bin1 pixel transcript only. The "
+              "cell-bin TSV (the cell_tsv role) is written by convert_stereoseq_cellbin, which "
+              "has no jitter option, so its coordinates stay on the original grid.",
+              file=sys.stderr)
+    # An explicit jitter, like an explicit ingest filter, silently does nothing for a sample
+    # that supplies an already-ingested transcript; report it there alongside the filters.
+    if jitter:
+        prof["_ingest_filters_explicit"].append("--jitter-xy")
     # min count per unit hexagon / per unit trained (both apply to the pixel FICTURE analyses)
     fd = prof.setdefault("ficture_defaults", {})
     if args.min_ct_per_unit_hexagon is not None:
@@ -931,6 +969,12 @@ def cmd_sge_convert(cfg, sge_dir, s):
         others = [ing["csv_colname_cell"]] + [c for c in others if c != ing["csv_colname_cell"]]
     if others:
         parts.append("--csv-colnames-others " + " ".join(others))
+    # Random jitter (um) added to X and Y as the transcript TSV is written. Both
+    # sge_convert routes accept it -- spatula convert-sge for MEX input, sge_format_generic
+    # for CSV input -- so every platform whose ingest method is sge_convert supports it
+    # (build_config rejects the platforms whose ingest is something else).
+    if ing.get("jitter_xy"):
+        parts.append(f"--jitter-xy {ing['jitter_xy']}")
     parts.extend(ing.get("extra_flags", []))
     return " ".join(p for p in parts if p)
 
@@ -1609,8 +1653,8 @@ def add_targets(mm, samples, cfg, args):
         if ingest_filters and preingested:
             print(f"WARNING: {', '.join(ingest_filters)} had no effect on sample(s) "
                   f"{', '.join(preingested)}: they provide an already-ingested transcript, which is "
-                  f"used as-is. Filter the file beforehand, or supply the raw input instead so it "
-                  f"goes through ingest.", file=sys.stderr)
+                  f"used as-is. Apply the same beforehand to that file, or supply the raw input "
+                  f"instead so it goes through ingest.", file=sys.stderr)
 
         in_list = os.path.join(sge_root, "in_list.tsv")
         with open(in_list, "w") as f:
@@ -2059,6 +2103,19 @@ def parse_arguments(_args):
     g.add_argument("--ingest-exclude-feature-list", type=str, default=None,
                    help="File listing the feature names (one per line) to drop when the transcript TSV "
                         "is written. Same scope as --ingest-exclude-feature-regex.")
+
+    j = p.add_argument_group("Ingest coordinate options (change the transcript coordinates themselves)")
+    j.add_argument("--jitter-xy", type=float, default=None,
+                   help="Add uniform random jitter of +/- this many microns to each transcript's X and Y "
+                        "(independently) as the transcript TSV is written; 0 disables it (the default). "
+                        "Use it on coarse-resolution platforms whose molecules all sit on the same lattice "
+                        "points -- e.g. 10x Visium HD 2um bins, where every transcript in a bin otherwise "
+                        "shares one coordinate -- so hexagon/pixel-level analysis and rendering see a "
+                        "distribution instead of a grid. Pick roughly half the bin pitch (0.8 for 2um bins). "
+                        "Like the ingest feature filters this rewrites the data itself, so every later stage "
+                        "sees the jittered coordinates. Supported on every platform whose ingest runs "
+                        "sge_convert (all but cosmx_smi); ignored (with a warning) for samples that supply an "
+                        "already-ingested transcript. Equivalent config key: {\"ingest\": {\"jitter_xy\": 0.8}}.")
 
     d.add_argument("--min-ct-per-unit-hexagon", type=int, default=None,
                    help=f"Minimum count per hexagon for FICTURE (default: {DEFAULT_MIN_CT_PER_UNIT_HEXAGON})")

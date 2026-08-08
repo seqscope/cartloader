@@ -193,6 +193,30 @@ The ingest regex always replaces `sge_convert`'s per-platform default (e.g. Xeni
     `--min-ct-per-unit-hexagon` (hexagons) and the cell analysis's minimum cell count are applied over **all** genes, while the model is fit over the **restricted** set. Restricting to a small panel therefore leaves units/cells whose surviving counts are low; lower `--min-ct-per-unit-train` and `--cell-min-cell-count` accordingly. Ingest filters do not have this problem — they run before any counting.
 
 ---
+## Coordinate jitter at ingest
+
+`--jitter-xy <um>` adds a uniform random offset in `[-um, +um]` to each transcript's X and Y — drawn **independently per transcript and per axis** — as the transcript TSV is written. It is off by default (`0`).
+
+Use it on coarse-resolution platforms whose molecules sit on a lattice rather than at measured positions. On 10x Visium HD, for example, every transcript in a 2 µm bin carries that bin's single coordinate, so the transcript cloud is a grid of stacked points; hexagon binning, pixel decoding and the rendered tiles all see the lattice. Jittering by roughly **half the bin pitch** (`--jitter-xy 0.8` for 2 µm bins) spreads each bin's molecules across the area they came from.
+
+Like the ingest feature filters, this rewrites the data itself: the jittered coordinates are what every later stage reads — hexagons, FICTURE, the packaged tiles, the browser.
+
+- Applied by `sge_convert`, in both of its routes: `spatula convert-sge` for MEX input (`10x_visium_hd`, `seqscope`, `illumina`) and `sge_format_generic` for CSV input (`10x_xenium`, `merfish`, `stereoseq`'s bin1 GEM, `generic`). Jitter is in **microns**, applied after the input's units are converted.
+- **Not supported on `cosmx_smi`**, whose ingest (`reformat_cosmx`) writes the transcript TSV itself. Asking for it there is an error, not a silently dropped flag.
+- On `stereoseq` it covers the bin1 pixel transcript only; the cell-bin TSV (`convert_stereoseq_cellbin`) has no jitter option and stays on the original grid. The run warns when you ask.
+- **Ignored, with a warning, for a sample that supplies an already-ingested `transcript`** — that file is used as given.
+
+```bash
+cartloader run_together --platform 10x_visium_hd --in-dir IN --out-dir OUT --jitter-xy 0.8
+```
+
+The config equivalent lives in the `ingest` block (a CLI `--jitter-xy` wins over it):
+
+```jsonc
+{ "platform": "10x_visium_hd", "ingest": { "jitter_xy": 0.8 } }
+```
+
+---
 ## Mode 3 — Full config (JSON)
 
 Escalate to `--config run.json` when samples need **different** settings, or to add analyses/images beyond the profile defaults. Everything a run can express reduces to one canonical, list-based configuration that the three layers (**profile → CLI → JSON**) assemble:
@@ -204,6 +228,7 @@ Escalate to `--config run.json` when samples need **different** settings, or to 
   "exclude_feature_regex": "...",
   "include_feature_list": "...",                    // or "exclude_feature_list"; factor analyses only
   "ingest_exclude_feature_regex": "...",            // ingest_{include,exclude}_feature_{regex,list}: drops from the data
+  "ingest": { "jitter_xy": 0.8 },                   // random +/- um offset on X/Y at ingest (see Coordinate jitter)
   "ficture_defaults": { "decode_scale": 2 },
   "cell_defaults":    { "min_cell_count": 20 },
   "ficture":       [ /* analyses: each is a de-novo train OR a projection */ ],
