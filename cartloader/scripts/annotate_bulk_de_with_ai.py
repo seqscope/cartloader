@@ -425,6 +425,9 @@ def call_umgpt(prompt: str, model_name: str, request_timeout: int, max_retries: 
 # Accepted (case-insensitive) names for the gene column in the input DE table.
 GENE_COLUMN_ALIASES = ("gene", "feature", "gene_id", "geneid")
 
+# Alias assigned to factors with too few marker genes to annotate reliably.
+INSUFFICIENT_MARKERS_ALIAS = "InsufficientMarkerGenes"
+
 def read_bulk_de(path: str) -> pd.DataFrame:
     with flexopen(path, "rt") as fh:
         df = pd.read_csv(fh, sep="\t")
@@ -515,7 +518,8 @@ def annotate_factors(
     max_retries: int,
     threads: int,
     api_base_url: Optional[str],
-    logger: logging.Logger
+    logger: logging.Logger,
+    min_marker_gene_count: int = 0
 ) -> Dict[str, List[Tuple[int, str]]]:
     """
     Returns dict keyed by engine name -> list of (factor_index, alias)
@@ -544,13 +548,26 @@ def annotate_factors(
     sorted_indices = sorted(factor2genes.keys())
     idx2alias: Dict[int, str] = {}
 
+    ## factors with too few marker genes are not worth an API call; give them a fixed alias
+    indices_to_annotate = []
+    for idx in sorted_indices:
+        n_genes = len(factor2genes[idx])
+        if n_genes < min_marker_gene_count:
+            logger.warning(
+                f"Skipping annotation of factor {idx}: only {n_genes} marker gene(s) "
+                f"available (minimum {min_marker_gene_count}). Using '{INSUFFICIENT_MARKERS_ALIAS}'."
+            )
+            idx2alias[idx] = INSUFFICIENT_MARKERS_ALIAS
+        else:
+            indices_to_annotate.append(idx)
+
     n_workers = max(1, int(threads))
-    logger.info(f"Annotating {len(sorted_indices)} factors with {n_workers} thread(s)...")
+    logger.info(f"Annotating {len(indices_to_annotate)} factors with {n_workers} thread(s)...")
 
     ## fail-fast: cancel pending tasks and don't wait on running ones if any factor errors
     executor = ThreadPoolExecutor(max_workers=n_workers)
     try:
-        future2idx = {executor.submit(_annotate_one, idx): idx for idx in sorted_indices}
+        future2idx = {executor.submit(_annotate_one, idx): idx for idx in indices_to_annotate}
         for future in as_completed(future2idx):
             idx = future2idx[future]
             try:
@@ -606,6 +623,7 @@ def annotate_bulk_de_with_ai(_args):
     aux_params.add_argument('--primary-rank', type=str, default="Chi2", help='Primary ranking column name in the input TSV (e.g., Chi2)')
     aux_params.add_argument('--secondary-rank', type=str, default="FoldChange", help='Secondary ranking column name in the input TSV (e.g., FoldChange)')
     aux_params.add_argument('--top-n', type=int, default=10, help='Number of top genes to use for annotation (default: 10)')
+    aux_params.add_argument('--min-marker-gene-count', type=int, default=5, help=f"Minimum number of marker genes required to annotate a factor. Factors with fewer markers are labeled '{INSUFFICIENT_MARKERS_ALIAS}' without calling the API (default: 5)")
     aux_params.add_argument('--model-name', type=str, help='Model name for generative AI API. Default will be used otherwise')
     aux_params.add_argument('--request-timeout', type=int, default=60, help='Request timeout (in seconds) for generative AI API (default: 60)')
     aux_params.add_argument('--max-retries', type=int, default=3, help='Maximum number of retries for failed requests (default: 3)')
@@ -713,7 +731,8 @@ def annotate_bulk_de_with_ai(_args):
         max_retries=args.max_retries,
         threads=args.threads,
         api_base_url=args.api_base_url,
-        logger=logger
+        logger=logger,
+        min_marker_gene_count=args.min_marker_gene_count
     )
 
     logger.info(f"Writing results to {args.out}")
