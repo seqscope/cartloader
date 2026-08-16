@@ -5,7 +5,7 @@ import requests
 import pandas as pd
 from typing import Dict, List, Optional, Tuple
 from google import genai
-from cartloader.utils.utils import create_custom_logger
+from cartloader.utils.utils import create_custom_logger, flexopen
 from google.genai import types
 
 
@@ -422,11 +422,25 @@ def call_umgpt(prompt: str, model_name: str, request_timeout: int, max_retries: 
 # -----------------------------
 # Core logic
 # -----------------------------
+# Accepted (case-insensitive) names for the gene column in the input DE table.
+GENE_COLUMN_ALIASES = ("gene", "feature", "gene_id", "geneid")
+
 def read_bulk_de(path: str) -> pd.DataFrame:
-    df = pd.read_csv(path, sep="\t")
+    with flexopen(path, "rt") as fh:
+        df = pd.read_csv(fh, sep="\t")
+
+    # The gene column is named "gene" in some DE outputs and "Feature" in
+    # others; normalize it so the rest of the script can assume "gene".
+    if "gene" not in df.columns:
+        lower2col = {str(c).lower(): c for c in df.columns}
+        for alias in GENE_COLUMN_ALIASES:
+            if alias in lower2col:
+                df = df.rename(columns={lower2col[alias]: "gene"})
+                break
+
     required = {"gene", "factor"}
     if not required.issubset(df.columns):
-        raise ValueError(f"Input missing required columns: {sorted(required)}")
+        raise ValueError(f"Input missing required columns: {sorted(required)}. Available: {list(df.columns)}")
 
     # Allow either "Chi2" or "FoldChange" columns as in your example
     return df
