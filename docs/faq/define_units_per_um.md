@@ -16,6 +16,8 @@ In other words:
 ## Platform guidance
 
 - **10x Visium HD**: prefer `--scale-json` (from `scalefactors_json.json`) so scaling is computed automatically.
+- **SeqScope (raw per-molecule TSV route)**: coordinates are in nanometers, so the default is `1000`.
+- **Illumina StrataMap**: coordinates are embedded in the barcode, and two conventions exist — older barcodes are in nanometers (`SBC:433503:2393851`, `--units-per-um 1000`), current ones in microns (`SBC:686.951:4668.15`, `--units-per-um 1`). `sge_convert` reads the barcode file and picks the right one, printing what it used; pass `--units-per-um` to override it.
 - **Other platforms / generic CSV**: set `--units-per-um` based on your file's coordinate unit metadata.
 
 ## Common mistakes

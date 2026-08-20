@@ -5,7 +5,7 @@
     "sge_platform": "bgi_stereoseq",
     "units_per_um": 2,
     "csv_colnames": { "feature": "geneName", "count": "ExonCount" },
-    "extra_flags": ["--csv-comment", "--units-per-um 2"]
+    "extra_flags": ["--csv-comment"]
   },
   "roles": {
     "gef":         { "suffix": ".tissue.gef" },

@@ -1,4 +1,4 @@
-import sys, os, argparse, logging,  inspect, json, subprocess
+import sys, os, argparse, gzip, logging,  inspect, json, subprocess
 import pandas as pd
 from cartloader.utils.minimake import minimake
 from cartloader.utils.utils import cmd_separator, scheck_app, add_param_to_cmd, read_minmax, write_dict_to_file, load_file_to_dict, execute_makefile
@@ -39,7 +39,7 @@ def parse_arguments(_args):
     inout_params.add_argument('--pos-parquet', type=str, default=None, help='Path to input position parquet providing spatial coordinates (platform: 10x Visium HD; typical: tissue_positions.parquet)') # 10x_visium_hd
     # - scaling
     inout_params.add_argument('--scale-json', type=str, default=None, help='Path to input scale JSON. If set, defaults --units-per-um from microns_per_pixel in this JSON file (platform: 10x Visium HD; typical: scalefactors_json.json)') 
-    inout_params.add_argument('--units-per-um', type=float, default=1.00, help='Coordinate units per µm in inputs (default: 1.00). For 10x Visium HD, prefer --scale-json')  
+    inout_params.add_argument('--units-per-um', type=float, default=None, help='Coordinate units per µm in inputs (default: 1.00; platform defaults: SeqScope raw TSV 1000, Illumina auto-detected from the barcode file - 1000 for nanometer barcodes, 1 for micron barcodes). For 10x Visium HD, prefer --scale-json')  
     # - output
     inout_params.add_argument('--out-dir', type=str, required=True, help='Path to output directory for converted SGE, filtered SGE, visualizations, and Makefile')
     inout_params.add_argument('--out-transcript', type=str, default="transcripts.unsorted.tsv.gz", help='File name of output transcript-indexed SGE TSV under --out-dir (default: transcripts.unsorted.tsv.gz)')
@@ -154,6 +154,60 @@ def extract_unit2px_from_json(scale_json):
     assert microns_per_pixel != 0, f"Invalid value: 'microns_per_pixel' == 0. Check your scale JSON {scale_json} (--scale-json)"
     print(f"microns_per_pixel: {microns_per_pixel}")
     return 1/microns_per_pixel
+
+def flag_given(_args, flag):
+    """True if `flag` appears in the raw argv, in either '--flag value' or '--flag=value'
+    form. Used where a platform default must not clobber a value the user set explicitly."""
+    return any(a == flag or a.startswith(flag + "=") for a in _args)
+
+
+DEFAULT_UNITS_PER_UM = 1.00
+# Coordinate magnitude (in barcode units) that separates the two Illumina barcode
+# conventions when no fractional coordinate settles it: a real section spans far more
+# than 0.1 mm, so nanometer coordinates run into the 1e5-1e7 range, while micron
+# coordinates of that same section stay well below 1e5 (which would be a 10 cm section).
+ILLUMINA_NM_MIN_COORD = 1e5
+
+
+def sniff_illumina_units_per_um(bcd_f, delim=":", icol_x=3, icol_y=2, max_lines=100000):
+    """Decide whether the coordinates embedded in an Illumina/StrataMap barcode are
+    nanometers (older format, e.g. 'SBC:433503:2393851') or microns (current format,
+    e.g. 'SBC:686.951:4668.15') and return the matching --units-per-um (1000 or 1).
+
+    Two independent signals, either of which is decisive:
+      * a fractional coordinate is meaningless at nanometer resolution -> microns;
+      * otherwise magnitude, per ILLUMINA_NM_MIN_COORD above.
+    Returns None if the file is unreadable or carries no usable coordinate, which
+    leaves the caller on the historical nanometer default.
+    """
+    opener = gzip.open if bcd_f.endswith(".gz") else open
+    max_coord = 0.0
+    n_seen = 0
+    try:
+        with opener(bcd_f, "rt") as fh:
+            for line in fh:
+                if n_seen >= max_lines:
+                    break
+                toks = line.rstrip("\r\n").split(delim)
+                if len(toks) < max(icol_x, icol_y):
+                    continue
+                x, y = toks[icol_x - 1], toks[icol_y - 1]
+                try:
+                    fx, fy = float(x), float(y)
+                except ValueError:
+                    continue
+                n_seen += 1
+                if "." in x or "." in y:      # fractional -> microns, decisive
+                    return 1.0
+                max_coord = max(max_coord, abs(fx), abs(fy))
+    except OSError as e:
+        print(f"WARNING: could not read {bcd_f} to detect the barcode coordinate units ({e})",
+              file=sys.stderr)
+        return None
+    if n_seen == 0:
+        return None
+    return 1000.0 if max_coord >= ILLUMINA_NM_MIN_COORD else 1.0
+
 
 mexarg_mapping = {
     "mex_bcd": "--sge-bcd",
@@ -451,16 +505,46 @@ def sge_convert(_args):
         if args.bcd_delim is None:
             args.bcd_delim = ":"
         # override the SeqScope-oriented defaults unless the user set them explicitly
-        if "--icol-bcd-x" not in _args:
+        if not flag_given(_args, "--icol-bcd-x"):
             args.icol_bcd_x = 3
-        if "--icol-bcd-y" not in _args:
+        if not flag_given(_args, "--icol-bcd-y"):
             args.icol_bcd_y = 2
-        if "--units-per-um" not in _args:
-            args.units_per_um = 1000
+        # Two barcode conventions are in the wild: the older one encodes nanometers
+        # ("SBC:433503:2393851", --units-per-um 1000), the current one microns
+        # ("SBC:686.951:4668.15", --units-per-um 1). They are indistinguishable from the
+        # flags alone, so read the barcode file and pick; --units-per-um always wins, and
+        # a value that contradicts the file is reported rather than silently applied
+        # (getting this wrong rescales the whole sample by 1000x).
+        bcd_f = os.path.join(args.in_mex, args.mex_bcd)
+        sniffed = sniff_illumina_units_per_um(bcd_f, delim=args.bcd_delim,
+                                              icol_x=args.icol_bcd_x, icol_y=args.icol_bcd_y)
+        if args.units_per_um is None:
+            if sniffed is None:
+                args.units_per_um = 1000
+                print(f"WARNING: could not tell the barcode coordinate units from {bcd_f}; "
+                      f"assuming nanometers (--units-per-um 1000). Pass --units-per-um "
+                      f"explicitly (1000 for nanometer barcodes, 1 for micron barcodes).",
+                      file=sys.stderr)
+            else:
+                args.units_per_um = sniffed
+                units = "nanometer" if sniffed == 1000 else "micron"
+                print(f"Detected {units} barcode coordinates in {bcd_f}: "
+                      f"using --units-per-um {sniffed:g}")
+        elif sniffed is not None and sniffed != args.units_per_um:
+            print(f"WARNING: --units-per-um {args.units_per_um:g} was given, but the barcodes in "
+                  f"{bcd_f} look like {'nanometers' if sniffed == 1000 else 'microns'} "
+                  f"(--units-per-um {sniffed:g}). Using the value you gave.", file=sys.stderr)
 
     #  * seqscope (raw TSV route): X/Y are in nanometers
-    if seqscope_csv and "--units-per-um" not in _args:
+    if seqscope_csv and args.units_per_um is None:
         args.units_per_um = 1000
+
+    #  * every other route: coordinates are already in microns unless told otherwise
+    #    (10x Visium HD overrides this from --scale-json inside convert_visiumhd)
+    if args.units_per_um is None:
+        args.units_per_um = DEFAULT_UNITS_PER_UM
+    if args.units_per_um <= 0:
+        sys.exit(f"ERROR: --units-per-um must be > 0 (got {args.units_per_um}).")
 
     # mm
     mm = minimake()

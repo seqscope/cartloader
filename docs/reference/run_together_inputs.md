@@ -193,6 +193,36 @@ The ingest regex always replaces `sge_convert`'s per-platform default (e.g. Xeni
     `--min-ct-per-unit-hexagon` (hexagons) and the cell analysis's minimum cell count are applied over **all** genes, while the model is fit over the **restricted** set. Restricting to a small panel therefore leaves units/cells whose surviving counts are low; lower `--min-ct-per-unit-train` and `--cell-min-cell-count` accordingly. Ingest filters do not have this problem — they run before any counting.
 
 ---
+## Coordinate units at ingest
+
+`--units-per-um <n>` tells ingest how many coordinate units of the **raw input** make one micron — the factor `sge_convert` divides the input X/Y by. `1` means the input is already in microns, `1000` means nanometers, `2` is Stereo-seq's 500 nm bins. Everything downstream of ingest is in microns, so this is the one place the input's unit convention is declared.
+
+Normally you never set it: each platform's ingest preset knows its own convention. Set it when a dataset departs from that convention — notably **Illumina StrataMap**, which ships two barcode formats:
+
+| Barcode | Units | `--units-per-um` |
+|---|---|---|
+| `SBC:433503:2393851` (older) | nanometers | `1000` |
+| `SBC:686.951:4668.15` (current) | microns | `1` |
+
+Ingest **detects which of the two** a StrataMap barcode file uses (a fractional coordinate means microns; otherwise the coordinate magnitude decides) and reports the value it picked, so both formats run correctly with no flag. `--units-per-um` overrides the detection; if the value you give contradicts the file, the run warns and uses yours.
+
+- Applied by `sge_convert`, in both of its routes (MEX via `spatula convert-sge`, CSV via `sge_format_generic`), so it covers every platform whose ingest is `sge_convert`. On `stereoseq` it also scales the cell-bin TSV, keeping the pixel and cell coordinates on one system.
+- **Not supported on `cosmx_smi`**, whose ingest (`reformat_cosmx`) writes the transcript TSV itself. Asking for it there is an error.
+- **Ignored, with a warning, for a sample that supplies an already-ingested `transcript`** — that file is used as given, in microns.
+- Boundary/centroid files are **not** rescaled by this flag: they must already be in microns (see the platform pages).
+
+```bash
+# a current (micron) StrataMap barcode file, stated explicitly
+cartloader run_together --platform illumina --samples samples.tsv --out-dir OUT --units-per-um 1
+```
+
+The config equivalent lives in the `ingest` block (a CLI `--units-per-um` wins over it):
+
+```jsonc
+{ "platform": "illumina", "ingest": { "units_per_um": 1 } }
+```
+
+---
 ## Coordinate jitter at ingest
 
 `--jitter-xy <um>` adds a uniform random offset in `[-um, +um]` to each transcript's X and Y — drawn **independently per transcript and per axis** — as the transcript TSV is written. It is off by default (`0`).
@@ -228,7 +258,7 @@ Escalate to `--config run.json` when samples need **different** settings, or to 
   "exclude_feature_regex": "...",
   "include_feature_list": "...",                    // or "exclude_feature_list"; factor analyses only
   "ingest_exclude_feature_regex": "...",            // ingest_{include,exclude}_feature_{regex,list}: drops from the data
-  "ingest": { "jitter_xy": 0.8 },                   // random +/- um offset on X/Y at ingest (see Coordinate jitter)
+  "ingest": { "jitter_xy": 0.8, "units_per_um": 1 }, // random +/- um offset on X/Y, and the input's coordinate units (see above)
   "ficture_defaults": { "decode_scale": 2 },
   "cell_defaults":    { "min_cell_count": 20 },
   "ficture":       [ /* analyses: each is a de-novo train OR a projection */ ],

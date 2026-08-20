@@ -10,7 +10,24 @@ Built-in profile for **Illumina StrataMap**. Ingest runs `sge_convert` (the `ill
 | Cell boundaries | Cell boundary polygons (CSV) → enables **cell-level** analysis | `boundaries` (aliases `cell_boundary`, `cell_boundaries`) / `--in-cell-boundary` | optional |
 | Cell centroids (xy) | Per-cell centroids → adds the spatial cluster scatter | `xy` (alias `cell_xy`) / `--in-cell-xy` | optional |
 
-The `mex` role must be a **single directory** (StrataMap ships the three files together) — it is passed to `sge_convert --in-mex`. `sge_convert` reads the coordinates out of the barcode with these StrataMap defaults: barcode delimiter `:`, X = field 3, Y = field 2, `units-per-um = 1000` (barcodes encode nanometers). Override them per run through `ingest.extra_flags` in a `--config`; see [`sge_convert`](../sge_convert.md).
+The `mex` role must be a **single directory** (StrataMap ships the three files together) — it is passed to `sge_convert --in-mex`. `sge_convert` reads the coordinates out of the barcode with these StrataMap defaults: barcode delimiter `:`, X = field 3, Y = field 2. The **coordinate units are detected from the barcode file** (see below); override any of these per run — the units with `--units-per-um`, the rest through `ingest.extra_flags` in a `--config`; see [`sge_convert`](../sge_convert.md).
+
+### Barcode coordinate units (nanometers or microns)
+
+StrataMap has shipped two barcode formats, and they differ by a factor of 1000:
+
+| Barcode | Units | `--units-per-um` |
+|---|---|---|
+| `SBC:433503:2393851` (older) | nanometers | `1000` |
+| `SBC:686.951:4668.15` (current) | microns | `1` |
+
+Ingest reads the barcode file and picks the right one — a fractional coordinate means microns, otherwise the coordinate magnitude decides — and prints the value it used, so **both formats run correctly without a flag**. State it yourself when you want it pinned, or when a file is unusual enough that detection should not be trusted:
+
+```bash
+cartloader run_together --platform illumina --samples samples.tsv --out-dir OUT --units-per-um 1
+```
+
+`--units-per-um` always wins over the detection; if it contradicts the file, the run warns and uses your value. The config equivalent is `{"ingest": {"units_per_um": 1}}`. Getting this wrong rescales the whole sample by 1000x, so it is worth checking the reported units in the ingest log against `gzip -cd barcodes.tsv.gz | head`.
 
 Default boundary/centroid column names (overridable — see below): boundaries `cell_id` / `vertex_x` / `vertex_y`; xy `cell_id` / `X` / `Y`.
 
@@ -78,8 +95,10 @@ cartloader run_together --platform illumina \
     { "id": "s2", "mex": "/data/stratamap/s2" }
   ],
   "ficture": [ { "id": "denovo", "mode": "train", "width": "12", "n_factor": "24,48,96" } ],
-  // override barcode parsing if a dataset differs from the StrataMap defaults:
-  "ingest": { "extra_flags": ["--sge-visual", "--bcd-delim :", "--icol-bcd-x 3", "--icol-bcd-y 2", "--units-per-um 1000"] }
+  // units are detected from the barcode file; pin them (and any other barcode parsing
+  // that differs from the StrataMap defaults) here:
+  "ingest": { "units_per_um": 1,
+              "extra_flags": ["--sge-visual", "--bcd-delim :", "--icol-bcd-x 3", "--icol-bcd-y 2"] }
 }
 ```
 ```bash
@@ -89,7 +108,7 @@ cartloader run_together --config run.json
 ---
 ## Notes
 
-- **Coordinates come from the barcode.** No `--pos-parquet` / `--scale-json` is used; if a run's barcode format differs, override the parsing flags via `ingest.extra_flags`.
+- **Coordinates come from the barcode.** No `--pos-parquet` / `--scale-json` is used. The nanometer/micron convention is detected per dataset (see [Barcode coordinate units](#barcode-coordinate-units-nanometers-or-microns)) and can be pinned with `--units-per-um`; if a run's barcode *layout* differs, override the parsing flags via `ingest.extra_flags`.
 - **Images:** StrataMap has no standard morphology image; attach any histology you have as a generic image (see [Image Modalities](../run_together_images.md)).
 
 ## See also

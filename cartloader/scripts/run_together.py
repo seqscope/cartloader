@@ -499,6 +499,34 @@ def build_config(args):
     # that supplies an already-ingested transcript; report it there alongside the filters.
     if jitter:
         prof["_ingest_filters_explicit"].append("--jitter-xy")
+    # Coordinate units per um in the raw input, i.e. how many input units make one micron
+    # (1000 for nanometer coordinates, 1 for microns, 2 for Stereo-seq's 500nm bins). Left
+    # unset, each platform's sge_convert preset decides -- including Illumina, which reads
+    # its barcode file to tell nanometer barcodes ("SBC:433503:2393851") from micron ones
+    # ("SBC:686.951:4668.15"). A CLI flag wins over `ingest.units_per_um`.
+    if args.units_per_um is not None:
+        prof.setdefault("ingest", {})["units_per_um"] = args.units_per_um
+    units_per_um = prof.get("ingest", {}).get("units_per_um")
+    if units_per_um is not None:
+        try:
+            units_per_um = float(units_per_um)
+        except (TypeError, ValueError):
+            sys.exit(f"ERROR: 'ingest.units_per_um' (--units-per-um) must be a number, got "
+                     f"{units_per_um!r}.")
+        if units_per_um <= 0:
+            sys.exit(f"ERROR: --units-per-um is input units per micron and must be > 0 (got "
+                     f"{units_per_um}).")
+        prof["ingest"]["units_per_um"] = units_per_um
+        # Same story as jitter: only the sge_convert ingest path takes a coordinate scale.
+        if ingest_method == "reformat_cosmx":
+            sys.exit(f"ERROR: --units-per-um is not supported on platform '{platform}': its "
+                     f"ingest ('{ingest_method}') writes the transcript TSV without going "
+                     f"through sge_convert. Drop the flag, or rescale the transcript yourself "
+                     f"and supply it with --in-transcript.")
+        # Only a value this run chose is worth reporting as "had no effect" on a
+        # pre-ingested sample; a profile's own default (e.g. Stereo-seq's 2) is not.
+        if args.units_per_um is not None or "units_per_um" in cfg.get("ingest", {}):
+            prof["_ingest_filters_explicit"].append("--units-per-um")
     # min count per unit hexagon / per unit trained (both apply to the pixel FICTURE analyses)
     fd = prof.setdefault("ficture_defaults", {})
     if args.min_ct_per_unit_hexagon is not None:
@@ -975,6 +1003,11 @@ def cmd_sge_convert(cfg, sge_dir, s):
     # (build_config rejects the platforms whose ingest is something else).
     if ing.get("jitter_xy"):
         parts.append(f"--jitter-xy {ing['jitter_xy']}")
+    # Coordinate units per um in the raw input. Only passed when the profile/config/CLI
+    # names one: left out, sge_convert applies its own per-platform default (e.g. the
+    # Illumina barcode-unit detection), which is the better answer than a blanket 1.
+    if ing.get("units_per_um") is not None:
+        parts.append(f"--units-per-um {ing['units_per_um']}")
     parts.extend(ing.get("extra_flags", []))
     return " ".join(p for p in parts if p)
 
@@ -2116,6 +2149,18 @@ def parse_arguments(_args):
                         "sees the jittered coordinates. Supported on every platform whose ingest runs "
                         "sge_convert (all but cosmx_smi); ignored (with a warning) for samples that supply an "
                         "already-ingested transcript. Equivalent config key: {\"ingest\": {\"jitter_xy\": 0.8}}.")
+    j.add_argument("--units-per-um", type=float, default=None,
+                   help="How many coordinate units of the raw input make one micron, i.e. the "
+                        "factor sge_convert divides the input X/Y by (1 = the input is already "
+                        "in microns, 1000 = nanometers, 2 = Stereo-seq's 500nm bins). Only needed "
+                        "when a dataset departs from its platform's convention -- notably Illumina "
+                        "StrataMap, whose older barcodes encode nanometers ('SBC:433503:2393851', "
+                        "--units-per-um 1000) and whose current ones encode microns "
+                        "('SBC:686.951:4668.15', --units-per-um 1); left unset, ingest detects "
+                        "which of the two a barcode file uses. Applies to every platform whose "
+                        "ingest runs sge_convert (all but cosmx_smi); ignored (with a warning) for "
+                        "samples that supply an already-ingested transcript. Equivalent config key: "
+                        "{\"ingest\": {\"units_per_um\": 1}}.")
 
     d.add_argument("--min-ct-per-unit-hexagon", type=int, default=None,
                    help=f"Minimum count per hexagon for FICTURE (default: {DEFAULT_MIN_CT_PER_UNIT_HEXAGON})")
