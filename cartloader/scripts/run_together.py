@@ -85,6 +85,8 @@ KNOWN_CONFIG_KEYS = frozenset({
     "hne", "image_transform", "image_defaults", "publish", "resources",
     # list blocks merged by id
     "ficture", "cell_analyses", "images",
+    # 10x MEX export of the hexagon files: true, or { "widths": "12,24" }
+    "segment_10x",
 })
 # Recognized keys inside a `samples[]` entry. Anything else is a typo that would be
 # silently dropped (a misspelled role looks provided but is never read), so build_config
@@ -392,7 +394,7 @@ def build_config(args):
               "ingest_include_feature_list", "ingest_exclude_feature_list",
               "ingest", "roles", "cartload", "ficture_defaults", "cell_defaults",
               "squares", "cell_import", "hne", "image_transform", "image_defaults",
-              "publish", "resources"):
+              "publish", "resources", "segment_10x"):
         if k in cfg:
             prof[k] = deep_merge(prof.get(k), cfg[k]) if isinstance(cfg[k], dict) else cfg[k]
     if "ficture" in cfg:
@@ -559,6 +561,31 @@ def build_config(args):
 
     # Packaging without any factor analysis (tiling only; see cmd_ficture_analysis).
     prof["_no_ficture"] = args.no_ficture
+
+    # 10x MEX export of the hexagon files (run_ficture2_multi --segment-10x). A top-level
+    # key rather than a per-analysis one so it survives --no-ficture, which rebuilds the
+    # ficture list; it applies to every analysis (targets are per width, and idempotent).
+    # Normalized to None (off) or {"widths": "12,24" | None} (on; None = each analysis'
+    # own --width). Config: `"segment_10x": true` or `{"widths": "..."}`; CLI wins.
+    s10 = prof.get("segment_10x")
+    if isinstance(s10, bool) or s10 is None:
+        s10 = {} if s10 else None
+    elif isinstance(s10, dict):
+        bad = [k for k in s10 if k != "widths"]
+        if bad and not args.allow_unknown_config_keys:
+            sys.exit(f"ERROR: unrecognized key(s) in 'segment_10x': {', '.join(sorted(bad))}. "
+                     f"Recognized keys: widths. Pass --allow-unknown-config-keys to ignore "
+                     f"unknown keys instead of failing.")
+        s10 = {"widths": str(s10["widths"])} if s10.get("widths") is not None else {}
+    else:
+        sys.exit("ERROR: 'segment_10x' must be true/false or an object like {\"widths\": \"12,24\"}.")
+    if args.segment_10x:
+        s10 = s10 if s10 is not None else {}
+    if args.segment_width_10x is not None:
+        if s10 is None:
+            sys.exit("ERROR: --segment-width-10x requires --segment-10x (or 'segment_10x' in the config).")
+        s10["widths"] = args.segment_width_10x
+    prof["_segment_10x"] = s10
 
     # Tolerate corrupt histology images in the images stage (opt-in; see plan_images).
     prof["_skip_image_errors"] = args.skip_image_errors
@@ -1227,6 +1254,11 @@ def cmd_ficture_analysis(a, in_list, fic_dir, cfg):
         parts.append(f"--decode-scale {a['decode_scale']}")
     if cfg.get("_sm_pixel"):   # single-molecule for pixel FICTURE (default ON)
         parts.append("--single-molecule")
+    s10 = cfg.get("_segment_10x")
+    if s10 is not None:        # 10x MEX export of the hexagon files (see build_config)
+        parts.append("--segment-10x")
+        if s10.get("widths"):
+            parts.append(f"--segment-width-10x {s10['widths']}")
     parts.extend(feature_filter_flags(cfg))
     return " ".join(parts)
 
@@ -2103,6 +2135,16 @@ def parse_arguments(_args):
     f.add_argument("--no-ficture", action="store_true",
                    help="No factor analysis at all: run only FICTURE's tiling step and package the tiled "
                         "transcripts (points + raster + images, no factor layers). Cell analyses are skipped too.")
+    f.add_argument("--segment-10x", action="store_true",
+                   help="Also export the hexagon files as 10x MEX directories, one per sample and width "
+                        "(<fic_dir>/samples/<id>/<id>.hex_<width>.mex/ with barcodes/features/matrix; "
+                        "barcodes are hexagon centers 'x:y'). Uses the very same hexagons as the factor "
+                        "analysis (after --min-ct-per-unit-hexagon). Works in every mode, including "
+                        "--no-ficture. Config equivalent: \"segment_10x\": true.")
+    f.add_argument("--segment-width-10x", type=str, default=None,
+                   help="Hexagon width(s) in um to export with --segment-10x, comma-separated (default: "
+                        "each analysis' own --width). Extra widths get their hexagon files built too. "
+                        "Config equivalent: \"segment_10x\": {\"widths\": \"12,24\"}.")
 
     d = p.add_argument_group("Common decode overrides (else profile / built-in defaults)")
     d.add_argument("--exclude-feature-regex", type=str, default=None,

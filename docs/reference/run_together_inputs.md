@@ -154,6 +154,15 @@ Independent of how inputs are specified, Tier-1 selects the base FICTURE work. E
 
     Applies to **every** platform, not just Seq-Scope. Cell analyses are skipped too (they decode against a model). Cannot be combined with `--n-factor` or `--project-models`. The hexagon files are still built alongside the tiles, so adding factors later re-uses them instead of re-tiling — rerun without `--no-ficture` in the same `--out-dir`.
 
+**Hexagon MEX export** (any mode): `--segment-10x` additionally writes each sample's hexagon file as a 10x MEX directory, `fic/samples/<id>/<id>.hex_<width>.mex/` (`barcodes.tsv.gz` with hexagon centers as `x:y`, `features.tsv.gz`, `matrix.mtx.gz`). It converts the very hexagon files the factor analysis uses (same `--min-ct-per-unit-hexagon` filter), so the two are consistent. By default every analysis' `--width` is exported; `--segment-width-10x 12,24` picks the widths instead (extra widths get their hexagon files built too). Works with `--no-ficture` — the way to get hexagon MEX files without any factor analysis, e.g. for Seq-Scope:
+
+```bash
+cartloader run_together --platform seqscope --in-dir IN --out-dir OUT --no-ficture \
+    --segment-10x --segment-width-10x 12,24
+```
+
+Config equivalent: top-level `"segment_10x": true` or `{ "widths": "12,24" }` (a CLI flag wins). The directories are recorded under `mex` in the per-sample `ficture.params.json` and in `ficture.multi.params.json`; see [`run_ficture2_multi --segment-10x`](./run_ficture2_multi.md#actions).
+
 **Common decode overrides** (else profile / built-in default): `--exclude-feature-regex`, `--include-feature-list` / `--exclude-feature-list`, the `--ingest-*-feature-*` family, `--min-ct-per-unit-hexagon` (default `50`), `--min-ct-per-unit-train`, `--cell-min-cell-count` / `--cell-min-feature-count`, and `--always-single-molecule` / `--never-single-molecule` (default: single-molecule **ON** for pixel FICTURE, **OFF** for cell decode). An explicit CLI flag wins over a `--config`/profile value, which wins over the built-in default.
 
 ### Feature filtering: two independent layers
@@ -261,6 +270,7 @@ Escalate to `--config run.json` when samples need **different** settings, or to 
   "ingest": { "jitter_xy": 0.8, "units_per_um": 1 }, // random +/- um offset on X/Y, and the input's coordinate units (see above)
   "ficture_defaults": { "decode_scale": 2 },
   "cell_defaults":    { "min_cell_count": 20 },
+  "segment_10x":   { "widths": "12,24" },           // or true: export the hexagon files as 10x MEX (see FICTURE mode)
   "ficture":       [ /* analyses: each is a de-novo train OR a projection */ ],
   "cell_analyses": [ /* {id, uses:[roles], any_uses?:[roles], optional_uses?:[roles], model_id?, lists?, extra_flags?} */ ],
   "cell_lists":    { "clusters": "..." },           // ready-made --list-* file(s) for every cell analysis

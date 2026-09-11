@@ -86,7 +86,7 @@ This mirrors the FICTURE manifests: `run_ficture2_multi` writes a shared [`fictu
 
 **Input/output:** `--platform`, `--in-dir`, `--samples`, `--out-dir`, `--out-root`, `--id`, `--config`, `--platform-json` (external profile override). Single-sample file inputs and column-name overrides are documented in [Specifying Inputs](./run_together_inputs.md).
 
-**FICTURE mode:** `--width`, `--n-factor` (de-novo); `--project-models` (projection-only); `--no-ficture` (tiling only — package with no factor layers). See [Specifying Inputs → FICTURE mode](./run_together_inputs.md#ficture-mode-de-novo-vs-projection).
+**FICTURE mode:** `--width`, `--n-factor` (de-novo); `--project-models` (projection-only); `--no-ficture` (tiling only — package with no factor layers); `--segment-10x` / `--segment-width-10x` (also export the hexagon files as 10x MEX directories, in any mode). See [Specifying Inputs → FICTURE mode](./run_together_inputs.md#ficture-mode-de-novo-vs-projection).
 
 **Common decode overrides:** `--exclude-feature-regex`, `--min-ct-per-unit-hexagon` (default `50`), `--always-single-molecule` / `--never-single-molecule` (default: single-molecule ON for pixel FICTURE, OFF for cell decode). An explicit CLI flag wins over a `--config`/profile value, which wins over the built-in default.
 

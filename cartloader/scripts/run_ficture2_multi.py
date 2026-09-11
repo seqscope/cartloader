@@ -36,6 +36,8 @@ def parse_arguments(_args):
     key_params.add_argument('--width', type=str, required=True, help='Comma-separated hexagon flat-to-flat widths (in um) for LDA training')
     key_params.add_argument('--n-factor', type=str, help='Comma-separated list of factor counts for LDA training.')
     key_params.add_argument('--prepare-only', action='store_true', default=False, help='Run only the multi-sample tiling/hexagon step and write the manifests with no models. Produces the tiled TSV/index that packaging (run_cartload2) reads, so a dataset can be hosted without any factor analysis.')
+    key_params.add_argument('--segment-10x', action='store_true', default=False, help='Also export the per-sample hexagon files as 10x MEX directories (samples/<sample>/<sample>.hex_<width>.mex/ with barcodes/features/matrix) via spatula sptsv2mex. The MEX is built from the very same hexagon files the factor analysis uses (same --min-ct-per-unit-hexagon filter), so the two stay consistent. Works with --prepare-only.')
+    key_params.add_argument('--segment-width-10x', type=str, default=None, help='Comma-separated hexagon flat-to-flat widths (um) to export as 10x MEX with --segment-10x (default: the --width list). Widths not in --width are added to the hexagon step so their hexagon files exist too.')
     key_params.add_argument('--anchor-res', type=int, default=6, help='Anchor resolution for decoding (default: 6)')
     key_params.add_argument('--cmap-file', type=str, default=os.path.join(repo_dir, "assets", "default_color_map.tsv"), help='Path to fixed color map TSV (default: <cartloader_dir>/assets/default_color_map.tsv)')
 
@@ -102,9 +104,26 @@ def parse_arguments(_args):
 
     return parser.parse_args(_args)
 
+def _split_widths(csv):
+    return [w.strip() for w in (csv or "").split(",") if w.strip()]
+
+def hexagon_widths(args):
+    """Every hexagon width the prepare step must build: the training widths plus any
+    --segment-width-10x width not already among them (order preserved, no duplicates)."""
+    widths = _split_widths(args.width)
+    if args.segment_10x:
+        widths += [w for w in _split_widths(args.segment_width_10x) if w not in widths]
+    return widths
+
+def mex_widths(args):
+    """Hexagon widths exported as 10x MEX (empty unless --segment-10x)."""
+    if not args.segment_10x:
+        return []
+    return _split_widths(args.segment_width_10x) or _split_widths(args.width)
+
 def add_multisample_prepare_targets(mm, args, ficture2bin, in_samples):
     """Add Makefile target for multi-sample tiling and hexagon generation."""
-    widths = args.width.split(",")
+    widths = hexagon_widths(args)
 
     cmds = cmd_separator([], f"Creating tiled tsv from {os.path.basename(args.in_list)}...")
     cmds.append(f"touch '{args.out_dir}/multi.begin'")
@@ -122,7 +141,7 @@ def add_multisample_prepare_targets(mm, args, ficture2bin, in_samples):
         f"--tile-size {args.tile_size}",
         f"--tile-buffer {args.tile_buffer}",
         f"--threads {args.threads}",
-        f"--hex-grid-dist {args.width.replace(',', ' ')}",
+        f"--hex-grid-dist {' '.join(widths)}",
         f"--min-total-count-per-sample {args.min_count_per_sample}",
         f"--min-count {args.min_ct_per_unit_hexagon}",
         # No feature filter here on purpose: this step writes the tiled TSV, the per-sample
@@ -137,6 +156,37 @@ def add_multisample_prepare_targets(mm, args, ficture2bin, in_samples):
     if os.path.exists(f"{args.out_dir}/multi.done"):
         os.remove(f"{args.out_dir}/multi.done")
     mm.add_target(f"{args.out_dir}/multi.done", [args.in_list], cmds)
+
+def add_segment_10x_targets(mm, args, in_samples):
+    """Add one Makefile target per (sample, width) converting the per-sample hexagon
+    file written by multisample-prepare (samples/<s>/<s>.hex_<w>.txt + .json) into a 10x
+    MEX directory samples/<s>/<s>.hex_<w>.mex/ with spatula sptsv2mex. The hexagon file
+    is used as-is (it is neither re-generated nor deleted), so the MEX holds exactly the
+    hexagons the factor analysis sees, after the --min-ct-per-unit-hexagon filter.
+    Barcodes are the hexagon centers as "x:y" (the random key is dropped).
+
+    Returns {sample: [(width, mex_dir, done_flag), ...]}.
+    """
+    out = {}
+    for sample in in_samples:
+        entries = []
+        for width in mex_widths(args):
+            hex_prefix = os.path.join(args.out_dir, "samples", sample, f"{sample}.hex_{width}")
+            mex_dir = f"{hex_prefix}.mex"
+            done = f"{hex_prefix}.mex.done"
+            cmds = cmd_separator([], f"Exporting {width}um hexagons of sample {sample} to 10x MEX format...")
+            cmds.append(f"mkdir -p '{mex_dir}'")
+            cmds.append(" ".join([
+                f"'{args.spatula}'", "sptsv2mex",
+                f"--tsv '{hex_prefix}.txt'",
+                f"--json '{hex_prefix}.json'",
+                f"--out-dir '{mex_dir}'",
+            ]))
+            cmds.append(f"[ -f '{mex_dir}/barcodes.tsv.gz' ] && [ -f '{mex_dir}/features.tsv.gz' ] && [ -f '{mex_dir}/matrix.mtx.gz' ] && touch '{done}'")
+            mm.add_target(done, [f"{args.out_dir}/multi.done"], cmds)
+            entries.append((width, mex_dir, done))
+        out[sample] = entries
+    return out
 
 def add_feature_select_target(mm, args):
     """Add the Makefile target resolving the feature filters into one feature list, and
@@ -391,7 +441,7 @@ def add_pixel_decode_target_per_sample(mm, args, ficture2bin, ficture2report, mo
 
     return f"{decode_prefix}.done"
 
-def add_sample_json_target(mm, args, sample, sample_transcript, n_samples, sample_tsv_transcript, selected_features=None):
+def add_sample_json_target(mm, args, sample, sample_transcript, n_samples, sample_tsv_transcript, selected_features=None, mex_entries=None):
     """Add Makefile target to write the output JSON for a single sample."""
     cmds = cmd_separator([], f"Writing output JSON file for sample {sample}...")
     sample_out_dir = os.path.join(args.out_dir, "samples", sample)
@@ -505,6 +555,10 @@ def add_sample_json_target(mm, args, sample, sample_transcript, n_samples, sampl
     # differs only when a feature filter was applied.
     summary_cmd_parts.append(f"--in-feature-ficture {selected_features or sample_feature_hdr}")
     summary_cmd_parts.extend(arg for arg in summary_aux_args if arg)
+    # 10x MEX exports of the hexagon files (--segment-10x), recorded under "mex" by width.
+    if mex_entries:
+        summary_cmd_parts.append("--mex " + " ".join(f"{w},{d}" for w, d, _ in mex_entries))
+        prerequisities.extend(done for _, _, done in mex_entries)
     cmd = " ".join(summary_cmd_parts)
     cmds.append(cmd)
     mm.add_target(sample_out_json, prerequisities, cmds)
@@ -525,15 +579,22 @@ def write_multi_params_json(args, in_samples):
     run_cartload2_multi would materialize shared factors/UMAPs for only that model
     while each per-sample run_cartload2 still expects all of them.
     """
-    widths = args.width.split(",")
+    widths = hexagon_widths(args)
     out_path = os.path.join(args.out_dir, "ficture.multi.params.json")
 
-    # Existing shared train_params, keyed by model_id (order preserved).
+    # Existing shared train_params, keyed by model_id (order preserved), and existing
+    # per-sample MEX exports (kept across invocations the same way).
     shared_train = []
+    mex = {}
     if os.path.exists(out_path) and not args.prepare_only:
         with open(out_path, "rt") as f:
             old_manifest = json.load(f)
         shared_train = old_manifest.get("shared", {}).get("train_params", [])
+        mex = old_manifest.get("mex", {})
+    # --segment-10x: samples/<s>/<s>.hex_<w>.mex/ per sample and width (relative paths)
+    for w in mex_widths(args):
+        for s in in_samples:
+            mex.setdefault(s, {})[w] = os.path.join("samples", s, f"{s}.hex_{w}.mex")
     index = {e["model_id"]: i for i, e in enumerate(shared_train) if "model_id" in e}
 
     for lda in ([] if args.prepare_only else define_lda_runs(args, **LDA_CONFIG)):
@@ -574,6 +635,8 @@ def write_multi_params_json(args, in_samples):
             "train_params": shared_train,
         },
     }
+    if mex:
+        manifest["mex"] = mex
     with open(out_path, "wt") as f:
         json.dump(manifest, f, indent=4)
     return out_path
@@ -597,6 +660,8 @@ def run_ficture2_multi(_args):
     if args.prepare_only:
         # No models are trained, so there is nothing to embed — and R is not needed.
         args.skip_umap = True
+    if args.segment_width_10x is not None and not args.segment_10x:
+        raise ValueError("--segment-width-10x is only meaningful together with --segment-10x.")
     for flag, path in (("--include-feature-list", args.include_feature_list),
                        ("--exclude-feature-list", args.exclude_feature_list)):
         if path is not None and not os.path.exists(path):
@@ -645,6 +710,10 @@ def run_ficture2_multi(_args):
 
     # step 1. multi-sample tiling and hexagon:
     add_multisample_prepare_targets(mm, args, ficture2bin, in_samples)
+
+    # step 1.2. --segment-10x: export the per-sample hexagon files as 10x MEX. Depends only
+    # on multi.done, so it runs in --prepare-only mode as well.
+    mex_by_sample = add_segment_10x_targets(mm, args, in_samples)
 
     # step 1.5. the feature subset the factor analysis is restricted to (None if unfiltered).
     # A --prepare-only run trains nothing, so there is nothing to restrict.
@@ -748,7 +817,8 @@ def run_ficture2_multi(_args):
     json_each_targets = []
     for sample, sample_transcript in zip(in_samples, in_tsvs):
         sample_out_json = add_sample_json_target(mm, args, sample, sample_transcript, n_samples, sample2tsv.get(sample),
-                                                 selected_features=selected_features)
+                                                 selected_features=selected_features,
+                                                 mex_entries=mex_by_sample.get(sample))
         json_each_targets.append(sample_out_json)
 
     cmds=cmd_separator([], f"Finishing writing the JSON file for each sample...")
