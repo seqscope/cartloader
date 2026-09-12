@@ -802,12 +802,14 @@ def image_row_to_spec(row, cfg, in_dir):
 # stack (the 2D projections are morphology_focus*.ome.tif). import_image refuses a
 # multi-page file without a page, so these default to --use-middle-page wherever the
 # image comes from (profile match, sample sheet `dapi` column, --images row, --image,
-# config). A `use_middle_page` key/column on the image (true/false) overrides the default.
-ZSTACK_OME_BASENAMES = frozenset({"morphology.ome.tif", "morphology.ome.tiff"})
+# config). Matched by suffix so renamed copies (e.g. GEO's GSM123_rep1_morphology.ome.tif)
+# qualify too, while morphology_focus.ome.tif does not (its stem ends in "_focus"). A
+# `use_middle_page` key/column on the image (true/false) overrides the default.
+ZSTACK_OME_SUFFIXES = ("morphology.ome.tif", "morphology.ome.tiff")
 
 
 def default_use_middle_page(src):
-    return os.path.basename(src).lower() in ZSTACK_OME_BASENAMES
+    return os.path.basename(src).lower().endswith(ZSTACK_OME_SUFFIXES)
 
 
 def _truthy(v):

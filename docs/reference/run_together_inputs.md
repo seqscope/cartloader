@@ -83,7 +83,7 @@ Columns map to per-sample **input roles**. Every column is optional except that 
 | `cellxgene` (`cell_by_gene`) | cellxgene | Cell×gene matrix CSV (e.g. MERSCOPE `cell_by_gene.csv`) → converted to a MEX that drives cell clustering (works without boundaries). |
 | `gef` / `cellbin_gef` | gef, cellbin_gef | Stereo-seq binary GEFs, when they do not match `in_prefix` + the standard suffix. |
 | `cell_tsv` | cell_tsv | A standalone pixel TSV (`X`, `Y`, gene, count, cell_id) that supplies cell counts on its own, for platforms whose cell assignment cannot be carried on the transcript (Stereo-seq cell bins). |
-| `dapi` | — | A single DAPI image (`.ome.tif`/`.tif`/`.png`) → a colorized `dapi` layer. Xenium's `morphology.ome.tif` z-stack is recognized by name and imported with `--use-middle-page`. |
+| `dapi` | — | A single DAPI image (`.ome.tif`/`.tif`/`.png`) → a colorized `dapi` layer. Xenium's `morphology.ome.tif` z-stack is recognized by name (any prefix, e.g. `GSM123_morphology.ome.tif`) and imported with `--use-middle-page`. |
 | `hne` | — | H&E image (Visium HD adds the layer automatically). |
 
 Other images are **not** sample-sheet columns (only `dapi` and `hne`) — they are a separate concern; see [Image Modalities](./run_together_images.md).
