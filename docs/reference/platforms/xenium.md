@@ -43,12 +43,17 @@ rep1    /data/xenium/rep1/outs
 rep2    /data/xenium/rep2/outs
 ```
 
-**GEO-style layouts** (non-standard filenames / scattered paths) — override per role with sheet columns; they are forwarded to the per-sample cell import as `--csv-*` overrides:
+**GEO-style layouts** (non-standard filenames / scattered paths) — name each file per role with sheet columns. The raw transcript goes in `raw_transcript` (it still needs ingest; the `transcript` column is for an *already-ingested* TSV and skips ingest). Role paths are forwarded to the per-sample cell import as `--csv-*` overrides:
 
 ```
-id      transcript                    xy                     boundaries               clusters
-rep1    /geo/rep1_transcripts.csv.gz  /geo/rep1_cells.csv.gz /geo/rep1_bounds.csv.gz  /geo/rep1_clusters.csv
+id      raw_transcript                xy                     boundaries               clusters                dapi
+rep1    /geo/rep1_transcripts.csv.gz  /geo/rep1_cells.csv.gz /geo/rep1_bounds.csv.gz  /geo/rep1_clusters.csv  /geo/rep1_morphology.ome.tif
+rep2    /geo/rep2_transcripts.parquet /geo/rep2_cells.parquet /geo/rep2_bounds.parquet -                       /geo/rep2_morphology_focus.ome.tif
 ```
+
+- **Parquet is fine.** `transcripts.parquet`, `cells.parquet` and `cell_boundaries.parquet` are converted to `.csv.gz` (`OUT/tsv/<id>/parquet2csv/`) as the first ingest step, with a `NOTE:` at planning time; the run aborts if a conversion fails.
+- **No clusters?** The `xeniumranger` import (Ranger's own clusters) needs `clusters`; a sample without it — as a column, or as `analysis/clustering/gene_expression_graphclust/clusters.csv` under `in_dir` — simply skips that import (a `NOTE:` says so). The `cartloader` analysis (clustering recomputed on the shared SGE) needs only `xy` + `boundaries` and still runs.
+- **DAPI.** A per-sample `dapi` column takes the image directly. `morphology.ome.tif` is the multi-page z-stack and is imported with `--use-middle-page` automatically; `morphology_focus.ome.tif` is the 2D projection and needs nothing special. See [Image Modalities](../run_together_images.md).
 
 ---
 ## 3. Full config (JSON)

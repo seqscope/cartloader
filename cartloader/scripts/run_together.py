@@ -787,7 +787,7 @@ def image_row_to_spec(row, cfg, in_dir):
         if val:
             spec["transform_flag"] = tr["flag"]
             spec["transform_path"] = _abs_in_dir(val, in_dir)
-    for k in ("shrink_factor", "high_memory", "convert", "um_per_pixel",
+    for k in ("shrink_factor", "high_memory", "use_middle_page", "convert", "um_per_pixel",
               "georef_plain", "georeferenced", "georef_detect",
               "swapxy", "rotate", "flip_vertical", "flip_horizontal",
               "rescale", "rescale_range", "rescale_min", "rescale_max"):
@@ -796,6 +796,18 @@ def image_row_to_spec(row, cfg, in_dir):
     # A plain .png needs no OME->PNG conversion; a .tif/.ome.tif does (default).
     spec.setdefault("convert", "none" if spec["source"].lower().endswith(".png") else "ome2png")
     return spec
+
+
+# OME-TIFFs known to be multi-page z-stacks: Xenium's morphology.ome.tif is the 3D DAPI
+# stack (the 2D projections are morphology_focus*.ome.tif). import_image refuses a
+# multi-page file without a page, so these default to --use-middle-page wherever the
+# image comes from (profile match, sample sheet `dapi` column, --images row, --image,
+# config). A `use_middle_page` key/column on the image (true/false) overrides the default.
+ZSTACK_OME_BASENAMES = frozenset({"morphology.ome.tif", "morphology.ome.tiff"})
+
+
+def default_use_middle_page(src):
+    return os.path.basename(src).lower() in ZSTACK_OME_BASENAMES
 
 
 def _truthy(v):
@@ -956,6 +968,47 @@ def ingest_feature_filter_flags(cfg):
     if not cfg.get("ingest_exclude_feature_regex"):
         parts.append('--exclude-feature-regex ""')
     return parts
+
+
+# Sample inputs whose consumers read CSV/TSV only: the raw transcript goes to sge_convert
+# --in-csv, and the cell roles to spatula / the per-sample importers' --csv-* readers. A
+# `.parquet` given for one of them (Xenium ships transcripts.parquet, cells.parquet and
+# cell_boundaries.parquet beside the .csv.gz files) is converted to .csv.gz first.
+PARQUET_CONVERTIBLE_ROLES = ("xy", "boundaries", "clusters")
+
+
+def _is_parquet(path):
+    return isinstance(path, str) and path.lower().endswith(".parquet")
+
+
+def plan_parquet_conversions(s, sge_dir, cfg):
+    """Convert this sample's .parquet inputs (raw_transcript and the CSV-only roles) to
+    .csv.gz under <sge_dir>/parquet2csv/ with `cartloader parquet_to_csv_rapid`, rewriting
+    the sample's paths to the converted files. Returns the shell commands (empty when
+    nothing needs converting); the caller makes them an ingest-stage target that every
+    consumer depends on. A failed or empty conversion aborts the run with an explicit
+    error rather than letting a downstream reader choke on the parquet."""
+    res = cfg["resources"]
+    out_dir = os.path.join(sge_dir, "parquet2csv")
+    cmds = []
+    items = [("raw_transcript", s.get("raw_transcript"))] + \
+            [(r, s["roles"].get(r)) for r in PARQUET_CONVERTIBLE_ROLES]
+    for role, path in items:
+        if not _is_parquet(path):
+            continue
+        out = os.path.join(out_dir, os.path.basename(path)[:-len(".parquet")] + ".csv.gz")
+        print(f"NOTE: sample {s['id']}: '{role}' is a parquet file ({path}); it will be converted "
+              f"to {out} with 'cartloader parquet_to_csv_rapid' before it is used.", file=sys.stderr)
+        cmds.append(f"echo 'Converting parquet to csv.gz ({role}): {path} -> {out}'")
+        cmds.append(f"cartloader parquet_to_csv_rapid --in-parquet {path} --out-csv-gz {out} "
+                    f"--threads {res['threads']} || {{ rm -f {out}; "
+                    f"echo 'ERROR: parquet -> csv.gz conversion failed for {path} ({role} of sample {s['id']})' >&2; exit 1; }}")
+        cmds.append(f"[ -s {out} ] || {{ echo 'ERROR: parquet -> csv.gz conversion of {path} produced no output ({out})' >&2; exit 1; }}")
+        if role == "raw_transcript":
+            s["raw_transcript"] = out
+        else:
+            s["roles"][role] = out
+    return cmds
 
 
 def cmd_sge_convert(cfg, sge_dir, s):
@@ -1448,7 +1501,13 @@ def plan_images(cfg, s, cart_dir, multi, transcript=None):
             if upp:
                 ppu = 1.0 / float(upp)
                 transform += f"--px-per-um-x {ppu:g} --px-per-um-y {ppu:g} "
-            extra = " ".join(op.get("extra_flags", []))
+            extra_flags = list(op.get("extra_flags", []))
+            # multi-page z-stack: pick the middle page (by file name unless overridden)
+            ump = op.get("use_middle_page")
+            ump = default_use_middle_page(src) if ump is None else _truthy(ump)
+            if ump and "--use-middle-page" not in extra_flags:
+                extra_flags.append("--use-middle-page")
+            extra = " ".join(extra_flags)
             cmds.append(
                 f"cartloader import_image {conv}{skip_img}--png2pmtiles --georeference "
                 f"--in-img {src} --out-dir {cart_dir} --img-id {iid} "
@@ -1484,11 +1543,19 @@ def plan_images(cfg, s, cart_dir, multi, transcript=None):
             imp = ca.get("multi_import")
             if not imp:
                 continue
-            # A sample can supply inputs via a Ranger-style --in-dir or via sheet
-            # role columns (or both). Emit only when at least one is present.
+            # A sample supplies the inputs via sheet role columns, or a Ranger-style
+            # --in-dir whose standard files were auto-detected into the same roles (a role
+            # is only resolved from in_dir when its file exists). The import needs every
+            # role in `uses` -- e.g. import_xenium_cell cannot run without the clusters
+            # CSV -- so it is skipped, with a note, when any is missing.
             has_indir = bool(s.get("in_dir"))
-            role_paths = {r: s["roles"][r] for r in ca.get("uses", []) if s["roles"].get(r)}
-            if not (has_indir or role_paths):
+            uses = ca.get("uses", [])
+            role_paths = {r: s["roles"][r] for r in uses if s["roles"].get(r)}
+            missing = [r for r in uses if r not in role_paths]
+            if missing:
+                if role_paths or has_indir:
+                    print(f"NOTE: sample {s['id']}: skipping the per-sample import '{ca['id']}' "
+                          f"({imp}); missing input role(s): {', '.join(missing)}.", file=sys.stderr)
                 continue
             parts = [f"cartloader {imp}",
                      f"--in-dir {s['in_dir'] if has_indir else '.'}",
@@ -1657,11 +1724,23 @@ def add_targets(mm, samples, cfg, args):
         sge_flags, transcript = [], {}
         preingested = []
         for s in grp:
+            sge_dir = os.path.join(sge_root, s["id"])
+            # .parquet inputs are converted to .csv.gz first (see plan_parquet_conversions);
+            # the conversion is its own ingest-stage target that the sample's ingest and,
+            # through sge_flags, every later stage depend on.
+            conv_flags = []
+            conv_cmds = plan_parquet_conversions(s, sge_dir, cfg)
+            if conv_cmds:
+                cflag = os.path.join(mkdir, f"parquet2csv.{s['id']}.done")
+                if on("ingest"):
+                    mm.add_target(cflag, [], [f"mkdir -p {os.path.join(sge_dir, 'parquet2csv')}"]
+                                  + conv_cmds + [f"touch {cflag}"])
+                conv_flags.append(cflag)
             if s["roles"].get("transcript"):
                 transcript[s["id"]] = s["roles"]["transcript"]
                 preingested.append(s["id"])
+                sge_flags.extend(conv_flags)
                 continue
-            sge_dir = os.path.join(sge_root, s["id"])
             if method == "reformat_cosmx":
                 prefix = os.path.join(sge_dir, s["id"])
                 transcript[s["id"]] = prefix + produces["transcript"]
@@ -1708,7 +1787,7 @@ def add_targets(mm, samples, cfg, args):
             flag = os.path.join(mkdir, f"sge.{s['id']}.done")
             sge_flags.append(flag)
             if on("ingest"):
-                mm.add_target(flag, [], [f"mkdir -p {sge_dir}"] + ingest_cmds + [f"touch {flag}"])
+                mm.add_target(flag, conv_flags, [f"mkdir -p {sge_dir}"] + ingest_cmds + [f"touch {flag}"])
 
         # The ingest filters act while the transcript TSV is written, so a sample that
         # supplies a ready-made transcript never sees them: its TSV is taken as given.

@@ -26,6 +26,7 @@ All three share the **same field vocabulary**. Built-in profiles also **auto-det
 | `transform` (or the platform column, e.g. `merfish_csv`) | | Geometric transform file → the profile's import flag (e.g. MERSCOPE `--micron2pixel-csv`). |
 | `shrink_factor` | | Downscale factor for very large mosaics (else the profile's `image_defaults`). |
 | `high_memory` | | `true` to allow a high-memory import path for big images. |
+| `use_middle_page` | | `true`/`false`: pick the middle page of a multi-page (z-stack) OME-TIFF. **Defaults to `true` for files named `morphology.ome.tif`** (Xenium's 3D DAPI stack, which `import_image` otherwise rejects for lacking a page), `false` for everything else. |
 | `convert` | | `ome2png` \| `png2pmtiles` \| `none`. Defaults from the source extension (`.png` → none; `.tif` → `ome2png`). |
 | `um_per_pixel` | | Microns per pixel, for a plain (non-OME) image that carries no pixel-size metadata. Sets `--px-per-um-x/y` (single-channel) or `--um-per-pixel` (rgb). E.g. `0.5` for a Stereo-seq `*_regist.tif`. |
 | `georef_plain` | | `true` to map the upper-left corner to (0,0) and the lower-right to the image size, scaled by `um_per_pixel` (`rgb` images). |
@@ -72,6 +73,7 @@ s2        hne       /p/s2_he.tif       -         -
 ```
 
 - `sample = *` (or blank) applies a row to **every** sample.
+- A single DAPI or H&E per sample can instead go straight into the **sample sheet** as a `dapi` / `hne` column (path only; type defaults apply, and the z-stack rule above still holds).
 - The transform column is named by the platform profile (`merfish_csv` for MERSCOPE); a generic `transform` column also works everywhere.
 
 ---
@@ -111,7 +113,7 @@ cartloader import_image --ome2png --png2pmtiles --georeference \
     --in-img <source> --out-dir cartl/<sample>/ --img-id <id>
 ```
 
-`shrink_factor` / `high_memory` fall back to the profile's `image_defaults` (e.g. MERSCOPE sets `shrink_factor=5.0`, `high_memory=true` for its large mosaics). An `rgb` image goes through the `image_png2pmtiles` (geotiff → mbtiles → pmtiles) path instead; a `prebuilt` image is copied straight in. See [`import_image`](./import_image.md).
+A `morphology.ome.tif` (Xenium's multi-page DAPI z-stack) additionally gets `--use-middle-page`, whichever way it was supplied, unless `use_middle_page` says otherwise. `shrink_factor` / `high_memory` fall back to the profile's `image_defaults` (e.g. MERSCOPE sets `shrink_factor=5.0`, `high_memory=true` for its large mosaics). An `rgb` image goes through the `image_png2pmtiles` (geotiff → mbtiles → pmtiles) path instead; a `prebuilt` image is copied straight in. See [`import_image`](./import_image.md).
 
 ---
 ## See also
