@@ -1496,7 +1496,14 @@ def plan_images(cfg, s, cart_dir, multi, transcript=None):
             transform = f"{op['transform_flag']} {op['transform_path']} " if op.get("transform_path") else ""
             sfval = op.get("shrink_factor", idef.get("shrink_factor"))
             sf = f"--shrink-factor {sfval} " if sfval is not None else ""
-            hm = "--high-memory " if _truthy(op.get("high_memory", idef.get("high_memory"))) else ""
+            # multi-page z-stack: pick the middle page (by file name unless overridden). A
+            # z-stack is large, so it also takes the high-memory path unless `high_memory`
+            # is explicitly false.
+            ump = op.get("use_middle_page")
+            ump = default_use_middle_page(src) if ump is None else _truthy(ump)
+            hm_val = op.get("high_memory", idef.get("high_memory"))
+            hm_on = _truthy(hm_val) if hm_val is not None else ump
+            hm = "--high-memory " if hm_on else ""
             # A plain (non-OME) TIFF carries no pixel size, so state the scale directly:
             # a Stereo-seq *_regist.tif at 0.5 um/pixel georeferences as px_per_um = 2.
             upp = op.get("um_per_pixel", idef.get("um_per_pixel"))
@@ -1504,11 +1511,10 @@ def plan_images(cfg, s, cart_dir, multi, transcript=None):
                 ppu = 1.0 / float(upp)
                 transform += f"--px-per-um-x {ppu:g} --px-per-um-y {ppu:g} "
             extra_flags = list(op.get("extra_flags", []))
-            # multi-page z-stack: pick the middle page (by file name unless overridden)
-            ump = op.get("use_middle_page")
-            ump = default_use_middle_page(src) if ump is None else _truthy(ump)
             if ump and "--use-middle-page" not in extra_flags:
                 extra_flags.append("--use-middle-page")
+            if hm_on and "--high-memory" in extra_flags:   # already emitted via hm
+                extra_flags.remove("--high-memory")
             extra = " ".join(extra_flags)
             cmds.append(
                 f"cartloader import_image {conv}{skip_img}--png2pmtiles --georeference "

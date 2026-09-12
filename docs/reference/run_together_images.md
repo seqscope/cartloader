@@ -25,7 +25,7 @@ All three share the **same field vocabulary**. Built-in profiles also **auto-det
 | `kind` | | `single` \| `rgb` \| `prebuilt`. **Defaults to the type's registry kind.** |
 | `transform` (or the platform column, e.g. `merfish_csv`) | | Geometric transform file → the profile's import flag (e.g. MERSCOPE `--micron2pixel-csv`). |
 | `shrink_factor` | | Downscale factor for very large mosaics (else the profile's `image_defaults`). |
-| `high_memory` | | `true` to allow a high-memory import path for big images. |
+| `high_memory` | | `true` to allow a high-memory import path for big images. Defaults to `true` whenever `use_middle_page` is in effect (a z-stack is large); set `false` to opt out. |
 | `use_middle_page` | | `true`/`false`: pick the middle page of a multi-page (z-stack) OME-TIFF. **Defaults to `true` for files whose name ends in `morphology.ome.tif`** (Xenium's 3D DAPI stack, also under a prefix such as `GSM123_rep1_morphology.ome.tif`; which `import_image` otherwise rejects for lacking a page), `false` for everything else. |
 | `convert` | | `ome2png` \| `png2pmtiles` \| `none`. Defaults from the source extension (`.png` → none; `.tif` → `ome2png`). |
 | `um_per_pixel` | | Microns per pixel, for a plain (non-OME) image that carries no pixel-size metadata. Sets `--px-per-um-x/y` (single-channel) or `--um-per-pixel` (rgb). E.g. `0.5` for a Stereo-seq `*_regist.tif`. |
@@ -113,7 +113,7 @@ cartloader import_image --ome2png --png2pmtiles --georeference \
     --in-img <source> --out-dir cartl/<sample>/ --img-id <id>
 ```
 
-A file ending in `morphology.ome.tif` (Xenium's multi-page DAPI z-stack, with or without a prefix) additionally gets `--use-middle-page`, whichever way it was supplied, unless `use_middle_page` says otherwise. `shrink_factor` / `high_memory` fall back to the profile's `image_defaults` (e.g. MERSCOPE sets `shrink_factor=5.0`, `high_memory=true` for its large mosaics). An `rgb` image goes through the `image_png2pmtiles` (geotiff → mbtiles → pmtiles) path instead; a `prebuilt` image is copied straight in. See [`import_image`](./import_image.md).
+A file ending in `morphology.ome.tif` (Xenium's multi-page DAPI z-stack, with or without a prefix) additionally gets `--use-middle-page` and `--high-memory`, whichever way it was supplied, unless `use_middle_page` / `high_memory` say otherwise. `shrink_factor` / `high_memory` fall back to the profile's `image_defaults` (e.g. MERSCOPE sets `shrink_factor=5.0`, `high_memory=true` for its large mosaics). An `rgb` image goes through the `image_png2pmtiles` (geotiff → mbtiles → pmtiles) path instead; a `prebuilt` image is copied straight in. See [`import_image`](./import_image.md).
 
 ---
 ## See also
