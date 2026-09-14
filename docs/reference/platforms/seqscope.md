@@ -78,7 +78,7 @@ cartloader run_together --platform seqscope --in-dir /data/mex --out-dir OUT --n
     --segment-10x --segment-width-10x 12,24
 ```
 
-Each sample and width yields `OUT/fic/samples/<id>/<id>.hex_<width>.mex/` with `barcodes.tsv.gz` (hexagon centers as `x:y`, µm), `features.tsv.gz`, and `matrix.mtx.gz`. These are converted from the same hexagon files FICTURE trains on (after `--min-ct-per-unit-hexagon`, default `50`), so they match the factor analysis exactly; without `--segment-width-10x` every `--width` is exported. Works together with a full FICTURE run too. Config equivalent: `"segment_10x": true` or `{ "widths": "12,24" }`.
+For a wide hexagon (roughly `--width` above 40), also raise the tiling size — punkst rejects a tile under 20× the hexagon side length and recommends 50–100× — e.g. `--width 100 --tile-size 5000` (config: `"tile_size": 5000`). Each sample and width yields `OUT/fic/samples/<id>/<id>.hex_<width>.mex/` with `barcodes.tsv.gz` (hexagon centers as `x:y`, µm), `features.tsv.gz`, and `matrix.mtx.gz`. These are converted from the same hexagon files FICTURE trains on (after `--min-ct-per-unit-hexagon`, default `50`), so they match the factor analysis exactly; without `--segment-width-10x` every `--width` is exported. Works together with a full FICTURE run too. Config equivalent: `"segment_10x": true` or `{ "widths": "12,24" }`.
 
 ---
 ## Coordinates and count columns

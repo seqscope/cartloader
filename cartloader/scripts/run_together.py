@@ -87,6 +87,8 @@ KNOWN_CONFIG_KEYS = frozenset({
     "ficture", "cell_analyses", "images",
     # 10x MEX export of the hexagon files: true, or { "widths": "12,24" }
     "segment_10x",
+    # FICTURE tiling knobs (run-wide; forwarded to run_ficture2_multi only when set)
+    "tile_size", "tile_buffer",
 })
 # Recognized keys inside a `samples[]` entry. Anything else is a typo that would be
 # silently dropped (a misspelled role looks provided but is never read), so build_config
@@ -394,7 +396,7 @@ def build_config(args):
               "ingest_include_feature_list", "ingest_exclude_feature_list",
               "ingest", "roles", "cartload", "ficture_defaults", "cell_defaults",
               "squares", "cell_import", "hne", "image_transform", "image_defaults",
-              "publish", "resources", "segment_10x"):
+              "publish", "resources", "segment_10x", "tile_size", "tile_buffer"):
         if k in cfg:
             prof[k] = deep_merge(prof.get(k), cfg[k]) if isinstance(cfg[k], dict) else cfg[k]
     if "ficture" in cfg:
@@ -586,6 +588,24 @@ def build_config(args):
             sys.exit("ERROR: --segment-width-10x requires --segment-10x (or 'segment_10x' in the config).")
         s10["widths"] = args.segment_width_10x
     prof["_segment_10x"] = s10
+
+    # FICTURE tiling: --tile-size / --tile-buffer (else the config's tile_size / tile_buffer,
+    # else run_ficture2_multi's own defaults, 500 um and 1000 lines). Run-wide, since
+    # multisample-prepare tiles each output directory once for every analysis. punkst
+    # rejects a tile size under 20x the hexagon side length (width / sqrt(3)), so a wide
+    # hexagon (e.g. --width 100) needs a larger tile, roughly 50x the width.
+    for key in ("tile_size", "tile_buffer"):
+        val = getattr(args, key)
+        if val is None:
+            val = prof.get(key)
+        if val is not None:
+            try:
+                val = int(val)
+            except (TypeError, ValueError):
+                sys.exit(f"ERROR: '{key}' must be an integer (got {val!r}).")
+            if val <= 0:
+                sys.exit(f"ERROR: '{key}' must be positive (got {val}).")
+        prof[key] = val
 
     # Tolerate corrupt histology images in the images stage (opt-in; see plan_images).
     prof["_skip_image_errors"] = args.skip_image_errors
@@ -1314,6 +1334,10 @@ def cmd_ficture_analysis(a, in_list, fic_dir, cfg):
         parts.append("--segment-10x")
         if s10.get("widths"):
             parts.append(f"--segment-width-10x {s10['widths']}")
+    if cfg.get("tile_size") is not None:
+        parts.append(f"--tile-size {cfg['tile_size']}")
+    if cfg.get("tile_buffer") is not None:
+        parts.append(f"--tile-buffer {cfg['tile_buffer']}")
     parts.extend(feature_filter_flags(cfg))
     return " ".join(parts)
 
@@ -2232,6 +2256,16 @@ def parse_arguments(_args):
                    help="Hexagon width(s) in um to export with --segment-10x, comma-separated (default: "
                         "each analysis' own --width). Extra widths get their hexagon files built too. "
                         "Config equivalent: \"segment_10x\": {\"widths\": \"12,24\"}.")
+    f.add_argument("--tile-size", type=int, default=None,
+                   help="FICTURE tiling: tile size in um for punkst multisample-prepare (default: "
+                        "run_ficture2_multi's 500). punkst requires at least 20x the hexagon side "
+                        "length (width/sqrt(3)) and recommends 50-100x, so a wide hexagon such as "
+                        "--width 100 needs roughly 50x the width, e.g. 5000. Run-wide. Config "
+                        "equivalent: top-level \"tile_size\".")
+    f.add_argument("--tile-buffer", type=int, default=None,
+                   help="FICTURE tiling: per-tile, per-thread line buffer for punkst multisample-prepare "
+                        "(default: run_ficture2_multi's 1000). Not spatial; rarely needs changing. "
+                        "Config equivalent: top-level \"tile_buffer\".")
 
     d = p.add_argument_group("Common decode overrides (else profile / built-in defaults)")
     d.add_argument("--exclude-feature-regex", type=str, default=None,
