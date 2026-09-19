@@ -31,6 +31,8 @@ parser$add_argument("--seed",                type = "integer",  default = 42,
                     help = "Random seed for reproducibility (default: 42)")
 parser$add_argument("--no-sqrt", dest = "sqrt_transform", action = "store_false", default = TRUE,
                     help = "Disable sqrt transform on topic columns before UMAP")
+parser$add_argument("--tmp-dir",             type = "character", default = NULL,
+                    help = "Directory for the temporary nearest-neighbor index written by uwot. Must be on a filesystem large enough for several GB on big inputs (default: <out-prefix>.umap.tmp, removed on completion)")
 args <- parser$parse_args()
 
 set.seed(args$seed)
@@ -100,13 +102,36 @@ if (!req_valid) {
   log_message(sprintf("Using requested n_neighbors=%d for n=%d", k_final, n_points))
 }
 
-log_message("Running UMAP (cosine)...")
-umap_xy <- run_umap_embedding(
-  mat,
-  n_neighbors = k_final,
-  threads     = args$threads,
-  pca_dims    = args$pca_dims,
-  metric      = args$metric
+# Scratch space for uwot's on-disk NN index. Keep it next to the output rather
+# than under /tmp (see run_umap_embedding in umap_utils.r for why).
+tmp_dir <- args$tmp_dir
+tmp_dir_is_auto <- is.null(tmp_dir) || identical(tmp_dir, "")
+if (tmp_dir_is_auto) {
+  tmp_dir <- paste0(args$out_prefix, ".umap.tmp")
+}
+if (!dir.exists(tmp_dir)) {
+  dir.create(tmp_dir, recursive = TRUE, showWarnings = FALSE)
+}
+if (!dir.exists(tmp_dir)) {
+  stop("Could not create temporary directory: ", tmp_dir)
+}
+log_message(sprintf("Running UMAP (%s)...", args$metric))
+umap_xy <- tryCatch(
+  run_umap_embedding(
+    mat,
+    n_neighbors = k_final,
+    threads     = args$threads,
+    pca_dims    = args$pca_dims,
+    metric      = args$metric,
+    tmp_dir     = tmp_dir
+  ),
+  finally = {
+    # Only remove the directory we created ourselves; a user-supplied --tmp-dir
+    # may be shared with other jobs.
+    if (tmp_dir_is_auto) {
+      unlink(tmp_dir, recursive = TRUE)
+    }
+  }
 )
 
 umap_df <- as.data.table(umap_xy)

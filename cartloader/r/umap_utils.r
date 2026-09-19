@@ -54,19 +54,70 @@ prepare_topic_matrix <- function(df, meta_cols, sqrt_transform = TRUE, zero_fill
   list(matrix = mat, topic_cols = topic_cols)
 }
 
-run_umap_embedding <- function(mat, n_neighbors = 50, threads = 8, pca_dims = 0, metric = "cosine") {
+# uwot's multithreaded Annoy search builds the NN index in memory, writes it to
+# a file, and memory-maps that file from each worker thread. For millions of
+# rows the index is several GB and the build runs for hours, so R's session
+# tempdir (under /tmp unless TMPDIR is set) is a poor place for it: /tmp is often
+# small, and shared nodes may reap idle /tmp entries mid-run. When that happens
+# ann$save() fails silently ("Unable to open: No such file or directory"),
+# file.size() returns NA, and uwot dies with "missing value where TRUE/FALSE
+# needed" in its `fsize` check.
+#
+# umap()/umap2() accept a `tmpdir` argument for exactly this, but in uwot 0.2.4
+# (and current GitHub master) both forward `tmpdir = tempdir()` to the internal
+# uwot() function, so the argument is silently ignored. Until that is fixed
+# upstream, redirect the one internal function that writes the index file.
+# trace() is base R's supported hook for instrumenting a namespaced function:
+# the tracer runs at entry, in the function's own frame, and overrides its
+# `tmpdir` argument. Returns TRUE if the redirect was installed.
+redirect_uwot_nn_index_dir <- function(tmp_dir) {
+  ns <- asNamespace("uwot")
+  target <- "annoy_search_parallel"
+  if (!exists(target, envir = ns, inherits = FALSE)) {
+    warning("uwot:::", target, " not found in this uwot version; the NN index ",
+            "will be written to ", tempdir(), " instead of ", tmp_dir)
+    return(invisible(FALSE))
+  }
+  tracer <- substitute(tmpdir <- TD, list(TD = tmp_dir))
+  ok <- tryCatch({
+    utils::capture.output(suppressMessages(
+      trace(target, where = ns, tracer = tracer, print = FALSE)
+    ))
+    TRUE
+  }, error = function(e) {
+    warning("Could not redirect uwot NN index dir (", conditionMessage(e), "); ",
+            "the NN index will be written to ", tempdir())
+    FALSE
+  })
+  invisible(ok)
+}
+
+# Rough size of the on-disk Annoy index: one node of (12 + 4 * ncol) bytes per
+# item, plus split nodes for the trees (~50-60% on top with the default 50 trees).
+estimate_annoy_index_bytes <- function(n_items, n_dims) {
+  n_items * (12 + 4 * n_dims) * 1.6
+}
+
+run_umap_embedding <- function(mat, n_neighbors = 50, threads = 8, pca_dims = 0, metric = "cosine",
+                               tmp_dir = NULL) {
   pca_arg <- if (pca_dims > 0) pca_dims else NULL
 
-  # uwot's multithreaded Annoy search writes the NN index to a temp file under
-  # tempdir() and memory-maps it from each worker thread. On shared/HPC nodes the
-  # R session temp dir can be cleaned up mid-run; ann$save() then fails silently
-  # ("Unable to open: No such file or directory"), file.size() returns NA, and
-  # uwot dies with "missing value where TRUE/FALSE needed" in its `fsize` check.
-  # Recreate the temp dir if it has gone missing before running the embedding.
-  tdir <- tempdir(check = TRUE)
-  if (!dir.exists(tdir)) {
-    dir.create(tdir, recursive = TRUE, showWarnings = FALSE)
+  if (is.null(tmp_dir) || identical(tmp_dir, "")) {
+    tmp_dir <- tempdir(check = TRUE)
   }
+  if (!dir.exists(tmp_dir)) {
+    dir.create(tmp_dir, recursive = TRUE, showWarnings = FALSE)
+  }
+  if (!dir.exists(tmp_dir)) {
+    stop("Could not create UMAP temporary directory: ", tmp_dir)
+  }
+  tmp_dir <- normalizePath(tmp_dir)
+
+  if (threads > 1 && !identical(tmp_dir, normalizePath(tempdir()))) {
+    redirect_uwot_nn_index_dir(tmp_dir)
+  }
+  log_message(sprintf("NN index dir: %s (estimated index size ~%.2f GB)",
+                      tmp_dir, estimate_annoy_index_bytes(nrow(mat), ncol(mat)) / 1e9))
 
   uwot::umap2(
     X            = mat,
@@ -74,7 +125,8 @@ run_umap_embedding <- function(mat, n_neighbors = 50, threads = 8, pca_dims = 0,
     n_components = 2,
     n_neighbors  = n_neighbors,
     n_threads    = threads,
-    pca          = pca_arg
+    pca          = pca_arg,
+    tmpdir       = tmp_dir   # ignored by uwot <= 0.2.4, see above; kept for when upstream fixes it
   )
 }
 
