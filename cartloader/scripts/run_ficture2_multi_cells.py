@@ -21,11 +21,11 @@ def parse_arguments(_args):
     run_params.add_argument('--makefn', type=str, help='File name of Makefile to write (default: run_ficture2_multi.mk)')
 
     cmd_params = parser.add_argument_group("Commands", "Commands to run together")
-    cmd_params.add_argument('--all', action='store_true', default=False, help='Enable all actions: --cells and --boundaries')
+    cmd_params.add_argument('--all', action='store_true', default=False, help='Enable the standard actions: --sptsv, --lda, --leiden, --umap, --pseudobulk, --heatmap, and --decode. TSNE is not included; add --tsne explicitly to generate it.')
     cmd_params.add_argument('--sptsv', action='store_true', default=False, help='Create SPTSV files for LDA clustering')
     cmd_params.add_argument('--lda', action='store_true', default=False, help='Perform LDA factorization')
     cmd_params.add_argument('--leiden', action='store_true', default=False, help='Generate Leiden clusters based on LDA factorization')
-    cmd_params.add_argument('--tsne', action='store_true', default=False, help='Generate TSNE manifolds based on LDA factorization')
+    cmd_params.add_argument('--tsne', action='store_true', default=False, help='Generate TSNE manifolds based on LDA factorization. Optional and not part of --all: downstream steps only use UMAP, so TSNE is off by default.')
     cmd_params.add_argument('--umap', action='store_true', default=False, help='Generate UMAP manifolds based on LDA factorization')
     cmd_params.add_argument('--pseudobulk', action='store_true', default=False, help='Generate pseudobulk files based on Leiden clusters')
     cmd_params.add_argument('--heatmap', action='store_true', default=False, help='Generate heamap between LDA factors and Leiden clusters')
@@ -296,10 +296,11 @@ def run_ficture2_multi_cells(_args):
         args.lda = True
         args.leiden = True
         args.pseudobulk = True
-        args.tsne = True
         args.umap = True
         args.heatmap = True
         args.decode = True
+        # --tsne is deliberately not part of --all: no downstream step consumes the
+        # TSNE manifold, and it is expensive on large datasets. Request it explicitly.
 
     ## create cell-based SPTSV files
     if args.sptsv:
