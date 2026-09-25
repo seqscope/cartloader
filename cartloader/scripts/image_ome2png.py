@@ -200,6 +200,10 @@ def image_ome2png(_args):
         # Get page and validate
         args.page = 0 if args.page is None else args.page
         page = tif.series[args.series].levels[args.level].pages[args.page]
+        # Pages after the first in a multi-page (z-stack) OME-TIFF are TiffFrame objects,
+        # which lack is_tiled/imagelength/imagewidth; read those from the keyframe
+        # (a TiffPage is its own keyframe).
+        keyframe = page.keyframe
         
         #assert page.is_tiled, "Only tiled TIFF files are supported"
         # Chunked/segment processing needs a tiled TIFF. A striped TIFF (e.g. a
@@ -207,7 +211,7 @@ def image_ome2png(_args):
         # to whole-image mode automatically rather than forcing the caller to know
         # to pass --high-memory. This loads the full page into memory; if that runs
         # out of memory, re-run with --shrink-factor to downsample first.
-        if not args.high_memory and not page.is_tiled:
+        if not args.high_memory and not keyframe.is_tiled:
             logger.warning(
                 "TIFF is not tiled (striped); enabling --high-memory automatically to "
                 "process it. This loads the full image into memory -- if it runs out "
@@ -314,7 +318,7 @@ def image_ome2png(_args):
             effective_shape = image_array_highmem.shape
         else:
             (chunk_height, chunk_width) = page.chunks[:2]
-            n_chunks = ((page.imagelength + chunk_height - 1) // chunk_height) * ((page.imagewidth + chunk_width - 1) // chunk_width)
+            n_chunks = ((keyframe.imagelength + chunk_height - 1) // chunk_height) * ((keyframe.imagewidth + chunk_width - 1) // chunk_width)
             effective_shape = page.shape  # full size; tiled mode shrinks only at save time
         logger.info(f"Processing in chunks of {chunk_height}x{chunk_width} pixels")
 
@@ -410,20 +414,20 @@ def image_ome2png(_args):
                 offset_y, offset_x = offset[-3], offset[-2]
                 
                 ## determine height and length
-                if offset_y + chunk_height > page.imagelength:
-                    height = page.imagelength - offset_y
+                if offset_y + chunk_height > keyframe.imagelength:
+                    height = keyframe.imagelength - offset_y
                 else:
                     height = chunk_height
                     
-                if offset_x + chunk_width > page.imagewidth:
-                    width = page.imagewidth - offset_x
+                if offset_x + chunk_width > keyframe.imagewidth:
+                    width = keyframe.imagewidth - offset_x
                 else:
                     width = chunk_width
 
                 data = np.squeeze(data)
                 processed = process_image_chunk(data, args, r, g, b)
                 
-                #print(f"Chunk {i}: shape: {data.shape}, {processed.shape}, {offset_x}, {offset_y}, {width}, {height}, {page.imagewidth}, {page.imagelength}")
+                #print(f"Chunk {i}: shape: {data.shape}, {processed.shape}, {offset_x}, {offset_y}, {width}, {height}, {keyframe.imagewidth}, {keyframe.imagelength}")
                     
                 # Write to output
                 if len(output_shape) > 2:
