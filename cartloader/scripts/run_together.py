@@ -1,4 +1,4 @@
-import sys, os, argparse, inspect, json, copy, csv, datetime, glob
+import sys, os, argparse, inspect, json, copy, csv, datetime, glob, shlex
 
 from cartloader.utils.minimake import minimake
 from cartloader.utils.utils import execute_makefile
@@ -96,7 +96,9 @@ KNOWN_CONFIG_KEYS = frozenset({
 # friendly aliases, the explicit mex triple, per-sample images, and the addressing keys.
 KNOWN_SAMPLE_KEYS = frozenset(
     {"id", "in_dir", "in_prefix", "raw_transcript", "images", "dapi", "hne",
-     "mex_bcd", "mex_ftr", "mex_mtx"}
+     "mex_bcd", "mex_ftr", "mex_mtx",
+     # tissue context of the sample, used by --anno-deep (pan-tissue runs)
+     "tissue"}
     | set(ROLE_KEYS) | set(ROLE_ALIASES)
 )
 # Recognized sub-keys for the closed-schema nested config blocks. An unknown key here is
@@ -690,6 +692,13 @@ def build_config(args):
                 sys.exit(f"ERROR: file not found: {path} (cell analysis "
                          f"'{ca.get('id', '?')}', lists.{role})")
             lists[role] = full
+        # A companion cluster-label file (see write_cell_alias); parsed at planning time.
+        if ca.get("alias"):
+            full = os.path.abspath(os.path.expanduser(ca["alias"]))
+            if not os.path.exists(full):
+                sys.exit(f"ERROR: file not found: {ca['alias']} (cell analysis "
+                         f"'{ca.get('id', '?')}', alias)")
+            ca["alias"] = full
 
     prof["out_dir"] = args.out_dir or cfg.get("out_dir")
     prof["out_root"] = args.out_root or cfg.get("out_root")
@@ -960,6 +969,8 @@ def resolve_sample(raw, cfg):
         # `transcript` role, which is an already-ingested TSV that skips ingest.
         "raw_transcript": raw.get("raw_transcript"),
         "hne": raw.get("hne"),
+        # tissue context for --anno-deep (sample sheet / JSON `tissue`; falls back to --tissue)
+        "tissue": raw.get("tissue"),
         "images": list(raw.get("images", [])) + tsv_images + sheet_image_specs(raw, in_dir, cfg),
     }
 
@@ -1411,10 +1422,11 @@ def cmd_cartload(fic_sample_dir, cart_dir, sid, cfg, cell_params):
 
 
 def cmd_record_alias(cart_dir, catalog_path, oid, alias_path):
-    """Deploy a companion alias (manual factor labels) beside a projection model:
-    copy it into `cart_dir` as `<oid>-alias.tsv` and record it under the factor's
-    `alias` key in `catalog_path`. Distinct from the AI-generated `alias_ai` that
-    anno_cartload_folder writes; supplied via an `alias` field on a ficture entry."""
+    """Deploy a companion alias (manual factor labels) beside a projection model or a
+    cell analysis: copy it into `cart_dir` as `<oid>-alias.tsv` and record it under the
+    factor's `alias` key in `catalog_path`. Distinct from the AI-generated `alias_ai` that
+    anno_cartload_folder writes (which skips a factor already carrying `alias`); supplied
+    via an `alias` field on a ficture or cell_analyses entry."""
     dst = f"{oid}-alias.tsv"
     return [
         f"cp {alias_path} {os.path.join(cart_dir, dst)}",
@@ -1436,6 +1448,12 @@ def cmd_record_catalog_name(catalog_path, fid, name):
 def cell_display_names(active_cells):
     """(analysis_id, name) for the active cell analyses that declare a display name."""
     return [(c["id"], c["name"]) for c in active_cells if c.get("name")]
+
+
+def cell_aliases(active_cells):
+    """(analysis_id, normalized alias path, contributing sample ids) for the active cell
+    analyses that declare an alias (see write_cell_alias)."""
+    return [(c["id"], c["alias"], c["sids"]) for c in active_cells if c.get("alias")]
 
 
 def cmd_cartload_multi(fic_dir, cart_root, multi_id, cfg):
@@ -1678,13 +1696,42 @@ def _cmd_rgb_image(cfg, s, iid, src, cart_dir, settings):
     return cmds
 
 
-def cmd_anno(cart_dir, args, multi=False):
+# Annotation tool defaults: --anno runs annotate_bulk_de_with_ai (one call per factor),
+# --anno-deep runs annotate_factors_with_llm (all factors in one deep-reasoning call + report).
+ANNO_DEFAULTS = {False: {"api_type": "umgpt", "model": "claude-opus-4-7"},
+                 True: {"api_type": "claude", "model": "claude-opus-5-5"}}
+
+
+def anno_tissue_sheet(mkdir, grp, args):
+    """--anno-deep, joint run: write <mk>/anno.tissues.tsv (id, tissue) so the annotator reads each
+    sample's tissue (sample sheet / JSON `tissue`, else --tissue). Returns its path."""
+    path = os.path.join(mkdir, "anno.tissues.tsv")
+    with open(path, "w") as f:
+        f.write("id\ttissue\n")
+        for s in grp:
+            f.write(f"{s['id']}\t{s.get('tissue') or args.tissue}\n")
+    return path
+
+
+def cmd_anno(cart_dir, args, multi=False, tissue=None, tissue_sheet=None):
     """AI-annotate a packaged directory. For a joint run (multi=True) point at the
-    cartl/ root: shared factors are annotated once and reused into every sample."""
-    return (f"cartloader anno_cartload_folder --cartl-dir {cart_dir} "
-            + ("--multi-sample " if multi else "")
-            + f"--tissue \"{args.tissue}\" --organism {args.organism} "
-            f"--api-type {args.anno_api_type} --model {args.anno_model} --threads {args.anno_threads} --profile {args.aws_profile}")
+    cartl/ root: shared factors are annotated once and reused into every sample.
+    With --anno-deep, `tissue_sheet` (joint run) or `tissue` (one sample) give the
+    tissue context; otherwise --tissue applies to every sample."""
+    deep = bool(args.anno_deep)
+    api_type = args.anno_api_type or ANNO_DEFAULTS[deep]["api_type"]
+    model = args.anno_model or ANNO_DEFAULTS[deep]["model"]
+    tissue = tissue or args.tissue
+    cmd = (f"cartloader anno_cartload_folder --cartl-dir {cart_dir} "
+           + ("--multi-sample " if multi else "")
+           + (f"--tissue {shlex.quote(tissue)} " if tissue else "")
+           + f"--organism {shlex.quote(args.organism)} "
+           f"--api-type {api_type} --model {model} --threads {args.anno_threads} --profile {args.aws_profile}")
+    if deep:
+        cmd += f" --deep --effort {args.anno_effort}"
+        if tissue_sheet:
+            cmd += f" --sample-sheet {tissue_sheet}"
+    return cmd
 
 
 def cmd_upload(cart_dir, args, batch):
@@ -1891,6 +1938,14 @@ def add_targets(mm, samples, cfg, args):
                         sample_cart = os.path.join(cart_root, f"{multi_id}-{sid}")
                         cmds.append(cmd_record_catalog_name(
                             os.path.join(sample_cart, "catalog.yaml"), cid, cname))
+            # Cell-analysis aliases, keyed the same way as the display names above.
+            for cid, alias_path, sids in cell_aliases(active_cells):
+                cmds += cmd_record_alias(cart_root, os.path.join(cart_root, "multi-catalog.yaml"),
+                                         cid.replace("_", "-"), alias_path)
+                for sid in sids:
+                    sample_cart = os.path.join(cart_root, f"{multi_id}-{sid}")
+                    cmds += cmd_record_alias(sample_cart, os.path.join(sample_cart, "catalog.yaml"),
+                                             cid, alias_path)
             mm.add_target(multi_cart_flag, [cart_prereq], cmds + [f"touch {multi_cart_flag}"])
 
         # --- cartload + images (per sample); collect each sample's post-images flag ---
@@ -1922,6 +1977,10 @@ def add_targets(mm, samples, cfg, args):
                         if s["id"] in next(c["sids"] for c in active_cells if c["id"] == cid):
                             cmds.append(cmd_record_catalog_name(
                                 os.path.join(cart_dir, "catalog.yaml"), cid, cname))
+                    for cid, alias_path, sids in cell_aliases(active_cells):
+                        if s["id"] in sids:
+                            cmds += cmd_record_alias(cart_dir, os.path.join(cart_dir, "catalog.yaml"),
+                                                     cid, alias_path)
                     mm.add_target(cart_flag, [cart_prereq], cmds + [f"touch {cart_flag}"])
 
             img_prereq = cart_flag if on("cartload") else cart_prereq
@@ -1940,13 +1999,15 @@ def add_targets(mm, samples, cfg, args):
         if args.anno and on("anno"):
             if multi:
                 anno_flag = os.path.join(mkdir, "anno.done")
+                sheet = anno_tissue_sheet(mkdir, grp, args) if args.anno_deep else None
                 mm.add_target(anno_flag, [bp for (_, _, bp) in sample_ctx],
-                              [cmd_anno(cart_root, args, multi=True), f"touch {anno_flag}"])
+                              [cmd_anno(cart_root, args, multi=True, tissue_sheet=sheet), f"touch {anno_flag}"])
                 anno_prereq = {s["id"]: anno_flag for (s, _, _) in sample_ctx}
             else:
                 for (s, cart_dir, bp) in sample_ctx:
                     anno_flag = os.path.join(mkdir, f"anno.{s['id']}.done")
-                    mm.add_target(anno_flag, [bp], [cmd_anno(cart_dir, args), f"touch {anno_flag}"])
+                    mm.add_target(anno_flag, [bp], [cmd_anno(cart_dir, args, tissue=s.get("tissue") if args.anno_deep else None),
+                                                    f"touch {anno_flag}"])
                     anno_prereq[s["id"]] = anno_flag
 
         # --- S3 upload (opt-in); upload waits on annotation when both run ---
@@ -2080,6 +2141,48 @@ def _resolve_cell_inputs(ca, grp, cfg):
     return contributing, list_roles
 
 
+def write_cell_alias(src, dst, one_based, ca_id):
+    """Normalize a cell analysis's companion cluster-label file into the packaged alias
+    layout (`index<TAB>alias`, 0-based index, sorted) and write it to `dst`.
+
+    The source is two columns, cluster id then label, with an optional header (a first
+    line whose id is not an integer). It is split on tabs if the first line has one, else
+    commas, else the first run of whitespace, so a label may itself contain spaces. Ids
+    follow the analysis's own cluster files: supplied cluster labels are 1-based unless
+    the analysis passes --zero-based-clust-id, and run_ficture2_multi_cells shifts them
+    to 0-based, so a 1-based alias is shifted the same way here to stay in step. Leiden
+    clusters computed on demand are already 0-based and taken as-is."""
+    with open(src) as f:
+        lines = [ln.rstrip("\r\n") for ln in f if ln.strip()]
+    if not lines:
+        sys.exit(f"ERROR: empty alias file: {src} (cell analysis '{ca_id}')")
+    delim = "\t" if "\t" in lines[0] else ("," if "," in lines[0] else None)
+    base = 1 if one_based else 0
+    index2label = {}
+    for n, line in enumerate(lines):
+        toks = line.split(delim, 1)
+        cid = toks[0].strip().strip('"')
+        label = toks[1].strip().strip('"') if len(toks) > 1 else ""
+        if n == 0 and not cid.lstrip("-").isdigit():
+            continue   # header
+        if not cid.lstrip("-").isdigit() or not label:
+            sys.exit(f"ERROR: alias file {src} (cell analysis '{ca_id}'): expected "
+                     f"'<cluster id> <label>', got: {line!r}")
+        idx = int(cid) - base
+        if idx < 0:
+            sys.exit(f"ERROR: alias file {src} (cell analysis '{ca_id}'): cluster id {cid} "
+                     f"is below {base}; this analysis's cluster ids are "
+                     f"{'1' if one_based else '0'}-based.")
+        if idx in index2label:
+            sys.exit(f"ERROR: alias file {src} (cell analysis '{ca_id}'): cluster id {cid} "
+                     f"is listed more than once.")
+        index2label[idx] = label
+    with open(dst, "w") as f:
+        f.write("index\talias\n")
+        f.writelines(f"{i}\t{index2label[i]}\n" for i in sorted(index2label))
+    return dst
+
+
 def plan_cell_analyses(grp, sge_root, cfg, fic_dir, default_model_id, multi):
     """Write per-cell-analysis role lists; return the analyses that have inputs, each
     tagged with the sample ids that contribute (`sids`).
@@ -2126,8 +2229,16 @@ def plan_cell_analyses(grp, sge_root, cfg, fic_dir, default_model_id, multi):
             list_files[role] = path
         model_id = ca.get("model_id", default_model_id)
         model_path = os.path.join(fic_dir, f"{model_id}.model.tsv")
+        alias = None
+        if ca.get("alias"):
+            # 1-based exactly when the analysis decodes supplied cluster labels (a `lists`
+            # override or the samples' clusters role) without --zero-based-clust-id.
+            one_based = ("clusters" in list_files
+                         and "--zero-based-clust-id" not in (ca.get("extra_flags") or []))
+            alias = write_cell_alias(ca["alias"], os.path.join(sge_root, f"alias.{ca['id']}.tsv"),
+                                     one_based, ca["id"])
         active.append({"id": ca["id"], "sids": [s["id"] for s in contributing],
-                       "name": ca.get("name"),
+                       "name": ca.get("name"), "alias": alias,
                        "cmd": cmd_cells(ca, list_files, fic_dir, model_path, cfg)})
     return active
 
@@ -2357,12 +2468,23 @@ def parse_arguments(_args):
 
     pub = p.add_argument_group("Publish (opt-in; enable with --anno and/or --s3-upload)")
     pub.add_argument("--anno", action="store_true", help="AI-annotate each sample (requires --tissue and --organism)")
+    pub.add_argument("--anno-deep", action="store_true",
+                     help="AI-annotate with annotate_factors_with_llm instead: all factors of a model in one deep-reasoning "
+                          "LLM call, with alternative interpretations and an interactive HTML report (implies --anno; "
+                          "requires --organism, and --tissue unless every sample has a `tissue` in the sample sheet/config)")
     pub.add_argument("--s3-upload", action="store_true", help="Upload each sample to S3 (requires --collection)")
     # annotation (tissue/organism required; the rest default)
-    pub.add_argument("--tissue", type=str, default=None, help="Tissue for --anno (required for --anno)")
+    pub.add_argument("--tissue", type=str, default=None, help="Tissue for --anno (required for --anno; for --anno-deep, "
+                                                               "the fallback for samples without a `tissue` column/key)")
     pub.add_argument("--organism", type=str, default=None, help="Organism/species for --anno (required for --anno)")
-    pub.add_argument("--anno-api-type", type=str, default="umgpt", help="AI annotation API type (default: umgpt)")
-    pub.add_argument("--anno-model", type=str, default="claude-opus-4-7", help="AI annotation model (default: claude-opus-4-7)")
+    pub.add_argument("--anno-api-type", type=str, default=None,
+                     help=f"AI annotation API type (default: {ANNO_DEFAULTS[False]['api_type']}; "
+                          f"{ANNO_DEFAULTS[True]['api_type']} with --anno-deep)")
+    pub.add_argument("--anno-model", type=str, default=None,
+                     help=f"AI annotation model (default: {ANNO_DEFAULTS[False]['model']}; "
+                          f"{ANNO_DEFAULTS[True]['model']} with --anno-deep)")
+    pub.add_argument("--anno-effort", type=str, default="high",
+                     help="--anno-deep: reasoning effort (low, medium, high, xhigh, max; default: high)")
     pub.add_argument("--anno-threads", type=int, default=10, help="AI annotation threads (default: 10)")
     # S3 upload
     pub.add_argument("--collection", type=str, default=None, help="Collection name (required for --s3-upload)")
@@ -2379,7 +2501,17 @@ def run_together(_args):
     cfg = build_config(args)
 
     # Publish is opt-in per action. Each action requires its mandatory inputs.
-    if args.anno and not (args.tissue and args.organism):
+    if args.anno_deep:
+        args.anno = True
+        if not args.organism:
+            sys.exit("ERROR: --anno-deep requires --organism (no default).")
+        if not args.tissue:
+            missing = [str(raw.get("id") or raw.get("in_dir") or raw.get("in_prefix") or i)
+                       for i, raw in enumerate(cfg["_raw_samples"]) if not raw.get("tissue")]
+            if missing:
+                sys.exit("ERROR: --anno-deep needs a tissue for every sample: pass --tissue, or give each sample a "
+                         "`tissue` (sample sheet column or JSON sample key). Missing for: " + ", ".join(missing))
+    elif args.anno and not (args.tissue and args.organism):
         sys.exit("ERROR: --anno requires --tissue and --organism (no defaults).")
     # Collection defaults to the run id, matching the <multi_id>-<sample_id>
     # per-sample naming; override with --collection. This only affects the S3
