@@ -297,21 +297,23 @@ auto_plot_dimension <- function(x, y, base_dim = 4, scale_factor = 0.1, min_dim 
   min(max(plot_dim, min_dim), max_dim)
 }
 
-## Inlier mask for UMAP coordinates: a point is an outlier when its x or y lies more than
-## `n_sd` standard deviations from that axis's mean. The mean and SD are computed without
-## the most extreme `trim` fraction of points (trim/2 per tail), so a few far-out values
-## cannot inflate the SD and hide themselves. NA coordinates are kept.
-umap_inlier_mask <- function(x, y, n_sd = 5, trim = 0.01) {
-  keep <- rep(TRUE, length(x))
+## Each point's distance from the UMAP centre in SD units: the larger of |x - mean| / sd
+## and |y - mean| / sd. The mean and SD of each axis are computed without the most extreme
+## `trim` fraction of points (trim/2 per tail), so a few far-out values cannot inflate the
+## SD and hide themselves. NA coordinates score 0 (never outliers).
+umap_sd_score <- function(x, y, trim = 0.01) {
+  score <- rep(0, length(x))
   for (v in list(x, y)) {
     q <- quantile(v, c(trim / 2, 1 - trim / 2), na.rm = TRUE, names = FALSE)
     core <- v[!is.na(v) & v >= q[1] & v <= q[2]]
     m <- mean(core)
     s <- sd(core)
     if (!is.finite(s) || s <= 0) next
-    keep <- keep & (is.na(v) | abs(v - m) <= n_sd * s)
+    z <- abs(v - m) / s
+    z[is.na(z)] <- 0
+    score <- pmax(score, z)
   }
-  keep
+  score
 }
 
 draw_umap_plot <- function(
