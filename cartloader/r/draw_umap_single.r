@@ -60,6 +60,12 @@ plotgrp$add_argument("--max-dim",       type = "double", default = 15,
                     help = "Maximum size in inches per panel for auto-computed dimension (default: 15)")
 plotgrp$add_argument("--plot-dim",      type = "double", default = NULL,
                     help = "Manual defined single plot size in inches (used for BOTH width and height) because it uses a 1:1 aspect. If omitted, the size is auto-computed from data span.")
+plotgrp$add_argument("--max-megapixels", type = "double", default = 700,
+                    help = "Largest image to render, in megapixels (default: 700, just under the ~716 Mpx at which the PNG device's RGB buffer reaches 2^31 bytes and fails). Only a larger image drops UMAP outliers (see --outlier-sd); if it is still too large, the DPI is lowered to fit.")
+plotgrp$add_argument("--outlier-sd",     type = "double", default = 5,
+                    help = "Only when the image exceeds --max-megapixels: drop points whose UMAP1 or UMAP2 lies more than this many SDs from the axis mean, with mean and SD computed without the most extreme --outlier-max-frac of points (default: 5). 0 never drops points.")
+plotgrp$add_argument("--outlier-max-frac", type = "double", default = 0.01,
+                    help = "Failsafe for --outlier-sd: if more than this fraction of points lies beyond it, they are treated as real structure and nothing is dropped (default: 0.01)")
 
 args <- parser$parse_args()
 
@@ -81,6 +87,46 @@ if (length(missing_cols) > 0) {
     "Input is missing required columns: %s",
     paste(missing_cols, collapse = ", ")
   ))
+}
+
+## Panel size (inches) and panel count this script renders for a set of points, and the
+## resulting image size: one panel per factor level, laid out on a near-square grid.
+panel_dim_for <- function(dt) {
+  if (!is.null(args$plot_dim)) return(args$plot_dim)
+  auto_plot_dimension(dt[[args$tsv_colname_umap1]], dt[[args$tsv_colname_umap2]],
+                      base_dim = args$base_dim, scale_factor = args$scale_factor,
+                      min_dim = args$min_dim, max_dim = args$max_dim)
+}
+n_panels_for <- function(dt) {
+  f <- as.character(dt[[args$tsv_colname_factor]])
+  length(unique(f[!is.na(f) & nzchar(f)]))
+}
+image_megapixels <- function(dim, n_panels, dpi) {
+  ncol <- ceiling(sqrt(n_panels))
+  nrow <- ceiling(n_panels / ncol)
+  (dim * ncol * dpi) * (dim * nrow * dpi) / 1e6
+}
+
+## A few far-out UMAP coordinates inflate the auto-sized panels until the image exceeds
+## what the PNG device can allocate. Only then are they dropped, and only when they are
+## clear outliers (beyond --outlier-sd) and few (at most --outlier-max-frac); otherwise
+## every point is kept and the DPI fallback below makes the image fit.
+mpx <- image_megapixels(panel_dim_for(plot_dt), n_panels_for(plot_dt), args$dpi)
+if (mpx > args$max_megapixels && args$outlier_sd > 0 && is.null(args$plot_dim)) {
+  keep <- umap_inlier_mask(plot_dt[[args$tsv_colname_umap1]], plot_dt[[args$tsv_colname_umap2]],
+                           n_sd = args$outlier_sd, trim = args$outlier_max_frac)
+  n_out <- sum(!keep)
+  if (n_out == 0) {
+    log_message(sprintf("Image would be %.0f Mpx (limit %.0f); no points lie beyond %g SD, keeping all",
+                        mpx, args$max_megapixels, args$outlier_sd))
+  } else if (n_out > args$outlier_max_frac * length(keep)) {
+    log_message(sprintf("Image would be %.0f Mpx (limit %.0f); %d points (%.2f%%) lie beyond %g SD, more than --outlier-max-frac %g, so they are kept as real structure",
+                        mpx, args$max_megapixels, n_out, 100 * n_out / length(keep), args$outlier_sd, args$outlier_max_frac))
+  } else {
+    log_message(sprintf("Image would be %.0f Mpx (limit %.0f); dropping %d of %d points (%.3f%%) beyond %g SD as UMAP outliers",
+                        mpx, args$max_megapixels, n_out, length(keep), 100 * n_out / length(keep), args$outlier_sd))
+    plot_dt <- plot_dt[keep]
+  }
 }
 
 if (args$mode != "prob"){
@@ -108,13 +154,7 @@ if (!is.null(args$plot_dim)) {
   plot_dim <- args$plot_dim
 }else{
   log_message("Computing dimension based on the input...")
-  umap1_dat <- plot_dt[[args$tsv_colname_umap1]]
-  umap2_dat <- plot_dt[[args$tsv_colname_umap2]]
-  plot_dim  <- auto_plot_dimension(umap1_dat, umap2_dat, 
-                                    base_dim = args$base_dim, 
-                                    scale_factor = args$scale_factor, 
-                                    min_dim = args$min_dim, 
-                                    max_dim = args$max_dim)
+  plot_dim  <- panel_dim_for(plot_dt)
 }
 
 ## Build a single faceted plot per mode (facet = factor)
@@ -136,6 +176,16 @@ if (all(!is.na(fac_nums))) {
 # Grid shape to size output
 grid_ncol <- ceiling(sqrt(length(ordered_levels)))
 grid_nrow <- ceiling(length(ordered_levels) / grid_ncol)
+
+# Last resort for an image that is still too large (real structure, many panels, or a
+# fixed --plot-dim): lower the resolution rather than fail to allocate the PNG.
+dpi <- args$dpi
+mpx <- image_megapixels(plot_dim, length(ordered_levels), dpi)
+if (mpx > args$max_megapixels) {
+  dpi <- floor(dpi * sqrt(args$max_megapixels / mpx))
+  log_message(sprintf("Image would be %.0f Mpx (limit %.0f); lowering DPI from %d to %d",
+                      mpx, args$max_megapixels, args$dpi, dpi))
+}
 
 # Minimal working copy
 xcol <- args$tsv_colname_umap1
@@ -207,7 +257,7 @@ if (args$mode %in% c("binary", "both")) {
     width = plot_dim * grid_ncol,
     height = plot_dim * grid_nrow,
     units = "in",
-    dpi = args$dpi,
+    dpi = dpi,
     bg = "white",
     limitsize = FALSE
   )
@@ -247,7 +297,7 @@ if (args$mode %in% c("prob", "both")) {
     width = plot_dim * grid_ncol,
     height = plot_dim * grid_nrow,
     units = "in",
-    dpi = args$dpi,
+    dpi = dpi,
     bg = "white",
     limitsize = FALSE
   )

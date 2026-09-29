@@ -67,7 +67,7 @@ For **independent** per-sample models (each its own model), use `--out-root` ins
 
 ### The sample sheet is a wide table of input roles
 
-Columns map to per-sample **input roles**. Every column is optional except that each sample needs a transcript source (`in_dir`, `raw_transcript`, or `transcript`). Column names are case-sensitive; the listed **aliases** are accepted interchangeably.
+Columns map to per-sample **input roles**. Every column is optional except that each sample needs a transcript source (`in_dir`, `raw_transcript`, or `transcript`). Column names are case-sensitive; the listed **aliases** are accepted interchangeably. The transcript source is checked before anything is planned: a sample with none, or one whose file is missing (including an `in_dir` without the platform's expected input), stops the run with an error naming each affected sample. Because an unrecognized column is otherwise ignored, that error also lists any unrecognized columns (e.g. `transcripts` for `transcript`). The check is skipped when the ingest stage is not run (`--only` / `--skip ingest`), since a resumed run reuses the already-converted transcripts.
 
 | Column (aliases) | Role | Meaning |
 |---|---|---|

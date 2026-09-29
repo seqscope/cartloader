@@ -975,6 +975,94 @@ def resolve_sample(raw, cfg):
     }
 
 
+def stage_selected(args, stage):
+    """True when `stage` runs under the --only / --skip selection."""
+    stages = set(args.only.split(",")) if args.only else None
+    skip = set(args.skip.split(",")) if args.skip else set()
+    return stage not in skip and (stages is None or stage in stages)
+
+
+def ingest_source_problem(s, cfg):
+    """Why sample `s` has no usable transcript source, or None when it has one.
+
+    Every sample needs a transcript: an already-converted one (the `transcript` role,
+    which skips ingest) or the platform's raw input that the ingest stage converts. The
+    routes mirror add_targets' ingest branches, so a sample that passes here is one the
+    ingest stage can build. Without this check a missing source plans an ingest command
+    with no input, which fails only once make runs. A future run type without
+    transcripts (e.g. H&E only) would relax this check."""
+    ing = cfg.get("ingest", {})
+    method = ing.get("method", "sge_convert")
+    in_dir = s.get("in_dir")
+    tx = s["roles"].get("transcript")
+    if tx:
+        return None if os.path.exists(tx) else f"transcript file not found: {tx}"
+    if in_dir and not os.path.isdir(in_dir):
+        return f"in_dir is not a directory: {in_dir}"
+    if method == "reformat_cosmx":
+        return None if in_dir else "no in_dir (CosMx ingest reads its input files from in_dir)"
+    if method == "stereoseq":
+        gef = s["roles"].get("gef")
+        if not gef:
+            return f"no {ing.get('gef_suffix', '.tissue.gef')} input (give in_prefix or a 'gef' column)"
+        return None if os.path.exists(gef) else f"gef file not found: {gef}"
+    raw_tx = s.get("raw_transcript")
+    if raw_tx:
+        return None if os.path.exists(raw_tx) else f"raw_transcript file not found: {raw_tx}"
+    if ing.get("input_roles"):
+        for role in ing["input_roles"].values():
+            val = s["roles"].get(role)
+            if not val:
+                return f"no '{role}' input (a '{role}' column or in_dir)"
+            for p in (val.values() if isinstance(val, dict) else [val]):
+                if not os.path.exists(p):
+                    return f"{role} input not found: {p}"
+        return None
+    if ing.get("in_dir_flag"):
+        return None if in_dir else f"no in_dir ({cfg['platform']} ingest reads in_dir directly)"
+    if ing.get("autodetect"):
+        names = ", ".join(c["file"] for c in ing["autodetect"])
+        if not in_dir:
+            return f"no in_dir to search for a raw transcript ({names})"
+        if any(os.path.exists(os.path.join(in_dir, c["file"])) for c in ing["autodetect"]):
+            return None
+        return f"none of {names} found in {in_dir}"
+    if ing.get("inputs"):
+        if not in_dir:
+            return "no in_dir (ingest reads " + ", ".join(ing["inputs"].values()) + " under it)"
+        missing = [rel for rel in ing["inputs"].values() if not os.path.exists(os.path.join(in_dir, rel))]
+        return f"missing under {in_dir}: {', '.join(missing)}" if missing else None
+    return "no transcript input"
+
+
+def check_ingest_sources(samples, raw_samples, cfg):
+    """Stop, naming every affected sample, when any sample has no transcript source (see
+    ingest_source_problem). Sample-sheet columns are not validated on their own, so a
+    misspelled column (e.g. `transcripts`) is dropped silently and surfaces here; the
+    unrecognized columns of the failing samples are listed as the likely cause."""
+    problems, unknown = [], set()
+    for s, raw in zip(samples, raw_samples):
+        why = ingest_source_problem(s, cfg)
+        if why:
+            problems.append(f"  {s['id']}: {why}")
+            unknown |= {k for k in raw if k not in KNOWN_SAMPLE_KEYS}
+    if not problems:
+        return
+    method = cfg.get("ingest", {}).get("method", "sge_convert")
+    ways = ["a 'transcript' column (alias 'tsv'; --in-transcript for one sample): an "
+            "already-converted TSV (X, Y, gene, count[, cell_id]) that skips ingest"]
+    if method == "sge_convert":
+        ways.append("a 'raw_transcript' column (--raw-transcript): a raw transcript CSV to ingest")
+    ways.append("the platform's raw input via 'in_dir' (--in-dir)"
+                + (" or 'in_prefix' (--in-prefix)" if method == "stereoseq" else ""))
+    msg = (f"ERROR: {len(problems)} sample(s) have no transcript source:\n" + "\n".join(problems)
+           + "\nEach sample needs one of:\n" + "\n".join(f"  - {w}" for w in ways))
+    if unknown:
+        msg += (f"\nUnrecognized sample column(s), ignored: {', '.join(sorted(unknown))}. "
+                f"Check the spelling against the recognized columns: {', '.join(sorted(KNOWN_SAMPLE_KEYS))}.")
+    sys.exit(msg)
+
+
 # ---------------------------------------------------------------------------
 # Command builders
 # ---------------------------------------------------------------------------
@@ -1769,11 +1857,8 @@ def cmd_upload_multi_catalog(cart_root, args, batch):
 # ---------------------------------------------------------------------------
 
 def add_targets(mm, samples, cfg, args):
-    stages = set(args.only.split(",")) if args.only else None
-    skip = set(args.skip.split(",")) if args.skip else set()
-
     def on(stage):
-        return stage not in skip and (stages is None or stage in stages)
+        return stage_selected(args, stage)
 
     _, default_model_id = resolved_models(cfg["ficture"])
     # Every sample id in the run (not just this group's): a user-supplied list file may
@@ -2532,6 +2617,10 @@ def run_together(_args):
         args.batch = datetime.date.today().strftime("%Y_%m")
 
     samples = [resolve_sample(raw, cfg) for raw in cfg["_raw_samples"]]
+    # Only a run that ingests reads the raw sources; a resume that skips ingest reuses the
+    # transcripts already under <out_dir>/tsv, whose raw inputs may since have moved.
+    if stage_selected(args, "ingest"):
+        check_ingest_sources(samples, cfg["_raw_samples"], cfg)
 
     out_dirs = sorted({s["out_dir"] for s in samples})
     anchor = cfg.get("out_root") or out_dirs[0]
