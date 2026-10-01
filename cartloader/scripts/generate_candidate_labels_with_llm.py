@@ -34,6 +34,8 @@ DEFAULT_MODEL = {"claude": "claude-opus-5-5", "openai": "gpt-5.4-mini", "umgpt":
                  "google": "gemini-3.5-flash"}
 DEFAULT_BASE_URL = {"openai": "https://api.openai.com/v1", "umgpt": "https://api.toolkit.umgpt.umich.edu/v1"}
 ANTHROPIC_FALLBACK_BETA = "server-side-fallback-2026-07-01"
+# First anthropic release whose messages.stream accepts output_config (effort + JSON-schema output)
+ANTHROPIC_MIN_VERSION = "0.77.0"
 PROMPT_VERSION = "candidates.v1"
 EFFORT_ORDER = ("low", "medium", "high", "xhigh", "max")
 
@@ -156,9 +158,24 @@ def render(template, **values):
     return Template(system).substitute(values), Template(user.strip()).substitute(values)
 
 
+def require_anthropic():
+    """Import the anthropic SDK (only needed for --api-type claude), exiting with an install hint when it is
+    missing or older than ANTHROPIC_MIN_VERSION. Checked at the first uncached request, not at startup, so a run
+    served entirely from the cache does not need the SDK."""
+    hint = f"pip install 'anthropic>={ANTHROPIC_MIN_VERSION}' (or, in the cartloader checkout, pip install -e '.[ai]')"
+    try:
+        import anthropic
+    except ImportError:
+        sys.exit(f"ERROR: --api-type claude needs the anthropic package: {hint}")
+    if tuple(map(int, re.findall(r"\d+", anthropic.__version__)[:3])) < \
+            tuple(map(int, ANTHROPIC_MIN_VERSION.split("."))):
+        sys.exit(f"ERROR: anthropic {anthropic.__version__} is too old for --api-type claude: {hint}")
+    return anthropic
+
+
 def complete_json(args, system, prompt, schema):
     if args.api_type == "claude":
-        import anthropic  # only needed for --api-type claude
+        anthropic = require_anthropic()
 
         client = anthropic.Anthropic()
         kwargs = {"model": args.model_name, "max_tokens": args.max_output_tokens, "system": system,

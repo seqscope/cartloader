@@ -313,7 +313,7 @@ Below is an example of spatial factor inference results from `FICTURE` using a t
 ![FICTURE](../../images/pipeline_vignettes/visiumhd_3prime_mouse_brain.t18_f24_p18_a6.png)
 ![cmap](../../images/pipeline_vignettes/visiumhd_3prime_mouse_brain.t18_f24.rgb.png)
 
-{{ read_csv('../../tabs/visiumhd_3prime_mouse_brain.t18_f24_p18_a6.factor.info.tsv',sep = '\t') }}
+{{ read_table('../../tabs/visiumhd_3prime_mouse_brain.t18_f24_p18_a6.factor.info.tsv') }}
 
 ### SGE/FICTURE/Cell/Images assets
 

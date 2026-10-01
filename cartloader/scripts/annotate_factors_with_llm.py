@@ -70,6 +70,8 @@ DEFAULT_MODEL = {"claude": "claude-opus-5-5", "openai": "gpt-5.4-mini", "umgpt":
 DEFAULT_BASE_URL = {"openai": "https://api.openai.com/v1", "umgpt": "https://api.toolkit.umgpt.umich.edu/v1"}
 DEFAULT_MAX_OUTPUT_TOKENS = {"claude": 128000, "openai": 128000, "umgpt": 64000, "google": 64000}
 ANTHROPIC_FALLBACK_BETA = "server-side-fallback-2026-07-01"
+# First anthropic release whose messages.stream accepts output_config (effort + JSON-schema output)
+ANTHROPIC_MIN_VERSION = "0.77.0"
 PROMPT_VERSION = "joint.v2"
 
 GENE_COLUMN_ALIASES = ("gene", "feature", "gene_id", "geneid")
@@ -658,8 +660,22 @@ def build_request(ctx, batch, name):
 # -----------------------------
 # LLM calls (JSON-schema constrained output)
 # -----------------------------
+def require_anthropic():
+    """Import the anthropic SDK (only needed for --api-type claude), exiting with an install hint when it is
+    missing or older than ANTHROPIC_MIN_VERSION."""
+    hint = f"pip install 'anthropic>={ANTHROPIC_MIN_VERSION}' (or, in the cartloader checkout, pip install -e '.[ai]')"
+    try:
+        import anthropic
+    except ImportError:
+        sys.exit(f"ERROR: --api-type claude needs the anthropic package: {hint}")
+    if tuple(map(int, re.findall(r"\d+", anthropic.__version__)[:3])) < \
+            tuple(map(int, ANTHROPIC_MIN_VERSION.split("."))):
+        sys.exit(f"ERROR: anthropic {anthropic.__version__} is too old for --api-type claude: {hint}")
+    return anthropic
+
+
 def call_claude(system, prompt, schema, model, effort, max_tokens, fallbacks):
-    import anthropic  # only needed for --api-type claude
+    anthropic = require_anthropic()
 
     client = anthropic.Anthropic()
     kwargs = {"model": model, "max_tokens": max_tokens, "messages": [{"role": "user", "content": prompt}],
@@ -1925,6 +1941,8 @@ def annotate_factors_with_llm(_args):
         if not os.environ.get(env) and not (args.api_type == "claude" and os.environ.get("ANTHROPIC_AUTH_TOKEN")):
             log.error("%s is not set (needed for --api-type %s)", env, args.api_type)
             sys.exit(1)
+        if args.api_type == "claude":
+            require_anthropic()  # fail before any work, not at the first request
 
     samples = resolve_samples(args)
     if len(samples) == 1:

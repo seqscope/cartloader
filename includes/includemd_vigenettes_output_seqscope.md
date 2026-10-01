@@ -23,7 +23,7 @@ Below is an example of spatial factor inference results from `FICTURE` using a t
 ![FICTURE](../docs/images/starter_vignettes/seqscope.t18_f12_p18_a6.png)
 ![cmap](../docs/images/starter_vignettes/seqscope.t18-f12-rgb.png)
 
-{{ read_csv('../../tabs/seqscope_starter.t18-f12-p18-a6-info.tsv',sep = '\t') }}
+{{ read_table('../../tabs/seqscope_starter.t18-f12-p18-a6-info.tsv') }}
 
 ### Packed SGE and Spatial Factor Outputs from `run_cartload2`
 

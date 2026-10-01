@@ -8,7 +8,7 @@ This tutorial walks through the `CartLoader` workflow, all packaged inside a pre
 !!! warning "Requirements"
     Users will need to:
 
-    - Set up `Docker` on their system (see [Set Up Docker](#set-up-docker) guide).
+    - Set up `Docker` on their system (see the [Install Docker](#install-docker) guide).
 
 !!! question
     - [I am not sure whether to run with Docker or run locally. Which one should I choose?](../../faq/choose_run_mode.md)
