@@ -229,6 +229,8 @@ def add_lda_training_target(mm, args, ficture2bin, n_factor, train_width, model_
     lda_model_matrix = f"{model_prefix}.model.tsv"
     lda_fit_tsv = f"{model_prefix}.results.tsv.gz"
     lda_de = f"{model_prefix}.bulk_chisq.tsv"
+    # lda4hex spools feature diagnostics to disk; keep them off the (often small) system /tmp
+    lda_temp_dir = f"{model_prefix}_lda4hex"
 
     # copy model
     if args.pretrained_model is not None and not args.retrain:
@@ -267,12 +269,14 @@ def add_lda_training_target(mm, args, ficture2bin, n_factor, train_width, model_
         # "--drop-random-key",
         f"--features '{selected_features}'" if selected_features else "",
         f"--min-count-train {args.min_ct_per_unit_train}" if args.min_ct_per_unit_train is not None else "",
+        f"--temp-dir '{lda_temp_dir}'",
         f"--minibatch-size {args.minibatch_size}",
         f"--seed {args.seed}",
         f"--n-epochs {args.train_epoch}",
         f"--threads {args.threads}",
     ])
     cmds.append(train_cmd)
+    cmds.append(f"rm -rf '{lda_temp_dir}'")
 
 #    cmds.append(f"sed '1s/^#//' '{unsorted_prefix}.results.tsv' | {args.gzip} > '{lda_fit_tsv}'")
     # 2) append topk
@@ -324,6 +328,7 @@ def add_projection_target_per_sample(mm, args, ficture2bin, model_prefix, model_
     sample_hex_prefix = os.path.join(args.out_dir, "samples", sample, f"{sample}.hex_{train_width}")
     sample_lda_prefix = os.path.join(args.out_dir, "samples", sample, f"{sample}.{model_id}")
     sample_lda_fit_tsv = f"{sample_lda_prefix}.results.tsv.gz"
+    sample_lda_temp_dir = f"{sample_lda_prefix}_lda4hex"
 
     cmds.append(f"touch '{sample_lda_prefix}.begin'")
 
@@ -340,12 +345,14 @@ def add_projection_target_per_sample(mm, args, ficture2bin, model_prefix, model_
         # "--drop-random-key",
         f"--features '{selected_features}'" if selected_features else "",
         f"--min-count-train {args.min_ct_per_unit_train}" if args.min_ct_per_unit_train is not None else "",
+        f"--temp-dir '{sample_lda_temp_dir}'",
         f"--minibatch-size {args.minibatch_size}",
         f"--seed {args.seed}",
         f"--n-epochs {args.train_epoch}",
         f"--threads {args.threads}",
     ])
     cmds.append(cmd)
+    cmds.append(f"rm -rf '{sample_lda_temp_dir}'")
 
     # cmd = f"sed '1s/^#//' '{sample_lda_prefix}.unsorted.results.tsv' | {args.gzip} > '{sample_lda_fit_tsv}'"
     # cmds.append(cmd)
