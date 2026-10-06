@@ -101,6 +101,20 @@ def define_decode_runs(args, **kwargs):
             })
     return decode_runs
 
+def _append_with_tmpdir(cmds, tmp_dir, cmd):
+    """Append `cmd` run with TMPDIR pointed at `tmp_dir`, which is removed afterwards.
+
+    R puts its session tempdir under TMPDIR (default /tmp), and data.table::fread
+    decompresses a .gz input there in full before parsing. For large results files
+    that can overflow a small /tmp, or lose the file to a /tmp reaper mid-run. R
+    silently falls back to /tmp when TMPDIR does not exist, hence the mkdir. Each
+    command needs its own directory: targets sharing one could run concurrently under
+    make -j, and one's cleanup would delete the other's live session tempdir.
+    """
+    cmds.append(f"mkdir -p '{tmp_dir}'")
+    cmds.append(f"TMPDIR='{tmp_dir}' {cmd}")
+    cmds.append(f"rm -rf '{tmp_dir}'")
+
 def add_umap_targets(
     mm,
     input_tsv,
@@ -119,7 +133,7 @@ def add_umap_targets(
         f"--input '{input_tsv}'",
         f"--out-prefix '{out_prefix}'"
     ])
-    cmds.append(cmd)
+    _append_with_tmpdir(cmds, f"{out_prefix}_create_umap", cmd)
     mm.add_target(umap_tsv, [f"{out_prefix}.done", color_map], cmds)
 
     cmds = cmd_separator([], f"UMAP Visualization for ID: {subtitle}...")
@@ -130,7 +144,7 @@ def add_umap_targets(
         f"--cmap '{color_map}'",
         f'--subtitle "{subtitle}"'
     ])
-    cmds.append(cmd)
+    _append_with_tmpdir(cmds, f"{out_prefix}_draw_umap", cmd)
     mm.add_target(umap_png, [f"{out_prefix}.done", color_map, umap_tsv], cmds)
 
     cmds = cmd_separator([], f"UMAP Visualization (plot for individual factors; colorized by probability) for ID: {subtitle}...")
@@ -142,7 +156,7 @@ def add_umap_targets(
         f'--subtitle "{subtitle}"',
         f"--mode prob"
     ])
-    cmds.append(cmd)
+    _append_with_tmpdir(cmds, f"{out_prefix}_draw_umap_single", cmd)
     mm.add_target(umap_single_prob_png, [f"{out_prefix}.done", color_map, umap_tsv], cmds)
 
 ## transform FICTURE parameters to FACTOR assets (new standard)
@@ -271,7 +285,11 @@ def ficture2_params_to_factor_assets(params, skip_raster=False, cell_params = No
         for cell_param in cell_params:
             model_id = cell_param["model_id"]
             model_rgb = cell_param["cmap"]
-            cell_xy_f = cell_param["cell_xy_path"]
+            # cell_xy_path is optional: it is omitted for coordinate-less MEX
+            # clustering (e.g. standard Visium HD segmented cells), in which case
+            # run_cartload2 skips the cell-point PMTiles. Match that tolerance here
+            # instead of failing with a KeyError.
+            cell_xy_f = cell_param.get("cell_xy_path", None)
             cell_boundaries_f = cell_param.get("cell_boundaries_path", None)
             cell_clust_f = cell_param.get("cluster_path", None)
             cell_info_f = cell_param.get("cluster_info", None)
@@ -296,7 +314,10 @@ def ficture2_params_to_factor_assets(params, skip_raster=False, cell_params = No
                 "heatmap_pdf": model_id + suffix_heatmap_pdf,
                 "heatmap_tsv": model_id + suffix_heatmap_tsv,
                 "pmtiles": {
-                    "cells": model_id + suffix_cells_pmtiles,
+                    # cell-point PMTiles are only built when cell coordinates exist,
+                    # so only advertise them here when cell_xy_path was provided
+                    # (mirrors the `if cell_xy_f is not None` guard in run_cartload2).
+                    **({"cells": model_id + suffix_cells_pmtiles} if cell_xy_f is not None else {}),
                     **({"boundaries": model_id + suffix_boundaries_pmtiles} if cell_boundaries_f is not None else {}),
                     **({"raster": model_id + suffix_raster} if not skip_raster else {})
                 }

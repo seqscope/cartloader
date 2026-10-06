@@ -23,17 +23,17 @@ Following format conversion, `CartLoader` provides the **`run_ficture2`** module
 The tiling step takes the standardized SGE (from [SGE format conversion](./sge_convert.md)) as input. It reorganizes input coordinate data into non‑overlapping square tiles in a plain TSV format and generates an index file with tile offsets to enable efficient random access.
 
 ### Segmentation Step (`--segment`)
-The segmentation step starts from the tiled SGE, using the plain TSV file from [tiling step](#tiling-step---tile) as input. It aggregates tiled pixel data into non-overlapping hexagons in a TSV file for spot-level analysis, outputting a tab-delimited file of hexagon records and associated metadata in JSON format.
+The segmentation step starts from the tiled SGE, using the plain TSV file from [tiling step](#tiling-step-tile) as input. It aggregates tiled pixel data into non-overlapping hexagons in a TSV file for spot-level analysis, outputting a tab-delimited file of hexagon records and associated metadata in JSON format.
 
 ### LDA Training Step (`--init-lda`)
-The LDA training step uses the hexagon TSV and JSON file from [segmentation step](#segmentation-step---segment) as input, trains a Latent Dirichlet Allocation (LDA) model on sparse gene count data from hexagon units, using metadata to interpret input structure and optionally filter or weight features, producing a factorized topic model in TSV.
+The LDA training step uses the hexagon TSV and JSON file from [segmentation step](#segmentation-step-segment) as input, trains a Latent Dirichlet Allocation (LDA) model on sparse gene count data from hexagon units, using metadata to interpret input structure and optionally filter or weight features, producing a factorized topic model in TSV.
 
 ### Decoding Step (`--decode`)
-The decoding step applies a trained LDA model from [LDA training step](#lda-training-step---init-lda) to tiled pixel-level transcript data from [tiling step](#tiling-step---tile) to infer the top spatial factors and their posterior probabilities for each pixel, enabling fine-grained spatial mapping of gene expression. It outputs a pixel-level annotation file in TSV format with coordinates and factor assignments, along with a pseudobulk gene-by-factor matrix in TSV format.
+The decoding step applies a trained LDA model from [LDA training step](#lda-training-step-init-lda) to tiled pixel-level transcript data from [tiling step](#tiling-step-tile) to infer the top spatial factors and their posterior probabilities for each pixel, enabling fine-grained spatial mapping of gene expression. It outputs a pixel-level annotation file in TSV format with coordinates and factor assignments, along with a pseudobulk gene-by-factor matrix in TSV format.
 
 ### UMAP Visualization Step (`--umap`)
 
-The UMAP visualization step generates UMAP embeddings of factors learned in [LDA training](#lda-training-step---init-lda), writing both coordinates and plots for reuse downstream.
+The UMAP visualization step generates UMAP embeddings of factors learned in [LDA training](#lda-training-step-init-lda), writing both coordinates and plots for reuse downstream.
 
 ### 10x Segmentation Step (`--segment-10x`)
 
@@ -69,12 +69,12 @@ Below are the core parameters. See more details in the collapsible section ("Aux
 
 
 * `--main`: Run all of the following five actions.
-* `--tile`: Run [tiling step](#tiling-step---tile).
-* `--segment`: Run [segmentation step](#segmentation-step---segment).
-* `--init-lda`: Run [LDA training step](#lda-training-step---init-lda).
-* `--decode`: Run [decoding step](#decoding-step---decode).
-* `--umap`: Run [UMAP step](#umap-visualization-step---umap).
-* `--segment-10x`: Run [10x segmentation step](#10x-segmentation-step---segment-10x).
+* `--tile`: Run [tiling step](#tiling-step-tile).
+* `--segment`: Run [segmentation step](#segmentation-step-segment).
+* `--init-lda`: Run [LDA training step](#lda-training-step-init-lda).
+* `--decode`: Run [decoding step](#decoding-step-decode).
+* `--umap`: Run [UMAP step](#umap-visualization-step-umap).
+* `--segment-10x`: Run [10x segmentation step](#10x-segmentation-step-segment-10x).
 
 #### Input/Output Parameters
 

@@ -139,6 +139,56 @@ def _get_image_size(image_path: str) -> tuple[int, int]:
         f"Cannot determine image size for --georef-plain (unsupported extension '{ext}'): {image_path}"
     )
 
+# Conversion factors from an OME PhysicalSize unit to microns (um).
+_OME_LENGTH_TO_UM = {
+    "nm": 1e-3,
+    "µm": 1.0,
+    "um": 1.0,
+    "micron": 1.0,
+    "microns": 1.0,
+    "mm": 1e3,
+    "cm": 1e4,
+    "m": 1e6,
+}
+
+
+def _ome_physical_size_um(pixels: dict, axis: str) -> float:
+    """Return PhysicalSize<axis> from an OME Pixels dict, converted to microns."""
+    size = pixels.get(f"PhysicalSize{axis}")
+    if size is None:
+        raise ValueError(
+            f"OME metadata has no PhysicalSize{axis}; cannot use --georef-detect=ome"
+        )
+    unit = pixels.get(f"PhysicalSize{axis}Unit", "µm")
+    scale = _OME_LENGTH_TO_UM.get(unit)
+    if scale is None:
+        raise ValueError(
+            f"Unsupported OME PhysicalSize{axis}Unit '{unit}' for --georef-detect=ome "
+            f"(supported: {', '.join(sorted(_OME_LENGTH_TO_UM))})"
+        )
+    return float(size) * scale
+
+
+def _select_ome_pixels(ome: dict, *, in_img: str) -> dict:
+    """Pick the OME Pixels block matching the input image among one or more Images.
+
+    An OME-TIFF may embed multiple <Image> elements (e.g. a full-resolution
+    pyramid plus derived masks/downsamples), so ``xml2dict`` yields a list. Match
+    the Image whose pixel dimensions equal the actual raster, falling back to the
+    first Image when none matches.
+    """
+    images = ome["Image"]
+    if isinstance(images, dict):
+        images = [images]
+
+    actual_x, actual_y = _get_image_size(in_img)
+    for image in images:
+        pixels = image["Pixels"]
+        if int(pixels["SizeX"]) == actual_x and int(pixels["SizeY"]) == actual_y:
+            return pixels
+    return images[0]["Pixels"]
+
+
 def _resolve_bounds_from_args(args, *, in_img: str) -> Optional[Dict[str, float]]:
 
     # only one should be provided and indicate that current georef_detect only supports ome.
@@ -192,20 +242,16 @@ def _resolve_bounds_from_args(args, *, in_img: str) -> Optional[Dict[str, float]
         if detect_mode != "ome":
             raise ValueError(f"Unsupported --georef-detect mode: {georef_detect}")
         with tifffile.TiffFile(in_img) as tif:
-            meta = tifffile.xml2dict(tif.ome_metadata)["OME"]["Image"]["Pixels"]
-            physical_size_x = meta["PhysicalSizeX"]
-            physical_size_y = meta["PhysicalSizeY"]
-            size_x = meta["SizeX"]
-            size_y = meta["SizeY"]
-            px_size_unit = meta.get("PhysicalSizeXUnit", "um")
-            if px_size_unit not in {"um", "µm"}:
-                raise ValueError(
-                    f"Physical size unit is not supported for --georef-detect=ome: {px_size_unit}"
-                )
+            ome = tifffile.xml2dict(tif.ome_metadata)["OME"]
+            meta = _select_ome_pixels(ome, in_img=in_img)
+            size_x = int(meta["SizeX"])
+            size_y = int(meta["SizeY"])
+            um_per_x = _ome_physical_size_um(meta, "X")
+            um_per_y = _ome_physical_size_um(meta, "Y")
             ulx = float(meta.get("OffsetX", 0)) + args.georef_offset_x
             uly = float(meta.get("OffsetY", 0)) + args.georef_offset_y
-            lrx = ulx + float(physical_size_x) * int(size_x) + args.georef_offset_x
-            lry = uly + float(physical_size_y) * int(size_y) + args.georef_offset_y
+            lrx = ulx + um_per_x * size_x
+            lry = uly + um_per_y * size_y
             return {"ulx": ulx, "uly": uly, "lrx": lrx, "lry": lry}
 
     if georef_plain:
@@ -231,13 +277,29 @@ def register_georeference_stage(
 
     #print(f"args.mono = {args.mono}, args.rgba = {args.rgba}, {in_img.endswith('.png')} {getattr(args, 'mono', False)}")
 
+    georef_f = f"{out_prefix}.georef.tif"
+
+    # --georef-detect gtiff: the input already carries the geotransform we want (e.g. a
+    # Seq-Scope H&E TIF registered upstream, whose corner coordinates are already the
+    # transcript um extent), but no CRS. That combination is not "already georeferenced"
+    # as far as the tilers are concerned: geotiff2pmtiles resolves the max zoom from the
+    # CRS, so without one it settles on 0, writes an empty PMTiles and still exits 0.
+    # Stamp --srs on and leave the geotransform alone -- no -a_ullr, so the corner
+    # coordinates are not round-tripped through a decimal rendering of themselves.
+    if str(getattr(args, "georef_detect", "") or "").lower() == "gtiff":
+        cmds = cmd_separator([], f"Assigning {args.srs} to the existing geotransform of {in_img}")
+        cmds.append(
+            " ".join([args.gdal_translate, "-of GTiff", f"-a_srs {args.srs}", in_img, georef_f])
+        )
+        mm.add_target(georef_f, [in_img], cmds)
+        return georef_f
+
     bounds = _resolve_bounds_from_args(args, in_img=in_img)
     if bounds is None:
         raise ValueError(
             "Georeferencing requested but no bounds provided via --georef-*, or --georef-detect"
         )
 
-    georef_f = f"{out_prefix}.georef.tif"
     cmds = cmd_separator([], f"Geo-referencing {in_img} to {georef_f}")
     ullr = "{ulx} {uly} {lrx} {lry}".format(**bounds)
     ## check if rgb expansion is needed
@@ -513,8 +575,25 @@ def register_geotiff2pmtiles_stage(
 
     pmtiles_f = f"{out_prefix}.pmtiles"
 
+    # Rescale controls for 16-bit imagery: geotiff2pmtiles errors on 16-bit input
+    # unless given an explicit --rescale-range (e.g. some Stereo-seq H&E TIFs).
+    rescale = ""
+    if getattr(args, "rescale", None):
+        rescale += f"--rescale {args.rescale} "
+    if getattr(args, "rescale_range", None):
+        rescale += f"--rescale-range {args.rescale_range} "
+
     cmds = cmd_separator([], f"Converting from geotiff to pmtiles: {src_tif}")
-    cmds.append(f"'{args.geotiff2pmtiles}' --format {args.tile_format} --min-zoom {args.min_zoom} " + (f"--max-zoom {args.max_zoom} " if args.max_zoom is not None else "") + f"{src_tif} {pmtiles_f}")
+    # geotiff2pmtiles derives its zoom range from the CRS, and on an input that has none it
+    # resolves the max zoom to 0 -- below --min-zoom -- so it writes an empty PMTiles and
+    # still exits 0. Catch that here rather than letting an empty layer reach the catalog.
+    cmds.append(
+        f"if ! '{getattr(args, 'gdalinfo', 'gdalinfo')}' {src_tif} | grep -q 'Coordinate System is'; then "
+        f"echo 'ERROR: {src_tif} has no CRS, so geotiff2pmtiles would write an empty PMTiles. "
+        f"Re-run with --georeference plus a --georef-* mode (use --georef-detect gtiff to keep "
+        f"an existing geotransform and only assign the CRS).' >&2; exit 1; fi"
+    )
+    cmds.append(f"'{args.geotiff2pmtiles}' --format {args.tile_format} --min-zoom {args.min_zoom} " + (f"--max-zoom {args.max_zoom} " if args.max_zoom is not None else "") + rescale + f"{src_tif} {pmtiles_f}")
     mm.add_target(pmtiles_f, [src_tif], cmds)
 
     return pmtiles_f
@@ -568,14 +647,26 @@ def register_png2pmtiles_pipeline(
         if getattr(args, "georeference", False):
             georef_f = register_georeference_stage(mm, args, in_img=src_img, out_prefix=prefix)
 
-        gdalwarp_f = register_gdalwarp_stage(mm, args, src_tif=georef_f, out_prefix=prefix)
+        # Rotate/flip, including the x/y transpose (--rotate 90 --flip-vertical, which
+        # orient2axisorder maps to the gdalwarp axisswap order "2,1"). Registered here as well
+        # as in the gdal branch: this is the default method, and without it those flags parse
+        # and are then silently dropped -- the image tiles, just in the wrong orientation.
+        oriented_f = register_orientation_stage(mm, args, src_tif=georef_f, out_prefix=prefix)
 
-        pmtiles_f = register_geotiff2pmtiles_stage(mm, args, src_tif=gdalwarp_f, out_prefix=prefix)
+        # The plain warp exists to hand the tiler a normalized GeoTIFF. When the orientation
+        # stage ran it has already produced exactly that, so re-warping only costs a second
+        # full-raster resample of a large image.
+        if oriented_f != georef_f:
+            src_for_tiles = oriented_f
+        else:
+            src_for_tiles = register_gdalwarp_stage(mm, args, src_tif=georef_f, out_prefix=prefix)
+
+        pmtiles_f = register_geotiff2pmtiles_stage(mm, args, src_tif=src_for_tiles, out_prefix=prefix)
 
         return Png2PmtilesResult(
             georef_tif=georef_f,
-            oriented_tif=gdalwarp_f,
-            final_tif=gdalwarp_f,
+            oriented_tif=src_for_tiles,
+            final_tif=src_for_tiles,
             mbtile_flag=None,
             mbtile_path=None,
             pmtiles_path=pmtiles_f

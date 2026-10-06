@@ -4,7 +4,7 @@ from pathlib import Path
 
 from cartloader.utils.minimake import minimake
 from cartloader.utils.utils import cmd_separator, scheck_app, create_custom_logger, load_file_to_dict, write_dict_to_file, read_minmax, flexopen, execute_makefile, valid_and_touch_cmd
-from cartloader.utils.color_helper import normalize_rgb
+from cartloader.utils.cartload_helper import copy_rgb_tsv, render_umap_cmd, umap_tippecanoe_cmd
 from cartloader.utils.ficture2_helper import ficture2_params_to_factor_assets
 from cartloader.utils.ficture2_helper_patch import infer_tiled_query_layout, make_direct_pmtiles_cmd, make_direct_pmtiles_pyramid_cmd
 
@@ -54,6 +54,8 @@ def parse_arguments(_args):
     aux_params.add_argument('--rename-y', type=str, default='y:lat', help='Column rename mapping for Y axis in tippecanoe, format old:new (default: y:lat)')
     aux_params.add_argument('--colname-feature', type=str, default='gene', help='Column name for feature/gene (default: gene)')
     aux_params.add_argument('--colname-count', type=str, default='count', help='Column name for molecule counts (default: count)')
+    aux_params.add_argument('--replace-features', type=str, default=None, help='Path to a shared feature list (e.g. multi.features.tsv from the FICTURE multi output). When set, a header-normalized copy (multi.features.rehdr.tsv) is written and used as --in-features when packaging point PMTiles, so gene-to-bin assignment is identical across all batches that share this feature list (default: use the per-dataset feature list)')
+    aux_params.add_argument('--in-bin-json', type=str, default=None, help='Optional precomputed gene->bin assignment JSON (spatula assign-feature2bin output / _bin_counts.json). When set, it is forwarded to run_tsv2pmtiles so point PMTiles reuse this shared assignment instead of deriving one from the per-sample feature list. Typically supplied by run_cartload2_multi so all samples share one gene-to-bin assignment and one unified counts view. Takes precedence over --replace-features for point binning.')
     aux_params.add_argument('--out-molecules-id', type=str, default='genes', help='Base name for output molecules PMTiles files (no directory)')
     aux_params.add_argument('--max-join-dist-um', type=float, default=0.1, help='Max distance (in µm) to associate molecules with decoded pixels (default: 0.1)')
     aux_params.add_argument('--join-tile-size', type=float, default=500, help='Tile size (in µm) when joining molecules with decoded pixels (default: 500)')
@@ -71,6 +73,7 @@ def parse_arguments(_args):
     aux_params.add_argument('--umap-min-zoom', type=int, default=0, help='Minimum zoom for generated UMAP PMTiles (default: 0)')
     aux_params.add_argument('--umap-max-zoom', type=int, default=18, help='Maximum zoom for generated UMAP PMTiles (default: 18)')
     aux_params.add_argument('--skip-umap', action='store_true', default=False, help='Skip UMAP PMTiles and copied UMAP assets even when UMAP inputs are present')
+    aux_params.add_argument('--reuse-shared-umap-dir', type=str, default=None, help='Directory holding pre-built shared UMAP PMTiles named <factor>-umap.pmtiles (e.g. the run_cartload2_multi output root). When set, each factor\'s shared UMAP PMTiles is copied from here instead of re-running tippecanoe per sample (the shared UMAP is identical across samples)')
     # ?
     aux_params.add_argument('--skip-raster', action='store_true', default=False, help='Skip raster image generation (no GDAL/go-pmtiles required)')
     # tmp
@@ -143,48 +146,12 @@ def pick_sge_inputs(args):
     # neither source provided, actionable error
     raise KeyError("Path not provided for SGE. Provide using --sge-dir with --in-sge-assets or --fic-dir with --in-fic-params")
 
-def copy_rgb_tsv(in_rgb, out_rgb, restart=False):
-    def _get_content(path):
-        with open(path, 'r') as f:
-            hdrs = f.readline().rstrip().split("\t")
-            col2idx = {hdr: i for i, hdr in enumerate(hdrs)}
-            lines = ["\t".join(["Name", "Color_index", "R", "G", "B"])]
-            for line in f:
-                toks = line.rstrip().split("\t")
-                if len(toks) != len(hdrs):
-                    raise ValueError(f"Input RGB file {path} has inconsistent number of columns")
-                rgb_r = float(toks[col2idx["R"]])
-                rgb_g = float(toks[col2idx["G"]])
-                rgb_b = float(toks[col2idx["B"]])
-                rgb_r, rgb_g, rgb_b = normalize_rgb(rgb_r, rgb_g, rgb_b)
-                name = toks[col2idx["Name"]]
-                lines.append(f"{name}\t{name}\t{rgb_r:.5f}\t{rgb_g:.5f}\t{rgb_b:.5f}")
-        return "\n".join(lines) + "\n"
+def process_umap(umap, mm, args, out_prefix, model_id, fic_jsonf, reuse_pmtiles=None):
+    """Add Makefile target to convert a UMAP bundle into PMTiles and copies.
 
-    # Desired behavior:
-    # - If restart is True OR output file does not exist: (re)generate the file.
-    # - Otherwise: compare to expected output and skip rewrite if identical.
-    expected_content = _get_content(in_rgb)
-
-    if restart or not os.path.exists(out_rgb):
-        with open(out_rgb, 'w') as f:
-            f.write(expected_content)
-        return
-
-    try:
-        with open(out_rgb, 'r') as f:
-            existing_content = f.read()
-        if existing_content == expected_content:
-            return  # up-to-date; no rewrite needed
-    except Exception:
-        # On read/compare failure, fall through to regenerate
-        pass
-
-    with open(out_rgb, 'w') as f:
-        f.write(expected_content)
-
-def process_umap(umap, mm, args, out_prefix, model_id, fic_jsonf):
-    """Add Makefile target to convert a UMAP bundle into PMTiles and copies."""
+    When ``reuse_pmtiles`` is given, the PMTiles are copied from that pre-built file
+    (e.g. a shared UMAP already materialized once by run_cartload2_multi) instead of
+    re-running tippecanoe. The cheap tsv/png copies are still made locally."""
     if not umap:
         return None
 
@@ -214,34 +181,19 @@ def process_umap(umap, mm, args, out_prefix, model_id, fic_jsonf):
 
     umap_ndjson = f"{out_prefix}-umap.ndjson"
     umap_pmtiles = f"{out_prefix}-umap.pmtiles"
-    convert_cmd = " ".join([
-        "cartloader", "render_umap",
-        f"--input {umap_tsv_out}",
-        f"--out {umap_ndjson}",
-        f"--colname-factor {args.umap_colname_factor}",
-        f"--colname-x {args.umap_colname_x}",
-        f"--colname-y {args.umap_colname_y}"
-    ])
-    cmds.append(convert_cmd)
-
-    tippecanoe_cmd = " ".join([
-        f"TIPPECANOE_MAX_THREADS={args.threads}",
-        f"'{args.tippecanoe}'",
-        f"-t {args.tmp_dir}",
-        f"-o {umap_pmtiles}",
-        "-Z", str(args.umap_min_zoom),
-        "-z", str(args.umap_max_zoom),
-        "-l", "umap",
-        "--force",
-        "--drop-densest-as-needed",
-        "--extend-zooms-if-still-dropping",
-        "--no-duplication",
-        f"--preserve-point-density-threshold={args.preserve_point_density_thres}",
-        umap_ndjson
-    ])
-    cmds.append(tippecanoe_cmd)
-    if not args.keep_intermediate_files:
-        cmds.append(f"rm -f {umap_ndjson}")
+    if reuse_pmtiles is not None:
+        # Reuse the shared UMAP PMTiles built once upstream instead of re-tippecanoe-ing.
+        cmds.append(f"cp {reuse_pmtiles} {umap_pmtiles}")
+        prerequisites.append(reuse_pmtiles)
+    else:
+        cmds.append(render_umap_cmd(umap_tsv_out, umap_ndjson,
+                                    args.umap_colname_factor, args.umap_colname_x, args.umap_colname_y))
+        cmds.append(umap_tippecanoe_cmd(umap_pmtiles, umap_ndjson, args.tippecanoe, args.tmp_dir,
+                                        threads=args.threads, min_zoom=args.umap_min_zoom,
+                                        max_zoom=args.umap_max_zoom,
+                                        preserve_thres=args.preserve_point_density_thres))
+        if not args.keep_intermediate_files:
+            cmds.append(f"rm -f {umap_ndjson}")
     outfiles.append(umap_pmtiles)
 
     touch_flag_cmd=valid_and_touch_cmd(outfiles, f"{out_prefix}-umap.done") # this only touch the flag file when all output files exist
@@ -340,8 +292,11 @@ def run_cartload2(_args):
         fic_jsonf = os.path.join(args.fic_dir, args.in_fic_params)
         fic_data = load_file_to_dict(fic_jsonf)
         in_fic_params = fic_data.get("train_params", [])
-        if len(in_fic_params) == 0:  # parameters are empty
-            logger.error(f"FICTURE 'train_params' is empty after loading {fic_jsonf} (provided by --fic-dir and --in-fic-params)")
+        if len(in_fic_params) == 0:
+            # Expected for a manifest written by run_ficture2_multi --prepare-only: the
+            # dataset is packaged with no factor layers (transcripts + raster + images).
+            logger.warning(f"FICTURE 'train_params' is empty in {fic_jsonf} (provided by --fic-dir and "
+                           f"--in-fic-params); packaging without any factor layers")
 
         # create the output assets json
         out_fic_assets = ficture2_params_to_factor_assets(in_fic_params, args.skip_raster, in_cell_params)
@@ -429,35 +384,42 @@ def run_cartload2(_args):
                         prerequisites = [umap_tsv, umap_png]
                         outfiles=[]
 
-                        convert_cmd = " ".join([
-                            "cartloader", "render_umap",
-                            f"--input {umap_tsv}",
-                            f"--out {shared_umap_ndjson}",
-                            f"--colname-factor {args.umap_colname_factor}",
-                            f"--colname-x {args.umap_colname_x}",
-                            f"--colname-y {args.umap_colname_y}"
-                        ])
-                        cmds.append(convert_cmd)
+                        if args.reuse_shared_umap_dir:
+                            # Reuse the shared UMAP PMTiles built once by run_cartload2_multi
+                            # instead of re-running tippecanoe for every sample.
+                            reuse_pmtiles = os.path.join(args.reuse_shared_umap_dir, f"{out_id}-umap.pmtiles")
+                            cmds.append(f"cp {reuse_pmtiles} {shared_umap_pmtiles}")
+                            prerequisites.append(reuse_pmtiles)
+                        else:
+                            convert_cmd = " ".join([
+                                "cartloader", "render_umap",
+                                f"--input {umap_tsv}",
+                                f"--out {shared_umap_ndjson}",
+                                f"--colname-factor {args.umap_colname_factor}",
+                                f"--colname-x {args.umap_colname_x}",
+                                f"--colname-y {args.umap_colname_y}"
+                            ])
+                            cmds.append(convert_cmd)
 
-                        # 2) ndjson to pmtiles
-                        tippecanoe_cmd = " ".join([
-                            f"TIPPECANOE_MAX_THREADS={args.threads}",
-                            f"'{args.tippecanoe}'",
-                            f"-t {args.tmp_dir}",
-                            f"-o {shared_umap_pmtiles}",
-                            "-Z", str(args.umap_min_zoom),
-                            "-z", str(args.umap_max_zoom),
-                            "-l", "umap",
-                            "--force",
-                            "--drop-densest-as-needed",
-                            "--extend-zooms-if-still-dropping",
-                            "--no-duplication",
-                            f"--preserve-point-density-threshold={args.preserve_point_density_thres}",
-                            shared_umap_ndjson
-                        ])
-                        cmds.append(tippecanoe_cmd)
-                        if not args.keep_intermediate_files:
-                            cmds.append(f"rm -f {shared_umap_ndjson}")
+                            # 2) ndjson to pmtiles
+                            tippecanoe_cmd = " ".join([
+                                f"TIPPECANOE_MAX_THREADS={args.threads}",
+                                f"'{args.tippecanoe}'",
+                                f"-t {args.tmp_dir}",
+                                f"-o {shared_umap_pmtiles}",
+                                "-Z", str(args.umap_min_zoom),
+                                "-z", str(args.umap_max_zoom),
+                                "-l", "umap",
+                                "--force",
+                                "--drop-densest-as-needed",
+                                "--extend-zooms-if-still-dropping",
+                                "--no-duplication",
+                                f"--preserve-point-density-threshold={args.preserve_point_density_thres}",
+                                shared_umap_ndjson
+                            ])
+                            cmds.append(tippecanoe_cmd)
+                            if not args.keep_intermediate_files:
+                                cmds.append(f"rm -f {shared_umap_ndjson}")
                         outfiles.append(shared_umap_pmtiles)
 
                         cmds.append(f"cp {umap_tsv} {out_prefix}-shared-umap.tsv.gz")
@@ -648,7 +610,10 @@ def run_cartload2(_args):
             # if umap is a dict,
             if not args.skip_umap:
                 if train_param.get("analysis_type") == "multi-sample":
-                    process_umap(umap.get("shared"), mm, args, out_prefix+"-shared", model_id, fic_jsonf)
+                    shared_reuse = (os.path.join(args.reuse_shared_umap_dir, f"{out_id}-umap.pmtiles")
+                                    if args.reuse_shared_umap_dir else None)
+                    process_umap(umap.get("shared"), mm, args, out_prefix+"-shared", model_id, fic_jsonf,
+                                 reuse_pmtiles=shared_reuse)
                     process_umap(umap.get("sample"), mm, args, out_prefix, model_id, fic_jsonf)
                 elif "sample" in umap:
                     process_umap(umap.get("sample"), mm, args, out_prefix, model_id, fic_jsonf)
@@ -858,20 +823,69 @@ def run_cartload2(_args):
 
     ## 5. run tsv2pmtiles for the convert the joined pixel-level TSV to PMTiles
     if not (len(join_pixel_bins) > 0 and args.use_ficture2_direct_pmtiles):
-        cmds = cmd_separator([], f"Converting the joined pixel-level TSV to PMTiles")
+        # By default each batch bins genes using its own feature list, so the same gene
+        # can land in a different bin/PMTiles layer across datasets (inconsistent lookups).
+        # With --replace-features, use a shared feature list (e.g. FICTURE multi.features.tsv)
+        # so every batch bins genes identically.
+        features_for_points = in_features
+        pmtiles_prereqs = [molecules_f]
+        point_bin_json = args.in_bin_json
+        if args.in_bin_json is not None:
+            # A shared gene->bin assignment is supplied (e.g. by run_cartload2_multi).
+            # Reuse its gene->bin routing (identical across samples), but refresh each
+            # gene's `count` from this sample's own feature totals (in_features) so the
+            # per-sample _bin_counts.json reports per-sample counts. Genes absent from
+            # this sample get count 0.
+            point_bin_json = f"{out_molecules_prefix}.sample_bin_counts.json"
+            rebin_cmds = cmd_separator([], "Refreshing shared gene->bin counts with per-sample feature totals")
+            rebin_cmds.append(
+                "python3 -c \"from cartloader.utils.cartload_helper import update_bin_counts_json; "
+                f"update_bin_counts_json('{args.in_bin_json}', '{in_features}', '{point_bin_json}')\""
+            )
+            mm.add_target(point_bin_json, [args.in_bin_json, in_features], rebin_cmds)
+            pmtiles_prereqs.append(point_bin_json)
+        if args.replace_features is not None:
+            assert os.path.exists(args.replace_features), f"File not found: {args.replace_features} (--replace-features)"
+            features_for_points = os.path.join(args.out_dir, "multi.features.rehdr.tsv")
+            rehdr_cmds = cmd_separator([], "Normalizing shared feature list header (multi.features.rehdr.tsv) for consistent gene-to-bin assignment")
+            # Replace the source header line (e.g. "#feature<TAB>total_count") with the
+            # column names run_tsv2pmtiles expects.
+            rehdr_cmds.append(f"(printf '{args.colname_feature}\\t{args.colname_count}\\n'; tail -n +2 {shlex.quote(args.replace_features)}) > {shlex.quote(features_for_points)}")
+            mm.add_target(features_for_points, [args.replace_features], rehdr_cmds)
+            pmtiles_prereqs.append(features_for_points)
+
+        # With no decoded factors to join, the molecules are the tiled transcript itself,
+        # whose punkst header is "#X  Y  Feature  count". X/Y/count already match
+        # split-mol2bin's defaults; the feature column does not (it defaults to "gene"),
+        # and split-mol2bin resolves columns by their INPUT name — --col-rename only
+        # rewrites the OUTPUT header, where Feature must become gene.
+        tiled_direct = len(join_pixel_bins) == 0
+        col_renames = [args.rename_x, args.rename_y,
+                       f"feature:{args.colname_feature}", f"ct:{args.colname_count}"]
+        tiled_flags = []
+        if tiled_direct:
+            col_renames.append(f"Feature:{args.colname_feature}")
+            # --skip-original: the unsplit "all" point layer is not used when no factor
+            # layers are packaged. Skipping it also drops its row from the PMTiles index,
+            # so the catalog does not advertise a file that was never built.
+            tiled_flags = ["--in-colname-feature", "Feature", "--skip-original"]
+
+        cmds = cmd_separator([], "Converting the tiled transcript TSV to PMTiles" if tiled_direct
+                                 else "Converting the joined pixel-level TSV to PMTiles")
         cmd = " ".join([
             "cartloader", "run_tsv2pmtiles",
             "--in-molecules", molecules_f,
-            "--in-features", in_features,
+            "--in-features", features_for_points,
             "--out-prefix", f"{out_molecules_prefix}",
             "--threads", str(args.threads),
-            "--col-rename", args.rename_x, args.rename_y, f"feature:{args.colname_feature}", f"ct:{args.colname_count}",
+            "--col-rename"] + col_renames + tiled_flags + [
             "--colname-feature", args.colname_feature,
             "--colname-count", args.colname_count,
             "--max-tile-bytes", str(args.max_point_tile_bytes),
             "--max-feature-counts", str(args.max_point_feature_counts),
             "--preserve-point-density-thres", str(args.preserve_point_density_thres),
             "--bin-count", str(args.bin_count),
+            (f"--in-bin-json '{point_bin_json}'" if args.in_bin_json is not None else ""),
             "--all",
             "--n-jobs", str(args.n_jobs),
             f"--log --log-suffix '{args.log_suffix}'" if args.log else "",
@@ -880,7 +894,7 @@ def run_cartload2(_args):
             "--keep-intermediate-files" if args.keep_intermediate_files else ""
         ])
         cmds.append(cmd)
-        mm.add_target(sge_index_f, [molecules_f], cmds)
+        mm.add_target(sge_index_f, pmtiles_prereqs, cmds)
 
     # 6. Create a yaml for all output assets
     cmds = cmd_separator([], f"Writing catalog YAML for all output assets")

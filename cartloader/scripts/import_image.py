@@ -34,6 +34,7 @@ def parse_arguments(_args):
     cmd_params.add_argument('--flip-vertical', action='store_true', default=False, help='Flip vertically (around X axis); applied after rotation')
     cmd_params.add_argument('--flip-horizontal', action='store_true', default=False, help='Flip horizontally (around Y axis); applied after rotation')
     cmd_params.add_argument('--update-catalog', action='store_true', default=False, help='Update catalog.yaml with the generated PMTiles')
+    cmd_params.add_argument('--skip-image-errors', action='store_true', default=False, help='Tolerate an unreadable/corrupt OME-TIFF during --ome2png: image_ome2png is run with --skip-if-invalid, and if it skips (writes a .skipped sentinel), the PMTiles/catalog steps are skipped with a warning instead of failing. Lets a pipeline continue past a corrupt histology image.')
 
     inout_params = parser.add_argument_group(
         "Input/Output Parameters",
@@ -47,6 +48,10 @@ def parse_arguments(_args):
 
     aux_params1 = parser.add_argument_group("Auxiliary parameters for --ome2png")
     aux_params1.add_argument('--micron2pixel-csv', type=str, help='CSV file containing transformation parameters from microns to mosaic pixels (platform: Vizgen; typical: micron_to_mosaic_pixel_transform.csv)')
+    aux_params1.add_argument("--px-per-um-x", type=float, help='Pixels per micrometer along X. Use for a plain (non-OME) TIFF that carries no pixel-size metadata but whose scale is known, e.g. a Stereo-seq *_regist.tif at 0.5um/pixel (--px-per-um-x 2). Requires --px-per-um-y.')
+    aux_params1.add_argument("--px-per-um-y", type=float, help='Pixels per micrometer along Y (see --px-per-um-x)')
+    aux_params1.add_argument("--offset-px-x", type=float, help='Offset in pixels along X, used with --px-per-um-x (default: 0)')
+    aux_params1.add_argument("--offset-px-y", type=float, help='Offset in pixels along Y, used with --px-per-um-y (default: 0)')
     aux_params1.add_argument("--shrink-factor", type=float, default=None, help='Downsample the image by this factor in both dimensions before processing (e.g., 2.0 = half resolution). Reduces memory when used with --high-memory.')
     aux_params1.add_argument("--use-middle-page", action='store_true', default=False, help='Automatically select the middle page of the OME-TIFF if --page is not provided; only applicable when multiple pages are detected')
     aux_params1.add_argument("--page", type=int, help='Z-slice index to extract from multi-page OME-TIFF (3D)')
@@ -69,6 +74,12 @@ def parse_arguments(_args):
     aux_params2.add_argument('--min-zoom', type=int, default=6, help='Minimum zoom level for PMTiles (default: 6)')
     aux_params2.add_argument('--max-zoom', type=int, help='Maximum zoom level for PMTiles (default: 20)')
     aux_params2.add_argument('--tile-format', type=str, default='png', choices=['png', 'webp'], help='Tile image format for PMTiles (default: png)')
+    aux_params2.add_argument('--rescale', type=str, default=None, choices=['auto', 'linear', 'log', 'none'],
+                             help='Rescale mode for geotiff2pmtiles; needed for 16-bit imagery (e.g. some '
+                                  'Stereo-seq H&E TIFs), which the tool rejects without an explicit range. '
+                                  'Use "linear" with --rescale-range.')
+    aux_params2.add_argument('--rescale-range', type=str, default=None,
+                             help='Input value range "min,max" for --rescale (required for 16-bit data; e.g. "0,65535").')
     aux_params2.add_argument('--gdal-only', action='store_true', default=False, help='If set, only run gdal_translate to convert a georeferenced GeoTIFF to PMTileswithout using geotiff2pmtiles')
 
     aux_params3 = parser.add_argument_group("Auxiliary parameters for --georeference", "Pick one of the following three ways to provide georeferencing bounds")
@@ -99,8 +110,8 @@ def parse_arguments(_args):
     return args 
 
 aux_image_arg={
-    "ome2png": ["page", "level", "series", "upper_thres_quantile", "upper_thres_intensity", "lower_thres_quantile", "lower_thres_intensity", "transparent_below", "colorize", "high_memory", "shrink_factor"],
-    "png2pmtiles": ["srs", "mono", "rgba", "resample", "blocksize", "pmtiles", "gdaladdo", "gdal_only", "min_zoom", "max_zoom", "tile_format", "geotiff2pmtiles"],
+    "ome2png": ["page", "level", "series", "upper_thres_quantile", "upper_thres_intensity", "lower_thres_quantile", "lower_thres_intensity", "transparent_below", "colorize", "high_memory", "shrink_factor", "px_per_um_x", "px_per_um_y", "offset_px_x", "offset_px_y"],
+    "png2pmtiles": ["srs", "mono", "rgba", "resample", "blocksize", "pmtiles", "gdaladdo", "gdal_only", "min_zoom", "max_zoom", "tile_format", "geotiff2pmtiles", "rescale", "rescale_range"],
     "georeference": ["georef_pixel_tsv", "georef_bounds_tsv", "georef_bounds", "srs"],
     "orientate": ["gdalinfo"]
 }
@@ -196,12 +207,20 @@ def import_image(_args):
             f"--page {args.page}" if args.page is not None else "",
             f"--level {args.level}" if args.level is not None else "",
             f"--series {args.series}" if args.series is not None else "",
+            "--skip-if-invalid" if args.skip_image_errors else "",
             f"--write-color-mode"
         ])
         cmd = add_param_to_cmd(cmd, args, aux_image_arg["ome2png"])
         cmds.append(cmd)
-        # >1 output: transform_f, transform_prefix.bounds 
-        cmds.append(f"[ -f {transform_f} ] && [ -f {transform_bounds_tsv} ] && touch {transform_prefix}.done")
+        # >1 output: transform_f, transform_prefix.bounds
+        skipped_sentinel = f"{transform_prefix}.skipped"
+        if args.skip_image_errors:
+            # image_ome2png writes <prefix>.skipped when it gracefully skips a corrupt
+            # image; still touch .done so downstream targets can no-op instead of erroring.
+            cmds.append(f"if [ -f {skipped_sentinel} ]; then touch {transform_prefix}.done; "
+                        f"else [ -f {transform_f} ] && [ -f {transform_bounds_tsv} ] && touch {transform_prefix}.done; fi")
+        else:
+            cmds.append(f"[ -f {transform_f} ] && [ -f {transform_bounds_tsv} ] && touch {transform_prefix}.done")
         mm.add_target(f"{transform_prefix}.done", prereq, cmds)
 
         # update for georeference and bounds
@@ -252,7 +271,14 @@ def import_image(_args):
         ])
         cmd = add_param_to_cmd(cmd, args, list(set(aux_image_arg["png2pmtiles"] + aux_image_arg["georeference"])))
         cmd = add_param_to_cmd(cmd, args, ["restart", "n_jobs"])
-        cmds.append(cmd)
+        if args.skip_image_errors and args.ome2png:
+            # If the OME→PNG step gracefully skipped a corrupt image, there is no PNG to
+            # tile; warn and leave no PMTiles (recipe still exits 0 so make continues).
+            cmds.append(f"if [ -f {transform_prefix}.skipped ]; then "
+                        f"echo 'WARNING: {args.img_id}: corrupt image skipped, not building PMTiles' >&2; "
+                        f"else {cmd}; fi")
+        else:
+            cmds.append(cmd)
         mm.add_target(pmtiles_f, prereq, cmds)
 
     # 3. Update the catalog.yaml file with the new pmtiles and upload to AWS
@@ -267,7 +293,13 @@ def import_image(_args):
             f"--basemap {args.img_id}:{args.img_id}.pmtiles",
             f"--basemap-dir {args.out_dir}"
         ])
-        cmds.append(cmd)
+        if args.skip_image_errors and args.ome2png:
+            # No PMTiles were produced for a skipped corrupt image; do not add it to the catalog.
+            cmds.append(f"if [ -f {transform_prefix}.skipped ] || [ ! -f {pmtiles_f} ]; then "
+                        f"echo 'WARNING: {args.img_id}: corrupt image skipped, catalog not updated' >&2; "
+                        f"else {cmd}; fi")
+        else:
+            cmds.append(cmd)
         cmds.append(f"touch {pmtiles_f}.yaml.done")
         mm.add_target(f"{pmtiles_f}.yaml.done", prereq, cmds)
 

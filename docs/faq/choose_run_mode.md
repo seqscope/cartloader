@@ -14,3 +14,6 @@ Use this quick comparison to choose a run mode.
 
 - Docker guide: [Run with Docker](../vignettes/quickstart/run_in_docker.md)
 - Local guide: [Run Locally](../vignettes/quickstart/run_locally.md)
+
+!!! info "Choosing an interface (not a run mode)"
+    This page is about **where** to run (Docker vs local). For **which command** to drive the pipeline — `run_together` vs `run_xenium`/`run_visiumhd` vs individual modules — see [Which interface should I use?](./choose_interface.md).

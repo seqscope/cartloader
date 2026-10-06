@@ -121,7 +121,7 @@ cartloader sge_convert \
     | Platform               | `--csv-comment`<sup>1</sup> | `--csv-delim` | `--csv-colname-x` | `--csv-colname-y` | `--csv-colnames-count` | `--csv-colname-feature-name` |
     |------------------------|-----------------------------|---------------|-------------------|-------------------|------------------------|------------------------------|
     | 10x Xenium<sup>2</sup> | `False`                     | `,`           | `x_location`      | `y_location`      | -                      | `feature_name`               |
-    | StereoSeq              | `False`                     | `\t`          | `x`               | `y`               | `MIDCounts`            | `geneID`                     |
+    | StereoSeq              | `False`                     | `\t`          | `x`               | `y`               | `ExonCount`            | `geneName`                   |
     | CosMx SMI              | `False`                     | `,`           | `x_local_px`      | `y_local_px`      | -                      | `target`                     |
     | MERSCOPE               | `False`                     | `,`           | `global_x`        | `global_y`        | -                      | `gene`                       |
     | Pixel-seq              | `False`                     | `\t`          | `xcoord`          | `ycoord`          | -                      | `geneName`                   |
@@ -144,7 +144,7 @@ Below are the core parameters. See more details in the collapsible sections belo
 * `--in-parquet` (str): Path to input transcript parquet (platform: 10x Xenium).
 * `--pos-parquet` (str): Path to position parquet with spatial coordinates (platform: 10x Visium HD; typical: `tissue_positions.parquet`).
 * `--scale-json` (str): Path to scale JSON; if set, derives `--units-per-um` from `microns_per_pixel` (platform: 10x Visium HD; typical: `scalefactors_json.json`).
-* `--units-per-um` (float): Coordinate units per µm (default: 1.00). Prefer `--scale-json` for 10x Visium HD.
+* `--units-per-um` (float): Coordinate units per µm (default: 1.00). Prefer `--scale-json` for 10x Visium HD. Platform defaults: SeqScope's raw per-molecule TSV route uses 1000 (nanometers); for Illumina StrataMap the value is **detected from the barcode file** — 1000 for the older nanometer barcodes (`SBC:433503:2393851`), 1 for the current micron ones (`SBC:686.951:4668.15`) — and an explicit `--units-per-um` overrides the detection (a value that contradicts the file is reported as a warning).
 * `--out-dir` (str): Output directory.
 * `--include-feature-regex` (regex): Regex of feature/gene names to include.
 * `--exclude-feature-regex` (regex): Regex of feature/gene names to exclude.
@@ -170,8 +170,8 @@ Below are the core parameters. See more details in the collapsible sections belo
     * `--csv-delim` (str): Delimiter for the input file (default: `","` for 10x Xenium, CosMx SMI, and MERSCOPE; `"\t"` for Stereo‑seq, Pixel‑seq).
     * `--csv-colname-x` (str): Column name for X coordinates (default: `x_location` for 10x Xenium; `x` for Stereo‑seq; `x_local_px` for CosMx SMI; `global_x` for MERSCOPE; `xcoord` for Pixel‑seq).
     * `--csv-colname-y` (str): Column name for Y coordinates (default: `y_location` for 10x Xenium; `y` for Stereo‑seq; `y_local_px` for CosMx SMI; `global_y` for MERSCOPE; `ycoord` for Pixel‑seq).
-    * `--csv-colnames-count` (str): Comma‑separated column names for expression count. If not provided, defaults to a count of 1 per transcript (default: `MIDCounts` for Stereo‑seq).
-    * `--csv-colname-feature-name` (str): Column name for gene name (default: `feature_name` for 10x Xenium; `geneID` for Stereo‑seq; `target` for CosMx SMI; `gene` for MERSCOPE; `geneName` for Pixel‑seq).
+    * `--csv-colnames-count` (str): Comma‑separated column names for expression count. If not provided, defaults to a count of 1 per transcript (default: `ExonCount` for Stereo‑seq — the exonic subset of the MIDs; zero-count rows are dropped).
+    * `--csv-colname-feature-name` (str): Column name for gene name (default: `feature_name` for 10x Xenium; `geneName` for Stereo‑seq; `target` for CosMx SMI; `gene` for MERSCOPE; `geneName` for Pixel‑seq).
     * `--csv-colnames-others` (str): Column names to keep.
     * `--csv-colname-phredscore` (str): Column name for Phred‑scaled quality value estimating the probability of incorrect calls (default: `qv` for 10x Xenium).
     * `--min-phred-score` (float): Minimum Q-score to retain a transcript.

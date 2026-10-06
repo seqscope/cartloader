@@ -3,6 +3,8 @@ from venv import logger
 import pandas as pd
 from cartloader.utils.minimake import minimake
 from cartloader.utils.utils import cmd_separator, scheck_app, add_param_to_cmd, read_minmax, flexopen, execute_makefile
+from cartloader.utils.geometry_helper import iter_geojson_cell_centroids, CENTROID_SUPPORTED_FORMATS
+from cartloader.scripts.feature_select import feature_select
 
 repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -19,11 +21,11 @@ def parse_arguments(_args):
     run_params.add_argument('--makefn', type=str, help='File name of Makefile to write (default: run_ficture2_multi.mk)')
 
     cmd_params = parser.add_argument_group("Commands", "Commands to run together")
-    cmd_params.add_argument('--all', action='store_true', default=False, help='Enable all actions: --cells and --boundaries')
+    cmd_params.add_argument('--all', action='store_true', default=False, help='Enable the standard actions: --sptsv, --lda, --leiden, --umap, --pseudobulk, --heatmap, and --decode. TSNE is not included; add --tsne explicitly to generate it.')
     cmd_params.add_argument('--sptsv', action='store_true', default=False, help='Create SPTSV files for LDA clustering')
     cmd_params.add_argument('--lda', action='store_true', default=False, help='Perform LDA factorization')
     cmd_params.add_argument('--leiden', action='store_true', default=False, help='Generate Leiden clusters based on LDA factorization')
-    cmd_params.add_argument('--tsne', action='store_true', default=False, help='Generate TSNE manifolds based on LDA factorization')
+    cmd_params.add_argument('--tsne', action='store_true', default=False, help='Generate TSNE manifolds based on LDA factorization. Optional and not part of --all: downstream steps only use UMAP, so TSNE is off by default.')
     cmd_params.add_argument('--umap', action='store_true', default=False, help='Generate UMAP manifolds based on LDA factorization')
     cmd_params.add_argument('--pseudobulk', action='store_true', default=False, help='Generate pseudobulk files based on Leiden clusters')
     cmd_params.add_argument('--heatmap', action='store_true', default=False, help='Generate heamap between LDA factors and Leiden clusters')
@@ -39,6 +41,7 @@ def parse_arguments(_args):
     inout_params.add_argument('--mex-ftr', type=str, default="features.tsv.gz", help='Feature files in MEX format')
     inout_params.add_argument('--mex-mtx', type=str, default="matrix.mtx.gz", help='Matrix files in MEX format')
     inout_params.add_argument('--mex-list', type=str, help='TSV file containing sample IDs and paths to MEX files')
+    inout_params.add_argument('--tsv-list', type=str, help='TSV file of [SAMPLE_ID] [PIXEL_TSV] naming an external pixel TSV that carries a cell-id column. Use when the cell assignment lives in a separate file that cannot be mapped onto the tiled transcript (e.g. a Stereo-seq cell-bin GEM). Unlike the tiled transcript, this file has a header row and its columns are read by name (X, Y, gene, count, cell_id) so that filter_molecules can be applied to it beforehand.')
     inout_params.add_argument('--sptsv-prefix', type=str, help='Prefix for SPTSV files')
 
     key_params = parser.add_argument_group("Key Parameters", "Key parameters that requires user's attention")
@@ -76,16 +79,32 @@ def parse_arguments(_args):
     aux_params.add_argument('--list-samples', type=str, help='Path to a TSV file containing sample IDs and paths to their transcript TSV files for multi-sample analysis. If provided, the samples listed in the file will be used for analysis.')
     aux_params.add_argument('--list-cluster', type=str, help='Path to a existing cluster files to create pseudobulk matrix in the format of [SAMPLE_ID] [CLUSTER_FILE]. If provided, Leiden clustering will be skipped, and the provided cluster files will be used for pseudobulk generation.')
     aux_params.add_argument('--list-xy', type=str, help='Path to a existing file containing X/Y locations of each cell. If provided, X/Y locations will be read from the provided file instead of computing from pixel file.')
-    aux_params.add_argument('--list-boundaries', type=str, help='Path to a existing file containing cell boundaries. This file will simply be stored in the output JSON for future use.')
+    aux_params.add_argument('--list-boundaries', type=str, help='Path to an existing file containing cell boundaries, as [SAMPLE_ID] [BOUNDARIES_FILE] or [SAMPLE_ID] [BOUNDARIES_FILE] [SCALE_JSON]. The path is stored in the output JSON; when a sample has boundaries but no --list-xy entry and --boundaries-format supports it, per-cell centroids are derived from the polygons (rescaled into microns using microns_per_pixel from the optional third-column SCALE_JSON).')
     aux_params.add_argument('--xy-colname-cell-id', type=str, default="cell_id", help='Column name for cell IDs in the metadata file (default: cell_id)')
     aux_params.add_argument('--xy-colname-x', type=str, default="X", help='Column name for X coordinates in the metadata file (default: X)')
     aux_params.add_argument('--xy-colname-y', type=str, default="Y", help='Column name for Y coordinates in the metadata file (default: Y)')
+    aux_params.add_argument('--boundaries-format', type=str, default=None, choices=[None, "geojson"], help='Format of the --list-boundaries files. Set (e.g. "geojson") to enable deriving per-cell centroids from the boundary polygons for samples that have boundaries but no --list-xy entry (default: None, i.e. boundaries are pass-through only).')
+    aux_params.add_argument('--boundaries-cell-id-format', type=str, default="cellid_{:09d}-1", help='Python format string applied to each boundary feature cell id so the derived centroid id matches the cell barcode convention used for clustering (default: "cellid_{:09d}-1", the Visium HD segmented convention). Use "{}" to keep the raw id.')
+    aux_params.add_argument('--boundaries-cell-id-prop', type=str, default="cell_id", help='GeoJSON feature property holding the cell id (default: cell_id)')
+    aux_params.add_argument('--boundaries-units-key', type=str, default="microns_per_pixel", help='Key in the third-column SCALE_JSON giving microns per pixel; centroids are rescaled by this value into microns (default: microns_per_pixel)')
     aux_params.add_argument('--zero-based-clust-id', action='store_true', default=False, help='Whether the cluster IDs in the existing cluster files provided by --list-cluster are zero-based. By default, it is assumed that the cluster IDs are one-based and will be converted to zero-based by subtracting 1. If the cluster IDs are already zero-based, please turn on this option to avoid incorrect cluster ID conversion.')
 
     # AUX gene-filtering params
-    aux_ftrfilter_params = parser.add_argument_group( "Feature Customizing Auxiliary Parameters", "Customize features (typically genes) used by FICTURE without altering the original feature TSV") # This ensures the original feature TSV file is retained in the output JSON file for downstream processing 
-    aux_ftrfilter_params.add_argument('--include-feature-regex', type=str, default=None, help='Regex of feature names to include')
-    aux_ftrfilter_params.add_argument('--exclude-feature-regex', type=str, default=None, help='Regex of feature names to exclude')
+    # The filters below restrict the features used to build the per-cell count matrices
+    # (SPTSV), and therefore everything derived from them: LDA, Leiden, the pseudobulk
+    # matrix and the cell-based pixel decode. The tiled transcript they are read from is
+    # left untouched, so packaging still sees every gene.
+    # These are COUNT-level (data) filters: a gene removed here is gone from the pseudobulk
+    # and DE too. To keep a gene in the counts but out of the factorization only, restrict
+    # the model instead (e.g. project onto a --pretrained-model whose feature space is
+    # already restricted) rather than dropping it here. run_together drives exactly that:
+    # it passes only the ingest (technical-artifact) exclusions here, and lets the projected
+    # pixel model carry the FICTURE restriction.
+    aux_ftrfilter_params = parser.add_argument_group( "Feature Customizing Auxiliary Parameters", "Customize features (typically genes) used by FICTURE without altering the original feature TSV") # This ensures the original feature TSV file is retained in the output JSON file for downstream processing
+    aux_ftrfilter_params.add_argument('--include-feature-regex', type=str, default=None, help='Regex of feature names to include in the cell-based analysis')
+    aux_ftrfilter_params.add_argument('--exclude-feature-regex', type=str, default=None, help='Regex of feature names to exclude from the cell-based analysis')
+    aux_ftrfilter_params.add_argument('--include-feature-list', type=str, default=None, help='Path to a file listing the feature names (one per line) to include in the cell-based analysis. Combines with the regexes above.')
+    aux_ftrfilter_params.add_argument('--exclude-feature-list', type=str, default=None, help='Path to a file listing the feature names (one per line) to exclude from the cell-based analysis. Combines with the regexes above.')
 
     # env params
     env_params = parser.add_argument_group("ENV Parameters", "Environment parameters, e.g., tools.")
@@ -103,6 +122,60 @@ def parse_arguments(_args):
         sys.exit(1)
 
     return parser.parse_args(_args)
+
+def resolve_feature_filter_flags(args):
+    """Build the feature-filter flags shared by mex2sptsv / pixel2sptsv.
+
+    spatula takes at most one include-type and one exclude-type feature filter, so a list
+    and a regex of the same polarity cannot both be handed to it. Such a pair is folded
+    into a single list first:
+
+      * include list + include regex -> the list filtered by the regex (the list is its
+        own universe, so no dataset-wide feature file is needed);
+      * exclude list + exclude regex -> the list unioned with the features the regex
+        matches in `multi.union_features.tsv` (every feature seen in any sample, written
+        by run_ficture2_multi). A feature that exists only in a MEX matrix and never in
+        the transcripts is consequently not reachable by the regex half of that pair.
+
+    Both derived files are written into --out-dir, so a run records exactly which features
+    it filtered on.
+    """
+    inc_list, exc_list = args.include_feature_list, args.exclude_feature_list
+    inc_regex, exc_regex = args.include_feature_regex, args.exclude_feature_regex
+
+    for flag, path in (("--include-feature-list", inc_list), ("--exclude-feature-list", exc_list)):
+        if path is not None and not os.path.exists(path):
+            raise FileNotFoundError(f"File not found: {path} ({flag})")
+
+    if inc_list is not None and inc_regex is not None:
+        derived = os.path.join(args.out_dir, f"{args.out_prefix}.include_features.tsv")
+        feature_select(["--mode", "include", "--in-features", inc_list,
+                        "--include-regex", inc_regex, "--out", derived])
+        inc_list, inc_regex = derived, None
+
+    if exc_list is not None and exc_regex is not None:
+        universe = os.path.join(args.in_dir, "multi.union_features.tsv")
+        if not os.path.exists(universe):
+            raise FileNotFoundError(
+                f"File not found: {universe}. Combining --exclude-feature-list with "
+                f"--exclude-feature-regex needs the feature list written by run_ficture2_multi "
+                f"to resolve which features the regex matches.")
+        derived = os.path.join(args.out_dir, f"{args.out_prefix}.exclude_features.tsv")
+        feature_select(["--mode", "exclude", "--in-features", universe,
+                        "--exclude-list", exc_list, "--exclude-regex", exc_regex, "--out", derived])
+        exc_list, exc_regex = derived, None
+
+    parts = []
+    if inc_list is not None:
+        parts.append(f"--include-feature-list '{inc_list}'")
+    if exc_list is not None:
+        parts.append(f"--exclude-feature-list '{exc_list}'")
+    if inc_regex is not None:
+        parts.append(f"--include-feature-regex '{inc_regex}'")
+    if exc_regex is not None:
+        parts.append(f"--exclude-feature-regex '{exc_regex}'")
+    return (" " + " ".join(parts)) if parts else ""
+
 
 def run_ficture2_multi_cells(_args):
     """Run all functions in FICTURE2 cell clustering with multi-sample pipeline
@@ -161,6 +234,45 @@ def run_ficture2_multi_cells(_args):
 
     n_samples = len(in_samples)
 
+    ## parse the MEX list (cell x gene matrices) into samp2mex: sample_id -> (bcd, ftr, mtx).
+    ## A sample present here is clustered from its MEX counts (mex2sptsv); a sample absent
+    ## here is clustered from the tiled transcript's cell_id column (pixel2sptsv). This is
+    ## resolved per sample so a mixed run (some samples MEX, some transcript-based) works.
+    samp2mex = {}
+    if args.mex_list is not None:
+        with flexopen(args.mex_list, 'rt') as rf:
+            for line in rf:
+                toks = line.strip().split("\t")
+                if len(toks) == 0 or toks[0] == "":
+                    continue
+                sample_id = toks[0]
+                if len(toks) == 2:
+                    mex_dir = toks[1]
+                    samp2mex[sample_id] = (os.path.join(mex_dir, args.mex_bcd),
+                                           os.path.join(mex_dir, args.mex_ftr),
+                                           os.path.join(mex_dir, args.mex_mtx))
+                elif len(toks) == 4:
+                    samp2mex[sample_id] = (toks[1], toks[2], toks[3])
+                else:
+                    raise ValueError(f"Each line in --mex-list must have 2 or 4 columns. Found {len(toks)} columns in line: {line}")
+
+    ## parse the external pixel-TSV list into samp2tsv: sample_id -> pixel TSV path.
+    ## Such a sample is clustered from that file's cell-id column instead of the tiled
+    ## transcript's, for platforms whose cell assignment cannot be mapped back onto the
+    ## pixel-level data (Stereo-seq cell bins). --mex-list wins if a sample is in both.
+    samp2tsv = {}
+    if args.tsv_list is not None:
+        with flexopen(args.tsv_list, 'rt') as rf:
+            for line in rf:
+                toks = line.strip().split("\t")
+                if len(toks) == 0 or toks[0] == "":
+                    continue
+                if len(toks) != 2:
+                    raise ValueError(f"Each line in --tsv-list must have exactly 2 columns containing [SAMPLE_ID] [PIXEL_TSV]. Found {len(toks)} columns in line: {line}")
+                if not os.path.exists(toks[1]):
+                    raise FileNotFoundError(f"File not found: {toks[1]} (from --tsv-list)")
+                samp2tsv[toks[0]] = toks[1]
+
     # cmap
     assert os.path.exists(args.cmap_file), f"File not found: {args.cmap_file} (--cmap-file)"
     
@@ -184,19 +296,17 @@ def run_ficture2_multi_cells(_args):
         args.lda = True
         args.leiden = True
         args.pseudobulk = True
-        args.tsne = True
         args.umap = True
         args.heatmap = True
         args.decode = True
-
-    cmd_ftr_include_exclude = ""
-    if args.include_feature_regex is not None:
-        cmd_ftr_include_exclude += f" --include-feature-regex '{args.include_feature_regex}'"
-    if args.exclude_feature_regex is not None:
-        cmd_ftr_include_exclude += f" --exclude-feature-regex '{args.exclude_feature_regex}'"
+        # --tsne is deliberately not part of --all: no downstream step consumes the
+        # TSNE manifold, and it is expensive on large datasets. Request it explicitly.
 
     ## create cell-based SPTSV files
     if args.sptsv:
+        # Feature filtering applies where the per-cell counts are built; a run that reuses
+        # an existing --sptsv-prefix inherits whatever the run that built it filtered on.
+        cmd_ftr_include_exclude = resolve_feature_filter_flags(args)
         if args.sptsv_prefix is not None:
             raise ValueError("When --sptsv is ON, --sptsv-prefix should not be provided.")
         sptsv_prefix = os.path.join(args.out_dir, args.out_prefix) + ".sptsv"
@@ -204,35 +314,45 @@ def run_ficture2_multi_cells(_args):
         cmds.append(f"touch '{sptsv_prefix}.begin'")
         samp2sptsv = {} ## sample ID to SPTSV file mapping
         deps = []
-        if args.mex_list is not None:
-            with flexopen(args.mex_list, 'rt') as rf:
-                for line in rf:
-                    toks = line.strip().split("\t")
-                    sample_id = toks[0]
-                    if len(toks) == 2:
-                        mex_dir = toks[1]
-                        mex_bcd = os.path.join(mex_dir, args.mex_bcd)
-                        mex_ftr = os.path.join(mex_dir, args.mex_ftr)
-                        mex_mtx = os.path.join(mex_dir, args.mex_mtx)
-                    elif len(toks) == 4:
-                        mex_bcd = toks[1]
-                        mex_ftr = toks[2]
-                        mex_mtx = toks[3]
-                    else:
-                        raise ValueError(f"Each line in --mex-list must have 2 or 4 columns. Found {len(toks)} columns in line: {line}")
-                    sample_sptsv_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.sptsv"
-                    cmd = f"{args.spatula} mex2sptsv --bcd {mex_bcd} --ftr {mex_ftr} --mtx {mex_mtx} --out {sample_sptsv_prefix} --min-feature-count {args.min_feature_count} {cmd_ftr_include_exclude}"
-                    cmds.append(cmd)
-                    samp2sptsv[sample_id] = sample_sptsv_prefix
-                    deps.extend([mex_bcd, mex_ftr, mex_mtx])
-        else:
-            for sample_id in in_samples:
+        ## Resolve the cell-count source per sample: a sample listed in --mex-list is
+        ## clustered from its MEX matrix (mex2sptsv); one listed in --tsv-list from that
+        ## external pixel TSV's cell_id column; any other from the tiled transcript's
+        ## cell_id column (both via pixel2sptsv). This mix lets a joint run combine
+        ## MEX-based samples (e.g. MERSCOPE cell_by_gene without boundaries) with
+        ## transcript/boundary-based samples in a single decode. Every branch writes the
+        ## same per-sample sptsv prefix, so the steps below are source-agnostic.
+        def cmd_pixel2sptsv(pixel_tsv, out_prefix, has_header=False):
+            # The tiled transcript is headerless, so its columns are selected by fixed
+            # position (--idx-col-*). An external --tsv-list file (e.g. the Stereo-seq
+            # cellbin.tsv) carries a X/Y/gene/count/cell_id header row so that
+            # filter_molecules can be applied to it beforehand; select those columns by
+            # name (pixel2sptsv's --in-col-* defaults already match these names).
+            if has_header:
+                col_flags = ("--in-col-x X --in-col-y Y --in-col-ftr gene "
+                             "--in-col-cnt count --in-col-id cell_id")
+            else:
+                col_flags = (f"--no-header --idx-col-x {args.colidx_x} --idx-col-y {args.colidx_y} "
+                             f"--idx-col-ftr {args.colidx_feature} --idx-col-cnt {args.colidx_count} "
+                             f"--idx-col-id {args.colidx_cell_id}")
+            return (f"{args.spatula} pixel2sptsv --min-cell-count {args.min_cell_count} --pixel {pixel_tsv} "
+                    f"{col_flags} --ignore-ids {args.ignore_ids} "
+                    f"--out {out_prefix} --min-feature-count {args.min_feature_count} {cmd_ftr_include_exclude}")
+
+        for sample_id in in_samples:
+            sample_sptsv_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.sptsv"
+            if sample_id in samp2mex:
+                mex_bcd, mex_ftr, mex_mtx = samp2mex[sample_id]
+                cmd = f"{args.spatula} mex2sptsv --bcd {mex_bcd} --ftr {mex_ftr} --mtx {mex_mtx} --out {sample_sptsv_prefix} --min-feature-count {args.min_feature_count} {cmd_ftr_include_exclude}"
+                deps.extend([mex_bcd, mex_ftr, mex_mtx])
+            elif sample_id in samp2tsv:
+                cmd = cmd_pixel2sptsv(samp2tsv[sample_id], sample_sptsv_prefix, has_header=True)
+                deps.append(samp2tsv[sample_id])
+            else:
                 pixelf = f"{args.in_dir}/samples/{sample_id}/{sample_id}.tiled"
-                sample_sptsv_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.sptsv"
-                cmd = f"{args.spatula} pixel2sptsv --min-cell-count {args.min_cell_count} --pixel {pixelf}.tsv --no-header --idx-col-x {args.colidx_x} --idx-col-y {args.colidx_y} --idx-col-ftr {args.colidx_feature} --idx-col-cnt {args.colidx_count} --idx-col-id {args.colidx_cell_id} --ignore-ids {args.ignore_ids} --out {sample_sptsv_prefix} --min-feature-count {args.min_feature_count} {cmd_ftr_include_exclude}"
-                cmds.append(cmd)
-                samp2sptsv[sample_id] = sample_sptsv_prefix
+                cmd = cmd_pixel2sptsv(f"{pixelf}.tsv", sample_sptsv_prefix)
                 deps.append(f"{pixelf}.tsv")
+            cmds.append(cmd)
+            samp2sptsv[sample_id] = sample_sptsv_prefix
         
         ## merge SPTSV files if needed
         if len(samp2sptsv) > 0:
@@ -262,8 +382,9 @@ def run_ficture2_multi_cells(_args):
             cmds.append(f"touch {lda_prefix}.multi.begin")
             if args.n_factor is None:
                 raise ValueError("--n-factor must be specified when --model is not specified with --lda ON.")
-            cmd = f"{ficture2bin} lda4hex --in-data {sptsv_prefix}.randomized.tsv --in-meta {sptsv_prefix}.json --out-prefix {lda_prefix} --sort-topics --n-topics {args.n_factor} --transform --minibatch-size 500 --seed {args.seed} --n-epochs 2 --threads {args.threads}"
+            cmd = f"{ficture2bin} lda4hex --in-data {sptsv_prefix}.randomized.tsv --in-meta {sptsv_prefix}.json --out-prefix {lda_prefix} --sort-topics --n-topics {args.n_factor} --transform --residuals --temp-dir {lda_prefix}_lda4hex --minibatch-size 500 --seed {args.seed} --n-epochs 2 --threads {args.threads}"
             cmds.append(cmd)
+            cmds.append(f"rm -rf {lda_prefix}_lda4hex")
             cmds.append(f"[ -f {lda_prefix}.model.tsv ] && [ -f {lda_prefix}.results.tsv ] && touch {lda_prefix}.multi.done" )
             mm.add_target(f"{lda_prefix}.multi.done", [f"{sptsv_prefix}.done"], cmds)
         else:  ## use existing model
@@ -275,8 +396,9 @@ def run_ficture2_multi_cells(_args):
             else:
                 cmd = f"cp {args.pretrained_model} {lda_prefix}.model.tsv"
             cmds.append(cmd)
-            cmd = f"{ficture2bin} lda4hex --model-prior {lda_prefix}.model.tsv --projection-only --in-data {sptsv_prefix}.randomized.tsv --in-meta {sptsv_prefix}.json --out-prefix {lda_prefix} --transform --minibatch-size 500 --seed {args.seed} --n-epochs 2 --threads {args.threads}"
+            cmd = f"{ficture2bin} lda4hex --model-prior {lda_prefix}.model.tsv --projection-only --in-data {sptsv_prefix}.randomized.tsv --in-meta {sptsv_prefix}.json --out-prefix {lda_prefix} --transform --residuals --temp-dir {lda_prefix}_lda4hex --minibatch-size 500 --seed {args.seed} --n-epochs 2 --threads {args.threads}"
             cmds.append(cmd)
+            cmds.append(f"rm -rf {lda_prefix}_lda4hex")
             cmds.append(f"[ -f '{lda_prefix}.results.tsv' ] && touch '{lda_prefix}.multi.done'" )
             mm.add_target(f"{lda_prefix}.multi.done", [f"{sptsv_prefix}.done"], cmds)
         ## project the LDA model to each sample separately
@@ -286,8 +408,9 @@ def run_ficture2_multi_cells(_args):
             sample_lda_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.lda"
             sample_sptsv_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.sptsv"
             cmds.append(f"touch {sample_lda_prefix}.begin")
-            cmd = f"{ficture2bin} lda4hex --model-prior {lda_prefix}.model.tsv --projection-only --in-data {sample_sptsv_prefix}.tsv --in-meta {sample_sptsv_prefix}.json --out-prefix {sample_lda_prefix} --transform --minibatch-size 500 --seed {args.seed} --n-epochs 2 --threads {args.threads}"
+            cmd = f"{ficture2bin} lda4hex --model-prior {lda_prefix}.model.tsv --projection-only --in-data {sample_sptsv_prefix}.tsv --in-meta {sample_sptsv_prefix}.json --out-prefix {sample_lda_prefix} --transform --residuals --temp-dir {sample_lda_prefix}_lda4hex --minibatch-size 500 --seed {args.seed} --n-epochs 2 --threads {args.threads}"
             cmds.append(cmd)
+            cmds.append(f"rm -rf {sample_lda_prefix}_lda4hex")
             cmds.append(f"[ -f {sample_lda_prefix}.results.tsv ] && touch {sample_lda_prefix}.done" )
             mm.add_target(f"{sample_lda_prefix}.done", [f"{lda_prefix}.multi.done"], cmds)
             deps.append(f"{sample_lda_prefix}.done")
@@ -297,6 +420,7 @@ def run_ficture2_multi_cells(_args):
         mm.add_target(f"{lda_prefix}.done", deps, cmds);
 
     samp2boundaries = {}
+    xy_samples = set()   # sample ids for which a per-cell scatter (cell.xy) was produced
     if args.leiden:
         lda_prefix = os.path.join(args.out_dir, args.out_prefix) + ".lda"
         leiden_prefix = os.path.join(args.out_dir, args.out_prefix) + ".leiden"
@@ -382,6 +506,35 @@ def run_ficture2_multi_cells(_args):
                     if not os.path.exists(xy_file):
                         raise FileNotFoundError(f"File not found: {xy_file} (from --list-xy)")
                     samp2xy[sample_id] = xy_file
+        # Boundary files (optional 3rd column = per-sample scale JSON for unit rescaling).
+        # Parsed before the scatter loop so that centroids can be derived for samples that
+        # have boundaries but no --list-xy entry (e.g. default Visium HD segmentation).
+        samp2boundaries_scale = {}
+        if args.list_boundaries is not None:
+            with flexopen(args.list_boundaries, "rt") as rf:
+                for line in rf:
+                    toks = line.strip().split("\t")
+                    if len(toks) not in (2, 3):
+                        raise ValueError("Each line in --list-boundaries must have 2 or 3 columns: [SAMPLE_ID] [BOUNDARIES_FILE] [SCALE_JSON (optional)]")
+                    if not os.path.exists(toks[1]):
+                        raise FileNotFoundError(f"File not found: {toks[1]} (from --list-boundaries)")
+                    samp2boundaries[toks[0]] = toks[1]
+                    if len(toks) == 3 and toks[2]:
+                        samp2boundaries_scale[toks[0]] = toks[2]
+
+        def _boundary_units_per_um(sid):
+            # units_per_um = coordinate units per micron = 1 / microns_per_pixel, so the
+            # shared helper rescales polygon coordinates (pixels) into microns. No scale
+            # JSON => assume coordinates are already in microns (units_per_um = 1).
+            sj = samp2boundaries_scale.get(sid)
+            if not sj:
+                return 1.0
+            with open(sj) as jf:
+                mpp = json.load(jf).get(args.boundaries_units_key)
+            if not mpp:
+                raise ValueError(f"'{args.boundaries_units_key}' missing or zero in scale JSON {sj} (from --list-boundaries)")
+            return 1.0 / float(mpp)
+
         merge_cmd = ""
         for sample_id in in_samples:
             sample_lda_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.lda"
@@ -421,6 +574,45 @@ def run_ficture2_multi_cells(_args):
                             y = toks[idx_y]
                             wf_sample.write(f"{cell_id}\t{x}\t{y}\n")
                         nlines += 1
+            elif sample_id in samp2boundaries and args.boundaries_format in CENTROID_SUPPORTED_FORMATS:
+                # No pre-computed cell XY, but boundary polygons are available (e.g. the
+                # default Visium HD segmentation, which ships cell polygons but no
+                # centroids): derive per-cell centroids from the polygons so the
+                # leiden-cluster scatter and cell-point PMTiles can still be produced.
+                metaf = f"{sample_sptsv_prefix}.cell.xy.tsv"
+                upp = _boundary_units_per_um(sample_id)
+                derived_ids = []
+                with flexopen(metaf, "wt") as wf_sample:
+                    wf_sample.write("cell_id\tX\tY\n")
+                    for cid, cx, cy in iter_geojson_cell_centroids(
+                            samp2boundaries[sample_id], upp,
+                            args.boundaries_cell_id_format, args.boundaries_cell_id_prop):
+                        wf_sample.write(f"{cid}\t{cx}\t{cy}\n")
+                        derived_ids.append(cid)
+                # Sanity check (printed so it is visible in the run log): how many derived
+                # centroid ids match the cell barcodes that drive clustering? Leiden ids
+                # are a subset of these, so a low/zero match ratio means the cell_id
+                # conventions disagree and the cell-point layer will be (near) empty --
+                # verify --boundaries-cell-id-format / --boundaries-cell-id-prop.
+                msg = (f"[boundaries->centroids] sample {sample_id}: derived "
+                       f"{len(derived_ids)} centroids (units_per_um={upp:g})")
+                if sample_id in samp2mex:
+                    with flexopen(samp2mex[sample_id][0], "rt") as bf:
+                        barcodes = {ln.split("\t")[0].strip().strip('"') for ln in bf if ln.strip()}
+                    matched = len(set(derived_ids) & barcodes)
+                    pct = (100.0 * matched / len(barcodes)) if barcodes else 0.0
+                    msg += f"; matched {matched}/{len(barcodes)} MEX barcodes ({pct:.1f}%)"
+                    if barcodes and matched == 0:
+                        msg += "  <-- WARNING: ZERO matches; cell-point layer will be empty"
+                print(msg, file=sys.stderr, flush=True)
+            elif sample_id in samp2mex:
+                # MEX-based clustering carries no cell coordinates (mex2sptsv writes no
+                # per-cell metadata), so a MEX sample without an xy file or boundaries has
+                # nothing to place spatially; skip its per-cell leiden-cluster scatter
+                # rather than failing on a missing metadata file. A transcript/boundary-
+                # based sample (not in samp2mex) still has pixel2sptsv metadata, drawn below.
+                continue
+            xy_samples.add(sample_id)   # a per-cell scatter (cell.xy) is produced below
             draw_manifold_rscript=f"{repo_dir}/cartloader/r/draw_manifold_clust.r"
             cmd = f"{args.R} '{draw_manifold_rscript}' --tsv-manifold '{metaf}' --tsv-clust '{sample_leiden_prefix}.tsv.gz' --tsv-colname-x X --tsv-colname-y Y --out '{sample_leiden_prefix}.xy.png' --out-tsv '{sample_leiden_prefix}.xy.tsv.gz' --tsv-colname-clust topK"
             cmds.append(cmd)
@@ -429,19 +621,6 @@ def run_ficture2_multi_cells(_args):
         merge_cmd += f"[ -f '{leiden_prefix}.tsv.gz' ] && touch '{leiden_prefix}.done'"
         cmds.append(merge_cmd)
         mm.add_target(f"{leiden_prefix}.done", [f"{lda_prefix}.done"], cmds)
-
-        ## spatial visualization of leiden clusters
-        if args.list_boundaries is not None:
-            with flexopen(args.list_boundaries, "rt") as rf:
-                for line in rf:
-                    toks = line.strip().split("\t")
-                    if len(toks) != 2:
-                        raise ValueError(f"Each line in --list-boundaries must have exactly 2 columns containing [SAMPLE_ID] [BOUNDARIES_FILE]")
-                    sample_id = toks[0]
-                    boundaries_file = toks[1]
-                    if not os.path.exists(boundaries_file):
-                        raise FileNotFoundError(f"File not found: {boundaries_file} (from --list-boundaries)")
-                    samp2boundaries[sample_id] = boundaries_file
     if args.tsne:
         ## generate TSNE manifolds
         lda_prefix = os.path.join(args.out_dir, args.out_prefix) + ".lda"
@@ -757,7 +936,12 @@ def run_ficture2_multi_cells(_args):
             out_cell_params["sptsv_prefix"] = f"{sample_prefix}.sptsv"
             
         if args.leiden:
-            out_cell_params["cell_xy_path"] = f"{sample_prefix}.leiden.xy.tsv.gz"
+            # cell_xy_path is only produced when the per-cell scatter actually ran — i.e.
+            # the sample had cell XY (--list-xy) or centroids derived from its boundary
+            # polygons. Coordinate-less MEX clustering produces none, so run_cartload2
+            # skips cell-point PMTiles instead of failing on a missing file.
+            if sample in xy_samples:
+                out_cell_params["cell_xy_path"] = f"{sample_prefix}.leiden.xy.tsv.gz"
             out_cell_params["cluster_path"] = f"{sample_prefix}.leiden.tsv.gz"
             
         if args.heatmap:
@@ -777,12 +961,47 @@ def run_ficture2_multi_cells(_args):
             out_cell_params["manifolds"] = out_manifolds
         if n_samples > 1:
             out_cell_params["analysis_type"] = "multi-sample"
-        if sample in samp2boundaries:
+        # Advertise the boundary path for the cell-boundaries PMTiles layer only for
+        # formats run_cartload2 can tile (vertex CSV). A geojson consumed here is used
+        # solely to derive centroids (its boundaries layer is produced separately, e.g.
+        # by import_visiumhd_cell), so it must not be passed on as cell_boundaries_path.
+        if sample in samp2boundaries and args.boundaries_format not in CENTROID_SUPPORTED_FORMATS:
             out_cell_params["cell_boundaries_path"] = samp2boundaries[sample]
         out_json = { "cell_params": out_cell_params }
 
         out_json_path = sample_out_json
         json.dump(out_json, flexopen(out_json_path, "wt"), indent=4)
+
+    ## write the shared multi-sample cell manifest (points to per-sample JSONs + shared cell components)
+    sp = args.out_prefix   # paths relative to --out-dir
+    shared = {"model_type": "lda", "model_id": args.out_prefix}
+    if args.lda:
+        shared["shared_model_path"] = f"{sp}.lda.model.tsv"
+    if args.pseudobulk:
+        shared["shared_cmap"] = f"{sp}.leiden.pseudobulk.cmap.tsv"
+        shared["shared_cluster_pseudobulk"] = f"{sp}.leiden.pseudobulk.tsv"
+        shared["shared_cluster_de"] = f"{sp}.leiden.pseudobulk.de.tsv"
+        shared["shared_cluster_info"] = f"{sp}.leiden.pseudobulk.factor.info.tsv"
+    if args.heatmap:
+        shared["shared_cluster_model_heatmap_pdf"] = f"{sp}.heatmap.pdf"
+        shared["shared_cluster_model_heatmap_tsv"] = f"{sp}.heatmap.normfrac.tsv"
+    shared_manifolds = {}
+    if args.tsne:
+        shared_manifolds["tsne"] = {"tsv": f"{sp}.tsne.leiden.tsv.gz", "png": f"{sp}.tsne.png"}
+    if args.umap:
+        shared_manifolds["umap"] = {"tsv": f"{sp}.umap.leiden.tsv.gz", "png": f"{sp}.umap.png"}
+    if shared_manifolds:
+        shared["manifolds"] = shared_manifolds
+
+    multi_manifest = {
+        "analysis_type": "multi-sample",
+        "n_samples": n_samples,
+        "out_prefix": args.out_prefix,
+        "samples": {s: os.path.join("samples", s, f"ficture.{args.out_prefix}.params.json") for s in in_samples},
+        "shared": shared,
+    }
+    multi_json_path = os.path.join(args.out_dir, f"ficture.multi.{args.out_prefix}.params.json")
+    json.dump(multi_manifest, flexopen(multi_json_path, "wt"), indent=4)
 
     ## write makefile
     if len(mm.targets) == 0:

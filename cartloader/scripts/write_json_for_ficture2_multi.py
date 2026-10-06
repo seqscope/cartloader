@@ -21,6 +21,7 @@ def parse_arguments(_args):
     parser.add_argument('--decode', nargs='*', type=str, default=None, help='Projection information: <model_type>,<model_id>,<decode_id>,<fit_width>,<anchor_res>,<decode_pixel_tsv>,<decode_pixel_png>,<decode_pseudobulk_tsv>,<decode_de_tsv>,<decode_info_tsv>. Can be provided multiple times for multiple projections.')
     parser.add_argument('--umap', nargs='*', type=str, default=None, help='UMAP information if exists. Each entry: <model_type>,<model_id>,<umap_tsv>,<umap_png>,<umap_single_factor_png>,<sample_umap_tsv>,<sample_umap_png>,<sample_umap_single_factor_png>. Can be provided multiple times for multiple UMAPs.')
     parser.add_argument('--n-samples', type=int, default=None, help='Number of samples used in multi-sample analysis. Required if mode is write and LDA models are provided.')
+    parser.add_argument('--mex', nargs='*', type=str, default=None, help='10x MEX export(s) of the hexagon files (run_ficture2_multi --segment-10x): <width>,<mex_dir>. Recorded under "mex" keyed by width; in append mode merged into the existing entries.')
 
     if len(_args) == 0:
         parser.print_help()
@@ -227,6 +228,14 @@ def write_json_for_ficture2_multi(_args):
         "in_sge": sge_data,
         "train_params": train_params
     }
+
+    # 10x MEX exports of the hexagon files, keyed by hexagon width (um).
+    mex = dict(old_data.get("mex", {})) if args.mode == "append" else {}
+    for entry in (args.mex or []):
+        width, mex_dir = entry.split(",", 1)
+        mex[width] = mex_dir
+    if mex:
+        json_data["mex"] = mex
 
     write_json(json_data, args.out_json)
     print(f'Data has been written to {args.out_json}')

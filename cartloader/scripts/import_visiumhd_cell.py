@@ -6,20 +6,11 @@ from scipy.io import mmread
 import subprocess
 
 from shapely.geometry import shape, mapping
-from shapely.affinity import scale as shapely_scale
 
 from cartloader.utils.utils import create_custom_logger, flexopen, unquote_str, smartsort, write_dict_to_file, load_file_to_dict, scheck_app
+from cartloader.utils.geometry_helper import rescale_geometry, iter_geojson_cell_centroids
 from cartloader.scripts.import_xenium_cell import process_cluster_csv, read_de_csv, write_de_tsv, write_cmap_tsv, tile_csv_into_pmtiles, make_factor_dict, write_umap_tsv, umap_tsv2pmtiles, umap_tsv2png, umap_tsv2indpng
 from cartloader.scripts.sge_convert import extract_unit2px_from_json
-
-def _rescale_geometry(geom, units_per_um):
-    """Rescale geometry coordinates into microns when needed."""
-    if units_per_um is None or math.isclose(units_per_um, 1.0):
-        return geom
-    if units_per_um == 0:
-        raise ValueError("units_per_um must be non-zero")
-    scale_factor = 1.0 / units_per_um
-    return shapely_scale(geom, xfact=scale_factor, yfact=scale_factor, origin=(0, 0))
 
 def process_cell_geojson_w_mtx(cells_geojson, cell_ftr_mex, cells_out, bcd2clusteridx, units_per_um, mex_bcd="barcodes.tsv.gz", mex_mtx="matrix.mtx.gz"):
     # Load barcodes
@@ -42,23 +33,11 @@ def process_cell_geojson_w_mtx(cells_geojson, cell_ftr_mex, cells_out, bcd2clust
         "count": barcode_sums
     })
 
-    # Load convert cells_geojson into csv
-    with open(cells_geojson, "r") as f:
-        cell_data = json.load(f)
-    
-    def _iter_cell_centroids():
-        for feature in cell_data["features"]:
-            formatted_id = f"cellid_{feature['properties']['cell_id']:09d}-1"
-            geom = shape(feature["geometry"])
-            scaled_geom = _rescale_geometry(geom, units_per_um)
-            centroid = scaled_geom.centroid
-            yield {
-                "cell_id": formatted_id,
-                "lon": centroid.x,
-                "lat": centroid.y,
-            }
-
-    df_bcd_xy = pd.DataFrame(_iter_cell_centroids())
+    # Derive per-cell centroids from the boundary polygons (shared helper).
+    df_bcd_xy = pd.DataFrame(
+        iter_geojson_cell_centroids(cells_geojson, units_per_um),
+        columns=["cell_id", "lon", "lat"],
+    )
 
     # Merge and select final columns
     df_bcd = (
@@ -79,7 +58,7 @@ def process_boundaries_geojson(input_geojson, output_geojson, bcd2clusteridx, un
         raw_id = feature["properties"]["cell_id"]
         formatted_id = f"cellid_{raw_id:09d}-1"
         clusteridx = bcd2clusteridx.get(formatted_id, "NA")
-        geom = _rescale_geometry(shape(feature["geometry"]), units_per_um)
+        geom = rescale_geometry(shape(feature["geometry"]), units_per_um)
         feature["properties"] = {
             "cell_id": formatted_id,
             "topK": str(clusteridx)

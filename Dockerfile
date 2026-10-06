@@ -83,14 +83,13 @@ RUN bash -x build.sh && cp pmtiles/pmtiles /usr/local/bin/ && \
 
 WORKDIR /app/cartloader
 
-# Install Python dependencies
-RUN python3 -m pip install --no-cache-dir -r installation/requirements.txt
-
 # Install R dependencies
 RUN Rscript installation/install_r_packages.R
 
-# Install cartloader itself
-RUN python3 -m pip install -e ./
+# Install cartloader with its Python dependencies (declared in pyproject.toml), including
+# the optional [ai] extra for AI annotation. Editable, since the package reads assets/ and
+# the submodule binaries from the checkout.
+RUN python3 -m pip install --no-cache-dir -e ".[ai]"
 
 # ===============================
 # Add a test dataset

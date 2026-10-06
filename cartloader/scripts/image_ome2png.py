@@ -43,6 +43,7 @@ def parse_arguments(_args):
     inout_params.add_argument('--shrink-factor', type=float, default=None, help='Downsample the image by this factor in both dimensions before processing (e.g., 2.0 = half resolution). Reduces memory when used with --high-memory.')
     inout_params.add_argument('--high-memory', action='store_true', default=False)
     inout_params.add_argument('--write-color-mode', action='store_true', default=False,  help='Save the color mode into a file (<out_prefix>.color.csv). This argument is specifically designed for "cartloader import_image"')
+    inout_params.add_argument('--skip-if-invalid', action='store_true', default=False, help='If the OME-TIFF cannot be opened, or is an OME file whose georeferencing metadata is missing/corrupt and no manual pixel size (--px-per-um-x/y or --csv) was given, log a warning, write a <out-prefix>.skipped sentinel, and exit 0 instead of failing. Intended for pipeline use via "import_image --skip-image-errors".')
 
     # memory_params = parser.add_argument_group("Memory Management")
     # memory_params.add_argument('--max-memory-gb', type=float, default=4.0,
@@ -126,6 +127,19 @@ def compute_quantiles_from_histogram(histogram, total_count, quantile):
     # The corresponding integer value is:
     return sorted_keys[idx]
 
+def write_skip_sentinel(logger, out_prefix, reason):
+    """Record that an image was skipped (invalid/corrupt) and clean up any temp
+    files. Writes <out_prefix>.skipped so callers can detect the skip and continue."""
+    logger.warning(f"Skipping image (invalid/corrupt): {reason}")
+    for tmp in (f"{out_prefix}_output.npy", f"{out_prefix}_transformed.npy"):
+        if os.path.exists(tmp):
+            try:
+                os.remove(tmp)
+            except OSError:
+                pass
+    with open(f"{out_prefix}.skipped", "w") as f:
+        f.write(reason + "\n")
+
 def image_ome2png(_args):
     args = parse_arguments(_args)
     logger = create_custom_logger(__name__, args.out_prefix + args.log_suffix if args.log else None)
@@ -133,7 +147,12 @@ def image_ome2png(_args):
 
     out_dir=os.path.dirname(args.out_prefix)
     os.makedirs(out_dir, exist_ok=True)
-    
+
+    # Clear any stale skip sentinel so this run's outcome (skipped vs produced) is
+    # unambiguous to a caller inspecting <out_prefix>.skipped.
+    if os.path.exists(f"{args.out_prefix}.skipped"):
+        os.remove(f"{args.out_prefix}.skipped")
+
     is_ome = True
     px_per_um_x = None
     px_per_um_y = None
@@ -160,8 +179,15 @@ def image_ome2png(_args):
         offset_px_y = args.offset_px_y if args.offset_px_y is not None else 0
 
     # [CSV processing and metadata extraction remain the same]
-    with tifffile.TiffFile(args.tif, _multifile=False) as tif:
-        logger.info(f"Loaded OME-TIFF file {args.tif}")
+    try:
+        tif = tifffile.TiffFile(args.tif, _multifile=False)
+    except (tifffile.TiffFileError, OSError, ValueError) as e:
+        if args.skip_if_invalid:
+            write_skip_sentinel(logger, args.out_prefix, f"could not open OME-TIFF {args.tif}: {e}")
+            return
+        raise
+    with tif:
+        logger.info(f"Loaded {'OME-TIFF' if is_ome else 'TIFF'} file {args.tif}")
         
         n_pages = len(tif.pages)
         n_series = len(tif.series)
@@ -174,11 +200,24 @@ def image_ome2png(_args):
         # Get page and validate
         args.page = 0 if args.page is None else args.page
         page = tif.series[args.series].levels[args.level].pages[args.page]
+        # Pages after the first in a multi-page (z-stack) OME-TIFF are TiffFrame objects,
+        # which lack is_tiled/imagelength/imagewidth; read those from the keyframe
+        # (a TiffPage is its own keyframe).
+        keyframe = page.keyframe
         
         #assert page.is_tiled, "Only tiled TIFF files are supported"
-        if not args.high_memory and not page.is_tiled:
-            logger.error("When the TIFF file is not tiled, please use the --high-memory flag")
-            sys.exit(1)
+        # Chunked/segment processing needs a tiled TIFF. A striped TIFF (e.g. a
+        # Stereo-seq *_regist.tif written by tifffile) has no 2D tiles, so fall back
+        # to whole-image mode automatically rather than forcing the caller to know
+        # to pass --high-memory. This loads the full page into memory; if that runs
+        # out of memory, re-run with --shrink-factor to downsample first.
+        if not args.high_memory and not keyframe.is_tiled:
+            logger.warning(
+                "TIFF is not tiled (striped); enabling --high-memory automatically to "
+                "process it. This loads the full image into memory -- if it runs out "
+                "of memory, re-run with --shrink-factor to downsample."
+            )
+            args.high_memory = True
         
         if len(page.shape) == 3:
             if page.shape[2] != 3:
@@ -200,10 +239,15 @@ def image_ome2png(_args):
             px_size_x = meta['PhysicalSizeX']
             px_size_y = meta['PhysicalSizeY']
             px_size_unit = meta.get('PhysicalSizeXUnit', 'um')
-            if px_size_unit != 'um' and px_size_unit != 'µm':
-                raise ValueError(f"Physical size unit is not in um: {px_size_unit}")
             offset_um_x = meta.get('OffsetX', 0)
             offset_um_y = meta.get('OffsetY', 0)
+            if px_size_unit == 'nm':
+                px_size_x /= 1000.0
+                px_size_y /= 1000.0
+                offset_um_x /= 1000.0
+                offset_um_y /= 1000.0
+            elif px_size_unit != 'um' and px_size_unit != 'µm':
+                raise ValueError(f"Physical size unit is not in um or nm: {px_size_unit}")
 
             level_0_shape = tif.series[0].levels[0].pages[args.page].shape
             current_page_shape = page.shape
@@ -213,11 +257,25 @@ def image_ome2png(_args):
                 px_size_x = px_size_x * scale_factor_x
                 px_size_y = px_size_y * scale_factor_y
                 logger.info(f"Rescaling the pixel size level {args.level} by ({scale_factor_x},{scale_factor_y})...")
-        else:
+        elif not is_ome:
+            # Manual / CSV mode: pixel size and offset came from --csv or --px-per-um-*.
             px_size_x = 1/px_per_um_x
             px_size_y = 1/px_per_um_y
             offset_um_x = 0 - offset_px_x / px_per_um_x
             offset_um_y = 0 - offset_px_y / px_per_um_y
+        else:
+            # OME mode, but the OME-XML/ImageDescription metadata is missing or corrupt
+            # (tif.ome_metadata is None) and no manual pixel size was provided, so the
+            # image cannot be georeferenced.
+            msg = (f"OME metadata could not be read from {args.tif} (the OME-XML / "
+                   f"ImageDescription tag is missing or corrupt) and no manual pixel size "
+                   f"was provided. Provide --px-per-um-x/--px-per-um-y (with optional "
+                   f"--offset-px-x/--offset-px-y) or a --csv, or pass --skip-if-invalid to "
+                   f"skip this image.")
+            if args.skip_if_invalid:
+                write_skip_sentinel(logger, args.out_prefix, msg)
+                return
+            raise ValueError(msg)
             
         ul = [offset_um_x, offset_um_y]
         lr = [offset_um_x + px_size_x * page.shape[1], offset_um_y + px_size_y * page.shape[0]]
@@ -260,7 +318,7 @@ def image_ome2png(_args):
             effective_shape = image_array_highmem.shape
         else:
             (chunk_height, chunk_width) = page.chunks[:2]
-            n_chunks = ((page.imagelength + chunk_height - 1) // chunk_height) * ((page.imagewidth + chunk_width - 1) // chunk_width)
+            n_chunks = ((keyframe.imagelength + chunk_height - 1) // chunk_height) * ((keyframe.imagewidth + chunk_width - 1) // chunk_width)
             effective_shape = page.shape  # full size; tiled mode shrinks only at save time
         logger.info(f"Processing in chunks of {chunk_height}x{chunk_width} pixels")
 
@@ -356,20 +414,20 @@ def image_ome2png(_args):
                 offset_y, offset_x = offset[-3], offset[-2]
                 
                 ## determine height and length
-                if offset_y + chunk_height > page.imagelength:
-                    height = page.imagelength - offset_y
+                if offset_y + chunk_height > keyframe.imagelength:
+                    height = keyframe.imagelength - offset_y
                 else:
                     height = chunk_height
                     
-                if offset_x + chunk_width > page.imagewidth:
-                    width = page.imagewidth - offset_x
+                if offset_x + chunk_width > keyframe.imagewidth:
+                    width = keyframe.imagewidth - offset_x
                 else:
                     width = chunk_width
 
                 data = np.squeeze(data)
                 processed = process_image_chunk(data, args, r, g, b)
                 
-                #print(f"Chunk {i}: shape: {data.shape}, {processed.shape}, {offset_x}, {offset_y}, {width}, {height}, {page.imagewidth}, {page.imagelength}")
+                #print(f"Chunk {i}: shape: {data.shape}, {processed.shape}, {offset_x}, {offset_y}, {width}, {height}, {keyframe.imagewidth}, {keyframe.imagelength}")
                     
                 # Write to output
                 if len(output_shape) > 2:

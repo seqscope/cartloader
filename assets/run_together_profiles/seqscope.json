@@ -1,0 +1,17 @@
+{
+  "platform": "seqscope",
+  "ingest": {
+    "sge_platform": "seqscope",
+    "in_dir_flag": "--in-mex",
+    "raw_input_flag": "--in-csv",
+    "extra_flags": ["--units-per-um 1000", "--icols-mtx 2", "--sge-visual"]
+  },
+  "roles": {},
+  "ficture": [
+    { "id": "denovo", "mode": "train", "width": "12", "n_factor": "24,48,96" }
+  ],
+  "cell_analyses": [],
+  "cartload": { "use_pmpoint": true, "bin_count": 500 },
+  "image_defaults": { "georeferenced": true },
+  "images": []
+}

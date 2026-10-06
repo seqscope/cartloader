@@ -2,6 +2,9 @@
 
 This tutorial walks through end‑to‑end processing of 10x Xenium data with `CartLoader`: converting inputs, running FICTURE, importing cell results and histology, packaging assets, and uploading to AWS for sharing.
 
+!!! tip "Prefer one command?"
+    [`run_together`](./run_together.md) runs this same pipeline for the standard Xenium layout with a single command. This step-by-step tutorial is the best way to understand each stage and to customize individual steps.
+
 ---
 ## Prepare Input
 
@@ -263,13 +266,13 @@ docker run -it --rm \
 | `CartLoader` Modules                     | Flags in `run_xenium`  | Actions                                                                       | Prerequisites                                                             |
 |------------------------------------------|------------------------|-------------------------------------------------------------------------------|---------------------------------------------------------------------------|
 | `load_xenium_ranger`                     | `--load-xenium-ranger` | Summarize Xenium Ranger outputs into JSON                                     | Xenium Output files                                                       |
-| [`sge_convert`](./sge_convert.md)        | `--sge-convert`        | Convert SGE to `CartLoader` format; optional density filter and visuals         | Xenium assets JSON (from `load_xenium_ranger`) or transcript CSV/Parquet  |
-| [`run_ficture2`](./run_ficture2.md)      | `--run-ficture2`       | FICTURE analysis                                                              | SGE (from `sge_convert`); FICTURE parameters (`--width`, `--n-factor`)    |
-| [`import_xenium_cell`](./import_cell.md) | `--import-cells`       | Import cell points, boundaries, cluster, de;                                  | Xenium assets JSON or manual CSVs; also `--cell-id`                       |
-| [`import_image`](./import_image.md)      | `--import-images`      | Import background images (OME‑TIFF) → PNG/PMTiles;                            | Xenium assets JSON or `--ome-tifs`; also `--image-ids`  or `--all-images` |
-| [`run_cartload2`](./run_cartload2.md)    | `--run-cartload2`      | Package SGE, optional FICTURE/cells/images into PMTiles; write `catalog.yaml` | SGE, optional FICTURE assets or any imported cell/image assets; `--id`    |
-| [`upload_aws`](./upload_aws.md)          | `--upload-aws`         | Upload catalog and PMTiles to S3                                              | `catalog.yaml` (from `run_cartload2`); `--s3-bucket`, `--id`              |
-| [`upload_zenodo`](./upload_zenodo.md)    | `--upload-zenodo`      | Upload catalog and PMTiles to Zenodo                                          | `catalog.yaml` (from `run_cartload2`); `--zenodo-token`                   |
+| [`sge_convert`](../../reference/sge_convert.md)        | `--sge-convert`        | Convert SGE to `CartLoader` format; optional density filter and visuals         | Xenium assets JSON (from `load_xenium_ranger`) or transcript CSV/Parquet  |
+| [`run_ficture2`](../../reference/run_ficture2.md)      | `--run-ficture2`       | FICTURE analysis                                                              | SGE (from `sge_convert`); FICTURE parameters (`--width`, `--n-factor`)    |
+| [`import_xenium_cell`](../../reference/import_cell.md) | `--import-cells`       | Import cell points, boundaries, cluster, de;                                  | Xenium assets JSON or manual CSVs; also `--cell-id`                       |
+| [`import_image`](../../reference/import_image.md)      | `--import-images`      | Import background images (OME‑TIFF) → PNG/PMTiles;                            | Xenium assets JSON or `--ome-tifs`; also `--image-ids`  or `--all-images` |
+| [`run_cartload2`](../../reference/run_cartload2.md)    | `--run-cartload2`      | Package SGE, optional FICTURE/cells/images into PMTiles; write `catalog.yaml` | SGE, optional FICTURE assets or any imported cell/image assets; `--id`    |
+| [`upload_aws`](../../reference/upload_aws.md)          | `--upload-aws`         | Upload catalog and PMTiles to S3                                              | `catalog.yaml` (from `run_cartload2`); `--s3-bucket`, `--id`              |
+| [`upload_zenodo`](../../reference/upload_zenodo.md)    | `--upload-zenodo`      | Upload catalog and PMTiles to Zenodo                                          | `catalog.yaml` (from `run_cartload2`); `--zenodo-token`                   |
 
 **Parameter Requirements by Action Flag**
 
@@ -320,4 +323,4 @@ Below are explanations of the parameters used in the example. For the full list,
 
 </div>
 
-See output details in the reference pages for [run_ficture2](../docs/reference/run_ficture2.md) and [run_cartload2](../docs/reference/run_cartload2.md).
+See output details in the reference pages for [run_ficture2](../../reference/run_ficture2.md) and [run_cartload2](../../reference/run_cartload2.md).

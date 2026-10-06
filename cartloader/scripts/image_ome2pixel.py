@@ -157,9 +157,13 @@ def image_ome2pixel(_args):
         # Get page and validate
         args.page = 0 if args.page is None else args.page
         page = tif.series[args.series].levels[args.level].pages[args.page]
+        # Pages after the first in a multi-page (z-stack) OME-TIFF are TiffFrame objects,
+        # which lack is_tiled/imagelength/imagewidth; read those from the keyframe
+        # (a TiffPage is its own keyframe).
+        keyframe = page.keyframe
         
         #assert page.is_tiled, "Only tiled TIFF files are supported"
-        if not args.high_memory and not page.is_tiled:
+        if not args.high_memory and not keyframe.is_tiled:
             logger.error("When the TIFF file is not tiled, please use the --high-memory flag")
             sys.exit(1)
         
@@ -224,7 +228,7 @@ def image_ome2pixel(_args):
             n_chunks = 1
         else:
             (chunk_height, chunk_width) = page.chunks
-            n_chunks = ((page.imagelength + chunk_height - 1) // chunk_height) * ((page.imagewidth + chunk_width - 1) // chunk_width)
+            n_chunks = ((keyframe.imagelength + chunk_height - 1) // chunk_height) * ((keyframe.imagewidth + chunk_width - 1) // chunk_width)
         logger.info(f"Processing in chunks of {chunk_height}x{chunk_width} pixels")
 
         #pixel_bytes = 4 if args.colorize else 1  # Account for RGB vs grayscale
@@ -322,13 +326,13 @@ def image_ome2pixel(_args):
                     offset_y, offset_x = offset[-3], offset[-2]
                     
                     ## determine height and length
-                    if offset_y + chunk_height > page.imagelength:
-                        height = page.imagelength - offset_y
+                    if offset_y + chunk_height > keyframe.imagelength:
+                        height = keyframe.imagelength - offset_y
                     else:
                         height = chunk_height
                         
-                    if offset_x + chunk_width > page.imagewidth:
-                        width = page.imagewidth - offset_x
+                    if offset_x + chunk_width > keyframe.imagewidth:
+                        width = keyframe.imagewidth - offset_x
                     else:
                         width = chunk_width
 
@@ -346,7 +350,7 @@ def image_ome2pixel(_args):
                     # triplets[1] = np.concatenate( (triplets[1], tmp_triplets[1] + offset_x ) )
                     # triplets[2] = np.concatenate( (triplets[2], tmp_triplets[2] ) )
                     
-                    #print(f"Chunk {i}: shape: {data.shape}, {processed.shape}, {offset_x}, {offset_y}, {width}, {height}, {page.imagewidth}, {page.imagelength}")
+                    #print(f"Chunk {i}: shape: {data.shape}, {processed.shape}, {offset_x}, {offset_y}, {width}, {height}, {keyframe.imagewidth}, {keyframe.imagelength}")
                         
                     #output[offset_y:(offset_y+height), offset_x:(offset_x+width)] = processed[0:height, 0:width]
                     

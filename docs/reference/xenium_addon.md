@@ -67,7 +67,7 @@ cartloader load_xenium_ranger \
 
 Writes a JSON manifest at `--out-json`.
 
-Example: [`includes/xenium_ranger_assets.human_lung_cancer.json`](../../includes/xenium_ranger_assets.human_lung_cancer.json)
+Example (`includes/xenium_ranger_assets.human_lung_cancer.json`):
 
 ```json
 {% include-markdown "../../includes/xenium_ranger_assets.human_lung_cancer.json" %}
