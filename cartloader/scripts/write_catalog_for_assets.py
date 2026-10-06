@@ -83,9 +83,14 @@ def write_catalog_for_assets(_args):
         ## read the SGE index file
         if args.sge_index is not None:
             sge_df = pd.read_csv(args.sge_index, sep="\t")
-            all_pmtiles = sge_df.loc[sge_df['bin_id'] == 'all']['pmtiles_path'].to_list()[0]
+            # The unsplit "all" layer is optional: run_tsv2pmtiles --skip-original omits
+            # both the file and its index row, so only advertise it when it was built.
+            all_pmtiles = sge_df.loc[sge_df['bin_id'] == 'all']['pmtiles_path'].to_list()
             bin_pmtiles = sge_df.loc[sge_df['bin_id'] != 'all']['pmtiles_path'].to_list()
-            sge_dict["all"] = all_pmtiles
+            if all_pmtiles:
+                sge_dict["all"] = all_pmtiles[0]
+            else:
+                sge_dict.pop("all", None)
             sge_dict["bins"] = bin_pmtiles
         if args.sge_counts is not None:
             sge_dict["counts"] = os.path.basename(args.sge_counts)

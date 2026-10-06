@@ -10,14 +10,34 @@ from cartloader.utils.color_helper import normalize_rgb, rgb_to_hex
 
 repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+def _resolve_column(fieldnames, preferred, aliases):
+    """Resolve a column name against a CSV header: prefer the configured name, then
+    known aliases, then a case-insensitive match. Returns None if nothing matches.
+    Lets standard 10x headers (Barcode/Cluster) and GEO variants (cell_id/cluster)
+    both work without per-dataset configuration."""
+    fields = list(fieldnames or [])
+    for cand in [preferred, *aliases]:
+        if cand in fields:
+            return cand
+    lower = {c.lower(): c for c in fields}
+    for cand in [preferred, *aliases]:
+        if cand.lower() in lower:
+            return lower[cand.lower()]
+    return None
+
+
 def process_cluster_csv(clust_csv, barcode_col="Barcode", cluster_col="Cluster", output_filename=None):
     bcd2cluster = {}
     cluster2cnt = {}
     with flexopen(clust_csv, "rt") as f:
         reader = csv.DictReader(f)
+        bcol = _resolve_column(reader.fieldnames, barcode_col, ["cell_id", "cell", "barcode"])
+        ccol = _resolve_column(reader.fieldnames, cluster_col, ["cluster", "graphclust", "kmeans"])
+        assert bcol is not None, f"Cannot find a barcode/cell-id column in {clust_csv} (tried '{barcode_col}' and common aliases); header: {reader.fieldnames}"
+        assert ccol is not None, f"Cannot find a cluster column in {clust_csv} (tried '{cluster_col}' and common aliases); header: {reader.fieldnames}"
         for row in reader:
-            bcd = unquote_str(row[barcode_col])
-            clust = row[cluster_col]
+            bcd = unquote_str(row[bcol])
+            clust = row[ccol]
             bcd2cluster[bcd] = clust
             cluster2cnt[clust] = cluster2cnt.get(clust, 0) + 1
     
@@ -291,7 +311,7 @@ def parse_arguments(_args):
     aux_inout_params.add_argument('--csv-clust', type=str, default="analysis/clustering/gene_expression_graphclust/clusters.csv", help='Location of CSV with cell cluster assignments under --in-dir (default: analysis/clustering/gene_expression_graphclust/clusters.csv)')
     aux_inout_params.add_argument('--csv-diffexp', type=str, default="analysis/diffexp/gene_expression_graphclust/differential_expression.csv", help='Location of CSV with differential expression results under --in-dir (default: analysis/diffexp/gene_expression_graphclust/differential_expression.csv)')
     ## cell-level MEX format files
-    aux_inout_params.add_argument('--mex-dir', type=str, default="cell_feature_matrix", help='Directory location of 10x Genomic MatrixMarket files under --in-dir (default: cell_feature_matrix)')
+    aux_inout_params.add_argument('--mex-dir', type=str, default=None, help='Directory location of 10x Genomic MatrixMarket files under --in-dir, used as an alternative source for pseudobulk/DE when --pixel is not given (e.g. cell_feature_matrix). Default: None (regenerate from --pixel transcripts)')
     aux_inout_params.add_argument('--mex-bcd', type=str, default="barcodes.tsv.gz", help='Filename for barcodes in the MatrixMarket directory (default: barcodes.tsv.gz)')
     aux_inout_params.add_argument('--mex-ftr', type=str, default="features.tsv.gz", help='Filename for features in the MatrixMarket directory (default: features.tsv.gz)')
     aux_inout_params.add_argument('--mex-mtx', type=str, default="matrix.mtx.gz", help='Filename for matrix in the MatrixMarket directory (default: matrix.mtx.gz)')
@@ -315,7 +335,7 @@ def parse_arguments(_args):
     aux_params = parser.add_argument_group("Auxiliary Parameters", "Auxiliary parameters (using default is recommended)")
     aux_params.add_argument('--skip-redo-diffexp', action='store_true', default=False, help='Skip computing differential expression from the MatrixMarket files. Use files from --csv-diffexp instead.') 
     aux_params.add_argument('--skip-redo-pseudobulk', action='store_true', default=False, help='Skip generating pseudobulk files from the MatrixMarket files.')
-    aux_params.add_argument('--tsv-cmap', type=str, default=f"{repo_dir}/assets/fixed_color_map_256.tsv", help=f'Location of TSV with color mappings for clusters under --in-dir (default: {repo_dir}/assets/fixed_color_map_60.tsv)')
+    aux_params.add_argument('--tsv-cmap', type=str, default=f"{repo_dir}/assets/default_color_map.tsv", help=f'Location of TSV with color mappings for clusters under --in-dir (default: {repo_dir}/assets/default_color_map.tsv)')
     aux_params.add_argument('--de-max-pval', type=float, default=0.01, help='Maximum p-value for differential expression (default: 0.01)')
     aux_params.add_argument('--de-min-fc', type=float, default=1.2, help='Minimum fold change for differential expression (default: 1.2)')
     aux_params.add_argument('--catalog-yaml', type=str, help='Path to catalog.yaml to update (used with --update-catalog; default: <out_dir>/catalog.yaml)')
@@ -397,19 +417,25 @@ def import_xenium_cell(_args):
         raw_data=load_file_to_dict(args.in_json)
         cell_data=raw_data.get("CELLS", raw_data) # # use raw_data as default to support the flat dict build in the old scripts
     else:
+        # os.path.join keeps each --csv-* relative to --in-dir (as documented) but
+        # honors an absolute override as-is (e.g. scattered GEO-style paths forwarded
+        # by run_together), avoiding a doubled <in_dir>/<abs_path>.
         cell_data={
-            "CELL": f"{args.in_dir}/{args.csv_cells}",
-            "BOUNDARY": f"{args.in_dir}/{args.csv_boundaries}",
-            "CLUSTER": f"{args.in_dir}/{args.csv_clust}",
-            "DE": f"{args.in_dir}/{args.csv_diffexp}",
-            "UMAP_PROJ": f"{args.in_dir}/{args.csv_umap}",
-            "CELL_FEATURE_MEX": f"{args.in_dir}/{args.mex_dir}",
-            # "MEX_BCD": os.path.join(args.in_dir, args.mex_dir, args.mex_bcd),
-            # "MEX_FTR": os.path.join(args.in_dir, args.mex_dir, args.mex_ftr),
-            # "MEX_MTX": os.path.join(args.in_dir, args.mex_dir, args.mex_mtx),
+            "CELL": os.path.join(args.in_dir, args.csv_cells),
+            "BOUNDARY": os.path.join(args.in_dir, args.csv_boundaries),
+            "CLUSTER": os.path.join(args.in_dir, args.csv_clust),
+            "DE": os.path.join(args.in_dir, args.csv_diffexp),
+            "UMAP_PROJ": os.path.join(args.in_dir, args.csv_umap),
         }
+        # spTSV for pseudobulk/DE regeneration comes from the raw transcript pixel TSV
+        # (--pixel, the default source, e.g. transcripts.tsv.gz from run_together; used
+        # as given, not under --in-dir) or, only when explicitly requested, the
+        # cell-feature MEX (--mex-dir). MEX_BCD/FTR/MTX are derived from CELL_FEATURE_MEX
+        # below, mirroring import_visiumhd_cell.
         if args.pixel is not None:
             cell_data["PIXEL"] = args.pixel
+        elif args.mex_dir is not None:
+            cell_data["CELL_FEATURE_MEX"] = os.path.join(args.in_dir, args.mex_dir)
 
     if cell_data.get("CELL_FEATURE_MEX") is not None:
         mex_ftr_dir = cell_data["CELL_FEATURE_MEX"]
@@ -423,7 +449,7 @@ def import_xenium_cell(_args):
         if args.pixel is not None:
             logger.info(f"  * Generating spTSV from pixel TSV file")
             pixelf = cell_data.get("PIXEL", None)
-            cmd = f"{args.spatula} pixel2sptsv --pixel {pixelf} --out {args.outprefix}.sptsv --in-col-id {args.pixel_colname_cell_id} --in-col-gene {args.pixel_colname_gene} --in-col-count {args.pixel_colname_count} --gzip {args.gzip} --sort {args.sort}"
+            cmd = f"{args.spatula} pixel2sptsv --pixel {pixelf} --out {args.outprefix}.sptsv --in-col-id {args.pixel_colname_cell_id} --in-col-ftr {args.pixel_colname_gene} --in-col-cnt {args.pixel_colname_count}"
             result = subprocess.run(cmd, shell=True, capture_output=True)
             if result.returncode != 0:
                 logger.error(f"Command {cmd}\nfailed with error: {result.stderr.decode()}")
@@ -436,7 +462,9 @@ def import_xenium_cell(_args):
             mex_ftr = cell_data.get("MEX_FTR", None)
             mex_mtx = cell_data.get("MEX_MTX", None)
 
-            assert mex_bcd is not None and os.path.exists(mex_bcd), (f'Path not provided or file not found: "MEX_BCD" in --in-json' if args.in_json is not None else f'Path not provided or file not found: --mex-bcd')
+            assert mex_bcd is not None, ('No expression source for pseudobulk/DE: provide --pixel (raw transcript TSV) '
+                                         'or --mex-dir (cell-feature MEX), or skip with --skip-redo-pseudobulk --skip-redo-diffexp')
+            assert os.path.exists(mex_bcd), (f'Path not provided or file not found: "MEX_BCD" in --in-json' if args.in_json is not None else f'Path not provided or file not found: --mex-bcd')
             assert mex_ftr is not None and os.path.exists(mex_ftr), (f'Path not provided or file not found: "MEX_FTR" in --in-json' if args.in_json is not None else f'Path not provided or file not found: --mex-ftr')
             assert mex_mtx is not None and os.path.exists(mex_mtx), (f'Path not provided or file not found: "MEX_MTX" in --in-json' if args.in_json is not None else f'Path not provided or file not found: --mex-mtx')
 
@@ -657,16 +685,17 @@ def import_xenium_cell(_args):
         tile_csv_into_pmtiles(bound_out, bound_pmtiles, args, logger, no_dup=False)
         #temp_fs.append(bound_out)
     
-    # UMAP
-    if args.umap:
+    # UMAP (best-effort: many datasets, e.g. some GEO deposits, ship no UMAP
+    # projection, so skip with a warning rather than failing the whole import)
+    umap_in = cell_data.get("UMAP_PROJ", None)
+    if args.umap and (umap_in is None or not os.path.exists(umap_in)):
+        logger.warning("Skipping UMAP generation: projection source not found "
+                       f"({umap_in if umap_in is not None else '--csv-umap not provided'})")
+    elif args.umap:
         scheck_app(args.R)
 
-        umap_in = cell_data.get("UMAP_PROJ", None)
         umap_tsv_out = f"{args.outprefix}-umap.tsv.gz"
         umap_pmtiles = f"{args.outprefix}-umap.pmtiles"
-
-        assert umap_in is not None, ('Path not provided: "UMAP_PROJ" in --in-json' if args.in_json is not None else 'Path not provided: --csv-umap')
-        assert os.path.exists(umap_in), (f'File not found: {umap_in} ("UMAP_PROJ" in --in-json)' if args.in_json is not None else f'File not found: {umap_in} (--csv-umap)')
 
         logger.info(f"Processing UMAP projection from {umap_in}")
         write_umap_tsv(umap_in, umap_tsv_out, bcd2clusteridx, args)

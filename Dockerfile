@@ -68,8 +68,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # 2. Increase Git's HTTP buffer size to prevent timeout drops
 RUN git config --global http.postBuffer 524288000
 
-RUN git clone --recursive https://github.com/seqscope/cartloader.git 
-#RUN git clone -b dev --recursive https://github.com/seqscope/cartloader.git 
+# 3. Clone exactly the commit being released. installation/docker_release.sh passes the
+#    commit of the checkout it runs from; a plain `docker build .` builds main.
+ARG CARTLOADER_REF=main
+LABEL org.opencontainers.image.source="https://github.com/seqscope/cartloader" \
+      org.opencontainers.image.revision="${CARTLOADER_REF}"
+RUN git clone https://github.com/seqscope/cartloader.git && \
+    cd cartloader && \
+    git checkout "${CARTLOADER_REF}" && \
+    git submodule update --init --recursive
 
 # Set working directory to the cloned repository
 WORKDIR /app/cartloader/submodules
@@ -83,14 +90,13 @@ RUN bash -x build.sh && cp pmtiles/pmtiles /usr/local/bin/ && \
 
 WORKDIR /app/cartloader
 
-# Install Python dependencies
-RUN python3 -m pip install --no-cache-dir -r installation/requirements.txt
-
 # Install R dependencies
 RUN Rscript installation/install_r_packages.R
 
-# Install cartloader itself
-RUN python3 -m pip install -e ./
+# Install cartloader with its Python dependencies (declared in pyproject.toml), including
+# the optional [ai] extra for AI annotation. Editable, since the package reads assets/ and
+# the submodule binaries from the checkout.
+RUN python3 -m pip install --no-cache-dir -e ".[ai]"
 
 # ===============================
 # Add a test dataset

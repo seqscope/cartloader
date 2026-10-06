@@ -5,7 +5,7 @@ set -euo pipefail
 # NOTE: This is an end-to-end example of running cartloader on Xenium v1 mouse brain coronal subset data
 # To run this script correctly, it is important to specify the absolute paths to the tools
 # PLEASE UPDATE the following variables to the absolute paths to the tools
-IMAGE="hyunminkang/cartloader:20260326b"
+IMAGE="hyunminkang/cartloader:latest"
 SCRIPTDIR="$(cd "$(dirname "$0")" && pwd)"
 REAL_OUTDIR="${SCRIPTDIR}/out"
 REAL_INDIR="${SCRIPTDIR}/data"
@@ -38,7 +38,7 @@ CMD="docker run --rm -v ${REAL_OUTDIR}:${OUTDIR} -v ${REAL_INDIR}:${INDIR} ${IMA
 BASH="docker run --rm -v ${REAL_OUTDIR}:${OUTDIR} -v ${REAL_INDIR}:${INDIR} --entrypoint /bin/bash ${IMAGE}"
 
 REGEX_STR="^(Unassigned|Neg|BLANK|Blank|Intergenic|Deprecated|System|Gm[0-9]|MT-|mt-|Rps|Rpl|NCS-|NCP-)"
-XTRA_COLS="cell_id z_location overlaps_nucleus nucleus_distance"
+XTRA_COLS="cell_id z_location overlaps_nucleus"
 BIN_COUNT=500
 
 WIDTH=12

@@ -30,6 +30,7 @@ Together, they provide a unified solution for working with raw pixel-level spati
         - [**Installation**](./installation.md) section for installation.
         - [**Vignettes**](./vignettes/intro.md) section for usage examples.
         - [**Reference**](./reference/intro.md) section for detailed descriptions (action, inputs, outputs, and parameters).
+        - [**FAQ**](./faq/intro.md) section for common questions and troubleshooting.
 
     !!! info "Key Features"
 
@@ -80,14 +81,11 @@ Together, they provide a unified solution for working with raw pixel-level spati
 
     If you use CartoScope in your research, please cite:
 
-    * CartoScope: [10.5281/zenodo.18739064]([placeholder](https://doi.org/10.5281/zenodo.18739064))
+    * CartoScope: [10.5281/zenodo.18739064](https://doi.org/10.5281/zenodo.18739064)
     * FICTURE: [doi.org/10.1038/s41592-024-02415-2](https://www.nature.com/articles/s41592-024-02415-2)
 
 --- 
 
 ## Contact Us
 
-!!! info "Contact Us"
-    To report issues or ask questions, please submit your questions or report issues via:
-
-    {% include-markdown "../includes/contact-us.md" %}
+{% include-markdown "../includes/contact-us.md" %}

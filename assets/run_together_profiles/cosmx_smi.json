@@ -1,0 +1,28 @@
+{
+  "platform": "cosmx_smi",
+  "ingest": {
+    "method": "reformat_cosmx",
+    "inputs": {
+      "--tx": "*tx_file.csv.gz",
+      "--meta": "*metadata*.csv.gz",
+      "--poly": "*polygons.csv.gz"
+    },
+    "produces": {
+      "transcript": ".transcripts.tsv.gz",
+      "xy": ".metadata.csv.gz",
+      "boundaries": ".polygons.csv.gz"
+    }
+  },
+  "roles": {
+    "xy": { "colname_x": "X", "colname_y": "Y" }
+  },
+  "ficture_defaults": { "min_ct_per_unit_hexagon": 100 },
+  "ficture": [
+    { "id": "denovo", "mode": "train", "width": "12", "n_factor": "12,24,48" }
+  ],
+  "cell_analyses": [
+    { "id": "cartloader", "uses": ["boundaries", "xy"] }
+  ],
+  "cartload": { "use_pmpoint": true, "bin_count": 500 },
+  "images": []
+}

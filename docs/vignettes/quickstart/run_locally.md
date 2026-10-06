@@ -14,6 +14,9 @@ This tutorial walks you through running the `CartLoader` workflow using a minima
 
     - Set up `CartLoader` and its dependencies locally (see [Installation](../../installation.md) guide).
 
+!!! question
+    - [I am not sure whether to run with Docker or run locally. Which one should I choose?](../../faq/choose_run_mode.md)
+
 ---
 
 ## Set Up the Environment

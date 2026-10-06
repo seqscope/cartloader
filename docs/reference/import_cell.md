@@ -88,10 +88,10 @@ Convert UMAP embeddings to PMTiles.
 
 ### Action Parameters
 
-- `--cells` (flag): Import [segmented cells](#cell-conversion-step---cells) and generate PMTiles.
-- `--boundaries` (flag): Import [segmented cell boundaries](#cell-boundary-conversion-step---boundaries) and generate GeoJSON/PMTiles.
-- `--umap` (flag): Import [UMAP projection](#umap-conversion-step---umap) and generate PMTiles.
-- `--update-catalog` (flag): [Update an existing catalog.yaml](#catalog-update---update-catalog).
+- `--cells` (flag): Import [segmented cells](#cell-conversion-step-cells) and generate PMTiles.
+- `--boundaries` (flag): Import [segmented cell boundaries](#cell-boundary-conversion-step-boundaries) and generate GeoJSON/PMTiles.
+- `--umap` (flag): Import [UMAP projection](#umap-conversion-step-umap) and generate PMTiles.
+- `--update-catalog` (flag): [Update an existing catalog.yaml](#catalog-update-update-catalog).
 - `--all` (flag): Enable all actions (`--cells`, `--boundaries`, `--umap`).
 
 ### Input/Output Parameters

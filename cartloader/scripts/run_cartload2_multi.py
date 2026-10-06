@@ -1,175 +1,323 @@
-import sys, os, argparse, logging, subprocess, inspect
-import pandas as pd
-from pathlib import Path
+import sys, os, argparse, logging, inspect, json, glob
+import yaml
 
 from cartloader.utils.minimake import minimake
-from cartloader.utils.utils import cmd_separator, add_param_to_cmd, execute_makefile, valid_and_touch_cmd
+from cartloader.utils.utils import cmd_separator, add_param_to_cmd, execute_makefile
+from cartloader.utils.cartload_helper import render_umap_cmd, umap_tippecanoe_cmd
+
+repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
+# run_cartload2 options forwarded to each per-sample invocation
 aux_args = {
     "params": [
         "in_fic_params", "out_fic_assets", "out_catalog",
-        "rename_x","rename_y",
-        "colname_feature", "colname_count",
-        "out_molecules_id", "max_join_dist_um", "join_tile_size", "bin_count", "max_tile_bytes", "max_feature_counts", "preserve_point_density_thres",
+        "rename_x", "rename_y", "colname_feature", "colname_count",
+        "out_molecules_id", "max_join_dist_um", "join_tile_size", "bin_count",
+        "preserve_point_density_thres",
         "umap_colname_factor", "umap_colname_x", "umap_colname_y", "umap_min_zoom", "umap_max_zoom",
-        "skip_raster",
-        "tmp_dir", "keep_intermediate_files",
-        "transparent_below", "transparent_above"
+        "sge_scale", "use_pmpoint", "tile_format_pmpoint",
+        "skip_umap", "skip_raster",
+        "keep_intermediate_files",
+        "transparent_below", "transparent_above",
     ],
-    "env":[
-        "gzip", "pmtiles", "gdaladdo", "tippecanoe", "spatula"
-    ],
-    "run":[
-        "restart", "n_jobs", "threads", "log", "log_suffix"
-    ]
+    "env": ["gzip", "pmtiles", "gdal_translate", "gdaladdo", "tippecanoe", "spatula", "pmpoint", "ficture2"],
+    "run": ["restart", "threads", "log", "log_suffix", "n_jobs"],
 }
 
-def parse_arguments(_args):
-    """
-    Package SGE and optional FICTURE outputs into PMTiles and a catalog for CartoScope (sge → optional ficture2/joins → pmtiles → catalog)
-    """
-    repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+def parse_arguments(_args):
     parser = argparse.ArgumentParser(
         prog=f"cartloader {inspect.getframeinfo(inspect.currentframe()).function}",
-        description="Package SGE and optional FICTURE outputs into PMTiles and a catalog for CartoScope (sge → optional ficture2/joins → pmtiles → catalog)"
-    )
+        description="Package a multi-sample FICTURE run into per-sample PMTiles (one run_cartload2 per sample, "
+                    "in parallel) plus a shared multi-catalog YAML.")
 
-    run_params = parser.add_argument_group("Run Options", "Execution controls for generating and running the Makefile")
+    run_params = parser.add_argument_group("Run Options")
     run_params.add_argument('--dry-run', action='store_true', default=False, help='Generate the Makefile but do not execute it')
     run_params.add_argument('--restart', action='store_true', default=False, help='Ignore existing outputs and re-run all steps')
-    run_params.add_argument('--makefn', type=str, default="run_cartload2_multi.mk", help='Name of the generated Makefile (default: run_cartload2.mk)')
-    run_params.add_argument('--n-jobs', type=int, default=None, help='Number of parallel jobs to run (default: 1)') # pass down to sub-makefiles
-    run_params.add_argument('--threads', type=int, default=None, help='Maximum number of threads per job for tippecanoe') # pass down to sub-makefiles
-    run_params.add_argument('--log', action='store_true', default=False, help='Write logs to a file under the output directory') # pass down to sub-makefiles
-    run_params.add_argument('--log-suffix', type=str, default=None, help='Suffix for the log filename; final path is <out_dir>_cartload<suffix> (default: .log)') # pass down to sub-makefiles
+    run_params.add_argument('--makefn', type=str, default="run_cartload2_multi.mk", help='Name of the generated Makefile')
+    run_params.add_argument('-j', '--n-jobs', type=int, default=1, help='Parallel jobs, applied to both samples (outer) and each per-sample run_cartload2 (inner, e.g. parallel bins in run_tsv2pmtiles); lower it if this oversubscribes (default: 1)')
+    run_params.add_argument('--threads', type=int, default=None, help='Threads per job (forwarded to run_cartload2)')
+    run_params.add_argument('--log', action='store_true', default=False, help='Write logs to a file under the output directory')
+    run_params.add_argument('--log-suffix', type=str, default=None, help='Suffix for the log filename')
 
     inout_params = parser.add_argument_group("Input/Output Parameters")
-    inout_params.add_argument('--out-dir', type=str, required=True, help='Output directory (PMTiles, assets JSON, and catalog YAML)')
-    inout_params.add_argument('--fic-dir', type=str, required=True, help='Path to FICTURE results directory produced by "cartloader run_ficture2" or "cartloader run_ficture2_multi"; must include FICTURE results and a parameter JSON (see --in-fic-params)')
-    inout_params.add_argument('--in-list', type=str, required=True, help='Path to input TSV without header. One sample per row with 2 required columns [sample id, path to transcript] and 2 optional columns [title, description]. If id is omitted it defaults to sample (use lowercase and replace _ by -); quote title/description if they contain spaces.')
+    inout_params.add_argument('--out-dir', type=str, required=True, help='Output directory. Holds one self-contained sub-directory per sample plus the multi-catalog YAML')
+    inout_params.add_argument('--fic-dir', type=str, required=True, help='Multi-sample FICTURE directory produced by run_ficture2_multi; must contain the multi manifest (see --in-multi-params)')
+    inout_params.add_argument('--id', type=str, default=None, help='Identifier for the multi-sample run; per-sample directories are named <id>-<sample_id> (default: basename of --out-dir)')
+    inout_params.add_argument('--in-multi-params', type=str, default="ficture.multi.params.json", help='File name of the shared multi manifest under --fic-dir (default: ficture.multi.params.json)')
+    inout_params.add_argument('--multi-catalog', type=str, default="multi-catalog.yaml", help='File name of the output multi-sample catalog under --out-dir (default: multi-catalog.yaml)')
 
-    ## Show the default value in help text but not set it here. All defaults will be applied in run_cartload2()
-    aux_params = parser.add_argument_group("Auxiliary Parameters", "Advanced settings; defaults work for most cases") 
-    aux_params.add_argument('--in-fic-params', type=str, help='File name of FICTURE params JSON/YAML under --fic-dir, providing FICTURE parameters (default: ficture.params.json)')
-    aux_params.add_argument('--out-fic-assets', type=str, help='File name of output JSON/YAML for FICTURE asset metadata under --out-dir (default: ficture_assets.json)')
-    aux_params.add_argument('--out-catalog', type=str,  help='File name of output catalog YAML under --out-dir (default: catalog.yaml)')
-    aux_params.add_argument('--rename-x', type=str, help='Column rename mapping for X axis in tippecanoe, format old:new (default: x:lon)')  
-    aux_params.add_argument('--rename-y', type=str, help='Column rename mapping for Y axis in tippecanoe, format old:new (default: y:lat)')  
-    aux_params.add_argument('--colname-feature', type=str, help='Column name for feature/gene (default: gene)')
-    aux_params.add_argument('--colname-count', type=str, help='Column name for molecule counts (default: count)')
-    aux_params.add_argument('--out-molecules-id', type=str, help='Base name for output molecules PMTiles files (no directory)')
-    aux_params.add_argument('--max-join-dist-um', type=float, help='Max distance (in µm) to associate molecules with decoded pixels (default: 0.1)')
-    aux_params.add_argument('--join-tile-size', type=float, help='Tile size (in µm) when joining molecules with decoded pixels (default: 500)')
-    aux_params.add_argument('--bin-count', type=int, help='Number of bins when splitting input molecules (default: 50)')
-    aux_params.add_argument('--max-tile-bytes', type=int, help='Maximum tile size in bytes for tippecanoe/PMTiles (default: 5000000)')
-    aux_params.add_argument('--max-feature-counts', type=int, help='Maximum features per tile for tippecanoe/PMTiles (default: 500000)')
-    aux_params.add_argument('--preserve-point-density-thres', type=int, help='Tippecanoe point-density preservation threshold (default: 1024)')
-    aux_params.add_argument('--umap-colname-factor', type=str, help='Column name encoding the dominant factor assignment in a UMAP TSV (default: topK)')
-    aux_params.add_argument('--umap-colname-x', type=str, help='Column name for the UMAP X coordinate (default: UMAP1)')
-    aux_params.add_argument('--umap-colname-y', type=str, help='Column name for the UMAP Y coordinate (default: UMAP2)')
-    aux_params.add_argument('--umap-min-zoom', type=int, help='Minimum zoom for generated UMAP PMTiles (default: 0)')
-    aux_params.add_argument('--umap-max-zoom', type=int, help='Maximum zoom for generated UMAP PMTiles (default: 18)')
-    aux_params.add_argument('--skip-raster', action='store_true', help='Skip raster image generation (no GDAL/go-pmtiles required)')
-    aux_params.add_argument('--tmp-dir', type=str, help='Temporary directory (default: <out_dir>/tmp)')
-    aux_params.add_argument('--keep-intermediate-files', action='store_true', help='Keep intermediate files instead of cleaning up')
-    aux_params.add_argument('--transparent-below', type=int, help='Set pixels below this value to transparent for dark background (range: 0~255)')
-    aux_params.add_argument('--transparent-above', type=int, help='Set pixels above this value to transparent for light background (range: 0~255)')
+    aux_params = parser.add_argument_group("Auxiliary Parameters", "Forwarded to each per-sample run_cartload2; defaults work for most cases")
+    aux_params.add_argument('--in-fic-params', type=str, help='FICTURE params JSON under each sample dir (default: ficture.params.json)')
+    aux_params.add_argument('--out-fic-assets', type=str, help='Output FICTURE assets JSON name')
+    aux_params.add_argument('--out-catalog', type=str, default="catalog.yaml", help='Per-sample catalog YAML name (default: catalog.yaml)')
+    aux_params.add_argument('--colname-feature', type=str, help='Column name for feature/gene')
+    aux_params.add_argument('--colname-count', type=str, help='Column name for molecule counts')
+    aux_params.add_argument('--rename-x', type=str, help='Column rename mapping for X (old:new)')
+    aux_params.add_argument('--rename-y', type=str, help='Column rename mapping for Y (old:new)')
+    aux_params.add_argument('--out-molecules-id', type=str, help='Base name for output molecules PMTiles')
+    aux_params.add_argument('--max-join-dist-um', type=float, help='Max distance (µm) to associate molecules with pixels')
+    aux_params.add_argument('--join-tile-size', type=float, help='Tile size (µm) when joining molecules with pixels')
+    aux_params.add_argument('--bin-count', type=int, help='Number of bins when splitting input molecules')
+    aux_params.add_argument('--preserve-point-density-thres', type=int, help='Tippecanoe point-density preservation threshold')
+    aux_params.add_argument('--sge-scale', type=int, help='Scale factor from input coordinates to output pixels')
+    aux_params.add_argument('--use-pmpoint', action='store_true', default=False, help='Use pmpoint/MLT instead of tippecanoe for point PMTiles')
+    aux_params.add_argument('--tile-format-pmpoint', choices=['MLT', 'MVT'], help='Tile format when --use-pmpoint is enabled')
+    aux_params.add_argument('--umap-colname-factor', type=str, help='UMAP dominant-factor column name')
+    aux_params.add_argument('--umap-colname-x', type=str, help='UMAP X column name')
+    aux_params.add_argument('--umap-colname-y', type=str, help='UMAP Y column name')
+    aux_params.add_argument('--umap-min-zoom', type=int, help='Minimum zoom for UMAP PMTiles')
+    aux_params.add_argument('--umap-max-zoom', type=int, help='Maximum zoom for UMAP PMTiles')
+    aux_params.add_argument('--skip-umap', action='store_true', default=False, help='Skip UMAP PMTiles')
+    aux_params.add_argument('--skip-raster', action='store_true', default=False, help='Skip raster image generation')
+    aux_params.add_argument('--tmp-dir', type=str, help='Temporary directory')
+    aux_params.add_argument('--keep-intermediate-files', action='store_true', default=False, help='Keep intermediate files')
+    aux_params.add_argument('--transparent-below', type=int, help='Transparent below this pixel value')
+    aux_params.add_argument('--transparent-above', type=int, help='Transparent above this pixel value')
 
-    ## Show the default value in help text but not set it here. All defaults will be applied in run_cartload2()
-    env_params = parser.add_argument_group("Env Parameters", "Tool paths (override defaults if needed)")
-    env_params.add_argument('--gzip', type=str, help='Path to gzip-compatible binary (tip: use "pigz -p4" for speed)')
-    env_params.add_argument('--pmtiles', type=str, help='Path to pmtiles binary from go-pmtiles')
+    env_params = parser.add_argument_group("Env Parameters")
+    env_params.add_argument('--gzip', type=str, help='Path to gzip-compatible binary')
+    env_params.add_argument('--pmtiles', type=str, help='Path to pmtiles binary')
     env_params.add_argument('--gdal_translate', type=str, help='Path to gdal_translate binary')
     env_params.add_argument('--gdaladdo', type=str, help='Path to gdaladdo binary')
-    env_params.add_argument('--tippecanoe', type=str, help='Path to tippecanoe binary') # default=f"{repo_dir}/submodules/tippecanoe/tippecanoe", 
-    env_params.add_argument('--spatula', type=str, help='Path to spatula binary') # default=f"{repo_dir}/submodules/spatula/bin/spatula",
+    env_params.add_argument('--tippecanoe', type=str, help='Path to tippecanoe binary')
+    env_params.add_argument('--spatula', type=str, help='Path to spatula binary')
+    env_params.add_argument('--pmpoint', type=str, help='Path to pmpoint binary')
+    env_params.add_argument('--ficture2', type=str, help='Path to punkst (ficture2) repository')
 
     if len(_args) == 0:
         parser.print_help()
         sys.exit(1)
-    
-    args=parser.parse_args(_args)
+    return parser.parse_args(_args)
 
-    # dir
-    if args.tmp_dir is None:
-        args.tmp_dir = os.path.join(args.out_dir, "tmp")
-    
-    return args
+
+def build_multi_catalog(mm, args, manifest, cells_manifests, samples, multi_id):
+    """Assemble the multi-sample catalog and add targets that materialize the shared
+    factor files at the out_dir root, sourced from the FICTURE output (via the
+    manifests) with run_cartload2-consistent naming. Returns (catalog, shared_flags)."""
+    out_catalog = args.out_catalog
+    fic, root = args.fic_dir, args.out_dir
+    gzip = args.gzip or "gzip"
+    factors = {}
+    shared_flags = []
+
+    def cp(src_rel, dst):
+        return f'cp -f "{os.path.join(fic, src_rel)}" "{os.path.join(root, dst)}"'
+
+    def rgb(src_rel, dst):   # normalize the FICTURE cmap into an rgb.tsv (as run_cartload2 does)
+        s = os.path.join(fic, src_rel); d = os.path.join(root, dst)
+        return (f'python3 -c "from cartloader.utils.cartload_helper import copy_rgb_tsv; '
+                f"copy_rgb_tsv('{s}', '{d}', restart=True)\"")
+
+    def umap_cmds(src_tsv_rel, src_png_rel, oid):
+        tip = args.tippecanoe or f"{repo_dir}/submodules/tippecanoe/tippecanoe"
+        ndjson = os.path.join(args.tmp_dir, f"{oid}-umap.ndjson")
+        out_tsv = os.path.join(root, f"{oid}-umap.tsv.gz")
+        out_pmt = os.path.join(root, f"{oid}-umap.pmtiles")
+        return [
+            cp(src_tsv_rel, f"{oid}-umap.tsv.gz"),
+            cp(src_png_rel, f"{oid}-umap.png"),
+            render_umap_cmd(out_tsv, ndjson,
+                            args.umap_colname_factor or "topK",
+                            args.umap_colname_x or "UMAP1",
+                            args.umap_colname_y or "UMAP2"),
+            umap_tippecanoe_cmd(out_pmt, ndjson, tip, args.tmp_dir,
+                                threads=args.threads or 4,
+                                min_zoom=args.umap_min_zoom if args.umap_min_zoom is not None else 0,
+                                max_zoom=args.umap_max_zoom if args.umap_max_zoom is not None else 18,
+                                preserve_thres=args.preserve_point_density_thres or 1024),
+            f"rm -f {ndjson}",
+        ]
+
+    # --- model-derived factors (from the joint LDA models) ---
+    for tp in manifest.get("shared", {}).get("train_params", []):
+        oid = tp["model_id"].replace("_", "-")
+        cmds = cmd_separator([], f"Materializing shared factor {tp['model_id']}")
+        # `post` keeps its provenance suffix: -model.tsv for an LDA model.
+        cmds += [cp(tp["model_path"], f"{oid}-model.tsv"),
+                 rgb(tp["cmap"], f"{oid}-rgb.tsv"),
+                 cp(tp["de_path"], f"{oid}-de.tsv"),
+                 cp(tp["info_path"], f"{oid}-info.tsv")]
+        entry = {"post": f"{oid}-model.tsv", "rgb": f"{oid}-rgb.tsv",
+                 "de": f"{oid}-de.tsv", "info": f"{oid}-info.tsv"}
+        u = tp.get("umap")
+        if u:
+            cmds += umap_cmds(u["tsv"], u["png"], oid)
+            entry["umap"] = {"pmtiles": f"{oid}-umap.pmtiles", "png": f"{oid}-umap.png",
+                             "tsv": f"{oid}-umap.tsv.gz"}
+        flag = os.path.join(root, f"{oid}.shared.done")
+        cmds.append(f"touch {flag}")
+        mm.add_target(flag, [os.path.join(fic, tp["model_path"])], cmds)
+        shared_flags.append(flag)
+        # Key the factor by the hyphenated id (oid) so it matches the file names.
+        factors[oid] = entry
+
+    # --- cell-derived factors (same keys) ---
+    for cm in cells_manifests:
+        prefix = cm.get("out_prefix"); oid = prefix.replace("_", "-")
+        csh = cm.get("shared", {})
+        cmds = cmd_separator([], f"Materializing shared cell factor {prefix}")
+        entry, prereqs = {}, []
+        if "shared_cluster_pseudobulk" in csh:
+            src = csh["shared_cluster_pseudobulk"]
+            # `post` keeps its provenance suffix: -pseudobulk.tsv.gz for cell clusters.
+            cmds.append(f'{gzip} -c "{os.path.join(fic, src)}" > "{os.path.join(root, oid + "-pseudobulk.tsv.gz")}"')
+            entry["post"] = f"{oid}-pseudobulk.tsv.gz"; prereqs.append(os.path.join(fic, src))
+        if "shared_cmap" in csh:
+            cmds.append(rgb(csh["shared_cmap"], f"{oid}-rgb.tsv")); entry["rgb"] = f"{oid}-rgb.tsv"
+        if "shared_cluster_de" in csh:
+            cmds.append(cp(csh["shared_cluster_de"], f"{oid}-de.tsv")); entry["de"] = f"{oid}-de.tsv"
+        if "shared_cluster_info" in csh:
+            cmds.append(cp(csh["shared_cluster_info"], f"{oid}-info.tsv")); entry["info"] = f"{oid}-info.tsv"
+        um = csh.get("manifolds", {}).get("umap")
+        if um:
+            cmds += umap_cmds(um["tsv"], um["png"], oid)
+            entry["umap"] = {"pmtiles": f"{oid}-umap.pmtiles", "png": f"{oid}-umap.png",
+                             "tsv": f"{oid}-umap.tsv.gz"}
+        if "shared_cluster_model_heatmap_pdf" in csh:
+            cmds.append(cp(csh["shared_cluster_model_heatmap_pdf"], f"{oid}-heatmap.pdf"))
+            cmds.append(cp(csh["shared_cluster_model_heatmap_tsv"], f"{oid}-heatmap.tsv"))
+            entry["heatmap"] = {"pdf": f"{oid}-heatmap.pdf", "tsv": f"{oid}-heatmap.tsv"}
+        flag = os.path.join(root, f"{oid}.shared.done")
+        cmds.append(f"touch {flag}")
+        mm.add_target(flag, prereqs, cmds)
+        shared_flags.append(flag)
+        # Key the factor by the hyphenated id (oid) so it matches the file names.
+        factors[oid] = entry
+
+    catalog = {
+        "id": multi_id,
+        "analysis_type": "multi-sample",
+        "n_samples": len(samples),
+        "samples": {sid: os.path.join(f"{multi_id}-{sid}", out_catalog) for sid in samples},
+        # Mirror the per-sample catalog.yaml layout: layers live under "assets"
+        # (assets.sge, assets.factors, ...). The unified sge counts are added by
+        # run_cartload2_multi once the shared gene->bin assignment path is known.
+        "assets": {
+            "factors": factors,
+        },
+    }
+    return catalog, shared_flags
+
 
 def run_cartload2_multi(_args):
-    """
-    Build resources for CartoScope
-    """
+    args = parse_arguments(_args)
+    if args.tmp_dir is None:
+        args.tmp_dir = os.path.join(args.out_dir, "tmp")
 
-    # parse argument
-    args=parse_arguments(_args)
-
-    # start mm
-    mm = minimake()
-
-    # files/dirs
     os.makedirs(args.out_dir, exist_ok=True)
-    ficture2_flag = os.path.join(args.fic_dir, "multi_json_each.done")
 
-    # read the in_list
-    df=pd.read_csv(args.in_list, sep="\t", dtype=str, header=None)
-    
-    if df.shape[1] < 2:
-        raise ValueError(f"Input list {args.in_list} must have at least 2 columns: sample id and path to transcript")
-    
-    df.columns = ["id", "transcript_path"] + (["title"] if df.shape[1] >= 3 else []) + (["desc"] if df.shape[1] >= 4 else [])
-    
-    # process by row
-    for idx, row in df.iterrows():
-        id = row["id"]
-        transcript_path = row["transcript_path"]
-        title = row["title"] if "title" in df.columns else None
-        desc = row["desc"] if "desc" in df.columns else None
-        out_id = id.replace("_", "-").lower()   
-        
-        fic_dir = os.path.join(args.fic_dir, "samples", id)
-        fic_param_assets = os.path.join(fic_dir, "ficture.params.json")
+    # Read the shared multi manifest written by run_ficture2_multi
+    manifest_path = os.path.join(args.fic_dir, args.in_multi_params)
+    if not os.path.exists(manifest_path):
+        raise FileNotFoundError(
+            f"Multi manifest not found: {manifest_path}. Run run_ficture2_multi first (it writes {args.in_multi_params}).")
+    with open(manifest_path) as f:
+        manifest = json.load(f)
+    samples = list(manifest.get("samples", {}).keys())
+    if not samples:
+        raise ValueError(f"No samples found in {manifest_path}")
 
-        cart_dir = os.path.join(args.out_dir, id)
-        os.makedirs(cart_dir, exist_ok=True)
-        catalog_yaml = os.path.join(cart_dir, args.out_catalog if args.out_catalog is not None else "catalog.yaml")
+    # Any cell-analysis multi manifests (ficture.multi.<prefix>.params.json)
+    cells_manifests = []
+    for p in sorted(glob.glob(os.path.join(args.fic_dir, "ficture.multi.*.params.json"))):
+        if os.path.basename(p) == args.in_multi_params:
+            continue
+        with open(p) as f:
+            cells_manifests.append(json.load(f))
 
-        prerequisites = [ficture2_flag, fic_param_assets]
+    multi_id = args.id if args.id is not None else os.path.basename(os.path.normpath(args.out_dir))
 
-        cmds = cmd_separator([], f"Running run_cartload2 for sample {id}")
+    mm = minimake()
+    # Shared joint feature list from the FICTURE multi output. Its path is recorded in the
+    # multi manifest (shared.multi_hexagon.features); passing it to every sample's
+    # run_cartload2 keeps point PMTiles gene-to-bin assignment identical across samples.
+    multi_features_rel = manifest.get("shared", {}).get("multi_hexagon", {}).get("features")
+    multi_features = os.path.join(args.fic_dir, multi_features_rel) if multi_features_rel else None
+
+    os.makedirs(args.tmp_dir, exist_ok=True)
+
+    # Shared gene->bin assignment for the unified counts view. When the FICTURE multi
+    # output provides a joint feature list, compute one gene->bin assignment (with the
+    # per-gene aggregate counts) once via 'assign-feature2bin'. This single _bin_counts.json
+    # is referenced by the multi catalog and handed to every per-sample run_cartload2
+    # (--in-bin-json), so all samples share an identical gene-to-bin assignment and one
+    # unified per-gene counts view across samples.
+    spatula = args.spatula or os.path.join(repo_dir, "submodules", "spatula", "bin", "spatula")
+    counts_oid = args.out_molecules_id or "genes"
+    shared_bin_json = None
+    if multi_features:
+        shared_bin_json = os.path.join(args.out_dir, f"{counts_oid}_bin_counts.json")
+        bin_count = args.bin_count if args.bin_count is not None else 50
+        cmds = cmd_separator([], "Assigning shared gene->bin bins (assign-feature2bin) for the unified counts view")
+        cmds.append(f"'{spatula}' assign-feature2bin --feature-tsv {multi_features} "
+                    f"--out-json {shared_bin_json} --bin-count {bin_count}")
+        mm.add_target(shared_bin_json, [multi_features], cmds)
+
+    # Build the shared factor targets first — this materializes the shared factor files
+    # (including the shared UMAP PMTiles) once at the out_dir root. Each per-sample
+    # run_cartload2 then depends on these flags and reuses the shared UMAP instead of
+    # re-running tippecanoe for every sample.
+    multi_catalog, shared_flags = build_multi_catalog(mm, args, manifest, cells_manifests, samples, multi_id)
+    if shared_bin_json is not None:
+        # The unified per-gene counts / gene->bin assignment for multi-sample CartoScope,
+        # placed at assets.sge.counts to match the per-sample catalog.yaml layout. Keep
+        # sge ahead of factors, as in the per-sample catalog.
+        assets = multi_catalog.get("assets", {})
+        multi_catalog["assets"] = {"sge": {"counts": os.path.basename(shared_bin_json)}, **assets}
+    with open(os.path.join(args.out_dir, args.multi_catalog), "w") as f:
+        yaml.safe_dump(multi_catalog, f, sort_keys=False)
+
+    sample_catalogs = {}
+    for sid in samples:
+        sample_rel = manifest["samples"][sid]                     # e.g. samples/<sid>/ficture.params.json
+        sample_fic_dir = os.path.join(args.fic_dir, os.path.dirname(sample_rel))
+        out_id = f"{multi_id}-{sid}"
+        cart_dir = os.path.join(args.out_dir, out_id)
+        catalog_yaml = os.path.join(cart_dir, args.out_catalog)
+        sample_catalogs[sid] = catalog_yaml
+
+        # Auto-detect per-sample cell analyses (ficture.<prefix>.params.json, excluding the base)
+        cell_params = [p for p in sorted(glob.glob(os.path.join(sample_fic_dir, "ficture.*.params.json")))
+                       if os.path.basename(p) != "ficture.params.json"]
+
+        # Depend on the shared factor targets so the shared UMAP PMTiles exist before
+        # this sample's run_cartload2 copies (rather than recomputes) them, and on the
+        # shared gene->bin assignment so it is materialized before this sample reuses it.
+        prereqs = [manifest_path, os.path.join(args.fic_dir, sample_rel)] + shared_flags
+        if shared_bin_json:
+            prereqs.append(shared_bin_json)
+
+        cmds = cmd_separator([], f"Packaging sample {sid} (run_cartload2)")
         cmd = " ".join([
             "cartloader", "run_cartload2",
             f"--out-dir {cart_dir}",
-            f"--fic-dir {fic_dir}",
+            f"--fic-dir {sample_fic_dir}",
             f"--id {out_id}",
-            f"--title '{title}'" if title is not None else "",
-            f"--desc '{desc}'" if desc is not None else "",
-            f"--gdal_translate '{args.gdal_translate}'" if args.gdal_translate is not None else "",
-            f"--makefn run_cartload2.mk",
+            (f"--in-bin-json {shared_bin_json}" if shared_bin_json else ""),
+            f"--reuse-shared-umap-dir {args.out_dir}",
+            ("--in-cell-params " + " ".join(cell_params)) if cell_params else "",
+            "--makefn run_cartload2.mk",
         ])
         cmd = add_param_to_cmd(cmd, args, aux_args["params"])
         cmd = add_param_to_cmd(cmd, args, aux_args["env"])
         cmd = add_param_to_cmd(cmd, args, aux_args["run"])
         cmds.append(cmd)
-        mm.add_target(catalog_yaml, prerequisites, cmds)
+        mm.add_target(catalog_yaml, prereqs, cmds)
 
     if len(mm.targets) == 0:
         raise ValueError("No tasks were generated. Check inputs and parameters.")
 
-    ## write makefile
     make_f = os.path.join(args.out_dir, args.makefn)
     mm.write_makefile(make_f)
+    # --n-jobs applies to both the outer (samples in parallel) and inner
+    # (per-sample run_cartload2) make. Effective concurrency is usually capped
+    # by local bottlenecks; if it does oversubscribe, lower --n-jobs.
+    execute_makefile(make_f, dry_run=args.dry_run, restart=args.restart, n_jobs=args.n_jobs)
 
-    execute_makefile(make_f, dry_run=args.dry_run, restart=args.restart, n_jobs=1)
 
 if __name__ == "__main__":
-    # Get the base file name without extension
     script_name = os.path.splitext(os.path.basename(__file__))[0]
-
-    # Dynamically get the function based on the script name
     func = getattr(sys.modules[__name__], script_name)
-
-    # Call the function with command line arguments
     func(sys.argv[1:])

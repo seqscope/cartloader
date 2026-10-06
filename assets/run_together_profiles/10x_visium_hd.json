@@ -1,0 +1,42 @@
+{
+  "platform": "10x_visium_hd",
+  "ingest": {
+    "sge_platform": "10x_visium_hd",
+    "inputs": {
+      "--scale-json": "binned_outputs/square_002um/spatial/scalefactors_json.json",
+      "--in-mex": "binned_outputs/square_002um/filtered_feature_bc_matrix/",
+      "--pos-parquet": "binned_outputs/square_002um/spatial/tissue_positions.parquet"
+    },
+    "extra_flags": ["--sge-visual", "--scale-xy 2.0"]
+  },
+  "roles": {
+    "mex": { "file": "segmented_outputs/filtered_feature_cell_matrix" },
+    "boundaries": {
+      "file": "segmented_outputs/cell_segmentations.geojson",
+      "format": "geojson",
+      "cell_id_format": "cellid_{:09d}-1",
+      "cell_id_prop": "cell_id",
+      "units_json": "binned_outputs/square_002um/spatial/scalefactors_json.json"
+    }
+  },
+  "ficture_defaults": { "decode_scale": 2 },
+  "ficture": [
+    { "id": "denovo", "mode": "train", "width": "12", "n_factor": "24,48,96" }
+  ],
+  "cell_analyses": [
+    { "id": "cartloader", "uses": ["mex"], "optional_uses": ["boundaries"], "require_all": true }
+  ],
+  "cartload": { "use_pmpoint": true, "bin_count": 500, "sge_scale": 2 },
+  "images": [],
+  "squares": [
+    { "subdir": "binned_outputs/square_008um", "bin_size": 8, "suffix": "spaceranger-sq008" },
+    { "subdir": "binned_outputs/square_016um", "bin_size": 16, "suffix": "spaceranger-sq016" }
+  ],
+  "cell_import": { "detect_dir": "segmented_outputs", "suffix": "spaceranger" },
+  "hne": {
+    "georef_plain": true,
+    "um_per_pixel_json": "binned_outputs/square_002um/spatial/scalefactors_json.json",
+    "um_per_pixel_key": "microns_per_pixel",
+    "out_id": "hne"
+  }
+}

@@ -45,7 +45,7 @@ train_width=18                           # define LDA training hexagon width (co
 n_factor=6,12                            # define number of factors in LDA training (comma-separated if multiple n-factor values are provided)
 ```
 
-!!! info "How to Define Scaling Factors for Pixel-Seq?"
+!!! question "How to define Scaling Factors for Pixel-Seq?"
 
     In [Pixel-Seq publication](https://doi.org/10.1016/j.cell.2022.10.021):
     > "Because polonies have varied sizes and shapes, to maximize the feature resolution we developed a base-calling pipeline to determine the major barcode species in each pixel (0.325 * 0.325 mm2) of gel images to construct a spatial barcode map".

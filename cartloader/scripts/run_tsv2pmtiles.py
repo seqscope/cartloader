@@ -21,10 +21,20 @@ def parse_arguments(_args):
     inout_params = parser.add_argument_group("Input/Output Parameters", "Input/output directory/files.")
     inout_params.add_argument('--in-molecules', type=str, help='Input Long Format TSV/CSV (possibly gzipped) file containing the X/Y coordinates and gene expression counts per spot')
     inout_params.add_argument('--in-features', type=str, help='Input TSV/CSV (possibly gzipped) file containing the gene name and total count for each gene')
+    inout_params.add_argument('--in-bin-json', type=str, default=None, help='Optional precomputed gene->bin assignment JSON (spatula assign-feature2bin output, i.e. a _bin_counts.json). When provided, the gene-to-bin assignment is reused from this file instead of being derived from --in-features, so assignment is identical across all datasets that share it. A copy is written to <out-prefix>_bin_counts.json.')
     inout_params.add_argument('--out-prefix', required= True, type=str, help='The output prefix. New directory will be created if needed')  
     inout_params.add_argument('--colname-feature', type=str, default='gene', help='Input/output Column name for gene name (default: gene)')
     inout_params.add_argument('--colname-count', type=str, default='gn', help='Column name for feature counts')
     inout_params.add_argument('--col-rename', type=str, nargs='+', help='Columns to rename in the output file. Format: old_name1:new_name1 old_name2:new_name2 ...')
+    # Column names AS THEY APPEAR IN --in-molecules. split-mol2bin looks its columns up
+    # by the input name (--col-rename only rewrites the output header), so an input whose
+    # header differs from the defaults (X/Y/gene) must name them here. E.g. a punkst tiled
+    # TSV has the header "#X Y Feature count", so its X/Y/count already match but its
+    # feature column needs --in-colname-feature Feature. Unset = leave split-mol2bin's
+    # own defaults in place.
+    inout_params.add_argument('--in-colname-x', type=str, default=None, help='Column name for X in --in-molecules (default: split-mol2bin default, X)')
+    inout_params.add_argument('--in-colname-y', type=str, default=None, help='Column name for Y in --in-molecules (default: split-mol2bin default, Y)')
+    inout_params.add_argument('--in-colname-feature', type=str, default=None, help='Column name for the feature/gene in --in-molecules (default: Feature with --use-pmpoint, else split-mol2bin default, gene)')
 
     key_params = parser.add_argument_group("Key Parameters", "Key parameters frequently used by users")
     key_params.add_argument('--bin-count', type=int, default=50, help='Number of bins to equally divide the genes into (default: 50)')
@@ -91,6 +101,9 @@ def run_tsv2pmtiles(_args):
         args.col_rename.append("X:lon")
         args.col_rename.append("Y:lat")
 
+    if args.use_pmpoint and "Feature:gene" not in args.col_rename:
+        args.col_rename.append("Feature:gene")
+
     # start mm
     mm = minimake()
 
@@ -107,32 +120,76 @@ def run_tsv2pmtiles(_args):
     
     # 1. Perform split without running makefile
     if args.split:
-        logger.info("Splitting the input cross-platform TSV file into CSV files")
+        logger.info("Splitting the input cross-platform TSV file into per-bin files")
 
-        cmd = f"""'{args.spatula}' split-molecule-counts \\
+        in_colname_feature = args.in_colname_feature or ("Feature" if args.use_pmpoint else None)
+        pmpoint_arg = f"--colname-feature {in_colname_feature}" if in_colname_feature else ""
+        if args.in_colname_x:
+            pmpoint_arg += f" --colname-x {args.in_colname_x}"
+        if args.in_colname_y:
+            pmpoint_arg += f" --colname-y {args.in_colname_y}"
+        col_rename_arg = ""
+        if args.col_rename is not None and len(args.col_rename) > 0:
+            for col_rename in args.col_rename:
+                col_rename_arg += f" --col-rename {col_rename}"
+
+        # The gene->bin assignment is produced by 'assign-feature2bin' and consumed by
+        # 'split-mol2bin'. When --in-bin-json is given (e.g. a shared assignment from
+        # run_cartload2_multi), reuse it so gene-to-bin assignment is identical across
+        # samples; otherwise derive it from this dataset's own feature counts.
+        bin_json = f"{args.out_prefix}_bin_counts.json"
+        if args.in_bin_json is not None:
+            logger.info(f"Reusing gene->bin assignment from {args.in_bin_json}")
+            if os.path.abspath(args.in_bin_json) != os.path.abspath(bin_json):
+                shutil.copyfile(args.in_bin_json, bin_json)
+        else:
+            assign_cmd = f"""'{args.spatula}' assign-feature2bin \\
+                    --feature-tsv '{args.in_features}' \\
+                    --out-json '{bin_json}' \\
+                    --bin-count {args.bin_count} \\
+                    --in-feature-tsv-delim '{args.in_features_delim}'
+            """
+            print(assign_cmd)
+            result = subprocess.run(assign_cmd, shell=True)
+            if result.returncode != 0:
+                logger.error("Error in assigning features to bins (assign-feature2bin)")
+                sys.exit(1)
+
+        cmd = f"""'{args.spatula}' split-mol2bin \\
                 --mol-tsv '{args.in_molecules}' \\
-                --feature-tsv '{args.in_features}' \\
+                --bin-json '{bin_json}' \\
                 --out-prefix '{args.out_prefix}' \\
-                --bin-count {args.bin_count} \\
                 --in-mol-tsv-delim '{args.in_molecules_delim}' \\
-                --in-feature-tsv-delim '{args.in_features_delim}' \\
                 --out-mol-tsv-delim '{args.out_molecules_delim}' \\
                 --out-feature-tsv-delim '{args.out_features_delim}' \\
                 --out-mol-suffix '{args.out_molecules_suffix}' \\
-                --out-feature-suffix '{args.out_features_suffix}'
-        """ + ("--skip-original" if args.skip_original else "")
+                --out-feature-suffix '{args.out_features_suffix}' {pmpoint_arg} {col_rename_arg} \\
+                """ + ("--skip-original" if args.skip_original else "")
 
         print(cmd)
         result = subprocess.run(cmd, shell=True)
 
         if result.returncode != 0:
-            logger.error("Error in splitting the input TSV file into CSV files")
+            logger.error("Error in splitting the input TSV file into per-bin files")
             sys.exit(1)
+
+    # pmpoint reads the SPLIT output, whose header has already been rewritten by
+    # --col-rename, so its X/Y column names are the renamed ones.
+    def _renamed(name):
+        for r in args.col_rename:
+            old, sep, new = r.partition(":")
+            if sep and old == name:
+                return new
+        return name
+    pmpoint_colname_x = _renamed(args.in_colname_x or "X")
+    pmpoint_colname_y = _renamed(args.in_colname_y or "Y")
 
     # 2. Perform conversion:
     if args.convert:
-        ## open index file
-        df = pd.read_csv(f"{args.out_prefix}_index.tsv", sep="\t")
+        ## open index file. bin_id is read as text: it is "all" plus the numbered bins,
+        ## but with --skip-original there is no "all" row and pandas would otherwise
+        ## infer an integer column, which the name-building below cannot concatenate.
+        df = pd.read_csv(f"{args.out_prefix}_index.tsv", sep="\t", dtype={"bin_id": str})
 
         ## add targets for each bin
         for i, row in df.iterrows():
@@ -147,7 +204,7 @@ def run_tsv2pmtiles(_args):
             cmds = cmd_separator([], f"Converting bin {bin_id} to pmtiles")
             if args.use_pmpoint:
                 cmds.append(f"mkdir -p {args.tmp_dir}/{bin_id}")
-                cmds.append(f"'{args.pmpoint}' build-point-pmtiles --tmp-dir {args.tmp_dir}/{bin_id} --in {csv_path} --out {pmtiles_prefix}.z{args.max_zoom}.pmtiles --zoom {args.max_zoom} --colname-x X --colname-y Y --delim ',' --threads {args.threads} --format {args.tile_format_pmpoint}")
+                cmds.append(f"'{args.pmpoint}' build-point-pmtiles --tmp-dir {args.tmp_dir}/{bin_id} --in {csv_path} --out {pmtiles_prefix}.z{args.max_zoom}.pmtiles --zoom {args.max_zoom} --colname-x {pmpoint_colname_x} --colname-y {pmpoint_colname_y} --delim ',' --threads {args.threads} --format {args.tile_format_pmpoint}")
                 cmds.append(f"'{args.pmpoint}' build-pyramid-pmtiles --scale-factor-compression {args.pmpoint_compression_scale} --tmp-dir {args.tmp_dir}/{bin_id} --in {pmtiles_prefix}.z{args.max_zoom}.pmtiles --out {pmtiles_prefix}.pmtiles --min-zoom {args.min_zoom} --max-tile-bytes {args.max_tile_bytes} --max-tile-features {args.max_feature_counts} --threads {args.threads}")
                 cmds.append(f"rm {pmtiles_prefix}.z{args.max_zoom}.pmtiles")
                 cmds.append(f"rm -rf {args.tmp_dir}/{bin_id}")
@@ -172,7 +229,7 @@ def run_tsv2pmtiles(_args):
     if not args.keep_intermediate_files:
         logger.info("Cleaning intermediate files")
 
-        df = pd.read_csv(f"{args.out_prefix}_index.tsv", sep="\t")
+        df = pd.read_csv(f"{args.out_prefix}_index.tsv", sep="\t", dtype={"bin_id": str})
         for i, row in df.iterrows():
             bin_id = row["bin_id"]
             csv_path = out_dir + "/" + row["molecules_path"]

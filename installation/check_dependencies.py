@@ -3,7 +3,9 @@ import subprocess
 import sys
 import shutil
 import importlib.util
+import importlib.metadata
 import os
+import re
 from pathlib import Path
 
 # Identify Repo Root
@@ -42,26 +44,62 @@ def check_submodule(submodule_path):
         print(f"[MISSING] Submodule {submodule_path} is missing or empty")
         return False
 
-def check_python_module(module_name):
-    import_name = module_name
-    if module_name == "Pillow":
-        import_name = "PIL"
-    elif module_name == "PyYAML":
-        import_name = "yaml"
-    elif module_name == "scikit-learn":
-        import_name = "sklearn"
-    elif module_name == "parquet-tools": 
+# pip distribution name -> import name, where they differ beyond '-' -> '_'
+IMPORT_NAMES = {
+    "Pillow": "PIL",
+    "PyYAML": "yaml",
+    "scikit-learn": "sklearn",
+    "google-genai": "google.genai",
+    "opentsne": "openTSNE",
+}
+
+def read_requirements():
+    """(name, minimum version or None, extra or None) for every dependency the package
+    declares, read from pyproject.toml so this check always matches what the install step
+    installs. Python < 3.11 has no tomllib; there the installed package's metadata is read
+    instead (importlib.metadata.PackageNotFoundError if cartloader is not installed)."""
+    try:
+        import tomllib
+        with open(REPO_ROOT / "pyproject.toml", "rb") as f:
+            project = tomllib.load(f)["project"]
+        specs = [(s, None) for s in project.get("dependencies", [])]
+        for extra, deps in project.get("optional-dependencies", {}).items():
+            specs += [(s, extra) for s in deps]
+    except ModuleNotFoundError:
+        specs = []
+        for s in importlib.metadata.requires("cartloader") or []:
+            m = re.search(r"""extra\s*==\s*['"]([^'"]+)['"]""", s)
+            specs.append((s.split(";", 1)[0], m.group(1) if m else None))
+    reqs = []
+    for spec, extra in specs:
+        name = re.match(r"[A-Za-z0-9][A-Za-z0-9._-]*", spec.strip()).group(0)
+        m = re.search(r">=\s*([0-9][0-9.]*)", spec)
+        reqs.append((name, m.group(1) if m else None, extra))
+    return reqs
+
+def _version_tuple(v):
+    return tuple(int(p) for p in re.findall(r"\d+", v)[:3])
+
+def check_python_module(module_name, min_version=None, extra=None):
+    if module_name == "parquet-tools":
         # Skip package check, handled as binary
         return True
-    
+    import_name = IMPORT_NAMES.get(module_name, module_name.replace("-", "_"))
+    note = f" (optional: [{extra}])" if extra else ""
+
     try:
         if importlib.util.find_spec(import_name) is not None:
-             print(f"[OK] {module_name:<20} installed")
-             return True
+            if min_version:
+                installed = importlib.metadata.version(module_name)
+                if _version_tuple(installed) < _version_tuple(min_version):
+                    print(f"[OUTDATED] {module_name:<20} {installed} installed, >= {min_version} required{note}")
+                    return False
+            print(f"[OK] {module_name:<20} installed{note}")
+            return True
     except Exception:
         pass
-    
-    print(f"[MISSING] {module_name:<20} not installed")
+
+    print(f"[MISSING] {module_name:<20} not installed{note}")
     return False
 
 def check_r_package(package_name):
@@ -78,7 +116,7 @@ def main():
     print(f"Repo Root detected as: {REPO_ROOT}\n")
 
     # Check for globally available tools first to inform submodule checks
-    has_magick = shutil.which("magick") is not None
+    has_imagemagick = shutil.which("convert") is not None or shutil.which("magick") is not None
 
     print("Checking Submodules...")
     # List of submodules to check
@@ -92,8 +130,8 @@ def main():
     missing_submodules = []
     
     for sub in submodules:
-        if sub == "submodules/ImageMagick" and has_magick:
-            print(f"[NOTE] Skipping {sub} check because 'magick' is in PATH")
+        if sub == "submodules/ImageMagick" and has_imagemagick:
+            print(f"[NOTE] Skipping {sub} check because ImageMagick is in PATH")
             continue
             
         if not check_submodule(sub):
@@ -105,7 +143,6 @@ def main():
     tool_fallbacks = {
         "spatula": ["submodules/spatula/build/spatula", "submodules/spatula/bin/spatula"],
         "tippecanoe": ["submodules/tippecanoe/tippecanoe"],
-        "magick": ["submodules/ImageMagick/utilities/magick"], # depends on how IM is built, usually make install puts it in /usr/local
         "pmtiles": [], # User installed manually
     }
     
@@ -117,7 +154,6 @@ def main():
         "spatula",                    
         "tippecanoe",                 
         "pmtiles",                    
-        "magick",                     
         "Rscript",                    
         "python"                      
     ]
@@ -127,18 +163,32 @@ def main():
         fallbacks = tool_fallbacks.get(tool)
         if not check_command(tool, fallback_paths=fallbacks):
             missing_tools.append(tool)
+
+    # ImageMagick (used by spatula's CImg): ImageMagick 6 provides `convert` (e.g. Ubuntu's
+    # apt package) and ImageMagick 7 provides `magick`; either one will do.
+    if shutil.which("convert"):
+        check_command("convert", name="ImageMagick")
+    elif not check_command("magick", name="ImageMagick",
+                           # depends on how IM is built, usually make install puts it in /usr/local
+                           fallback_paths=["submodules/ImageMagick/utilities/magick"]):
+        missing_tools.append("ImageMagick (convert or magick)")
             
     print("\nChecking Python Packages...")
-    python_packages = [
-        "numpy", "pandas", "ficture", "tifffile", "imagecodecs", 
-        "Pillow", "psutil", "rasterio", "requests", "setuptools", 
-        "PyYAML", "polars"
-    ]
-    
-    missing_python = []
-    for pkg in python_packages:
-        if not check_python_module(pkg):
-            missing_python.append(pkg)
+    missing_python, missing_optional = [], {}
+    try:
+        requirements = read_requirements()
+    except importlib.metadata.PackageNotFoundError:
+        print("[MISSING] cartloader is not installed, so its dependencies cannot be read "
+              "(install it with: pip install -e .)")
+        requirements = []
+        missing_python.append("cartloader")
+    for pkg, min_version, extra in requirements:
+        if not check_python_module(pkg, min_version, extra):
+            name = pkg if min_version is None else f"{pkg}>={min_version}"
+            if extra is None:
+                missing_python.append(name)
+            else:
+                missing_optional.setdefault(extra, []).append(name)
 
     # Check parquet-tools CLI specifically
     if not check_command("parquet-tools"):
@@ -173,7 +223,10 @@ def main():
     if missing_r:
         print(f"Missing R Packages: {', '.join(missing_r)}")
         clean = False
-        
+    # Optional extras do not fail the check; they are needed only for the features they cover.
+    for extra, names in missing_optional.items():
+        print(f"Missing optional [{extra}] packages (install with: pip install -e '.[{extra}]'): {', '.join(names)}")
+
     if clean:
         print("All dependencies appear to be properly installed!")
         sys.exit(0)

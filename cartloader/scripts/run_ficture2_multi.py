@@ -1,7 +1,7 @@
-import sys, os, gzip, argparse, logging, shutil, subprocess, inspect
+import sys, os, gzip, argparse, logging, shutil, subprocess, inspect, json
 import pandas as pd
 from cartloader.utils.minimake import minimake
-from cartloader.utils.utils import cmd_separator, scheck_app, add_param_to_cmd, read_minmax, flexopen, execute_makefile
+from cartloader.utils.utils import cmd_separator, scheck_app, add_param_to_cmd, read_minmax, flexopen, execute_makefile, write_dict_to_file
 from cartloader.utils.ficture2_helper import (
     define_lda_runs,
     define_decode_runs,
@@ -35,6 +35,9 @@ def parse_arguments(_args):
     key_params = parser.add_argument_group("Key Parameters", "Key parameters that requires user's attention")
     key_params.add_argument('--width', type=str, required=True, help='Comma-separated hexagon flat-to-flat widths (in um) for LDA training')
     key_params.add_argument('--n-factor', type=str, help='Comma-separated list of factor counts for LDA training.')
+    key_params.add_argument('--prepare-only', action='store_true', default=False, help='Run only the multi-sample tiling/hexagon step and write the manifests with no models. Produces the tiled TSV/index that packaging (run_cartload2) reads, so a dataset can be hosted without any factor analysis.')
+    key_params.add_argument('--segment-10x', action='store_true', default=False, help='Also export the per-sample hexagon files as 10x MEX directories (samples/<sample>/<sample>.hex_<width>.mex/ with barcodes/features/matrix) via spatula sptsv2mex. The MEX is built from the very same hexagon files the factor analysis uses (same --min-ct-per-unit-hexagon filter), so the two stay consistent. Works with --prepare-only.')
+    key_params.add_argument('--segment-width-10x', type=str, default=None, help='Comma-separated hexagon flat-to-flat widths (um) to export as 10x MEX with --segment-10x (default: the --width list). Widths not in --width are added to the hexagon step so their hexagon files exist too.')
     key_params.add_argument('--anchor-res', type=int, default=6, help='Anchor resolution for decoding (default: 6)')
     key_params.add_argument('--cmap-file', type=str, default=os.path.join(repo_dir, "assets", "default_color_map.tsv"), help='Path to fixed color map TSV (default: <cartloader_dir>/assets/default_color_map.tsv)')
 
@@ -52,6 +55,7 @@ def parse_arguments(_args):
     # segmentation - ficture
     aux_params.add_argument('--min-count-per-sample', type=int, default=50, help='Minimum count per sample in the tiled SGE (default: 50)')
     aux_params.add_argument('--min-ct-per-unit-hexagon', type=int, default=50, help='Minimum count per hexagon in hexagon segmentation in FICTURE compatible format (default: 50)')
+    aux_params.add_argument('--min-ct-per-unit-train', type=int, default=None, help='Minimum count per hexagon during LDA training/projection, counted over the features the analysis actually uses (default: punkst default). Worth raising/lowering when the feature filters below restrict the analysis to a small panel, since --min-ct-per-unit-hexagon is applied earlier, over all features.')
     # minibatch
     aux_params.add_argument('--minibatch-size', type=int, default=500, help='Batch size used in minibatch processing (default: 500)')
     # train
@@ -74,9 +78,15 @@ def parse_arguments(_args):
     aux_params.add_argument('--retrain', action='store_true', default=False, help='If set, retain the pre-trained model. Only applicable when --pretrained-model is set.')
 
     # AUX gene-filtering params
+    # The filters below restrict the features that LDA training/projection (and hence pixel
+    # decoding, whose model carries only the trained features) uses. They are deliberately NOT
+    # passed to multisample-prepare: tiling, the per-sample feature lists and the shared
+    # feature list stay complete, so the tiled TSV and everything packaging reads keep all genes.
     aux_ftrfilter_params = parser.add_argument_group( "Feature Customizing Auxiliary Parameters", "Customize features (typically genes) used by FICTURE without altering the original feature TSV") # This ensures the original feature TSV file is retained in the output JSON file for downstream processing
-    aux_ftrfilter_params.add_argument('--include-feature-regex', type=str, default=None, help='Regex of feature names to include')
-    aux_ftrfilter_params.add_argument('--exclude-feature-regex', type=str, default=None, help='Regex of feature names to exclude')
+    aux_ftrfilter_params.add_argument('--include-feature-regex', type=str, default=None, help='Regex of feature names to include in the FICTURE analysis')
+    aux_ftrfilter_params.add_argument('--exclude-feature-regex', type=str, default=None, help='Regex of feature names to exclude from the FICTURE analysis')
+    aux_ftrfilter_params.add_argument('--include-feature-list', type=str, default=None, help='Path to a file listing the feature names (one per line) to include in the FICTURE analysis. Names absent from the data are ignored. Combines with the regexes above.')
+    aux_ftrfilter_params.add_argument('--exclude-feature-list', type=str, default=None, help='Path to a file listing the feature names (one per line) to exclude from the FICTURE analysis. Combines with the regexes above.')
 
     # env params
     env_params = parser.add_argument_group("ENV Parameters", "Environment parameters, e.g., tools.")
@@ -94,13 +104,72 @@ def parse_arguments(_args):
 
     return parser.parse_args(_args)
 
-def add_multisample_prepare_targets(mm, args, ficture2bin, in_samples):
-    """Add Makefile target for multi-sample tiling and hexagon generation."""
-    widths = args.width.split(",")
+def _split_widths(csv):
+    return [w.strip() for w in (csv or "").split(",") if w.strip()]
 
-    cmds = cmd_separator([], f"Creating tiled tsv from {os.path.basename(args.in_list)}...")
-    cmds.append(f"touch '{args.out_dir}/multi.begin'")
-    cmd = " ".join([
+def hexagon_widths(args):
+    """Every hexagon width the prepare step must build: the training widths plus any
+    --segment-width-10x width not already among them (order preserved, no duplicates)."""
+    widths = _split_widths(args.width)
+    if args.segment_10x:
+        widths += [w for w in _split_widths(args.segment_width_10x) if w not in widths]
+    return widths
+
+def mex_widths(args):
+    """Hexagon widths exported as 10x MEX (empty unless --segment-10x)."""
+    if not args.segment_10x:
+        return []
+    return _split_widths(args.segment_width_10x) or _split_widths(args.width)
+
+def tiles_flag(args):
+    """Done flag of the tiling step (per-sample tiled transcripts and feature lists)."""
+    return f"{args.out_dir}/multi.tiles.done"
+
+def hex_flag(args, width):
+    """Done flag of the hexagon step for one width (per-sample and joint hexagon files)."""
+    return f"{args.out_dir}/multi.hex_{width}.done"
+
+def predates_prepare_flags(args):
+    """True for an output directory last prepared before the per-step done flags existed
+    (it has the old single multi.done flag but no settings files yet). Its outputs are
+    adopted as up to date instead of being rebuilt; see stamp_settings."""
+    return (os.path.exists(f"{args.out_dir}/multi.done")
+            and not os.path.exists(f"{args.out_dir}/multi.tiles.params.json"))
+
+def stamp_settings(target, settings_path, settings, outputs, inputs, adopt=False):
+    """Write `settings_path`, the settings file the Makefile `target` depends on.
+
+    The file is rewritten only when `settings` change, so its timestamp, and with it the
+    need to rerun the step, moves only on a real change. A target whose `outputs` have
+    gone missing is removed so that the step reruns.
+
+    With `adopt`, outputs built before settings files existed are marked up to date
+    instead, provided none of `inputs` (the target's other prerequisites) is newer than
+    them. The target and its settings file are dated to the newest input, the earliest
+    date at which the target is up to date, so that nothing built from the outputs
+    afterwards looks stale.
+    """
+    have_outputs = all(os.path.exists(p) for p in outputs)
+    if (adopt and have_outputs and not os.path.exists(settings_path)
+            and all(os.path.exists(p) for p in inputs)):
+        t_out = min(os.stat(p).st_mtime_ns for p in outputs)
+        t_in = max((os.stat(p).st_mtime_ns for p in inputs), default=t_out)
+        if t_in <= t_out:
+            write_dict_to_file(settings, settings_path)
+            if not os.path.exists(target):
+                open(target, "a").close()
+            os.utime(settings_path, ns=(t_in, t_in))
+            os.utime(target, ns=(t_in, t_in))
+            return
+    if os.path.exists(target) and not have_outputs:
+        os.remove(target)
+    write_dict_to_file(settings, settings_path)
+
+def prepare_cmd(args, ficture2bin, widths=()):
+    """The multisample-prepare command. Without widths it only tiles the samples and
+    writes the feature lists; with widths it also builds those hexagon widths, reusing
+    the existing tiles."""
+    parts = [
         f"'{ficture2bin}'", "multisample-prepare",
         f"--in-tsv-list '{args.in_list}'",
         f"--out-dir '{args.out_dir}'",
@@ -114,22 +183,153 @@ def add_multisample_prepare_targets(mm, args, ficture2bin, in_samples):
         f"--tile-size {args.tile_size}",
         f"--tile-buffer {args.tile_buffer}",
         f"--threads {args.threads}",
-        f"--hex-grid-dist {args.width.replace(',', ' ')}",
         f"--min-total-count-per-sample {args.min_count_per_sample}",
-        f"--min-count {args.min_ct_per_unit_hexagon}",
-        f"--include-feature-regex '{args.include_feature_regex}'" if args.include_feature_regex is not None else "",
-        f"--exclude-feature-regex '{args.exclude_feature_regex}'" if args.exclude_feature_regex is not None else "",
-    ])
-    cmds.append(cmd)
+        # No feature filter here on purpose: this step writes the tiled TSV, the per-sample
+        # feature lists and multi.features.tsv, all of which packaging reads and which must
+        # therefore keep every gene. Filtering happens at LDA time (see add_feature_select_target).
+    ]
+    if widths:
+        parts += [f"--hex-grid-dist {' '.join(widths)}",
+                  f"--min-count {args.min_ct_per_unit_hexagon}"]
+    return " ".join(parts)
 
-    cmd = f"[ -f '{args.out_dir}/multi.features.tsv' ]" + "".join([f" && [ -f '{args.out_dir}/multi.hex_{width}.txt' ]" for width in widths]) + f" && touch '{args.out_dir}/multi.done'"
-    cmds.append(cmd)
-    ## remove multi.done if exists to support incremental running
-    if os.path.exists(f"{args.out_dir}/multi.done"):
-        os.remove(f"{args.out_dir}/multi.done")
-    mm.add_target(f"{args.out_dir}/multi.done", [args.in_list], cmds)
+def add_multisample_prepare_targets(mm, args, ficture2bin, in_samples, sample2tsv, adopt=False):
+    """Add the Makefile targets for multi-sample tiling (tiles_flag) and for each hexagon
+    width (hex_flag), and return {width: hex_flag}.
 
-def add_lda_training_target(mm, args, ficture2bin, n_factor, train_width, model_prefix, hex_prefix, color_map, ficture2report):
+    Each step reruns only when needed, so re-invoking this script with unchanged inputs
+    leaves the multi.* outputs, and every LDA/decode target downstream of them, alone.
+    Each flag depends on a settings file (*.params.json, see stamp_settings) holding
+    what determines the step's output, including the contents of --in-list, so a changed
+    setting, a changed sample list, a new width or an earlier failed attempt reruns the
+    step. The tiling step also depends on the transcript files, so a re-ingested sample
+    is re-tiled.
+
+    punkst keeps per-sample outputs that already exist, so each step first removes the
+    ones it rebuilds. That matters for correctness, not just freshness: a per-sample
+    hexagon file numbers its features by a dictionary built over every listed sample,
+    and the joint file reuses those numbers, so one left over from a different sample
+    list would silently mislabel features. A changed list thus rebuilds every sample,
+    more than strictly needed, which is fine for so rare an event.
+    """
+    widths = hexagon_widths(args)
+    samples_dir = os.path.join(args.out_dir, "samples")
+    transcripts = [sample2tsv[s] for s in in_samples]
+
+    # 1) tiling (pts2tiles per sample, then the feature lists)
+    tiled = [os.path.join(samples_dir, s, f"{s}.tiled.{ext}") for s in in_samples for ext in ("tsv", "index")]
+    settings_path = f"{args.out_dir}/multi.tiles.params.json"
+    stamp_settings(tiles_flag(args), settings_path, {
+        "samples": sorted([s, sample2tsv[s]] for s in in_samples),  # tiles are per sample; order is irrelevant
+        "icol_x": args.colidx_x - 1,
+        "icol_y": args.colidx_y - 1,
+        "icol_feature": args.colidx_feature - 1,
+        "icol_count": args.colidx_count - 1,
+        "tile_size": args.tile_size,
+        "tile_buffer": args.tile_buffer,
+    }, tiled, transcripts, adopt)
+
+    cmds = cmd_separator([], f"Tiling the transcripts listed in {os.path.basename(args.in_list)}...")
+    cmds.append(f"touch '{args.out_dir}/multi.begin'")
+    cmds.append("rm -f " + " ".join(f"'{p}'" for p in tiled))
+    cmds.append(prepare_cmd(args, ficture2bin))
+    cmds.append(" && ".join(f"[ -f '{p}' ]" for p in tiled + [f"{args.out_dir}/multi.union_features.tsv"]) + f" && touch '{tiles_flag(args)}'")
+    mm.add_target(tiles_flag(args), [settings_path] + transcripts, cmds)
+
+    # 2) hexagons, one width at a time
+    flags = {}
+    for width in widths:
+        per_sample = [os.path.join(samples_dir, s, f"{s}.hex_{width}.{ext}") for s in in_samples for ext in ("txt", "json")]
+        joint = [f"{args.out_dir}/multi.hex_{width}.{ext}" for ext in ("txt", "json")]
+        settings_path = f"{args.out_dir}/multi.hex_{width}.params.json"
+        stamp_settings(hex_flag(args, width), settings_path, {
+            "samples": [[s, sample2tsv[s]] for s in in_samples],  # order sets each sample's index in the joint file
+            "hex_grid_dist": width,
+            "min_count_per_sample": args.min_count_per_sample,
+            "min_ct_per_unit_hexagon": args.min_ct_per_unit_hexagon,
+        }, per_sample + joint, [tiles_flag(args)], adopt)
+
+        cmds = cmd_separator([], f"Creating {width}um hexagons for the samples listed in {os.path.basename(args.in_list)}...")
+        cmds.append("rm -f " + " ".join(f"'{p}'" for p in per_sample))
+        cmds.append(prepare_cmd(args, ficture2bin, [width]))
+        cmds.append(" && ".join(f"[ -f '{p}' ]" for p in joint + [f"{args.out_dir}/multi.features.tsv"]) + f" && touch '{hex_flag(args, width)}'")
+        # Order-only on the previous width (after "|"): every run rewrites the shared feature
+        # lists, so two must not run at once, but one width's rerun must not make the next stale.
+        prev = list(flags.values())[-1:]
+        mm.add_target(hex_flag(args, width), [settings_path, tiles_flag(args)] + (["|"] + prev if prev else []), cmds)
+        flags[width] = hex_flag(args, width)
+    return flags
+
+def add_segment_10x_targets(mm, args, in_samples):
+    """Add one Makefile target per (sample, width) converting the per-sample hexagon
+    file written by multisample-prepare (samples/<s>/<s>.hex_<w>.txt + .json) into a 10x
+    MEX directory samples/<s>/<s>.hex_<w>.mex/ with spatula sptsv2mex. The hexagon file
+    is used as-is (it is neither re-generated nor deleted), so the MEX holds exactly the
+    hexagons the factor analysis sees, after the --min-ct-per-unit-hexagon filter.
+    Barcodes are the hexagon centers as "x:y" (the random key is dropped).
+
+    Returns {sample: [(width, mex_dir, done_flag), ...]}.
+    """
+    out = {}
+    for sample in in_samples:
+        entries = []
+        for width in mex_widths(args):
+            hex_prefix = os.path.join(args.out_dir, "samples", sample, f"{sample}.hex_{width}")
+            mex_dir = f"{hex_prefix}.mex"
+            done = f"{hex_prefix}.mex.done"
+            cmds = cmd_separator([], f"Exporting {width}um hexagons of sample {sample} to 10x MEX format...")
+            cmds.append(f"mkdir -p '{mex_dir}'")
+            cmds.append(" ".join([
+                f"'{args.spatula}'", "sptsv2mex",
+                f"--tsv '{hex_prefix}.txt'",
+                f"--json '{hex_prefix}.json'",
+                f"--out-dir '{mex_dir}'",
+            ]))
+            cmds.append(f"[ -f '{mex_dir}/barcodes.tsv.gz' ] && [ -f '{mex_dir}/features.tsv.gz' ] && [ -f '{mex_dir}/matrix.mtx.gz' ] && touch '{done}'")
+            mm.add_target(done, [hex_flag(args, width)], cmds)
+            entries.append((width, mex_dir, done))
+        out[sample] = entries
+    return out
+
+def add_feature_select_target(mm, args, hex_flags, adopt=False):
+    """Add the Makefile target resolving the feature filters into one feature list, and
+    return its path (None when no filter was requested).
+
+    The list is resolved against multi.union_features.tsv (every feature seen in any
+    sample, with counts), which is a superset of both the joint and the per-sample hexagon
+    dictionaries, so the same file can be handed to every lda4hex call. Feeding it as
+    `--features` restricts the model's feature space, and the pixel decode inherits the
+    restriction because it maps pixels through the model's features. Nothing else reads
+    it, which is what keeps the tiled TSV and the packaged feature list complete.
+    """
+    if not any([args.include_feature_list, args.exclude_feature_list,
+                args.include_feature_regex, args.exclude_feature_regex]):
+        return None
+
+    union_features = f"{args.out_dir}/multi.union_features.tsv"
+    selected = f"{args.out_dir}/multi.selected_features.tsv"
+    cmds = cmd_separator([], "Selecting the features to use for the FICTURE analysis...")
+    parts = ["cartloader", "feature_select", "--mode include",
+             f"--in-features '{union_features}'", f"--out '{selected}'"]
+    if args.include_feature_list:
+        parts.append(f"--include-list '{args.include_feature_list}'")
+    if args.exclude_feature_list:
+        parts.append(f"--exclude-list '{args.exclude_feature_list}'")
+    if args.include_feature_regex:
+        parts.append(f"--include-regex '{args.include_feature_regex}'")
+    if args.exclude_feature_regex:
+        parts.append(f"--exclude-regex '{args.exclude_feature_regex}'")
+    cmds.append(" ".join(parts))
+    # Rerun when the filters change (settings file, list files) or the sample list does
+    # (tiling flag). Order-only on the hexagon steps (after "|"): each rewrites the union
+    # feature list, which must not be read mid-write.
+    settings_path = f"{args.out_dir}/multi.selected_features.params.json"
+    list_files = [f for f in (args.include_feature_list, args.exclude_feature_list) if f]
+    stamp_settings(selected, settings_path, {"command": " ".join(parts)}, [selected], [tiles_flag(args)] + list_files, adopt)
+    mm.add_target(selected, [tiles_flag(args), settings_path] + list_files + ["|"] + list(hex_flags.values()), cmds)
+    return selected
+
+def add_lda_training_target(mm, args, ficture2bin, n_factor, train_width, model_prefix, hex_prefix, color_map, ficture2report, selected_features=None):
     """Add Makefile target for training (or projecting) an LDA model."""
     cmds = cmd_separator([], f"LDA training for {train_width}um and {n_factor} factors...")
     cmds.append(f"touch '{model_prefix}.begin'")
@@ -138,6 +338,8 @@ def add_lda_training_target(mm, args, ficture2bin, n_factor, train_width, model_
     lda_model_matrix = f"{model_prefix}.model.tsv"
     lda_fit_tsv = f"{model_prefix}.results.tsv.gz"
     lda_de = f"{model_prefix}.bulk_chisq.tsv"
+    # lda4hex spools feature diagnostics to disk; keep them off the (often small) system /tmp
+    lda_temp_dir = f"{model_prefix}_lda4hex"
 
     # copy model
     if args.pretrained_model is not None and not args.retrain:
@@ -171,14 +373,19 @@ def add_lda_training_target(mm, args, ficture2bin, n_factor, train_width, model_
         n_topics_arg,
         sort_topics_arg,
         "--transform",
+        "--residuals",
         # "--append-topk",
         # "--drop-random-key",
+        f"--features '{selected_features}'" if selected_features else "",
+        f"--min-count-train {args.min_ct_per_unit_train}" if args.min_ct_per_unit_train is not None else "",
+        f"--temp-dir '{lda_temp_dir}'",
         f"--minibatch-size {args.minibatch_size}",
         f"--seed {args.seed}",
         f"--n-epochs {args.train_epoch}",
         f"--threads {args.threads}",
     ])
     cmds.append(train_cmd)
+    cmds.append(f"rm -rf '{lda_temp_dir}'")
 
 #    cmds.append(f"sed '1s/^#//' '{unsorted_prefix}.results.tsv' | {args.gzip} > '{lda_fit_tsv}'")
     # 2) append topk
@@ -196,7 +403,7 @@ def add_lda_training_target(mm, args, ficture2bin, n_factor, train_width, model_
     cmds.append(f"cp '{unsorted_prefix}.model.tsv' '{lda_model_matrix}'")
     cmds.append(f"rm -f '{unsorted_prefix}.model.tsv' '{unsorted_prefix}.results.tsv'")
     cmds.append(f"[ -f '{lda_fit_tsv}' ] && [ -f '{lda_model_matrix}' ] && touch '{model_prefix}.done'")
-    mm.add_target(f"{model_prefix}.done", [f"{args.out_dir}/multi.done"], cmds)
+    mm.add_target(f"{model_prefix}.done", [hex_flag(args, train_width)] + ([selected_features] if selected_features else []), cmds)
 
     # 3) create color table
     cmds = cmd_separator([], f"Generate the color map ")
@@ -222,7 +429,7 @@ def add_lda_training_target(mm, args, ficture2bin, n_factor, train_width, model_
     cmds.append(f"[ -f '{lda_de}' ] && [ -f '{model_prefix}.factor.info.html' ] && touch '{model_prefix}_summary.done'")
     mm.add_target(f"{model_prefix}_summary.done", [f"{model_prefix}.done", color_map], cmds)
 
-def add_projection_target_per_sample(mm, args, ficture2bin, model_prefix, model_id, sample, train_width):
+def add_projection_target_per_sample(mm, args, ficture2bin, model_prefix, model_id, sample, train_width, selected_features=None):
     """Add Makefile target that projects a trained LDA model onto a single sample."""
     cmds = cmd_separator([], f"Creating projection for sample {sample}...")
 
@@ -230,6 +437,7 @@ def add_projection_target_per_sample(mm, args, ficture2bin, model_prefix, model_
     sample_hex_prefix = os.path.join(args.out_dir, "samples", sample, f"{sample}.hex_{train_width}")
     sample_lda_prefix = os.path.join(args.out_dir, "samples", sample, f"{sample}.{model_id}")
     sample_lda_fit_tsv = f"{sample_lda_prefix}.results.tsv.gz"
+    sample_lda_temp_dir = f"{sample_lda_prefix}_lda4hex"
 
     cmds.append(f"touch '{sample_lda_prefix}.begin'")
 
@@ -241,14 +449,19 @@ def add_projection_target_per_sample(mm, args, ficture2bin, model_prefix, model_
         f"--model-prior '{lda_model_matrix}'",
         f"--out-prefix '{sample_lda_prefix}.unsorted'",
         "--transform",
+        "--residuals",
         # "--append-topk",
         # "--drop-random-key",
+        f"--features '{selected_features}'" if selected_features else "",
+        f"--min-count-train {args.min_ct_per_unit_train}" if args.min_ct_per_unit_train is not None else "",
+        f"--temp-dir '{sample_lda_temp_dir}'",
         f"--minibatch-size {args.minibatch_size}",
         f"--seed {args.seed}",
         f"--n-epochs {args.train_epoch}",
         f"--threads {args.threads}",
     ])
     cmds.append(cmd)
+    cmds.append(f"rm -rf '{sample_lda_temp_dir}'")
 
     # cmd = f"sed '1s/^#//' '{sample_lda_prefix}.unsorted.results.tsv' | {args.gzip} > '{sample_lda_fit_tsv}'"
     # cmds.append(cmd)
@@ -267,7 +480,8 @@ def add_projection_target_per_sample(mm, args, ficture2bin, model_prefix, model_
     
     cmds.append(f"rm -f '{sample_lda_prefix}.unsorted.results.tsv'")
     cmds.append(f"[ -f '{sample_lda_fit_tsv}' ] && touch '{sample_lda_prefix}.done'")
-    mm.add_target(f"{sample_lda_prefix}.done", [f"{model_prefix}.done", f"{args.out_dir}/multi.done"], cmds)
+    mm.add_target(f"{sample_lda_prefix}.done",
+                  [f"{model_prefix}.done", hex_flag(args, train_width)] + ([selected_features] if selected_features else []), cmds)
     return f"{sample_lda_prefix}.done"
 
 def add_pixel_decode_target_per_sample(mm, args, ficture2bin, ficture2report, model_prefix, model_path, cmap_path, decode_id, fit_width, n_factor, fit_n_move, sample):
@@ -305,7 +519,7 @@ def add_pixel_decode_target_per_sample(mm, args, ficture2bin, ficture2report, mo
     cmds.append(f"{args.gzip} -f '{decode_postcount}'")
     #cmds.append(f"[ -f '{decode_fit_tsv}.gz' ] && [ -f '{decode_postcount}.gz' ] && touch '{decode_prefix}.tsv.done'")
     cmds.append(f"[ -f '{decode_prefix}.bin' ] && [ -f '{decode_postcount}.gz' ] && touch '{decode_prefix}.bin.done'")
-    mm.add_target(f"{decode_prefix}.bin.done", [cmap_path, f"{args.out_dir}/multi.done", f"{model_prefix}.done"], cmds)
+    mm.add_target(f"{decode_prefix}.bin.done", [cmap_path, tiles_flag(args), f"{model_prefix}.done"], cmds)
 
     cmds = cmd_separator([], f"Performing post-decode tasks, ID {decode_id} for sample {sample}...")
     cmds.append(f"'{args.spatula}' diffexp-model-matrix --tsv1 '{decode_postcount}.gz' --out '{decode_de}' --min-count {args.de_min_ct_per_feature} --max-pval {args.de_max_pval} --min-fc {args.de_min_fold}")
@@ -339,11 +553,11 @@ def add_pixel_decode_target_per_sample(mm, args, ficture2bin, ficture2report, mo
     #cmds.append(f"rm -f '{decode_fit_tsv}'")
 
     cmds.append(f"[ -f '{decode_de}' ] && [ -f '{decode_prefix}.factor.info.html' ] && [ -f '{decode_prefix}.png' ] && touch '{decode_prefix}.done'")
-    mm.add_target(f"{decode_prefix}.done", [cmap_path, f"{decode_prefix}.bin.done", f"{args.out_dir}/multi.done", f"{model_prefix}.done"], cmds)
+    mm.add_target(f"{decode_prefix}.done", [cmap_path, f"{decode_prefix}.bin.done", tiles_flag(args), f"{model_prefix}.done"], cmds)
 
     return f"{decode_prefix}.done"
 
-def add_sample_json_target(mm, args, sample, sample_transcript, n_samples, sample_tsv_transcript):
+def add_sample_json_target(mm, args, sample, sample_transcript, n_samples, sample_tsv_transcript, selected_features=None, mex_entries=None):
     """Add Makefile target to write the output JSON for a single sample."""
     cmds = cmd_separator([], f"Writing output JSON file for sample {sample}...")
     sample_out_dir = os.path.join(args.out_dir, "samples", sample)
@@ -362,11 +576,15 @@ def add_sample_json_target(mm, args, sample, sample_transcript, n_samples, sampl
     cmds.append(cmd)
 
     summary_aux_args = []
-    prerequisities = [f"{args.out_dir}/multi.done"]
+    prerequisities = [tiles_flag(args)] + [hex_flag(args, w) for w in hexagon_widths(args)]
+    if selected_features:
+        prerequisities.append(selected_features)
 
     summary_aux_args_models = ["--lda-model"]
     summary_aux_args_umap = ["--umap"] if not args.skip_umap else []
-    lda_runs = define_lda_runs(args, **LDA_CONFIG)
+    # --prepare-only stops after tiling: the manifest records only `in_sge` (the tiled
+    # transcript, feature, and minmax paths) so packaging can read it, with no models.
+    lda_runs = [] if args.prepare_only else define_lda_runs(args, **LDA_CONFIG)
     for lda_params in lda_runs:
         train_width = lda_params["train_width"]
         n_factor = lda_params["n_factor"]
@@ -407,7 +625,7 @@ def add_sample_json_target(mm, args, sample, sample_transcript, n_samples, sampl
         summary_aux_args.append(" ".join(summary_aux_args_umap))
 
     summary_aux_args_decodes = ["--decode"]
-    decode_runs = define_decode_runs(args, **LDA_CONFIG)
+    decode_runs = [] if args.prepare_only else define_decode_runs(args, **LDA_CONFIG)
     for decode_params in decode_runs:
         decode_id = decode_params["decode_id"]
         decode_prefix = os.path.join(args.out_dir, "samples", sample, f"{sample}.{decode_id}")
@@ -436,7 +654,10 @@ def add_sample_json_target(mm, args, sample, sample_transcript, n_samples, sampl
     # models from older runs in the same output directory do not persist.
     summary_cmd_parts = [
         "cartloader", "write_json_for_ficture2_multi",
-        "--mode append",
+        # append merges this invocation's models into any existing manifest; a
+        # prepare-only run has none, so it overwrites instead — otherwise models from
+        # an earlier full run in the same directory would survive as dangling entries.
+        "--mode write" if args.prepare_only else "--mode append",
         f"--in-transcript '{sample_tsv_transcript}'",
         f"--in-tiled '{sample_tiled_prefix}'",
         f"--in-feature '{sample_feature_hdr}'",
@@ -445,13 +666,97 @@ def add_sample_json_target(mm, args, sample, sample_transcript, n_samples, sampl
         f"--out-json '{sample_out_json}'",
         f"--n-samples {n_samples}"
     ]
-    if sample_feature_hdr:
-        summary_cmd_parts.append(f"--in-feature-ficture {sample_feature_hdr}")
+    # `in_feature` is the sample's complete feature list (what packaging reads); the
+    # ficture feature file records the subset the models were actually trained on, which
+    # differs only when a feature filter was applied.
+    summary_cmd_parts.append(f"--in-feature-ficture {selected_features or sample_feature_hdr}")
     summary_cmd_parts.extend(arg for arg in summary_aux_args if arg)
+    # 10x MEX exports of the hexagon files (--segment-10x), recorded under "mex" by width.
+    if mex_entries:
+        summary_cmd_parts.append("--mex " + " ".join(f"{w},{d}" for w, d, _ in mex_entries))
+        prerequisities.extend(done for _, _, done in mex_entries)
     cmd = " ".join(summary_cmd_parts)
     cmds.append(cmd)
     mm.add_target(sample_out_json, prerequisities, cmds)
     return sample_out_json
+
+def write_multi_params_json(args, in_samples):
+    """Write the shared multi-sample manifest (ficture.multi.params.json).
+
+    Points to each per-sample manifest (relative path) and records the shared
+    components — shared LDA models, shared UMAPs, and the multi-sample hexagon
+    files — as paths relative to --out-dir so the directory is self-contained.
+
+    Merges into an existing manifest by ``model_id`` (mirroring the per-sample
+    ``write_json_for_ficture2_multi --mode append`` semantics). This is required
+    because projection mode invokes run_ficture2_multi once per model against the
+    same --out-dir (each --model-id yields a single define_lda_runs entry); an
+    overwrite would leave only the last model in shared.train_params, so
+    run_cartload2_multi would materialize shared factors/UMAPs for only that model
+    while each per-sample run_cartload2 still expects all of them.
+    """
+    widths = hexagon_widths(args)
+    out_path = os.path.join(args.out_dir, "ficture.multi.params.json")
+
+    # Existing shared train_params, keyed by model_id (order preserved), and existing
+    # per-sample MEX exports (kept across invocations the same way).
+    shared_train = []
+    mex = {}
+    if os.path.exists(out_path) and not args.prepare_only:
+        with open(out_path, "rt") as f:
+            old_manifest = json.load(f)
+        shared_train = old_manifest.get("shared", {}).get("train_params", [])
+        mex = old_manifest.get("mex", {})
+    # --segment-10x: samples/<s>/<s>.hex_<w>.mex/ per sample and width (relative paths)
+    for w in mex_widths(args):
+        for s in in_samples:
+            mex.setdefault(s, {})[w] = os.path.join("samples", s, f"{s}.hex_{w}.mex")
+    index = {e["model_id"]: i for i, e in enumerate(shared_train) if "model_id" in e}
+
+    for lda in ([] if args.prepare_only else define_lda_runs(args, **LDA_CONFIG)):
+        model_id = lda["model_id"]
+        entry = {
+            "model_type": lda["model_type"],
+            "model_id": model_id,
+            "train_width": lda["train_width"],
+            "n_factor": lda["n_factor"],
+            "cmap": f"{model_id}.cmap.tsv",
+            "model_path": f"{model_id}.model.tsv",
+            "fit_path": f"{model_id}.results.tsv.gz",   # shared/joint fit
+            "de_path": f"{model_id}.bulk_chisq.tsv",
+            "info_path": f"{model_id}.factor.info.tsv",
+        }
+        if not args.skip_umap:
+            entry["umap"] = {
+                "tsv": f"{model_id}.umap.tsv.gz",
+                "png": f"{model_id}.umap.png",
+                "ind_png": f"{model_id}.umap.single.prob.png",
+            }
+        if model_id in index:
+            shared_train[index[model_id]] = entry
+        else:
+            index[model_id] = len(shared_train)
+            shared_train.append(entry)
+
+    manifest = {
+        "analysis_type": "multi-sample",
+        "n_samples": len(in_samples),
+        "samples": {s: os.path.join("samples", s, "ficture.params.json") for s in in_samples},
+        "shared": {
+            "multi_hexagon": {
+                "features": "multi.features.tsv",
+                "hex": {w: f"multi.hex_{w}.txt" for w in widths},
+                "json": {w: f"multi.hex_{w}.json" for w in widths},
+            },
+            "train_params": shared_train,
+        },
+    }
+    if mex:
+        manifest["mex"] = mex
+    with open(out_path, "wt") as f:
+        json.dump(manifest, f, indent=4)
+    return out_path
+
 
 def run_ficture2_multi(_args):
     """Run all functions in FICTURE2 with multi-sample pipeline
@@ -466,8 +771,17 @@ def run_ficture2_multi(_args):
     args=parse_arguments(_args)
 
     # validate args
-    if args.n_factor is None and args.pretrained_model is None:
+    if args.n_factor is None and args.pretrained_model is None and not args.prepare_only:
         raise ValueError("When --pretrained-model is not provided, --n-factor is required.")
+    if args.prepare_only:
+        # No models are trained, so there is nothing to embed — and R is not needed.
+        args.skip_umap = True
+    if args.segment_width_10x is not None and not args.segment_10x:
+        raise ValueError("--segment-width-10x is only meaningful together with --segment-10x.")
+    for flag, path in (("--include-feature-list", args.include_feature_list),
+                       ("--exclude-feature-list", args.exclude_feature_list)):
+        if path is not None and not os.path.exists(path):
+            raise FileNotFoundError(f"File not found: {path} ({flag})")
     if args.model_id is not None: ## model id is specified
         if args.pretrained_model is None: ## pretrained_model is not specified
             if args.n_factor.find(",") != -1 or args.width.find(",") != -1: ## multiple models are being trained
@@ -511,10 +825,19 @@ def run_ficture2_multi(_args):
     mm = minimake()
 
     # step 1. multi-sample tiling and hexagon:
-    add_multisample_prepare_targets(mm, args, ficture2bin, in_samples)
+    adopt = predates_prepare_flags(args)  # before any settings file is written below
+    hex_flags = add_multisample_prepare_targets(mm, args, ficture2bin, in_samples, sample2tsv, adopt)
 
-    # step 2. multi-sample LDA training
-    lda_runs = define_lda_runs(args, **LDA_CONFIG)
+    # step 1.2. --segment-10x: export the per-sample hexagon files as 10x MEX. Depends only
+    # on the hexagon step of its width, so it runs in --prepare-only mode as well.
+    mex_by_sample = add_segment_10x_targets(mm, args, in_samples)
+
+    # step 1.5. the feature subset the factor analysis is restricted to (None if unfiltered).
+    # A --prepare-only run trains nothing, so there is nothing to restrict.
+    selected_features = None if args.prepare_only else add_feature_select_target(mm, args, hex_flags, adopt)
+
+    # step 2. multi-sample LDA training (none in --prepare-only: tiling is the whole run)
+    lda_runs = [] if args.prepare_only else define_lda_runs(args, **LDA_CONFIG)
     for lda_params in lda_runs:
         # params & prefix
         train_width = lda_params["train_width"]
@@ -537,7 +860,8 @@ def run_ficture2_multi(_args):
             model_prefix=model_prefix,
             hex_prefix=hex_prefix,
             color_map=color_map,
-            ficture2report=ficture2report
+            ficture2report=ficture2report,
+            selected_features=selected_features
         )
 
         # 2) shared UMAP
@@ -562,6 +886,7 @@ def run_ficture2_multi(_args):
                 model_id=model_id,
                 sample=sample,
                 train_width=train_width,
+                selected_features=selected_features,
             )
             lda_each_targets.append(target)
 
@@ -578,7 +903,7 @@ def run_ficture2_multi(_args):
 
     ## step 3. multi-sample pixel-decode (perform pixel-decode for each sample)
 
-    decode_runs = define_decode_runs(args, **LDA_CONFIG)
+    decode_runs = [] if args.prepare_only else define_decode_runs(args, **LDA_CONFIG)
     for decode_params in decode_runs:
         model_prefix = os.path.join(args.out_dir, decode_params["model_id"])
         fit_width = decode_params["fit_width"]
@@ -608,12 +933,17 @@ def run_ficture2_multi(_args):
     ## step 4. write the output JSON file for each sample
     json_each_targets = []
     for sample, sample_transcript in zip(in_samples, in_tsvs):
-        sample_out_json = add_sample_json_target(mm, args, sample, sample_transcript, n_samples, sample2tsv.get(sample))
+        sample_out_json = add_sample_json_target(mm, args, sample, sample_transcript, n_samples, sample2tsv.get(sample),
+                                                 selected_features=selected_features,
+                                                 mex_entries=mex_by_sample.get(sample))
         json_each_targets.append(sample_out_json)
 
     cmds=cmd_separator([], f"Finishing writing the JSON file for each sample...")
     cmds.append(f"touch '{args.out_dir}/multi_json_each.done'")
     mm.add_target(f"{args.out_dir}/multi_json_each.done", json_each_targets, cmds)
+
+    ## write the shared multi-sample manifest (points to per-sample JSONs + shared components)
+    write_multi_params_json(args, in_samples)
 
     ## write makefile
     if len(mm.targets) == 0:

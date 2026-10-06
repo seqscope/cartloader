@@ -1,25 +1,64 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "cartloader"
 description = "Tools for High-Resolution for Spatial Transcriptomics"
 version = "0.0.1"
 authors = [{name = "Weiqiu Cheng", email = "weiqiuc@umich.edu"}, {name = "Hyun Min Kang", email = "hmkang@umich.edu"}]
-license = {text = "Apache 2.0"}
+license = "Apache-2.0"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dependencies = [
-    "numpy", "pandas", "ficture"
+    "numpy",
+    "pandas",
+    "polars",
+    "scipy",
+    "scikit-learn",
+    "ficture",
+    "igraph",
+    "leidenalg",
+    "pynndescent",
+    "opentsne",
+    "tifffile",
+    "imagecodecs",
+    "Pillow",
+    "rasterio",
+    "shapely",
+    "matplotlib",
+    "psutil",
+    "PyYAML",
+    "requests",
+    "parquet-tools",
+]
+
+[project.optional-dependencies]
+# AI annotation of factors and cell clusters (anno_cartload_folder; run_together --anno / --anno-deep)
+ai = [
+    # --api-type claude (the --anno-deep default); 0.77.0 is the first release whose messages.stream accepts output_config
+    "anthropic>=0.77.0",
+    "google-genai",
+    # anno_cartload_folder --s3-dir
+    "boto3",
+    # annotate_bulk_de_with_ai_heatmap reads PMTiles
+    "pmtiles",
+    "mapbox-vector-tile",
+    "zstandard",
+    "brotli",
 ]
 
 [project.scripts]
 cartloader = "cartloader.cli:main"
 
-[build-system]
-requires = ["setuptools", "wheel"]
-build-backend = "setuptools.build_meta"
-
-[tool.setuptools.package-data]
-scripts = ["*.txt", "*.rst", "*.html"]
-
 [project.urls]
 "Homepage" = "https://seqscope.github.io/cartloader/"
 "Bug Tracker" = "https://github.com/seqscope/cartloader/issues"
+
+# Install editable (pip install -e .): the package reads assets/ and the submodule binaries
+# from the repository checkout, which a regular wheel install does not carry.
+[tool.setuptools.packages.find]
+include = ["cartloader*"]
+
+[tool.setuptools.package-data]
+cartloader = ["r/*.r", "utils/*.sh"]

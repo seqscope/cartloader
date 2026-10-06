@@ -1,4 +1,4 @@
-import sys, os, argparse, logging,  inspect, json, subprocess
+import sys, os, argparse, gzip, logging,  inspect, json, subprocess
 import pandas as pd
 from cartloader.utils.minimake import minimake
 from cartloader.utils.utils import cmd_separator, scheck_app, add_param_to_cmd, read_minmax, write_dict_to_file, load_file_to_dict, execute_makefile
@@ -29,17 +29,17 @@ def parse_arguments(_args):
     
     # Input/output/key params
     inout_params = parser.add_argument_group("Input/Output Parameters", "Input/output paths and core settings.")
-    inout_params.add_argument('--platform', type=str, choices=["10x_visium_hd", "seqscope", "10x_xenium", "bgi_stereoseq", "cosmx_smi", "vizgen_merscope", "pixel_seq", "nova_st", "generic"], required=True, help='Input platform. Use "generic" for CSV/TSV from unsupported or custom sources')
+    inout_params.add_argument('--platform', type=str, choices=["10x_visium_hd", "seqscope", "illumina", "10x_xenium", "bgi_stereoseq", "cosmx_smi", "vizgen_merscope", "pixel_seq", "nova_st", "generic"], required=True, help='Input platform. Use "generic" for CSV/TSV from unsupported or custom sources')
     # - input
     inout_params.add_argument('--in-json', type=str, default=None, help='Path to input manifest JSON. If set, omits --in-parquet/--in-csv/--pos-parquet/--scale-json (platform: 10x_xenium, 10x_visium_hd)')
-    inout_params.add_argument('--in-mex', type=str, default=os.getcwd(), help='Path to input MEX directory (platform: 10x Visium HD, SeqScope; default: current working directory)') # 10x_visium_hd, seqscope 
-    inout_params.add_argument('--in-csv', type=str, default=None, help='Path to input CSV/TSV (platform: 10x Xenium, BGI Stereo-seq, CosMx SMI, Vizgen MERSCOPE, Pixel-seq, Nova-ST)') 
+    inout_params.add_argument('--in-mex', type=str, default=os.getcwd(), help='Path to input MEX directory (platform: 10x Visium HD, SeqScope, Illumina; default: current working directory)') # 10x_visium_hd, seqscope, illumina
+    inout_params.add_argument('--in-csv', type=str, default=None, help='Path to input CSV/TSV (platform: 10x Xenium, BGI Stereo-seq, CosMx SMI, Vizgen MERSCOPE, Pixel-seq, Nova-ST, SeqScope). For SeqScope this is the raw per-molecule TSV (#lane/tile/X/Y/gene_id/gene/gn/...) and selects the TSV route instead of --in-mex')
     inout_params.add_argument('--in-parquet', type=str, default=None, help='Path to input transcript parquet (platform: 10x Xenium)') 
     # - additional pos
     inout_params.add_argument('--pos-parquet', type=str, default=None, help='Path to input position parquet providing spatial coordinates (platform: 10x Visium HD; typical: tissue_positions.parquet)') # 10x_visium_hd
     # - scaling
     inout_params.add_argument('--scale-json', type=str, default=None, help='Path to input scale JSON. If set, defaults --units-per-um from microns_per_pixel in this JSON file (platform: 10x Visium HD; typical: scalefactors_json.json)') 
-    inout_params.add_argument('--units-per-um', type=float, default=1.00, help='Coordinate units per µm in inputs (default: 1.00). For 10x Visium HD, prefer --scale-json')  
+    inout_params.add_argument('--units-per-um', type=float, default=None, help='Coordinate units per µm in inputs (default: 1.00; platform defaults: SeqScope raw TSV 1000, Illumina auto-detected from the barcode file - 1000 for nanometer barcodes, 1 for micron barcodes). For 10x Visium HD, prefer --scale-json')  
     # - output
     inout_params.add_argument('--out-dir', type=str, required=True, help='Path to output directory for converted SGE, filtered SGE, visualizations, and Makefile')
     inout_params.add_argument('--out-transcript', type=str, default="transcripts.unsorted.tsv.gz", help='File name of output transcript-indexed SGE TSV under --out-dir (default: transcripts.unsorted.tsv.gz)')
@@ -57,8 +57,9 @@ def parse_arguments(_args):
     aux_in_mex_params.add_argument('--icol-ftr-id', type=int, default=1, help='1-based column index of feature ID in --mex-ftr (default: 1)')
     aux_in_mex_params.add_argument('--icol-ftr-name', type=int, default=2, help='1-based column index of feature name in --mex-ftr (default: 2)')
     aux_in_mex_params.add_argument('--icol-bcd-barcode', type=int, default=1, help='1-based column index of barcode in --mex-bcd (platform: SeqScope; default: 1)')
-    aux_in_mex_params.add_argument('--icol-bcd-x', type=int, default=6, help='1-based column index of x coordinate in --mex-bcd (platform: SeqScope; default: 6)')
-    aux_in_mex_params.add_argument('--icol-bcd-y', type=int, default=7, help='1-based column index of y coordinate in --mex-bcd (platform: SeqScope; default: 7)')
+    aux_in_mex_params.add_argument('--icol-bcd-x', type=int, default=6, help='1-based column index of x coordinate in --mex-bcd (platform: SeqScope; default: 6, Illumina: 3)')
+    aux_in_mex_params.add_argument('--icol-bcd-y', type=int, default=7, help='1-based column index of y coordinate in --mex-bcd (platform: SeqScope; default: 7, Illumina: 2)')
+    aux_in_mex_params.add_argument('--bcd-delim', type=str, default=None, help='Delimiter used to split the barcode into spatial coordinates (platform: Illumina; default: ":")')
     aux_in_mex_params.add_argument('--pos-colname-barcode', type=str, default='barcode', help='Column name for barcode in --pos-parquet (platform: 10x Visium HD; default: barcode)')
     aux_in_mex_params.add_argument('--pos-colname-x', type=str, default='pxl_col_in_fullres', help='Column name for X coordinates in --pos-parquet (platform: 10x Visium HD; default: pxl_row_in_fullres)')
     aux_in_mex_params.add_argument('--pos-colname-y', type=str, default='pxl_row_in_fullres', help='Column name for Y coordinates in --pos-parquet (platform: 10x Visium HD; default: pxl_col_in_fullres)')
@@ -73,10 +74,11 @@ def parse_arguments(_args):
     aux_in_csv_params.add_argument('--csv-delim', type=str, default=None, help='Delimiter in --in-csv (default: "," for 10x_xenium, cosmx_smi, and vizgen_merscope, "\\t" for bgi_stereoseq, pixel_seq, and nova_st) ')
     aux_in_csv_params.add_argument('--csv-colname-x', type=str, default=None, help='Column name for X coordinates in --in-csv (default: x_location for 10x_xenium, x for bgi_stereoseq, x_local_px for cosmx_smi, global_x for vizgen_merscope, xcoord for pixel_seq, x for nova_st)')
     aux_in_csv_params.add_argument('--csv-colname-y', type=str, default=None, help='Column name for Y coordinates in --in-csv (default: y_location for 10x_xenium, y for bgi_stereoseq, y_local_px for cosmx_smi, global_y for vizgen_merscope, ycoord for pixel_seq, y for nova_st)')
-    aux_in_csv_params.add_argument('--csv-colname-count', type=str, default=None, help='Column name for expression count in --in-csv. If not provided, a count of 1 will be added for a feature in a pixel (default: MIDCounts for bgi_stereoseq, MIDCount for nova_st, None for the rest platforms).')
-    aux_in_csv_params.add_argument('--csv-colname-feature-name', type=str, default=None, help='Column name for gene name in --in-csv (default: feature_name for 10x_xenium, geneID for bgi_stereoseq, target for cosmx_smi, gene for vizgen_merscope, geneName for pixel_seq, geneID for nova_st)')
+    aux_in_csv_params.add_argument('--csv-colname-count', type=str, default=None, help='Column name for expression count in --in-csv. If not provided, a count of 1 will be added for a feature in a pixel (default: ExonCount for bgi_stereoseq, MIDCount for nova_st, None for the rest platforms).')
+    aux_in_csv_params.add_argument('--csv-colname-feature-name', type=str, default=None, help='Column name for gene name in --in-csv (default: feature_name for 10x_xenium, geneName for bgi_stereoseq, target for cosmx_smi, gene for vizgen_merscope, geneName for pixel_seq, geneID for nova_st)')
     # aux_in_csv_params.add_argument('--csv-colname-feature-id', type=str, default=None, help='Column name for gene id')
     aux_in_csv_params.add_argument('--csv-colnames-others', nargs='*', default=[], help='Columns names to keep in --in-csv (e.g., cell_id, overlaps_nucleus)')
+    aux_in_csv_params.add_argument('--csv-colnames-positive', nargs='*', default=[], help='Column names in --in-csv whose value must be strictly positive; rows with a zero, negative or non-numeric value in any of them are discarded as malformed (default: "lane tile X Y" for seqscope, none for the rest). The columns are not carried into the output')
     aux_in_csv_params.add_argument('--csv-colname-phredscore', type=str, default=None, help='Column name for Phred-scaled quality value in --in-csv. This is also named as Q-Score, which estimates the probability of incorrect call (default: qv for 10x_xenium and None for the rest platforms)') # qv
     aux_in_csv_params.add_argument('--min-phred-score', type=float, default=None, help='Phred-scaled quality score cutoff (default: 20 for 10x_xenium and None for the rest platforms).')
     #aux_in_csv_params.add_argument('--add-molecule-id', action='store_true', default=False, help='If enabled, a column of "molecule_id" will be added to the output file to track the index of the original input will be stored in.')
@@ -95,7 +97,9 @@ def parse_arguments(_args):
     # AUX gene-filtering params
     aux_ftrfilter_params = parser.add_argument_group("Feature Filtering Parameters")
     aux_ftrfilter_params.add_argument('--include-feature-regex', type=str, default=None, help='A regex pattern of feature/gene names to be included')
-    aux_ftrfilter_params.add_argument('--exclude-feature-regex', type=str, default=None, help='A regex pattern of feature/gene names to be excluded (default: "^(BLANK_|Blank-|DeprecatedCodeword_|NegCon|UnassignedCodeword_)" for 10_xenium, None for the rest)')
+    aux_ftrfilter_params.add_argument('--exclude-feature-regex', type=str, default=None, help='A regex pattern of feature/gene names to be excluded (default: "^(BLANK_|Blank-|DeprecatedCodeword_|NegCon|UnassignedCodeword_)" for 10_xenium, None for the rest). Pass "" to filter nothing, including on platforms that have a default.')
+    aux_ftrfilter_params.add_argument('--include-feature-list', type=str, default=None, help='Path to a file listing the feature/gene names (one per line) to be included')
+    aux_ftrfilter_params.add_argument('--exclude-feature-list', type=str, default=None, help='Path to a file listing the feature/gene names (one per line) to be excluded')
 
     # AUX polygon-filtering params
     aux_polyfilter_params = parser.add_argument_group('Density/Polygon Filtering Parameters')
@@ -150,6 +154,60 @@ def extract_unit2px_from_json(scale_json):
     assert microns_per_pixel != 0, f"Invalid value: 'microns_per_pixel' == 0. Check your scale JSON {scale_json} (--scale-json)"
     print(f"microns_per_pixel: {microns_per_pixel}")
     return 1/microns_per_pixel
+
+def flag_given(_args, flag):
+    """True if `flag` appears in the raw argv, in either '--flag value' or '--flag=value'
+    form. Used where a platform default must not clobber a value the user set explicitly."""
+    return any(a == flag or a.startswith(flag + "=") for a in _args)
+
+
+DEFAULT_UNITS_PER_UM = 1.00
+# Coordinate magnitude (in barcode units) that separates the two Illumina barcode
+# conventions when no fractional coordinate settles it: a real section spans far more
+# than 0.1 mm, so nanometer coordinates run into the 1e5-1e7 range, while micron
+# coordinates of that same section stay well below 1e5 (which would be a 10 cm section).
+ILLUMINA_NM_MIN_COORD = 1e5
+
+
+def sniff_illumina_units_per_um(bcd_f, delim=":", icol_x=3, icol_y=2, max_lines=100000):
+    """Decide whether the coordinates embedded in an Illumina/StrataMap barcode are
+    nanometers (older format, e.g. 'SBC:433503:2393851') or microns (current format,
+    e.g. 'SBC:686.951:4668.15') and return the matching --units-per-um (1000 or 1).
+
+    Two independent signals, either of which is decisive:
+      * a fractional coordinate is meaningless at nanometer resolution -> microns;
+      * otherwise magnitude, per ILLUMINA_NM_MIN_COORD above.
+    Returns None if the file is unreadable or carries no usable coordinate, which
+    leaves the caller on the historical nanometer default.
+    """
+    opener = gzip.open if bcd_f.endswith(".gz") else open
+    max_coord = 0.0
+    n_seen = 0
+    try:
+        with opener(bcd_f, "rt") as fh:
+            for line in fh:
+                if n_seen >= max_lines:
+                    break
+                toks = line.rstrip("\r\n").split(delim)
+                if len(toks) < max(icol_x, icol_y):
+                    continue
+                x, y = toks[icol_x - 1], toks[icol_y - 1]
+                try:
+                    fx, fy = float(x), float(y)
+                except ValueError:
+                    continue
+                n_seen += 1
+                if "." in x or "." in y:      # fractional -> microns, decisive
+                    return 1.0
+                max_coord = max(max_coord, abs(fx), abs(fy))
+    except OSError as e:
+        print(f"WARNING: could not read {bcd_f} to detect the barcode coordinate units ({e})",
+              file=sys.stderr)
+        return None
+    if n_seen == 0:
+        return None
+    return 1000.0 if max_coord >= ILLUMINA_NM_MIN_COORD else 1.0
+
 
 mexarg_mapping = {
     "mex_bcd": "--sge-bcd",
@@ -220,6 +278,30 @@ def convert_seqscope(cmds, args):
     if not args.keep_mismatches:   
         drop_cmd = f"cartloader sge_drop_mismatches --in-dir {args.out_dir} --transcript {args.out_transcript} --feature {args.out_feature} --minmax {args.out_minmax} --gzip {args.gzip}"    
         cmds.append(drop_cmd)
+    return cmds
+
+def convert_illumina(cmds, args):
+    ## tools:
+    scheck_app(args.spatula)
+    ## input: in_mex (spatial coordinates are embedded in the barcode, so no --pos-parquet/--scale-json needed)
+    ## output: out_transcript, out_minmax, out_feature
+    # * convert sge to tsv (output: out_transcript, out_minmax, out_feature)
+    cmd = " ".join([f"'{args.spatula}' convert-sge",
+                f"--in-sge '{args.in_mex}'",
+                f"--out-tsv '{args.out_dir}'",
+                f"--tsv-mtx '{args.out_transcript}'",
+                f"--tsv-ftr '{args.out_feature}'",
+                f"--tsv-minmax '{args.out_minmax}'",
+                f"--bcd-delim '{args.bcd_delim}'",
+                f"--icol-bcd-x {args.icol_bcd_x}",
+                f"--icol-bcd-y {args.icol_bcd_y}",
+                f"--icols-mtx {args.icols_mtx}",
+                f"--units-per-um {args.units_per_um}",
+                f"--jitter-xy {args.jitter_xy}" if args.jitter_xy > 0 else "",
+                f"--colnames-count {args.colname_count}" if args.colname_count else ""])
+    cmd = add_param_to_cmd(cmd, args, set(aux_sge_args["ftrname"]))
+    cmd = add_mexparam_to_cmd(cmd, args, mexarg_mapping)
+    cmds.append(cmd)
     return cmds
 
 #================================================================================================
@@ -340,8 +422,28 @@ def sge_visual_northup(mm, xy_f, xy_northup_f, minmax_f, prereq, srs="EPSG:3857"
 def sge_convert(_args):
     # args
     args=parse_arguments(_args)
-    if args.exclude_feature_regex == "":
+    # An explicitly empty regex means "filter nothing", which also switches off the
+    # per-platform default below; omitting the flag entirely leaves that default in place.
+    no_exclude_feature_regex = args.exclude_feature_regex == ""
+    if no_exclude_feature_regex:
         args.exclude_feature_regex = None
+    for flag, path in (("--include-feature-list", args.include_feature_list),
+                       ("--exclude-feature-list", args.exclude_feature_list)):
+        if path is not None and not os.path.exists(path):
+            raise FileNotFoundError(f"File not found: {path} ({flag})")
+    # SeqScope reads either a MEX triple or a raw per-molecule TSV; --in-csv selects the latter,
+    # which is handled by the same generic CSV route as the other transcript-indexed platforms.
+    seqscope_csv = args.platform == "seqscope" and args.in_csv is not None
+    # The MEX platforms convert through spatula convert-sge, which takes at most one
+    # include-type and one exclude-type feature filter. The generic CSV route (every other
+    # platform) evaluates each filter independently, so there a list and a regex combine.
+    if args.platform in ("10x_visium_hd", "illumina") or (args.platform == "seqscope" and not seqscope_csv):
+        for pol in ("include", "exclude"):
+            if getattr(args, f"{pol}_feature_list") and getattr(args, f"{pol}_feature_regex"):
+                sys.exit(f"ERROR: --{pol}-feature-list and --{pol}-feature-regex cannot be combined on "
+                         f"platform '{args.platform}', which filters features inside spatula convert-sge. "
+                         f"Use one of them (or resolve both into a single list with 'cartloader "
+                         f"feature_select').")
     scheck_app(args.gzip)
 
     # input
@@ -388,7 +490,7 @@ def sge_convert(_args):
 
     # params
     if args.platform == "10x_xenium":
-        if args.exclude_feature_regex is None:
+        if args.exclude_feature_regex is None and not no_exclude_feature_regex:
             # Negative probe patterns:
             #   BLANK_*
             #   DeprecatedCodeword_*
@@ -397,7 +499,53 @@ def sge_convert(_args):
             #   UnassignedCodeword_*
             args.exclude_feature_regex = "^(BLANK|Blank-|Deprecated|Intergenic|NegCon|Unassigned)"
             print(f"Using --exclude-feature-regex: {args.exclude_feature_regex }")
-    
+
+    #  * illumina: spatial coordinates are embedded in the barcode; apply platform-specific defaults
+    if args.platform == "illumina":
+        if args.bcd_delim is None:
+            args.bcd_delim = ":"
+        # override the SeqScope-oriented defaults unless the user set them explicitly
+        if not flag_given(_args, "--icol-bcd-x"):
+            args.icol_bcd_x = 3
+        if not flag_given(_args, "--icol-bcd-y"):
+            args.icol_bcd_y = 2
+        # Two barcode conventions are in the wild: the older one encodes nanometers
+        # ("SBC:433503:2393851", --units-per-um 1000), the current one microns
+        # ("SBC:686.951:4668.15", --units-per-um 1). They are indistinguishable from the
+        # flags alone, so read the barcode file and pick; --units-per-um always wins, and
+        # a value that contradicts the file is reported rather than silently applied
+        # (getting this wrong rescales the whole sample by 1000x).
+        bcd_f = os.path.join(args.in_mex, args.mex_bcd)
+        sniffed = sniff_illumina_units_per_um(bcd_f, delim=args.bcd_delim,
+                                              icol_x=args.icol_bcd_x, icol_y=args.icol_bcd_y)
+        if args.units_per_um is None:
+            if sniffed is None:
+                args.units_per_um = 1000
+                print(f"WARNING: could not tell the barcode coordinate units from {bcd_f}; "
+                      f"assuming nanometers (--units-per-um 1000). Pass --units-per-um "
+                      f"explicitly (1000 for nanometer barcodes, 1 for micron barcodes).",
+                      file=sys.stderr)
+            else:
+                args.units_per_um = sniffed
+                units = "nanometer" if sniffed == 1000 else "micron"
+                print(f"Detected {units} barcode coordinates in {bcd_f}: "
+                      f"using --units-per-um {sniffed:g}")
+        elif sniffed is not None and sniffed != args.units_per_um:
+            print(f"WARNING: --units-per-um {args.units_per_um:g} was given, but the barcodes in "
+                  f"{bcd_f} look like {'nanometers' if sniffed == 1000 else 'microns'} "
+                  f"(--units-per-um {sniffed:g}). Using the value you gave.", file=sys.stderr)
+
+    #  * seqscope (raw TSV route): X/Y are in nanometers
+    if seqscope_csv and args.units_per_um is None:
+        args.units_per_um = 1000
+
+    #  * every other route: coordinates are already in microns unless told otherwise
+    #    (10x Visium HD overrides this from --scale-json inside convert_visiumhd)
+    if args.units_per_um is None:
+        args.units_per_um = DEFAULT_UNITS_PER_UM
+    if args.units_per_um <= 0:
+        sys.exit(f"ERROR: --units-per-um must be > 0 (got {args.units_per_um}).")
+
     # mm
     mm = minimake()
 
@@ -423,7 +571,9 @@ def sge_convert(_args):
     if args.platform == "10x_visium_hd":
         cmds = convert_visiumhd(cmds, args)
     elif args.platform == "seqscope":
-        cmds = convert_seqscope(cmds, args)
+        cmds = convert_tsv(cmds, args) if seqscope_csv else convert_seqscope(cmds, args)
+    elif args.platform == "illumina":
+        cmds = convert_illumina(cmds, args)
     elif args.platform in ["cosmx_smi", "bgi_stereoseq", "vizgen_merscope", "pixel_seq", "nova_st", "generic", "10x_xenium"]:
         cmds = convert_tsv(cmds, args)
     cmds.append(f"[ -f {out_transcript_f} ] && [ -f {out_feature_f} ] && [ -f {out_minmax_f} ] && touch {sge_convert_flag}")

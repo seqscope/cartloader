@@ -75,17 +75,34 @@ nav:
       # Real‑world end‑to‑end workflows by platform
       # (Rename or expand as needed; examples below.)
       - Platform Workflows:
-        - Xenium end-to-end Tutorial: vignettes/pipelines/xenium.md
-        - Visium HD end-to-end Tutorial: vignettes/pipelines/visiumhd.md
+        - One-Command Pipeline (run_together): vignettes/pipelines/run_together.md
+        - Xenium end-to-end (step-by-step): vignettes/pipelines/xenium.md
+        - Visium HD end-to-end (step-by-step): vignettes/pipelines/visiumhd.md
       - Multi-sample Showcases:
+        - Multi-sample with run_together: vignettes/pipelines/run_together_multi.md
         - Human Cortex Multi-sample Tutorial: vignettes/multi_sample.md
         # - CosMX SMI Pipeline: vignettes/pipelines/cosmxsmi.md   # example placeholder
         # - MERSCOPE Pipeline: vignettes/pipelines/merscope.md     # example placeholder
   - References:
       - Overview: reference/intro.md
+      - Unified Orchestrator:
+          - Overview (run_together): reference/run_together.md
+          - Specifying Inputs: reference/run_together_inputs.md
+          - Image Modalities: reference/run_together_images.md
+          - Platforms:
+              - Overview & Status: reference/supported_platforms.md
+              - 10x Xenium: reference/platforms/xenium.md
+              - 10x Visium HD: reference/platforms/visium_hd.md
+              - CosMx SMI: reference/platforms/cosmx_smi.md
+              - MERSCOPE (MERFISH): reference/platforms/merscope.md
+              - Illumina StrataMap: reference/platforms/illumina.md
+              - BGI Stereo-seq: reference/platforms/stereoseq.md
+              - Seq-Scope: reference/platforms/seqscope.md
       - SGE Preparation:
           - SGE Format Conversion: reference/sge_convert.md
-          - SGE Preparation Add-ons: reference/sge_addon.md
+          - CosMx Reformatting: reference/reformat_cosmx.md
+          - SGE Stitching: reference/sge_stitch.md
+          - SGE Reorientation: reference/sge_orientate.md
       - Analysis:
           - FICTURE Analysis: reference/run_ficture2.md
           - Multi-Sample FICTURE Analysis: reference/run_ficture2_multi.md
@@ -99,6 +116,8 @@ nav:
       - Upload:
           - AWS Upload: reference/upload_aws.md
           - Zenodo Upload: reference/upload_zenodo.md
+      - AI Annotation:
+          - Annotate CartLoad Folder: reference/anno_cartload_folder.md
       - Platform-specific Modules:
           - Xenium:
               - Pipeline Orchestrator : reference/run_xenium.md
@@ -106,7 +125,24 @@ nav:
           - Visium HD:
               - Pipeline Orchestrator: reference/run_visiumhd.md
               - Pipeline Add-ons: reference/visiumhd_addon.md
-      
+  - FAQ:
+      - Overview: faq/intro.md
+      - Find tutorials:
+        - Which Interface: faq/choose_interface.md
+        - Run Mode: faq/choose_run_mode.md
+        - Platform Tutorial: faq/choose_platform.md
+        - Unsupported Platform: faq/unsupported_platform.md
+      - Basics Function:
+        - Units per um: faq/define_units_per_um.md
+        - Image Orientation: faq/background_image_orientation.md
+        - FICTURE & punkst: faq/ficture.md
+        - Why Multi-sample: faq/why_multi-sample.md
+        - Zenodo Setup: faq/zenodo_setup.md
+        - AWS Upload Failures: faq/aws_upload_failures.md
+      - Execution Tips:
+        - Resume or Restart: faq/restart_or_resume.md
+        - Speed Up Runs: faq/speed_up_runs.md
+        - Find Outputs: faq/find_outputs.md
 
 # Watch for changes
 watch:

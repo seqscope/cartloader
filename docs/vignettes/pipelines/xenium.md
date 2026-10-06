@@ -2,6 +2,9 @@
 
 This tutorial walks through end‑to‑end processing of 10x Xenium data with `CartLoader`: converting inputs, running FICTURE, importing cell results and histology, packaging assets, and uploading to AWS for sharing.
 
+!!! tip "Prefer one command?"
+    [`run_together`](./run_together.md) runs this same pipeline for the standard Xenium layout with a single command. This step-by-step tutorial is the best way to understand each stage and to customize individual steps.
+
 ---
 ## Prepare Input
 
@@ -157,7 +160,7 @@ n_factor=24                               # define number of factors in LDA trai
 S3_DIR=/s3/path/to/s3/dir                 # Recommend to use DATA_ID as directory name, such as s3://bucket-name/xenium-v1-humanlung-cancer-ffpe
 ```
 
-!!! info "How to Define Scaling Factors for Xenium?"
+!!! question "How to define Scaling Factors for Xenium?"
 
     `--units-per-um` means "coordinate units per micrometer" in your raw transcript coordinates.
     For the Xenium example dataset in this tutorial, coordinates are already in µm, so use `--units-per-um 1`.
@@ -174,78 +177,81 @@ Choose one of the following options to run the `run_xenium` pipeline, either loc
 
 In the following examples, only `DAPI_OME` image is deployed. Alternatively, `CartLoader` supports `--all-images` to deploy all detected images.
 
-=== "Run Pipeline Locally"
+### Run Pipeline Locally
 
-    **Set Up Environment**
-    {%
-    include-markdown "../../../includes/includemd_vigenettes_setupenv.md"
-    %}
+**Set Up Environment**
+{%
+include-markdown "../../../includes/includemd_vigenettes_setupenv.md"
+%}
 
-    **Example Command**
-    ```bash
-    cartloader run_xenium \
-      --load-xenium-ranger \
-      --sge-convert \
-      --run-ficture2 \
-      --import-cells \
-      --import-images \
-      --run-cartload2 \
-      --upload-aws \
-      --xenium-ranger-dir /path/to/xenium/ranger/output \
-      --out-dir /path/to/out/dir \
-      --s3-dir ${S3_DIR} \
-      --units-per-um ${SCALE} \
-      --width ${train_width} \
-      --n-factor ${n_factor} \
-      --id ${DATA_ID} \
-      --image-ids DAPI_OME \
-      --spatula ${spatula} \
-      --ficture2 ${punkst} \
-      --pmtiles ${pmtiles} \
-      --tippecanoe ${tippecanoe} \
-      --aws ${aws} \
-      --n-jobs ${n_jobs} \
-      --threads ${n_jobs}
-    ```
+**Example Command**
+```bash
+cd ${work_dir}
+mkdir -p ${work_dir}/output
 
-=== "Run Pipeline via Docker"
+cartloader run_xenium \
+    --load-xenium-ranger \
+    --sge-convert \
+    --run-ficture2 \
+    --import-cells \
+    --import-images \
+    --run-cartload2 \
+    --upload-aws \
+    --xenium-ranger-dir ${work_dir}/raw \
+    --out-dir ${work_dir}/output \
+    --s3-dir ${S3_DIR} \
+    --units-per-um ${SCALE} \
+    --width ${train_width} \
+    --n-factor ${n_factor} \
+    --id ${DATA_ID} \
+    --image-ids DAPI_OME \
+    --spatula ${spatula} \
+    --ficture2 ${punkst} \
+    --pmtiles ${pmtiles} \
+    --tippecanoe ${tippecanoe} \
+    --aws ${aws} \
+    --n-jobs ${n_jobs} \
+    --threads ${n_jobs}
+```
+---
+### Run Pipeline via Docker
 
-    **Set Up Environment**
+**Set Up Environment**
 
-    {%
-    include-markdown "../../../includes/includemd_vigenettes_setupenv_docker.md"
-    %}
+{%
+include-markdown "../../../includes/includemd_vigenettes_setupenv_docker.md"
+%}
 
-    **Example Command**
+**Example Command**
 
-    ```bash
-    docker run -it --rm \
+```bash
+docker run -it --rm \
     -v ${work_dir}:/data \
     weiqiuc/cartloader:${docker_tag}\
     run_xenium \
-      --load-xenium-ranger \
-      --sge-convert \
-      --run-ficture2 \
-      --import-cells \
-      --import-images \
-      --run-cartload2 \
-      --upload-aws \
-      --xenium-ranger-dir /data/raw \
-      --out-dir /data/output \
-      --s3-dir ${S3_DIR} \
-      --units-per-um ${SCALE} \
-      --width ${train_width} \
-      --n-factor ${n_factor} \
-      --id ${DATA_ID} \
-      --image-ids DAPI_OME \
-      --spatula ${spatula} \
-      --ficture2 ${punkst} \
-      --pmtiles ${pmtiles} \
-      --tippecanoe ${tippecanoe} \
-      --aws ${aws} \
-      --n-jobs ${n_jobs} \
-      --threads ${n_jobs}
-    ```
+    --load-xenium-ranger \
+    --sge-convert \
+    --run-ficture2 \
+    --import-cells \
+    --import-images \
+    --run-cartload2 \
+    --upload-aws \
+    --xenium-ranger-dir /data/raw \
+    --out-dir /data/output \
+    --s3-dir ${S3_DIR} \
+    --units-per-um ${SCALE} \
+    --width ${train_width} \
+    --n-factor ${n_factor} \
+    --id ${DATA_ID} \
+    --image-ids DAPI_OME \
+    --spatula ${spatula} \
+    --ficture2 ${punkst} \
+    --pmtiles ${pmtiles} \
+    --tippecanoe ${tippecanoe} \
+    --aws ${aws} \
+    --n-jobs ${n_jobs} \
+    --threads ${n_jobs}
+```
 
 ---
 
@@ -260,13 +266,13 @@ In the following examples, only `DAPI_OME` image is deployed. Alternatively, `Ca
 | `CartLoader` Modules                     | Flags in `run_xenium`  | Actions                                                                       | Prerequisites                                                             |
 |------------------------------------------|------------------------|-------------------------------------------------------------------------------|---------------------------------------------------------------------------|
 | `load_xenium_ranger`                     | `--load-xenium-ranger` | Summarize Xenium Ranger outputs into JSON                                     | Xenium Output files                                                       |
-| [`sge_convert`](./sge_convert.md)        | `--sge-convert`        | Convert SGE to `CartLoader` format; optional density filter and visuals         | Xenium assets JSON (from `load_xenium_ranger`) or transcript CSV/Parquet  |
-| [`run_ficture2`](./run_ficture2.md)      | `--run-ficture2`       | FICTURE analysis                                                              | SGE (from `sge_convert`); FICTURE parameters (`--width`, `--n-factor`)    |
-| [`import_xenium_cell`](./import_cell.md) | `--import-cells`       | Import cell points, boundaries, cluster, de;                                  | Xenium assets JSON or manual CSVs; also `--cell-id`                       |
-| [`import_image`](./import_image.md)      | `--import-images`      | Import background images (OME‑TIFF) → PNG/PMTiles;                            | Xenium assets JSON or `--ome-tifs`; also `--image-ids`  or `--all-images` |
-| [`run_cartload2`](./run_cartload2.md)    | `--run-cartload2`      | Package SGE, optional FICTURE/cells/images into PMTiles; write `catalog.yaml` | SGE, optional FICTURE assets or any imported cell/image assets; `--id`    |
-| [`upload_aws`](./upload_aws.md)          | `--upload-aws`         | Upload catalog and PMTiles to S3                                              | `catalog.yaml` (from `run_cartload2`); `--s3-bucket`, `--id`              |
-| [`upload_zenodo`](./upload_zenodo.md)    | `--upload-zenodo`      | Upload catalog and PMTiles to Zenodo                                          | `catalog.yaml` (from `run_cartload2`); `--zenodo-token`                   |
+| [`sge_convert`](../../reference/sge_convert.md)        | `--sge-convert`        | Convert SGE to `CartLoader` format; optional density filter and visuals         | Xenium assets JSON (from `load_xenium_ranger`) or transcript CSV/Parquet  |
+| [`run_ficture2`](../../reference/run_ficture2.md)      | `--run-ficture2`       | FICTURE analysis                                                              | SGE (from `sge_convert`); FICTURE parameters (`--width`, `--n-factor`)    |
+| [`import_xenium_cell`](../../reference/import_cell.md) | `--import-cells`       | Import cell points, boundaries, cluster, de;                                  | Xenium assets JSON or manual CSVs; also `--cell-id`                       |
+| [`import_image`](../../reference/import_image.md)      | `--import-images`      | Import background images (OME‑TIFF) → PNG/PMTiles;                            | Xenium assets JSON or `--ome-tifs`; also `--image-ids`  or `--all-images` |
+| [`run_cartload2`](../../reference/run_cartload2.md)    | `--run-cartload2`      | Package SGE, optional FICTURE/cells/images into PMTiles; write `catalog.yaml` | SGE, optional FICTURE assets or any imported cell/image assets; `--id`    |
+| [`upload_aws`](../../reference/upload_aws.md)          | `--upload-aws`         | Upload catalog and PMTiles to S3                                              | `catalog.yaml` (from `run_cartload2`); `--s3-bucket`, `--id`              |
+| [`upload_zenodo`](../../reference/upload_zenodo.md)    | `--upload-zenodo`      | Upload catalog and PMTiles to Zenodo                                          | `catalog.yaml` (from `run_cartload2`); `--zenodo-token`                   |
 
 **Parameter Requirements by Action Flag**
 
@@ -300,40 +306,6 @@ Below are explanations of the parameters used in the example. For the full list,
 
 
 ## Outputs
-<!-- 
-### Xenium Assets JSON
-
-Example: [`includes/xenium_ranger_assets.human_lung_cancer.json`](../../../includes/xenium_ranger_assets.human_lung_cancer.json)
-
-```json
-{% include-markdown "../../../includes/xenium_ranger_assets.human_lung_cancer.json" %}
-```
-
-
-### Spatial Factor Inference
-Below is an example of spatial factor inference results from `FICTURE` using a training width of 18, 12 factors, a fit width of 18, and an anchor resolution of 6. See output details in the reference pages for [run_ficture2](../docs/reference/run_ficture2.md)
-
-![FICTURE](../../images/pipeline_vignettes/xenium_human_lung_cancer_v1.2.t18_f24_p18_a6.png)
-![cmap](../../images/pipeline_vignettes/xenium_human_lung_cancer_v1.2.t18_f24.rgb.png)
-
-
-{{ read_csv('../../tabs/./xenium_human_lung_cancer_v1.2.t18_f24_p18_a6.factor.info.tsv',sep = '\t') }}
-
-
-### SGE/FICTURE/Cell/Image assets
-
-See output details in the reference pages for [run_cartload2](../../reference/run_cartload2.md), [import_xenium_cell](../../reference/import_cell.md), and [import_image](../../reference/import_image.md).
-
-- SGE assets JSON: `<out-dir>/sge/sge_assets.json`
-- FICTURE assets JSON: `<out-dir>/cartload2/ficture_assets.json` (when `--run-ficture2`)
-- Cells assets JSON: `<out-dir>/cartload2/spaceranger_assets.json` (default `--cell-id spaceranger`)
-  - Cells PMTiles: `<out-dir>/cartload2/spaceranger-cells.pmtiles`
-  - Boundaries PMTiles: `<out-dir>/cartload2/spaceranger-boundaries.pmtiles`
-- Catalog to serve: `<out-dir>/cartload2/catalog.yaml`
-- SGE PMTiles (examples): `<out-dir>/cartload2/sge-mono-dark.pmtiles`, `<out-dir>/cartload2/sge-mono-light.pmtiles`
-- Factor PMTiles (examples): `<out-dir>/cartload2/t18_f24_p18_a6-results.pmtiles`, `<out-dir>/cartload2/t18_f24_p18_a6-pixel-raster.pmtiles`
-
-individual PMTiles and asset JSON files reside alongside it under `<out-dir>/cartload2/`. -->
 
 <div class="grid cards generic" markdown>
 
@@ -351,4 +323,4 @@ individual PMTiles and asset JSON files reside alongside it under `<out-dir>/car
 
 </div>
 
-See output details in the reference pages for [run_ficture2](../docs/reference/run_ficture2.md) and [run_cartload2](../docs/reference/run_cartload2.md).
+See output details in the reference pages for [run_ficture2](../../reference/run_ficture2.md) and [run_cartload2](../../reference/run_cartload2.md).

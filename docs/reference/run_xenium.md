@@ -4,6 +4,9 @@
 
 An end‑to‑end workflow for 10x Xenium data using `CartLoader` to run steps (including convert inputs, run FICTURE, convert cell analysis results, convert background images, package assets, and upload for sharing) as needed.
 
+!!! tip "Also available: `run_together`"
+    [`run_together`](./run_together.md) runs the same kind of pipeline with a single command and supports **multiple platforms and multiple samples** (joint model). `run_xenium` remains the choice when you want explicit per-action and per-tool control for a single Xenium sample. See [Which interface should I use?](../faq/choose_interface.md).
+
 ---
 ## Requirements
 
@@ -20,7 +23,7 @@ An end‑to‑end workflow for 10x Xenium data using `CartLoader` to run steps (
 
 Click to see action details per flag:
 
-* [`--load-xenium-ranger`](./load_xenium_ranger.md#actions)
+* `--load-xenium-ranger` — detect Xenium Ranger outputs and write the assets JSON
 * [`--sge-convert`](./sge_convert.md#actions)
 * [`--run-ficture2`](./run_ficture2.md#actions)
 * [`--import-cells`](./import_cell.md#actions)
