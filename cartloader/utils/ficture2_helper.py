@@ -101,6 +101,20 @@ def define_decode_runs(args, **kwargs):
             })
     return decode_runs
 
+def _append_with_tmpdir(cmds, tmp_dir, cmd):
+    """Append `cmd` run with TMPDIR pointed at `tmp_dir`, which is removed afterwards.
+
+    R puts its session tempdir under TMPDIR (default /tmp), and data.table::fread
+    decompresses a .gz input there in full before parsing. For large results files
+    that can overflow a small /tmp, or lose the file to a /tmp reaper mid-run. R
+    silently falls back to /tmp when TMPDIR does not exist, hence the mkdir. Each
+    command needs its own directory: targets sharing one could run concurrently under
+    make -j, and one's cleanup would delete the other's live session tempdir.
+    """
+    cmds.append(f"mkdir -p '{tmp_dir}'")
+    cmds.append(f"TMPDIR='{tmp_dir}' {cmd}")
+    cmds.append(f"rm -rf '{tmp_dir}'")
+
 def add_umap_targets(
     mm,
     input_tsv,
@@ -119,7 +133,7 @@ def add_umap_targets(
         f"--input '{input_tsv}'",
         f"--out-prefix '{out_prefix}'"
     ])
-    cmds.append(cmd)
+    _append_with_tmpdir(cmds, f"{out_prefix}_create_umap", cmd)
     mm.add_target(umap_tsv, [f"{out_prefix}.done", color_map], cmds)
 
     cmds = cmd_separator([], f"UMAP Visualization for ID: {subtitle}...")
@@ -130,7 +144,7 @@ def add_umap_targets(
         f"--cmap '{color_map}'",
         f'--subtitle "{subtitle}"'
     ])
-    cmds.append(cmd)
+    _append_with_tmpdir(cmds, f"{out_prefix}_draw_umap", cmd)
     mm.add_target(umap_png, [f"{out_prefix}.done", color_map, umap_tsv], cmds)
 
     cmds = cmd_separator([], f"UMAP Visualization (plot for individual factors; colorized by probability) for ID: {subtitle}...")
@@ -142,7 +156,7 @@ def add_umap_targets(
         f'--subtitle "{subtitle}"',
         f"--mode prob"
     ])
-    cmds.append(cmd)
+    _append_with_tmpdir(cmds, f"{out_prefix}_draw_umap_single", cmd)
     mm.add_target(umap_single_prob_png, [f"{out_prefix}.done", color_map, umap_tsv], cmds)
 
 ## transform FICTURE parameters to FACTOR assets (new standard)
