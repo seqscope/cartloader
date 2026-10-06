@@ -16,6 +16,10 @@ set -euo pipefail
 #
 # OPTIONAL ARGUMENTS (override defaults, any order):
 #   --docker             Run in docker mode (default: local).
+#   --image <name>       Docker image to run in docker mode    (default: IMAGE below)
+#   --no-pull            Use the local copy of --image instead of pulling it first
+#   --work-dir <dir>     Directory for out/ (and data/ with --url)
+#                        (default: current directory; the script's directory with --docker)
 #   --width <int>        Hexagon width in um for FICTURE2     (default: 12)
 #   --n-factor <list>    Comma-separated list of factors      (default: 12,24,48)
 #   --threads <int>      Number of threads per job            (default: 4)
@@ -41,7 +45,7 @@ CARTLOADER="cartloader"                      # cartloader executable/path (only 
 ##########################################################################################################
 ## Parse arguments
 usage() {
-	echo "Usage: $0 --id <ID> (--url <URL> | --in-dir <DIR>) [--docker] [--width N] [--n-factor LIST] [--threads N] [--jobs N] [--bin-count N]"
+	echo "Usage: $0 --id <ID> (--url <URL> | --in-dir <DIR>) [--docker] [--image NAME] [--no-pull] [--work-dir DIR] [--width N] [--n-factor LIST] [--threads N] [--jobs N] [--bin-count N]"
 }
 
 ## Required / mode arguments (no defaults)
@@ -49,6 +53,8 @@ ID=""
 URL=""
 IN_DIR=""
 SYSTEM=local
+PULL=1
+WORKDIR=""
 
 ## Optional parameters with default values
 WIDTH=12
@@ -64,6 +70,9 @@ while [ "$#" -gt 0 ]; do
 		--url)       URL=$2;       shift 2 ;;
 		--in-dir)    IN_DIR=$2;    shift 2 ;;
 		--docker)    SYSTEM=docker; shift 1 ;;
+		--image)     IMAGE=$2;     shift 2 ;;
+		--no-pull)   PULL=0;       shift 1 ;;
+		--work-dir)  WORKDIR=$2;   shift 2 ;;
 		--width)     WIDTH=$2;     shift 2 ;;
 		--n-factor)  N_FACTOR=$2;  shift 2 ;;
 		--threads)   THREADS=$2;   shift 2 ;;
@@ -103,9 +112,13 @@ LARGEST_N_FACTOR=$(echo ${N_FACTOR} | tr ',' '\n' | sort -nr | head -n 1)
 ##########################################################################################################
 ## Common settings
 ## Base directory for output:
-##   local  -> current working directory (pwd)
-##   docker -> the directory containing this script
-if [ "${SYSTEM}" == "docker" ]; then
+##   --work-dir -> the given directory (created if needed)
+##   local      -> current working directory (pwd)
+##   docker     -> the directory containing this script
+if [ -n "${WORKDIR}" ]; then
+	mkdir -p "${WORKDIR}"
+	WORKDIR="$(cd "${WORKDIR}" && pwd)"
+elif [ "${SYSTEM}" == "docker" ]; then
 	WORKDIR="$(cd "$(dirname "$0")" && pwd)"
 else
 	WORKDIR="$(pwd)"
@@ -136,7 +149,9 @@ SAMPLE=rep1   # generic sample name; change to your preferred sample name
 ## INDIR/OUTDIR are the paths passed to the commands (container paths under docker,
 ## identical to REAL_INDIR/REAL_OUTDIR under local).
 if [ "${SYSTEM}" == "docker" ]; then
-	docker pull ${IMAGE}
+	if [ "${PULL}" == "1" ]; then
+		docker pull ${IMAGE}
+	fi
 	INDIR=/data
 	OUTDIR=/out
 	CMD="docker run --rm -v ${REAL_OUTDIR}:${OUTDIR} -v ${REAL_INDIR}:${INDIR} ${IMAGE}"

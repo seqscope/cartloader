@@ -116,7 +116,7 @@ def main():
     print(f"Repo Root detected as: {REPO_ROOT}\n")
 
     # Check for globally available tools first to inform submodule checks
-    has_magick = shutil.which("magick") is not None
+    has_imagemagick = shutil.which("convert") is not None or shutil.which("magick") is not None
 
     print("Checking Submodules...")
     # List of submodules to check
@@ -130,8 +130,8 @@ def main():
     missing_submodules = []
     
     for sub in submodules:
-        if sub == "submodules/ImageMagick" and has_magick:
-            print(f"[NOTE] Skipping {sub} check because 'magick' is in PATH")
+        if sub == "submodules/ImageMagick" and has_imagemagick:
+            print(f"[NOTE] Skipping {sub} check because ImageMagick is in PATH")
             continue
             
         if not check_submodule(sub):
@@ -143,7 +143,6 @@ def main():
     tool_fallbacks = {
         "spatula": ["submodules/spatula/build/spatula", "submodules/spatula/bin/spatula"],
         "tippecanoe": ["submodules/tippecanoe/tippecanoe"],
-        "magick": ["submodules/ImageMagick/utilities/magick"], # depends on how IM is built, usually make install puts it in /usr/local
         "pmtiles": [], # User installed manually
     }
     
@@ -155,7 +154,6 @@ def main():
         "spatula",                    
         "tippecanoe",                 
         "pmtiles",                    
-        "magick",                     
         "Rscript",                    
         "python"                      
     ]
@@ -165,6 +163,15 @@ def main():
         fallbacks = tool_fallbacks.get(tool)
         if not check_command(tool, fallback_paths=fallbacks):
             missing_tools.append(tool)
+
+    # ImageMagick (used by spatula's CImg): ImageMagick 6 provides `convert` (e.g. Ubuntu's
+    # apt package) and ImageMagick 7 provides `magick`; either one will do.
+    if shutil.which("convert"):
+        check_command("convert", name="ImageMagick")
+    elif not check_command("magick", name="ImageMagick",
+                           # depends on how IM is built, usually make install puts it in /usr/local
+                           fallback_paths=["submodules/ImageMagick/utilities/magick"]):
+        missing_tools.append("ImageMagick (convert or magick)")
             
     print("\nChecking Python Packages...")
     missing_python, missing_optional = [], {}
