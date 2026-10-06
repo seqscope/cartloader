@@ -1964,10 +1964,16 @@ def add_targets(mm, samples, cfg, args):
                   f"used as-is. Apply the same beforehand to that file, or supply the raw input "
                   f"instead so it goes through ingest.", file=sys.stderr)
 
+        # Rewritten only when its content changes, so its timestamp is meaningful to make.
         in_list = os.path.join(sge_root, "in_list.tsv")
-        with open(in_list, "w") as f:
-            for s in grp:
-                f.write(f"{s['id']}\t{transcript[s['id']]}\n")
+        in_list_text = "".join(f"{s['id']}\t{transcript[s['id']]}\n" for s in grp)
+        old_text = None
+        if os.path.exists(in_list):
+            with open(in_list) as f:
+                old_text = f.read()
+        if old_text != in_list_text:
+            with open(in_list, "w") as f:
+                f.write(in_list_text)
 
         # --- ficture: one target, each analysis run sequentially (params merge) ---
         fic_flag = os.path.join(mkdir, "ficture.done")

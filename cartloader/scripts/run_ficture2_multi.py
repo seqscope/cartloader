@@ -1,7 +1,7 @@
 import sys, os, gzip, argparse, logging, shutil, subprocess, inspect, json
 import pandas as pd
 from cartloader.utils.minimake import minimake
-from cartloader.utils.utils import cmd_separator, scheck_app, add_param_to_cmd, read_minmax, flexopen, execute_makefile
+from cartloader.utils.utils import cmd_separator, scheck_app, add_param_to_cmd, read_minmax, flexopen, execute_makefile, write_dict_to_file
 from cartloader.utils.ficture2_helper import (
     define_lda_runs,
     define_decode_runs,
@@ -121,13 +121,55 @@ def mex_widths(args):
         return []
     return _split_widths(args.segment_width_10x) or _split_widths(args.width)
 
-def add_multisample_prepare_targets(mm, args, ficture2bin, in_samples):
-    """Add Makefile target for multi-sample tiling and hexagon generation."""
-    widths = hexagon_widths(args)
+def tiles_flag(args):
+    """Done flag of the tiling step (per-sample tiled transcripts and feature lists)."""
+    return f"{args.out_dir}/multi.tiles.done"
 
-    cmds = cmd_separator([], f"Creating tiled tsv from {os.path.basename(args.in_list)}...")
-    cmds.append(f"touch '{args.out_dir}/multi.begin'")
-    cmd = " ".join([
+def hex_flag(args, width):
+    """Done flag of the hexagon step for one width (per-sample and joint hexagon files)."""
+    return f"{args.out_dir}/multi.hex_{width}.done"
+
+def predates_prepare_flags(args):
+    """True for an output directory last prepared before the per-step done flags existed
+    (it has the old single multi.done flag but no settings files yet). Its outputs are
+    adopted as up to date instead of being rebuilt; see stamp_settings."""
+    return (os.path.exists(f"{args.out_dir}/multi.done")
+            and not os.path.exists(f"{args.out_dir}/multi.tiles.params.json"))
+
+def stamp_settings(target, settings_path, settings, outputs, inputs, adopt=False):
+    """Write `settings_path`, the settings file the Makefile `target` depends on.
+
+    The file is rewritten only when `settings` change, so its timestamp, and with it the
+    need to rerun the step, moves only on a real change. A target whose `outputs` have
+    gone missing is removed so that the step reruns.
+
+    With `adopt`, outputs built before settings files existed are marked up to date
+    instead, provided none of `inputs` (the target's other prerequisites) is newer than
+    them. The target and its settings file are dated to the newest input, the earliest
+    date at which the target is up to date, so that nothing built from the outputs
+    afterwards looks stale.
+    """
+    have_outputs = all(os.path.exists(p) for p in outputs)
+    if (adopt and have_outputs and not os.path.exists(settings_path)
+            and all(os.path.exists(p) for p in inputs)):
+        t_out = min(os.stat(p).st_mtime_ns for p in outputs)
+        t_in = max((os.stat(p).st_mtime_ns for p in inputs), default=t_out)
+        if t_in <= t_out:
+            write_dict_to_file(settings, settings_path)
+            if not os.path.exists(target):
+                open(target, "a").close()
+            os.utime(settings_path, ns=(t_in, t_in))
+            os.utime(target, ns=(t_in, t_in))
+            return
+    if os.path.exists(target) and not have_outputs:
+        os.remove(target)
+    write_dict_to_file(settings, settings_path)
+
+def prepare_cmd(args, ficture2bin, widths=()):
+    """The multisample-prepare command. Without widths it only tiles the samples and
+    writes the feature lists; with widths it also builds those hexagon widths, reusing
+    the existing tiles."""
+    parts = [
         f"'{ficture2bin}'", "multisample-prepare",
         f"--in-tsv-list '{args.in_list}'",
         f"--out-dir '{args.out_dir}'",
@@ -141,21 +183,82 @@ def add_multisample_prepare_targets(mm, args, ficture2bin, in_samples):
         f"--tile-size {args.tile_size}",
         f"--tile-buffer {args.tile_buffer}",
         f"--threads {args.threads}",
-        f"--hex-grid-dist {' '.join(widths)}",
         f"--min-total-count-per-sample {args.min_count_per_sample}",
-        f"--min-count {args.min_ct_per_unit_hexagon}",
         # No feature filter here on purpose: this step writes the tiled TSV, the per-sample
         # feature lists and multi.features.tsv, all of which packaging reads and which must
         # therefore keep every gene. Filtering happens at LDA time (see add_feature_select_target).
-    ])
-    cmds.append(cmd)
+    ]
+    if widths:
+        parts += [f"--hex-grid-dist {' '.join(widths)}",
+                  f"--min-count {args.min_ct_per_unit_hexagon}"]
+    return " ".join(parts)
 
-    cmd = f"[ -f '{args.out_dir}/multi.features.tsv' ]" + "".join([f" && [ -f '{args.out_dir}/multi.hex_{width}.txt' ]" for width in widths]) + f" && touch '{args.out_dir}/multi.done'"
-    cmds.append(cmd)
-    ## remove multi.done if exists to support incremental running
-    if os.path.exists(f"{args.out_dir}/multi.done"):
-        os.remove(f"{args.out_dir}/multi.done")
-    mm.add_target(f"{args.out_dir}/multi.done", [args.in_list], cmds)
+def add_multisample_prepare_targets(mm, args, ficture2bin, in_samples, sample2tsv, adopt=False):
+    """Add the Makefile targets for multi-sample tiling (tiles_flag) and for each hexagon
+    width (hex_flag), and return {width: hex_flag}.
+
+    Each step reruns only when needed, so re-invoking this script with unchanged inputs
+    leaves the multi.* outputs, and every LDA/decode target downstream of them, alone.
+    Each flag depends on a settings file (*.params.json, see stamp_settings) holding
+    what determines the step's output, including the contents of --in-list, so a changed
+    setting, a changed sample list, a new width or an earlier failed attempt reruns the
+    step. The tiling step also depends on the transcript files, so a re-ingested sample
+    is re-tiled.
+
+    punkst keeps per-sample outputs that already exist, so each step first removes the
+    ones it rebuilds. That matters for correctness, not just freshness: a per-sample
+    hexagon file numbers its features by a dictionary built over every listed sample,
+    and the joint file reuses those numbers, so one left over from a different sample
+    list would silently mislabel features. A changed list thus rebuilds every sample,
+    more than strictly needed, which is fine for so rare an event.
+    """
+    widths = hexagon_widths(args)
+    samples_dir = os.path.join(args.out_dir, "samples")
+    transcripts = [sample2tsv[s] for s in in_samples]
+
+    # 1) tiling (pts2tiles per sample, then the feature lists)
+    tiled = [os.path.join(samples_dir, s, f"{s}.tiled.{ext}") for s in in_samples for ext in ("tsv", "index")]
+    settings_path = f"{args.out_dir}/multi.tiles.params.json"
+    stamp_settings(tiles_flag(args), settings_path, {
+        "samples": sorted([s, sample2tsv[s]] for s in in_samples),  # tiles are per sample; order is irrelevant
+        "icol_x": args.colidx_x - 1,
+        "icol_y": args.colidx_y - 1,
+        "icol_feature": args.colidx_feature - 1,
+        "icol_count": args.colidx_count - 1,
+        "tile_size": args.tile_size,
+        "tile_buffer": args.tile_buffer,
+    }, tiled, transcripts, adopt)
+
+    cmds = cmd_separator([], f"Tiling the transcripts listed in {os.path.basename(args.in_list)}...")
+    cmds.append(f"touch '{args.out_dir}/multi.begin'")
+    cmds.append("rm -f " + " ".join(f"'{p}'" for p in tiled))
+    cmds.append(prepare_cmd(args, ficture2bin))
+    cmds.append(" && ".join(f"[ -f '{p}' ]" for p in tiled + [f"{args.out_dir}/multi.union_features.tsv"]) + f" && touch '{tiles_flag(args)}'")
+    mm.add_target(tiles_flag(args), [settings_path] + transcripts, cmds)
+
+    # 2) hexagons, one width at a time
+    flags = {}
+    for width in widths:
+        per_sample = [os.path.join(samples_dir, s, f"{s}.hex_{width}.{ext}") for s in in_samples for ext in ("txt", "json")]
+        joint = [f"{args.out_dir}/multi.hex_{width}.{ext}" for ext in ("txt", "json")]
+        settings_path = f"{args.out_dir}/multi.hex_{width}.params.json"
+        stamp_settings(hex_flag(args, width), settings_path, {
+            "samples": [[s, sample2tsv[s]] for s in in_samples],  # order sets each sample's index in the joint file
+            "hex_grid_dist": width,
+            "min_count_per_sample": args.min_count_per_sample,
+            "min_ct_per_unit_hexagon": args.min_ct_per_unit_hexagon,
+        }, per_sample + joint, [tiles_flag(args)], adopt)
+
+        cmds = cmd_separator([], f"Creating {width}um hexagons for the samples listed in {os.path.basename(args.in_list)}...")
+        cmds.append("rm -f " + " ".join(f"'{p}'" for p in per_sample))
+        cmds.append(prepare_cmd(args, ficture2bin, [width]))
+        cmds.append(" && ".join(f"[ -f '{p}' ]" for p in joint + [f"{args.out_dir}/multi.features.tsv"]) + f" && touch '{hex_flag(args, width)}'")
+        # Order-only on the previous width (after "|"): every run rewrites the shared feature
+        # lists, so two must not run at once, but one width's rerun must not make the next stale.
+        prev = list(flags.values())[-1:]
+        mm.add_target(hex_flag(args, width), [settings_path, tiles_flag(args)] + (["|"] + prev if prev else []), cmds)
+        flags[width] = hex_flag(args, width)
+    return flags
 
 def add_segment_10x_targets(mm, args, in_samples):
     """Add one Makefile target per (sample, width) converting the per-sample hexagon
@@ -183,12 +286,12 @@ def add_segment_10x_targets(mm, args, in_samples):
                 f"--out-dir '{mex_dir}'",
             ]))
             cmds.append(f"[ -f '{mex_dir}/barcodes.tsv.gz' ] && [ -f '{mex_dir}/features.tsv.gz' ] && [ -f '{mex_dir}/matrix.mtx.gz' ] && touch '{done}'")
-            mm.add_target(done, [f"{args.out_dir}/multi.done"], cmds)
+            mm.add_target(done, [hex_flag(args, width)], cmds)
             entries.append((width, mex_dir, done))
         out[sample] = entries
     return out
 
-def add_feature_select_target(mm, args):
+def add_feature_select_target(mm, args, hex_flags, adopt=False):
     """Add the Makefile target resolving the feature filters into one feature list, and
     return its path (None when no filter was requested).
 
@@ -217,7 +320,13 @@ def add_feature_select_target(mm, args):
     if args.exclude_feature_regex:
         parts.append(f"--exclude-regex '{args.exclude_feature_regex}'")
     cmds.append(" ".join(parts))
-    mm.add_target(selected, [f"{args.out_dir}/multi.done"], cmds)
+    # Rerun when the filters change (settings file, list files) or the sample list does
+    # (tiling flag). Order-only on the hexagon steps (after "|"): each rewrites the union
+    # feature list, which must not be read mid-write.
+    settings_path = f"{args.out_dir}/multi.selected_features.params.json"
+    list_files = [f for f in (args.include_feature_list, args.exclude_feature_list) if f]
+    stamp_settings(selected, settings_path, {"command": " ".join(parts)}, [selected], [tiles_flag(args)] + list_files, adopt)
+    mm.add_target(selected, [tiles_flag(args), settings_path] + list_files + ["|"] + list(hex_flags.values()), cmds)
     return selected
 
 def add_lda_training_target(mm, args, ficture2bin, n_factor, train_width, model_prefix, hex_prefix, color_map, ficture2report, selected_features=None):
@@ -294,7 +403,7 @@ def add_lda_training_target(mm, args, ficture2bin, n_factor, train_width, model_
     cmds.append(f"cp '{unsorted_prefix}.model.tsv' '{lda_model_matrix}'")
     cmds.append(f"rm -f '{unsorted_prefix}.model.tsv' '{unsorted_prefix}.results.tsv'")
     cmds.append(f"[ -f '{lda_fit_tsv}' ] && [ -f '{lda_model_matrix}' ] && touch '{model_prefix}.done'")
-    mm.add_target(f"{model_prefix}.done", [f"{args.out_dir}/multi.done"] + ([selected_features] if selected_features else []), cmds)
+    mm.add_target(f"{model_prefix}.done", [hex_flag(args, train_width)] + ([selected_features] if selected_features else []), cmds)
 
     # 3) create color table
     cmds = cmd_separator([], f"Generate the color map ")
@@ -372,7 +481,7 @@ def add_projection_target_per_sample(mm, args, ficture2bin, model_prefix, model_
     cmds.append(f"rm -f '{sample_lda_prefix}.unsorted.results.tsv'")
     cmds.append(f"[ -f '{sample_lda_fit_tsv}' ] && touch '{sample_lda_prefix}.done'")
     mm.add_target(f"{sample_lda_prefix}.done",
-                  [f"{model_prefix}.done", f"{args.out_dir}/multi.done"] + ([selected_features] if selected_features else []), cmds)
+                  [f"{model_prefix}.done", hex_flag(args, train_width)] + ([selected_features] if selected_features else []), cmds)
     return f"{sample_lda_prefix}.done"
 
 def add_pixel_decode_target_per_sample(mm, args, ficture2bin, ficture2report, model_prefix, model_path, cmap_path, decode_id, fit_width, n_factor, fit_n_move, sample):
@@ -410,7 +519,7 @@ def add_pixel_decode_target_per_sample(mm, args, ficture2bin, ficture2report, mo
     cmds.append(f"{args.gzip} -f '{decode_postcount}'")
     #cmds.append(f"[ -f '{decode_fit_tsv}.gz' ] && [ -f '{decode_postcount}.gz' ] && touch '{decode_prefix}.tsv.done'")
     cmds.append(f"[ -f '{decode_prefix}.bin' ] && [ -f '{decode_postcount}.gz' ] && touch '{decode_prefix}.bin.done'")
-    mm.add_target(f"{decode_prefix}.bin.done", [cmap_path, f"{args.out_dir}/multi.done", f"{model_prefix}.done"], cmds)
+    mm.add_target(f"{decode_prefix}.bin.done", [cmap_path, tiles_flag(args), f"{model_prefix}.done"], cmds)
 
     cmds = cmd_separator([], f"Performing post-decode tasks, ID {decode_id} for sample {sample}...")
     cmds.append(f"'{args.spatula}' diffexp-model-matrix --tsv1 '{decode_postcount}.gz' --out '{decode_de}' --min-count {args.de_min_ct_per_feature} --max-pval {args.de_max_pval} --min-fc {args.de_min_fold}")
@@ -444,7 +553,7 @@ def add_pixel_decode_target_per_sample(mm, args, ficture2bin, ficture2report, mo
     #cmds.append(f"rm -f '{decode_fit_tsv}'")
 
     cmds.append(f"[ -f '{decode_de}' ] && [ -f '{decode_prefix}.factor.info.html' ] && [ -f '{decode_prefix}.png' ] && touch '{decode_prefix}.done'")
-    mm.add_target(f"{decode_prefix}.done", [cmap_path, f"{decode_prefix}.bin.done", f"{args.out_dir}/multi.done", f"{model_prefix}.done"], cmds)
+    mm.add_target(f"{decode_prefix}.done", [cmap_path, f"{decode_prefix}.bin.done", tiles_flag(args), f"{model_prefix}.done"], cmds)
 
     return f"{decode_prefix}.done"
 
@@ -467,7 +576,7 @@ def add_sample_json_target(mm, args, sample, sample_transcript, n_samples, sampl
     cmds.append(cmd)
 
     summary_aux_args = []
-    prerequisities = [f"{args.out_dir}/multi.done"]
+    prerequisities = [tiles_flag(args)] + [hex_flag(args, w) for w in hexagon_widths(args)]
     if selected_features:
         prerequisities.append(selected_features)
 
@@ -716,15 +825,16 @@ def run_ficture2_multi(_args):
     mm = minimake()
 
     # step 1. multi-sample tiling and hexagon:
-    add_multisample_prepare_targets(mm, args, ficture2bin, in_samples)
+    adopt = predates_prepare_flags(args)  # before any settings file is written below
+    hex_flags = add_multisample_prepare_targets(mm, args, ficture2bin, in_samples, sample2tsv, adopt)
 
     # step 1.2. --segment-10x: export the per-sample hexagon files as 10x MEX. Depends only
-    # on multi.done, so it runs in --prepare-only mode as well.
+    # on the hexagon step of its width, so it runs in --prepare-only mode as well.
     mex_by_sample = add_segment_10x_targets(mm, args, in_samples)
 
     # step 1.5. the feature subset the factor analysis is restricted to (None if unfiltered).
     # A --prepare-only run trains nothing, so there is nothing to restrict.
-    selected_features = None if args.prepare_only else add_feature_select_target(mm, args)
+    selected_features = None if args.prepare_only else add_feature_select_target(mm, args, hex_flags, adopt)
 
     # step 2. multi-sample LDA training (none in --prepare-only: tiling is the whole run)
     lda_runs = [] if args.prepare_only else define_lda_runs(args, **LDA_CONFIG)
