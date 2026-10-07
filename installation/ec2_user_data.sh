@@ -11,13 +11,14 @@
 # Safety net: terminate after 24 h even if nobody comes back (cancel: sudo shutdown -c)
 shutdown -h +1440
 
-dnf install -y docker git wget unzip tmux
+dnf install -y docker git tmux awscli-2
 usermod -a -G docker ec2-user
 systemctl enable --now docker
 
+# The version is the launch date and time in UTC (the instance clock), e.g. 20261007-1432.
 # To build another branch or tag, add `git checkout <ref> &&` after `cd cartloader`.
 sudo -u ec2-user -i bash -c '
 	git clone https://github.com/seqscope/cartloader.git &&
 	cd cartloader &&
-	bash installation/docker_release.sh --version "$(date +%Y%m%d)a"
+	bash installation/docker_release.sh --version "$(date -u +%Y%m%d-%H%M)"
 '
