@@ -2,190 +2,254 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://seqscope.github.io/cartloader/</loc>
-         <lastmod>2026-03-09</lastmod>
+         <lastmod>2026-10-07</lastmod>
     </url>
     <url>
          <loc>https://seqscope.github.io/cartloader/installation/</loc>
-         <lastmod>2026-03-09</lastmod>
+         <lastmod>2026-10-07</lastmod>
     </url>
     <url>
          <loc>https://seqscope.github.io/cartloader/faq/aws_upload_failures/</loc>
-         <lastmod>2026-03-09</lastmod>
+         <lastmod>2026-10-07</lastmod>
     </url>
     <url>
          <loc>https://seqscope.github.io/cartloader/faq/background_image_orientation/</loc>
-         <lastmod>2026-03-09</lastmod>
+         <lastmod>2026-10-07</lastmod>
+    </url>
+    <url>
+         <loc>https://seqscope.github.io/cartloader/faq/choose_interface/</loc>
+         <lastmod>2026-10-07</lastmod>
     </url>
     <url>
          <loc>https://seqscope.github.io/cartloader/faq/choose_platform/</loc>
-         <lastmod>2026-03-09</lastmod>
+         <lastmod>2026-10-07</lastmod>
     </url>
     <url>
          <loc>https://seqscope.github.io/cartloader/faq/choose_run_mode/</loc>
-         <lastmod>2026-03-09</lastmod>
+         <lastmod>2026-10-07</lastmod>
     </url>
     <url>
          <loc>https://seqscope.github.io/cartloader/faq/define_units_per_um/</loc>
-         <lastmod>2026-03-09</lastmod>
+         <lastmod>2026-10-07</lastmod>
     </url>
     <url>
          <loc>https://seqscope.github.io/cartloader/faq/ficture/</loc>
-         <lastmod>2026-03-09</lastmod>
+         <lastmod>2026-10-07</lastmod>
     </url>
     <url>
          <loc>https://seqscope.github.io/cartloader/faq/find_outputs/</loc>
-         <lastmod>2026-03-09</lastmod>
+         <lastmod>2026-10-07</lastmod>
     </url>
     <url>
          <loc>https://seqscope.github.io/cartloader/faq/intro/</loc>
-         <lastmod>2026-03-09</lastmod>
+         <lastmod>2026-10-07</lastmod>
     </url>
     <url>
          <loc>https://seqscope.github.io/cartloader/faq/restart_or_resume/</loc>
-         <lastmod>2026-03-09</lastmod>
+         <lastmod>2026-10-07</lastmod>
     </url>
     <url>
          <loc>https://seqscope.github.io/cartloader/faq/speed_up_runs/</loc>
-         <lastmod>2026-03-09</lastmod>
+         <lastmod>2026-10-07</lastmod>
     </url>
     <url>
          <loc>https://seqscope.github.io/cartloader/faq/unsupported_platform/</loc>
-         <lastmod>2026-03-09</lastmod>
+         <lastmod>2026-10-07</lastmod>
     </url>
     <url>
          <loc>https://seqscope.github.io/cartloader/faq/why_multi-sample/</loc>
-         <lastmod>2026-03-09</lastmod>
+         <lastmod>2026-10-07</lastmod>
     </url>
     <url>
          <loc>https://seqscope.github.io/cartloader/faq/zenodo_setup/</loc>
-         <lastmod>2026-03-09</lastmod>
+         <lastmod>2026-10-07</lastmod>
+    </url>
+    <url>
+         <loc>https://seqscope.github.io/cartloader/reference/anno_cartload_folder/</loc>
+         <lastmod>2026-10-07</lastmod>
     </url>
     <url>
          <loc>https://seqscope.github.io/cartloader/reference/feature_customization/</loc>
-         <lastmod>2026-03-09</lastmod>
+         <lastmod>2026-10-07</lastmod>
     </url>
     <url>
          <loc>https://seqscope.github.io/cartloader/reference/import_cell/</loc>
-         <lastmod>2026-03-09</lastmod>
+         <lastmod>2026-10-07</lastmod>
     </url>
     <url>
          <loc>https://seqscope.github.io/cartloader/reference/import_image/</loc>
-         <lastmod>2026-03-09</lastmod>
+         <lastmod>2026-10-07</lastmod>
     </url>
     <url>
          <loc>https://seqscope.github.io/cartloader/reference/import_square/</loc>
-         <lastmod>2026-03-09</lastmod>
+         <lastmod>2026-10-07</lastmod>
     </url>
     <url>
          <loc>https://seqscope.github.io/cartloader/reference/intro/</loc>
-         <lastmod>2026-03-09</lastmod>
+         <lastmod>2026-10-07</lastmod>
+    </url>
+    <url>
+         <loc>https://seqscope.github.io/cartloader/reference/reformat_cosmx/</loc>
+         <lastmod>2026-10-07</lastmod>
     </url>
     <url>
          <loc>https://seqscope.github.io/cartloader/reference/run_cartload2/</loc>
-         <lastmod>2026-03-09</lastmod>
+         <lastmod>2026-10-07</lastmod>
     </url>
     <url>
          <loc>https://seqscope.github.io/cartloader/reference/run_cartload2_multi/</loc>
-         <lastmod>2026-03-09</lastmod>
+         <lastmod>2026-10-07</lastmod>
     </url>
     <url>
          <loc>https://seqscope.github.io/cartloader/reference/run_ficture2/</loc>
-         <lastmod>2026-03-09</lastmod>
+         <lastmod>2026-10-07</lastmod>
     </url>
     <url>
          <loc>https://seqscope.github.io/cartloader/reference/run_ficture2_multi/</loc>
-         <lastmod>2026-03-09</lastmod>
+         <lastmod>2026-10-07</lastmod>
+    </url>
+    <url>
+         <loc>https://seqscope.github.io/cartloader/reference/run_together/</loc>
+         <lastmod>2026-10-07</lastmod>
+    </url>
+    <url>
+         <loc>https://seqscope.github.io/cartloader/reference/run_together_images/</loc>
+         <lastmod>2026-10-07</lastmod>
+    </url>
+    <url>
+         <loc>https://seqscope.github.io/cartloader/reference/run_together_inputs/</loc>
+         <lastmod>2026-10-07</lastmod>
     </url>
     <url>
          <loc>https://seqscope.github.io/cartloader/reference/run_visiumhd/</loc>
-         <lastmod>2026-03-09</lastmod>
+         <lastmod>2026-10-07</lastmod>
     </url>
     <url>
          <loc>https://seqscope.github.io/cartloader/reference/run_xenium/</loc>
-         <lastmod>2026-03-09</lastmod>
+         <lastmod>2026-10-07</lastmod>
     </url>
     <url>
          <loc>https://seqscope.github.io/cartloader/reference/sge_convert/</loc>
-         <lastmod>2026-03-09</lastmod>
+         <lastmod>2026-10-07</lastmod>
     </url>
     <url>
          <loc>https://seqscope.github.io/cartloader/reference/sge_orientate/</loc>
-         <lastmod>2026-03-09</lastmod>
+         <lastmod>2026-10-07</lastmod>
     </url>
     <url>
          <loc>https://seqscope.github.io/cartloader/reference/sge_stitch/</loc>
-         <lastmod>2026-03-09</lastmod>
+         <lastmod>2026-10-07</lastmod>
+    </url>
+    <url>
+         <loc>https://seqscope.github.io/cartloader/reference/supported_platforms/</loc>
+         <lastmod>2026-10-07</lastmod>
     </url>
     <url>
          <loc>https://seqscope.github.io/cartloader/reference/upload_aws/</loc>
-         <lastmod>2026-03-09</lastmod>
+         <lastmod>2026-10-07</lastmod>
     </url>
     <url>
          <loc>https://seqscope.github.io/cartloader/reference/upload_zenodo/</loc>
-         <lastmod>2026-03-09</lastmod>
+         <lastmod>2026-10-07</lastmod>
     </url>
     <url>
          <loc>https://seqscope.github.io/cartloader/reference/visiumhd_addon/</loc>
-         <lastmod>2026-03-09</lastmod>
+         <lastmod>2026-10-07</lastmod>
     </url>
     <url>
          <loc>https://seqscope.github.io/cartloader/reference/xenium_addon/</loc>
-         <lastmod>2026-03-09</lastmod>
+         <lastmod>2026-10-07</lastmod>
+    </url>
+    <url>
+         <loc>https://seqscope.github.io/cartloader/reference/platforms/cosmx_smi/</loc>
+         <lastmod>2026-10-07</lastmod>
+    </url>
+    <url>
+         <loc>https://seqscope.github.io/cartloader/reference/platforms/illumina/</loc>
+         <lastmod>2026-10-07</lastmod>
+    </url>
+    <url>
+         <loc>https://seqscope.github.io/cartloader/reference/platforms/merscope/</loc>
+         <lastmod>2026-10-07</lastmod>
+    </url>
+    <url>
+         <loc>https://seqscope.github.io/cartloader/reference/platforms/seqscope/</loc>
+         <lastmod>2026-10-07</lastmod>
+    </url>
+    <url>
+         <loc>https://seqscope.github.io/cartloader/reference/platforms/stereoseq/</loc>
+         <lastmod>2026-10-07</lastmod>
+    </url>
+    <url>
+         <loc>https://seqscope.github.io/cartloader/reference/platforms/visium_hd/</loc>
+         <lastmod>2026-10-07</lastmod>
+    </url>
+    <url>
+         <loc>https://seqscope.github.io/cartloader/reference/platforms/xenium/</loc>
+         <lastmod>2026-10-07</lastmod>
     </url>
     <url>
          <loc>https://seqscope.github.io/cartloader/vignettes/intro/</loc>
-         <lastmod>2026-03-09</lastmod>
+         <lastmod>2026-10-07</lastmod>
     </url>
     <url>
          <loc>https://seqscope.github.io/cartloader/vignettes/multi_sample/</loc>
-         <lastmod>2026-03-09</lastmod>
+         <lastmod>2026-10-07</lastmod>
+    </url>
+    <url>
+         <loc>https://seqscope.github.io/cartloader/vignettes/pipelines/run_together/</loc>
+         <lastmod>2026-10-07</lastmod>
+    </url>
+    <url>
+         <loc>https://seqscope.github.io/cartloader/vignettes/pipelines/run_together_multi/</loc>
+         <lastmod>2026-10-07</lastmod>
     </url>
     <url>
          <loc>https://seqscope.github.io/cartloader/vignettes/pipelines/visiumhd/</loc>
-         <lastmod>2026-03-09</lastmod>
+         <lastmod>2026-10-07</lastmod>
     </url>
     <url>
          <loc>https://seqscope.github.io/cartloader/vignettes/pipelines/xenium/</loc>
-         <lastmod>2026-03-09</lastmod>
+         <lastmod>2026-10-07</lastmod>
     </url>
     <url>
          <loc>https://seqscope.github.io/cartloader/vignettes/quickstart/intro/</loc>
-         <lastmod>2026-03-09</lastmod>
+         <lastmod>2026-10-07</lastmod>
     </url>
     <url>
          <loc>https://seqscope.github.io/cartloader/vignettes/quickstart/run_in_docker/</loc>
-         <lastmod>2026-03-09</lastmod>
+         <lastmod>2026-10-07</lastmod>
     </url>
     <url>
          <loc>https://seqscope.github.io/cartloader/vignettes/quickstart/run_locally/</loc>
-         <lastmod>2026-03-09</lastmod>
+         <lastmod>2026-10-07</lastmod>
     </url>
     <url>
          <loc>https://seqscope.github.io/cartloader/vignettes/subregion_tutorials/cosmxsmi/</loc>
-         <lastmod>2026-03-09</lastmod>
+         <lastmod>2026-10-07</lastmod>
     </url>
     <url>
          <loc>https://seqscope.github.io/cartloader/vignettes/subregion_tutorials/merscope/</loc>
-         <lastmod>2026-03-09</lastmod>
+         <lastmod>2026-10-07</lastmod>
     </url>
     <url>
          <loc>https://seqscope.github.io/cartloader/vignettes/subregion_tutorials/pixelseq/</loc>
-         <lastmod>2026-03-09</lastmod>
+         <lastmod>2026-10-07</lastmod>
     </url>
     <url>
          <loc>https://seqscope.github.io/cartloader/vignettes/subregion_tutorials/seqscope/</loc>
-         <lastmod>2026-03-09</lastmod>
+         <lastmod>2026-10-07</lastmod>
     </url>
     <url>
          <loc>https://seqscope.github.io/cartloader/vignettes/subregion_tutorials/stereoseq/</loc>
-         <lastmod>2026-03-09</lastmod>
+         <lastmod>2026-10-07</lastmod>
     </url>
     <url>
          <loc>https://seqscope.github.io/cartloader/vignettes/subregion_tutorials/visiumhd/</loc>
-         <lastmod>2026-03-09</lastmod>
+         <lastmod>2026-10-07</lastmod>
     </url>
     <url>
          <loc>https://seqscope.github.io/cartloader/vignettes/subregion_tutorials/xenium/</loc>
-         <lastmod>2026-03-09</lastmod>
+         <lastmod>2026-10-07</lastmod>
     </url>
 </urlset>

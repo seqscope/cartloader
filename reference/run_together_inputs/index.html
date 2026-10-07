@@ -1,0 +1,4814 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://seqscope.github.io/cartloader/reference/run_together_inputs/">
+      
+      
+        <link rel="prev" href="../run_together/">
+      
+      
+        <link rel="next" href="../run_together_images/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Specifying Inputs - cartloader</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+  
+  
+  
+  
+  <style>:root{--md-annotation-icon:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cpath%20d%3D%22M22%2012a10%2010%200%200%201-10%2010A10%2010%200%200%201%202%2012%2010%2010%200%200%201%2012%202a10%2010%200%200%201%2010%2010M6%2013h8l-3.5%203.5%201.42%201.42L17.84%2012l-5.92-5.92L10.5%207.5%2014%2011H6z%22/%3E%3C/svg%3E');}</style>
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../css/extra.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#specifying-inputs-to-run_together" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="cartloader" class="md-header__button md-logo" aria-label="cartloader" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            cartloader
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Specifying Inputs
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7a5 5 0 0 0-5 5 5 5 0 0 0 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1M8 13h8v-2H8zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4a5 5 0 0 0 5-5 5 5 0 0 0-5-5"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_2" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 7H7a5 5 0 0 0-5 5 5 5 0 0 0 5 5h10a5 5 0 0 0 5-5 5 5 0 0 0-5-5m0 8a3 3 0 0 1-3-3 3 3 0 0 1 3-3 3 3 0 0 1 3 3 3 3 0 0 1-3 3"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="indigo"  aria-label="Switch to system preference"  type="radio" name="__palette" id="__palette_2">
+    
+      <label class="md-header__button md-icon" title="Switch to system preference" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 7H7a5 5 0 0 0-5 5 5 5 0 0 0 5 5h10a5 5 0 0 0 5-5 5 5 0 0 0-5-5M7 15a3 3 0 0 1-3-3 3 3 0 0 1 3-3 3 3 0 0 1 3 3 3 3 0 0 1-3 3"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/seqscope/cartloader" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    seqscope/cartloader
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../.." class="md-tabs__link">
+          
+  
+  
+    
+  
+  Home
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../vignettes/quickstart/intro/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Quick Start
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../installation/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Installation
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../vignettes/intro/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Vignettes
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../intro/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  References
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../faq/intro/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  FAQ
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="cartloader" class="md-nav__button md-logo" aria-label="cartloader" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    cartloader
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/seqscope/cartloader" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    seqscope/cartloader
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_1" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../.." class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Home
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Start
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Quick Start
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../vignettes/quickstart/intro/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../vignettes/quickstart/run_in_docker/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Run with Docker
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../vignettes/quickstart/run_locally/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Run Locally
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Vignettes
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Vignettes
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../vignettes/intro/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_2" id="__nav_4_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started per Platform
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started per Platform
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../vignettes/subregion_tutorials/seqscope/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SeqScope Starter Tutorial
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../vignettes/subregion_tutorials/stereoseq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    StereoSeq Starter Tutorial
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../vignettes/subregion_tutorials/visiumhd/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Visium HD Starter Tutorial
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../vignettes/subregion_tutorials/pixelseq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Pixel-Seq Starter Tutorial
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../vignettes/subregion_tutorials/xenium/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Xenium Starter Tutorial
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../vignettes/subregion_tutorials/merscope/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MERSCOPE Starter Tutorial
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../vignettes/subregion_tutorials/cosmxsmi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CosMX SMI Starter Tutorial
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_3" id="__nav_4_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Platform Workflows
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Platform Workflows
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../vignettes/pipelines/run_together/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    One-Command Pipeline (run_together)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../vignettes/pipelines/xenium/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Xenium end-to-end (step-by-step)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../vignettes/pipelines/visiumhd/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Visium HD end-to-end (step-by-step)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_4" id="__nav_4_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multi-sample Showcases
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Multi-sample Showcases
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../vignettes/pipelines/run_together_multi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multi-sample with run_together
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../vignettes/multi_sample/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Human Cortex Multi-sample Tutorial
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    References
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    References
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../intro/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_5_2" id="__nav_5_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Unified Orchestrator
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_5_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Unified Orchestrator
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../run_together/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview (run_together)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Specifying Inputs
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Specifying Inputs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#mode-1-single-sample-direct-cli" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mode 1 — Single sample (direct CLI)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mode-2-multi-sample-sample-sheet" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mode 2 — Multi-sample (sample sheet)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Mode 2 — Multi-sample (sample sheet)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-sample-sheet-is-a-wide-table-of-input-roles" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The sample sheet is a wide table of input roles
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#the-three-transcript-sources" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The three transcript sources
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#column-name-overrides" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Column-name overrides
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ficture-mode-de-novo-vs-projection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FICTURE mode (de-novo vs. projection)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="FICTURE mode (de-novo vs. projection)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#feature-filtering-two-independent-layers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Feature filtering: two independent layers
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#coordinate-units-at-ingest" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Coordinate units at ingest
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#coordinate-jitter-at-ingest" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Coordinate jitter at ingest
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mode-3-full-config-json" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mode 3 — Full config (JSON)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Mode 3 — Full config (JSON)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#list-assembly-rule-append-by-default-keyed-by-id" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        List assembly rule (append-by-default, keyed by id)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ficture-analyses" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ficture analyses
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cell_analyses" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        cell_analyses
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#supplying-your-own-list-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Supplying your own --list-* files
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#see-also" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        See also
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../run_together_images/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Image Modalities
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_2_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_2_4" id="__nav_5_2_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Platforms
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_2_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_2_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Platforms
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../supported_platforms/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview & Status
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../platforms/xenium/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    10x Xenium
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../platforms/visium_hd/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    10x Visium HD
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../platforms/cosmx_smi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CosMx SMI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../platforms/merscope/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MERSCOPE (MERFISH)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../platforms/illumina/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Illumina StrataMap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../platforms/stereoseq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    BGI Stereo-seq
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../platforms/seqscope/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Seq-Scope
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_3" id="__nav_5_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SGE Preparation
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    SGE Preparation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../sge_convert/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SGE Format Conversion
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reformat_cosmx/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CosMx Reformatting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../sge_stitch/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SGE Stitching
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../sge_orientate/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SGE Reorientation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_4" id="__nav_5_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Analysis
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Analysis
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../run_ficture2/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FICTURE Analysis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../run_ficture2_multi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multi-Sample FICTURE Analysis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../feature_customization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Feature Customization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_5" id="__nav_5_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Packaging
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Packaging
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../run_cartload2/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Asset Packaging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../run_cartload2_multi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multi-Sample Asset Packaging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../import_image/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Background Image Import
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../import_cell/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cell Analysis Import
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../import_square/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Square Analysis Import
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_6" id="__nav_5_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Upload
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Upload
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upload_aws/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AWS Upload
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upload_zenodo/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Zenodo Upload
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_7" id="__nav_5_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AI Annotation
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    AI Annotation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../anno_cartload_folder/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Annotate CartLoad Folder
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_8" id="__nav_5_8_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Platform-specific Modules
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Platform-specific Modules
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_8_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_8_1" id="__nav_5_8_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Xenium
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_8_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_8_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Xenium
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../run_xenium/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Pipeline Orchestrator
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../xenium_addon/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Pipeline Add-ons
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_8_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_8_2" id="__nav_5_8_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Visium HD
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_8_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_8_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Visium HD
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../run_visiumhd/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Pipeline Orchestrator
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../visiumhd_addon/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Pipeline Add-ons
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FAQ
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    FAQ
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../faq/intro/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_6_2" id="__nav_6_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Find tutorials
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Find tutorials
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../faq/choose_interface/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Which Interface
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../faq/choose_run_mode/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Run Mode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../faq/choose_platform/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Platform Tutorial
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../faq/unsupported_platform/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Unsupported Platform
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_6_3" id="__nav_6_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Basics Function
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Basics Function
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../faq/define_units_per_um/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Units per um
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../faq/background_image_orientation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Image Orientation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../faq/ficture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FICTURE & punkst
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../faq/why_multi-sample/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Why Multi-sample
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../faq/zenodo_setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Zenodo Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../faq/aws_upload_failures/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AWS Upload Failures
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_6_4" id="__nav_6_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Execution Tips
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Execution Tips
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../faq/restart_or_resume/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Resume or Restart
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../faq/speed_up_runs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Speed Up Runs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../faq/find_outputs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Find Outputs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#mode-1-single-sample-direct-cli" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mode 1 — Single sample (direct CLI)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mode-2-multi-sample-sample-sheet" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mode 2 — Multi-sample (sample sheet)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Mode 2 — Multi-sample (sample sheet)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-sample-sheet-is-a-wide-table-of-input-roles" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The sample sheet is a wide table of input roles
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#the-three-transcript-sources" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The three transcript sources
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#column-name-overrides" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Column-name overrides
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ficture-mode-de-novo-vs-projection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FICTURE mode (de-novo vs. projection)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="FICTURE mode (de-novo vs. projection)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#feature-filtering-two-independent-layers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Feature filtering: two independent layers
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#coordinate-units-at-ingest" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Coordinate units at ingest
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#coordinate-jitter-at-ingest" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Coordinate jitter at ingest
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mode-3-full-config-json" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mode 3 — Full config (JSON)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Mode 3 — Full config (JSON)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#list-assembly-rule-append-by-default-keyed-by-id" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        List assembly rule (append-by-default, keyed by id)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ficture-analyses" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ficture analyses
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cell_analyses" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        cell_analyses
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#supplying-your-own-list-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Supplying your own --list-* files
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#see-also" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        See also
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+                
+
+
+
+
+  <nav class="md-path" aria-label="Navigation" >
+    <ol class="md-path__list">
+      
+      
+        
+  
+  
+    
+    
+      <li class="md-path__item">
+        <a href="../intro/" class="md-path__link">
+          
+  <span class="md-ellipsis">
+    References
+  </span>
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+    
+    
+      <li class="md-path__item">
+        <a href="../run_together/" class="md-path__link">
+          
+  <span class="md-ellipsis">
+    Unified Orchestrator
+  </span>
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ol>
+  </nav>
+
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="specifying-inputs-to-run_together">Specifying Inputs to <code>run_together</code><a class="headerlink" href="#specifying-inputs-to-run_together" title="Permanent link">&para;</a></h1>
+<p><code>run_together</code> accepts inputs in <strong>three ways</strong>, from most convenient to most expressive. They compose — you can set the base run on the CLI and add only the extras in a config JSON.</p>
+<table>
+<thead>
+<tr>
+<th>Mode</th>
+<th>Flag</th>
+<th>Use when</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>1. Single sample (direct CLI)</strong></td>
+<td><code>--in-dir</code> <strong>or</strong> explicit <code>--in-*</code> file flags</td>
+<td>One sample; a standard platform directory, or a few individually-named files.</td>
+</tr>
+<tr>
+<td><strong>2. Multi-sample (sample sheet)</strong></td>
+<td><code>--samples samples.tsv</code></td>
+<td>Several samples (a joint model by default). A wide TSV, one row per sample.</td>
+</tr>
+<tr>
+<td><strong>3. Full config (JSON)</strong></td>
+<td><code>--config run.json</code></td>
+<td>Per-sample settings differ, or you need analyses/images beyond the profile defaults.</td>
+</tr>
+</tbody>
+</table>
+<p>Whichever you use, the <strong>platform profile</strong> (<code>--platform &lt;name&gt;</code>) supplies the defaults: which files to auto-detect, the default <abbr title="Segmentation-free method inferring latent spatial factors from SGE (Si et al., Nature Methods 2024)">FICTURE</abbr> analyses, and the image conventions. See <a href="../supported_platforms/">Supported Platforms</a> for what each profile expects and <a href="../platforms/xenium/">per-platform pages</a> for worked examples of all three modes.</p>
+<hr />
+<h2 id="mode-1-single-sample-direct-cli">Mode 1 — Single sample (direct CLI)<a class="headerlink" href="#mode-1-single-sample-direct-cli" title="Permanent link">&para;</a></h2>
+<p>Two shapes, depending on how your files are laid out.</p>
+<p><strong>A standard platform directory</strong> — point <code>--in-dir</code> at it and the profile auto-detects every role inside:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span></pre></div></td><td class="code"><div><pre><span></span><code>cartloader<span class="w"> </span>run_together<span class="w"> </span>--platform<span class="w"> </span>10x_xenium<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--in-dir<span class="w"> </span>/data/sample1<span class="w"> </span>--out-dir<span class="w"> </span>OUT<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--width<span class="w"> </span><span class="m">12</span><span class="w"> </span>--n-factor<span class="w"> </span><span class="m">24</span>
+</code></pre></div></td></tr></table></div>
+<p><strong>Individually-named files</strong> (not in a standard directory) — name each explicitly. Each flag is the CLI equivalent of a sample-sheet column:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span></pre></div></td><td class="code"><div><pre><span></span><code>cartloader<span class="w"> </span>run_together<span class="w"> </span>--platform<span class="w"> </span>merfish<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--raw-transcript<span class="w">   </span>/data/molecules.csv<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--in-cell-xy<span class="w">       </span>/data/cell_metadata.csv<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--in-cell-boundary<span class="w"> </span>/data/cell_boundaries.csv<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--id<span class="w"> </span>MYSAMPLE<span class="w"> </span>--out-dir<span class="w"> </span>OUT
+</code></pre></div></td></tr></table></div>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Sample-sheet column</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--in-dir</code></td>
+<td><code>in_dir</code></td>
+<td>Raw platform directory → every role auto-detected inside it. A platform may instead consume the directory whole (Seq-Scope: it <em>is</em> the <abbr title="Matrix Exchange (10x sparse matrix format)">MEX</abbr> directory)</td>
+</tr>
+<tr>
+<td><code>--in-prefix</code></td>
+<td><code>in_prefix</code></td>
+<td>Raw platform <strong>path prefix</strong> → roles auto-detected by suffix (Stereo-seq)</td>
+</tr>
+<tr>
+<td><code>--raw-transcript</code></td>
+<td><code>raw_transcript</code></td>
+<td>Raw transcript CSV/TSV (or <code>.parquet</code>, converted first) to ingest through <code>sge_convert</code></td>
+</tr>
+<tr>
+<td><code>--in-transcript</code></td>
+<td><code>transcript</code></td>
+<td>An <strong>already-ingested</strong> transcript TSV; skips ingest</td>
+</tr>
+<tr>
+<td><code>--in-cell-xy</code></td>
+<td><code>xy</code></td>
+<td>Cell centroids / metadata file</td>
+</tr>
+<tr>
+<td><code>--in-cell-boundary</code></td>
+<td><code>boundaries</code></td>
+<td>Cell boundary polygons</td>
+</tr>
+<tr>
+<td><code>--in-cellxgene</code></td>
+<td><code>cellxgene</code></td>
+<td>Cell×gene matrix CSV → converted to a <abbr title="Matrix Exchange (10x sparse matrix format)">MEX</abbr> (drives cell clustering)</td>
+</tr>
+<tr>
+<td><code>--id</code></td>
+<td><code>id</code></td>
+<td>Sample id. With <code>--out-dir</code>, defaults to <strong><code>rep1</code></strong> (the packaged dir/catalog id becomes <code>&lt;out-dir basename&gt;-rep1</code>); with <code>--out-root</code>, defaults to the <code>in_dir</code>/<code>in_prefix</code> basename</td>
+</tr>
+</tbody>
+</table>
+<p><code>--in-dir</code> is just a one-row sample sheet with only <code>in_dir</code>; the explicit <code>--in-*</code> flags are a one-row sheet with those columns.</p>
+<hr />
+<h2 id="mode-2-multi-sample-sample-sheet">Mode 2 — Multi-sample (sample sheet)<a class="headerlink" href="#mode-2-multi-sample-sample-sheet" title="Permanent link">&para;</a></h2>
+<p>A joint multi-sample run is a single-sample run with <code>--samples samples.tsv</code> in place of <code>--in-dir</code>. All rows share one <code>--out-dir</code>, so they train <strong>one joint <abbr title="Segmentation-free method inferring latent spatial factors from SGE (Si et al., Nature Methods 2024)">FICTURE</abbr> model</strong>. For the common case you only need <code>id</code> + <code>in_dir</code>:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span></pre></div></td><td class="code"><div><pre><span></span><code>cartloader<span class="w"> </span>run_together<span class="w"> </span>--platform<span class="w"> </span>10x_xenium<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--samples<span class="w"> </span>samples.tsv<span class="w"> </span>--out-dir<span class="w"> </span>OUT<span class="w"> </span>--width<span class="w"> </span><span class="m">12</span><span class="w"> </span>--n-factor<span class="w"> </span><span class="m">24</span><span class="w"> </span>-j<span class="w"> </span><span class="m">8</span>
+</code></pre></div></td></tr></table></div>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span></pre></div></td><td class="code"><div><pre><span></span><code>id    in_dir
+s1    /data/s1
+s2    /data/s2
+s3    /data/s3
+</code></pre></div></td></tr></table></div>
+<p>For <strong>independent</strong> per-sample models (each its own model), use <code>--out-root</code> instead of <code>--out-dir</code>; each row becomes its own <code>&lt;out_root&gt;/&lt;id&gt;/</code>.</p>
+<h3 id="the-sample-sheet-is-a-wide-table-of-input-roles">The sample sheet is a wide table of input roles<a class="headerlink" href="#the-sample-sheet-is-a-wide-table-of-input-roles" title="Permanent link">&para;</a></h3>
+<p>Columns map to per-sample <strong>input roles</strong>. Every column is optional except that each sample needs a transcript source (<code>in_dir</code>, <code>raw_transcript</code>, or <code>transcript</code>). Column names are case-sensitive; the listed <strong>aliases</strong> are accepted interchangeably. The transcript source is checked before anything is planned: a sample with none, or one whose file is missing (including an <code>in_dir</code> without the platform's expected input), stops the run with an error naming each affected sample. Because an unrecognized column is otherwise ignored, that error also lists any unrecognized columns (e.g. <code>transcripts</code> for <code>transcript</code>). The check is skipped when the ingest stage is not run (<code>--only</code> / <code>--skip ingest</code>), since a resumed run reuses the already-converted transcripts.</p>
+<table>
+<thead>
+<tr>
+<th>Column (aliases)</th>
+<th>Role</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>—</td>
+<td>Sample identifier. Optional: defaults to the <code>in_dir</code>/<code>in_prefix</code> basename, or to <code>rep1</code> for a lone <code>--out-dir</code> sample with no named input.</td>
+</tr>
+<tr>
+<td><code>in_dir</code></td>
+<td>—</td>
+<td>Raw platform directory → the profile <strong>auto-detects</strong> every role inside it.</td>
+</tr>
+<tr>
+<td><code>in_prefix</code></td>
+<td>—</td>
+<td>Raw platform path prefix → the profile auto-detects roles by <strong>suffix</strong> (<code>{prefix}.tissue.gef</code>, …). For platforms whose files share a name rather than a directory; see <a href="../platforms/stereoseq/">BGI Stereo-seq</a>.</td>
+</tr>
+<tr>
+<td><code>raw_transcript</code></td>
+<td>—</td>
+<td>Explicit path to a <strong>raw</strong> transcript file to ingest (e.g. MERSCOPE <code>detected_transcripts.csv</code>, Xenium <code>transcripts.csv.gz</code>). Runs through <code>sge_convert</code>. Sheet equivalent of <code>--raw-transcript</code>.</td>
+</tr>
+<tr>
+<td><code>transcript</code> (<code>tsv</code>)</td>
+<td>transcript</td>
+<td>A <strong>pre-converted</strong> <code>transcripts.tsv.gz</code> (the <em>output</em> of <code>sge_convert</code>) → <strong>skips ingest</strong>. Not for raw CSVs.</td>
+</tr>
+<tr>
+<td><code>xy</code> (<code>cell_xy</code>)</td>
+<td>xy</td>
+<td>Cell centroids file.</td>
+</tr>
+<tr>
+<td><code>boundaries</code> (<code>cell_boundary</code>, <code>cell_boundaries</code>)</td>
+<td>boundaries</td>
+<td>Cell boundary polygons.</td>
+</tr>
+<tr>
+<td><code>clusters</code></td>
+<td>clusters</td>
+<td>External cluster labels.</td>
+</tr>
+<tr>
+<td><code>mex</code> (<code>mex_dir</code>)</td>
+<td>mex</td>
+<td><abbr title="Matrix Exchange (10x sparse matrix format)">MEX</abbr> directory. Or give the explicit triple <code>mex_bcd</code> / <code>mex_ftr</code> / <code>mex_mtx</code> when one directory does not apply.</td>
+</tr>
+<tr>
+<td><code>cellxgene</code> (<code>cell_by_gene</code>)</td>
+<td>cellxgene</td>
+<td>Cell×gene matrix CSV (e.g. MERSCOPE <code>cell_by_gene.csv</code>) → converted to a <abbr title="Matrix Exchange (10x sparse matrix format)">MEX</abbr> that drives cell clustering (works without boundaries).</td>
+</tr>
+<tr>
+<td><code>gef</code> / <code>cellbin_gef</code></td>
+<td>gef, cellbin_gef</td>
+<td>Stereo-seq binary GEFs, when they do not match <code>in_prefix</code> + the standard suffix.</td>
+</tr>
+<tr>
+<td><code>cell_tsv</code></td>
+<td>cell_tsv</td>
+<td>A standalone pixel TSV (<code>X</code>, <code>Y</code>, gene, count, cell_id) that supplies cell counts on its own, for platforms whose cell assignment cannot be carried on the transcript (Stereo-seq cell bins).</td>
+</tr>
+<tr>
+<td><code>dapi</code></td>
+<td>—</td>
+<td>A single <abbr title="Fluorescent DNA stain that labels cell nuclei">DAPI</abbr> image (<code>.ome.tif</code>/<code>.tif</code>/<code>.png</code>) → a colorized <code>dapi</code> layer. Xenium's <code>morphology.ome.tif</code> z-stack is recognized by name (any prefix, e.g. <code>GSM123_morphology.ome.tif</code>) and imported with <code>--use-middle-page --high-memory</code>.</td>
+</tr>
+<tr>
+<td><code>hne</code></td>
+<td>—</td>
+<td>H&amp;E image (Visium HD adds the layer automatically).</td>
+</tr>
+</tbody>
+</table>
+<p>Other images are <strong>not</strong> sample-sheet columns (only <code>dapi</code> and <code>hne</code>) — they are a separate concern; see <a href="../run_together_images/">Image Modalities</a>.</p>
+<p><strong>Parquet inputs.</strong> <code>raw_transcript</code>, <code>xy</code>, <code>boundaries</code> and <code>clusters</code> may point at a <code>.parquet</code> file (Xenium ships <code>transcripts.parquet</code>, <code>cells.parquet</code>, <code>cell_boundaries.parquet</code> beside the <code>.csv.gz</code> files). Their consumers read CSV only, so each is converted to <code>.csv.gz</code> under <code>OUT/tsv/&lt;id&gt;/parquet2csv/</code> with <code>cartloader parquet_to_csv_rapid</code> as the first ingest step — announced with a <code>NOTE:</code> at planning time — and every later stage uses the converted file. A failed or empty conversion aborts the run with an explicit error.</p>
+<p><strong>Rules:</strong> an explicit column <strong>overrides</strong> auto-detection for that role; the cell values <code>` (empty),</code>-<code>,</code>.<code>, and</code>NA<code>all mean *unset*. Role columns are resolved relative to</code>in_dir<code>when relative, but</code>raw_transcript` is not — give it an absolute path (or one relative to the working directory).</p>
+<h3 id="the-three-transcript-sources">The three transcript sources<a class="headerlink" href="#the-three-transcript-sources" title="Permanent link">&para;</a></h3>
+<p>Each sample gets its transcripts from exactly one of:</p>
+<ul>
+<li><strong><code>in_dir</code></strong> — the standard path: point at the raw platform folder and the profile finds <code>detected_transcripts.csv[.gz]</code> (and every other role) inside it.</li>
+<li><strong><code>raw_transcript</code></strong> — a raw CSV/TSV that still needs ingesting, when it is arbitrarily named or not laid out as a standard <code>in_dir</code>.</li>
+<li><strong><code>transcript</code></strong> — an already-ingested TSV (<code>transcripts.tsv.gz</code>); ingest is skipped and it feeds <abbr title="Segmentation-free method inferring latent spatial factors from SGE (Si et al., Nature Methods 2024)">FICTURE</abbr> directly.</li>
+</ul>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span></pre></div></td><td class="code"><div><pre><span></span><code># in_dir (auto-detect), a pre-converted TSV, and a raw CSV named explicitly:
+id    in_dir            transcript                    raw_transcript                 boundaries
+s1    /data/s1
+s2                      /data/s2/transcripts.tsv.gz
+s3                                                    /data/s3/detected.csv.gz       /data/s3/bounds.csv.gz
+</code></pre></div></td></tr></table></div>
+<h3 id="column-name-overrides">Column-name overrides<a class="headerlink" href="#column-name-overrides" title="Permanent link">&para;</a></h3>
+<p>When input <strong>columns</strong> are non-standard, name them (CLI or the profile/<code>--config</code>):</p>
+<ul>
+<li><code>--colname-transcript-x/-y/-feature/-count</code> — the raw transcript's coordinate/gene/count columns.</li>
+<li><code>--colname-xy-cell/-x/-y</code> — the xy file's columns (use <code>--colname-xy-cell ''</code> for an unnamed index column).</li>
+<li><code>--colname-boundary-cell/-x/-y</code> — the boundary file's columns.</li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">Transcript that already carries a <code>cell_id</code> column (rare)</p>
+<p>If your raw transcript CSV already has a per-molecule cell-id column, name it with
+<code>--colname-transcript-cell &lt;name&gt;</code> (or <code>ingest.csv_colname_cell</code> in <code>--config</code>).
+The column is carried through ingest to transcript column 5 and used directly for
+cell analysis, skipping <code>spatula tsv-add-cell-id</code>. A <code>cellxgene</code> <abbr title="Matrix Exchange (10x sparse matrix format)">MEX</abbr>, if also
+present, still drives the clustering.</p>
+</div>
+<hr />
+<h2 id="ficture-mode-de-novo-vs-projection"><abbr title="Segmentation-free method inferring latent spatial factors from SGE (Si et al., Nature Methods 2024)">FICTURE</abbr> mode (de-novo vs. projection)<a class="headerlink" href="#ficture-mode-de-novo-vs-projection" title="Permanent link">&para;</a></h2>
+<p>Independent of how inputs are specified, Tier-1 selects the base <abbr title="Segmentation-free method inferring latent spatial factors from SGE (Si et al., Nature Methods 2024)">FICTURE</abbr> work. Exactly one mode is the base (a config JSON can add more analyses on top).</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:3"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><input id="__tabbed_1_3" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">De-novo training (default)</label><label for="__tabbed_1_2">Projection-only</label><label for="__tabbed_1_3">No factor analysis</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<p>Train new <abbr title="Latent Dirichlet Allocation">LDA</abbr> models. <code>--width</code> and <code>--n-factor</code> accept comma lists → the cross-product is trained (<strong>multiple widths supported</strong>).</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span></pre></div></td><td class="code"><div><pre><span></span><code>cartloader<span class="w"> </span>run_together<span class="w"> </span>--platform<span class="w"> </span>10x_xenium<span class="w"> </span>--in-dir<span class="w"> </span>IN<span class="w"> </span>--out-dir<span class="w"> </span>OUT<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--width<span class="w"> </span><span class="m">12</span>,18<span class="w"> </span>--n-factor<span class="w"> </span><span class="m">24</span>,48
+</code></pre></div></td></tr></table></div>
+</div>
+<div class="tabbed-block">
+<p>Reuse <strong>already-trained</strong> models — no <abbr title="Latent Dirichlet Allocation">LDA</abbr> training runs. Point <code>--project-models</code> at one or more <strong>existing <abbr title="Segmentation-free method inferring latent spatial factors from SGE (Si et al., Nature Methods 2024)">FICTURE</abbr> directories</strong>; <code>run_together</code> reads each <code>ficture.params.json</code> and re-projects every model it lists onto the current data.</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span></pre></div></td><td class="code"><div><pre><span></span><code>cartloader<span class="w"> </span>run_together<span class="w"> </span>--platform<span class="w"> </span>10x_xenium<span class="w"> </span>--in-dir<span class="w"> </span>IN<span class="w"> </span>--out-dir<span class="w"> </span>OUT<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--project-models<span class="w"> </span>/prev/run/fic<span class="w"> </span>--width<span class="w"> </span><span class="m">12</span>
+</code></pre></div></td></tr></table></div>
+<p>Ingest still runs (the <em>data</em> is current); only training is skipped.</p>
+</div>
+<div class="tabbed-block">
+<p>Host a dataset with <strong>no <abbr title="Segmentation-free method inferring latent spatial factors from SGE (Si et al., Nature Methods 2024)">FICTURE</abbr> at all</strong> — transcripts, the <abbr title="Spatial Digital Gene Expression">SGE</abbr> raster, and histology, with no factor layers. <code>--no-ficture</code> runs only <abbr title="Segmentation-free method inferring latent spatial factors from SGE (Si et al., Nature Methods 2024)">FICTURE</abbr>'s tiling step (<code>run_ficture2_multi --prepare-only</code>), and packaging reads the resulting tiled TSV directly.</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code>cartloader<span class="w"> </span>run_together<span class="w"> </span>--platform<span class="w"> </span>seqscope<span class="w"> </span>--in-dir<span class="w"> </span>IN<span class="w"> </span>--out-dir<span class="w"> </span>OUT<span class="w"> </span>--no-ficture
+</code></pre></div></td></tr></table></div>
+<p>Applies to <strong>every</strong> platform, not just Seq-Scope. Cell analyses are skipped too (they decode against a model). Cannot be combined with <code>--n-factor</code> or <code>--project-models</code>. The hexagon files are still built alongside the tiles, so adding factors later re-uses them instead of re-tiling — rerun without <code>--no-ficture</code> in the same <code>--out-dir</code>.</p>
+</div>
+</div>
+</div>
+<p><strong>Hexagon <abbr title="Matrix Exchange (10x sparse matrix format)">MEX</abbr> export</strong> (any mode): <code>--segment-10x</code> additionally writes each sample's hexagon file as a 10x <abbr title="Matrix Exchange (10x sparse matrix format)">MEX</abbr> directory, <code>fic/samples/&lt;id&gt;/&lt;id&gt;.hex_&lt;width&gt;.mex/</code> (<code>barcodes.tsv.gz</code> with hexagon centers as <code>x:y</code>, <code>features.tsv.gz</code>, <code>matrix.mtx.gz</code>). It converts the very hexagon files the factor analysis uses (same <code>--min-ct-per-unit-hexagon</code> filter), so the two are consistent. By default every analysis' <code>--width</code> is exported; <code>--segment-width-10x 12,24</code> picks the widths instead (extra widths get their hexagon files built too). Works with <code>--no-ficture</code> — the way to get hexagon <abbr title="Matrix Exchange (10x sparse matrix format)">MEX</abbr> files without any factor analysis, e.g. for Seq-Scope:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span></pre></div></td><td class="code"><div><pre><span></span><code>cartloader<span class="w"> </span>run_together<span class="w"> </span>--platform<span class="w"> </span>seqscope<span class="w"> </span>--in-dir<span class="w"> </span>IN<span class="w"> </span>--out-dir<span class="w"> </span>OUT<span class="w"> </span>--no-ficture<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--segment-10x<span class="w"> </span>--segment-width-10x<span class="w"> </span><span class="m">12</span>,24
+</code></pre></div></td></tr></table></div>
+<p>Config equivalent: top-level <code>"segment_10x": true</code> or <code>{ "widths": "12,24" }</code> (a CLI flag wins). The directories are recorded under <code>mex</code> in the per-sample <code>ficture.params.json</code> and in <code>ficture.multi.params.json</code>; see <a href="../run_ficture2_multi/#actions"><code>run_ficture2_multi --segment-10x</code></a>.</p>
+<p><strong>Tiling</strong> (run-wide, rarely needed): <code>--tile-size</code> and <code>--tile-buffer</code> are forwarded to <code>run_ficture2_multi</code> (punkst <code>multisample-prepare</code>) and otherwise keep its defaults of <code>500</code> <abbr title="micrometer">µm</abbr> and <code>1000</code> lines. punkst rejects a tile size under 20× the hexagon <em>side</em> length (width / √3) and recommends 50–100×, so only a wide hexagon needs this — e.g. <code>--width 100</code> wants roughly <code>--tile-size 5000</code>. The buffer is a per-tile line buffer, not a spatial size. Config equivalents: top-level <code>"tile_size"</code> / <code>"tile_buffer"</code> (a CLI flag wins).</p>
+<p><strong>Common decode overrides</strong> (else profile / built-in default): <code>--exclude-feature-regex</code>, <code>--include-feature-list</code> / <code>--exclude-feature-list</code>, the <code>--ingest-*-feature-*</code> family, <code>--min-ct-per-unit-hexagon</code> (default <code>50</code>), <code>--min-ct-per-unit-train</code>, <code>--cell-min-cell-count</code> / <code>--cell-min-feature-count</code>, and <code>--always-single-molecule</code> / <code>--never-single-molecule</code> (default: single-molecule <strong>ON</strong> for pixel <abbr title="Segmentation-free method inferring latent spatial factors from SGE (Si et al., Nature Methods 2024)">FICTURE</abbr>, <strong>OFF</strong> for cell decode). An explicit CLI flag wins over a <code>--config</code>/profile value, which wins over the built-in default.</p>
+<h3 id="feature-filtering-two-independent-layers">Feature filtering: two independent layers<a class="headerlink" href="#feature-filtering-two-independent-layers" title="Permanent link">&para;</a></h3>
+<p>Feature filters come in two flavours that do <strong>not</strong> interact. Each takes a regex and/or a plain text file of feature names (one per line), and each has a default that applies to <strong>every</strong> platform:</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>default regex</th>
+<th>rationale</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ingest</td>
+<td><code>^(Unassigned\|Neg\|BLANK\|Blank\|Intergenic\|Deprecated\|System\|NCS-\|NCP-)</code></td>
+<td>technical artifacts — not genes, so they never enter the data</td>
+</tr>
+<tr>
+<td>analysis</td>
+<td><code>^(Gm[0-9]\|MT-\|mt-\|Rps\|Rpl)</code></td>
+<td>real genes that distort a factorization — kept in the data, kept out of the models</td>
+</tr>
+</tbody>
+</table>
+<p>Pass <code>''</code> to either flag to disable its default; a profile or <code>--config</code> value overrides it.</p>
+<p><strong>1. Analysis (<abbr title="Segmentation-free method inferring latent spatial factors from SGE (Si et al., Nature Methods 2024)">FICTURE</abbr>) filters</strong> — <code>--include-feature-list</code> / <code>--exclude-feature-list</code> / <code>--exclude-feature-regex</code>. These restrict the <strong>factor model only</strong> (<code>lda4hex --features</code>); the data — counts, pseudobulk, <abbr title="Differential Expression; comparing groups to find significantly changed genes">DE</abbr> — keep every gene. <code>--include-feature-list</code> is the natural place for a highly-variable-gene set: the model is built on those genes, but all genes are still emitted afterwards.</p>
+<table>
+<thead>
+<tr>
+<th>stage</th>
+<th>affected</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ingest, tiled transcripts, feature list, packaged tiles</td>
+<td><strong>no</strong> — every gene is kept</td>
+</tr>
+<tr>
+<td>pixel <abbr title="Segmentation-free method inferring latent spatial factors from SGE (Si et al., Nature Methods 2024)">FICTURE</abbr>: the <abbr title="Latent Dirichlet Allocation">LDA</abbr>/projection <strong>model</strong> (and hence pixel decoding, which reads that model)</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>cell clustering: the <abbr title="Latent Dirichlet Allocation">LDA</abbr> is a projection onto the pixel model, so it inherits the same restriction</td>
+<td>yes (via the model)</td>
+</tr>
+<tr>
+<td>cell <strong>counts, pseudobulk, <abbr title="Differential Expression; comparing groups to find significantly changed genes">DE</abbr></strong></td>
+<td><strong>no</strong> — excluded/non-HVG genes stay in and reappear here</td>
+</tr>
+</tbody>
+</table>
+<p>A list and the regex <strong>combine</strong>: the regex narrows what the list leaves. The features the pixel model was trained on are written to <code>fic/multi.selected_features.tsv</code> and recorded per model as <code>feature</code> in <code>ficture.params.json</code>.</p>
+<p>Because the restriction lives in the model (not the counts), the cell <strong>pseudobulk and <abbr title="Differential Expression; comparing groups to find significantly changed genes">DE</abbr> report every gene</strong>, and the pixel decode — which reads the restricted model — reports only the model's genes. That asymmetry is intentional: the pixel decode <em>is</em> the model, the cell pseudobulk is an independent aggregate of the raw counts.</p>
+<p><strong>2. Ingest filters</strong> — <code>--ingest-include-feature-list</code> / <code>--ingest-exclude-feature-list</code> / <code>--ingest-include-feature-regex</code> / <code>--ingest-exclude-feature-regex</code>. These drop features from the transcript TSV as it is written, so a filtered feature is gone from <strong>everything</strong> downstream: the feature list, the packaged tiles, the browser's gene list and every analysis. Use them for features that should not be part of the dataset at all (negative-control probes, blanks); use the analysis filters for features that should be visible but not drive the factorization.</p>
+<p>The ingest regex always replaces <code>sge_convert</code>'s per-platform default (e.g. Xenium's negative-probe pattern), so one pattern governs every platform.</p>
+<ul>
+<li>Applied by whichever step writes the transcript: <code>sge_convert</code>, <code>reformat_cosmx</code> (CosMx), and the Stereo-seq cell-bin conversion.</li>
+<li>Also applied to the <strong>cell count matrices</strong> (<code>mex2sptsv</code> / <code>pixel2sptsv</code>), so a <abbr title="Matrix Exchange (10x sparse matrix format)">MEX</abbr>-derived cell source (a <code>cell_by_gene</code> matrix or an external <code>mex</code> role) — which never passes through <code>sge_convert</code> — drops the same technical artifacts. This is the <em>only</em> feature filter on the cell counts; the <abbr title="Segmentation-free method inferring latent spatial factors from SGE (Si et al., Nature Methods 2024)">FICTURE</abbr> filters deliberately are not applied there (see above), so the cell pseudobulk keeps every real gene.</li>
+<li><strong>Ignored, with a warning, for a sample that supplies an already-ingested <code>transcript</code></strong> — that file is used as given. Filter it beforehand, or supply the raw input.</li>
+<li>On the <abbr title="Matrix Exchange (10x sparse matrix format)">MEX</abbr>-based platforms (<code>10x_visium_hd</code>, <code>seqscope</code>, <code>illumina</code>) filtering happens inside <code>spatula convert-sge</code>, which accepts only <strong>one</strong> include-type and <strong>one</strong> exclude-type filter; a list and a regex of the same polarity is an error there. Resolve them into one list with <code>cartloader feature_select</code>.</li>
+</ul>
+<div class="admonition warning">
+<p class="admonition-title">Count thresholds are applied before the analysis filter</p>
+<p><code>--min-ct-per-unit-hexagon</code> (hexagons) and the cell analysis's minimum cell count are applied over <strong>all</strong> genes, while the model is fit over the <strong>restricted</strong> set. Restricting to a small panel therefore leaves units/cells whose surviving counts are low; lower <code>--min-ct-per-unit-train</code> and <code>--cell-min-cell-count</code> accordingly. Ingest filters do not have this problem — they run before any counting.</p>
+</div>
+<hr />
+<h2 id="coordinate-units-at-ingest">Coordinate units at ingest<a class="headerlink" href="#coordinate-units-at-ingest" title="Permanent link">&para;</a></h2>
+<p><code>--units-per-um &lt;n&gt;</code> tells ingest how many coordinate units of the <strong>raw input</strong> make one micron — the factor <code>sge_convert</code> divides the input X/Y by. <code>1</code> means the input is already in microns, <code>1000</code> means nanometers, <code>2</code> is Stereo-seq's 500 nm bins. Everything downstream of ingest is in microns, so this is the one place the input's unit convention is declared.</p>
+<p>Normally you never set it: each platform's ingest preset knows its own convention. Set it when a dataset departs from that convention — notably <strong>Illumina StrataMap</strong>, which ships two barcode formats:</p>
+<table>
+<thead>
+<tr>
+<th>Barcode</th>
+<th>Units</th>
+<th><code>--units-per-um</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>SBC:433503:2393851</code> (older)</td>
+<td>nanometers</td>
+<td><code>1000</code></td>
+</tr>
+<tr>
+<td><code>SBC:686.951:4668.15</code> (current)</td>
+<td>microns</td>
+<td><code>1</code></td>
+</tr>
+</tbody>
+</table>
+<p>Ingest <strong>detects which of the two</strong> a StrataMap barcode file uses (a fractional coordinate means microns; otherwise the coordinate magnitude decides) and reports the value it picked, so both formats run correctly with no flag. <code>--units-per-um</code> overrides the detection; if the value you give contradicts the file, the run warns and uses yours.</p>
+<ul>
+<li>Applied by <code>sge_convert</code>, in both of its routes (<abbr title="Matrix Exchange (10x sparse matrix format)">MEX</abbr> via <code>spatula convert-sge</code>, CSV via <code>sge_format_generic</code>), so it covers every platform whose ingest is <code>sge_convert</code>. On <code>stereoseq</code> it also scales the cell-bin TSV, keeping the pixel and cell coordinates on one system.</li>
+<li><strong>Not supported on <code>cosmx_smi</code></strong>, whose ingest (<code>reformat_cosmx</code>) writes the transcript TSV itself. Asking for it there is an error.</li>
+<li><strong>Ignored, with a warning, for a sample that supplies an already-ingested <code>transcript</code></strong> — that file is used as given, in microns.</li>
+<li>Boundary/centroid files are <strong>not</strong> rescaled by this flag: they must already be in microns (see the platform pages).</li>
+</ul>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># a current (micron) StrataMap barcode file, stated explicitly</span>
+cartloader<span class="w"> </span>run_together<span class="w"> </span>--platform<span class="w"> </span>illumina<span class="w"> </span>--samples<span class="w"> </span>samples.tsv<span class="w"> </span>--out-dir<span class="w"> </span>OUT<span class="w"> </span>--units-per-um<span class="w"> </span><span class="m">1</span>
+</code></pre></div></td></tr></table></div>
+<p>The config equivalent lives in the <code>ingest</code> block (a CLI <code>--units-per-um</code> wins over it):</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code>{ &quot;platform&quot;: &quot;illumina&quot;, &quot;ingest&quot;: { &quot;units_per_um&quot;: 1 } }
+</code></pre></div></td></tr></table></div>
+<hr />
+<h2 id="coordinate-jitter-at-ingest">Coordinate jitter at ingest<a class="headerlink" href="#coordinate-jitter-at-ingest" title="Permanent link">&para;</a></h2>
+<p><code>--jitter-xy &lt;um&gt;</code> adds a uniform random offset in <code>[-um, +um]</code> to each transcript's X and Y — drawn <strong>independently per transcript and per axis</strong> — as the transcript TSV is written. It is off by default (<code>0</code>).</p>
+<p>Use it on coarse-resolution platforms whose molecules sit on a lattice rather than at measured positions. On 10x Visium HD, for example, every transcript in a 2 <abbr title="micrometer">µm</abbr> bin carries that bin's single coordinate, so the transcript cloud is a grid of stacked points; hexagon binning, pixel decoding and the rendered tiles all see the lattice. Jittering by roughly <strong>half the bin pitch</strong> (<code>--jitter-xy 0.8</code> for 2 <abbr title="micrometer">µm</abbr> bins) spreads each bin's molecules across the area they came from.</p>
+<p>Like the ingest feature filters, this rewrites the data itself: the jittered coordinates are what every later stage reads — hexagons, <abbr title="Segmentation-free method inferring latent spatial factors from SGE (Si et al., Nature Methods 2024)">FICTURE</abbr>, the packaged tiles, the browser.</p>
+<ul>
+<li>Applied by <code>sge_convert</code>, in both of its routes: <code>spatula convert-sge</code> for <abbr title="Matrix Exchange (10x sparse matrix format)">MEX</abbr> input (<code>10x_visium_hd</code>, <code>seqscope</code>, <code>illumina</code>) and <code>sge_format_generic</code> for CSV input (<code>10x_xenium</code>, <code>merfish</code>, <code>stereoseq</code>'s bin1 GEM, <code>generic</code>). Jitter is in <strong>microns</strong>, applied after the input's units are converted.</li>
+<li><strong>Not supported on <code>cosmx_smi</code></strong>, whose ingest (<code>reformat_cosmx</code>) writes the transcript TSV itself. Asking for it there is an error, not a silently dropped flag.</li>
+<li>On <code>stereoseq</code> it covers the bin1 pixel transcript only; the cell-bin TSV (<code>convert_stereoseq_cellbin</code>) has no jitter option and stays on the original grid. The run warns when you ask.</li>
+<li><strong>Ignored, with a warning, for a sample that supplies an already-ingested <code>transcript</code></strong> — that file is used as given.</li>
+</ul>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code>cartloader<span class="w"> </span>run_together<span class="w"> </span>--platform<span class="w"> </span>10x_visium_hd<span class="w"> </span>--in-dir<span class="w"> </span>IN<span class="w"> </span>--out-dir<span class="w"> </span>OUT<span class="w"> </span>--jitter-xy<span class="w"> </span><span class="m">0</span>.8
+</code></pre></div></td></tr></table></div>
+<p>The config equivalent lives in the <code>ingest</code> block (a CLI <code>--jitter-xy</code> wins over it):</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code>{ &quot;platform&quot;: &quot;10x_visium_hd&quot;, &quot;ingest&quot;: { &quot;jitter_xy&quot;: 0.8 } }
+</code></pre></div></td></tr></table></div>
+<hr />
+<h2 id="mode-3-full-config-json">Mode 3 — Full config (JSON)<a class="headerlink" href="#mode-3-full-config-json" title="Permanent link">&para;</a></h2>
+<p>Escalate to <code>--config run.json</code> when samples need <strong>different</strong> settings, or to add analyses/images beyond the profile defaults. Everything a run can express reduces to one canonical, list-based configuration that the three layers (<strong>profile → CLI → JSON</strong>) assemble:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span></pre></div></td><td class="code"><div><pre><span></span><code>{
+  &quot;platform&quot;: &quot;10x_xenium&quot;, &quot;out_dir&quot;: &quot;...&quot;, &quot;resources&quot;: { &quot;n_jobs&quot;: 8, &quot;threads&quot;: 16 },
+  &quot;samples&quot;: [ { &quot;id&quot;: &quot;s1&quot;, &quot;in_dir&quot;: &quot;...&quot; } ],   // same fields as sheet columns: in_dir, raw_transcript, transcript, xy, boundaries, clusters, mex, cellxgene
+  &quot;exclude_feature_regex&quot;: &quot;...&quot;,
+  &quot;include_feature_list&quot;: &quot;...&quot;,                    // or &quot;exclude_feature_list&quot;; factor analyses only
+  &quot;ingest_exclude_feature_regex&quot;: &quot;...&quot;,            // ingest_{include,exclude}_feature_{regex,list}: drops from the data
+  &quot;ingest&quot;: { &quot;jitter_xy&quot;: 0.8, &quot;units_per_um&quot;: 1 }, // random +/- um offset on X/Y, and the input&#39;s coordinate units (see above)
+  &quot;ficture_defaults&quot;: { &quot;decode_scale&quot;: 2 },
+  &quot;cell_defaults&quot;:    { &quot;min_cell_count&quot;: 20 },
+  &quot;segment_10x&quot;:   { &quot;widths&quot;: &quot;12,24&quot; },           // or true: export the hexagon files as 10x MEX (see FICTURE mode)
+  &quot;tile_size&quot;: 5000, &quot;tile_buffer&quot;: 1000,           // punkst tiling knobs; omit to keep run_ficture2_multi&#39;s 500 / 1000 (see FICTURE mode)
+  &quot;ficture&quot;:       [ /* analyses: each is a de-novo train OR a projection */ ],
+  &quot;cell_analyses&quot;: [ /* {id, uses:[roles], any_uses?:[roles], optional_uses?:[roles], model_id?, lists?, extra_flags?} */ ],
+  &quot;cell_lists&quot;:    { &quot;clusters&quot;: &quot;...&quot; },           // ready-made --list-* file(s) for every cell analysis
+  &quot;images&quot;:        [ /* see Image Modalities */ ],
+  &quot;cartload&quot;:  { &quot;use_pmpoint&quot;: true, &quot;bin_count&quot;: 500 }
+}
+</code></pre></div></td></tr></table></div>
+<p>Publishing (annotation + S3 upload) is <strong>not</strong> part of this config — it is driven entirely by CLI flags (see <a href="../run_together/#publishing">Overview → Publishing</a>).</p>
+<h3 id="list-assembly-rule-append-by-default-keyed-by-id">List assembly rule (append-by-default, keyed by <code>id</code>)<a class="headerlink" href="#list-assembly-rule-append-by-default-keyed-by-id" title="Permanent link">&para;</a></h3>
+<p>For <code>ficture</code>, <code>cell_analyses</code>, and <code>images</code>, JSON entries are <strong>merged into</strong> the profile/CLI-derived list:</p>
+<ul>
+<li>entry with a <strong>new <code>id</code></strong> → appended;</li>
+<li>entry reusing an <strong>existing <code>id</code></strong> → deep-merged (override);</li>
+<li>to discard the base list entirely, write the section as <code>{ "replace": [ ... ] }</code>.</li>
+</ul>
+<p>This is what lets you set the base on the CLI and add only the extras in JSON:</p>
+<p><div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span></pre></div></td><td class="code"><div><pre><span></span><code>cartloader<span class="w"> </span>run_together<span class="w"> </span>--platform<span class="w"> </span>10x_xenium<span class="w"> </span>--in-dir<span class="w"> </span>IN<span class="w"> </span>--out-dir<span class="w"> </span>OUT<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--width<span class="w"> </span><span class="m">12</span><span class="w"> </span>--n-factor<span class="w"> </span><span class="m">24</span><span class="w"> </span>--config<span class="w"> </span>extra.json
+</code></pre></div></td></tr></table></div>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span>
+<span class="normal">6</span></pre></div></td><td class="code"><div><pre><span></span><code>// extra.json — de-novo base comes from the CLI; these are ADDED
+{
+  &quot;ficture&quot;:       [ { &quot;id&quot;: &quot;ref&quot;, &quot;mode&quot;: &quot;project&quot;, &quot;model&quot;: &quot;/models/ref.tsv&quot;, &quot;width&quot;: 12 } ],
+  &quot;cell_analyses&quot;: [ { &quot;id&quot;: &quot;spatch&quot;, &quot;uses&quot;: [&quot;xy&quot;,&quot;boundaries&quot;,&quot;clusters&quot;,&quot;mex&quot;], &quot;model_id&quot;: &quot;ref&quot; } ],
+  &quot;images&quot;:        [ { &quot;id&quot;: &quot;cd3&quot;, &quot;source&quot;: &quot;cd3.ome.tif&quot;, &quot;kind&quot;: &quot;single&quot;, &quot;color&quot;: &quot;FF0000&quot; } ]
+}
+</code></pre></div></td></tr></table></div></p>
+<h3 id="ficture-analyses"><code>ficture</code> analyses<a class="headerlink" href="#ficture-analyses" title="Permanent link">&para;</a></h3>
+<p>Each entry is either de-novo or a projection:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span></pre></div></td><td class="code"><div><pre><span></span><code>{ &quot;id&quot;: &quot;denovo&quot;, &quot;mode&quot;: &quot;train&quot;,   &quot;width&quot;: &quot;12&quot;, &quot;n_factor&quot;: &quot;24,48,96&quot; }
+{ &quot;id&quot;: &quot;ref&quot;,    &quot;mode&quot;: &quot;project&quot;, &quot;model&quot;: &quot;/models/ref.tsv&quot;, &quot;width&quot;: 12 }
+</code></pre></div></td></tr></table></div>
+<p><code>ficture_defaults</code> (per-analysis decode params like <code>decode_scale</code>, <code>min_ct_per_unit_hexagon</code>, <code>min_ct_per_unit_train</code>) apply to <strong>every</strong> analysis, including projections; per-entry keys win. <code>cell_defaults</code> does the same for <code>cell_analyses</code> entries (<code>min_cell_count</code>, <code>min_feature_count</code>).</p>
+<h3 id="cell_analyses"><code>cell_analyses</code><a class="headerlink" href="#cell_analyses" title="Permanent link">&para;</a></h3>
+<p>Cell-level decode is <strong>platform-default and automatic</strong>: an analysis runs whenever a sample provides its required roles. A sample contributes when it has <strong>every</strong> role in <code>uses</code> <strong>and</strong> (if present) <strong>at least one</strong> role in <code>any_uses</code>; roles in <code>optional_uses</code> are added to the decode when available. <code>model_id</code> picks which <abbr title="Segmentation-free method inferring latent spatial factors from SGE (Si et al., Nature Methods 2024)">FICTURE</abbr> model decodes the cells (default: the largest-factor model).</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code>{ &quot;id&quot;: &quot;spatch&quot;, &quot;uses&quot;: [&quot;xy&quot;, &quot;boundaries&quot;, &quot;clusters&quot;, &quot;mex&quot;], &quot;model_id&quot;: &quot;ref&quot; }
+</code></pre></div></td></tr></table></div>
+<p><code>any_uses</code> lets an analysis accept <strong>alternative</strong> cell-count sources — e.g. MERSCOPE runs cell analysis from <strong>either</strong> boundaries <strong>or</strong> a <code>cellxgene</code> <abbr title="Matrix Exchange (10x sparse matrix format)">MEX</abbr>, and a <strong>mixed joint run</strong> (some samples with boundaries, some with a <abbr title="Matrix Exchange (10x sparse matrix format)">MEX</abbr>) is resolved per sample and packaged from one call. See the <a href="../platforms/merscope/">MERSCOPE page</a> for the source-precedence rules.</p>
+<p>An analysis may carry a <strong><code>multi_import</code></strong> command (e.g. Xenium's <code>xeniumranger</code> → <code>import_xenium_cell</code>). Such an analysis relies on <strong>sample-specific</strong> cluster labels: on a single-sample run it goes through <code>run_ficture2_multi_cells</code> as usual; on a <strong>joint run</strong> it is imported <strong>per sample</strong> instead (sheet-provided <code>xy</code>/<code>boundaries</code>/<code>clusters</code> paths are forwarded as <code>--csv-*</code> overrides). See the <a href="../platforms/xenium/">Xenium page</a>.</p>
+<p><code>extra_flags</code> is a list of raw flags appended to this analysis's <code>run_ficture2_multi_cells</code> call, for options <code>run_together</code> does not model (e.g. <code>["--zero-based-clust-id"]</code>).</p>
+<p>TSNE manifolds are <strong>not</strong> generated by default (only <abbr title="Uniform Manifold Approximation and Projection; nonlinear dimensionality reduction">UMAP</abbr> is; nothing downstream reads TSNE, and it is slow on large datasets). To add them for an analysis, pass <code>"extra_flags": ["--tsne"]</code>.</p>
+<p><code>name</code> sets the factor's human-readable <strong><code>name:</code></strong> in <code>catalog.yaml</code> and <code>multi-catalog.yaml</code> — the label shown for the layer. The factor <strong><code>id</code></strong> is unchanged (it still names every file and asset key), so this is purely cosmetic:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code>{ &quot;id&quot;: &quot;published&quot;, &quot;name&quot;: &quot;Published cell types (Banovich 2025)&quot;, &quot;uses&quot;: [&quot;boundaries&quot;, &quot;xy&quot;] }
+</code></pre></div></td></tr></table></div>
+<p>Without it, a cell analysis displays its bare id (<code>published</code>), and the multi-catalog's cell factors carry no <code>name</code> at all. The name is written after packaging, into the shared multi-catalog and every contributing sample's catalog. Plain text only — quotes, <code>$</code>, backticks and backslashes are rejected up front, since the name travels through a generated make recipe. Unrelated to <code>alias</code>, which points a factor at a companion factor-label TSV.</p>
+<p><code>alias</code> names a companion <strong>cluster-label file</strong> for the analysis — one label per cluster id:</p>
+<p><div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span></pre></div></td><td class="code"><div><pre><span></span><code>{ &quot;id&quot;: &quot;published&quot;, &quot;name&quot;: &quot;Published cell types&quot;, &quot;alias&quot;: &quot;/work/clust/published.alias.tsv&quot;,
+  &quot;lists&quot;: { &quot;clusters&quot;: &quot;/work/clust/published.list.tsv&quot; } }
+</code></pre></div></td></tr></table></div>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span></pre></div></td><td class="code"><div><pre><span></span><code>cluster annotation
+1   EN-IT
+2   EN-ET
+3   IN
+</code></pre></div></td></tr></table></div></p>
+<p>Two columns, cluster id then label, with an optional header; tab-, comma- or whitespace-separated (a label may contain spaces unless the file is comma-separated). The ids use <strong>the same numbering as the analysis's cluster files</strong>: 1-based for supplied cluster labels, unless the analysis passes <code>--zero-based-clust-id</code> in <code>extra_flags</code>, in which case they are 0-based. A Leiden analysis clusters on demand, so its alias ids are 0-based, matching the packaged output. At planning time the file is validated (integer ids at or above the base, no duplicates, non-empty labels) and rewritten to the packaged layout (<code>index&lt;TAB&gt;alias</code>, 0-based) as <code>&lt;out_dir&gt;/tsv/alias.&lt;analysis_id&gt;.tsv</code>. After packaging it is deployed as <code>&lt;analysis_id&gt;-alias.tsv</code> and recorded under the factor's <code>alias</code> key in the multi-catalog and every contributing sample's catalog. A factor that carries <code>alias</code> is skipped by the AI annotation stage (<code>--anno</code> / <code>--anno-deep</code>), so curated labels are not overwritten.</p>
+<h3 id="supplying-your-own-list-files">Supplying your own <code>--list-*</code> files<a class="headerlink" href="#supplying-your-own-list-files" title="Permanent link">&para;</a></h3>
+<p>By default <code>run_together</code> <strong>derives</strong> each <code>--list-*</code> file that <code>run_ficture2_multi_cells</code> consumes, writing <code>&lt;out_dir&gt;/tsv/in_&lt;role&gt;.&lt;analysis_id&gt;.tsv</code> from the samples' resolved roles. To supply one yourself instead — most often <strong>externally assigned cell clusters</strong>, since without <code>--list-cluster</code> the cells stage computes Leiden clusters on demand — name it per role, either run-wide or per analysis:</p>
+<table>
+<thead>
+<tr>
+<th>role</th>
+<th>flag it feeds</th>
+<th>CLI flag</th>
+<th>line format</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>clusters</code></td>
+<td><code>--list-cluster</code></td>
+<td><code>--list-cluster</code></td>
+<td><code>SAMPLE_ID&lt;TAB&gt;CLUSTER_FILE</code></td>
+</tr>
+<tr>
+<td><code>xy</code></td>
+<td><code>--list-xy</code></td>
+<td><code>--list-xy</code></td>
+<td><code>SAMPLE_ID&lt;TAB&gt;XY_FILE</code></td>
+</tr>
+<tr>
+<td><code>boundaries</code></td>
+<td><code>--list-boundaries</code></td>
+<td><code>--list-boundaries</code></td>
+<td><code>SAMPLE_ID&lt;TAB&gt;BOUNDARY_FILE</code></td>
+</tr>
+<tr>
+<td><code>mex</code></td>
+<td><code>--mex-list</code></td>
+<td><code>--list-mex</code></td>
+<td><code>SAMPLE_ID&lt;TAB&gt;MEX_DIR</code> (or a bcd/ftr/mtx triple)</td>
+</tr>
+<tr>
+<td><code>cell_tsv</code></td>
+<td><code>--tsv-list</code></td>
+<td><code>--list-cell-tsv</code></td>
+<td><code>SAMPLE_ID&lt;TAB&gt;CELL_TSV</code></td>
+</tr>
+</tbody>
+</table>
+<p><div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># run-wide, from the CLI (applies to every cell analysis)</span>
+cartloader<span class="w"> </span>run_together<span class="w"> </span>--platform<span class="w"> </span>10x_xenium<span class="w"> </span>--samples<span class="w"> </span>samples.tsv<span class="w"> </span>--out-dir<span class="w"> </span>OUT<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--list-cluster<span class="w"> </span>/work/clust/list.tsv
+</code></pre></div></td></tr></table></div>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span>
+<span class="normal">6</span>
+<span class="normal">7</span></pre></div></td><td class="code"><div><pre><span></span><code>// run-wide, in JSON: same effect as the CLI flags (a CLI flag wins)
+{ &quot;cell_lists&quot;: { &quot;clusters&quot;: &quot;/work/clust/list.tsv&quot; } }
+
+// per analysis: overrides the run-wide default role by role
+{ &quot;cell_analyses&quot;: [ { &quot;id&quot;: &quot;cartloader&quot;,
+                       &quot;lists&quot;: { &quot;clusters&quot;: &quot;/work/clust/list.tsv&quot; },
+                       &quot;extra_flags&quot;: [&quot;--zero-based-clust-id&quot;] } ] }
+</code></pre></div></td></tr></table></div></p>
+<p>A named list is passed <strong>verbatim</strong> (no file is generated for that role) and:</p>
+<ul>
+<li><strong>satisfies that role's gating</strong> — no sample has to carry the role on disk, and the role need not appear in the analysis's <code>uses</code> at all, so a cluster list can be attached to an analysis that would otherwise cluster on demand;</li>
+<li>is <strong>validated at plan time</strong> — unknown role name, missing file, empty file, and a first column matching none of the run's sample ids are hard errors; partial coverage and ids outside the run are warnings;</li>
+<li>does <strong>not</strong> change <code>multi_import</code> routing — that path is per-sample by nature, so on a joint Xenium run attach the list to the jointly decoded <code>cartloader</code> analysis, and <code>xeniumranger</code> keeps its per-sample import.</li>
+</ul>
+<p>Cluster ids are read as <strong>1-based</strong> and decremented; for 0-based labels add <code>"extra_flags": ["--zero-based-clust-id"]</code>.</p>
+<hr />
+<h2 id="see-also">See also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="../run_together/"><code>run_together</code> Overview</a> — the pipeline, stages/resume, publishing, output.</li>
+<li><a href="../run_together_images/">Image Modalities</a> — how to attach <abbr title="Fluorescent DNA stain that labels cell nuclei">DAPI</abbr>/H&amp;E/protein images.</li>
+<li><a href="../supported_platforms/">Supported Platforms</a> and the per-platform pages.</li>
+<li>Tutorials: <a href="../../vignettes/pipelines/run_together/">single-sample</a>, <a href="../../vignettes/pipelines/run_together_multi/">multi-sample</a>.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.indexes", "navigation.sections", "navigation.expand", "navigation.path", "content.code.annotate", "content.code.copy", "content.tooltips", "content.grid", "content.cards", "content.footnote.tooltips", "content.tabs.link", "navigation.instant", "navigation.top"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="../../js/load_tsv.js"></script>
+      
+        <script src="../../js/open_in_new_tab.js"></script>
+      
+    
+  </body>
+</html>
