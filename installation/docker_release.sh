@@ -5,11 +5,11 @@
 #
 #   git clone https://github.com/seqscope/cartloader.git && cd cartloader
 #   git checkout <branch|tag|commit>      # optional; the default branch otherwise
-#   bash installation/docker_release.sh --version 20261007a           # build and test
-#   bash installation/docker_release.sh --version 20261007a --push    # ... and push
+#   bash installation/docker_release.sh --version 20261007-1432           # build and test
+#   bash installation/docker_release.sh --version 20261007-1432 --push    # ... and push
 #
 # One-time setup on a fresh Amazon Linux 2023 instance:
-#   sudo yum install -y docker git wget unzip tmux
+#   sudo yum install -y docker git tmux awscli-2
 #   sudo usermod -a -G docker ec2-user && sudo service docker start
 #   newgrp docker                         # or log out and back in
 #   docker login                          # only needed for --push
@@ -18,7 +18,8 @@
 #   1. build    The image clones exactly this checkout's commit (which must be on GitHub).
 #   2. smoke    installation/docker_smoke_test.sh in the image: dependencies, bundled
 #               binaries, and every `cartloader <command>` imports.
-#   3. e2e      examples/xenium_end_to_end.sh --docker against the new image.
+#   3. test     `cartloader run_together` on the test dataset, inside the new image
+#               (default: the GSE264334 Xenium kidney data, fetched once from S3).
 #   4. check    Every file referenced by the output catalog exists and is non-empty.
 #   5. compare  The same test with the baseline image (default: the current :latest) and a
 #               report of the differences. For review only; it never fails the release.
@@ -33,17 +34,19 @@ REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 usage() {
 	cat <<EOF
 Usage: $0 --version <tag> [options]
-  --version <tag>         Version tag for the image, e.g. 20261007a (required)
+  --version <tag>         Version tag for the image, e.g. 20261007-1432 (required)
   --push                  Push <repo>:<version> and <repo>:latest if all checks pass
   --repo <name>           Image repository (default: hyunminkang/cartloader)
   --skip-build            Reuse <repo>:<version> built by an earlier run of this script
   --baseline-image <img>  Image to compare against (default: <repo>:latest)
   --no-baseline           Skip the baseline run and comparison
   --work-dir <dir>        Working directory (default: \$HOME/cartloader-release)
-  --threads <n>           Threads per job for the test run (default: 4)
-  --jobs <n>              Parallel jobs for the test run (default: 2)
-  --test-url <url>        Xenium *_outs.zip used for the test (default: mouse brain subset)
-  --test-id <id>          Dataset ID for the test (default: matches the default URL)
+  --threads <n>           run_together --threads for the test (default: 4)
+  --n-jobs <n>            run_together --n-jobs for the test (default: 4)
+  --bin-count <n>         run_together --bin-count for the test (default: 50)
+  --test-data <s3-uri>    .tar.gz that extracts into a directory of the same name, used as
+                          run_together --in-dir (default: the GSE264334 Xenium kidney data)
+  --test-platform <name>  run_together --platform for the test data (default: 10x_xenium)
 EOF
 }
 
@@ -55,9 +58,11 @@ BASELINE_IMAGE=""
 NO_BASELINE=0
 WORK="${HOME}/cartloader-release"
 THREADS=4
-JOBS=2
-TEST_URL="https://cf.10xgenomics.com/samples/xenium/1.0.2/Xenium_V1_FF_Mouse_Brain_Coronal_Subset_CTX_HP/Xenium_V1_FF_Mouse_Brain_Coronal_Subset_CTX_HP_outs.zip"
-TEST_ID="xenium-v1-ff-mouse-brain-coronal-subset-ctx-hp"
+JOBS=4
+BIN_COUNT=50
+# Public (AWS Open Data) copy of GSE264334 in Xenium folder layout; extracts into gse264334-reformatted/
+TEST_DATA="s3://cartostore/data/batch=2026_05/xenium-geo-public-dataset-collection/xenium-human-kidney-igan-bull2024-20260516/gse264334-reformatted.tar.gz"
+TEST_PLATFORM="10x_xenium"
 
 while [ "$#" -gt 0 ]; do
 	case "$1" in
@@ -69,9 +74,10 @@ while [ "$#" -gt 0 ]; do
 		--no-baseline)    NO_BASELINE=1;     shift 1 ;;
 		--work-dir)       WORK=$2;           shift 2 ;;
 		--threads)        THREADS=$2;        shift 2 ;;
-		--jobs)           JOBS=$2;           shift 2 ;;
-		--test-url)       TEST_URL=$2;       shift 2 ;;
-		--test-id)        TEST_ID=$2;        shift 2 ;;
+		--n-jobs)         JOBS=$2;           shift 2 ;;
+		--bin-count)      BIN_COUNT=$2;      shift 2 ;;
+		--test-data)      TEST_DATA=$2;      shift 2 ;;
+		--test-platform)  TEST_PLATFORM=$2;  shift 2 ;;
 		-h|--help)        usage; exit 0 ;;
 		*) echo "ERROR: Unknown argument '$1'"; usage; exit 1 ;;
 	esac
@@ -85,8 +91,9 @@ BASELINE_IMAGE=${BASELINE_IMAGE:-${REPO}:latest}
 
 ##########################################################################################
 ## Preconditions: everything that would otherwise fail hours into the run
-for tool in docker git wget unzip; do
-	command -v "${tool}" > /dev/null || die "'${tool}' is not installed (sudo yum install -y ${tool})"
+for tool in docker git tar aws; do
+	pkg=${tool}; [ "${tool}" = "aws" ] && pkg=awscli-2
+	command -v "${tool}" > /dev/null || die "'${tool}' is not installed (sudo yum install -y ${pkg})"
 done
 docker info > /dev/null 2>&1 || die "cannot reach the docker daemon (is it running, and are you in the docker group?)"
 
@@ -130,7 +137,8 @@ if [ -e "${RUN_DIR}" ]; then
 	mv "${RUN_DIR}" "${RUN_DIR}.$(date +%Y%m%d-%H%M%S)"
 fi
 mkdir -p "${RUN_DIR}/logs"
-DATA_DIR="${WORK}/data/${TEST_ID}"
+TEST_NAME=$(basename "${TEST_DATA}" .tar.gz)   # the archive extracts into this directory
+DATA_DIR="${WORK}/data/${TEST_NAME}"
 REPORT="${RUN_DIR}/report.md"
 T0=${SECONDS}
 
@@ -139,7 +147,7 @@ cat > "${REPORT}" <<EOF
 
 - commit: ${SHA} ($(git log -1 --format='%cd, %s' --date=short))
 - started: $(date '+%Y-%m-%d %H:%M:%S %Z') on $(uname -n), $(nproc) CPUs
-- test: ${TEST_ID} (--threads ${THREADS} --jobs ${JOBS})
+- test: run_together --platform ${TEST_PLATFORM} on ${TEST_NAME} (--threads ${THREADS} --n-jobs ${JOBS} --bin-count ${BIN_COUNT})
 
 | stage | result | time |
 |---|---|---|
@@ -226,26 +234,33 @@ smoke_test() {
 }
 
 fetch_test_data() {
-	if [ -f "${DATA_DIR}/.unzipped" ]; then
+	# The marker sits next to the data, not in it, where run_together would see it.
+	if [ -f "${DATA_DIR}.extracted" ]; then
 		echo "reusing ${DATA_DIR}"
 		return 0
 	fi
-	local zip="${WORK}/data/$(basename "${TEST_URL}")"
+	local tgz="${WORK}/data/$(basename "${TEST_DATA}")"
 	mkdir -p "${WORK}/data"
-	if [ ! -f "${zip}" ]; then
-		wget -nv -O "${zip}.part" "${TEST_URL}"
-		mv "${zip}.part" "${zip}"
-	fi
+	# Public data: --no-sign-request needs no AWS credentials on the instance.
+	aws s3 cp --no-sign-request --only-show-errors "${TEST_DATA}" "${tgz}.part"
+	mv "${tgz}.part" "${tgz}"
 	rm -rf "${DATA_DIR}"
-	mkdir -p "${DATA_DIR}"
-	unzip -q -o "${zip}" -d "${DATA_DIR}"
-	touch "${DATA_DIR}/.unzipped"
+	tar -xzf "${tgz}" -C "${WORK}/data"
+	rm -f "${tgz}"
+	if [ ! -d "${DATA_DIR}" ]; then
+		echo "$(basename "${tgz}") did not extract into ${DATA_DIR}"
+		return 1
+	fi
+	touch "${DATA_DIR}.extracted"
 }
 
-## run_e2e <image> <work dir>: the documented Xenium example, in docker mode
-run_e2e() {
-	bash "${REPO_DIR}/examples/xenium_end_to_end.sh" --id "${TEST_ID}" --in-dir "${DATA_DIR}" \
-		--docker --image "$1" --no-pull --work-dir "$2" --threads "${THREADS}" --jobs "${JOBS}"
+## run_test <image> <out dir>: run_together on the test data inside the image. The data is
+## mounted read-only, so the new and baseline runs share it without affecting each other.
+run_test() {
+	mkdir -p "$2"
+	docker run --rm -v "${DATA_DIR}:/data:ro" -v "$2:/out" "$1" run_together \
+		--platform "${TEST_PLATFORM}" --in-dir /data --out-dir /out --id "${TEST_NAME}" \
+		--threads "${THREADS}" --n-jobs "${JOBS}" --bin-count "${BIN_COUNT}"
 }
 
 check_outputs() {
@@ -263,7 +278,7 @@ run_baseline() {
 	if [ -e "${BASE_DIR}" ]; then
 		mv "${BASE_DIR}" "${BASE_DIR}.incomplete.$(date +%Y%m%d-%H%M%S)"
 	fi
-	run_e2e "${BASELINE_IMAGE}" "${BASE_DIR}"
+	run_test "${BASELINE_IMAGE}" "${BASE_DIR}/out"
 	touch "${BASE_DIR}/.complete"
 }
 
@@ -290,13 +305,13 @@ else
 	run_stage build 1 "Building ${IMG} from commit ${SHA}" build_image
 fi
 run_stage smoke 1 "Smoke test inside ${IMG}" smoke_test
-run_stage e2e 1 "End-to-end test (${TEST_ID}) with ${IMG}" run_e2e "${IMG}" "${RUN_DIR}"
+run_stage test 1 "run_together on ${TEST_NAME} with ${IMG}" run_test "${IMG}" "${RUN_DIR}/out"
 run_stage check 1 "Checking the files referenced by the output catalog" check_outputs
 
 if [ "${NO_BASELINE}" -eq 0 ] && run_stage baseline-pull 0 "Pulling the baseline image ${BASELINE_IMAGE}" docker pull "${BASELINE_IMAGE}"; then
 	# Keyed by image ID, so a rerun against the same baseline reuses its finished run.
 	BASE_ID=$(docker image inspect -f '{{.Id}}' "${BASELINE_IMAGE}" | cut -d: -f2 | cut -c1-12)
-	BASE_DIR="${WORK}/baseline/${TEST_ID}-${BASE_ID}"
+	BASE_DIR="${WORK}/baseline/${TEST_NAME}-${BASE_ID}"
 	if run_stage baseline 0 "Same test with the baseline image ${BASELINE_IMAGE} (${BASE_ID})" run_baseline; then
 		run_stage compare 0 "Comparing outputs with the baseline" compare_outputs || true
 	fi
