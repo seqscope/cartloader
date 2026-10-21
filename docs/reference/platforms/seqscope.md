@@ -1,6 +1,6 @@
 # Platform: Seq-Scope (`--platform seqscope`)
 
-Built-in profile for Seq-Scope. The input is a **MEX triple** (`barcodes.tsv.gz`, `features.tsv.gz`, `matrix.mtx.gz`), but in the Seq-Scope dialect: the barcode file carries the spatial coordinates, and the feature file and matrix carry **five count columns per entry** instead of one. `sge_convert --platform seqscope` (via `spatula convert-sge`) already reads that dialect; this profile wires it into the end-to-end run.
+Built-in profile for Seq-Scope. The usual input is a **MEX triple** (`barcodes.tsv.gz`, `features.tsv.gz`, `matrix.mtx.gz`) in the Seq-Scope dialect: the barcode file carries the spatial coordinates, and the feature file and matrix carry **five count columns per entry** instead of one. `sge_convert --platform seqscope` (via `spatula convert-sge`) reads that dialect; this profile wires it into the end-to-end run. A raw per-molecule TSV can be ingested instead with `--raw-transcript`.
 
 Seq-Scope has **no cell segmentation**, so the run is pixel-level throughout: ingest → FICTURE → packaging (+ histology). No cell analysis stage is planned or expected.
 
@@ -13,6 +13,8 @@ Seq-Scope has **no cell segmentation**, so the run is pixel-level throughout: in
 | `barcodes.tsv.gz` | `barcode`, index, …, **X (col 6)**, **Y (col 7)**, counts — coordinates in **nanometers** |
 | `features.tsv.gz` | `gene_id`, `gene_name`, index, counts |
 | `matrix.mtx.gz` | MatrixMarket with **5 count columns**: `gn, gt, spl, unspl, ambig` |
+
+Alternatively, `--raw-transcript` / a `raw_transcript` column names a raw per-molecule TSV (header `#lane  tile  X  Y  gene_id  gene  gn  gt  spl  unspl  ambig`, coordinates in nanometers), which `sge_convert` ingests through its CSV route (`--in-csv`) instead of the MEX; `--in-dir` is then not needed. An already-ingested transcript can be given with `--in-transcript`.
 
 Histology has no standard filename, so it is always given explicitly with `--image` (see [Images](#images)).
 
@@ -29,12 +31,20 @@ cartloader run_together --platform seqscope \
     --width 12 --n-factor 24
 ```
 
-The sample id defaults to the `--out-dir` basename; override with `--id`.
+The sample id defaults to `rep1`, so the packaged directory is `OUT/cartl/<OUT basename>-rep1/`; override with `--id`.
+
+From the raw per-molecule TSV instead:
+
+```bash
+cartloader run_together --platform seqscope \
+    --raw-transcript /data/seqscope/sample1/molecules.tsv.gz \
+    --out-dir OUT --width 12 --n-factor 24
+```
 
 ---
 ## 2. Multi-sample (sample sheet)
 
-Each row's `in_dir` is that sample's MEX directory. Images come from a separate `--images` TSV keyed by `sample`:
+Each row's `in_dir` is that sample's MEX directory (or give `raw_transcript`). Images come from a separate `--images` TSV keyed by `sample`:
 
 `samples.tsv`
 
@@ -83,23 +93,30 @@ For a wide hexagon (roughly `--width` above 40), also raise the tiling size — 
 ---
 ## Coordinates and count columns
 
-Barcode X/Y are in **nanometers**, so ingest passes `--units-per-um 1000`. Columns 6 and 7 of `barcodes.tsv.gz` are read as X and Y (the `sge_convert` defaults `--icol-bcd-x 6 --icol-bcd-y 7`); a different layout is set through the config:
+Barcode X/Y are in **nanometers**, so the profile's `ingest.extra_flags` pass `--units-per-um 1000` to `sge_convert`. Columns 6 and 7 of `barcodes.tsv.gz` are read as X and Y (the `sge_convert` defaults `--icol-bcd-x 6 --icol-bcd-y 7`).
+
+The matrix's five count columns are, in order, `gn, gt, spl, unspl, ambig`. The profile selects **column 2** (`--icols-mtx 2`), the gene-exon count, and names it `count` in the output.
+
+These settings live in `ingest.extra_flags`, which come last on the `sge_convert` command line, so **`--units-per-um` on the CLI (or `ingest.units_per_um`) has no effect here** — the profile's `--units-per-um 1000` takes precedence. To change any of them, replace the list in a `--config` (a list is replaced whole, so restate every flag you want to keep):
 
 ```json
-{ "ingest": { "extra_flags": ["--units-per-um 1000", "--icols-mtx 2", "--icol-bcd-x 5", "--icol-bcd-y 6"] } }
+{ "ingest": { "extra_flags": ["--units-per-um 1000", "--icols-mtx 2", "--icol-bcd-x 5", "--icol-bcd-y 6", "--sge-visual"] } }
 ```
 
-The matrix's five count columns are, in order, `gn, gt, spl, unspl, ambig`. The profile selects **column 2** (`--icols-mtx 2`), the gene-exon count, and names it `count` in the output. To quantify on a different column — e.g. total gene counts — override the flag the same way (`"--icols-mtx 1"`).
+To quantify on a different count column — e.g. total gene counts (`gn`) — set `--icols-mtx 1` the same way.
+
+On the raw-TSV route (`--raw-transcript`), `--icols-mtx` does not apply: the count column defaults to `gn` (`sge_convert`'s Seq-Scope TSV preset), so pass `--colname-transcript-count gt` to count the gene-exon column, as the MEX route does.
 
 Barcodes whose features do not match the feature file are dropped by `sge_drop_mismatches` after conversion (the `sge_convert` default for this platform).
 
 ---
 ## Images
 
-Seq-Scope histology is typically an **H&E TIF that has already been georeferenced** — it carries its own CRS/geotransform, aligned to the transcript frame. The profile therefore sets `image_defaults.georeferenced = true`, and the image is tiled as-is:
+Seq-Scope histology is typically an **H&E TIF that has already been georeferenced** — it carries its own geotransform, aligned to the transcript frame, but usually no CRS. The profile therefore sets `image_defaults.georeferenced = true`: the corner coordinates are kept as they are and only the CRS is assigned:
 
 ```bash
-cartloader image_png2pmtiles --in-img HE.tif --out-prefix .../hne --geotif2mbtiles --mbtiles2pmtiles
+cartloader image_png2pmtiles --in-img HE.tif --out-prefix .../hne \
+    --geotif2mbtiles --mbtiles2pmtiles --georeference --georef-detect gtiff
 ```
 
 No bounds are synthesized, so `--um-per-pixel` / `--georef-plain` do not apply. If a particular image is **not** already georeferenced, opt it out per image and state its scale instead:

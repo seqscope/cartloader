@@ -1,17 +1,30 @@
 # AI Annotation (`anno_cartload_folder`)
 
+!!! tip "Usually run for you"
+    [`run_together`](./run_together.md#publishing) calls `anno_cartload_folder` in its `anno` stage: `--anno` uses the per-factor annotator and `--anno-deep` adds `--deep`. This page is for annotating a packaged directory directly, step by step.
+
 ## Overview
 
-`anno_cartload_folder` AI-annotates every factor of a packaged CartoScope dataset. For each factor listed in the catalog it (a) calls [`annotate_bulk_de_with_ai`](#) on the factor's DE table to produce a per-factor **alias TSV** (`<factor_id>-alias-ai.tsv`), and (b) records that alias file in the catalog under the `alias_ai` key. It operates either on a **local `--cartl-dir`** or an already-uploaded **`--s3-dir`** (downloading, annotating, and re-uploading).
+`anno_cartload_folder` AI-annotates every factor of a packaged CartoScope dataset. For each factor listed in the catalog it writes an **alias TSV** (`<factor-id>-alias-ai.tsv`, factor index → label) and records that file in the catalog under the `alias_ai` key. Two annotators are available:
 
-The [`run_together`](./run_together.md) `--anno` stage invokes this script; you can also run it standalone on a packaged directory.
+- **Default**: `annotate_bulk_de_with_ai` labels each factor from its DE table, one LLM call per factor.
+- **`--deep`**: [`annotate_factors_with_llm`](./annotate_factors_with_llm.md) labels all factors of a model together in one deep-reasoning call, with alternative interpretations, and also writes an annotation table and an interactive HTML report.
+
+It operates on a **local `--cartl-dir`** or an already-uploaded **`--s3-dir`** (download, annotate, upload back).
+
+---
+## Requirements
+
+- A packaged directory with a `catalog.yaml` (from [`run_cartload2`](./run_cartload2.md)) or, for `--multi-sample`, a `run_cartload2_multi` output root with `multi-catalog.yaml`.
+- An API key for the chosen `--api-type` in the environment: `ANTHROPIC_API_KEY` (`claude`), `OPENAI_API_KEY` (`openai`), `GEMINI_API_KEY` (`google`), or `UMGPT_API_KEY` (`umgpt`).
+- For `--s3-dir`: the `boto3` package and AWS credentials.
 
 ---
 ## Modes
 
 === "Single sample (default)"
 
-    Annotates one packaged directory. The catalog is either a per-sample `catalog.yaml` (`assets.factors: [...]` list) or any top-level `factors: {…}` map.
+    Annotates one packaged directory, reading `assets.factors` from its `catalog.yaml`.
 
     ```bash
     cartloader anno_cartload_folder \
@@ -21,7 +34,7 @@ The [`run_together`](./run_together.md) `--anno` stage invokes this script; you 
 
 === "Multi-sample (`--multi-sample`)"
 
-    Annotates the **shared** factors of a joint run **once** at the `cartl/` root (using the `multi-catalog.yaml` written by [`run_cartload2_multi`](./run_cartload2_multi.md)), then **propagates** each shared alias TSV into every sample sub-folder listed in `samples:`. Sub-folders reuse the shared results (via `--reuse-results-from`), so a factor is annotated at most once for the whole cohort and every sample's `catalog.yaml` ends up pointing at a matching alias file.
+    Annotates the **shared** factors of a joint run **once** at the `cartl/` root (from the `multi-catalog.yaml` written by [`run_cartload2_multi`](./run_cartload2_multi.md)), then copies each shared alias TSV into every sample sub-folder listed under `samples:` and records it in that sample's `catalog.yaml`. A sample-specific factor without a shared annotation is annotated in its own folder.
 
     ```bash
     cartloader anno_cartload_folder \
@@ -30,11 +43,23 @@ The [`run_together`](./run_together.md) `--anno` stage invokes this script; you 
       --tissue "Kidney" --organism human
     ```
 
-    Factor IDs are normalized (`t12_f48` → `t12-f48`) when naming alias files, so a shared alias matches the per-sample factor id in each `<multi_id>-<sample_id>/catalog.yaml`.
+    Factor IDs are hyphenated (`t12_f48` → `t12-f48`) in alias file names, so a shared alias matches the per-sample factor id in each `<multi_id>-<sample_id>/catalog.yaml`.
+
+=== "Deep annotation (`--deep`)"
+
+    Runs `annotate_factors_with_llm` per factor model. In a multi-sample root, per-sample tissues can come from a sample sheet (`id` and `tissue` columns), which may replace `--tissue`.
+
+    ```bash
+    cartloader anno_cartload_folder \
+      --cartl-dir cartl \
+      --multi-sample --deep \
+      --sample-sheet samples.tsv \
+      --organism human --api-type claude --effort high
+    ```
 
 === "S3 in-place (`--s3-dir`)"
 
-    Downloads the catalog (and the per-factor DE files that need annotation), annotates locally, and uploads the alias TSVs and the updated catalog back to S3. Uses `boto3`; upload uses `--profile`.
+    Downloads the catalog and the files needed for annotation, annotates them in a local temporary directory, and uploads the alias TSVs and the updated catalog back to S3. Downloads use the default `boto3` credentials; uploads use `--profile`. `--multi-sample` has no effect in this mode.
 
     ```bash
     cartloader anno_cartload_folder \
@@ -43,51 +68,60 @@ The [`run_together`](./run_together.md) `--anno` stage invokes this script; you 
     ```
 
 ---
-## Reusing prior annotations
+## Skipping and reusing annotations
 
-Pass `--reuse-results-from <dir>` to skip the AI call and copy alias TSVs from `<dir>` instead. Useful for re-runs or for hand-annotating one sample and propagating its results to the rest of a cohort. In `--multi-sample` mode this is applied only to the shared (root) pass; the sub-folder propagation always reuses the shared results just written.
+- Factors that already carry an `alias` or `alias_ai` key (`--yaml-key-skip`) are skipped, so reruns only annotate new factors. Factors without a `de` entry are skipped, except in `--deep` mode when they have a model (`model` or `post`) entry.
+- Pass `--reuse-results-from <dir>` to copy alias TSVs from `<dir>` instead of calling the AI, e.g., to propagate one hand-checked sample to a cohort. In `--multi-sample` mode it applies only to the shared (root) pass; the sample propagation always reuses the shared results just written.
 
 ---
 ## Parameters
 
-**Input/output (choose one):**
+**Input (choose one):**
 
-- `--cartl-dir` — local packaged directory
-- `--s3-dir` — `s3://…` prefix of an uploaded dataset
+- `--cartl-dir` (str): Local packaged directory.
+- `--s3-dir` (str): `s3://…` prefix of an uploaded dataset.
 
-**Required:**
+**Annotation context:**
 
-- `--tissue` — tissue name (passed to the annotation prompt)
-- `--organism` — organism/species
+- `--organism` (str, required): Organism/species.
+- `--tissue` (str): Tissue name. Required, except with `--deep --multi-sample` when `--sample-sheet` gives samples a tissue (samples without one fall back to `--tissue`).
 
-**Common:**
+**Annotator:**
 
-- `--multi-sample` — treat `--cartl-dir` as a joint-run root; use `multi-catalog.yaml` and propagate
-- `--multi-catalog` — multi-catalog filename (default `multi-catalog.yaml`)
-- `--reuse-results-from` — copy alias TSVs from this dir instead of annotating
-- `--api-type` (default `umgpt`), `--model` (default `claude-opus-4-7`), `--threads` (default `1`)
-- `--catalog` — per-sample catalog filename (default `catalog.yaml`)
+- `--api-type` (str): `claude`, `openai`, `google`, or `umgpt` (default: `claude`).
+- `--model` (str): LLM model name (default: `claude-opus-4-8`; with `--deep`, the `annotate_factors_with_llm` default for the API type, e.g. `claude-opus-5-5` for `claude`).
+- `--threads` (int): Annotation threads (default: `1`).
+- `--deep` (flag): Use `annotate_factors_with_llm` instead of `annotate_bulk_de_with_ai`.
+- `--effort` (str): `--deep` reasoning effort: `low`, `medium`, `high`, `xhigh`, or `max` (default: `high`).
+- `--sample-sheet` (str): `--deep` with `--multi-sample`: TSV with `id` and `tissue` columns (blank, `-`, `.`, or `NA` mean unset).
 
-**Alias / catalog keys:**
+**Multi-sample and reuse:**
 
-- `--alias-suffix` (default `-alias-ai.tsv`) — suffix for alias file names
-- `--backup-suffix` (default `.bak`) — appended to the pre-update catalog copy
-- `--yaml-key-store` (default `alias_ai`) — factor key that records the alias file
-- `--yaml-key-skip` (default `alias alias_ai`) — factor keys that mark an already-annotated factor (skip if present)
+- `--multi-sample` (flag): Treat `--cartl-dir` as a joint-run root; annotate `multi-catalog.yaml` and propagate.
+- `--multi-catalog` (str): Multi-catalog file name (default: `multi-catalog.yaml`).
+- `--catalog` (str): Per-sample catalog file name (default: `catalog.yaml`).
+- `--reuse-results-from` (str): Copy alias TSVs from this directory instead of annotating.
+
+**Alias and catalog keys:**
+
+- `--alias-suffix` (str): Alias file suffix (default: `-alias-ai.tsv`).
+- `--backup-suffix` (str): Suffix of the pre-update catalog copy (default: `.bak`).
+- `--yaml-key-store` (str): Factor key that records the alias file (default: `alias_ai`).
+- `--yaml-key-skip` (list of str): Factor keys that mark an annotated factor (default: `alias alias_ai`).
 
 **S3 (with `--s3-dir`):**
 
-- `--profile` (default `cartostore`), `--aws` (default `aws`)
-- `--skip-upload` — annotate locally in the temp dir, do not upload back
-- `--tmp-dir` — where to download / stage files
+- `--profile` (str): AWS profile for uploading results (default: `default`).
+- `--skip-upload` (flag): Annotate locally only; do not upload back.
+- `--tmp-dir` (str): Download and staging directory (default: a directory named after the last component of `--s3-dir`, under the current directory).
 
 ---
 ## Output
 
-Under the target directory:
+In each annotated directory:
 
-- `<factor_id>-alias-ai.tsv` for every factor that had a `de` entry and no prior alias.
-- The catalog rewritten in place, with `alias_ai: <factor_id>-alias-ai.tsv` added to each annotated factor.
-- A backup of the pre-update catalog at `<catalog><backup-suffix>` (default `.bak`).
+- `<factor-id>-alias-ai.tsv`: Alias TSV (`index`, `alias`) for every annotated factor.
+- With `--deep`, next to it: `<factor-id>-alias-ai.annotations.tsv` (per-factor label, confidence, alternatives, evidence), `<factor-id>-alias-ai.html` (report), and `<factor-id>-alias-ai.llm/` (saved LLM requests and responses).
+- The catalog rewritten in place with `alias_ai: <factor-id>-alias-ai.tsv` on each annotated factor, plus a backup of the previous catalog at `<catalog><backup-suffix>` (written on every run).
 
-For `--multi-sample`: alias files are written both at the `cartl/` root and inside every sample sub-folder listed in `multi-catalog.yaml`'s `samples:`.
+For `--multi-sample`, alias files are written at the `cartl/` root and in every sample sub-folder listed under `samples:` in `multi-catalog.yaml`.

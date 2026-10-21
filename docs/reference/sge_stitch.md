@@ -2,50 +2,62 @@
 
 ## Overview
 
-`sge_stitch` stitches two or more SGE datasets into a single SGE, with optional per-tile orientation.
-It can also run density-based filtering and quick visualization.
+`sge_stitch` stitches two or more SGE tiles into a single SGE, with optional per-tile orientation.
+It can also run density-based filtering on the stitched SGE.
+
+!!! tip "Not part of `run_together`"
+    [`run_together`](./run_together.md) does not stitch tiles. Use `sge_stitch` in step-by-step or custom workflows; its stitched transcript TSV can then be given to `run_together` as an already-ingested `transcript` (`--in-transcript`; see [Transcript sources](./run_together_inputs.md#transcript-sources)).
 
 ---
 ## Requirements
 
-- Input SGEs in the unified format (from [SGE format conversion](./sge_convert.md))
-- Pre-installed tools: `gzip`, `spatula`, `gdal_translate`, `gdalwarp`
+- Input SGE tiles in the unified format (from [SGE format conversion](./sge_convert.md)), with `X` and `Y` coordinate columns.
+- `cartloader` on the `PATH` (the generated Makefile calls `cartloader` sub-commands).
+- `gzip`; the `ficture` Python package (installed with CartLoader) for `--filter-by-density`.
 
 ---
 ## Example Usage
 
-Define each input tile as a CSV of paths and tile metadata:
+Define each input tile as a comma-separated tuple of paths and layout/orientation fields:
 
 ```bash
 cartloader sge_stitch \
---in-tiles \
-    "/path/to/tileA/transcripts.unsorted.tsv.gz,/path/to/tileA/feature.clean.tsv.gz,/path/to/tileA/coordinate_minmax.tsv,0,0,0,false,false" \
-    "/path/to/tileB/transcripts.unsorted.tsv.gz,/path/to/tileB/feature.clean.tsv.gz,/path/to/tileB/coordinate_minmax.tsv,0,1,90,false,true" \
---out-dir /path/to/output/dir \
---units-per-um 1.0 \
---precision 2
+    --in-tiles \
+        "/path/to/tileA/transcripts.unsorted.tsv.gz,/path/to/tileA/feature.clean.tsv.gz,/path/to/tileA/coordinate_minmax.tsv,0,0,,false,false" \
+        "/path/to/tileB/transcripts.unsorted.tsv.gz,/path/to/tileB/feature.clean.tsv.gz,/path/to/tileB/coordinate_minmax.tsv,0,1,90,false,true" \
+    --out-dir /path/to/output/dir \
+    --units-per-um 1.0 \
+    --precision 2
 ```
+
+Tile A is placed as is (empty `rotate` field); tile B is rotated 90° clockwise, then flipped horizontally.
 
 ---
 ## Parameters
 
 ### SGE Stitch
-- `--out-dir` (str): Output directory for stitched (filtered) SGE, visualizations, and Makefile.
-- `--in-tiles` (list of str): One or more tile tuples describing each input tile.
+- `--in-tiles` (list of str): One tuple per input tile (see below).
+- `--out-dir` (str, required): Output directory for the stitched (and filtered) SGE and the Makefile.
 
 !!! info "Input Tile Tuple Format"
 
-    Each tile tuple should provide in the following format. Recommend to quote each tuple
+    Each tuple has exactly eight comma-separated fields; quote each tuple:
     ```
     "transcript_path,feature_path,minmax_path,row,col,rotate,vertical_flip,horizontal_flip"
     ```
 
-    - `transcript_path` (str): Path to the tile's transcript-indexed SGE TSV.gz.
-    - `feature_path` (str): Path to the tile's per-gene UMI count TSV.gz.
-    - `minmax_path` (str): Path to the tile's coordinate min/max TSV.
-    - `row`, `col` (int): Integer grid indices (0-based) locating the tile within the stitched mosaic (row = tile grid row, col = tile grid column).
-    - `rotate` (int): One of `0`, `90`, `180`, `270` (clockwise rotation).
-    - `vertical_flip`, `horizontal_flip`: Boolean flags `true`/`false` (case-insensitive); flips are applied after rotation.
+    - `transcript_path` (str): The tile's transcript-indexed SGE TSV (`.tsv.gz`).
+    - `feature_path` (str, optional): The tile's per-gene count TSV. Leave empty (or `None`) to generate it with `cartloader sge_supp`.
+    - `minmax_path` (str, optional): The tile's coordinate min/max TSV. Leave empty (or `None`) to generate it with `cartloader sge_supp`.
+    - `row`, `col` (int): Grid position of the tile. Each grid cell is as wide as the widest tile in its column and as tall as the tallest tile in its row, and each tile is centered in its cell; `col` increases along X and `row` along Y. A `(row, col)` pair may be used only once.
+    - `rotate`: Clockwise rotation, `90`, `180`, or `270`; leave the field **empty** for no rotation (`0` is not accepted).
+    - `vertical_flip`, `horizontal_flip`: `true`/`false` (case-insensitive); flips are applied after rotation.
+
+    Generated feature/min-max files are written **next to the tile's transcript file**: `<id>.feature.tsv.gz` and `<id>.minmax.tsv`, where `<id>` is the transcript file name without `.tsv.gz` and `.transcripts`; or `feature.clean.tsv.gz` and `coordinate_minmax.tsv` when the transcript is named `transcripts.unsorted.tsv.gz`.
+
+!!! warning "Known issues"
+    - A tile whose orientation reduces to flips only — a flip without rotation, or `180` with or without a single flip — currently fails at its `sge_orientate` step. Pre-orient such tiles with [`sge_orientate`](./sge_orientate.md) and pass the result with an empty `rotate` field and both flips `false`.
+    - `--sge-visual` currently fails while the Makefile is being generated; omit it.
 
 ??? note "Auxiliary SGE Stitching Parameters"
     We recommend using default values; override only if needed.
@@ -53,28 +65,28 @@ cartloader sge_stitch \
     **Auxiliary Output Parameters**:
 
     - `--out-transcript` (str): Output transcript-indexed SGE under `--out-dir` (default: `transcripts.unsorted.tsv.gz`).
-    - `--out-feature` (str): Output per-gene UMI counts under `--out-dir` (default: `feature.clean.tsv.gz`).
+    - `--out-feature` (str): Output per-gene count TSV under `--out-dir` (default: `feature.clean.tsv.gz`).
     - `--out-minmax` (str): Output coordinate min/max TSV under `--out-dir` (default: `coordinate_minmax.tsv`).
-    - `--out-tile-minmax` (str): Output per-tile min/max TSV (default: `coordinate_minmax_per_tile.tsv`).
-    - `--out-json` (str): Output JSON summarizing SGE assets (default: `<out-dir>/sge_assets.json`).
+    - `--out-tile-minmax` (str): Output per-tile min/max and offset TSV under `--out-dir` (default: `coordinate_minmax_per_tile.tsv`).
+    - `--out-json` (str): Output JSON manifest of the SGE (default: `<out-dir>/sge_assets.json`).
 
     **Auxiliary Colname Parameters**:
 
-    - `--colname-count` (str): Column name of the UMI count (default: count).
-    - `--colname-feature-name` (str): Column name of feature name, typically gene (default: gene).
-    - `--colname-x` (str): Column name of X coordinates (default: X).
-    - `--colname-y` (str): Column name of Y coordinates (default: Y).
-    - `--colnames-others` (list): Column names of other information to keep.
+    - `--colname-count` (str): Count column (default: `count`).
+    - `--colname-feature-name` (str): Feature name column (default: `gene`).
+    - `--colname-feature-id` (str): Feature ID column, if present (default: none).
+    - `--colname-x`, `--colname-y` (str): X/Y columns (defaults: `X`, `Y`).
+    - `--colnames-others` (list): Additional columns to keep.
 
     **Auxiliary Scale and Precision Parameters**:
 
-    - `--units-per-um` (float): Coordinate units per um for global transform (default: 1.0). If input SGE is generated by `sge_convert`, use the default value.
-    - `--precision` (int): Decimal precision for stitched coordinates (default: 2).
+    - `--units-per-um` (float): Coordinate units per µm of the input tiles (default: 1.0). Tiles from `sge_convert` are already in µm; keep the default.
+    - `--precision` (int): Decimal places of the stitched coordinates (default: 2).
 
 ### Density-based Filtering
 
-- `--filter-by-density` (flag): Enable SGE filtering by density.
-- `--out-filtered-prefix` (str): Prefix for output filtered SGE files (default: filtered).
+- `--filter-by-density` (flag): Enable density-based filtering of the stitched SGE.
+- `--out-filtered-prefix` (str): Prefix of the filtered outputs (default: `filtered`).
 
 ??? note "Auxiliary Density-based Filtering Parameters"
     We recommend using default values; override only if needed.
@@ -84,31 +96,26 @@ cartloader sge_stitch \
     - `--hex-n-move` (int): Sliding step (default: 1).
     - `--polygon-min-size` (int): Minimum polygon size (default: 500).
 
-### SGE Visualization
+### Run Parameters
 
-- `--sge-visual` (flag): Enable SGE visualization.
-- `--north-up` (flag): Enable north-up orientation for the SGE visualization.
-
-??? note "Auxiliary SGE Visualization Parameters"
-    We recommend using default values; override only if needed.
-
-    - `--out-xy` (str): File name for output SGE visualization image (default: `xy.png`).
-    - `--out-northup-tif` (str): File name for output north-up oriented image (default: `xy_northup.tif`).
-    - `--srs` (str): Spatial reference system (used with `--north-up`; default: EPSG:3857).
-    - `--resample` (str): Resampling method (used with `--north-up`; options: near, bilinear, cubic, etc.; default: cubic).
-    - `--gdal_translate` (str): Path to `gdal_translate` binary (used with `--north-up`; default: `gdal_translate`)
-    - `--gdalwarp` (str): Path to `gdalwarp` binary (used with `--north-up`; default: `gdalwarp`)
+- `--dry-run` (flag): Write the Makefile and print the commands without executing.
+- `--restart` (flag): Ignore existing outputs and rerun all steps.
+- `--n-jobs`, `-j` (int): Number of parallel jobs (default: 1).
+- `--makefn` (str): Makefile name under `--out-dir` (default: `sge_stitch.mk`).
 
 ### Environment Parameters
 
-- `--gzip` (str): Path to gzip binary (default: gzip).
-- `--spatula` (str): Path to spatula binary (default: spatula).
+- `--gzip` (str): Path to `gzip` (default: `gzip`).
 
 ---
 ## Output
 
-An SGE matrix consisting of all input SGEs in a specific layout. In addition:
+Under `--out-dir`:
 
-- If `--filter-by-density` is enabled, a polygon-based filtered SGE matrix is created from the stitched SGE.
-- If `--sge-visual` is enabled, a monochrome PNG image is generated to visualize the stitched SGE.
-- If `--north-up` is enabled, a georeferenced TIFF image is produced with a north-up orientation.
+- The stitched SGE: `transcripts.unsorted.tsv.gz`, `feature.clean.tsv.gz`, `coordinate_minmax.tsv` (see the [unified SGE format](./sge_convert.md#unified-sge-matrix)).
+- `coordinate_minmax_per_tile.tsv`: per tile, the local min/max, the X/Y offsets applied, and the resulting global bounds in µm.
+- `feature.distribution.tsv.gz`: per feature, the number of tiles containing it and its count in each tile.
+- `sge_assets.json`: paths of the SGE to use downstream, in the same format as [`sge_convert`'s](./sge_convert.md#sge-manifest-sge_assetsjson); written after the Makefile runs.
+- Oriented tiles (for tiles with a rotation): `r<row>c<col>.rot<deg>[.vfip][.hfip].transcripts.unsorted.tsv.gz`, with matching `.feature.clean.tsv.gz` and `.coordinate_minmax.tsv`.
+- With `--filter-by-density`: `<prefix>.transcripts.unsorted.tsv.gz`, `<prefix>.feature.lenient.tsv.gz`, `<prefix>.coordinate_minmax.tsv` (and boundary GeoJSONs); `sge_assets.json` then points to these files.
+- `sge_stitch.done`, `sge_density_filtering.done`, and per-tile `.done` flags; the Makefile `sge_stitch.mk`.

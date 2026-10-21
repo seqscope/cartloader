@@ -1,9 +1,12 @@
 # Spatial Factor Inference Analysis using FICTURE
 
 ## Overview
-Following format conversion, `CartLoader` provides the **`run_ficture2`** module to run spatial factor inference using [**`FICTURE`**](https://www.nature.com/articles/s41592-024-02415-2) (Si et al., *Nature Methods*, 2024). This method infers spatial factors directly at the pixel level with submicron resolution, eliminating the need for segmentation.
+Following format conversion, `CartLoader` provides the **`run_ficture2`** module to run spatial factor inference on a single sample using [**`FICTURE`**](https://www.nature.com/articles/s41592-024-02415-2) (Si et al., *Nature Methods*, 2024), as implemented in `punkst`. This method infers spatial factors directly at the pixel level with submicron resolution, eliminating the need for segmentation.
 
-!!! question 
+!!! tip "Usually run for you"
+    [`run_together`](./run_together.md) runs FICTURE as part of the pipeline, through [`run_ficture2_multi`](./run_ficture2_multi.md) (also for a single sample). Use `run_ficture2` directly in step-by-step or custom single-sample workflows.
+
+!!! question
     - [What is `FICTURE` and `punkst`?](../faq/ficture.md)
     - [How can I speed up runs safely?](../faq/speed_up_runs.md)
     - [How do I resume a run, or rerun everything from scratch?](../faq/restart_or_resume.md)
@@ -11,8 +14,11 @@ Following format conversion, `CartLoader` provides the **`run_ficture2`** module
 ---
 ## Requirements
 
-- An SGE in the unified format (from [SGE format conversion](./sge_convert.md))
-- Pre-installed tools: `spatula`, `punkst`, `gzip`, `sort`, `python`
+- An SGE in the unified format (from [SGE format conversion](./sge_convert.md)): a transcript TSV with a header line, X/Y at `--colidx-x`/`--colidx-y`, and the feature name and count in columns **3 and 4** (fixed positions).
+- `punkst`: `--ficture2` must point to a `punkst` repository containing `bin/punkst` and `ext/py/factor_report.py` (default: the repository submodule `<cartloader_dir>/submodules/punkst`).
+- `spatula` (default: `<cartloader_dir>/submodules/spatula/bin/spatula`), `gzip`, `sort`, and `python3`.
+- `Rscript` on the `PATH` for `--umap`.
+- `cartloader` on the `PATH` (the Makefile calls `cartloader write_json_for_ficture2`).
 
 ## Actions
 
@@ -23,21 +29,22 @@ Following format conversion, `CartLoader` provides the **`run_ficture2`** module
 The tiling step takes the standardized SGE (from [SGE format conversion](./sge_convert.md)) as input. It reorganizes input coordinate data into non‑overlapping square tiles in a plain TSV format and generates an index file with tile offsets to enable efficient random access.
 
 ### Segmentation Step (`--segment`)
-The segmentation step starts from the tiled SGE, using the plain TSV file from [tiling step](#tiling-step-tile) as input. It aggregates tiled pixel data into non-overlapping hexagons in a TSV file for spot-level analysis, outputting a tab-delimited file of hexagon records and associated metadata in JSON format.
+Aggregates the tiled pixel data into non-overlapping hexagons (one width per `--width` value), writing a tab-delimited file of hexagon records and a JSON metadata file. Requires the tiling outputs.
 
 ### LDA Training Step (`--init-lda`)
-The LDA training step uses the hexagon TSV and JSON file from [segmentation step](#segmentation-step-segment) as input, trains a Latent Dirichlet Allocation (LDA) model on sparse gene count data from hexagon units, using metadata to interpret input structure and optionally filter or weight features, producing a factorized topic model in TSV.
+Trains a Latent Dirichlet Allocation (LDA) model on the hexagon counts for each (`--width`, `--n-factor`) pair, then writes the factor color map, a differential-expression table and a factor report.
 
 ### Decoding Step (`--decode`)
-The decoding step applies a trained LDA model from [LDA training step](#lda-training-step-init-lda) to tiled pixel-level transcript data from [tiling step](#tiling-step-tile) to infer the top spatial factors and their posterior probabilities for each pixel, enabling fine-grained spatial mapping of gene expression. It outputs a pixel-level annotation file in TSV format with coordinates and factor assignments, along with a pseudobulk gene-by-factor matrix in TSV format.
+Applies each trained model to the tiled pixel-level data to infer the top factors and their posterior probabilities at each pixel. It writes binary pixel-level results, a pseudobulk feature-by-factor matrix, a differential-expression table, a factor report, and a PNG image.
 
 ### UMAP Visualization Step (`--umap`)
-
-The UMAP visualization step generates UMAP embeddings of factors learned in [LDA training](#lda-training-step-init-lda), writing both coordinates and plots for reuse downstream.
+Generates a UMAP embedding of the hexagon-level factor posteriors from [LDA training](#lda-training-step-init-lda), writing both coordinates and plots for reuse downstream.
 
 ### 10x Segmentation Step (`--segment-10x`)
+Aggregates the tiled pixel data into hexagons in 10x Genomics MEX format (minimum count 1 per hexagon), for use with tools designed for 10x data.
 
-The 10x segmentation step aggregates tiled pixel data into 10x Genomics-compatible hexagonal bin formats (MEX matrix). This allows the data to be used with tools designed for 10x Visium data.
+!!! note "Step dependencies"
+    `--decode` and `--umap` need `--init-lda` in the same invocation. A model that is already trained is not retrained: completed steps are skipped through their `.done` flags, so rerun with the same flags plus the new action.
 
 ---
 ## Example Usage
@@ -45,20 +52,21 @@ The 10x segmentation step aggregates tiled pixel data into 10x Genomics-compatib
 ```bash
 cartloader run_ficture2 \
     --main \
-    --in-transcript /path/to/converted/transcripts/tsv/file \
-    --in-feature /path/to/converted/feature/tsv/file \
-    --in-minmax /path/to/converted/coordinates/minmax/tsv/file \
-    --cmap-file /path/to/cartloader/assets/fixed_color_map_256.tsv \
-    --colname-count count \
+    --in-transcript /path/to/sge/transcripts.unsorted.tsv.gz \
+    --in-feature /path/to/sge/feature.clean.tsv.gz \
+    --in-minmax /path/to/sge/coordinate_minmax.tsv \
     --out-dir /path/to/output/directory \
     --width 18 \
     --n-factor 24 \
-    --spatula /path/to/spatula/binary \
-    --ficture2 /path/to/punkst/directory \
-    --exclude-feature-regex '^(mt-|Gm\\d+$)' \
-    --n-jobs 20  \
+    --exclude-feature-regex '^(mt-.*|Gm[0-9]+)$' \
+    --n-jobs 20 \
     --threads 20
 ```
+
+`--in-json /path/to/sge/sge_assets.json` (written by `sge_convert`) can replace the three `--in-*` flags.
+
+!!! warning "Feature regexes must match the whole name"
+    `--include-feature-regex` / `--exclude-feature-regex` are passed to `punkst lda4hex`, which requires the pattern to match the **entire** feature name (`std::regex_match`). `'^(mt-|Gm\d+$)'` would therefore exclude `Gm123` but no `mt-` gene; write `'^(mt-.*|Gm[0-9]+)$'` instead. This differs from `sge_convert`, `run_ficture2_multi` and `feature_filtering`, which match substrings (see [Feature Customization](./feature_customization.md#regex-semantics-differ-between-commands)).
 
 ---
 ## Parameters
@@ -67,8 +75,7 @@ Below are the core parameters. See more details in the collapsible section ("Aux
 
 #### Action Parameters
 
-
-* `--main`: Run all of the following five actions.
+* `--main`: Run `--tile`, `--segment`, `--init-lda`, `--decode`, and `--umap` (not `--segment-10x`).
 * `--tile`: Run [tiling step](#tiling-step-tile).
 * `--segment`: Run [segmentation step](#segmentation-step-segment).
 * `--init-lda`: Run [LDA training step](#lda-training-step-init-lda).
@@ -78,85 +85,81 @@ Below are the core parameters. See more details in the collapsible section ("Aux
 
 #### Input/Output Parameters
 
-* `--out-dir` (str): Output directory to store all result files.
-* `--out-json` (str): Output JSON file summarizing FICTURE parameters (Default: `<out-dir>/ficture.params.json`).
-* `--in-transcript` (str): Input transcript-indexed SGE file in TSV format.
-* `--in-minmax` (str): Optional input coordinate min-max file.
-* `--in-feature` (str): Optional input UMI count per gene TSV file.
+* `--out-dir` (str, required): Output directory to store all result files.
+* `--in-transcript` (str): Input transcript-indexed SGE TSV (default: `<out-dir>/transcripts.unsorted.tsv.gz`).
+* `--in-minmax` (str): Input coordinate min/max TSV (default: `<out-dir>/transcripts.tiled.coord_range.tsv`, written by tiling). Pass it explicitly so that `ficture.params.json` records it (see [Summarization Output](#summarization-output)).
+* `--in-feature` (str): Input per-feature count TSV with a header line; the first column is the feature name and the last the count. Its features define the feature dictionary used by segmentation and LDA. Default: the feature list written by tiling (`transcripts.tiled.features.tsv`).
+* `--in-json` (str): Input manifest JSON with `transcript`, `feature`, and `minmax` keys (typically `sge_assets.json` from `sge_convert`); replaces the three flags above.
+* `--out-json` (str): Output JSON summarizing FICTURE parameters (default: `<out-dir>/ficture.params.json`).
 
 #### Key Parameters
 
-* `--width` (str): Comma-separated hexagon flat-to-flat widths (in µm) for LDA training.
-* `--n-factor` (str): Comma-separated list of factor counts for LDA training.
-* `--include-feature-regex` (str): (Optional) Regex pattern for including features/genes.
-* `--exclude-feature-regex` (str): (Optional) Regex pattern for excluding features/genes.
-* `--cmap-file` (str): (Optional) Path to fixed color map TSV file. If not provided, FICTURE will generate a color map.
-* `--segment-width-10x` (str): Comma-separated hexagon flat-to-flat widths (µm) in 10x format (required if `--segment-10x`).
+* `--width` (str): Comma-separated hexagon flat-to-flat widths (µm) for segmentation and LDA training. Required by `--segment`, `--init-lda`, `--decode`, and `--umap`.
+* `--n-factor` (str): Comma-separated factor counts for LDA training (default: `12`, with a warning). Every (width, factor count) pair is trained, as model `t{width}_f{n_factor}`.
+* `--include-feature-regex` (str): Regex of feature names to include in LDA training (whole-name match).
+* `--exclude-feature-regex` (str): Regex of feature names to exclude from LDA training (whole-name match).
+* `--cmap-file` (str): Color map TSV; its first `n_factor` colors are used (default: `<cartloader_dir>/assets/default_color_map.tsv`).
+* `--segment-width-10x` (str): Comma-separated hexagon widths (µm) in 10x format (required with `--segment-10x`).
 
 ??? note "Auxiliary Parameters"
 
     **Auxiliary Input Parameters**
 
-    * `--in-feature-ficture` (str): (Optional) A separate feature file applied to FICTURE analysis. Alternative to customizing via auxiliary parameters.
-    * `--colidx-x` (int): Column index of X in the transcript file (Default: 1).
-    * `--colidx-y` (int): Column index of Y in the transcript file (Default: 2).
-    * `--colname-count` (str): Column name to use as count value (Default: count).
-    * `--colname-feature` (str): Column name for gene/feature name (Default: gene).
+    * `--in-feature-ficture` (str): A feature file used instead of `--in-feature` for the FICTURE analysis (same format), restricting the analysis to the listed features.
+    * `--colidx-x`, `--colidx-y` (int): 1-based column indices of X and Y in the transcript file (defaults: 1, 2).
+    * `--colname-feature`, `--colname-count` (str): Header names written to the FICTURE feature file `*.hdr.tsv` (defaults: `gene`, `count`). They do not select input columns.
+    * `--model-id` (str): Name of the model in place of `t{width}_f{n_factor}`; only valid when a single width and a single factor count are given.
 
     **Auxiliary FICTURE Parameters**:
 
     * Tiling-specific parameters:
-        * `--tile-size` (int): Size of tiles for processing (Default: 500).
-        * `--tile-buffer` (int): Buffer zone around each tile (Default: 1000).
+        * `--tile-size` (int): Tile size (default: 500).
+        * `--tile-buffer` (int): Per-tile buffer size (default: 1000).
     * Segmentation-specific parameters:
-        * `--min-ct-per-unit-hexagon` (int): Minimum count per hexagon (Default: 50).
-        * `--minibatch-size` (int): Minibatch size for preprocessing (Default: 500).
+        * `--min-ct-per-unit-hexagon` (int): Minimum count per hexagon (default: 50).
     * LDA training-specific parameters:
-        * `--min-ct-per-unit-train` (int): Minimum count for training (Default: 50).
-        * `--train-epoch` (int): Number of epochs to train LDA model (Default: 2).
+        * `--min-ct-per-unit-train` (int): Minimum count per hexagon for training (default: 50).
+        * `--minibatch-size` (int): Minibatch size (default: 500).
+        * `--train-epoch` (int): Number of training epochs (default: 2).
     * Decoding-specific parameters:
-        * `--fit-width` (int): Hexagon width (in µm) for model fitting (Default: same as train width).
-        <!-- * `--min-ct-per-unit-fit` (int): Minimum count per unit during model fitting (Default: 50). -->
-        * `--anchor-res` (int): Anchor resolution used in decoding (Default: 6).
-        * `--radius-buffer` (int): Buffer added to anchor resolution for decoding (Default: 1).
-        <!-- * `--fit-plot-um-per-pixel` (int): Image resolution for fit coarse plots (Default: 1). -->
-        * `--decode-scale` (int): Scales input coordinates to pixels in the output image (Default: 1)
+        * `--fit-width` (int): Hexagon width (µm) for decoding; give a single value (default: the training width).
+        * `--anchor-res` (int): Anchor resolution; the decode uses `fit_width / anchor_res` sliding moves (default: 6).
+        * `--decode-pixel-res` (float): Pixel resolution (µm) of the decode (default: 0.5).
+        * `--single-molecule` (flag): Decode each molecule instead of pixels at `--decode-pixel-res`.
+        * `--decode-scale` (int): Scale from input coordinates to pixels of the output PNG (default: 1).
     * Shared parameters across steps:
-        * `--seed` (int): Random seed for reproducibility (Default: 1).
-        * `--min-ct-per-feature` (int): Minimum count per feature for LDA and decoding (Default: 20).
-        * `--de-max-pval` (float): p-value cutoff for differential expression (Default: 1e-3).
-        * `--de-min-fold` (float): Fold-change threshold for differential expression (Default: 1.5).
+        * `--seed` (int): Random seed (default: 1).
+        * `--min-ct-per-feature` (int): Minimum count per feature for LDA training and differential expression (default: 20).
+        * `--de-max-pval` (float): P-value cutoff for differential expression (default: 1e-3).
+        * `--de-min-fold` (float): Fold-change cutoff for differential expression (default: 1.5).
 
-    **Feature Filtering Parameters**:
-
-    * `--include-feature-regex` (str): Regex of feature names to include.
-    * `--exclude-feature-regex` (str): Regex of feature names to exclude.
-    
     **Environment Parameters**:
-    For tools that require specifying the path to their executable binaries, you may omit the path if the binary is already included in your system's `PATH`.
 
-    * `--gzip` (str): Path to `gzip` binary; consider `pigz -p 4` for speed (Default: `gzip`).
-    * `--sort` (str): Path to `sort` binary (Default: `sort`).
-    * `--sort-mem` (str): Memory allocated per `sort` process (Default: `1G`).
-    * `--spatula` (str): Path to `spatula` binary (Default: `spatula`).
-    * `--ficture2` (str): Path to the `punkst` repository (Default to `punkst` directory in `submodules`)
-    * `--python` (str): Path to Python 3 binary (Default: `python3`).
-    * `--R` (str): Path to `R` binary for UMAP generation (default: `R`).
+    * `--ficture2` (str): Path to the `punkst` repository (default: `<cartloader_dir>/submodules/punkst`).
+    * `--spatula` (str): Path to `spatula` (default: `<cartloader_dir>/submodules/spatula/bin/spatula`).
+    * `--gzip` (str): Path to `gzip`; consider `"pigz -p 4"` for speed (default: `gzip`).
+    * `--sort` (str): Path to `sort` (default: `sort`).
+    * `--sort-mem` (str): Memory per `sort` process (default: `1G`).
+    * `--python` (str): Python 3 used for `punkst`'s factor report (default: `python3`).
+    * `--R` (str): R binary checked with `--umap` (default: `R`); the UMAP scripts themselves run with `Rscript` from the `PATH`.
 
     **Run Parameters**:
 
-    * `--dry-run` (flag): Generate the Makefile; do not execute.
+    * `--dry-run` (flag): Write the Makefile and print the commands without executing.
     * `--restart` (flag): Ignore existing outputs and rerun all steps.
-    * `--makefn` (str): Makefile name to write (default: `run_ficture2.mk`).
+    * `--makefn` (str): Makefile name under `--out-dir` (default: `run_ficture2.mk`).
     * `--n-jobs` (int): Number of parallel jobs (default: 1).
     * `--threads` (int): Max threads per job (default: 4).
+
+??? note "Temporary files"
+    `punkst` writes temporary files under `<out-dir>/tmp` (tiling), `<out-dir>/tmp/<width>` (segmentation) and `<out-dir>/tmp/<model_id>_pixel` (decoding). The UMAP R scripts run with `TMPDIR` set to `<out-dir>/<model_id>_create_umap`, `_draw_umap` and `_draw_umap_single` (created and removed per step), so large inputs do not fill the system `/tmp`; the UMAP nearest-neighbor index goes to `<out-dir>/<model_id>.umap.tmp` (removed on completion). `lda4hex` is not given a temporary directory and uses `punkst`'s default.
 
 ---
 ## Output
 
 ### Tiling Output
 
-* `transcripts.tiled.tsv`: A tab-delimited TSV file where each line records a tile with X and Y coordinates, a feature name (e.g., gene), and its associated count.
+* `transcripts.tiled.tsv`: A tab-delimited TSV file where each line records a pixel with X and Y coordinates, a feature name (e.g., gene), and its associated count, grouped by tile.
     ```text
     3815.69	491.9	Arfgef1 1
     ```
@@ -170,7 +173,7 @@ Below are the core parameters. See more details in the collapsible section ("Aux
     # ymax	13476.4
     0	7	0	        13103550	569474
     0	8	13103550	40259340	1180529
-    ``` 
+    ```
 * `transcripts.tiled.coord_range.tsv`: A tab-delimited TSV file provides xmin, xmax, ymin, and ymax as key–value pairs.
     ```text
     xmin	0.28
@@ -178,28 +181,30 @@ Below are the core parameters. See more details in the collapsible section ("Aux
     ymin	0.5
     ymax	13476.4
     ```
-* `transcripts.tiled.features.tsv`: A tab-delimited TSV file listing each feature name and its expression count per line.
+* `transcripts.tiled.features.tsv`: A headerless TSV listing each feature name and its total count.
     ```text
     1810009J06Rik	1
     Gm48545	        1
     ```
+* FICTURE feature files: `transcripts.tiled.features.hdr.tsv` (the same list with a header), or, with `--in-feature`/`--in-feature-ficture`, `transcripts.tiled.selected_features.tsv` (headerless) and `transcripts.tiled.selected_features.hdr.tsv`.
+
 ### Segmentation Output
 
-* `hexagon_d_{width}.randomized.tsv`: A plain-text TSV file that stores sparse feature representations for hexagon units, with each line corresponding to one hexagon.
-    
+* `hexagon.d_{width}.randomized.tsv`: A plain-text TSV file that stores sparse feature counts for hexagon units, one hexagon per line, sorted by a random key.
+
     !!! info "File Format"
         This is not a regular table—the number of columns varies across lines depending on the number of features present in each hexagon.
 
     ```text
-    00001c64  18999.0000  9773.9627  227  244   2417 1  10469 2  2448 1  543 1   10935 1  6460 1  1797 1  6517 1  1094 1  9872 1  8587 1  7137 1  8786 1  10564 1  2127 1  439 1   1529 1  8432 1   1304 1  1739 1   3012 1  6434 1  5297 1  10017 1  2567 1  4771 1  5644 1  6415 1  5258 1   258 1   2314 1  6378 1  8843 1  7386 1  3322 1  2041 1  4735 1  9755 1  8614 1   4665 1  5693 1  2194 1  1680 1  10406 1  2696 1  7250 1  2367 1  7189 1  1616 1  10721 1  441 1   9981 1   8696 1  1012 1  8545 1  835 1   6550 1  4409 1  1860 1  575 1   139 1   5473 1  10172 1  7316 1  5260 1  180 1   2068 1  10806 1  8817 1  1621 1  4542 1  6193 1  440 1   6608 1  6989 1  4782 1  3258 1  5205 1  1093 1  9060 1  1921 1  6333 1   846 1   10575 1  2608 1  10186 1  932 1   2217 1  5392 1  2275 1  4845 1   8401 1  341 1   2810 1   754 1   4501 1  1160 1  5354 1  5097 1  3713 1  1619 1  9843 1  2749 1  1207 1  7384 1  2758 1  445 1   9040 1  45 1    2517 1   11255 1  8161 1  393 1   2963 1  3457 1  4481 1  10649 1  6954 2  2842 1  7982 1  2034 1  2849 2  5393 1  5257 1  773 1   1030 1  5455 1  2380 1  7079 1  1491 1  353 1    5343 1  1231 1  178 1   8659 1  10994 1  6168 1  267 1    6770 1   9083 1   2691 1  2423 2  3058 3  6921 1  1778 1  236 1   7175 1  7683 1   47 1    9094 2  1898 1  6524 1  5640 1  6668 1   6411 1  3536 1  10475 2  6538 1  1443 1  2728 1  7717 1  4633 1  6634 1   5349 1  11215 2  9159 1  2129 1  5984 1  8584 2  7042 1  3819 2  7931 1  2343 1  1182 2  2724 1  1871 1  716 1   1744 1  263 1   7459 1  6737 1  4654 1   9023 1  775 2    1546 1  1512 1  6395 1  5624 1  1560 2  8919 2  4689 1  2403 1  4163 1  5705 1  1260 1  8068 1  1900 1  1701 1  1187 1  8172 1  5955 1  494 1   428 1   6082 1  479 1   5362 1   11273 1  1764 1   9546 1  8261 1  11088 1  6262 1  2154 1  612 1   6777 2  866 1    10850 1  4168 1  9334 1  9077 2   3818 1  732 1   6386 1  989 1   1277 1  319 1   6230 1
+    00001c64  18999.0000  9773.9627  227  244   2417 1  10469 2  2448 1  543 1  10935 1  6460 1  ...
     ```
-	
-    * 1st column (str): Random identifier for the hexagon
-	* 2nd and 3rd columns (float): Axial coordinates in the hexagonal coordinate system
-	* 4th and 5th columns (int): Number of unique features and total counts, repeated per modality (for K modalities)
-	* 6th column onward (integer integer): Index–count pairs for non-zero features, using 0-based indices from --feature-dict or as provided in the input file
 
-* `hexagon_d_{width}.json`: The meta data for the hexagons. such as, , hexagon size, x and y column indices (), number of features, number of modalities, and number of hexagons (`n_units`),
+    * 1st column (str): Random identifier for the hexagon
+    * 2nd and 3rd columns (float): Coordinates of the hexagon center
+    * 4th and 5th columns (int): Number of unique features and total counts, repeated per modality (for K modalities)
+    * 6th column onward (integer integer): Index–count pairs for non-zero features, using the 0-based indices of the feature dictionary
+
+* `hexagon.d_{width}.json`: The metadata for the hexagons.
     ```json
     {
     "dictionary": {
@@ -222,33 +227,34 @@ Below are the core parameters. See more details in the collapsible section ("Aux
         "random_key": 0
     }
     ```
-    * `dictionary`: The feature name-idex pairs
-    * `header_info`: Header information
-    * `hex_size`: Size of hexagons
-    * `icol_x` and `icol_y`: Indices of X and Y coordinates
+    * `dictionary`: Feature name–index pairs
+    * `header_info`: Names of the leading columns
+    * `hex_size`: Hexagon side length (width / √3)
+    * `icol_x` and `icol_y`: 0-based column indices of the X and Y coordinates
     * `n_features`: Number of features
     * `n_modalities`: Number of modalities
     * `n_units`: Number of hexagons
-    * `offset_data`: ?
-    * `random_key`: the random seed for reproduction
+    * `offset_data`: Number of leading columns before the per-hexagon counts
+    * `random_key`: 0-based column index of the random key
+* `hexagon.d_{width}.done`: done flag.
 
 ### LDA Training Output
 
-* `t{width}_f{n_factor}.model.tsv`: A matrix to store the learned topic-word distribution.
+* `t{width}_f{n_factor}.model.tsv`: The learned feature-by-factor matrix.
     ```text
     Feature  0        1      2      3      4      5      6         7      8      9      10        11       12     13     14        15     16     17     18      19     20      21     22     23
     Neu4     481.168  0.042  0.042  0.042  0.042  0.042  1828.293  0.042  0.042  0.042  2290.443  836.722  0.042  0.042  1704.589  0.042  0.042  0.042  29.738  0.042  24.854  0.042  0.042  0.042
     ```
-    * Rows (str): LDA topics or spatial factors
-	* Columns (int): Feature identifiers (e.g., gene names or indices)
-	* Values (float): Probability or weight of a feature under each topic `(P(feature | topic))`
-* `t{width}_f{n_factor}.results.tsv.gz`: A tab-delimited file containing the posterior topic distributions for each hexagon.  
+    * Rows (str): Features (e.g., gene names)
+    * Columns (int): Factor IDs
+    * Values (float): Weight of a feature in each factor
+* `t{width}_f{n_factor}.results.tsv.gz`: A tab-delimited file containing the posterior factor distributions for each hexagon.
     ```text
     x           y          0       1       2       3       4       5       6       7       8       9       10      11      12      13      14      15      16      17      18      19      20      21      22      23      topK  topP
     14202.0000  5393.6062  0.0000  0.5087  0.0860  0.0000  0.0269  0.0000  0.0136  0.0000  0.0000  0.0179  0.0153  0.0000  0.0490  0.0000  0.0982  0.0000  0.0911  0.0199  0.0143  0.0189  0.0373  0.0000  0.0030  0.0000  1     0.5087
     ```
     * `x` and `y` (float): X Y coordinates of the hexagon.
-    * Columns `0` to `{n_factor-1}` (float): Posterior probabilities for each latent factor `(P(topic | hexagon))`
+    * Columns `0` to `{n_factor-1}` (float): Posterior probabilities for each factor `(P(factor | hexagon))`
     * `topK` (int): Index of the most probable factor
     * `topP` (float): Posterior probability of the top factor
 * `t{width}_f{n_factor}.bulk_chisq.tsv`
@@ -260,9 +266,9 @@ Below are the core parameters. See more details in the collapsible section ("Aux
     * `factor` (int): Factor IDs.
     * `Chi2` (float): Chi-squared test statistic comparing the expression in the target factor and the rest.
     * `pval` (float): P-value associated with the chi-squared test.
-    * `FoldChange` (float): Ratio of gene expression inside versus outside the factor’s high-loading region.
+    * `FoldChange` (float): Ratio of gene expression inside versus outside the factor.
     * `gene_total` (int): Total count of the gene in the dataset.
-    * `log10pval` (float): Base-10 logarithm of the inverse p-value (i.e., -log10(pval)), useful for ranking significant genes.
+    * `log10pval` (float): -log10(pval), useful for ranking significant genes.
 
 * `t{width}_f{n_factor}.factor.info.tsv` and `t{width}_f{n_factor}.factor.info.html`: A TSV and HTML file providing the information for each factor per line.
     ```text
@@ -274,92 +280,86 @@ Below are the core parameters. See more details in the collapsible section ("Aux
     * `Weight` (float): Proportion of the total factor signal explained by this factor
     * `PostUMI` (int): Sum of posterior UMI counts across all spatial locations for this factor
     * `TopGene_pval`, `TopGene_fc`, `TopGene_weight` (str): Top marker genes per factor ranked by significance (p-value), fold change, or weight
-* `t{width}_f{n_factor}.cmap.tsv`: a color map.
+* `t{width}_f{n_factor}.cmap.tsv`: The color map (the first `n_factor` rows of `--cmap-file`).
     ```text
     R    G    B    Color_hex  Name
     255  101  101  #ff6565    0
     ```
     * `Name` (int): Factor IDs
     * `Color_hex` (str): Color HEX code
-    * `R`, `G`, `B` (float): Red, Green, and Blue channel values (range: 0.0 to 1.0)
+    * `R`, `G`, `B` (int): Red, Green, and Blue channel values (0–255)
+* `t{width}_f{n_factor}.done` and `t{width}_f{n_factor}_summary.done`: done flags of training and of the DE/report step.
 
 ### Decoding Output
 
-* `t{width}_f{n_factor}_p{width}_a{anchor_res}.tsv.gz`: A tab-delimited file where each line represents a pixel–feature pair, recording the pixel’s coordinates, the expressed feature and its count, along with the top three most probable latent factors (`K1`–`K3`) and their corresponding probabilities (`P1`–`P3`).
-    ```text
-    #x         y         feature  ct  K1  K2  K3  P1          P2          P3
-    5159.4800  450.1500  Retreg2  1   0   19  9   9.5073e-01  4.8011e-02  5.0298e-04
-    ```
-    * `x` and `y` (float): X Y coordinates
-    * `feature` (str): feature names.
-    * `ct` (int): count
-    * `K1` (int) and `P1` (float): The most probable factor and its probability
-    * `K2` (int) and `P2` (float): The 2nd most probable factor and its probability
-    * `K3` (int) and `P3` (float): The 3rd most probable factor and its probability
+The decode ID is `{model_id}_pixel` (e.g., `t18_f24_pixel`).
 
-* `t{width}_f{n_factor}_p{width}_a{anchor_res}.index`: An index file for `t{width}_f{n_factor}_p{width}_a{anchor_res}.tsv.gz`.
-* `t{width}_f{n_factor}_p{width}_a{anchor_res}.json`: A JSON file to provide header information for `t{width}_f{n_factor}_p{width}_a{anchor_res}.tsv.gz`.
-    ```json 
-    {
-        "K1": 4,
-        "K2": 5,
-        "K3": 6,
-        "P1": 7,
-        "P2": 8,
-        "P3": 9,
-        "ct": 3,
-        "feature": 2,
-        "x": 0,
-        "y": 1
-    }
-    ```
-* `t{width}_f{n_factor}_p{width}_a{anchor_res}.png`: A PNG file to visualize the spatial factors distribution at pixel level.
-* `t{width}_f{n_factor}_p{width}_a{anchor_res}.pseudobulk.tsv`: A feature-by-factor matrix showing feature distribution across topics.
+* `{model_id}_pixel.bin` and `{model_id}_pixel.index`: Binary pixel-level decoding results (top factors and their posterior probabilities per pixel) and their index, read by `punkst draw-pixel-factors` and by packaging.
+* `{model_id}_pixel.pseudobulk.tsv.gz`: A feature-by-factor matrix of posterior counts.
     ```text
     Feature  0         1       2       3       4       5       6          7       8       9       10         11        12      13      14        15      16      17      18       19      20       21      22      23
     Neu4     648.5156  0.0000  0.9999  0.0000  0.0000  2.1425  1316.2651  0.0000  0.0000  0.0000  1114.2935  527.5519  0.0000  0.0000  820.3735  0.0000  0.0000  3.3504  30.4680  0.0000  38.0400  0.0000  0.0000  0.0000
     ```
-    * Rows (str): LDA topics or spatial factors
-	* Columns (int): Feature identifiers (e.g., gene names or indices)
-	* Values (float): Posterior probability of a feature in a factor.
+    * Rows (str): Features (e.g., gene names)
+    * Columns (int): Factor IDs
+    * Values (float): Posterior count of a feature in a factor
+* `{model_id}_pixel.bulk_chisq.tsv`: Same format as `t{width}_f{n_factor}.bulk_chisq.tsv`.
+* `{model_id}_pixel.factor.info.tsv` and `{model_id}_pixel.factor.info.html`: Same format as `t{width}_f{n_factor}.factor.info.tsv`/`.html`.
+* `{model_id}_pixel.png`: An image of the pixel-level factors.
+* `{model_id}_pixel.done` and `{model_id}_pixel_summary.done`: done flags.
 
-* `t{width}_f{n_factor}_p{width}_a{anchor_.res}.bulk_chisq.tsv`: Same format as the `t{width}_f{n_factor}.bulk_chisq.tsv`
-* `t{width}_f{n_factor}_p{width}_a{anchor_res}.factor.info.tsv`:  Same format as the `t{width}_f{n_factor}.factor.info.tsv`
-* `t{width}_f{n_factor}_p{width}_a{anchor_res}.factor.info.html`: Same format as the `t{width}_f{n_factor}.factor.info.html`
-
-### Summarization Output
-
-* `ficture.params.json`: A JSON file summarizing input and output paths and parameters.
-    ```json
-    {
-    "in_sge": {
-        "in_transcript": "/path/to/transcripts.unsorted.tsv.gz",
-        "in_feature": "/path/to/transcripts.tiled.features.hdr.tsv",
-        "in_minmax": "/path/to/coordinate_minmax.tsv"
-    },
-    "in_feature_ficture": "/path/to/transcripts.tiled.overlapping_features.min100.hdr.tsv", # if available
-    "train_params": [
-        {
-            "model_type": "lda",
-            "model_id": "t{width}_f{n_factor}",
-            "model_path": "/path/to/t{width}_f{n_factor}.model.tsv",
-            "train_width": width,
-            "n_factor": n_factor,
-            "cmap": "/path/to/t{width}_f{n_factor}.cmap.tsv",
-            "decode_params": [
-                {
-                    "decode_id": "t{width}_f{n_factor}_p{width}_a{anchor_res}",
-                    "fit_width": width,
-                    "anchor_res": anchor_res
-                }
-            ]
-        }
-    ]
-    }
-    ```
+!!! warning "Use an `--out-dir` path without dots"
+    The decode output prefix is derived by `punkst` from the last `.` in the full output path, so an `--out-dir` containing a `.` (e.g., `./out`, `../out`, `run.v2/`) misplaces the decode outputs and the step fails. Use a path without dots (an absolute path such as `/data/run_v2/ficture`).
 
 ### UMAP Output
 
-* `t{width}_f{n_factor}.umap.tsv.gz`: UMAP coordinates per factor with factor IDs and colors; can be reused by downstream pipelines (e.g., upload optional files).
-* `t{width}_f{n_factor}.umap.png`: A UMAP plot that visualizes the relationships between spatial factors.
-* `t{width}_f{n_factor}.umap.single.prob.png`: A gallery of images, with each image showing a single factor color-coded by probability.
+* `t{width}_f{n_factor}.umap.tsv.gz`: UMAP coordinates of the hexagons with their factor assignments; reused by packaging.
+* `t{width}_f{n_factor}.umap.png`: A UMAP plot colored by factor.
+* `t{width}_f{n_factor}.umap.single.prob.png`: A gallery of UMAP plots, each showing one factor colored by probability.
+
+### 10x Segmentation Output
+
+* `hexagon.d_{width}.10x/`: `barcodes.tsv.gz`, `features.tsv.gz`, `matrix.mtx.gz`, and the done flag `hexagon_10x.done`.
+
+### Summarization Output
+
+* `ficture.params.json`: A JSON file summarizing input paths and models, read by [`run_cartload2`](./run_cartload2.md).
+    ```json
+    {
+        "in_sge": {
+            "in_tiled": "/path/to/out/transcripts.tiled",
+            "in_feature": "/path/to/out/transcripts.tiled.selected_features.tsv",
+            "in_minmax": "/path/to/sge/coordinate_minmax.tsv"
+        },
+        "train_params": [
+            {
+                "model_type": "lda",
+                "model_id": "t18_f24",
+                "model_path": "/path/to/out/t18_f24.model.tsv",
+                "train_width": 18,
+                "n_factor": 24,
+                "cmap": "/path/to/out/t18_f24.cmap.tsv",
+                "decode_params": [
+                    {
+                        "decode_id": "t18_f24_pixel",
+                        "fit_width": 18,
+                        "anchor_res": 6,
+                        "pixel_res": 0.5,
+                        "decode_scale": 1.0
+                    }
+                ],
+                "feature": "/path/to/out/transcripts.tiled.selected_features.hdr.tsv",
+                "umap": {
+                    "tsv": "/path/to/out/t18_f24.umap.tsv.gz",
+                    "png": "/path/to/out/t18_f24.umap.png",
+                    "ind_png": "/path/to/out/t18_f24.umap.single.prob.png"
+                }
+            }
+        ]
+    }
+    ```
+    * `in_sge`: the tiled transcript prefix, the FICTURE feature list, and the coordinate min/max file.
+    * `train_params`: one entry per model; `feature` is the feature file the model used, `decode_params` lists the decodes (`pixel_res` is `0` with `--single-molecule`), and `umap` appears with `--umap`.
+
+!!! warning "Pass `--in-minmax` (or `--in-json`) with `--tile`"
+    When `--tile` runs and `--in-minmax` is omitted, `in_minmax` in `ficture.params.json` is currently recorded as the `transcripts.tiled.done` flag file instead of `transcripts.tiled.coord_range.tsv`. Giving `--in-minmax` (or `--in-json`) avoids this.

@@ -2,9 +2,12 @@
 
 ## Overview
 
-`run_ficture2_multi` orchestrates joint FICTURE analysis on >=2 samples. It tiles each sample, builds joint hex grids (one or more widths), trains LDA models cross samples per width/factor count, decodes per sample, and writes per‑sample JSON manifests summarizing results.
+`run_ficture2_multi` runs a joint FICTURE analysis across samples. It tiles each sample, builds joint hexagons (one or more widths), trains LDA models across samples per (width, factor count) — or projects a pre-trained model — then projects and pixel-decodes each sample, and writes per‑sample and shared JSON manifests.
 
-Use this when processing multiple samples together to learn shared spatial factors and generate per‑sample outputs in a single, parallelizable pipeline.
+Use it to learn shared spatial factors across samples and generate per‑sample outputs in a single, parallelizable Makefile. It also works with a single sample.
+
+!!! tip "Usually run for you"
+    [`run_together`](./run_together.md) calls `run_ficture2_multi` for every FICTURE analysis (single- or multi-sample, de-novo or projection, and `--prepare-only` for `--no-ficture`). Use this page to run it directly in step-by-step or custom workflows.
 
 !!! question
     - [What is `FICTURE` and `punkst`?](../faq/ficture.md)
@@ -13,26 +16,56 @@ Use this when processing multiple samples together to learn shared spatial facto
 ---
 ## Requirements
 
-- TSV file where the first two columns per line are the sample ID and the path to the transcript‑indexed SGE file  
-- FICTURE2 repository with `bin/punkst` and Python utilities (e.g., `ext/py/factor_report.py`)
-- Pre-installed tools: `gzip`, `python`, `punkst`, `spatula`
+- `--in-list`: a headerless, tab-delimited file with one line per sample: `<sample_id>` and the path to its transcript‑indexed SGE TSV (no blank or comment lines). Each transcript TSV has one header line; by default its first four columns are X, Y, feature, count (the [unified SGE format](./sge_convert.md#unified-sge-matrix)).
+- `punkst`: `--ficture2` must point to a repository containing `bin/punkst` and `ext/py/factor_report.py` (default: the submodule `<cartloader_dir>/submodules/punkst`).
+- `spatula` (default: `<cartloader_dir>/submodules/spatula/bin/spatula`), `gzip`, `sort`, and `python3`.
+- R (`Rscript` on the `PATH`) for the UMAPs, unless `--skip-umap` or `--prepare-only`.
+- `cartloader` on the `PATH` (the Makefile calls `cartloader feature_select` and `cartloader write_json_for_ficture2_multi`).
+
 ---
 ## Actions
 
 All actions run by default (UMAPs can be skipped with `--skip-umap`):
 
-- Multisample prepare: tiles inputs, builds joint hex grids at requested `--width` values
-- Hexagon MEX export (optional, `--segment-10x`): converts each per-sample hexagon file into a 10x MEX directory
-- LDA training: trains LDA models for each `(width, n-factor)` pair
-- Decode: applies trained models per sample; produces pixel‑level factors and summaries
-- Write per‑sample JSON: consolidates paths and metadata for downstream consumption
+- **Tiling**: tiles each sample (`punkst multisample-prepare`) and writes the per-sample and shared feature lists.
+- **Hexagons**: builds per-sample and joint hexagons at each `--width`.
+- **Feature selection** (only with a [feature filter](#feature-filters)): resolves the filters into `multi.selected_features.tsv`.
+- **LDA training**: trains a joint model for each (`--width`, `--n-factor`) pair, or projects `--pretrained-model` onto the joint hexagons; writes DE and a factor report.
+- **Projection**: projects each model onto every sample's hexagons.
+- **UMAP**: shared and per-sample UMAPs of the hexagon factor posteriors.
+- **Decode**: pixel-level decoding of each sample with each model, with pseudobulk, DE, a factor report, and an image.
+- **Manifests**: writes `samples/<sample>/ficture.params.json` and `ficture.multi.params.json`.
+- **Hexagon MEX export** (optional, `--segment-10x`): converts each per-sample hexagon file into a 10x MEX directory.
 
-`--prepare-only` stops after the first action: it tiles the inputs and builds the hex grids, then writes each sample's `ficture.params.json` with only `in_sge` (tiled prefix, feature list, coordinate range) and an empty `train_params`. No model is trained, projected, or decoded, and no UMAP is built. This is what lets a dataset be **packaged without any factor analysis** — `run_cartload2` reads the tiled TSV as its molecule source, so it produces transcripts + raster + images and a catalog with no factor layers. Re-running without `--prepare-only` in the same `--out-dir` adds models later and re-uses the existing tiles/hexagons. See [`run_together --no-ficture`](./run_together_inputs.md#ficture-mode-de-novo-vs-projection).
+`--prepare-only` stops after the hexagons: it writes each sample's `ficture.params.json` with only `in_sge` (tiled prefix, feature list, coordinate range) and an empty `train_params`. No model is trained, projected, or decoded, no UMAP is built, and feature filters are ignored; `--n-factor` is not required. This is what lets a dataset be **packaged without any factor analysis** — `run_cartload2` reads the tiled TSV as its molecule source, so it produces transcripts + raster + images and a catalog with no factor layers. Re-running without `--prepare-only` in the same `--out-dir` adds models later and re-uses the existing tiles/hexagons. See [`run_together --no-ficture`](./run_together_inputs.md#ficture-mode-de-novo-vs-projection).
 
-`--segment-10x` additionally exports every per-sample hexagon file as a **10x MEX** directory, `samples/<sample>/<sample>.hex_<width>.mex/` (`barcodes.tsv.gz`, `features.tsv.gz`, `matrix.mtx.gz`), via `spatula sptsv2mex`. The MEX is built from the very same `samples/<sample>/<sample>.hex_<width>.txt`/`.json` that the factor analysis uses — the hexagons are neither re-generated nor re-filtered, so the MEX contains exactly the hexagons that survive `--min-ct-per-unit-hexagon`. Barcodes are the hexagon centers as `x:y` (µm); features carry the gene name as both id and name, typed `Gene Expression`. By default every `--width` is exported; `--segment-width-10x` picks the widths instead (a width not in `--width` is simply added to the hexagon step, so its hexagon files get built too). The export depends only on the prepare step, so it also works with `--prepare-only` — the way to get hexagon MEX files without any factor analysis. Each exported directory is recorded under `mex` (keyed by width) in the per-sample `ficture.params.json` and in `ficture.multi.params.json` (keyed by sample, then width).
+`--segment-10x` additionally exports every per-sample hexagon file as a **10x MEX** directory, `samples/<sample>/<sample>.hex_<width>.mex/` (`barcodes.tsv.gz`, `features.tsv.gz`, `matrix.mtx.gz`), via `spatula sptsv2mex`. The MEX is built from the very same `samples/<sample>/<sample>.hex_<width>.txt`/`.json` that the factor analysis uses — the hexagons are neither re-generated nor re-filtered, so the MEX contains exactly the hexagons that survive `--min-ct-per-unit-hexagon`. Barcodes are the hexagon centers as `x:y` (µm); features carry the gene name as both id and name, typed `Gene Expression`. By default every `--width` is exported; `--segment-width-10x` picks the widths instead (a width not in `--width` is simply added to the hexagon step, so its hexagon files get built too). The export depends only on the hexagon step, so it also works with `--prepare-only` — the way to get hexagon MEX files without any factor analysis. Each exported directory is recorded under `mex` (keyed by width) in the per-sample `ficture.params.json` and in `ficture.multi.params.json` (keyed by sample, then width).
+
+### Reruns and done flags
+
+Re-invoking the command with unchanged inputs leaves the tiles, hexagons, and every model downstream of them alone:
+
+- Tiling is tracked by `multi.tiles.done`, which depends on `multi.tiles.params.json` (sample IDs and transcript paths, column indices, tile size/buffer) and on the transcript files, so a re-ingested sample is re-tiled.
+- Each hexagon width is tracked by `multi.hex_<width>.done`, which depends on `multi.hex_<width>.params.json` (ordered sample list, width, `--min-count-per-sample`, `--min-ct-per-unit-hexagon`).
+- Feature selection depends on `multi.selected_features.params.json` (the `feature_select` command) and on the list files.
+
+A settings file is rewritten only when its content changes, so a changed setting, a changed sample list, or a new width reruns that step and everything built from it; a step whose outputs are missing reruns too. A changed sample list rebuilds every sample's tiles and hexagons. An output directory prepared by an older version (a single `multi.done` flag and no settings files) is adopted as up to date when its outputs exist and are not older than their inputs.
+
+---
+## Feature filters
+
+`--include-feature-list`, `--exclude-feature-list`, `--include-feature-regex`, and `--exclude-feature-regex` restrict the features that **LDA training and projection** use:
+
+- They are resolved by [`cartloader feature_select`](./feature_customization.md#resolving-filters-into-one-list-feature_select) (`--mode include`) against `multi.union_features.tsv` (every feature seen in any sample) into `multi.selected_features.tsv`, and the command is recorded in `multi.selected_features.params.json`.
+- That list is passed as `lda4hex --features` to the joint training and to every per-sample projection; the pixel decode inherits the restriction through the model. Each sample's `ficture.params.json` records it as the FICTURE feature file.
+- Tiling, the per-sample and shared feature lists, and the packaged genes keep **every** feature.
+- Regexes use **substring** semantics (Python `re.search`); a list and a regex combine. Listed names absent from the data are ignored, and an empty selection is an error. Filters are ignored with `--prepare-only`.
+- `--min-ct-per-unit-hexagon` counts all features, so when restricting to a small panel consider lowering `--min-ct-per-unit-train`, which counts only the selected features.
 
 ---
 ## Example Usage
+
+De-novo training:
 
 ```bash
 cartloader run_ficture2_multi \
@@ -40,99 +73,136 @@ cartloader run_ficture2_multi \
   --out-dir /path/to/out/ficture_multi \
   --width 12 \
   --n-factor 12,24 \
-  --exclude-feature-regex "^(Blank-.*$)" \
-  --redo-merge-units \
-  --spatula /path/to/spatula/binary \
-  --ficture2 /path/to/FICTURE2 \
-  --cmap-file /path/to/colormap.tsv \
+  --exclude-feature-regex '^(Blank-|mt-|Gm[0-9])' \
   --threads 8 \
   --n-jobs 4
+```
+
+Projection of an existing model (no training):
+
+```bash
+cartloader run_ficture2_multi \
+  --in-list /path/to/samples.tsv \
+  --out-dir /path/to/out/ficture_multi \
+  --width 12 \
+  --pretrained-model /path/to/ref.model.tsv \
+  --model-id ref
 ```
 
 ---
 ## Parameters
 
-Below are the core arguments you’ll typically set. Flag names and behavior follow `run_ficture2_multi.py`.
-
 ### Input/Output
 
-- `--in-list` (str, required): TSV with at least two columns per line: `<sample_id>` and `<path_to_transcript_TSV>` .
+- `--in-list` (str, required): Sample list (see [Requirements](#requirements)).
 - `--out-dir` (str, required): Output directory.
-- `--out-json` (str): Top‑level JSON (defaults to `<out-dir>/ficture.params.json`).
+- `--out-json` (str): Accepted but currently unused; the manifests are always `samples/<sample>/ficture.params.json` and `ficture.multi.params.json`.
 
-### Hex Tiling / Preprocessing
+### Tiling / Hexagons
 
-- `--colidx-x`, `--colidx-y` (int, 1‑based): X/Y column indices in the transcript TSV.
-- `--colidx-feature`, `--colidx-count` (int, 1‑based): Feature and count indices.
-- `--tile-size` (int): Tile size for preprocessing.
-- `--tile-buffer` (int): Buffer size for tiling.
-- `--width` (str): Comma‑separated hex widths in µm (e.g., `8,16`).
-- `--min-count` (int): Minimum count per unit hexagon.
-- `--min-total-count-per-sample` (int): Minimum per‑sample transcript count to retain in the joint set.
-- `--include-feature-regex` / `--exclude-feature-regex` (str): Feature filters.
-- `--redo-merge-units` (flag): Rebuild merged units per width (temporary bug workaround).
+- `--width` (str, required): Comma‑separated hexagon flat-to-flat widths in µm (e.g., `12,18`).
+- `--colidx-x`, `--colidx-y`, `--colidx-feature`, `--colidx-count` (int, 1‑based): X, Y, feature and count columns of the transcript TSV (defaults: 1, 2, 3, 4).
+- `--tile-size` (int): Tile size (default: 500).
+- `--tile-buffer` (int): Per-tile buffer size (default: 1000).
+- `--min-count-per-sample` (int): Minimum total count for a feature to enter the shared feature list `multi.features.tsv` (`punkst --min-total-count-per-sample`; default: 50).
+- `--min-ct-per-unit-hexagon` (int): Minimum count per hexagon, over all features (default: 50).
 - `--prepare-only` (flag): Tile and build hexagons only; write manifests with no models (`--n-factor` not required, UMAP forced off).
-- `--segment-10x` (flag): Also export each per-sample hexagon file as a 10x MEX directory (`samples/<sample>/<sample>.hex_<width>.mex/`) with `spatula sptsv2mex`; same hexagons and `--min-ct-per-unit-hexagon` filter as the analysis. Works with `--prepare-only`.
-- `--segment-width-10x` (str): Comma‑separated widths (µm) to export with `--segment-10x` (default: the `--width` list). Extra widths are added to the hexagon step.
+- `--segment-10x` (flag): Also export each per-sample hexagon file as a 10x MEX directory (`samples/<sample>/<sample>.hex_<width>.mex/`). Works with `--prepare-only`.
+- `--segment-width-10x` (str): Comma‑separated widths (µm) to export with `--segment-10x` (default: the `--width` list); only valid with `--segment-10x`. Extra widths are added to the hexagon step.
 
-### Training / Decoding
+### Training / Projection
 
-- `--n-factor` (str): Comma‑separated factor counts for training (e.g., `12,24`).
-- `--anchor-res` (int): Anchor resolution used in decode IDs (see outputs).
-- `--cmap-file` (str, defaults to [fixed_color_map_256.tsv](https://github.com/seqscope/cartloader/blob/main/assets/fixed_color_map_256.tsv): Colormap TSV used to colorize factors.
-- `--umap` (flag): Generate UMAP embeddings/plots for each LDA model (on by default).
-- `--skip-umap` (flag): Skip UMAP generation (overrides `--umap`).
+- `--n-factor` (str): Comma‑separated factor counts (e.g., `12,24`). Required unless `--pretrained-model` or `--prepare-only`; not allowed with `--pretrained-model`. Every (width, factor count) pair is trained as model `t{width}_f{n_factor}`.
+- `--pretrained-model` (str): A model TSV (feature by factor, header `Feature 0 1 ...`) to project instead of training; its factor count is read from the header.
+- `--retrain` (flag): With `--pretrained-model`, use it as the prior and continue training instead of projecting only.
+- `--model-id` (str): Name of the model in place of `t{width}_f{n_factor}`; only valid for a single model.
+- `--min-ct-per-unit-train` (int): Minimum count per hexagon during training/projection, counted over the selected features (default: `punkst`'s default).
+- `--minibatch-size` (int): Minibatch size (default: 500).
+- `--train-epoch` (int): Number of training epochs (default: 2).
+- `--seed` (int): Random seed (default: 1).
+- `--cmap-file` (str): Color map TSV; its first `n_factor` colors are used (default: `<cartloader_dir>/assets/default_color_map.tsv`).
+- `--skip-umap` (flag): Skip the UMAPs.
+- Feature filters: `--include-feature-list`, `--exclude-feature-list`, `--include-feature-regex`, `--exclude-feature-regex` (see [Feature filters](#feature-filters)).
+
+### Decoding / DE
+
+- `--anchor-res` (int): Anchor resolution; the decode uses `width / anchor_res` sliding moves (default: 6).
+- `--decode-pixel-res` (float): Pixel resolution (µm) of the decode (default: 0.5).
+- `--single-molecule` (flag): Decode each molecule instead of pixels at `--decode-pixel-res`.
+- `--decode-scale` (int): Scale from coordinates to pixels of the decode PNG (default: 1).
+- `--de-min-ct-per-feature` (int): Minimum count per feature for differential expression (default: 20).
+- `--de-max-pval` (float): P-value cutoff for differential expression (default: 1e-3).
+- `--de-min-fold` (float): Fold-change cutoff for differential expression (default: 1.5).
 
 ### Run Options
 
-- `--dry-run` (flag): Generate Makefile and print commands only.
-- `--restart` (flag): Ignore existing outputs and rerun steps.
+- `--dry-run` (flag): Write the Makefile and print the commands only.
+- `--restart` (flag): Ignore existing outputs and rerun all steps.
 - `--threads` (int): Max threads per job (default: 8).
-- `--n-jobs` (int): Parallel jobs for the Makefile.
+- `--n-jobs` (int): Parallel Makefile jobs (default: 2).
+- `--makefn` (str): Makefile name under `--out-dir` (default: `run_ficture2_multi.mk`).
 
 ### Environment / Tools
 
-- `--ficture2` (str, required): Path to FICTURE2 repo containing `bin/punkst`.
-- `--python` (str): Python executable (used for reporting utilities).
-- `--gzip` (str): Path to `gzip` binary.
+- `--ficture2` (str): Path to the `punkst` repository (default: `<cartloader_dir>/submodules/punkst`).
+- `--spatula` (str): Path to `spatula` (default: `<cartloader_dir>/submodules/spatula/bin/spatula`).
+- `--gzip` (str): Path to `gzip`; consider `pigz` for speed (default: `gzip`).
+- `--sort` (str): Path to `sort` (default: `sort`).
+- `--python` (str): Python 3 used for `punkst`'s factor report (default: `python3`).
+- `--R` (str): R binary checked unless UMAPs are skipped (default: `R`); the UMAP scripts run with `Rscript` from the `PATH`.
+
+??? note "Temporary files"
+    `multisample-prepare` uses `<out-dir>/tmp`; `lda4hex` uses `<out-dir>/<model_id>_lda4hex` (joint) and `samples/<sample>/<sample>.<model_id>_lda4hex` (projection); `pixel-decode` uses `<out-dir>/tmp/<sample>_<model_id>_pixel`. The UMAP R scripts run with `TMPDIR` set to `<prefix>_create_umap`, `<prefix>_draw_umap` and `<prefix>_draw_umap_single`, where `<prefix>` is `<out-dir>/<model_id>` (shared) or `samples/<sample>/<sample>.<model_id>` (per sample). These directories are removed when their step finishes.
 
 ---
 ## Output
 
-Outputs are written under `--out-dir`.
+Outputs are written under `--out-dir`:
 
-- Multisample prepare (joint):
-    - `multi.features.tsv`: Joint (tiled) features table.
-    - `multi.hex_<width>.txt` and `multi.hex_<width>.json`: Hex grid and metadata per width.
+- Tiling and hexagons (joint):
+    - `multi.union_features.tsv`: Every feature seen in any sample, with its total and per-sample counts.
+    - `multi.features.tsv`: Shared feature list.
+    - `multi.hex_<width>.txt` and `multi.hex_<width>.json`: Joint hexagons and metadata per width.
+    - `multi.tiles.done`, `multi.tiles.params.json`, `multi.hex_<width>.done`, `multi.hex_<width>.params.json`: Done flags and their settings files (see [Reruns and done flags](#reruns-and-done-flags)).
+    - `multi.selected_features.tsv` and `multi.selected_features.params.json`: With feature filters only.
 
-- LDA training (per width × n‑factor): prefix `t{width}_f{n_factor}`
-    - `.model.tsv`: Topic–feature weights (factors).
-    - `.results.tsv.gz`: Posterior per unit (hex/pixel) with top factor columns.
-    - `.bulk_chisq.tsv`: Per‑factor differential feature table.
-    - `.factor.info.tsv` and optional `.factor.info.html`: Factor summaries and colors.
-    - `.umap.tsv.gz`, `.umap.png`, `.umap.single.prob.png`: UMAP coordinates and plots for factors (written unless `--skip-umap`).
+- Per sample, in `samples/<sample>/`:
+    - `<sample>.tiled.tsv`, `.tiled.index`, `.tiled.coord_range.tsv`, `.tiled.features.tsv`: Tiled transcripts (read by packaging).
+    - `<sample>.hex_<width>.txt` and `.json`: The sample's hexagons.
+    - `<sample>.hex_<width>.mex/`: 10x MEX export (`--segment-10x`).
 
-- Decode (per sample × model/width): prefix `<sample>.<decode_id>`
-    - `.tsv.gz`: Pixel‑level decode with posterior/assignments.
-    - `.png`: Quick‑look image per decode.
-    - `.pseudobulk.tsv.gz`: Aggregated counts by factor.
-    - `.bulk_chisq.tsv`, `.factor.info.tsv`: Per‑decode summaries.
+- Joint LDA (per width × factor count), prefix `<model_id>` (default `t{width}_f{n_factor}`):
+    - `.model.tsv`: Feature-by-factor weights.
+    - `.results.tsv.gz`: Factor posteriors of the joint hexagons, with top factor columns.
+    - `.cmap.tsv`: Factor colors.
+    - `.bulk_chisq.tsv`: Per‑factor differential expression.
+    - `.factor.info.tsv` and `.factor.info.html`: Factor summaries.
+    - `.umap.tsv.gz`, `.umap.png`, `.umap.single.prob.png`: Shared UMAP (unless `--skip-umap`).
 
-- Hexagon MEX export (`--segment-10x`; per sample × width)
-    - `samples/<sample>/<sample>.hex_<width>.mex/`: `barcodes.tsv.gz` (hexagon centers as `x:y`), `features.tsv.gz`, `matrix.mtx.gz` — the 10x MEX form of `samples/<sample>/<sample>.hex_<width>.txt`.
+- Per-sample projection, prefix `samples/<sample>/<sample>.<model_id>`:
+    - `.results.tsv.gz`: Factor posteriors of the sample's hexagons.
+    - `.umap.tsv.gz`, `.umap.png`, `.umap.single.prob.png`: Per-sample UMAP (unless `--skip-umap`).
 
-- Per‑sample JSONs
-    - `samples/<sample>/ficture.params.json`: Consolidates sample feature paths, LDA and decode outputs for downstream steps. With `--segment-10x`, a `mex` object maps each exported width to its MEX directory.
+- Per-sample decode, prefix `samples/<sample>/<sample>.<model_id>_pixel`:
+    - `.bin` and `.index`: Binary pixel-level decoding results and their index.
+    - `.pseudobulk.tsv.gz`: Feature-by-factor posterior counts.
+    - `.bulk_chisq.tsv`, `.factor.info.tsv`, `.factor.info.html`: Per‑decode DE and factor summaries.
+    - `.png`: Image of the pixel-level factors.
 
-- Shared multi‑sample manifest
-    - `ficture.multi.params.json`: see below.
+- Done flags: `<model_id>.done`, `<model_id>_summary.done`, `<model_id>_each.done`, `<model_id>_pixel_each.done`, `multi_json_each.done`, and per-sample `.done` flags.
 
-See `run_ficture2.md` for single‑sample formats and file details.
+- Manifests:
+    - `samples/<sample>/ficture.params.json`: Per-sample manifest of the tiled SGE, models, projections, UMAPs and decodes, read by `run_cartload2`. With `--segment-10x`, a `mex` object maps each exported width to its MEX directory.
+    - `ficture.multi.params.json`: Shared manifest (see below).
+
+See [`run_ficture2`](./run_ficture2.md#output) for the single‑sample file formats.
 
 ---
 ## Multi-sample manifest
 
 Alongside the per‑sample JSONs, `run_ficture2_multi` writes a top‑level **`ficture.multi.params.json`** that ties the run together. It (a) points to each per‑sample manifest by **relative path**, (b) records the **shared** components — the joint LDA models, shared UMAPs, and multi‑sample hexagon files — and (c) with `--segment-10x`, lists the per‑sample hexagon MEX directories under `mex` (sample → width → directory), so other tools (notably [`run_cartload2_multi`](./run_cartload2_multi.md)) can discover the samples and shared assets without re‑deriving paths. All paths are relative to `--out-dir`, so the directory is self‑contained.
+
+It is written when the Makefile is generated. Entries are merged by `model_id` into an existing manifest, so running once per model (e.g. several projections into the same `--out-dir`) accumulates all models; a `--prepare-only` run overwrites it.
 
 ```jsonc
 {
@@ -164,4 +234,4 @@ Alongside the per‑sample JSONs, `run_ficture2_multi` writes a top‑level **`f
 
 ### Cell analyses
 
-`run_ficture2_multi_cells` (the cell/segmentation‑based decode) writes the analogous **`ficture.multi.<prefix>.params.json`** for each output prefix (e.g. `ficture.multi.cartloader.params.json`). It points to each `samples/<sample>/ficture.<prefix>.params.json` and records the shared cell components — shared cluster pseudobulk/DE/info, shared heatmap, and shared UMAP/TSNE manifolds — for whichever steps ran.
+[`run_ficture2_multi_cells`](./run_ficture2_multi_cells.md) (the cell/segmentation‑based analysis) runs on the tiles of a `run_ficture2_multi` output directory and writes the analogous **`ficture.multi.<prefix>.params.json`** for each output prefix (e.g. `ficture.multi.cartloader.params.json`). It points to each `samples/<sample>/ficture.<prefix>.params.json` and records the shared cell components — shared cluster pseudobulk/DE/info, shared heatmap, and shared UMAP/TSNE manifolds — for whichever steps ran.

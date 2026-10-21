@@ -35,6 +35,6 @@
         "UMAP_PROJ": "/example_dir/Visium_HD_3prime_Mouse_Brain/binned_outputs/square_016um/analysis/umap/gene_expression_2_components/projection.csv"
     },
     "IMAGES": {
-        "HnE_BTF": "/example_dir/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_tissue_image.btf"
+        "HnE": "/example_dir/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_tissue_image.btf"
     }
 }

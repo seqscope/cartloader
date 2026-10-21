@@ -30,7 +30,7 @@ cartloader run_together --platform stereoseq \
     --out-dir OUT --width 12 --n-factor 24
 ```
 
-The sample id defaults to the prefix basename (`C04687E314`); override with `--id`.
+With `--out-dir`, the lone sample's id defaults to `rep1` (packaged as `OUT/cartl/<OUT basename>-rep1/`); override with `--id`. With `--out-root`, or for a joint run's samples without an `id`, it defaults to the prefix basename (`C04687E314`).
 
 ---
 ## 2. Multi-sample (sample sheet)
@@ -67,7 +67,7 @@ Override both together if a GEM variant differs:
 
 Stereo-seq GEM coordinates are on a **0.5 µm grid**, so ingest passes `--units-per-um 2` to convert them to microns. The registered histology is at the same 0.5 µm/pixel, so it is georeferenced with `--px-per-um-x/y 2` (single-channel) or `--um-per-pixel 0.5` (RGB) and lands in the same frame with no further transform.
 
-The GEM `#OffsetX` / `#OffsetY` headers are **not** applied. A non-zero offset would shift the transcripts relative to the histology, so the converter fails rather than silently producing a misaligned sample; override with `--allow-offset` only if the offset is already accounted for.
+The GEM `#OffsetX` / `#OffsetY` headers are **not** applied by either conversion. The cell-bin conversion (`convert_stereoseq_cellbin`) stops on a non-zero offset rather than producing cells shifted relative to the transcripts and histology; the bin1 conversion (`sge_convert`) skips the `#` header lines without checking them. `convert_stereoseq_cellbin` has an `--allow-offset` override, but `run_together` has no way to pass it. Instead, re-export without the offset, or run the conversion yourself and supply the result as `cell_tsv` (see [Skipping SAW](#skipping-saw-supplying-pre-processed-inputs)).
 
 ---
 ## Ingest: what SAW is run for
@@ -89,12 +89,12 @@ saw convert gef2gem --cellbin-gef {prefix}.cellbin.gef \
 ---
 ## Skipping SAW: supplying pre-processed inputs
 
-To test alternative filtering, or when SAW output is already on hand, you can bypass the GEFs (and SAW) entirely and feed the pipeline the two files ingest would otherwise produce. Provide them as **roles** in a `--samples` sheet or a `--config` JSON — there are no CLI flags for these — and `--saw` is then not required.
+To test alternative filtering, or when SAW output is already on hand, you can bypass the GEFs (and SAW) entirely and feed the pipeline the two files ingest would otherwise produce. Provide them as **roles** in a `--samples` sheet or a `--config` JSON, or for a single sample with `--in-transcript` plus a [`--list-cell-tsv`](../run_together_inputs.md#supplying-your-own-list-files) file; `--saw` is then not required.
 
 | Role | Replaces | Format |
 |------|----------|--------|
 | `transcript` (alias `tsv`) | `tissue.gef` → bin1 | **gzipped** TSV with header `X<TAB>Y<TAB>gene<TAB>count`, coordinates in **µm** (i.e. already divided by 2). Skips ingest, so no feature filtering / scaling is applied — do it yourself. |
-| `cell_tsv` | `cellbin.gef` | **headerless** TSV, columns `X Y gene count cell_id` (µm). This is exactly what `convert_stereoseq_cellbin` emits; it feeds `run_ficture2_multi_cells --tsv-list`. |
+| `cell_tsv` | `cellbin.gef` | TSV with a header row `X  Y  gene  count  cell_id` (µm; columns read by name). This is exactly what `convert_stereoseq_cellbin` emits; it feeds `run_ficture2_multi_cells --tsv-list`. |
 
 ```
 id    transcript                 cell_tsv
@@ -103,6 +103,14 @@ C1    /data/C1.tx.tsv.gz         /data/C1.cells.tsv
 
 ```bash
 cartloader run_together --platform stereoseq --samples samples.tsv --out-dir OUT --width 12 --n-factor 24
+```
+
+The single-sample equivalent, where `cells.list` holds one line `C1<TAB>/data/C1.cells.tsv` (its first column must be the run's sample id):
+
+```bash
+cartloader run_together --platform stereoseq \
+    --in-transcript /data/C1.tx.tsv.gz --list-cell-tsv cells.list \
+    --id C1 --out-dir OUT --width 12 --n-factor 24
 ```
 
 Giving a `transcript` role skips **all** ingest for that sample, including the cell-bin conversion — so pair it with an explicit `cell_tsv` if you want cell analysis (a `cellbin_gef` is ignored once `transcript` is present). Omit `cell_tsv` for a pixel-only run. Mixing is fine: some samples from GEFs (with `--saw`), others from pre-processed roles, in one sheet.
@@ -139,6 +147,8 @@ cartloader run_together --platform stereoseq --saw /path/to/saw \
 ```
 
 Override the scale per image with `um_per_pixel` when a TIF is at a different resolution (e.g. `um_per_pixel=1.0` for a 2× downsampled export).
+
+The profile's `image_defaults.um_per_pixel = 0.5` applies to **single-channel** images only (ssDNA, DAPI). An H&E (`rgb`) given with `--image` / `--images` must state `georef_plain=true` and `um_per_pixel` itself, as above, or the import stops for lack of bounds. A sample-sheet `hne` column cannot carry these fields, so a plain-TIFF H&E given that way stops the same way.
 
 !!! warning "16-bit H&E TIFs need a rescale range"
     Some SAW versions export the registered H&E as **16-bit** RGB (e.g. the V1.2 `*_HE_regist.tif`). `geotiff2pmtiles` rejects 16-bit input without an explicit value range, and the pipeline fails at the tiling step (the error may surface as a misleading `possibly OOM-killed` message). Supply a linear rescale — the range is given as `rescale_min` + `rescale_max` on a `--image` value (they survive the comma split; a `--images` TSV or config can use `rescale_range` directly):

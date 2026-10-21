@@ -1,56 +1,72 @@
 # Spatial Asset Packaging
 
+!!! tip "Usually run for you"
+    [`run_together`](./run_together.md) calls `run_cartload2` (single sample) or [`run_cartload2_multi`](./run_cartload2_multi.md) (joint runs) in its `cartload` stage. This page is for running the packaging step directly, step by step.
+
 ## Overview
 
-Following spatial factor inference via FICTURE analysis, `CartLoader` provides the `run_cartload2` module to package SGE data and spatial factor output from [FICTURE analysis](./run_ficture2.md) into standardized, spatially indexed, and storage‑efficient [PMTiles](https://github.com/protomaps/PMTiles), a web‑native tiling format. These PMTiles outputs are optimized for downstream analysis, interactive web visualization (e.g., in CartoScope), and data sharing across platforms.
+`run_cartload2` packages SGE data and spatial factor output from [FICTURE analysis](./run_ficture2.md) into standardized, spatially indexed, and storage‑efficient [PMTiles](https://github.com/protomaps/PMTiles), a web‑native tiling format, and writes a `catalog.yaml` describing every layer. These outputs are optimized for interactive web visualization (e.g., in CartoScope) and data sharing.
 
 ---
 ## Requirements
-- An SGE in the unified format (from [SGE format conversion](./sge_convert.md)) with a metadata file describing paths to SGE assets (`sge_assets.json`)
-- (Optional) A completed FICTURE run from [`run_ficture2`](./run_ficture2.md), including pixel-level decoding outputs and a metadata file describing the input-output structure (`ficture.params.json`)
-- (Optional) One or more deployed images with corresponding metadata file(s)
-- (Optional) A set of deployed cell-based analysis results and its metadata file
-- Pre-installed CLI tools: `tippecanoe`, `gdal_translate`, `gdaladdo`, `pmtiles`, `spatula`, `gzip`.
+
+- A completed FICTURE run (`--fic-dir`) from [`run_ficture2`](./run_ficture2.md) (or one sample directory of [`run_ficture2_multi`](./run_ficture2_multi.md)) with its `ficture.params.json`. Its `in_sge` block supplies the tiled transcript (`<in_tiled>.tsv` + `<in_tiled>.index`), feature, and minmax files.
+- (Optional) Cell-analysis parameter JSONs from [`run_ficture2_multi_cells`](./run_ficture2_multi_cells.md) (`--in-cell-params`).
+- (Optional) Asset JSON/YAML files from [`import_image`](./import_image.md), [`import_*_cell`](./import_cell.md), or [`import_visiumhd_square`](./import_square.md).
+- Tools (defaults point to the bundled submodules):
+    - always: `spatula`, `tippecanoe`, and punkst (`--ficture2`; `<ficture2>/bin/punkst` must exist even without FICTURE results);
+    - unless `--skip-raster`: `pmtiles`;
+    - with `--use-image-png2pmtiles`: `gdal_translate`, `gdaladdo`;
+    - with `--use-pmpoint` or `--use-ficture2-direct-pmtiles`: `pmpoint`.
+
+!!! warning "Packaging without FICTURE (`--sge-dir`)"
+    With `--sge-dir`, the SGE assets JSON must provide `transcript`, `feature`, and `minmax`, and `<transcript>.tsv` and `<transcript>.index` (a punkst tiled transcript) must exist. The `sge_assets.json` written by [`sge_convert`](./sge_convert.md) points to `transcripts.unsorted.tsv.gz`, which does not meet this requirement, so `--sge-dir` alone currently fails on standard `sge_convert` output. If both `--sge-dir` and `--fic-dir` are given, `--sge-dir` is used when its JSON has all three keys. Use `--fic-dir` (a `run_ficture2` output) as the SGE source.
 
 ---
 ## Actions
 
 !!! warning "Action Specifications"
-    SGE packaging and catalog preparation run by default. Enable optional integration actions using [input/output parameters](#inputoutput-parameters).
+    All applicable steps run by default; which ones apply depends on the [inputs](#inputoutput-parameters) you provide.
 
 ### SGE Packaging
-Converts transcript‑level SGE to raster PMTiles, including light and dark modes.
+Rasterizes the tiled transcripts into light and dark mono PMTiles (`sge-mono-light.pmtiles`, `sge-mono-dark.pmtiles`), unless `--skip-raster`.
 
 ### FICTURE Integration (`--fic-dir`)
-If FICTURE results are provided via `--fic-dir`:
-  - Converts topic proportions (`*.results.tsv.gz`) into vector PMTiles for spatial factors.
-  - Generates raster overlays from decoded pixel‑level outputs.
-  - Builds a joined molecule–factor matrix by associating decoded pixels with molecules based on spatial proximity, then converts it into multi‑feature PMTiles.
+For each trained model in `ficture.params.json`:
 
-### Additional Assets Integration (`--cell-assets` or `--background-assets`)
-Includes provided cell assets and background/basemap PMTiles in `catalog.yaml`; copies asset files into the output directory when they reside elsewhere.
+- Converts the hexagon-level factor results (`<model_id>.results.tsv.gz`) into a vector PMTiles layer (`<model-id>.pmtiles`).
+- Copies the model matrix, color table, DE, and factor info under renamed files (see [Output](#output)).
+- Converts UMAP embeddings into PMTiles (unless `--skip-umap`).
+- Converts each decoded pixel image into a raster PMTiles layer (`<decode-id>-pixel-raster.pmtiles`), unless `--skip-raster`.
+- Annotates every molecule with the decoded factors of its pixel (`punkst tile-op`), then splits the joined molecules into gene-bin point PMTiles.
 
-### Catalog and Metadata Preparation
-Writes a FICTURE assets JSON (when FICTURE integration is set) and a final `catalog.yaml` listing all layers.
+Without decoded factors (e.g., a `run_ficture2_multi --prepare-only` manifest), the tiled transcripts are converted to point PMTiles directly.
+
+### Cell Analysis Integration (`--in-cell-params`)
+For each cell analysis: builds cell-centroid and boundary PMTiles, copies its DE, info, pseudobulk, and heatmap files, converts its pixel image into a raster layer, and joins its decoded pixels into the molecule layers.
+
+### Additional Assets (`--cell-assets`, `--background-assets`, `--square-assets`)
+Adds the provided assets to `catalog.yaml`; referenced files are copied into `--out-dir` when they live elsewhere.
+
+### Catalog and Metadata
+Writes `ficture_assets.json` (with `--fic-dir`) and `catalog.yaml`. An existing `catalog.yaml` in `--out-dir` is updated in place (assets added or replaced) rather than overwritten.
 
 ---
 ## Example Usage
 
 ```bash
-DATA_ID="dataset_id"               ## replace dataset_id with the id for your dataset
+DATA_ID="dataset-id"               ## replace dataset-id with the id for your dataset
 
 cartloader run_cartload2 \
-    --makefn run_cartload2.mk \
     --fic-dir /path/to/run_ficture2/results \
     --out-dir /path/to/output/directory \
     --id ${DATA_ID} \
     --colname-count count \
     --n-jobs 20  \
-    --threads 20 \
-    --spatula /path/to/spatula/binary \
-    --pmtiles /path/to/pmtiles/binary \
-    --tippecanoe /path/to/tippecanoe/binary
+    --threads 20
 ```
+
+Tool paths default to the bundled submodules; override them (e.g., `--spatula`, `--tippecanoe`, `--pmtiles`, `--ficture2`) only if your binaries live elsewhere.
 
 ---
 ## Parameters
@@ -58,89 +74,122 @@ cartloader run_cartload2 \
 Below are the core parameters. See more details in the collapsible "Auxiliary Parameters" section.
 
 ### Input/Output Parameters
-Must use `--sge-dir` or `--fic-dir` to provide SGE data.
+Provide the SGE through `--fic-dir` (recommended) or `--sge-dir` (see the warning above).
 
-* `--sge-dir` (str): Path to the input Directory from `sge_convert`; must include an SGE assets JSON (`--in-sge-assets`). 
-* `--fic-dir` (str): Path to the input Directory from `run_ficture2`; must include `--in-fic-params` JSON/YAML.
-* `--cell-assets` (list of str): Optional cell asset JSON/YAML files (e.g., from `import_*_cell`) to include.
-* `--background-assets` (list of str): Optional basemap assets (e.g., from cell `import_image`); JSON/YAML or inline specs `id:path` or `id1:id2:path`.
-* `--square-assets` (list of str): Optional square asset JSON/YAML files (e.g., from `import_visiumhd_square`) to include.
-* `--out-dir` (str): Path to the output directory for PMTiles, assets JSON, and catalog YAML.
+* `--out-dir` (str, required): Output directory for PMTiles, assets JSON, and catalog YAML.
+* `--fic-dir` (str): `run_ficture2` output directory; must include the `--in-fic-params` JSON/YAML.
+* `--sge-dir` (str): `sge_convert` output directory; must include the `--in-sge-assets` JSON/YAML.
+* `--in-cell-params` (list of str): Cell-analysis parameter JSON/YAML files from `run_ficture2_multi_cells` (each must contain a `cell_params` block).
+* `--cell-assets` (list of str): Cell asset JSON/YAML files from `import_xenium_cell` / `import_visiumhd_cell`.
+* `--background-assets` (list of str): Background assets from `import_image`, as JSON/YAML files or inline `id:path` / `id1:id2:path` specs.
+* `--square-assets` (list of str): Square asset JSON/YAML files from `import_visiumhd_square`.
 
 ### Dataset ID and Descriptions
 
-* `--id` (str): Unique dataset identifier (avoid whitespace; use `-`).
-* `--title` (str): Optional title for the output assets.
-* `--desc` (str): Optional short description for the output assets.
+* `--id` (str, required): Dataset identifier (no whitespace; use `-`).
+* `--title` (str): Title for the catalog (default: `--id`).
+* `--desc` (str): Short description for the catalog.
 
 ??? note "Auxiliary Parameters"
     Recommend to use the default values; override only if needed.
 
-    **Auxiliary Conversion Parameters**:
-    
-    * `--in-sge-assets` (str): File name of SGE assets JSON/YAML under `--sge-dir` specifying paths to transcript, feature, and minmax files (default: `sge_assets.json`).
-    * `--in-fic-params` (str): File name of input JSON/YAML with SGE paths and FICTURE parameters under `--fic-dir`(default: `ficture.params.json`).
-    * `--out-fic-assets` (str): File name of output JSON/YAML file to write FICTURE assets (default: `ficture_assets.json`).
-    * `--out-catalog` (str): File name of output YAML file for assets (default: `catalog.yaml`).
-    * `--rename-x` (str): Column renaming rule for X axis in `tippecanoe` (Default: x:lon).
-    * `--rename-y` (str): Column renaming rule for Y axis in `tippecanoe` (Default: y:lat).
-    * `--colname-feature` (str): Column name for gene/feature name (default: `gene`).
-    * `--colname-count` (str): Column name for feature count (default: `count`).
-    * `--out-molecules-id` (str): Base name for output molecule PMTiles files (default: `genes`).
-    * `--max-join-dist-um` (float): Maximum join distance (µm) between molecules and pixels (default: `0.1`).
-    * `--bin-count` (int): Number of bins when splitting input molecules (default: `50`).
-    * `--join-tile-size` (float): Tile size (µm) for molecule–pixel joining (default: `500`).
-    * `--max-tile-bytes` (int): Maximum allowed tile size in bytes for PMTiles (default: `5_000_000`).
-    * `--max-feature-counts` (int): Maximum number of features per tile (default: `500_000`).
-    * `--preserve-point-density-thres` (int): Threshold to preserve point density in PMTiles (default: `1024`).
-    * `--transparent-below` / `--transparent-above` (int): Make pixels below/above the threshold transparent for dark/light backgrounds.
-    * `--sge-scale` (float): Scales input coordinates to pixels in the output image (default: 1).
-    * `--umap-colname-factor` (str): Column name encoding the dominant factor assignment in a UMAP TSV (default: `topK`).
-    * `--umap-colname-x` (str): Column name for the UMAP X coordinate (default: `UMAP1`).
-    * `--umap-colname-y` (str): Column name for the UMAP Y coordinate (default: `UMAP2`).
-    * `--umap-min-zoom` (int): Minimum zoom for generated UMAP PMTiles (default: `0`).
-    * `--umap-max-zoom` (int): Maximum zoom for generated UMAP PMTiles (default: `18`).
-    * `--keep-intermediate-files` (flag): Retain intermediate files generated.
-    * `--skip-raster` (flag): Skip raster tile generation and related dependencies.
-    * `--tmp-dir` (str): Path to a temporary directory (default: `<out-dir>/tmp`).
+    **Input/Output Names**:
 
-    **Environment Parameters**:
+    * `--in-sge-assets` (str): SGE assets JSON/YAML under `--sge-dir` (default: `sge_assets.json`).
+    * `--in-fic-params` (str): FICTURE parameter JSON/YAML under `--fic-dir` (default: `ficture.params.json`).
+    * `--out-fic-assets` (str): Output FICTURE assets JSON/YAML under `--out-dir` (default: `ficture_assets.json`).
+    * `--out-catalog` (str): Output catalog YAML under `--out-dir` (default: `catalog.yaml`).
+    * `--out-molecules-id` (str): Base name of the molecule PMTiles files (default: `genes`).
+    * `--tmp-dir` (str): Temporary directory (default: `<out-dir>/tmp`).
+    * `--keep-intermediate-files` (flag): Keep intermediate files.
 
-    * `--gzip` (str): Path to the `gzip` binary. For faster compression, use `pigz -p4` (default: `gzip`).
-    * `--pmtiles` (str): Path to the `pmtiles` binary from go-pmtiles (default: `pmtiles`).
-    * `--gdal_translate` (str): Path to the `gdal_translate` binary (default: `gdal_translate`).
-    * `--gdaladdo` (str): Path to the `gdaladdo` binary (default: `gdaladdo`).
-    * `--tippecanoe` (str): Path to the `tippecanoe` binary (default: `tippecanoe`).
-    * `--spatula` (str): Path to the `spatula` binary (default: `spatula`).
+    **Molecule (Point) PMTiles**:
+
+    * `--colname-feature` (str): Feature column name (default: `gene`).
+    * `--colname-count` (str): Count column name (default: `count`).
+    * `--rename-x` / `--rename-y` (str): Column renaming rules for tippecanoe (default: `x:lon` / `y:lat`).
+    * `--bin-count` (int): Number of gene bins for the point PMTiles (default: `50`).
+    * `--max-point-tile-bytes` (int): Maximum tile size in bytes for point layers (default: `10000000`).
+    * `--max-point-feature-counts` (int): Maximum features per tile for point layers (default: `1000000`).
+    * `--preserve-point-density-thres` (int): Tippecanoe point-density preservation threshold (default: `1024`).
+    * `--replace-features` (str): Shared feature list (e.g., `multi.features.tsv`); a header-normalized copy (`multi.features.rehdr.tsv`) is used for gene-to-bin assignment so batches sharing the list bin genes identically.
+    * `--in-bin-json` (str): Precomputed gene→bin assignment JSON (a `_bin_counts.json`); reused instead of deriving bins, with counts refreshed from this sample. Takes precedence over `--replace-features`. Supplied automatically by `run_cartload2_multi`.
+    * `--use-pmpoint` (flag): Build point PMTiles with `pmpoint` instead of tippecanoe.
+    * `--tile-format-pmpoint` (str): `MVT` or `MLT` with `--use-pmpoint` (default: `MVT`).
+    * `--pmpoint-compression-scale` (float): Extra pmpoint compression scale (default: `10.0`).
+    * `--use-ficture2-direct-pmtiles` (flag): Package joined molecules directly with `punkst tile-op` + `pmpoint` instead of `run_tsv2pmtiles`; applies only when decoded factors are joined, and requires a positive `--bin-count`.
+    * `--point-min-zoom` / `--point-max-zoom` (int): Zoom range for `--use-ficture2-direct-pmtiles` only (default: `10` / `18`).
+
+    **Polygon PMTiles (hexagons, cells, boundaries)**:
+
+    * `--max-polygon-tile-bytes` (int): Maximum tile size in bytes (default: `50000000`).
+    * `--max-polygon-feature-counts` (int): Maximum features per tile (default: `5000000`).
+    * `--hex-thres-prob` (float): Minimum per-factor probability stored in hexagon PMTiles (default: `0.0001`).
+
+    **Raster PMTiles**:
+
+    * `--skip-raster` (flag): Skip SGE and factor raster layers (no `pmtiles` binary required).
+    * `--sge-scale` (int): Units per pixel for rasterized images (default: `1`).
+    * `--raster-min-zoom` / `--raster-max-zoom` (int): Zoom range for decoded-factor raster layers (default: `6` / `18`).
+    * `--use-image-png2pmtiles` (flag): Use the GDAL-based `image_png2pmtiles` path instead of `punkst image2pmtiles`.
+
+    **UMAP**:
+
+    * `--skip-umap` (flag): Skip UMAP PMTiles and copied UMAP files even if UMAP inputs exist.
+    * `--umap-colname-factor` (str): Dominant-factor column in the UMAP TSV (default: `topK`).
+    * `--umap-colname-x` / `--umap-colname-y` (str): UMAP coordinate columns (default: `UMAP1` / `UMAP2`).
+    * `--umap-min-zoom` / `--umap-max-zoom` (int): UMAP PMTiles zoom range (default: `0` / `18`).
+    * `--reuse-shared-umap-dir` (str): Directory with prebuilt shared `<factor>-umap.pmtiles` to copy instead of re-running tippecanoe (set by `run_cartload2_multi`).
+
+    **Accepted but unused**: `--max-join-dist-um`, `--join-tile-size`, `--transparent-below`, `--transparent-above` are parsed but have no effect.
+
+    **Environment Parameters** (defaults are submodule paths unless noted):
+
+    * `--spatula` (str): `spatula` binary (default: `<cartloader_dir>/submodules/spatula/bin/spatula`).
+    * `--tippecanoe` (str): `tippecanoe` binary (default: `<cartloader_dir>/submodules/tippecanoe/tippecanoe`).
+    * `--pmtiles` (str): go-pmtiles binary (default: `<cartloader_dir>/submodules/pmtiles/pmtiles`).
+    * `--ficture2` (str): punkst repository (default: `<cartloader_dir>/submodules/punkst`).
+    * `--pmpoint` (str): `pmpoint` binary (default: `<cartloader_dir>/submodules/pmpoint/bin/pmpoint`).
+    * `--gdal_translate` / `--gdaladdo` (str): GDAL binaries on `PATH` (default: `gdal_translate` / `gdaladdo`).
+    * `--gzip` (str): gzip-compatible binary on `PATH`, e.g., `pigz` (default: `gzip`).
 
     **Run Parameters**:
 
-    * `--dry-run` (flag): Generate the Makefile; do not execute.
+    * `--dry-run` (flag): Write the Makefile and print the commands without executing them.
     * `--restart` (flag): Ignore existing outputs and rerun all steps.
-    * `--makefn` (str): Makefile name to write (default: `run_cartload2.mk`).
-    * `--n-jobs` (int): Number of parallel jobs (default: 1).
-    * `--threads` (int): Max threads per job (tippecanoe, etc.) (default: 4).
-    * `--log` (flag): Write logs to a file under the output directory.
+    * `--makefn` (str): Makefile name under `--out-dir` (default: `run_cartload2.mk`).
+    * `--n-jobs` (int): Number of parallel jobs (default: `1`).
+    * `--threads` (int): Max threads per job (default: `4`).
+    * `--log` (flag): Write a log to `<out-dir>_cartload<log-suffix>` (next to `--out-dir`).
     * `--log-suffix` (str): Log filename suffix (default: `.log`).
 
 ---
 ## Output
 
-### Copied FICTURE Output
-
-Copied FICTURE output from `<fic_dir>`. See formats in [FICTURE analysis](./run_ficture2.md).
+All files are written under `--out-dir`. FICTURE ids are hyphenated in file names (e.g., model `t12_f24` → `t12-f24`, decode `t12_f24_pixel` → `t12-f24-pixel`).
 
 ### Rasterized Transcript-level SGE
-* SGE mono PMTiles (`sge-mono-dark.pmtiles` and `sge-mono-light.pmtiles`): Rasterized gene expression tiles created from raw SGE for web visualization.
+* `sge-mono-dark.pmtiles`, `sge-mono-light.pmtiles`: Rasterized SGE for dark and light backgrounds.
 
-### Rasterized Spatial Factor Maps
-* Factor probability PMTiles (`*-results.pmtiles`): Vector tiles encoding posterior topic probabilities per spatial location.
-* Decoded factor PMTiles (`*-pixel-raster.pmtiles`): Rasterized spatial factor maps derived from pixel-level decoding results.
+### Spatial Factor Layers (per model)
+* `<model-id>.pmtiles`: Hexagon-level factor probabilities (vector tiles).
+* `<model-id>-model.tsv`, `<model-id>-rgb.tsv`, `<model-id>-bulk-de.tsv`, `<model-id>-info.tsv`: Copied model matrix, color table, DE, and factor info (`<model-id>-factor-map.tsv` when present).
+* `<model-id>-umap.pmtiles`, `<model-id>-umap.tsv.gz`, `<model-id>.umap.png`, `<model-id>.umap.single.prob.png`: UMAP layer and copies (multi-sample models also get `<model-id>-shared-umap.*` and `<model-id>-shared.umap*.png`).
 
-### Joined Molecule-factor PMTiles
-* Joined molecule-factor TSV (`transcripts_pixel_joined.tsv.gz`): Merged file linking transcript-level SGE with decoded pixel factors.
-* Final molecule PMTiles (`genes_bin*.pmtiles`, `genes_index.tsv`, `genes_pmtiles_index.tsv`, `genes_bin_counts.json`): Indexed, multi-feature PMTiles built from joined pixel-factor data for CartoScope.
+### Decoded Factor Layers (per decode)
+* `<decode-id>-pixel-raster.pmtiles`: Rasterized pixel-level factor map.
+* `<decode-id>-bulk-de.tsv`, `<decode-id>-pseudobulk.tsv.gz`, `<decode-id>-info.tsv`: Copied decode DE, pseudobulk, and factor info.
+
+### Cell Analysis Layers (with `--in-cell-params`)
+* `<cell-id>-cells.pmtiles`, `<cell-id>-boundaries.pmtiles`, `<cell-id>-pixel-raster.pmtiles`: Cell centroids, boundaries, and pixel raster.
+* `<cell-id>-rgb.tsv`, `<cell-id>-bulk-de.tsv`, `<cell-id>-info.tsv`, `<cell-id>-pseudobulk.tsv.gz`, `<cell-id>-heatmap.pdf`, `<cell-id>-heatmap.tsv` (plus `-shared-*` copies for multi-sample analyses) and UMAP files as above.
+
+### Molecule PMTiles
+* `transcripts_pixel_joined.tsv`: Molecules annotated with decoded factors (uncompressed; kept after the run).
+* `genes_bin*.pmtiles`, `genes_all.pmtiles`: Gene-bin point layers and the all-gene layer (`genes_all.pmtiles` only when factors are joined).
+* `genes_index.tsv`, `genes_pmtiles_index.tsv`, `genes_bin_counts.json`: Bin index, PMTiles index, and per-bin gene counts (prefix set by `--out-molecules-id`).
 
 ### Summary Files
-* FICTURE assets file (`ficture_assets.json`): JSON catalog listing all output files and their roles for each trained model.
-* Catalog file (`catalog.yaml`): Final YAML file summarizing all visual assets and layers for further deployment and visualization.
+* `ficture_assets.json`: FICTURE assets per trained model.
+* `catalog.yaml`: Catalog of all layers for CartoScope.
+* `run_cartload2.mk` and `*.done` flag files (e.g., `<model-id>.done`, `<decode-id>.done`, `ficture.done`, `sge-mono.done`).

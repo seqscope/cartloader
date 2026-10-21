@@ -1,57 +1,65 @@
 # Installation Guide
 
-This document walks through the environment setup and installation steps required for `CartLoader`.
+This page installs `CartLoader` on your own machine.
 
-In short: create an environment for the non-Python tools (Section 2), install `CartLoader` and its Python dependencies from the repository with [`uv`](https://docs.astral.sh/uv/) or `pip` (Section 3), build the bundled tools (Section 4), and verify (Section 5).
+!!! tip "No installation needed with Docker"
+    The prebuilt image `hyunminkang/cartloader:latest` contains `CartLoader` and every tool it uses. If you only want to run the pipeline, see [Quick Start with Docker](./vignettes/quickstart/run_in_docker.md) instead.
+
+In short:
+
+1. Create an environment for the non-Python tools ([Section 2](#2-setting-up-the-environment-using-conda)).
+2. Install `CartLoader` and its Python dependencies from the repository with [`uv`](https://docs.astral.sh/uv/) or `pip` ([Section 3](#3-installing-cartloader)).
+3. Build the bundled tools with `build.sh` ([Section 4](#4-initializing-and-building-submodules)).
+4. Verify ([Section 5](#5-verifying-the-installation)).
 
 ---
 
 ## 1. Dependencies
 
-Below listed all required tools and packages for `CartLoader`. Instruction of how to install those tools and packages are provided in the sections [2](#2-setting-up-the-environment-using-conda), [3](#3-installing-cartloader) and [4](#4-initializing-and-building-submodules).
+Instructions for installing everything below are in Sections [2](#2-setting-up-the-environment-using-conda), [3](#3-installing-cartloader) and [4](#4-initializing-and-building-submodules).
 
 ### **1.1 Required System Utilities**
 
 Confirm that these command-line programs are installed:
 
-- `gzip`
-- `sort`
-- `bgzip`
-- `tabix`
-- `bc`
-- `perl`
+- `make`, `gzip`, `pigz`, `sort`, `bc`, `perl`
+- `bgzip`, `tabix` (from [htslib](https://www.htslib.org/))
 
-### **1.2 External Tools and Utilities**
+### **1.2 Build Tools**
 
-These packages support spatial data handling and file conversion. Several are bundled as git submodules.
+`build.sh` ([Section 4](#4-initializing-and-building-submodules)) compiles several tools from source, which needs:
+
+- A C/C++ compiler, `cmake`, `autoconf`, `automake`, `libtool`, `pkg-config`, `git`
+- Development headers for `zlib`, `bzip2`, `liblzma`, `libcurl`, `openssl`, `libpng`, `libdeflate`, `TBB` and `OpenCV`
+
+On Ubuntu/Debian, the [Dockerfile](https://github.com/seqscope/cartloader/blob/main/Dockerfile) lists the exact `apt` packages. On macOS, install them with Homebrew.
+
+### **1.3 External Tools and Utilities**
 
 **Python & Related Tooling**
 
 - [`python`](https://www.python.org/) 3.10 or newer (verified with versions *3.10* and *3.13*)
 - [`uv`](https://docs.astral.sh/uv/) (optional, recommended): a fast drop-in for `pip`
-- [`parquet-tools`](https://github.com/apache/parquet-mr/tree/master/parquet-tools)
 
-The Python packages that `CartLoader` needs are declared in its `pyproject.toml` and installed automatically in [Section 3](#3-installing-cartloader).
+The Python packages `CartLoader` needs, including [`parquet-tools`](https://pypi.org/project/parquet-tools/), are declared in its `pyproject.toml` and installed automatically in [Section 3](#3-installing-cartloader).
 
-**R & related Packages:**
+**R & Related Packages**
 
-- [`R` from CRAN](https://cran.r-project.org/)(verified with versions *4.5.1*)
- 
-**External Tools** (included as submodules)
+- [`R` from CRAN](https://cran.r-project.org/) (verified with version *4.5.1*). The R packages are installed in [Section 3.2](#32-installing-r-packages).
 
-- [`punkst`](https://github.com/Yichen-Si/punkst) (the latest and more efficient implementation of [FICTURE](https://github.com/seqscope/ficture))
+**Tools Built from the Repository** (git submodules, built by `build.sh`)
+
+- [`punkst`](https://github.com/Yichen-Si/punkst): the latest, more efficient implementation of [FICTURE](https://github.com/seqscope/ficture)
 - [`spatula`](https://github.com/seqscope/spatula)
-- [`tippecanoe`](https://github.com/mapbox/tippecanoe)
-- [`magick`](https://imagemagick.org/)
-- [`go-pmtiles`](https://github.com/protomaps/go-pmtiles)
+- [`pmpoint`](https://github.com/seqscope/pmpoint)
+- [`tippecanoe`](https://github.com/felt/tippecanoe)
+- [`go-pmtiles`](https://github.com/protomaps/go-pmtiles) and `geotiff2pmtiles`: prebuilt binaries that `build.sh` downloads
 
-**Geospatial Utilities**
+**Other Tools**
 
+- [ImageMagick](https://imagemagick.org/): `convert` (ImageMagick 6) or `magick` (ImageMagick 7); `spatula` uses it for image I/O
 - [`gdal`](https://gdal.org/)
-
-**Cloud & CLI Utilities**
-
-- [`aws-cli`](https://aws.amazon.com/cli/)
+- [`aws-cli`](https://aws.amazon.com/cli/), only for uploading to S3
 
 ---
 
@@ -70,7 +78,7 @@ If `conda` is not already available, download and install [Miniconda](https://do
 Example installation of `Miniconda3` on Linux:
 
 ```bash
-env_dir=/path/to/your/directory/hosting/tools/      ## replace `/path/to/your/directory/hosting/tools/` with your preferred tools directory
+env_dir=/path/to/your/directory/hosting/tools/      ## replace with your preferred tools directory
 cd $env_dir
 
 wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
@@ -94,10 +102,10 @@ conda activate ${ENV_NAME}
 Install the non-Python dependencies once the environment is active:
 
 ```bash
-conda install -c conda-forge gdal aws-cli imagemagick parquet-tools r-base
+conda install -c conda-forge gdal aws-cli imagemagick pigz r-base
 ```
 
-Install only these tools with `conda`. Leave the Python packages to `uv` or `pip` in the next section: having the same Python package installed by both `conda` and `pip` is a common source of conflicts.
+Install only these tools with `conda`. Leave the Python packages (including `parquet-tools`) to `uv` or `pip` in the next section: having the same Python package installed by both `conda` and `pip` is a common source of conflicts.
 
 ### 2.4 Installing `uv` (optional)
 
@@ -117,7 +125,7 @@ Clone the repository, including its submodules, and install `CartLoader` with it
 
 ```bash
 cd $env_dir
-git clone --recursive git@github.com:seqscope/cartloader.git   # --recursive also fetches the submodules (Section 4)
+git clone --recursive https://github.com/seqscope/cartloader.git   # --recursive also fetches the submodules (Section 4)
 cd cartloader
 ```
 
@@ -187,38 +195,43 @@ cd $env_dir/cartloader
 git submodule update --init --recursive
 ```
 
-To build all the bundled tools in one step (the same step the Docker image uses), run `build.sh`. It builds `htslib`, `qgenlib`, `spatula`, `pmpoint`, `tippecanoe` and `punkst`, and downloads the `pmtiles` and `geotiff2pmtiles` binaries; ImageMagick is not built (install it with `conda` in [Section 2.3](#23-install-core-dependencies), or see [Section 4.5](#45-installing-imagemagick)).
+Then build the bundled tools with `build.sh`, the same step the Docker image uses:
 
 ```bash
 cd $env_dir/cartloader/submodules
 bash build.sh
 ```
 
-If a step fails, or to build a tool on its own, follow the sections below.
+It builds `htslib`, `qgenlib`, `spatula`, `pmpoint`, `tippecanoe` and `punkst`, and downloads the `pmtiles` and `geotiff2pmtiles` binaries. ImageMagick is not built; install it with `conda` ([Section 2.3](#23-install-core-dependencies)) or see [Section 4.5](#45-installing-imagemagick).
+
+!!! warning "The tools must stay inside `submodules/`"
+    `CartLoader` commands, and `run_together` in particular, look for these tools at fixed locations inside the checkout (for example `submodules/punkst/bin/punkst` and `submodules/pmtiles/pmtiles`), not on your `PATH`. Build them in place as below; a copy installed elsewhere is not found.
+
+If a step of `build.sh` fails, rebuild that tool on its own as follows, then rerun `build.sh` or continue with the remaining tools.
 
 ### 4.1 Installing `spatula`
 
-Install `spatula` with its dependencies from the submodules directory:
-
 ```bash
 cd ${env_dir}/cartloader/submodules/spatula
-
-cd submodules
-bash -x build.sh
-cd ..
-
-## build spatula
-mkdir build
-cd build
+mkdir -p build && cd build
 cmake ..
-make
+make -j 4
 ```
+
+`build.sh` builds `htslib` and `qgenlib` first, which `spatula` and `pmpoint` link against; build them first if you start from a clean checkout.
 
 ### 4.2 Installing `punkst`
 
-Install the [`punkst`](https://github.com/Yichen-Si/punkst) toolkit to use [`FICTURE` (Si et al., Nature Methods 2024)](https://www.nature.com/articles/s41592-024-02415-2).
+[`punkst`](https://github.com/Yichen-Si/punkst) provides [`FICTURE` (Si et al., Nature Methods 2024)](https://www.nature.com/articles/s41592-024-02415-2). Build it inside the submodule so that `submodules/punkst/bin/punkst` exists:
 
-Please follow the [`punkst` installation guide](https://yichen-si.github.io/punkst/install/).
+```bash
+cd ${env_dir}/cartloader/submodules/punkst
+mkdir -p build && cd build
+cmake ..
+make -j 4
+```
+
+For build prerequisites and troubleshooting, see the [`punkst` installation guide](https://yichen-si.github.io/punkst/install/).
 
 !!! question
 
@@ -228,43 +241,37 @@ Please follow the [`punkst` installation guide](https://yichen-si.github.io/punk
 
 ```bash
 cd ${env_dir}/cartloader/submodules/tippecanoe
-make -j
-
-## Choose one of the following installation options:
-# (1) System-wide installation (requires root access):
-make install
-
-# (2) Local installation (no root access): specify a custom PREFIX
-make install PREFIX=${env_dir}/cartloader/submodules/tippecanoe/  # Replace with your desired installation path
+make -j 4
 ```
 
-### 4.4 Installing `go-pmtiles`
-An easy way to install `go-pmtiles` is to download a release from [the official website](https://github.com/protomaps/go-pmtiles/releases) and decompress it. This provides a `pmtiles` binary ready for use.
+`CartLoader` uses the binary built in place (`submodules/tippecanoe/tippecanoe`); `make install` is not needed.
 
-Here is an example of its installation:
+### 4.4 Installing `go-pmtiles` and `geotiff2pmtiles`
+
+Both are downloaded as prebuilt binaries for your OS and architecture:
 
 ```bash
-cd ${env_dir}
-wget https://github.com/protomaps/go-pmtiles/releases/download/v1.28.0/go-pmtiles_1.28.0_Linux_x86_64.tar.gz
-tar -zxvf go-pmtiles_1.28.0_Linux_x86_64.tar.gz
+cd ${env_dir}/cartloader/submodules
+bash install-pmtiles.sh --dest ./pmtiles
+bash install-geotiff2pmtiles.sh --dest ./geotiff2pmtiles
 ```
 
 ### 4.5 Installing ImageMagick
 
-Skip this step if ImageMagick was already installed via `conda` in [Section 2.3](#23-install-core-dependencies).
+Skip this step if ImageMagick was already installed via `conda` in [Section 2.3](#23-install-core-dependencies) or by your system's package manager.
 
 ```bash
 cd ${env_dir}/cartloader/submodules/ImageMagick
 ./configure     # Alternatively, run `./configure --prefix=${env_dir}/cartloader/submodules/ImageMagick`.
-make 
-make install 
+make
+make install
 ```
 
 ---
 
 ## 5. Verifying the Installation
 
-Run the following commands to verify `CartLoader` and all dependencies:
+Run the following commands to verify `CartLoader` and its dependencies:
 
 ```bash
 # activate your environment if you did not
@@ -273,11 +280,17 @@ conda activate ${ENV_NAME}       # or, for Section 3.3: source .venv/bin/activat
 # verify the installation of cartloader: lists the available commands
 cartloader
 
-# verify all dependencies
+# check the system tools, Python packages and R packages
 python ./installation/check_dependencies.py
+
+# check that the bundled tools were built
+ls -l submodules/punkst/bin/punkst submodules/spatula/bin/spatula submodules/pmpoint/bin/pmpoint \
+      submodules/tippecanoe/tippecanoe submodules/pmtiles/pmtiles submodules/geotiff2pmtiles/geotiff2pmtiles
 ```
 
 `check_dependencies.py` reads the Python dependencies from `pyproject.toml`. Packages of the optional `[ai]` extra are reported as optional and do not fail the check.
+
+Then try the [local quick start](./vignettes/quickstart/run_locally.md).
 
 ---
 
@@ -290,6 +303,9 @@ git submodule update --init --recursive
 
 # pick up any dependency changes in pyproject.toml (include [ai] if you installed it)
 uv pip install -e ".[ai]"          # or: python -m pip install -e ".[ai]"
+
+# rebuild the bundled tools for the updated submodule versions
+cd submodules && bash build.sh
 ```
 
-Rebuild the submodules ([Section 4](#4-initializing-and-building-submodules)) when their versions change.
+Both steps matter after each update: new code may need a Python package added to `pyproject.toml` (a stale environment fails with an error such as `requires the 'imagecodecs' package`), and the pipeline passes options that only the tool versions pinned by the repository understand (an outdated build fails with an "unknown option" error or a usage message).

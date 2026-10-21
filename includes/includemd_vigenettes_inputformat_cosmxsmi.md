@@ -1,4 +1,4 @@
-NanoString CosMx SMI produces single‑molecule spatial transcriptomics data as a comma‑separated values (CSV) table.
+NanoString CosMx SMI produces single‑molecule spatial transcriptomics data as a comma‑separated values (CSV) table (`input.tsv.gz` in the starter data).
 
 !!! info "CSV File Format"
 

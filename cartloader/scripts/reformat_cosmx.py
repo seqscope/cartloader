@@ -34,6 +34,7 @@ def parse_arguments(_args):
     parser.add_argument('--tx-col-x', type=str, default='x_global_px', help='Global x (px) column in the transcript file')
     parser.add_argument('--tx-col-y', type=str, default='y_global_px', help='Global y (px) column in the transcript file')
     parser.add_argument('--tx-col-z', type=str, default='z', help='Z column in the transcript file')
+    parser.add_argument('--tx-col-cellcomp', type=str, default='CellComp', help='Subcellular-compartment column in the transcript file (e.g. Nuclear/Membrane/Cytoplasm/None). Carried to the output as a trailing CellComp column when present; skipped when absent')
     parser.add_argument('--meta-col-fov', type=str, default='fov', help='FOV column in the metadata file')
     parser.add_argument('--meta-col-cell', type=str, default='cell_ID', help='Cell-id column in the metadata file')
     parser.add_argument('--meta-col-x', type=str, default='CenterX_global_px', help='Global x (px) column in the metadata file')
@@ -68,7 +69,12 @@ def reformat_cosmx(_args):
         icol_x = hdrs.index(args.tx_col_x)
         icol_y = hdrs.index(args.tx_col_y)
         icol_z = hdrs.index(args.tx_col_z)
-        wf.write("X\tY\tgene\tcount\tcell_id\tZ\n")
+        # Only some CosMx exports carry the compartment column. It goes last so the
+        # positional X/Y/gene/count/cell_id columns that downstream steps read stay put.
+        icol_comp = hdrs.index(args.tx_col_cellcomp) if args.tx_col_cellcomp in hdrs else None
+        if icol_comp is not None:
+            custom_log(f"  Retaining the '{args.tx_col_cellcomp}' column as CellComp")
+        wf.write("X\tY\tgene\tcount\tcell_id\tZ" + ("\tCellComp" if icol_comp is not None else "") + "\n")
         nlines = 0
         for line in rf:
             toks = line.strip().split(',')
@@ -84,7 +90,8 @@ def reformat_cosmx(_args):
             x_um = float(toks[icol_x]) * args.um_per_px + args.offset_x
             y_um = float(toks[icol_y]) * args.um_per_px + args.offset_y
             z = toks[icol_z]
-            wf.write(f"{x_um:.3f}\t{y_um:.3f}\t{gene}\t1\t{cell_id}\t{z}\n")
+            comp = f"\t{unquote(toks[icol_comp])}" if icol_comp is not None else ""
+            wf.write(f"{x_um:.3f}\t{y_um:.3f}\t{gene}\t1\t{cell_id}\t{z}{comp}\n")
             nlines += 1
             if nlines % 1000000 == 0:
                 custom_log(f"  Processed {nlines} transcript lines...")

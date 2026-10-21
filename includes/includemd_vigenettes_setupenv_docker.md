@@ -1,29 +1,18 @@
-!!! warning "Fixed paths in the Docker Image"
-    Tools and dependencies have **fixed** paths in the Docker image (for example, `/usr/local/bin/pmtiles`).
-    
-    DO **NOT** modify paths of tools and dependencies manually.
-
 ```bash
 # ====
-# Replace user-specific placeholders with actual paths on your system.
+# Replace the placeholder with the actual path on your system.
 # ====
-work_dir=/path/to/work/directory                        # path to work directory that contains the downloaded input data
+work_dir=/path/to/work/directory        # directory holding the input data; mounted at /data in the container
 cd $work_dir
 
-# The following paths are fixed inside Docker. Do not modify them.
-spatula=/app/cartloader/submodules/spatula/bin/spatula  # path to spatula executable
-punkst=/app/cartloader/submodules/punkst                # path to FICTURE2 (punkst) executable
-tippecanoe=/usr/local/bin/tippecanoe                    # path to tippecanoe executable
-pmtiles=/usr/local/bin/pmtiles                          # path to pmtiles executable
-aws=/usr/local/bin/aws                                  # path to AWS CLI binary
+n_jobs=10                               # number of parallel jobs (also used as threads per job below)
 
-# (Optional) Define path to color map. 
-cmap=/app/cartloader/assets/fixed_color_map_256.tsv     # Path to fixed color map. `CartLoader` includes one at cartloader/assets/fixed_color_map_256.tsv.
-
-# Number of jobs
-n_jobs=10                                               # If not specified, the number of jobs defaults to 1.
-
-# Docker tag 
-docker_tag=20260306
+docker pull hyunminkang/cartloader:latest
 ```
 
+!!! info "Using the Docker image"
+    - The image's entry point is `cartloader`: whatever follows the image name is a `cartloader` subcommand and its options (`docker run --rm -v ${work_dir}:/data hyunminkang/cartloader:latest <command> [options]`).
+    - Paths passed to the command are **container** paths: with `-v ${work_dir}:/data`, a host file `${work_dir}/raw/x.csv` is `/data/raw/x.csv`.
+    - Every tool is built into the image, so no tool-path options are needed.
+    - Uploads need credentials inside the container: mount them read-only, e.g. `-v ${HOME}/.aws:/root/.aws:ro` for AWS.
+    - `latest` is the most recent release; for reproducible runs use a dated tag (e.g. `hyunminkang/cartloader:20261007-1432`).

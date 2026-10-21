@@ -1,4 +1,4 @@
-Stereo‑seq SGE includes one tab‑delimited “Bin1” gene expression matrix file:
+Stereo‑seq SGE includes one tab‑delimited “Bin1” gene expression matrix (GEM) file, `input.tsv.gz` in the starter data:
 
 !!! info "TSV File Format"
 
@@ -13,3 +13,6 @@ Stereo‑seq SGE includes one tab‑delimited “Bin1” gene expression matrix 
     * `x`: X coordinate of each DNB on the capture chip.
     * `y`: Y coordinate of each DNB on the capture chip.
     * `MIDCounts`: UMI count for each gene at each DNB.
+
+!!! note "Column names differ between SAW versions"
+    This MOSTA file names its columns `geneID` (gene symbol) and `MIDCounts`. GEM files from current SAW versions use `geneName` and `ExonCount` instead, which are the defaults of the `bgi_stereoseq` preset, so this tutorial names the starter file's columns explicitly.

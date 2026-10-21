@@ -1,5 +1,5 @@
 
-The MERSCOPE input SGE includes one comma‑delimited text file in the following format:
+The MERSCOPE input SGE includes one comma‑delimited text file (`detected_transcripts.csv`; `input.tsv.gz` in the starter data) in the following format:
 
 !!! info "CSV File Format"
 

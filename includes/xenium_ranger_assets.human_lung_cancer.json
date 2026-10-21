@@ -16,7 +16,6 @@
         "DAPI_OME": "/example_dir/Xenium_V1_humanLung_Cancer_FFPE_outs/morphology_focus/morphology_focus_0000.ome.tif",
         "BOUNDARY_OME": "/example_dir/Xenium_V1_humanLung_Cancer_FFPE_outs/morphology_focus/morphology_focus_0001.ome.tif",
         "INTERIOR_RNA_OME": "/example_dir/Xenium_V1_humanLung_Cancer_FFPE_outs/morphology_focus/morphology_focus_0002.ome.tif",
-        "INTERIOR_PROTEIN_OME": "/example_dir/Xenium_V1_humanLung_Cancer_FFPE_outs/morphology_focus/morphology_focus_0003.ome.tif",
-        "DAPI_3D_OME": "/example_dir/Xenium_V1_humanLung_Cancer_FFPE_outs/morphology.ome.tif"
+        "INTERIOR_PROTEIN_OME": "/example_dir/Xenium_V1_humanLung_Cancer_FFPE_outs/morphology_focus/morphology_focus_0003.ome.tif"
     }
 }

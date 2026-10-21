@@ -1,4 +1,4 @@
-# End-to-End with `run_together` (multi-sample)
+# Multiple Samples with `run_together`
 
 When you have several sections that should share **one FICTURE model**, list them in a sample sheet and `run_together` will:
 
@@ -37,7 +37,16 @@ cartloader run_together --platform 10x_xenium \
     --width 18 --n-factor 24 -j 10
 ```
 
-All rows share one `--out-dir`, so they train **one joint model**. Everything else (FICTURE mode, images, cell analyses) is assembled exactly as in the single-sample run and applied to every sample. Add `--dry-run` to inspect `run_together.mk` and `run_together.resolved.json` first.
+All rows share one `--out-dir`, so they train **one joint model**. Everything else (FICTURE mode, images, cell analyses) is assembled exactly as in the [single-sample run](./run_together.md) and applied to every sample. Add `--dry-run` to inspect `run_together.mk` and `run_together.resolved.json` first.
+
+With Docker, mount the directories that hold the sheet, the inputs, and the output, and use the container paths both on the command line and inside the sheet:
+
+```bash
+docker run --rm -v /data:/data hyunminkang/cartloader:latest \
+    run_together --platform 10x_xenium \
+    --samples /data/kidney/samples.tsv --out-dir /data/output/kidney-cohort \
+    --width 18 --n-factor 24 -j 10
+```
 
 !!! info "Output layout"
     Packaging is delegated to [`run_cartload2_multi`](../../reference/run_cartload2_multi.md): each sample is written to a self-contained `cartl/<multi_id>-<sample_id>/` directory (with `<multi_id>` defaulting to the `--out-dir` basename), plus a `cartl/multi-catalog.yaml` that links every per-sample `catalog.yaml` and copies the shared factor files (`post`/`rgb`/`de`/`info`/`umap`) into the `cartl/` root as a unified `factors:` map. Upload the whole `cartl/` directory to S3 as one unit.
@@ -54,19 +63,22 @@ All rows share one `--out-dir`, so they train **one joint model**. Everything el
 
 ### When to use JSON instead
 
-Escalate to a `--config` JSON when samples need **different** settings, or to add analyses/images beyond the profile defaults. JSON augments the CLI (append-by-default); a `samples` block gives full per-sample control:
+Escalate to a `--config` JSON when samples need **different** inputs, or to change run-wide settings beyond the CLI flags. JSON augments the CLI: per-sample inputs go in `samples` entries, and run-wide blocks such as `cartload` sit at the top level (a joint run packages all samples with one `run_cartload2_multi` call, so packaging settings apply to every sample):
 
 ```jsonc
 {
+  "cartload": { "bin_count": 300 },
   "samples": [
     { "id": "rep3", "in_dir": "/data/kidney/rep3/outs",
-      "hne": "/data/kidney/rep3/he.tif",
-      "cartload": { "bin_count": 300 } }
+      "hne": "/data/kidney/rep3/he.tif" }
   ]
 }
 ```
 
-See the [configuration reference](../../reference/run_together_inputs.md#mode-3-full-config-json) for every key.
+!!! warning "Samples from the config and the sheet are combined"
+    `samples` entries in the JSON are added to the rows of `--samples`; a sample listed in both appears twice. List each sample in only one place.
+
+Unknown keys abort the run, so a typo is caught instead of silently ignored. See the [configuration reference](../../reference/run_together_inputs.md#mode-3-full-config-json) for every key.
 
 ---
 ## Visium HD example
@@ -87,7 +99,7 @@ cartloader run_together --platform 10x_visium_hd \
 ---
 ## Publishing (opt-in)
 
-Publishing is CLI-driven — no config block. Enable annotation (`--anno`, needs `--tissue`/`--organism`) and/or S3 upload (`--s3-upload`) for every sample:
+Publishing is CLI-driven, with no config block. Enable AI annotation (`--anno`, or `--anno-deep` for one joint LLM call over all factors; both need `--tissue`/`--organism`) and/or S3 upload (`--s3-upload`) for every sample:
 
 ```bash
 cartloader run_together --platform 10x_xenium \
@@ -115,4 +127,4 @@ Each row becomes its own `<out_root>/<id>/` with an independent model. See [Spec
 
 - Full option and configuration reference: [`run_together` reference](../../reference/run_together.md).
 - Supported platforms and expected inputs: [Supported Platforms & Inputs](../../reference/supported_platforms.md).
-- A hand-built multi-sample walkthrough (lower-level modules): [Human Cortex Multi-sample Tutorial](../multi_sample.md).
+- The same kind of analysis with the individual commands: [Human Cortex Multi-sample Tutorial](../multi_sample.md).

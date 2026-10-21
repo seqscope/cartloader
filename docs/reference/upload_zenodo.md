@@ -1,31 +1,42 @@
 # Upload to Zenodo
 
+!!! tip "Not part of `run_together`"
+    [`run_together`](./run_together.md#publishing) has no Zenodo stage; its publishing step uploads to S3 only. Run `upload_zenodo` yourself on a packaged directory (e.g., `cartl/<id>/`).
+
 ## Overview
 
-Use `upload_zenodo` to publish `CartLoader` outputs — including PMTiles, decoded spatial factors, and the catalog — to a Zenodo deposition, either an existing one or a newly created draft. In catalog mode, files are pulled from `catalog.yaml` and grouped into cartload basics, cartload optional files (e.g., UMAP, alias), and additional basemaps (non-SGE PMTiles).
+Use `upload_zenodo` to publish `CartLoader` outputs (PMTiles, factor files, and the catalog) to a Zenodo deposition, either an existing one or a newly created draft. In catalog mode, files are taken from `catalog.yaml` and uploaded in three groups: cartload basics (with `catalog.yaml`), additional basemaps (non-SGE PMTiles), and optional files (UMAP, alias), using the same grouping as [`upload_aws`](./upload_aws.md).
+
+!!! danger "`--restart` deletes every file in the target draft"
+    With `--zenodo-deposition-id`, `--restart` removes **all** files currently in the target draft deposition before uploading, including files that are not part of this upload and files a new-version draft inherited from the published record. To replace only the files you are uploading, use `--overwrite` instead.
+
+!!! warning "`--dry-run` still changes Zenodo"
+    `--dry-run` skips file uploads, file deletions, and publishing, but it still:
+
+    - creates a new deposition when `--zenodo-deposition-id` is omitted;
+    - opens a new-version draft when the ID points to a published record;
+    - writes the merged metadata to the deposition.
 
 ---
 ## Requirements
 
-- A completed run of [`run_cartload2`](./run_cartload2.md), which produces:
-    - Rasterized SGE tiles
-    - (Optional) Decoded spatial factor maps
-    - (Optional) Joined molecule-factor outputs
-    - (Optional) Cell assets
-    - (Optional) Background assets, such as histology
-    - A catalog file (`catalog.yaml`) summarizing the output structure and metadata
-- A Zenodo access token saved in a file (for API authentication).
+- A packaged directory from [`run_cartload2`](./run_cartload2.md) with a `catalog.yaml` (for `--upload-method catalog`).
+- A Zenodo access token saved in a file.
+- For a new deposition: `--title` and at least one `--creators` entry.
 - (Optional) A Zenodo deposition ID to upload to an existing deposition.
 
 !!! question
     - [What are the Zenodo token and deposition ID, and how do you get them?](../faq/zenodo_setup.md)
 
-    
+---
 ## Actions
 
-- Upload files to a Zenodo deposition. 
-- (Optional) Create a new deposition if no `--zenodo-deposition-id` is provided or `--zenodo-deposition-id` points to a published record.
-- (Optional) Fullfill or update metadata.
+1. **Choose the deposition.** Without `--zenodo-deposition-id`, a new draft is created with the given metadata. With an ID of a draft, that draft is used. With an ID of a published record, its latest unsubmitted draft is reused if one exists; otherwise a new version is created. New-version drafts start with the files of the published version.
+2. **Update metadata** (existing depositions). Provided `--title`, `--description`, and `--creators` replace the existing values; `--upload-type` (default `dataset`) always replaces the existing type.
+3. **Select files** by `--upload-method`. Files are uploaded under their basenames.
+4. **Check capacity.** If the deposition would hold more than 100 files (existing plus new distinct names), the command aborts before uploading.
+5. **Upload.** Files not yet in the deposition are uploaded; files whose names already exist are skipped unless `--overwrite` (or `--restart`) is set. In catalog mode the groups are uploaded in order: basics with `catalog.yaml`, then basemaps, then optional files.
+6. **Publish** with `--publish` (skipped in dry-run mode). Uploads rejected by Zenodo are listed at the end with a command to retry them; other upload errors (e.g., connection failures) are only printed in the log.
 
 ---
 ## Example Usage
@@ -38,12 +49,12 @@ Use `upload_zenodo` to publish `CartLoader` outputs — including PMTiles, decod
       --in-dir /path/to/run_cartload2/output/directory \
       --zenodo-token /path/to/zenodo_token.txt \
       --title  "Title Info" \
-      --creators "Creator Name" \
+      --creators "Lastname, Firstname" \
       --description "Description Info"
     ```
 
-    - `--upload-method catalog`: Upload files defined in the catalog.
-    - (Recommended) Provide metadata via `--title`, `--creators`, and `--description`.
+    - `--upload-method catalog`: Upload the files referenced by the catalog.
+    - `--title` and `--creators` are required for a new deposition.
 
 === "Upload to an existing deposition"
 
@@ -56,7 +67,8 @@ Use `upload_zenodo` to publish `CartLoader` outputs — including PMTiles, decod
       --zenodo-token /path/to/zenodo_token.txt \
       --zenodo-deposition-id ${zenodo_deposition_id}
     ```
-    - `--upload-method catalog`: Upload files defined in the catalog.
+
+    Add `--overwrite` to replace files that already exist in the deposition.
 
 === "Upload explicit files"
 
@@ -68,40 +80,43 @@ Use `upload_zenodo` to publish `CartLoader` outputs — including PMTiles, decod
       --zenodo-token /path/to/zenodo_token.txt \
       --zenodo-deposition-id ${zenodo_deposition_id}
     ```
-    - `--upload-method files`: Upload files defined in `--files`.
+
+    - `--upload-method files`: Upload only the files given by `--files`.
 
 ---
 
 ## Parameters
 
 ### Input Selection
-- `--in-dir` (str): Path to the directory containing `run_cartload2` outputs.
-- `--upload-method` (str, default: `all`): Which files to upload.
+- `--in-dir` (str, required): Directory containing the files to upload.
+- `--upload-method` (str): Which files to upload (default: `all`).
 
     !!! info "`--upload-method` Options"
-        * `all`: Upload every file in `--in-dir`,
-        * `catalog`: Upload files listed in a `catalog.yaml`,
-        * `files`: Upload only the filenames provided via `--files`.
+        * `all`: every regular file directly in `--in-dir` (not recursive; includes Makefiles, logs, and flag files);
+        * `catalog`: the files referenced by `catalog.yaml`, plus the catalog itself;
+        * `files`: only the files given by `--files`.
 
-- `--files FILE [FILE ...]`: Filenames to upload (relative to `--in-dir` or absolute). Use with `--upload-method files`.
-- `--catalog-yaml` (str): Path to a `catalog.yaml`. Required if `--upload-method catalog`. If omitted, uses `<in-dir>/catalog.yaml`.
+- `--files` (list of str): Files to upload, relative to `--in-dir` or absolute. Required with `--upload-method files`.
+- `--catalog-yaml` (str): Catalog for `--upload-method catalog` (default: `<in-dir>/catalog.yaml`).
 
 ### Zenodo Configuration
-- `--zenodo-token` (str): Path to your Zenodo access token file.
-- `--zenodo-deposition-id` (str): Zenodo deposition ID to upload files to. If the ID is for a published deposition, a new draft version is created automatically. If omitted, a new draft deposition is created. 
-- `--publish` (flag): Publish the deposition automatically after upload. Recommended to publish manually after reviewing via the Zenodo web interface.
+- `--zenodo-token` (str, required): Path to a file containing your Zenodo access token.
+- `--zenodo-deposition-id` (str): Existing deposition ID. A published record gets a draft (reused or newly created); omit to create a new deposition.
+- `--publish` (flag): Publish the deposition after upload. Recommended to leave off and publish manually after reviewing the draft on Zenodo.
 
 ### Zenodo Metadata
-- `--title` (str): Title for Zenodo deposition. Required only when creating a new deposition (i.e., if `--zenodo-deposition-id` is not provided or the existing deposition lacks these fields).
-- `--upload-type` (str, default: dataset): One of: dataset, software, publication, poster, presentation, image, video, lesson, other.
-- `--creators` (list of str): Creators in "Lastname, Firstname" format.
+- `--title` (str): Deposition title. Required for a new deposition.
+- `--creators` (list of str): Creators, each quoted, e.g. `"Lastname, Firstname"`. Required for a new deposition.
+- `--description` (str): Deposition description (new depositions default to `No description provided.`).
+- `--upload-type` (str): One of `dataset`, `software`, `publication`, `poster`, `presentation`, `image`, `video`, `lesson`, `other` (default: `dataset`; also applied to existing depositions).
 
 ### Behavior Flags
-- `--dry-run` (flag): Simulate and print operations; do not execute uploads.
-- `--restart` (flag): Re-upload overlapping files instead of skipping existing ones.
+- `--overwrite` (flag): Re-upload files whose names already exist in the deposition, replacing them.
+- `--restart` (flag): Delete **all** files in the target draft first, then upload (see the warning above). Implies `--overwrite`.
+- `--dry-run` (flag): Print the files that would be uploaded or deleted; Zenodo is still contacted and modified as described above.
 
 ---
 ## Output
 
-- Files uploaded to the Zenodo deposition (existing or newly created draft).
-- A `cartload.zenodo.done` marker file when `--upload-method catalog` completes the basics stage.
+- Files uploaded to the Zenodo deposition (existing draft, new version draft, or new deposition); the deposition ID is printed.
+- With `--upload-method catalog` (not in dry-run mode): `<in-dir>/cartload.zenodo.done` is touched after the basics group, even if some of its files failed to upload, and `<file>.zenodo.done` is written next to each successfully uploaded basemap or optional file. Check the log for failures before relying on these flags.

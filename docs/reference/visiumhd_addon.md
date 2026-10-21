@@ -1,57 +1,57 @@
-# Visium HD Pipeline Add-ons Modules
+# Visium HD Pipeline Add-on Modules (Legacy)
+
+!!! warning "Legacy"
+    `load_space_ranger` supports the legacy [`run_visiumhd`](./run_visiumhd.md) orchestrator, which is superseded by [`run_together`](./run_together.md); `run_together` detects Visium HD inputs from `--in-dir` through its [Visium HD profile](./platforms/visium_hd.md). This page is kept for reference and is not part of the recommended workflow; see [Legacy Orchestrators](./legacy.md).
 
 ## Overview
 
-`CartLoader` provides add-on modules to support [Visium HD pipeline orchestrator](./run_visiumhd.md):
-
-* `load_space_ranger` scans a 10x Visium HD Space Ranger output directory and writes a JSON manifest of detected assets.
+`load_space_ranger` scans a 10x Visium HD Space Ranger output directory and writes a JSON manifest of detected assets: SGE inputs (2 µm bins and spatial metadata), segmented cell analysis outputs, the 8 µm and 16 µm square-bin analyses, and an H&E image. The manifest can be passed as `--in-json` to `sge_convert`, [`import_visiumhd_cell`](./import_cell.md), [`import_visiumhd_square`](./import_square.md), and [`import_image`](./import_image.md), and is read by `run_visiumhd`. It is also a way to unpack Space Ranger `.tar.gz` archives, which `run_together` does not extract.
 
 ---
 ## Requirements
 
-- Space Ranger output directory (unpacked) containing standard files and subfolders.
-- Optional: a writable directory for temporary archive extraction when using `--unzip-dir`.
+- A Space Ranger output directory.
+- Optional: a writable directory for archive extraction (`--unzip-dir`).
 
 ---
 ## Actions
 
 ### Load Space Ranger (`load_space_ranger`)
 
-Create a manifest that consolidates locations for SGE inputs (binned features and spatial metadata), segmented cell analysis outputs, hex-binned analysis at 8 µm and 16 µm, and optional tissue images.
-
-Typical next steps use this manifest as input for `sge_convert`, `import_cell`, `import_image`, or an end‑to‑end pipeline.
-
-Detect standard Space Ranger assets under `--in-dir` and build a structured JSON manifest. Paths are resolved from files and supported archives (via `--unzip-dir`); only present items are included.
+For each key below, the first existing path under `--in-dir` is used. If none exists, any matching archive found anywhere under `--in-dir` (`*_segmented_outputs.tar.gz` for cells; `*_square_<NNN>um_binned_outputs.tar.gz` or `*_binned_outputs.tar.gz` for bins) is extracted into `--unzip-dir` and searched there.
 
 - SGE (required keys):
-    - `TRANSCRIPT_MEX`: `square_002um/filtered_feature_bc_matrix` or `binned_outputs/square_002um/filtered_feature_bc_matrix` (also in `*_square_002um_binned_outputs.tar.gz` or `*_binned_outputs.tar.gz`)
-    - `SCALE`: `square_002um/spatial/scalefactors_json.json` or `binned_outputs/square_002um/spatial/scalefactors_json.json` (same archives)
-    - `POSITION`: `square_002um/spatial/tissue_positions.parquet` or `binned_outputs/square_002um/spatial/tissue_positions.parquet` (same archives)
+    - `TRANSCRIPT_MEX`: `square_002um/filtered_feature_bc_matrix` or `binned_outputs/square_002um/filtered_feature_bc_matrix`
+    - `SCALE`: `square_002um/spatial/scalefactors_json.json` or `binned_outputs/square_002um/spatial/scalefactors_json.json`
+    - `POSITION`: `square_002um/spatial/tissue_positions.parquet` or `binned_outputs/square_002um/spatial/tissue_positions.parquet`
 
 - CELLS (segmented outputs):
-    - Required: `CELL_FEATURE_MEX` — `segmented_outputs/filtered_feature_cell_matrix` (also in `*_segmented_outputs.tar.gz`)
-    - Required: `CELL_GEOJSON` — `segmented_outputs/cell_segmentations.geojson` (also in `*_segmented_outputs.tar.gz`)
-    - Optional: `NUCLEUS_GEOJSON` — `segmented_outputs/nucleus_segmentations.geojson` (also in `*_segmented_outputs.tar.gz`)
-    - Required: `CLUSTER` — `segmented_outputs/analysis/clustering/gene_expression_graphclust/clusters.csv` (also in `*_segmented_outputs.tar.gz`)
-    - Required: `DE` — `segmented_outputs/analysis/diffexp/gene_expression_graphclust/differential_expression.csv` (also in `*_segmented_outputs.tar.gz`)
-    - Optional: `PCA_PROJ` — `segmented_outputs/analysis/pca/gene_expression_10_components/projection.csv` (also in `*_segmented_outputs.tar.gz`)
-    - Optional: `PCA_VAR` — `segmented_outputs/analysis/pca/gene_expression_10_components/variance.csv` (also in `*_segmented_outputs.tar.gz`)
-    - Optional: `UMAP_PROJ` — `segmented_outputs/analysis/umap/gene_expression_2_components/projection.csv` (also in `*_segmented_outputs.tar.gz`)
+    - Required: `CELL_FEATURE_MEX` — `segmented_outputs/filtered_feature_cell_matrix`
+    - Required: `CELL_GEOJSON` — `segmented_outputs/cell_segmentations.geojson`
+    - Optional: `NUCLEUS_GEOJSON` — `segmented_outputs/nucleus_segmentations.geojson`
+    - Required: `CLUSTER` — `segmented_outputs/analysis/clustering/gene_expression_graphclust/clusters.csv`
+    - Required: `DE` — `segmented_outputs/analysis/diffexp/gene_expression_graphclust/differential_expression.csv`
+    - Optional: `PCA_PROJ` — `segmented_outputs/analysis/pca/gene_expression_10_components/projection.csv`
+    - Optional: `PCA_VAR` — `segmented_outputs/analysis/pca/gene_expression_10_components/variance.csv`
+    - Optional: `UMAP_PROJ` — `segmented_outputs/analysis/umap/gene_expression_2_components/projection.csv`
 
-- GRID_8um and GRID_16um (hex‑binned; all optional):
-    - `GRID_FEATURE_MEX`: `<square_008um|square_016um>/filtered_feature_bc_matrix` or `binned_outputs/<square_...>/filtered_feature_bc_matrix` (also in `*_square_00[8|16]um_binned_outputs.tar.gz` or `*_binned_outputs.tar.gz`)
-    - `SCALE`: `<square_...>/spatial/scalefactors_json.json` (same archive support)
-    - `POSITION`: `<square_...>/spatial/tissue_positions.parquet` (same archive support)
-    - `CLUSTER`: `<square_...>/analysis/clustering/gene_expression_graphclust/clusters.csv` (same archive support)
-    - `DE`: `<square_...>/analysis/diffexp/gene_expression_graphclust/differential_expression.csv` (same archive support)
-    - `PCA_PROJ`: `<square_...>/analysis/pca/gene_expression_10_components/projection.csv` (same archive support)
-    - `PCA_VAR`: `<square_...>/analysis/pca/gene_expression_10_components/variance.csv` (same archive support)
-    - `UMAP_PROJ`: `<square_...>/analysis/umap/gene_expression_2_components/projection.csv` (same archive support)
+- GRID_8um and GRID_16um (square bins of 8 µm and 16 µm; all optional), each under `square_008um/` or `binned_outputs/square_008um/` (`square_016um/` for 16 µm):
+    - `GRID_FEATURE_MEX`: `filtered_feature_bc_matrix`
+    - `SCALE`: `spatial/scalefactors_json.json`
+    - `POSITION`: `spatial/tissue_positions.parquet`
+    - `CLUSTER`: `analysis/clustering/gene_expression_graphclust/clusters.csv`
+    - `DE`: `analysis/diffexp/gene_expression_graphclust/differential_expression.csv`
+    - `PCA_PROJ`: `analysis/pca/gene_expression_10_components/projection.csv`
+    - `PCA_VAR`: `analysis/pca/gene_expression_10_components/variance.csv`
+    - `UMAP_PROJ`: `analysis/umap/gene_expression_2_components/projection.csv`
 
 - IMAGES (optional):
-    - `HnE_BTF`: Matches files with suffix `_tissue_image.btf` (also found within `*_square_002um_binned_outputs.tar.gz` or `*_binned_outputs.tar.gz`)
+    - `HnE`: The first file under `--in-dir` (searched recursively) ending in `_tissue_image.btf`, `_tissue_image.tif`, or `_tissue_image.tiff`, in that order of preference. Archives are not searched for images.
 
-Note: Exact availability varies by dataset and pipeline options. Missing entries are omitted.
+!!! note "Missing files"
+    Paths are exact; availability varies by dataset. Missing optional entries are left out of the manifest (a section with nothing found is written empty), but a missing required entry stops the command with an error listing what was not found.
+
+If `--out-json` already exists and `--overwrite` is not set, its entries are kept and only missing keys are resolved.
 
 ---
 ## Example Usage
@@ -66,9 +66,9 @@ cartloader load_space_ranger \
 ## Parameters
 
 - `--in-dir` (str, required): Space Ranger output directory to scan.
-- `--out-json` (str, required): Path to write the generated assets JSON.
-- `--unzip-dir` (str, optional): Directory to extract archives found under `--in-dir` (defaults to `--in-dir`).
-- `--overwrite` (flag): Overwrite `--out-json` if it already exists.
+- `--out-json` (str, required): Path to write the assets JSON.
+- `--unzip-dir` (str): Directory to extract archives into (default: `--in-dir`).
+- `--overwrite` (flag): Re-resolve all entries instead of keeping those in an existing `--out-json`.
 
 ---
 ## Output

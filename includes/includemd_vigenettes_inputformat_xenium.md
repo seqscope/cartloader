@@ -20,3 +20,5 @@ The 10x Genomics Xenium platform outputs Spatial Gene Expression (SGE) data in a
     * "`z_location`": Z coordinate (depth) of the transcript.  
     * "`qv`": Quality value indicating confidence in transcript detection.
     <!--section1-end-->
+
+In the starter data this file is `input.tsv.gz` (comma-separated despite its name). It has no `nucleus_distance` column, which newer Xenium Ranger versions add.

@@ -1,36 +1,16 @@
-Generate pmtiles and web-compatible tile directories. See more details in [Reference page](../docs/reference/run_cartload2.md).
+Package the SGE and the `FICTURE` results into PMTiles and a `catalog.yaml` for CartoScope. See more details in [Reference page](../docs/reference/run_cartload2.md).
 
-<!-- === "Deploy SGE and FICTURE output" -->
+Use the same mount as the `FICTURE` step, so that the paths recorded in `/out/ficture2/ficture.params.json` resolve.
+
 ```bash
-docker run -it --rm \
-  -v $(pwd):/data \
-  weiqiuc/cartloader:${docker_tag} \
+docker run --rm \
+  -v $(pwd)/out:/out \
+  hyunminkang/cartloader:latest \
   run_cartload2 \
     --makefn run_cartload2.mk \
-    --fic-dir /data/ficture2 \
-    --out-dir /data/cartload2 \
+    --fic-dir /out/ficture2 \
+    --out-dir /out/cartload2 \
     --id ${DATA_ID} \
-    --spatula ${spatula} \
-    --pmtiles ${pmtiles} \
-    --tippecanoe ${tippecanoe} \
     --n-jobs ${n_jobs} \
     --threads ${n_jobs}
 ```
-
-<!-- === "Deploy SGE only"
-    If you only want to deploy SGE without FICTURE analysis, use the following commands.
-    ```bash
-    docker run -it --rm \
-      -v $(pwd):/data \
-      weiqiuc/cartloader:${docker_tag} \
-      run_cartload2 \
-        --makefn run_cartload2.mk \
-        --sge-dir /data/sge_convert \
-        --out-dir /data/cartload2 \
-        --id ${DATA_ID} \
-        --spatula /app/cartloader/submodules/spatula/bin/spatula \
-        --pmtiles /usr/local/bin/pmtiles \
-        --tippecanoe /usr/local/bin/tippecanoe \
-        --n-jobs ${n_jobs} \
-        --threads ${n_jobs}
-    ``` -->

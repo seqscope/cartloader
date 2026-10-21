@@ -5,26 +5,24 @@ cartloader sge_convert \
   --makefn sge_convert.mk \
   --platform ${PLATFORM} \
   --in-mex ./raw \
-  --in-parquet ./raw/tissue_positions.parquet \
+  --pos-parquet ./raw/tissue_positions.parquet \
   --scale-json ./raw/scalefactors_json.json \
   --out-dir ./sge \
   --exclude-feature-regex '^(BLANK|NegCon|NegPrb)' \
   --sge-visual \
-  --spatula ${spatula} \
   --n-jobs ${n_jobs}
 ```
 
-| Parameter                 | Required      | Type   | Description                                                                                                                                       |
-|---------------------------|---------------|--------|---------------------------------------------------------------------------------------------------------------------------------------------------|
-| `--platform`              | required      | string | Platform (options: `10x_visium_hd`, `seqscope`, `10x_xenium`, `bgi_stereoseq`, `cosmx_smi`, `vizgen_merscope`, `pixel_seq`, `generic`) |
-| `--in-mex`                | required      | string | Path to the input MEX directory containing gene × barcode matrix                                                                                  |
-| `--in-parquet`            | required      | string | Path to the `tissue_positions.parquet` file with spatial barcode metadata                                                                         |
-| `--scale-json`            | required <sup>1</sup> | string | Path to the `scalefactors_json.json` file for coordinate scaling (or use `--units-per-um` to specify directly)   |
-| `--out-dir`               | required      | string | Output directory for the converted SGE files                                                                                                      |
-| `--makefn`                |               | string | File name for the generated Makefile (default: `sge_convert.mk`)                                                                                  |
-| `--exclude-feature-regex` |               | regex  | Pattern to exclude control features                                                                                                               |
-| `--sge-visual`            |               | flag   | Enable SGE visualization step (generates diagnostic image) (default: `FALSE`)                                                                     |
-| `--spatula`               |               | string | Path to the spatula binary (default: `spatula`)                                                                                                   |
-| `--n-jobs`                |               | int    | Number of parallel jobs for processing (default: `1`)                                                                                             |
+| Parameter                 | Required              | Type   | Description |
+|---------------------------|-----------------------|--------|-------------|
+| `--platform`              | required              | string | Input platform (options: `10x_visium_hd`, `seqscope`, `illumina`, `10x_xenium`, `bgi_stereoseq`, `cosmx_smi`, `vizgen_merscope`, `pixel_seq`, `nova_st`, `generic`) |
+| `--in-mex`                | required              | string | Input MEX directory holding `barcodes.tsv.gz`, `features.tsv.gz`, and `matrix.mtx.gz` |
+| `--pos-parquet`           | required              | string | Path to `tissue_positions.parquet`, which gives each barcode's position |
+| `--scale-json`            | required <sup>1</sup> | string | Path to `scalefactors_json.json`, used to convert pixel positions to µm |
+| `--out-dir`               | required              | string | Output directory for the converted SGE files |
+| `--makefn`                |                       | string | File name for the generated Makefile (default: `sge_convert.mk`) |
+| `--exclude-feature-regex` |                       | regex  | Pattern of feature names to drop (e.g. control probes) |
+| `--sge-visual`            |                       | flag   | Draw the converted SGE as an image (`xy.png`) for a visual check |
+| `--n-jobs`                |                       | int    | Number of parallel jobs (default: `1`) |
 
-<sub><sup>1</sup>: To define the scaling factor, `CartLoader` requires either a JSON file (via `--scale-json`) or a direct scale value using `--units-per-um`. When using `--scale-json`, make sure the JSON file has `microns_per_pixel` information.</sub>
+<sub><sup>1</sup>: `CartLoader` needs the scale either from a JSON file (`--scale-json`, which must contain `microns_per_pixel`) or as a number (`--units-per-um`, pixels per µm).</sub>

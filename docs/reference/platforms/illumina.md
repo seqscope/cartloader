@@ -64,7 +64,7 @@ cartloader run_together --platform illumina \
     --samples samples.tsv --out-dir OUT --width 12 --n-factor 48
 ```
 
-Boundary/centroid column names can be overridden per run with `--colname-boundary-cell/-x/-y` and `--colname-xy-cell/-x/-y`.
+Boundary/centroid column names can be overridden per run with `--colname-boundary-cell/-x/-y` and `--colname-xy-cell/-x/-y`. The boundary overrides apply to `tsv-add-cell-id`; the cell-polygon layer still expects `cell_id`, `vertex_x`, `vertex_y` as the first three columns of the boundary CSV.
 
 ---
 ## 2. Multi-sample (sample sheet)

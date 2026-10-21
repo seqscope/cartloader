@@ -1,52 +1,55 @@
 === "AWS Uploads"
 
-    Upload the generated `CartLoader` outputs to your designated AWS S3 directory:
+    Upload the generated `CartLoader` outputs to your designated AWS S3 directory. The container needs your AWS credentials, so mount `~/.aws` read-only:
     ```bash
-    # AWS S3 target location 
-    S3_DIR=/s3/path/to/s3/dir              # Recommend to use DATA_ID as directory name, such as s3://bucket_name/test-data
+    # AWS S3 target location
+    S3_DIR=s3://your-bucket/path/to/dir     # recommended: end with DATA_ID, e.g. s3://your-bucket/test-data/${DATA_ID}
 
-    docker run -it --rm \
-      -v $(pwd):/data \
-      weiqiuc/cartloader:${docker_tag} \
+    docker run --rm \
+      -v $(pwd)/out:/out \
+      -v ${HOME}/.aws:/root/.aws:ro \
+      hyunminkang/cartloader:latest \
       upload_aws \
-      --in-dir /data/cartload2 \
-      --s3-dir "${S3_DIR}" \
-      --aws ${aws} \
-      --n-jobs ${n_jobs}
+        --in-dir /out/cartload2 \
+        --s3-dir "${S3_DIR}" \
+        --n-jobs ${n_jobs}
     ```
-    
-    | Parameter       | Required  | Type   | Description                                                                 |
-    |-----------------|-----------|--------|-----------------------------------------------------------------------------|
-    | `--in-dir`      | required  | string | Path to the input directory containing the `CartLoader` asset packaging output    |
-    | `--s3-dir`      | required  | string | Path to the target S3 directory for uploading                               |
-    | `--aws`         |           | string | Path to the AWS CLI binary                                                  |
-    | `--n-jobs`      |           | int    | Number of parallel jobs                                                     |
+
+    | Parameter   | Required | Type   | Description |
+    |-------------|----------|--------|-------------|
+    | `--in-dir`  | required | string | Directory with the `CartLoader` packaging output (containing `catalog.yaml`); a container path |
+    | `--s3-dir`  | required | string | Target S3 directory |
+    | `--profile` |          | string | AWS CLI profile to use (from the mounted `~/.aws`) |
+    | `--n-jobs`  |          | int    | Number of parallel jobs (default: `2`) |
 
 
 === "Zenodo Uploads"
 
-    Upload the generated `CartLoader` outputs to your designated Zenodo deposition or a new deposition.
-    
-    ```bash
-    zenodo_token=/path/to/zenodo/token/file    # replace /path/to/zenodo/token/file with the path to your Zenodo token file
+    Upload the generated `CartLoader` outputs to a new Zenodo deposition or an existing one. Mount the token file into the container and pass its container path:
 
-    docker run -it --rm \
-      -v $(pwd):/data \
-      weiqiuc/cartloader:${docker_tag} \
+    ```bash
+    zenodo_token=/path/to/zenodo/token/file    # file holding your Zenodo access token (on the host)
+
+    docker run --rm \
+      -v $(pwd)/out:/out \
+      -v ${zenodo_token}:/root/zenodo_token:ro \
+      hyunminkang/cartloader:latest \
       upload_zenodo \
-        --in-dir /data/cartload2 \
+        --in-dir /out/cartload2 \
         --upload-method catalog \
-        --zenodo-token ${zenodo_token} \
-        --title  "Your Title" \
-        --creators "Your Name" \
+        --zenodo-token /root/zenodo_token \
+        --title "Your Title" \
+        --creators "Lastname, Firstname" \
         --description "This is an example description"
     ```
 
-    | Parameter         | Required | Type        | Description                                                                                                                                                                                                         |
-    |-------------------|----------|-------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-    | `--in-dir`        | required | string      | Path to the input directory containing the `CartLoader` asset packaging output                                                                                                                                            |
-    | `--upload-method` | required | string      | Method to determine which files to upload. Options: `all` to upload all files in `--in-dir`; `catalog` to upload files listed in a catalog YAML file; `user_list` to upload files explicitly listed via `--in-list` |
-    | `--catalog-yaml`  |          | string      | Required if `--upload-method catalog`. Path to `catalog.yaml` generated in `run_cartload2`. If absent, uses the catalog in the input directory specified by `--in-dir`.                                             |
-    | `--zenodo-token` | required | string      | Path to your Zenodo access token file                                                                                                                                                                               |
-    | `--title`         | required | string      | Required when creating a new deposition (i.e., if `--zenodo-deposition-id` is omitted). Title for the new Zenodo deposition.                                                                                        |
-    | `--creators`      | required | list of str | List of creators in "Lastname, Firstname" format. |
+    | Parameter                | Required              | Type        | Description |
+    |--------------------------|-----------------------|-------------|-------------|
+    | `--in-dir`               | required              | string      | Directory with the `CartLoader` packaging output; a container path |
+    | `--zenodo-token`         | required              | string      | Container path of the mounted token file |
+    | `--upload-method`        |                       | string      | Which files to upload: `all` (every file in `--in-dir`; default), `catalog` (the files listed in `catalog.yaml`), or `files` (the names given with `--files`) |
+    | `--zenodo-deposition-id` |                       | string      | Existing deposition to upload into (default: create a new one) |
+    | `--title`                | required <sup>1</sup> | string      | Title of the deposition |
+    | `--creators`             | required <sup>1</sup> | list of str | Creators in "Lastname, Firstname" format, each quoted |
+
+    <sub><sup>1</sup>: Required when creating a new deposition, or when the existing one lacks it.</sub>

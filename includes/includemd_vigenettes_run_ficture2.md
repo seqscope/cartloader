@@ -1,23 +1,4 @@
-Compute spatial factors using `punkst` (FICTURE2). See more details on the [Reference page](https://seqscope.github.io/cartloader/reference/run_ficture2/).
-
-<!-- ```bash
-cartloader run_ficture2 \
-    --makefn run_ficture2.mk \                          # (optional) file name of the output make file
-    --main \                                            # run all five steps in `run_ficture2`
-    --in-transcript ./sge/transcripts.unsorted.tsv.gz \ # path to input transcript-level SGE file
-    --in-feature ./sge/feature.clean.tsv.gz \           # (optional) path to input feature file
-    --in-minmax ./sge/coordinate_minmax.tsv \           # (optional) path to input minmax file
-    --cmap-file ${cmap} \                               # (optional) path to input color map file
-    --exclude-feature-regex '^(mt-.*$|Gm\d+$)' \        # regex pattern to exclude features (removing mitochondrial and predicted genes in the example analysis)
-    --out-dir ./ficture2 \                              # path to output directory
-    --width ${train_width} \                            # LDA training hexagon width (comma-separated if multiple widths are applied)
-    --n-factor ${n_factor} \                            # number of factors in LDA training (comma-separated if multiple n-factor values are provided)
-    --spatula ${spatula} \                              # (optional) path to the spatula binary
-    --ficture2 ${punkst} \                              # (optional) path to the punkst directory
-    --n-jobs ${n_jobs}  \                                      # (optional) number of parallel jobs 
-    --threads ${n_jobs}                                       # (optional) number of threads per job
-``` -->
-
+Compute spatial factors using `punkst` (FICTURE2). See more details on the [Reference page](../docs/reference/run_ficture2.md).
 
 ```bash
 cartloader run_ficture2 \
@@ -26,35 +7,29 @@ cartloader run_ficture2 \
   --in-transcript ./sge/transcripts.unsorted.tsv.gz \
   --in-feature ./sge/feature.clean.tsv.gz \
   --in-minmax ./sge/coordinate_minmax.tsv \
-  --cmap-file ${cmap} \
   --exclude-feature-regex '^(mt-.*$|Gm\d+$)' \
   --out-dir ./ficture2 \
   --width ${train_width} \
   --n-factor ${n_factor} \
-  --spatula ${spatula} \
-  --ficture2 ${punkst} \
   --n-jobs ${n_jobs} \
   --threads ${n_jobs}
 ```
 
 <!--parameter-start-->
-| Parameter                 | Required              | Type                        | Description                                                                                                     |
-|---------------------------|-----------------------|-----------------------------|-----------------------------------------------------------------------------------------------------------------|
-| `--main`                  | required <sup>1</sup> | flag                        | Enable `CartLoader` to run [all five steps](https://seqscope.github.io/cartloader/reference/run_ficture2/#actions)                            |
-| `--in-transcript`         | required              | string                      | Path to input transcript-level SGE file                                                                         |
-| `--out-dir`               | required              | string                      | Path to output directory                                                                                        |
-| `--width`                 | required              | int or comma-separated list | LDA training hexagon width(s)                                                                                   |
-| `--n-factor`              | required              | int or comma-separated list | Number of LDA factors                                                                                           |
-| `--makefn`                |                       | string                      | File name for the generated Makefile (default: `run_ficture2.mk` )                                              |
-| `--in-feature`            |                       | string                      | Path to input feature file                                                                                      |
-| `--in-minmax`             |                       | string                      | Path to input coordinate min/max file                                                                           |
-| `--cmap-file`             |                       | string                      | Path to color map file                                                                                          |
-| `--exclude-feature-regex` |                       | regex                       | Pattern to exclude features                                                                                     |
-| `--spatula`               |                       | string                      | Path to the `spatula` binary (default: `spatula`)                                                               |
-| `--ficture2`              |                       | string                      | Path to the `punkst` directory (defaults to `punkst` repository within `submodules` directory of  `CartLoader`) |
-| `--n-jobs`                |                       | int                         | Number of parallel jobs (default: `1`)                                                                          |
-| `--threads`               |                       | int                         | Number of threads per job (default: `1`)                                                                        |
+| Parameter                 | Required              | Type                        | Description |
+|---------------------------|-----------------------|-----------------------------|-------------|
+| `--main`                  | required <sup>1</sup> | flag                        | Run all [five main steps](../docs/reference/run_ficture2.md#actions) |
+| `--in-transcript`         | required              | string                      | Path to the transcript-indexed SGE file from `sge_convert` |
+| `--out-dir`               | required              | string                      | Output directory |
+| `--width`                 | required              | int or comma-separated list | Hexagon width(s) in µm for LDA training |
+| `--n-factor`              | required              | int or comma-separated list | Number(s) of LDA factors; one model per width × factor combination |
+| `--makefn`                |                       | string                      | File name for the generated Makefile (default: `run_ficture2.mk`) |
+| `--in-feature`            |                       | string                      | Path to the per-gene count file from `sge_convert` (default: the feature list made during tiling) |
+| `--in-minmax`             |                       | string                      | Path to the coordinate min/max file from `sge_convert` (default: the range computed during tiling) |
+| `--exclude-feature-regex` |                       | regex                       | Feature names to leave out of the factor analysis. `punkst` matches the **whole** name, so end each alternative with `.*` or `$` as needed (the example drops mitochondrial `mt-*` and predicted `Gm<digits>` genes) |
+| `--cmap-file`             |                       | string                      | Color map TSV (default: `assets/default_color_map.tsv` in the `CartLoader` repository) |
+| `--n-jobs`                |                       | int                         | Number of parallel jobs (default: `1`) |
+| `--threads`               |                       | int                         | Number of threads per job (default: `4`) |
 
-
-<sub><sup>1</sup>: `CartLoader` requires the user to specify **at least one action**. Available actions include: `--tile` to run tiling step; `--segment` to run segmentation step; `--init-lda` to run LDA training step; `--decode` to run decoding step; `--summary` to run summarization step; `--main` to run all above five actions.</sub>
+<sub><sup>1</sup>: `CartLoader` requires **at least one action**: `--tile` (tiling), `--segment` (hexagon segmentation), `--init-lda` (LDA training), `--decode` (pixel-level decoding), `--umap` (UMAP of the factors), or `--main` for all five.</sub>
 <!--parameter-end-->

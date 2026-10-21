@@ -25,7 +25,7 @@ cartloader run_together --platform 10x_xenium \
     --width 18 --n-factor 24 -j 8 --threads 8
 ```
 
-Morphology images are auto-detected — nothing to list. Everything (transcripts, boundaries, centroids, clusters, images) comes from the directory.
+Morphology images are auto-detected — nothing to list. Everything (transcripts, boundaries, centroids, clusters, images) comes from the directory. The sample id is `rep1`, so the packaged directory is `OUT/cartl/<OUT basename>-rep1/`; set `--id` to name it.
 
 ---
 ## 2. Multi-sample (sample sheet)
@@ -53,7 +53,7 @@ rep2    /geo/rep2_transcripts.parquet /geo/rep2_cells.parquet /geo/rep2_bounds.p
 
 - **Parquet is fine.** `transcripts.parquet`, `cells.parquet` and `cell_boundaries.parquet` are converted to `.csv.gz` (`OUT/tsv/<id>/parquet2csv/`) as the first ingest step, with a `NOTE:` at planning time; the run aborts if a conversion fails.
 - **No clusters?** The `xeniumranger` import (Ranger's own clusters) needs `clusters`; a sample without it — as a column, or as `analysis/clustering/gene_expression_graphclust/clusters.csv` under `in_dir` — simply skips that import (a `NOTE:` says so). The `cartloader` analysis (clustering recomputed on the shared SGE) needs only `xy` + `boundaries` and still runs.
-- **DAPI.** A per-sample `dapi` column takes the image directly. a file ending in `morphology.ome.tif` (any prefix) is the multi-page z-stack and is imported with `--use-middle-page --high-memory` automatically; `morphology_focus.ome.tif` is the 2D projection and needs nothing special. See [Image Modalities](../run_together_images.md).
+- **DAPI.** A per-sample `dapi` column takes the image (an OME-TIFF) directly. A file ending in `morphology.ome.tif` (any prefix) is the multi-page z-stack and is imported with `--use-middle-page --high-memory` automatically; `morphology_focus.ome.tif` is the 2D projection and needs nothing special. See [Image Modalities](../run_together_images.md).
 
 ---
 ## 3. Full config (JSON)

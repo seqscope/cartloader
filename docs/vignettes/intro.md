@@ -1,127 +1,116 @@
-# Vignettes
+# Guides
 
-Explore a series of tutorials that help you learn `CartLoader`, from quick getting‑started examples to full‑scale ST dataset processing.
+These guides show how to process spatial transcriptomics data with [`run_together`](../reference/run_together.md), the recommended way to run `CartLoader`: one command per run that takes raw platform output to deployable CartoScope assets.
 
-To view details for a specific module, see the [Reference](../reference/intro.md) section.
+New to `CartLoader`? Start with [Get Started](./quickstart/intro.md). For every option of every command, see the [Reference](../reference/intro.md).
 
 !!! question
     - [How do I choose the right tutorial for my platform?](../faq/choose_platform.md)
 
-## Quick Start
+## run_together Guides
 
-If you’re new to `CartLoader`, start with the [Quick Start](./quickstart/run_locally.md) tutorial, a beginner‑friendly walkthrough using a small mouse hippocampus dataset that covers core `CartLoader` functions.
-
-<div class="grid cards generic single-left" markdown>
+<div class="grid cards generic" markdown>
 
 -   <figure markdown="span">
-    ![Quick Start](../images/starter_vignettes/seqscope.t18_f12_p18_a6.png){ width="100%" }
-    <figcaption class="figure-caption-vigintro-large">Quick Start Tutorial</figcaption>
+    ![Single sample](../images/pipeline_vignettes/xenium_human_lung_cancer_v1.2.t18_f24_p18_a6.png){ width="100%" }
+    <figcaption class="figure-caption-vigintro-large">**Single Sample**: one command from raw output to CartoScope assets</figcaption>
     </figure>
 
-    [Read](./quickstart/run_locally.md){ .md-button .md-button--primary .button-tight-small }
+    [Read](./pipelines/run_together.md){ .md-button .md-button--primary .button-tight-small }
+
+-   <figure markdown="span">
+    ![Multiple samples](../images/multisample_vigenettes/multi-sample_results.png){ width="100%" }
+    <figcaption class="figure-caption-vigintro-large">**Multiple Samples**: one shared model across samples</figcaption>
+    </figure>
+
+    [Read](./pipelines/run_together_multi.md){ .md-button .md-button--primary .button-tight-small }
 
 </div>
 
-## Getting Started per Platform
+## Platform Tutorials
 
-These tutorials demonstrate how to run `CartLoader` on a variety of ST platforms using small, representative datasets.
+These tutorials process a small, representative dataset from each platform. Each one starts with the single `run_together` command for that data, then walks through the same analysis step by step with the individual commands.
 
-<!-- If a platform lacks hippocampal data, we select a comparable brain subregion. -->
+!!! tip
+    For consistency, we use mouse hippocampus when available. Each tutorial begins with data in the platform's native format.
 
-!!! tips
+### Imaging-based Platforms
 
-    For consistency, we use mouse hippocampus when available. 
+<div class="grid cards generic" markdown>
 
-    Each tutorial begins with data in the platform’s native format.
+-   <figure markdown="span">
+    ![Xenium](../images/starter_vignettes/xenium.t12_f12_p12_a6.png){ width="100%" }
+    <figcaption class="figure-caption-vigintro-large">**10x Xenium** Tutorial</figcaption>
+    </figure>
 
+    [Read](./subregion_tutorials/xenium.md){ .md-button .md-button--primary .button-tight-small }
+
+-   <figure markdown="span">
+    ![MERSCOPE](../images/starter_vignettes/merscope.t12_f12_p12_a6.png){ width="100%" }
+    <figcaption class="figure-caption-vigintro-large">**Vizgen MERSCOPE** Tutorial</figcaption>
+    </figure>
+
+    [Read](./subregion_tutorials/merscope.md){ .md-button .md-button--primary .button-tight-small }
+
+-   <figure markdown="span">
+    ![CosMx](../images/starter_vignettes/cosmxsmi.t12_f12_p12_a6.png){ width="100%" }
+    <figcaption class="figure-caption-vigintro-large">**CosMx SMI** Tutorial</figcaption>
+    </figure>
+
+    [Read](./subregion_tutorials/cosmxsmi.md){ .md-button .md-button--primary .button-tight-small }
+
+</div>
 
 ### Sequencing-based Platforms
 
 <div class="grid cards generic" markdown>
 
 -   <figure markdown="span">
-    ![example1](../images/starter_vignettes/seqscope.t18_f12_p18_a6.png)
-    <figcaption class="figure-caption-vigintro-large">**SeqScope** Starter Guide</figcaption>
-    </figure>
-
-    [Read](./quickstart/run_locally.md){ .md-button .md-button--primary .button-tight-small }
-
--   <figure markdown="span">
-    ![example2](../images/starter_vignettes/visiumhd.t18_f12_p18_a6.png)
-    <figcaption class="figure-caption-vigintro-large">**10x Visium HD** Starter Guide</figcaption>
+    ![Visium HD](../images/starter_vignettes/visiumhd.t18_f12_p18_a6.png)
+    <figcaption class="figure-caption-vigintro-large">**10x Visium HD** Tutorial</figcaption>
     </figure>
 
     [Read](./subregion_tutorials/visiumhd.md){ .md-button .md-button--primary .button-tight-small }
 
 -   <figure markdown="span">
-    ![example3](../images/starter_vignettes/stereoseq.t18_f12_p18_a6.png){ width="100%", height="300" }
-    <figcaption class="figure-caption-vigintro-large">**StereoSeq** Starter Guide</figcaption>
+    ![Stereo-seq](../images/starter_vignettes/stereoseq.t18_f12_p18_a6.png){ width="100%", height="300" }
+    <figcaption class="figure-caption-vigintro-large">**Stereo-seq** Tutorial</figcaption>
     </figure>
 
     [Read](./subregion_tutorials/stereoseq.md){ .md-button .md-button--primary .button-tight-small }
 
 -   <figure markdown="span">
-    ![example3](../images/starter_vignettes/pixelseq.t18_f12_p18_a6.png){ width="100%" }
-    <figcaption class="figure-caption-vigintro-large">**Pixel-seq** Starter Guide</figcaption>
+    ![Seq-Scope](../images/starter_vignettes/seqscope.t18_f12_p18_a6.png)
+    <figcaption class="figure-caption-vigintro-large">**Seq-Scope** Tutorial</figcaption>
+    </figure>
+
+    [Read](./subregion_tutorials/seqscope.md){ .md-button .md-button--primary .button-tight-small }
+
+-   <figure markdown="span">
+    ![Pixel-seq](../images/starter_vignettes/pixelseq.t18_f12_p18_a6.png){ width="100%" }
+    <figcaption class="figure-caption-vigintro-large">**Pixel-seq** Tutorial</figcaption>
     </figure>
 
     [Read](./subregion_tutorials/pixelseq.md){ .md-button .md-button--primary .button-tight-small }
 
 </div>
 
-### Imaging-based Platforms
-<div class="grid cards generic" markdown>
--   <figure markdown="span">
-    ![example3](../images/starter_vignettes/xenium.t12_f12_p12_a6.png){ width="100%" }
-    <figcaption class="figure-caption-vigintro-large">**10x Xenium** Starter Guide</figcaption>
-    </figure>
-
-    [Read](./subregion_tutorials/xenium.md){ .md-button .md-button--primary .button-tight-small }
-
--   <figure markdown="span">
-    ![example3](../images/starter_vignettes/merscope.t12_f12_p12_a6.png){ width="100%" }
-    <figcaption class="figure-caption-vigintro-large">**Vizgen MERSCOPE** Starter Guide</figcaption>
-    </figure>
-
-    [Read](./subregion_tutorials/merscope.md){ .md-button .md-button--primary .button-tight-small }
-
--   <figure markdown="span">
-    ![example3](../images/starter_vignettes/cosmxsmi.t12_f12_p12_a6.png){ width="100%" }
-    <figcaption class="figure-caption-vigintro-large">**CosMX SMI** Starter Guide</figcaption>
-    </figure>
-
-    [Read](./subregion_tutorials/cosmxsmi.md){ .md-button .md-button--primary .button-tight-small }
-</div>
-
-## End‑to‑end workflows by platform
-These examples show how to process real‑world ST datasets from different platforms using end‑to‑end workflows in `CartLoader`.
+### Any Other Platform
 
 <div class="grid cards generic" markdown>
--   <figure markdown="span">
-    ![example3](../images/pipeline_vignettes/xenium_human_lung_cancer_v1.2.t18_f24_p18_a6.png){ width="100%" }
-    <figcaption class="figure-caption-vigintro-large">**10x Xenium** Pipeline Guide</figcaption>
-    </figure>
-
-    [Read](./pipelines/xenium.md){ .md-button .md-button--primary .button-tight-small }
 
 -   <figure markdown="span">
-    ![example3](../images/pipeline_vignettes/visiumhd_3prime_mouse_brain.t18_f24_p18_a6.png){ width="100%" }
-    <figcaption class="figure-caption-vigintro-large">**Visium HD** Pipeline Guide</figcaption>
+    ![Generic](../images/starter_vignettes/xenium.t12_f12_p12_a6.png){ width="100%" }
+    <figcaption class="figure-caption-vigintro-large">**Generic** Tutorial: any transcript table</figcaption>
     </figure>
 
-    [Read](./pipelines/visiumhd.md){ .md-button .md-button--primary .button-tight-small }
+    [Read](./subregion_tutorials/generic.md){ .md-button .md-button--primary .button-tight-small }
 
 </div>
 
+For the exact inputs `run_together` expects from each platform, see [Platforms](../reference/supported_platforms.md).
 
-## Multi‑Sample Analysis
+## Beyond the Guides
 
-<div class="grid cards generic" markdown>
--   <figure markdown="span">
-    ![example4](../images/multisample_vigenettes/multi-sample_results.png){ width="100%" }
-    <figcaption class="figure-caption-vigintro-large">**Multi-sample** Analysis</figcaption>
-    </figure>
-
-    [Read](./multi_sample.md){ .md-button .md-button--primary .button-tight-small }
-
-</div>
+- **Step by step**: run each stage (`sge_convert`, `run_ficture2`, `run_cartload2`, ...) yourself, for custom workflows. See [Step-by-step](./step_by_step.md).
+- **Legacy orchestrators**: the older `run_xenium` and `run_visiumhd` pipelines and their end-to-end walkthroughs are kept under [Legacy Orchestrators](../reference/legacy.md); new work should use `run_together`.

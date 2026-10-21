@@ -2,8 +2,10 @@
 
 This tutorial walks through end‑to‑end processing of 10x Visium HD data with `CartLoader`: converting inputs, running FICTURE, importing cell results and histology, packaging assets, and uploading for sharing.
 
-!!! tip "Prefer one command?"
-    [`run_together`](./run_together.md) runs this same pipeline for the standard Space Ranger layout with a single command (and multiple samples with a joint model). This step-by-step tutorial is the best way to understand each stage and to customize individual steps.
+!!! warning "Legacy"
+    This tutorial uses `run_visiumhd`, a legacy orchestrator superseded by [`run_together`](./run_together.md), which runs the same stages for the standard Space Ranger layout (and multiple samples with a joint model) and is the recommended workflow. The page is kept for existing users; see [Legacy Orchestrators](../../reference/legacy.md).
+
+    **Known issue:** combining `--run-ficture2` with `--run-cartload2` in one `run_visiumhd` call, as in the examples below, currently fails at the packaging step. Workaround: once FICTURE has finished, run [`run_cartload2`](../../reference/run_cartload2.md) directly with `--fic-dir <out-dir>/ficture2`, then upload; see [Legacy Orchestrators](../../reference/legacy.md#known-issues).
 
 ---
 
@@ -62,6 +64,8 @@ Download the ST data from the [10x Genomics Dataset portal](https://www.10xgenom
     curl -O https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_image.tif
     curl -O https://cf.10xgenomics.com/samples/spatial-exp/4.0.1/Visium_HD_3prime_Mouse_Brain/Visium_HD_3prime_Mouse_Brain_tissue_image.btf
     ```
+
+There is no need to extract the `.tar.gz` archives: `--load-space-ranger` (below) finds the files it needs inside them and extracts them under `<out-dir>/unzip/`.
 
 ### Data Structure and Format
 
@@ -124,11 +128,17 @@ See Space Ranger output details in the official documentation: [Space Ranger Out
 === "Cell Analysis Result Format"
     !!! info "Cell Segmentation Mask"
         Location: `segmented_outputs/cell_segmentations.geojson`
+        ```text
+        {"type": "FeatureCollection", "features": [
+          {"type": "Feature",
+           "geometry": {"type": "Polygon", "coordinates": [[[x1, y1], [x2, y2], ...]]},
+           "properties": {"cell_id": 1}},
+          ...
+        ]}
         ```
-        "cell_id","x_centroid","y_centroid","transcript_counts","control_probe_counts","genomic_control_counts","control_codeword_counts","unassigned_codeword_counts","deprecated_codeword_counts","total_counts","cell_area","nucleus_area","nucleus_count","segmentation_method"
-        "aaaagkdm-1",170.85508728027344,2017.2412109375,1,0,0,0,0,0,1,46.285157930105925,NaN,0,"Segmented by boundary stain (ATP1A1+CD45+E-Cadherin)"
-        "aaaamcnn-1",141.60569763183594,2481.442138671875,341,0,0,0,0,1,342,111.5359415486455,50.484689332544804,1,"Segmented by boundary stain (ATP1A1+CD45+E-Cadherin)"
-        ```
+
+        * One polygon per segmented cell, with vertices in full-resolution image pixels (converted to µm with `microns_per_pixel` from `scalefactors_json.json`).
+        * `cell_id`: integer cell ID; cell `N` is barcode `cellid_00000000N-1` (zero-padded to 9 digits) in the cell feature matrix.
     !!! info "Cell Feature Matrix"
         Location: `segmented_outputs/filtered_feature_cell_matrix`
         
@@ -160,7 +170,7 @@ train_width=18                           # define LDA training hexagon width (co
 n_factor=48                              # define number of factors in LDA training (comma-separated if multiple n-factor values are provided)
 
 # Path to AWS S3 directory
-S3_DIR=/s3/path/to/s3/dir                # Recommend to use DATA_ID as directory name, such as s3://bucket-name/visiumhd-3prime-mouse-brain
+S3_DIR=s3://your-bucket/path/to/dir      # recommended: end with DATA_ID, e.g. s3://your-bucket/visiumhd-3prime-mouse-brain
 ```
 
 !!! question "How to define scaling for Visium HD?"
@@ -171,7 +181,7 @@ S3_DIR=/s3/path/to/s3/dir                # Recommend to use DATA_ID as directory
 
 ## Example Runs
 
-Choose one of the following options to run the `run_visiumhd` pipeline, either locally or with Docker.
+Choose one of the following options to run the `run_visiumhd` pipeline, either locally or with Docker. Add `--import-squares` to either command to also import the Space Ranger 8 µm and 16 µm square-bin results.
 
 ### Run Pipeline Locally
 
@@ -199,11 +209,6 @@ cartloader run_visiumhd \
     --width ${train_width} \
     --n-factor ${n_factor} \
     --id ${DATA_ID} \
-    --spatula ${spatula} \
-    --ficture2 ${punkst} \
-    --pmtiles ${pmtiles} \
-    --tippecanoe ${tippecanoe} \
-    --aws ${aws} \
     --n-jobs ${n_jobs} \
     --threads ${n_jobs}
 ```
@@ -218,13 +223,16 @@ include-markdown "../../../includes/includemd_vigenettes_setupenv_docker.md"
 
 **Example Command**
 
+The `~/.aws` mount gives the container your AWS credentials for `--upload-aws`.
+
 ```bash
 cd ${work_dir}
 mkdir -p ${work_dir}/output
 
-docker run -it --rm \
+docker run --rm \
     -v ${work_dir}:/data \
-    weiqiuc/cartloader:${docker_tag}\
+    -v ${HOME}/.aws:/root/.aws:ro \
+    hyunminkang/cartloader:latest \
     run_visiumhd \
     --load-space-ranger \
     --sge-convert \
@@ -239,11 +247,6 @@ docker run -it --rm \
     --width ${train_width} \
     --n-factor ${n_factor} \
     --id ${DATA_ID} \
-    --spatula ${spatula} \
-    --ficture2 ${punkst} \
-    --pmtiles ${pmtiles} \
-    --tippecanoe ${tippecanoe} \
-    --aws ${aws} \
     --n-jobs ${n_jobs} \
     --threads ${n_jobs}
 ```
@@ -261,10 +264,11 @@ docker run -it --rm \
 | `load_space_ranger`                     | `--load-space-ranger`   | Summarize Space Ranger outputs into JSON                                      | Space Ranger Output files                                                     |
 | [`sge_convert`](../../reference/sge_convert.md)       | `--sge-convert`         | Convert SGE to `CartLoader` format; optional density filter and visuals         | Space Ranger assets JSON (from `load_space_ranger`) or transcript CSV/Parquet |
 | [`run_ficture2`](../../reference/run_ficture2.md)     | `--run-ficture2`        | FICTURE analysis                                                              | SGE (from `sge_convert`); FICTURE parameters (`--width`, `--n-factor`)        |
-| [`import_space_cell`](../../reference/import_cell.md) | `--import-cells`        | Import cell points, boundaries, cluster, de;                                  | Space Ranger assets JSON or manual CSVs; also `--cell-id`                     |
+| [`import_visiumhd_cell`](../../reference/import_cell.md) | `--import-cells`     | Import cell points, boundaries, cluster, de;                                  | Space Ranger assets JSON or manual CSVs; also `--cell-id`                     |
+| [`import_visiumhd_square`](../../reference/import_square.md) | `--import-squares` | Import square-bin (8 µm, 16 µm) points, clusters, de, UMAP;                 | Space Ranger assets JSON or `--square-input`; also `--square-id`              |
 | [`import_image`](../../reference/import_image.md)     | `--import-images`       | Import background images (BTF-TIFF) → PNG/PMTiles;                            | Space Ranger assets JSON or `--tifs`; also `--image-ids`/`--all-images`   |
 | [`run_cartload2`](../../reference/run_cartload2.md)   | `--run-cartload2`       | Package SGE, optional FICTURE/cells/images into PMTiles; write `catalog.yaml` | SGE, optional FICTURE assets or any imported cell/image assets; `--id`        |
-| [`upload_aws`](../../reference/upload_aws.md)         | `--upload-aws`          | Upload catalog and PMTiles to S3                                              | `catalog.yaml` (from `run_cartload2`); `--s3-bucket`, `--id`                  |
+| [`upload_aws`](../../reference/upload_aws.md)         | `--upload-aws`          | Upload catalog and PMTiles to S3                                              | `catalog.yaml` (from `run_cartload2`); `--s3-dir`                            |
 | [`upload_zenodo`](../../reference/upload_zenodo.md)   | `--upload-zenodo`       | Upload catalog and PMTiles to Zenodo                                          | `catalog.yaml` (from `run_cartload2`); `--zenodo-token`                       |
 
 **Parameter Requirements by Action Flag**

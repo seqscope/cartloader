@@ -1,4 +1,4 @@
-# How do I define scaling (`--units-per-um`) for `sge_convert`?
+# How do I define scaling (`--units-per-um`)?
 
 `--units-per-um` means: **how many coordinate units in your input equal 1 micrometer (um)**.
 
@@ -12,6 +12,11 @@ In other words:
 - If input coordinates are in **pixels**: use  
   `--units-per-um = pixels_per_um = 1 / microns_per_pixel`.
 - If input coordinates are in **nanometers (nm)**: use `--units-per-um 1000`.
+
+## Where to set it
+
+- **`run_together`**: `--units-per-um` (or `ingest.units_per_um` in the config) is passed to SGE conversion. Most platform profiles already know their platform's unit, so you usually only set it for `--platform generic` or unusual inputs; your [platform page](../reference/supported_platforms.md) says whether the profile fixes it.
+- **[`sge_convert`](../reference/sge_convert.md)**: `--units-per-um`, as in the examples below.
 
 ## Platform guidance
 

@@ -83,6 +83,7 @@ cartloader run_together --config run.json
 
 - **Glob discipline:** each pattern must match exactly one file — zero or multiple is an error that lists what's present. Narrow the pattern via `ingest.inputs`.
 - Transcripts already carry a per-molecule `cell_ID`, so no `tsv-add-cell-id` step is needed (contrast with MERSCOPE).
+- `--jitter-xy` and `--units-per-um` are rejected on this platform: `reformat_cosmx`, not `sge_convert`, writes the transcript TSV. The ingest feature filters do apply.
 
 ## See also
 

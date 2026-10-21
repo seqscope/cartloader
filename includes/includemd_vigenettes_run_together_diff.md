@@ -1,0 +1,6 @@
+!!! info "How `run_together` differs from the step-by-step path"
+    - **FICTURE** runs through [`run_ficture2_multi`](../docs/reference/run_ficture2_multi.md) (a joint model over a single sample) with single-molecule pixel decoding, instead of `run_ficture2`.
+    - **Feature filters** are the `run_together` defaults: control features (`Unassigned`, `Neg`, `BLANK`/`Blank`, `Intergenic`, `Deprecated`, `System`, `NCS-`, `NCP-`) are dropped at ingest; predicted (`Gm<digit>`), mitochondrial (`mt-`/`MT-`), and ribosomal (`Rps`/`Rpl`) genes stay in the data but are left out of the factor models. Change them with `--ingest-exclude-feature-regex` and `--exclude-feature-regex`.
+    - **Point layers** are packaged with `pmpoint` (`--use-pmpoint`, 500 gene bins) instead of `tippecanoe`.
+    - **Outputs** go under `--out-dir`: `tsv/<id>/` (converted SGE), `fic/` (FICTURE), and `cartl/<id>/` (PMTiles and `catalog.yaml`; deploy this), instead of `sge/`, `ficture2/`, and `cartload2/`.
+    - **Publishing** is built in: `--s3-upload` uploads `cartl/<id>/` to S3 (see [Publishing](../docs/reference/run_together.md#publishing)). For Zenodo, run `upload_zenodo` on `cartl/<id>/` as in the step-by-step path.

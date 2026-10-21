@@ -1,30 +1,35 @@
 # How do I resume a run, or rerun everything from scratch?
 
-Most `CartLoader` modules use Makefile-based execution behavior:
+`run_together` and the individual `CartLoader` commands plan their work as a Makefile, so:
 
-- If outputs already exist, completed steps are typically skipped.
-- Use `--restart` to ignore existing outputs and rerun all steps.
-- Use `--dry-run` to generate the Makefile and inspect planned commands without executing.
+- **Resume:** rerun the same command. Steps whose outputs already exist are skipped, so an interrupted or failed run continues from where it stopped.
+- **Rerun everything:** add `--restart`, which rebuilds every step (`make -B`).
+- **Preview:** add `--dry-run` to write the Makefile and print the planned commands without executing them.
 
-## Practical workflow
-
-1. Run normally first.
-2. If a run was interrupted, rerun the same command to continue from missing targets.
-3. If inputs/parameters changed and you want a clean rerun, add `--restart`.
-4. If you want to inspect what will run, add `--dry-run`.
-
-## Example
+## With `run_together`
 
 ```bash
-# Inspect commands only
-cartloader run_ficture2 ... --dry-run
+# Resume after an interruption: the same command again
+cartloader run_together --platform 10x_xenium --in-dir IN --out-dir OUT --id my_sample
 
-# Force full rerun
-cartloader run_ficture2 ... --restart
+# Run or skip particular stages (stages outside the selection are assumed done)
+cartloader run_together ... --only ingest,ficture
+cartloader run_together ... --skip images
+
+# Rebuild everything
+cartloader run_together ... --restart
+```
+
+Changing a setting such as `--n-factor` or `--width` adds new models alongside the existing ones on the next run. `--restart` is only needed to redo steps whose outputs already exist.
+
+## With the individual commands
+
+```bash
+cartloader run_ficture2 ... --dry-run     # inspect commands only
+cartloader run_ficture2 ... --restart     # force a full rerun
 ```
 
 See also:
 
+- [`run_together` reference](../reference/run_together.md)
 - [FICTURE Analysis reference](../reference/run_ficture2.md)
-- [Asset Packaging reference](../reference/run_cartload2.md)
-- [SGE Conversion reference](../reference/sge_convert.md)

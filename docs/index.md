@@ -11,7 +11,7 @@ To address this challenge, we introduce a scalable, harmonized, and cloud-friend
 
 ## Ecosystem Overview
 
-The CartoScope ecosystem is structures as illustrated below:
+The CartoScope ecosystem is structured as illustrated below:
 
 ![flowchart](./images/flowchart.png)
 
@@ -23,17 +23,30 @@ Together, they provide a unified solution for working with raw pixel-level spati
 
     **CartLoader** is the backend pipeline that prepares data for CartoScope. It provides a modular, reproducible tool to harmonize, integrate, analyze, and visualize raw high-resolution ST data across platforms. 
 
+    !!! tip "Start here: one command per sample"
+        [`run_together`](./reference/run_together.md) takes a sample from raw platform output to deployable CartoScope assets in a single command. To try it with no installation, run the prebuilt Docker image on the bundled starter dataset:
+
+        ```bash
+        docker run --rm -v $(pwd)/out:/out hyunminkang/cartloader:latest \
+          run_together --platform seqscope \
+            --in-transcript /app/data/sge/transcripts.unsorted.tsv.gz \
+            --out-dir /out/seqscope_hippo --id seqscope_hippo --width 18 --n-factor 6,12
+        ```
+
+        Then continue with [**Get Started**](./vignettes/quickstart/intro.md).
+
     !!! abstract "Table of Contents"
         The current document includes:
 
-        - [**Quick Start**](./vignettes/quickstart/intro.md) section for getting started with `cartloader`.
-        - [**Installation**](./installation.md) section for installation.
-        - [**Vignettes**](./vignettes/intro.md) section for usage examples.
-        - [**Reference**](./reference/intro.md) section for detailed descriptions (action, inputs, outputs, and parameters).
-        - [**FAQ**](./faq/intro.md) section for common questions and troubleshooting.
+        - [**Get Started**](./vignettes/quickstart/intro.md): run the pipeline with Docker or a local [installation](./installation.md).
+        - [**Guides**](./vignettes/intro.md): `run_together` for single and multiple samples, and tutorials for each platform.
+        - [**Step-by-step**](./vignettes/step_by_step.md): run the individual commands yourself for full control.
+        - [**Reference**](./reference/intro.md): every command and option (actions, inputs, outputs, and parameters).
+        - [**FAQ**](./faq/intro.md): common questions and troubleshooting.
 
     !!! info "Key Features"
 
+        - **One-Command Pipeline**: [`run_together`](./reference/run_together.md) runs conversion, FICTURE, cell analyses, image import, packaging, and optional publishing and AI annotation as one resumable Makefile, for one sample or a joint multi-sample model.
         - **Cross-Platform Format Conversion**: Converts raw SGE data from diverse ST platforms (public or your own) into a unified format, enabling consistent downstream processing.
         - **Spatial Factor Inference**: Applies [FICTURE](https://www.nature.com/articles/s41592-024-02415-2) to infer spatial factors directly from pixel-level data, capturing biological patterns without requiring cell segmentation.
         - **Multi-Modal Alignment**: Aligns and overlays histology images with SGE data so all layers share a common coordinate system for pixel-accurate comparisons.
@@ -54,7 +67,7 @@ Together, they provide a unified solution for working with raw pixel-level spati
         - **Growing Repository**: Continuously updated with new datasets as they are processed and added.
 
 
-=== "[**`CartoScope`**](index.md)"
+=== "[**`CartoScope`**](https://seqscope.github.io/cartoscope3o/)"
 
     **CartoScope** is the frontend web-based App of our ecosystem, which enables interactive, pixel-level exploration of spatial omics data without requiring programming expertise. Visit the [CartoScope Documentation](https://seqscope.github.io/cartoscope3o/) for more details
         

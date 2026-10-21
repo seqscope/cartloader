@@ -2,8 +2,10 @@
 
 This tutorial walks through end‑to‑end processing of 10x Xenium data with `CartLoader`: converting inputs, running FICTURE, importing cell results and histology, packaging assets, and uploading to AWS for sharing.
 
-!!! tip "Prefer one command?"
-    [`run_together`](./run_together.md) runs this same pipeline for the standard Xenium layout with a single command. This step-by-step tutorial is the best way to understand each stage and to customize individual steps.
+!!! warning "Legacy"
+    This tutorial uses `run_xenium`, a legacy orchestrator superseded by [`run_together`](./run_together.md), which runs the same stages for the standard Xenium layout and is the recommended workflow. The page is kept for existing users; see [Legacy Orchestrators](../../reference/legacy.md).
+
+    **Known issue:** combining `--run-ficture2` with `--run-cartload2` in one `run_xenium` call, as in the examples below, currently fails at the packaging step. Workaround: once FICTURE has finished, run [`run_cartload2`](../../reference/run_cartload2.md) directly with `--fic-dir <out-dir>/ficture2`, then upload; see [Legacy Orchestrators](../../reference/legacy.md#known-issues).
 
 ---
 ## Prepare Input
@@ -157,7 +159,7 @@ train_width=18                            # define LDA training hexagon width (c
 n_factor=24                               # define number of factors in LDA training (comma-separated if multiple n-factor values are provided)
 
 # Path to AWS S3 directory
-S3_DIR=/s3/path/to/s3/dir                 # Recommend to use DATA_ID as directory name, such as s3://bucket-name/xenium-v1-humanlung-cancer-ffpe
+S3_DIR=s3://your-bucket/path/to/dir       # recommended: end with DATA_ID, e.g. s3://your-bucket/xenium-v1-humanlung-cancer-ffpe
 ```
 
 !!! question "How to define Scaling Factors for Xenium?"
@@ -205,11 +207,6 @@ cartloader run_xenium \
     --n-factor ${n_factor} \
     --id ${DATA_ID} \
     --image-ids DAPI_OME \
-    --spatula ${spatula} \
-    --ficture2 ${punkst} \
-    --pmtiles ${pmtiles} \
-    --tippecanoe ${tippecanoe} \
-    --aws ${aws} \
     --n-jobs ${n_jobs} \
     --threads ${n_jobs}
 ```
@@ -224,10 +221,13 @@ include-markdown "../../../includes/includemd_vigenettes_setupenv_docker.md"
 
 **Example Command**
 
+The `~/.aws` mount gives the container your AWS credentials for `--upload-aws`.
+
 ```bash
-docker run -it --rm \
+docker run --rm \
     -v ${work_dir}:/data \
-    weiqiuc/cartloader:${docker_tag}\
+    -v ${HOME}/.aws:/root/.aws:ro \
+    hyunminkang/cartloader:latest \
     run_xenium \
     --load-xenium-ranger \
     --sge-convert \
@@ -244,11 +244,6 @@ docker run -it --rm \
     --n-factor ${n_factor} \
     --id ${DATA_ID} \
     --image-ids DAPI_OME \
-    --spatula ${spatula} \
-    --ficture2 ${punkst} \
-    --pmtiles ${pmtiles} \
-    --tippecanoe ${tippecanoe} \
-    --aws ${aws} \
     --n-jobs ${n_jobs} \
     --threads ${n_jobs}
 ```
@@ -271,7 +266,7 @@ docker run -it --rm \
 | [`import_xenium_cell`](../../reference/import_cell.md) | `--import-cells`       | Import cell points, boundaries, cluster, de;                                  | Xenium assets JSON or manual CSVs; also `--cell-id`                       |
 | [`import_image`](../../reference/import_image.md)      | `--import-images`      | Import background images (OME‑TIFF) → PNG/PMTiles;                            | Xenium assets JSON or `--ome-tifs`; also `--image-ids`  or `--all-images` |
 | [`run_cartload2`](../../reference/run_cartload2.md)    | `--run-cartload2`      | Package SGE, optional FICTURE/cells/images into PMTiles; write `catalog.yaml` | SGE, optional FICTURE assets or any imported cell/image assets; `--id`    |
-| [`upload_aws`](../../reference/upload_aws.md)          | `--upload-aws`         | Upload catalog and PMTiles to S3                                              | `catalog.yaml` (from `run_cartload2`); `--s3-bucket`, `--id`              |
+| [`upload_aws`](../../reference/upload_aws.md)          | `--upload-aws`         | Upload catalog and PMTiles to S3                                              | `catalog.yaml` (from `run_cartload2`); `--s3-dir`                        |
 | [`upload_zenodo`](../../reference/upload_zenodo.md)    | `--upload-zenodo`      | Upload catalog and PMTiles to Zenodo                                          | `catalog.yaml` (from `run_cartload2`); `--zenodo-token`                   |
 
 **Parameter Requirements by Action Flag**
