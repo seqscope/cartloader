@@ -169,6 +169,7 @@ Grouped as in `cartloader run_together --help`. A CLI flag wins over the same se
 | `--in-cell-xy` | Single sample: cell centroid / metadata file (`xy` role). |
 | `--in-cell-boundary` | Single sample: cell boundary polygon file (`boundaries` role). |
 | `--in-cellxgene` | Single sample: cell-by-gene matrix CSV, converted to a MEX that drives cell clustering. |
+| `--geojson` | Single sample: GeoJSON polygon(s) in µm; only transcripts inside are kept ([polygon filtering](./run_together_inputs.md#polygon-filtering)). For a sheet, use its `geojson` column. |
 | `--samples` | TSV sample sheet, one row per sample. |
 | `--images` | TSV of image specs, one row per image (attached by its `sample` column). |
 | `--image` | One image as comma-separated `key=value` pairs; repeatable. |

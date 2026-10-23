@@ -97,6 +97,8 @@ KNOWN_CONFIG_KEYS = frozenset({
 KNOWN_SAMPLE_KEYS = frozenset(
     {"id", "in_dir", "in_prefix", "raw_transcript", "images", "dapi", "hne",
      "mex_bcd", "mex_ftr", "mex_mtx",
+     # GeoJSON polygon(s) in post-ingest um coordinates; only transcripts inside are kept
+     "geojson",
      # tissue context of the sample, used by --anno-deep (pan-tissue runs)
      "tissue"}
     | set(ROLE_KEYS) | set(ROLE_ALIASES)
@@ -740,7 +742,12 @@ def build_config(args):
         if args.in_cell_xy: s["xy"] = args.in_cell_xy
         if args.in_cell_boundary: s["boundaries"] = args.in_cell_boundary
         if args.in_cellxgene: s["cellxgene"] = args.in_cellxgene
+        if args.geojson: s["geojson"] = args.geojson
         raw_samples.append(s)
+    elif args.geojson:
+        sys.exit("ERROR: --geojson applies to the single sample given by --in-dir/--in-prefix/the "
+                 "--in-*/--raw-transcript file flags. For a --samples sheet or a 'samples' config "
+                 "block, give each sample's polygon in its 'geojson' column/key instead.")
     if not raw_samples:
         sys.exit("ERROR: no samples. Use --in-dir, --in-prefix, the "
                  "--in-transcript/--raw-transcript/--in-cell-xy/--in-cell-boundary file flags, "
@@ -968,6 +975,10 @@ def resolve_sample(raw, cfg):
         # raw transcript CSV to ingest (sge_convert --in-csv); distinct from the
         # `transcript` role, which is an already-ingested TSV that skips ingest.
         "raw_transcript": raw.get("raw_transcript"),
+        # GeoJSON polygon filter (um, post-ingest coordinates); unset in the sheet as
+        # ''/'-'/'.'/'NA', which a JSON sample may also use (or null) to opt out.
+        "geojson": (None if (raw.get("geojson") or "").strip() in SHEET_UNSET else
+                    _abs_in_dir(raw["geojson"].strip(), in_dir)),
         "hne": raw.get("hne"),
         # tissue context for --anno-deep (sample sheet / JSON `tissue`; falls back to --tissue)
         "tissue": raw.get("tissue"),
@@ -1040,6 +1051,10 @@ def check_ingest_sources(samples, raw_samples, cfg):
     ingest_source_problem). Sample-sheet columns are not validated on their own, so a
     misspelled column (e.g. `transcripts`) is dropped silently and surfaces here; the
     unrecognized columns of the failing samples are listed as the likely cause."""
+    missing = [f"  {s['id']}: {s['geojson']}" for s in samples
+               if s.get("geojson") and not os.path.exists(s["geojson"])]
+    if missing:
+        sys.exit("ERROR: geojson polygon file not found for sample(s):\n" + "\n".join(missing))
     problems, unknown = [], set()
     for s, raw in zip(samples, raw_samples):
         why = ingest_source_problem(s, cfg)
@@ -1344,6 +1359,18 @@ def cmd_tsv_add_cell_id(cfg, in_tsv, out_tsv, boundaries):
         # distance (µm); off by default (transcripts outside all cells stay UNASSIGNED).
         parts.append(f"--expand-um {ac['expand_um']}")
     return " ".join(parts)
+
+
+def cmd_filter_tsv_polygon(in_tsv, out_prefix, geojson):
+    """Keep only the transcripts inside the sample's GeoJSON polygon(s) (spatula filter-tsv
+    --polygon), writing <out_prefix>.tsv.gz with every input column intact (cell_id etc.).
+    The polygon must be in the ingested transcript's coordinates (um, after units-per-um
+    scaling), since it is applied to the X/Y columns of the ingested TSV. filter-tsv also
+    writes <out_prefix>.features.tsv.gz and <out_prefix>.minmax.tsv; neither is consumed
+    here, as FICTURE tiling recomputes both from the filtered transcript."""
+    return " ".join([SPATULA_BIN, "filter-tsv", f"--in-tsv {in_tsv}",
+                     f"--out-prefix {out_prefix}", "--tsv-suffix .tsv.gz",
+                     f"--polygon {geojson}"])
 
 
 def cmd_convert_cellxgene(cfg, csv_path, mex_dir):
@@ -1903,9 +1930,13 @@ def add_targets(mm, samples, cfg, args):
             if s["roles"].get("transcript"):
                 transcript[s["id"]] = s["roles"]["transcript"]
                 preingested.append(s["id"])
-                sge_flags.extend(conv_flags)
-                continue
-            if method == "reformat_cosmx":
+                # A ready-made transcript needs no ingest target, unless it is to be
+                # polygon-filtered (below), which is then its only ingest step.
+                if not s.get("geojson"):
+                    sge_flags.extend(conv_flags)
+                    continue
+                ingest_cmds = []
+            elif method == "reformat_cosmx":
                 prefix = os.path.join(sge_dir, s["id"])
                 transcript[s["id"]] = prefix + produces["transcript"]
                 for role, suffix in produces.items():
@@ -1948,6 +1979,12 @@ def add_targets(mm, samples, cfg, args):
                     mex_dir = os.path.join(sge_dir, "cellxgene_mex")
                     ingest_cmds.append(cmd_convert_cellxgene(cfg, s["roles"]["cellxgene"], mex_dir))
                     s["roles"]["mex"] = mex_dir
+            # Polygon filter, the last ingest step on every route, so it applies to the
+            # final transcript (incl. a cell_id column added above) whatever produced it.
+            if s.get("geojson"):
+                roi_prefix = os.path.join(sge_dir, "transcripts.roi")
+                ingest_cmds.append(cmd_filter_tsv_polygon(transcript[s["id"]], roi_prefix, s["geojson"]))
+                transcript[s["id"]] = roi_prefix + ".tsv.gz"
             flag = os.path.join(mkdir, f"sge.{s['id']}.done")
             sge_flags.append(flag)
             if on("ingest"):
@@ -2385,6 +2422,10 @@ def parse_arguments(_args):
     io.add_argument("--in-cellxgene", type=str, help="Single sample: cell-by-gene matrix CSV (e.g. MERSCOPE cell_by_gene.csv). "
                                                      "Converted to a MEX directory that drives cell clustering, so cell-based "
                                                      "analysis works without cell boundaries (optional).")
+    io.add_argument("--geojson", type=str, help="Single sample: GeoJSON (Polygon/MultiPolygon) in the ingested transcript's um "
+                                                "coordinates. Only transcripts inside the polygon(s) are kept (spatula "
+                                                "filter-tsv --polygon), as the last ingest step. For a sample sheet, use a "
+                                                "'geojson' column instead ('', '-', '.' or 'NA' = no filtering for that sample).")
     io.add_argument("--samples", type=str, help="TSV sample sheet (wide table of input roles) for a joint multi-sample run")
     io.add_argument("--images", type=str, help="TSV of per-image specs, one row per image (columns: sample, type, id, "
                                               "source/src, color, and the platform transform column e.g. merfish_csv). "

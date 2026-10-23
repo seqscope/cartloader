@@ -54,6 +54,14 @@ liver1 /data/seqscope/liver1/mex
 liver2 /data/seqscope/liver2/mex
 ```
 
+To restrict a sample to a region of interest, add a `geojson` column (polygons in µm, i.e. after the nm → µm conversion); `NA` or `.` leaves that sample unfiltered. See [Polygon filtering](../run_together_inputs.md#polygon-filtering).
+
+```
+id     in_dir                     geojson
+liver1 /data/seqscope/liver1/mex  /data/seqscope/liver1/roi.geojson
+liver2 /data/seqscope/liver2/mex  NA
+```
+
 `images.tsv`
 
 ```

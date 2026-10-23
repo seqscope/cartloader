@@ -44,6 +44,7 @@ cartloader run_together --platform merfish \
 | `--in-cell-xy` | `xy` | Cell centroids / metadata file. |
 | `--in-cell-boundary` | `boundaries` | Cell boundary polygons. |
 | `--in-cellxgene` | `cellxgene` | Cell×gene matrix CSV → converted to a MEX (drives cell clustering). |
+| `--geojson` | `geojson` | GeoJSON polygon(s) in µm; only transcripts inside are kept. See [Polygon filtering](#polygon-filtering). |
 | `--id` | `id` | Sample id. With `--out-dir` it defaults to **`rep1`** (the packaged directory and catalog id become `<out-dir basename>-rep1`); with `--out-root`, to the `in_dir` / `in_prefix` basename. |
 
 `--in-dir` is just a one-row sample sheet with only `in_dir`; the explicit `--in-*` flags are a one-row sheet with those columns. Other roles (`clusters`, `mex`, `cell_tsv`, `gef`, …) have no single-sample flag: use a one-row sample sheet or a config (or a ready-made [`--list-*` file](#supplying-your-own-list-files)). Images use [`--image`](./run_together_images.md#inline-cli-image).
@@ -88,6 +89,7 @@ Columns map to per-sample **input roles**. Every column is optional except that 
 | `dapi` | — | One DAPI **OME-TIFF** → a colorized `dapi` layer. A name ending in `morphology.ome.tif` (Xenium's z-stack, any prefix) is imported with `--use-middle-page --high-memory`. A value not ending in `.ome.tif`/`.ome.tiff` is imported without OME→PNG conversion and has no georeferencing source; give such images through [`--images`](./run_together_images.md) with `um_per_pixel` instead. |
 | `hne` | — | H&E image. On Visium HD it gets the profile's scale handling (see [Visium HD](./platforms/visium_hd.md)); elsewhere it is a plain `rgb` layer, which needs an `.ome.tif` (scale read from its metadata) or, as on Seq-Scope, a profile `image_defaults` that supplies the bounds. Otherwise use `--images` with the georeferencing fields. Used as given (not resolved against `in_dir`) on Visium HD. |
 | `tissue` | — | The sample's tissue, used by `--anno-deep` (falls back to `--tissue`). |
+| `geojson` | — | GeoJSON polygon(s) in µm; only transcripts inside are kept. Leave unset (`` / `-` / `.` / `NA`) for samples that need no filtering. See [Polygon filtering](#polygon-filtering). |
 
 Other images are **not** sample-sheet columns — see [Image Modalities](./run_together_images.md). A config sample may also carry its own `images` list (JSON only).
 
@@ -120,6 +122,21 @@ s1    /data/s1
 s2                      /data/s2/transcripts.tsv.gz
 s3                                                    /data/s3/detected.csv.gz       /data/s3/bounds.csv.gz
 ```
+
+### Polygon filtering
+
+A sample with a `geojson` (sheet column, config sample key, or `--geojson` for a single sample) has its transcript restricted to the region inside the polygon(s) with `spatula filter-tsv --polygon`. This runs as the **last ingest step** on every route — after `sge_convert`, the CosMx/Stereo-seq ingest, or `tsv-add-cell-id` — and also applies to an already-ingested `transcript`. All columns (e.g. `cell_id`) are kept; the result is `OUT/tsv/<id>/transcripts.roi.tsv.gz`, and every later stage uses it.
+
+```
+id     in_dir                     geojson
+s1     /data/s1/mex               /data/s1/roi.geojson
+s2     /data/s2/mex               NA
+```
+
+- **Coordinates** must match the ingested transcript: **µm, after `--units-per-um` scaling** (not raw pixel or nanometer units).
+- **Format**: a `Feature` or `FeatureCollection` of `Polygon` / `MultiPolygon`, or a JSON object that wraps one under a top-level `geometry` key. A transcript inside any polygon is kept.
+- Only transcripts are filtered: cell boundaries/centroids and images are not cropped.
+- `--geojson` cannot be combined with `--samples`; use the sheet column.
 
 An already-ingested transcript uses the layout ingest writes (`transcripts.unsorted.tsv.gz`): tab-separated, a header row `X  Y  gene  count` (optionally a fifth `cell_id` column), coordinates in µm.
 
@@ -335,7 +352,7 @@ Dict values are **deep-merged** into the profile; other values replace it, excep
 | `cell_import` | Visium HD segmented-cell import, `{ "detect_dir", "suffix" }`. |
 | `publish` | Accepted but not read (publishing is CLI-only). |
 
-**Sample entries** accept `id`, `in_dir`, `in_prefix`, `raw_transcript`, the role keys and their aliases (`transcript`/`tsv`, `xy`/`cell_xy`, `boundaries`/`cell_boundary`/`cell_boundaries`, `clusters`, `mex`/`mex_dir` or `mex_bcd`+`mex_ftr`+`mex_mtx`, `cellxgene`/`cell_by_gene`, `cell_tsv`, `gef`, `cellbin_gef`), `dapi`, `hne`, `tissue`, and `images` — a list of image entries in the [config JSON form](./run_together_images.md#config-json-images) that take precedence over the profile's entries with the same `id`.
+**Sample entries** accept `id`, `in_dir`, `in_prefix`, `raw_transcript`, the role keys and their aliases (`transcript`/`tsv`, `xy`/`cell_xy`, `boundaries`/`cell_boundary`/`cell_boundaries`, `clusters`, `mex`/`mex_dir` or `mex_bcd`+`mex_ftr`+`mex_mtx`, `cellxgene`/`cell_by_gene`, `cell_tsv`, `gef`, `cellbin_gef`), `dapi`, `hne`, `tissue`, `geojson` (`null` or `"NA"` = no filtering), and `images` — a list of image entries in the [config JSON form](./run_together_images.md#config-json-images) that take precedence over the profile's entries with the same `id`.
 
 **`ingest`** keys:
 
