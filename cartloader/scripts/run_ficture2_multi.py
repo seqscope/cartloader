@@ -6,6 +6,7 @@ from cartloader.utils.ficture2_helper import (
     define_lda_runs,
     define_decode_runs,
     add_umap_targets,
+    resolve_tile_size,
 )
 
 repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -49,7 +50,7 @@ def parse_arguments(_args):
     aux_params.add_argument('--colidx-feature',  type=int, default=3, help='Column index for feature in the --in-transcript (default: 3)')
     aux_params.add_argument('--colidx-count',  type=int, default=4, help='Column index for intensity in the --in-transcript (default: 4)')
     # tile
-    aux_params.add_argument('--tile-size', type=int, default=500, help='Tile size for tiling (default: 500)')
+    aux_params.add_argument('--tile-size', type=int, default=None, help='Tile size (um) for tiling. Must be at least 20x the hexagon side length (width/sqrt(3)) of the widest hexagon (default: 500, raised automatically as needed for wide hexagons, e.g. 600 for width 48)')
     aux_params.add_argument('--tile-buffer', type=int, default=1000, help='Tile buffer for tiling (default: 1000)')
     aux_params.add_argument('--seed', type=int, default=1, help='Random seed for random number generation (default: 1)')
     # segmentation - ficture
@@ -778,6 +779,7 @@ def run_ficture2_multi(_args):
         args.skip_umap = True
     if args.segment_width_10x is not None and not args.segment_10x:
         raise ValueError("--segment-width-10x is only meaningful together with --segment-10x.")
+    args.tile_size = resolve_tile_size(hexagon_widths(args), args.tile_size)
     for flag, path in (("--include-feature-list", args.include_feature_list),
                        ("--exclude-feature-list", args.exclude_feature_list)):
         if path is not None and not os.path.exists(path):

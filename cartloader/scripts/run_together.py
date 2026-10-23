@@ -2,6 +2,7 @@ import sys, os, argparse, inspect, json, copy, csv, datetime, glob, shlex
 
 from cartloader.utils.minimake import minimake
 from cartloader.utils.utils import execute_makefile
+from cartloader.utils.ficture2_helper import resolve_tile_size
 
 repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 PROFILE_DIR = os.path.join(repo_dir, "assets", "run_together_profiles")
@@ -594,10 +595,9 @@ def build_config(args):
     prof["_segment_10x"] = s10
 
     # FICTURE tiling: --tile-size / --tile-buffer (else the config's tile_size / tile_buffer,
-    # else run_ficture2_multi's own defaults, 500 um and 1000 lines). Run-wide, since
-    # multisample-prepare tiles each output directory once for every analysis. punkst
-    # rejects a tile size under 20x the hexagon side length (width / sqrt(3)), so a wide
-    # hexagon (e.g. --width 100) needs a larger tile, roughly 50x the width.
+    # else run_ficture2_multi's tile_buffer default of 1000 lines; an unset tile_size is
+    # chosen from the widths at the end of build_config). Run-wide, since
+    # multisample-prepare tiles each output directory once for every analysis.
     for key in ("tile_size", "tile_buffer"):
         val = getattr(args, key)
         if val is None:
@@ -762,6 +762,17 @@ def build_config(args):
 
     if not prof["out_dir"] and not prof["out_root"]:
         sys.exit("ERROR: --out-dir (or --out-root for independent per-sample models) is required.")
+
+    # One tile size for the whole run, large enough for every hexagon width of every
+    # analysis and 10x export. Each analysis is a separate run_ficture2_multi call into
+    # the same fic dir, so letting each choose from its own widths would re-tile (and
+    # invalidate the others) whenever two analyses' widths differ.
+    widths = [w for a in prof["ficture"] for w in str(a.get("width") or "").split(",") if w.strip()]
+    widths += [w for w in str((prof["_segment_10x"] or {}).get("widths") or "").split(",") if w.strip()]
+    try:
+        prof["tile_size"] = resolve_tile_size(widths, prof.get("tile_size"))
+    except ValueError as e:
+        sys.exit(f"ERROR: {e}")
     return prof
 
 
@@ -2500,11 +2511,11 @@ def parse_arguments(_args):
                         "each analysis' own --width). Extra widths get their hexagon files built too. "
                         "Config equivalent: \"segment_10x\": {\"widths\": \"12,24\"}.")
     f.add_argument("--tile-size", type=int, default=None,
-                   help="FICTURE tiling: tile size in um for punkst multisample-prepare (default: "
-                        "run_ficture2_multi's 500). punkst requires at least 20x the hexagon side "
-                        "length (width/sqrt(3)) and recommends 50-100x, so a wide hexagon such as "
-                        "--width 100 needs roughly 50x the width, e.g. 5000. Run-wide. Config "
-                        "equivalent: top-level \"tile_size\".")
+                   help="FICTURE tiling: tile size in um for punkst multisample-prepare. punkst requires "
+                        "at least 20x the hexagon side length (width/sqrt(3)) of the widest hexagon; an "
+                        "explicit value below that is rejected up front. Default: 500, raised "
+                        "automatically for wide hexagons (e.g. 600 for --width 48, 1200 for --width 100). "
+                        "Run-wide. Config equivalent: top-level \"tile_size\".")
     f.add_argument("--tile-buffer", type=int, default=None,
                    help="FICTURE tiling: per-tile, per-thread line buffer for punkst multisample-prepare "
                         "(default: run_ficture2_multi's 1000). Not spatial; rarely needs changing. "

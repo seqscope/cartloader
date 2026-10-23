@@ -215,7 +215,7 @@ They set profile-level values, so they apply to **every** sample in the run.
 | `--no-ficture` | Tiling only: package transcripts, raster, and images with no factor layers; cell analyses are skipped. Not combinable with `--n-factor` / `--project-models`. |
 | `--segment-10x` | Also export the hexagon files as 10x MEX directories (any mode). |
 | `--segment-width-10x` | Widths to export with `--segment-10x` (default: each analysis' own width). |
-| `--tile-size` | punkst tiling size in µm (default: `run_ficture2_multi`'s `500`). |
+| `--tile-size` | punkst tiling size in µm (default: `500`, raised automatically for wide hexagons, e.g. `600` for width 48). |
 | `--tile-buffer` | punkst per-tile line buffer (default: `run_ficture2_multi`'s `1000`). |
 
 See [Specifying Inputs → FICTURE mode](./run_together_inputs.md#ficture-mode-de-novo-vs-projection).

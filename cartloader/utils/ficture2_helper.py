@@ -1,4 +1,4 @@
-import os
+import os, math
 from cartloader.utils.utils import flexopen, cmd_separator, factor_id_to_name
 
 repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -6,6 +6,38 @@ repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__fil
 create_umap_rscript = f"{repo_dir}/cartloader/r/create_umap.r"
 draw_umap_rscript = f"{repo_dir}/cartloader/r/draw_umap.r"
 draw_umap_single_rscript = f"{repo_dir}/cartloader/r/draw_umap_single.r"
+
+# Tile size (um) for punkst multisample-prepare when none is given. Kept whenever it is
+# large enough, so existing outputs are not re-tiled.
+DEFAULT_TILE_SIZE = 500
+# punkst multisample-prepare rejects a tile smaller than this multiple of the hexagon side
+# length (side = flat-to-flat width / sqrt(3)) unless --force-tile-size is given.
+PUNKST_MIN_TILE_PER_HEX_SIDE = 20
+
+def min_tile_size(widths):
+    """Smallest tile size (um) punkst multisample-prepare accepts for these hexagon widths.
+    Every width is checked: the prepare step for each width re-runs punkst's check with
+    that width alone, so the largest width sets the bound."""
+    ws = [float(w) for w in widths]
+    return PUNKST_MIN_TILE_PER_HEX_SIDE * max(ws) / math.sqrt(3) if ws else 0.0
+
+def resolve_tile_size(widths, tile_size=None):
+    """The tile size (um) to tile with for these hexagon widths.
+
+    Unset: DEFAULT_TILE_SIZE, raised to punkst's minimum (rounded up to a multiple of 100)
+    when a width is too wide for it, e.g. 600 for width 48 and 1200 for width 100. An
+    explicit value below the minimum is rejected here, before anything runs, rather than
+    by punkst partway through the run."""
+    need = min_tile_size(widths)
+    if tile_size is None:
+        return max(DEFAULT_TILE_SIZE, int(math.ceil(need / 100.0)) * 100)
+    if tile_size < need:
+        widest = max(widths, key=float)
+        raise ValueError(f"--tile-size {tile_size} is too small for hexagon width {widest}: punkst "
+                         f"requires at least {PUNKST_MIN_TILE_PER_HEX_SIDE}x the hexagon side length "
+                         f"(width/sqrt(3)), i.e. {need:.0f}. Use --tile-size {int(math.ceil(need / 100.0)) * 100} "
+                         f"or larger, or leave it unset to choose one automatically.")
+    return tile_size
 
 def _parse_int_csv(value):
     return [int(x) for x in value.split(",")] if value else []

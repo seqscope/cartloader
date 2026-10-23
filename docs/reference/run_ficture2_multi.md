@@ -102,7 +102,7 @@ cartloader run_ficture2_multi \
 
 - `--width` (str, required): Comma‑separated hexagon flat-to-flat widths in µm (e.g., `12,18`).
 - `--colidx-x`, `--colidx-y`, `--colidx-feature`, `--colidx-count` (int, 1‑based): X, Y, feature and count columns of the transcript TSV (defaults: 1, 2, 3, 4).
-- `--tile-size` (int): Tile size (default: 500).
+- `--tile-size` (int): Tile size in µm. Must be at least 20× the side length (width / √3) of the widest hexagon, including `--segment-width-10x` (default: 500, raised automatically for wide hexagons to that minimum rounded up to 100, e.g. 600 for width 48).
 - `--tile-buffer` (int): Per-tile buffer size (default: 1000).
 - `--min-count-per-sample` (int): Minimum total count for a feature to enter the shared feature list `multi.features.tsv` (`punkst --min-total-count-per-sample`; default: 50).
 - `--min-ct-per-unit-hexagon` (int): Minimum count per hexagon, over all features (default: 50).

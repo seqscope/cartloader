@@ -204,7 +204,7 @@ cartloader run_together --platform seqscope --in-dir IN --out-dir OUT --no-fictu
 
 Config equivalent: top-level `"segment_10x": true` or `{ "widths": "12,24" }` (a CLI flag wins). The directories are recorded under `mex` in the per-sample `ficture.params.json` and in `ficture.multi.params.json`; see [`run_ficture2_multi --segment-10x`](./run_ficture2_multi.md#actions).
 
-**Tiling** (run-wide, rarely needed): `--tile-size` and `--tile-buffer` are forwarded to `run_ficture2_multi` (punkst `multisample-prepare`) and otherwise keep its defaults of `500` µm and `1000` lines. punkst rejects a tile size under 20× the hexagon *side* length (width / √3) and recommends 50–100×, so only a wide hexagon needs this — e.g. `--width 100` wants roughly `--tile-size 5000`. The buffer is a per-tile line buffer, not a spatial size. Config equivalents: top-level `"tile_size"` / `"tile_buffer"` (a CLI flag wins).
+**Tiling** (run-wide, rarely needed): `--tile-size` and `--tile-buffer` are forwarded to `run_ficture2_multi` (punkst `multisample-prepare`). punkst rejects a tile size under 20× the *side* length (width / √3) of the widest hexagon, so the tile size is chosen automatically when unset: `500` µm, raised for wide hexagons to that minimum rounded up to 100 µm (`600` for width 48, `1200` for width 100), counting every analysis' widths and any `--segment-width-10x`. An explicit value below the minimum stops the run before planning. punkst recommends 50–100× the side length, so set a larger `--tile-size` if pixel-level decoding is poor at a wide width. The buffer is a per-tile line buffer, not a spatial size. Config equivalents: top-level `"tile_size"` / `"tile_buffer"` (a CLI flag wins).
 
 **Common decode overrides** (else profile / built-in default): `--exclude-feature-regex`, `--include-feature-list` / `--exclude-feature-list`, the `--ingest-*-feature-*` family, `--min-ct-per-unit-hexagon` (default `50`), `--min-ct-per-unit-train`, `--cell-min-cell-count` / `--cell-min-feature-count`, and `--always-single-molecule` / `--never-single-molecule` (default: single-molecule **ON** for pixel FICTURE, **OFF** for cell decode). For these, an explicit CLI flag wins over a `--config`/profile value, which wins over the built-in default. Settings that do not follow that order: `resources.n_jobs` / `resources.threads` in a config win over `-j` / `--threads` (see [Mode 3](#mode-3-full-config-json)), and `--units-per-um` has no effect on `seqscope` or `10x_visium_hd` (see [Coordinate units](#coordinate-units-at-ingest)).
 
@@ -316,7 +316,7 @@ Escalate to `--config run.json` when samples need **different** settings, or to 
   "ficture_defaults": { "decode_scale": 2 },
   "cell_defaults":    { "min_cell_count": 20 },
   "segment_10x":   { "widths": "12,24" },           // or true: export the hexagon files as 10x MEX (see FICTURE mode)
-  "tile_size": 5000, "tile_buffer": 1000,           // punkst tiling knobs; omit to keep run_ficture2_multi's 500 / 1000
+  "tile_size": 5000, "tile_buffer": 1000,           // punkst tiling knobs; omit for automatic tile size / 1000
   "ficture":       [ /* analyses: each is a de-novo train OR a projection */ ],
   "cell_analyses": [ /* see below */ ],
   "cell_lists":    { "clusters": "..." },           // ready-made --list-* file(s) for every cell analysis
