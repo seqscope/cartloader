@@ -133,6 +133,16 @@ No bounds are synthesized, so `--um-per-pixel` / `--georef-plain` do not apply. 
 --image type=hne,source=/data/HE_plain.tif,georeferenced=false,georef_plain=true,um_per_pixel=0.5
 ```
 
+### Spatial-barcode image (`type=sbcd`)
+
+The `*.sge_match_sbcd.png` produced by `spatula draw-3way` shows, per 1 µm pixel, the 1st-seq spatial barcodes (blue), the 2nd-seq barcodes matched to them (green), and the barcodes aligned to genes (red), each channel brightening additively with the count. It is stored as a **palette-indexed** PNG at the same scale and origin as the transcript coordinates, so it needs no registration:
+
+```bash
+--image type=sbcd,source=/data/DATAID.sge_match_sbcd.png
+```
+
+The `sbcd` type supplies its defaults: `georeferenced=false`, `georef_plain=true`, `um_per_pixel=1`, and `nodata=0`. The PNG is georeferenced to `0,0,<width>,<height>` µm, the palette is expanded to RGB, and black (no-barcode) pixels are written transparent. Any of these can be overridden on the same `--image` value, e.g. `nodata=none` to keep the black background opaque.
+
 Single-channel modalities (e.g. `type=dapi`) are colorized through `import_image` on the usual path and are not covered by `georeferenced`; give them a scale with `um_per_pixel`.
 
 ## See also

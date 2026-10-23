@@ -122,7 +122,7 @@ KNOWN_SUBKEYS = {
     "image_defaults": frozenset({
         "um_per_pixel", "um_per_pixel_json", "um_per_pixel_key", "georeferenced",
         "georef_detect", "shrink_factor", "high_memory", "rescale", "rescale_range",
-        "rescale_min", "rescale_max",
+        "rescale_min", "rescale_max", "nodata",
         "swapxy", "rotate", "flip_vertical", "flip_horizontal",
     }),
 }
@@ -837,9 +837,14 @@ def image_row_to_spec(row, cfg, in_dir):
     for k in ("shrink_factor", "high_memory", "use_middle_page", "convert", "um_per_pixel",
               "georef_plain", "georeferenced", "georef_detect",
               "swapxy", "rotate", "flip_vertical", "flip_horizontal",
-              "rescale", "rescale_range", "rescale_min", "rescale_max"):
+              "rescale", "rescale_range", "rescale_min", "rescale_max", "nodata"):
         if row.get(k):
             spec[k] = row[k]
+    # Type-level field defaults from the registry (e.g. sbcd: a plain 1 um/pixel PNG, not
+    # an upstream-registered TIF), filled in under the row's own values. They sit above the
+    # profile's image_defaults, which _cmd_rgb_image/plan_images consult only for unset keys.
+    for k, v in reg.get("defaults", {}).items():
+        spec.setdefault(k, v)
     # A plain .png needs no OME->PNG conversion; a .tif/.ome.tif does (default).
     spec.setdefault("convert", "none" if spec["source"].lower().endswith(".png") else "ome2png")
     return spec
@@ -1772,6 +1777,11 @@ def _cmd_rgb_image(cfg, s, iid, src, cart_dir, settings):
         rescale += f" --rescale {rs}"
     if rrange:
         rescale += f" --rescale-range {rrange}"
+    # Pixels whose bands all equal `nodata` become transparent in the tiles (e.g. the black
+    # no-barcode background of a Seq-Scope sbcd image). "none" opts out of a type default.
+    nd = settings.get("nodata", idef.get("nodata"))
+    if nd is not None and str(nd).strip().lower() != "none":
+        rescale += f" --nodata {nd}"
     # Rotate/flip (incl. swapxy, the x/y transpose). Orthogonal to how the bounds are
     # obtained, so it applies to every branch below.
     orient = _image_orient_flags(settings, idef)
@@ -2446,7 +2456,8 @@ def parse_arguments(_args):
                          "transform (or the platform column e.g. merfish_csv), shrink_factor, high_memory, and the "
                          "orientation keys swapxy / rotate / flip_vertical / flip_horizontal — swapxy=true transposes "
                          "the image, for histology stored with its axes swapped relative to the transcript "
-                         "coordinates). Same fields as a --images TSV row; repeat --image per image.")
+                         "coordinates). Same fields as a --images TSV row; repeat --image per image. "
+                         "Seq-Scope: type=sbcd,source=<DATAID>.sge_match_sbcd.png adds the spatial-barcode image.")
     io.add_argument("--out-dir", type=str, help="Output directory (single sample / shared joint model)")
     io.add_argument("--out-root", type=str, help="Output root; each sample gets its own dir and an independent model")
     io.add_argument("--id", type=str, help=f"Sample id for a single-sample run (default: {DEFAULT_SAMPLE_ID}). The packaged directory and catalog id become <out-dir basename>-<id>, so the descriptive name lives in --out-dir. With --out-root instead, each sample is named after its input directory/prefix.")

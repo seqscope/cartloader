@@ -1,5 +1,5 @@
 {
-  "_comment": "Image modality registry for run_together: `type` -> its default colorize hex (`color`) and `kind`. kind=single is a colorized single-channel layer (its `color` is overridable per image); kind=rgb is a multi-channel passthrough (e.g. H&E) with no color. Edit this file to add or adjust image types; keys beginning with '_' are ignored.",
+  "_comment": "Image modality registry for run_together: `type` -> its default colorize hex (`color`) and `kind`. kind=single is a colorized single-channel layer (its `color` is overridable per image); kind=rgb is a multi-channel passthrough (e.g. H&E) with no color. An optional `defaults` object supplies per-image fields for the type (same vocabulary as an --images row; an explicit row value wins). Edit this file to add or adjust image types; keys beginning with '_' are ignored.",
   "dapi":        { "color": "0F73E6", "kind": "single" },
   "boundary":    { "color": "F300A5", "kind": "single" },
   "rna":         { "color": "A4A400", "kind": "single" },
@@ -9,5 +9,8 @@
   "cellbound3":  { "color": "CC79A7", "kind": "single" },
   "polyt":       { "color": "00FFFF", "kind": "single" },
   "ssdna":       { "color": "F0F0F0", "kind": "single" },
-  "hne":         { "kind": "rgb" }
+  "hne":         { "kind": "rgb" },
+  "sbcd":        { "kind": "rgb",
+                   "_comment": "Seq-Scope spatula draw-3way PNG (*.sge_match_sbcd.png): palette-indexed additive RGB at 1 um/pixel from (0,0); black (no barcode) is made transparent",
+                   "defaults": { "georeferenced": false, "georef_plain": true, "um_per_pixel": 1, "nodata": 0 } }
 }

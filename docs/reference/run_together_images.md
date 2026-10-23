@@ -46,6 +46,7 @@ Fields of an `--images` row or an `--image` value:
 | `swapxy` / `rotate` / `flip_vertical` / `flip_horizontal` | | `rgb`: orientation (see [Orientation](#orientation-rgb-images)). Else the profile's `image_defaults`. |
 | `rescale` | | `rgb`: rescale mode for **16-bit** imagery (`auto` \| `linear` \| `log` \| `none`), forwarded to `geotiff2pmtiles`, which rejects 16-bit input without a range. Use `linear` with the range below. |
 | `rescale_range` / `rescale_min` + `rescale_max` | | `rgb`: input value range for `rescale` (e.g. `0,65535`). Give `rescale_range` in a `--images` TSV or config; on a `--image` CLI value use `rescale_min`/`rescale_max` instead, since the range's comma would split the value. |
+| `nodata` | | `rgb`: pixels whose bands all equal this value are written transparent (forwarded to `geotiff2pmtiles --nodata`), e.g. `0` for a black background. `none` disables a type default. Else the profile's `image_defaults`. |
 
 Blank cells (`` / `-` / `.` / `NA`) mean *unset*. Fields marked `single` or `rgb` are accepted for the other kind but have no effect there.
 
@@ -71,6 +72,9 @@ Blank cells (`` / `-` / `.` / `NA`) mean *unset*. Fields marked `single` or `rgb
 | `polyt` | `00FFFF` | single |
 | `ssdna` | `F0F0F0` | single |
 | `hne` | — (RGB) | rgb |
+| `sbcd` | — (RGB) | rgb |
+
+A registry entry may also carry `defaults`: per-image fields filled in for that type (an explicit field on the row wins, and they take precedence over the profile's `image_defaults`). `sbcd` (the Seq-Scope `spatula draw-3way` spatial-barcode PNG) uses them to declare a plain, palette-indexed PNG at 1 µm/pixel from the origin with a black background: `georeferenced=false`, `georef_plain=true`, `um_per_pixel=1`, `nodata=0`. See [Seq-Scope](./platforms/seqscope.md#spatial-barcode-image-typesbcd).
 
 An **unregistered** `type` with no explicit `color` is an error (no silent wrong color) — either add a `color` field or register the type. An unregistered type defaults to `kind` `single`.
 

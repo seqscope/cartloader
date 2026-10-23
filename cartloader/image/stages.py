@@ -582,6 +582,9 @@ def register_geotiff2pmtiles_stage(
         rescale += f"--rescale {args.rescale} "
     if getattr(args, "rescale_range", None):
         rescale += f"--rescale-range {args.rescale_range} "
+    # Pixels with all bands equal to --nodata are written transparent.
+    if getattr(args, "nodata", None) is not None:
+        rescale += f"--nodata {args.nodata} "
 
     cmds = cmd_separator([], f"Converting from geotiff to pmtiles: {src_tif}")
     # geotiff2pmtiles derives its zoom range from the CRS, and on an input that has none it
