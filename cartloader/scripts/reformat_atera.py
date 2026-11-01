@@ -1,5 +1,5 @@
 import sys, os, argparse, gzip, inspect, datetime, shutil
-from multiprocessing import Pool
+import multiprocessing
 
 import numpy as np
 
@@ -87,6 +87,9 @@ _W = {}
 
 
 def _init_worker(tx_zip, gene_names, keep_gene, min_qv, precision):
+    # One polars thread per worker: --threads already sets the parallelism, and polars'
+    # default (one thread per core) in every worker oversubscribes the machine.
+    os.environ["POLARS_MAX_THREADS"] = "1"
     import polars as pl
     _W["store"], _W["root"] = open_zip(tx_zip)
     _W["genes"] = pl.Series("gene", gene_names, dtype=pl.Utf8)
@@ -157,7 +160,10 @@ def write_transcripts(args, gene_names, out_tsv):
     # Concatenated gzip members form one valid gzip stream; imap keeps the task order, so
     # each part is appended (and deleted) as soon as it and every part before it are done.
     n_read = n_qv = n_kept = 0
-    with Pool(args.threads, initializer=_init_worker,
+    # spawn, not Linux's default fork: the parent has already run polars (cells/boundaries), and
+    # a forked child inherits polars' thread-pool state without its threads, so it deadlocks.
+    ctx = multiprocessing.get_context("spawn")
+    with ctx.Pool(args.threads, initializer=_init_worker,
               initargs=(tx_zip, gene_names, keep_gene, args.min_phred_score, args.precision)) as pool, \
          open(out_tsv, "ab") as out:
         for i, (nr, nq, nk) in enumerate(pool.imap(_convert_chunk, tasks)):
