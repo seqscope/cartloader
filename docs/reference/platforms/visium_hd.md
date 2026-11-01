@@ -15,7 +15,7 @@ Built-in profile. Ingest runs `sge_convert` on the 2 µm bins. Point `--in-dir` 
 | Segmented cell polygons | `segmented_outputs/cell_segmentations.geojson` (`boundaries` role) | `cartloader` cell analysis (optional) |
 | H&E image | not auto-detected: the sample's `hne` column / config key | `hne` layer |
 
-**Defaults:** FICTURE `width=12`, `n_factor=24,48,96`, single-molecule mode, `decode_scale=2`; packaging with `--use-pmpoint --bin-count 500 --sge-scale 2`; `sge_convert` with `--sge-visual --scale-xy 2.0`. These three scale settings render the ingest preview (`xy.png`), the FICTURE pixel-decode images, and the packaged SGE raster at 2 µm per pixel.
+**Defaults:** FICTURE `width=12`, `n_factor=12,24,48`, single-molecule mode, `decode_scale=2`; packaging with `--use-pmpoint --bin-count 500 --sge-scale 2`; `sge_convert` with `--sge-visual --scale-xy 2.0`. These three scale settings render the ingest preview (`xy.png`), the FICTURE pixel-decode images, and the packaged SGE raster at 2 µm per pixel.
 
 ---
 ## Cell layers
@@ -90,7 +90,7 @@ cartloader run_together --platform 10x_visium_hd --config run.json
     { "id": "s1", "in_dir": "/data/visiumhd/s1/outs", "hne": "/data/visiumhd/s1/he.tif" },
     { "id": "s2", "in_dir": "/data/visiumhd/s2/outs", "hne": "/data/visiumhd/s2/he.tif" }
   ],
-  "ficture": [ { "id": "denovo", "mode": "train", "width": "12", "n_factor": "24,48,96" } ]
+  "ficture": [ { "id": "denovo", "mode": "train", "width": "12", "n_factor": "12,24,48" } ]
 }
 ```
 

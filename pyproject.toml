@@ -34,6 +34,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# 10x Atera bundles (reformat_atera; run_together --platform 10x_atera) read *.zarr.zip in place.
+# zarr 3 needs Python >= 3.11.
+atera = ["zarr>=3"]
 # AI annotation of factors and cell clusters (anno_cartload_folder; run_together --anno / --anno-deep)
 ai = [
     # --api-type claude (the --anno-deep default); 0.77.0 is the first release whose messages.stream accepts output_config

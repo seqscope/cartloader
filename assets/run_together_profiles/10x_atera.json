@@ -1,0 +1,49 @@
+{
+  "platform": "10x_atera",
+  "ingest": {
+    "method": "reformat_atera",
+    "in_dir_flag": "--in-dir",
+    "produces": {
+      "transcript": ".transcripts.tsv.gz",
+      "xy": ".cells.csv.gz",
+      "boundaries": ".cell_boundaries.csv.gz",
+      "clusters": ".clusters.graphclust.csv",
+      "clusters_azimuth_broad": ".clusters.azimuth_broad.csv",
+      "alias_azimuth_broad": ".clusters.azimuth_broad.alias.tsv",
+      "clusters_azimuth_coarse": ".clusters.azimuth_coarse.csv",
+      "alias_azimuth_coarse": ".clusters.azimuth_coarse.alias.tsv",
+      "clusters_azimuth_fine": ".clusters.azimuth_fine.csv",
+      "alias_azimuth_fine": ".clusters.azimuth_fine.alias.tsv",
+      "clusters_azimuth_full_hierarchy": ".clusters.azimuth_full_hierarchy.csv",
+      "alias_azimuth_full_hierarchy": ".clusters.azimuth_full_hierarchy.alias.tsv"
+    }
+  },
+  "roles": {
+    "xy": { "colname_x": "x_centroid", "colname_y": "y_centroid" }
+  },
+  "ficture": [
+    { "id": "denovo", "mode": "train", "width": "12", "n_factor": "12,24,48" }
+  ],
+  "cell_analyses": [
+    { "id": "cartloader", "uses": ["boundaries", "xy"] },
+    { "id": "graphclust", "uses": ["clusters", "boundaries", "xy"], "multi_import": "import_xenium_cell" },
+    { "id": "azimuth-broad", "name": "Azimuth broad", "uses": ["clusters", "boundaries", "xy"],
+      "role_from": { "clusters": "clusters_azimuth_broad" }, "alias_from": "alias_azimuth_broad",
+      "multi_import": "import_xenium_cell" },
+    { "id": "azimuth-coarse", "name": "Azimuth coarse", "uses": ["clusters", "boundaries", "xy"],
+      "role_from": { "clusters": "clusters_azimuth_coarse" }, "alias_from": "alias_azimuth_coarse",
+      "multi_import": "import_xenium_cell" },
+    { "id": "azimuth-fine", "name": "Azimuth fine", "uses": ["clusters", "boundaries", "xy"],
+      "role_from": { "clusters": "clusters_azimuth_fine" }, "alias_from": "alias_azimuth_fine",
+      "multi_import": "import_xenium_cell" }
+  ],
+  "cartload": { "use_pmpoint": true, "bin_count": 500 },
+  "images": [
+    { "id": "dapi",     "match": "morphology_2d/ch0000_*.ome.tif", "kind": "single", "color": "0F73E6", "convert": "ome2png" },
+    { "id": "boundary", "match": "morphology_2d/ch0001_*.ome.tif", "kind": "single", "color": "F300A5", "convert": "ome2png" },
+    { "id": "rna",      "match": "morphology_2d/ch0002_*.ome.tif", "kind": "single", "color": "A4A400", "convert": "ome2png" },
+    { "id": "protein",  "match": "morphology_2d/ch0003_*.ome.tif", "kind": "single", "color": "008A00", "convert": "ome2png" },
+    { "id": "hne", "match": "*_he_image.ome.tif", "kind": "xenium_hne", "alignment": "*_he_imagealignment.csv",
+      "morphology_px_json": "experiment.spatial", "morphology_px_key": "pixel_size" }
+  ]
+}

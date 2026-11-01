@@ -25,6 +25,10 @@ DEFAULT_MIN_CT_PER_UNIT_HEXAGON = 50
 # compose as <out_dir_basename>-<sample_id>, matching joint runs (see resolve_sample).
 DEFAULT_SAMPLE_ID = "rep1"
 
+# Ingest methods that replace sge_convert with a platform-specific `cartloader <method>`
+# step writing the transcript TSV plus companion role files (declared in ingest.produces).
+REFORMAT_METHODS = ("reformat_cosmx", "reformat_atera")
+
 # Publish (S3 upload) defaults for the CartoStore project.
 DEFAULT_S3_PREFIX = "s3://cartostore/data"
 DEFAULT_S3_PROFILE = "default"
@@ -217,6 +221,12 @@ def first_existing(*paths):
     return None
 
 
+def first_glob(in_dir, pattern):
+    """First (sorted) path under in_dir matching `pattern`, or None; a plain path matches itself."""
+    matches = sorted(glob.glob(os.path.join(in_dir, pattern)))
+    return matches[0] if matches else None
+
+
 SHEET_UNSET = {"", "-", ".", "NA"}
 
 
@@ -307,7 +317,7 @@ def _consumable_roles(ingest, cell_analyses):
         roles |= {"gef", "cellbin_gef", "cell_tsv"}         # SAW ingest + its cellbin cells
     if ingest.get("assign_cell_id"):
         roles.add("boundaries")                             # tsv-add-cell-id
-    if method not in ("stereoseq", "reformat_cosmx"):
+    if method != "stereoseq" and method not in REFORMAT_METHODS:
         roles.add("cellxgene")                              # cellxgene -> mex on the generic path
     for ca in cell_analyses:
         roles |= set(ca.get("uses", [])) | set(ca.get("any_uses", [])) | set(ca.get("optional_uses", []))
@@ -411,6 +421,23 @@ def build_config(args):
     if "images" in cfg:
         prof["images"] = merge_images(prof["images"], cfg["images"])
 
+    # `role_from` / `alias_from` name outputs of a reformat ingest (ingest.produces keys); a
+    # misspelled one would otherwise just make the analysis look like it lacks its input.
+    produced = set(prof.get("ingest", {}).get("produces", {}))
+    for ca in prof["cell_analyses"]:
+        refs = [(f"role_from.{role}", key) for role, key in (ca.get("role_from") or {}).items()]
+        if ca.get("alias_from"):
+            refs.append(("alias_from", ca["alias_from"]))
+        for field, key in refs:
+            if key not in produced:
+                sys.exit(f"ERROR: cell analysis '{ca.get('id')}': {field} names '{key}', which is not "
+                         f"an output of this platform's ingest (ingest.produces: "
+                         f"{', '.join(sorted(produced)) or 'none'}).")
+        bad = [r for r in (ca.get("role_from") or {}) if r not in ROLE_KEYS]
+        if bad:
+            sys.exit(f"ERROR: cell analysis '{ca.get('id')}': role_from maps unknown role(s) "
+                     f"{', '.join(bad)}; roles are {', '.join(ROLE_KEYS)}.")
+
     # Reject explicit sample roles the platform can never consume (e.g. cell_tsv on
     # 10x_xenium): the value resolves but no ingest step or cell analysis on this platform
     # reads it, so it silently has no effect — almost always a wrong --platform, a copy-paste
@@ -488,11 +515,11 @@ def build_config(args):
         if jitter < 0:
             sys.exit(f"ERROR: --jitter-xy is a half-width in um and must be >= 0 (got {jitter}).")
         prof["ingest"]["jitter_xy"] = jitter
-    # Only the sge_convert ingest path can apply jitter. The CosMx reformat writes its
-    # transcript TSV itself and has no jitter option, so asking for it there is an error
+    # Only the sge_convert ingest path can apply jitter. The CosMx/Atera reformats write their
+    # transcript TSV themselves and have no jitter option, so asking for it there is an error
     # rather than a flag that is silently dropped.
     ingest_method = prof.get("ingest", {}).get("method", "sge_convert")
-    if jitter and ingest_method == "reformat_cosmx":
+    if jitter and ingest_method in REFORMAT_METHODS:
         sys.exit(f"ERROR: --jitter-xy is not supported on platform '{platform}': its ingest "
                  f"('{ingest_method}') writes the transcript TSV without going through "
                  f"sge_convert. Drop the flag, or jitter the transcript yourself and supply it "
@@ -527,7 +554,7 @@ def build_config(args):
                      f"{units_per_um}).")
         prof["ingest"]["units_per_um"] = units_per_um
         # Same story as jitter: only the sge_convert ingest path takes a coordinate scale.
-        if ingest_method == "reformat_cosmx":
+        if ingest_method in REFORMAT_METHODS:
             sys.exit(f"ERROR: --units-per-um is not supported on platform '{platform}': its "
                      f"ingest ('{ingest_method}') writes the transcript TSV without going "
                      f"through sge_convert. Drop the flag, or rescale the transcript yourself "
@@ -1026,8 +1053,8 @@ def ingest_source_problem(s, cfg):
         return None if os.path.exists(tx) else f"transcript file not found: {tx}"
     if in_dir and not os.path.isdir(in_dir):
         return f"in_dir is not a directory: {in_dir}"
-    if method == "reformat_cosmx":
-        return None if in_dir else "no in_dir (CosMx ingest reads its input files from in_dir)"
+    if method in REFORMAT_METHODS:
+        return None if in_dir else f"no in_dir ({cfg['platform']} ingest reads its input files from in_dir)"
     if method == "stereoseq":
         gef = s["roles"].get("gef")
         if not gef:
@@ -1099,8 +1126,8 @@ def check_ingest_sources(samples, raw_samples, cfg):
 # ---------------------------------------------------------------------------
 
 def ingest_feature_filter_flags(cfg):
-    """Feature filters for the ingest step (sge_convert / reformat_cosmx / the Stereo-seq
-    cell-bin conversion), i.e. the step that writes the transcript TSV.
+    """Feature filters for the ingest step (sge_convert / reformat_cosmx / reformat_atera /
+    the Stereo-seq cell-bin conversion), i.e. the step that writes the transcript TSV.
 
     A feature dropped here never reaches any later stage — it is absent from the transcript
     TSV, the feature list, the packaged tiles and the browser's gene list. That is the whole
@@ -1244,33 +1271,42 @@ def cmd_sge_convert(cfg, sge_dir, s):
     return " ".join(p for p in parts if p)
 
 
-def cmd_reformat_cosmx(cfg, sge_dir, sid, in_dir):
-    """Custom CosMx ingest: reformat raw *_tx_file/*_metadata_file/*-polygons CSVs into
-    the transcript TSV + cell metadata (xy) + polygon (boundaries) files. Input patterns
-    are globbed against the sample's in_dir at plan time so a missing file fails early."""
+def cmd_reformat(cfg, sge_dir, sid, in_dir):
+    """Custom reformat ingest (`cartloader <ingest.method>`, see REFORMAT_METHODS): turn the
+    platform's raw files into the transcript TSV + companion role files declared in
+    ingest.produces -- CosMx *_tx_file/*_metadata_file/*-polygons CSVs, or an Atera bundle's
+    *.zarr.zip files. `in_dir_flag` passes the sample's in_dir itself (Atera reads a fixed
+    bundle layout); `inputs` patterns are globbed against in_dir at plan time so a missing
+    file fails early."""
     ing = cfg.get("ingest", {})
+    method = ing["method"]
     if not in_dir:
-        sys.exit("ERROR: cosmx ingest requires a sample 'in_dir'.")
-    parts = ["cartloader", "reformat_cosmx"]
+        sys.exit(f"ERROR: {cfg['platform']} ingest requires a sample 'in_dir'.")
+    parts = ["cartloader", method]
+    if ing.get("in_dir_flag"):
+        parts.append(f"{ing['in_dir_flag']} {in_dir}")
     for flag, pattern in ing.get("inputs", {}).items():
         if not pattern:      # a config may null out an optional input to drop it
             continue
         matches = sorted(glob.glob(os.path.join(in_dir, pattern)))
         if not matches:
             avail = ", ".join(sorted(os.listdir(in_dir))) if os.path.isdir(in_dir) else "(not a directory)"
-            sys.exit(f"ERROR: cosmx ingest: no file matching '{pattern}' for {flag} in {in_dir}.\n"
+            sys.exit(f"ERROR: {cfg['platform']} ingest: no file matching '{pattern}' for {flag} in {in_dir}.\n"
                      f"       Files present: {avail}\n"
                      f"       Override the glob via the config 'ingest.inputs' block (e.g. "
                      f"{{\"ingest\": {{\"inputs\": {{\"{flag}\": \"*your_suffix.csv.gz\"}}}}}}).")
         if len(matches) > 1:
             names = ", ".join(os.path.basename(m) for m in matches)
-            sys.exit(f"ERROR: cosmx ingest: pattern '{pattern}' for {flag} matched multiple files in "
+            sys.exit(f"ERROR: {cfg['platform']} ingest: pattern '{pattern}' for {flag} matched multiple files in "
                      f"{in_dir}: {names}.\n       Make the pattern more specific in 'ingest.inputs'.")
         parts.append(f"{flag} {matches[0]}")
     parts.append(f"--out {os.path.join(sge_dir, sid)}")
-    # Same ingest-level feature filters as sge_convert; this step writes the transcript TSV
-    # for CosMx, so a filtered feature never enters the run. (No platform default to
-    # suppress here, so an empty exclude regex is simply a no-op.)
+    # The Atera reformat converts transcript chunks in parallel.
+    if method == "reformat_atera":
+        parts.append(f"--threads {cfg['resources']['threads']}")
+    # Same ingest-level feature filters as sge_convert; this step writes the transcript TSV,
+    # so a filtered feature never enters the run. (No platform default to suppress here, so
+    # an empty exclude regex is simply a no-op.)
     parts.extend(ingest_feature_filter_flags(cfg))
     parts.extend(ing.get("extra_flags", []))
     return " ".join(parts)
@@ -1629,8 +1665,8 @@ def resolve_image_ops(cfg, s):
             src = first_existing(s["in_prefix"] + spec["suffix"]) if s.get("in_prefix") else None
             if not src:
                 continue
-        else:  # match relative to in_dir
-            src = first_existing(os.path.join(s["in_dir"], spec["match"])) if s.get("in_dir") else None
+        else:  # match relative to in_dir (a glob picks its first match, e.g. *_he_image.ome.tif)
+            src = first_glob(s["in_dir"], spec["match"]) if s.get("in_dir") else None
             if not src:
                 continue
         seen.add(iid)
@@ -1658,6 +1694,24 @@ def plan_images(cfg, s, cart_dir, multi, transcript=None):
         iid, kind, src = op["id"], op.get("kind", "single"), op["source"]
         if kind == "prebuilt":
             cmds.append(f"cp {src} {os.path.join(cart_dir, iid + '.pmtiles')}")
+        elif kind == "xenium_hne":
+            # H&E placed by a 10x alignment CSV (3x3 affine from H&E pixels onto morphology
+            # pixels; `alignment` is a glob under in_dir). `morphology_px_json`/`_key` name the
+            # morphology pixel size (um), from which the H&E pixel size follows; without them
+            # it is read from the H&E OME-TIFF metadata.
+            aln = first_glob(s["in_dir"], op["alignment"]) if s.get("in_dir") else None
+            if not aln:
+                print(f"NOTE: sample {s['id']}: skipping image '{iid}': no alignment CSV matching "
+                      f"'{op['alignment']}'.", file=sys.stderr)
+                continue
+            parts = [f"cartloader image_xenium_hne2pmtiles --tif {src} --csv {aln}",
+                     f"--out-prefix {os.path.join(cart_dir, iid)}",
+                     f"--threads {cfg['resources']['threads']} --remove-intermediate-files"]
+            if op.get("morphology_px_json"):
+                # Inlined: make runs each recipe line in its own shell.
+                jpath = os.path.join(s["in_dir"], op["morphology_px_json"])
+                parts.append(f"--morphology-px-size \"$(jq -r '.{op.get('morphology_px_key', 'pixel_size')}' {jpath})\"")
+            cmds.append(" ".join(parts))
         elif kind == "rgb":
             cmds += _cmd_rgb_image(cfg, s, iid, src, cart_dir, op)
             continue  # _cmd_rgb_image appends its own catalog line
@@ -1731,7 +1785,8 @@ def plan_images(cfg, s, cart_dir, multi, transcript=None):
             # CSV -- so it is skipped, with a note, when any is missing.
             has_indir = bool(s.get("in_dir"))
             uses = ca.get("uses", [])
-            role_paths = {r: s["roles"][r] for r in uses if s["roles"].get(r)}
+            roles = samples_for_analysis(ca, [s])[0]["roles"]
+            role_paths = {r: roles[r] for r in uses if roles.get(r)}
             missing = [r for r in uses if r not in role_paths]
             if missing:
                 if role_paths or has_indir:
@@ -1926,8 +1981,8 @@ def add_targets(mm, samples, cfg, args):
         os.makedirs(sge_root, exist_ok=True)
 
         # --- ingest (skipped for samples that already provide a transcript) ---
-        # An ingest 'method' of "reformat_cosmx" replaces sge_convert with a custom
-        # step that emits multiple role files (transcript + xy + boundaries); their
+        # A reformat ingest 'method' (REFORMAT_METHODS) replaces sge_convert with a custom
+        # step that emits multiple role files (transcript + xy + boundaries ...); their
         # produced paths are injected as this sample's roles so the cells stage picks
         # them up (unless the sample already supplies that role explicitly).
         ing = cfg.get("ingest", {})
@@ -1957,13 +2012,21 @@ def add_targets(mm, samples, cfg, args):
                     sge_flags.extend(conv_flags)
                     continue
                 ingest_cmds = []
-            elif method == "reformat_cosmx":
+            elif method in REFORMAT_METHODS:
                 prefix = os.path.join(sge_dir, s["id"])
                 transcript[s["id"]] = prefix + produces["transcript"]
-                for role, suffix in produces.items():
-                    if role != "transcript" and not s["roles"].get(role):
-                        s["roles"][role] = prefix + suffix
-                ingest_cmds = [cmd_reformat_cosmx(cfg, sge_dir, s["id"], s["in_dir"])]
+                # A produced key naming a role fills that role (unless the sample supplies
+                # it); any other key (e.g. Atera's extra cluster sets and their labels) is a
+                # named output a cell analysis can draw on via `role_from` / `alias_from`.
+                for key, suffix in produces.items():
+                    if key == "transcript":
+                        continue
+                    if key in ROLE_KEYS:
+                        if not s["roles"].get(key):
+                            s["roles"][key] = prefix + suffix
+                    else:
+                        s.setdefault("produced", {})[key] = prefix + suffix
+                ingest_cmds = [cmd_reformat(cfg, sge_dir, s["id"], s["in_dir"])]
             elif method == "stereoseq":
                 # SAW-driven ingest. The bin1 GEM becomes the ordinary pixel transcript;
                 # the cell-bin GEM, when present, becomes a standalone `cell_tsv` role
@@ -2332,6 +2395,27 @@ def write_cell_alias(src, dst, one_based, ca_id):
     return dst
 
 
+def samples_for_analysis(ca, grp):
+    """The group's samples as cell analysis `ca` sees them. `role_from` maps a role to a
+    named reformat-ingest output (an ingest.produces key outside ROLE_KEYS, e.g. Atera's
+    clusters_azimuth_fine), so one platform can feed the same role to several analyses from
+    different files. A sample without that output lacks the role for this analysis."""
+    role_from = ca.get("role_from")
+    if not role_from:
+        return grp
+    view = []
+    for s in grp:
+        roles = dict(s["roles"])
+        for role, key in role_from.items():
+            path = s.get("produced", {}).get(key)
+            if path:
+                roles[role] = path
+            else:
+                roles.pop(role, None)
+        view.append({**s, "roles": roles})
+    return view
+
+
 def plan_cell_analyses(grp, sge_root, cfg, fic_dir, default_model_id, multi):
     """Write per-cell-analysis role lists; return the analyses that have inputs, each
     tagged with the sample ids that contribute (`sids`).
@@ -2346,7 +2430,7 @@ def plan_cell_analyses(grp, sge_root, cfg, fic_dir, default_model_id, multi):
     for ca in cfg.get("cell_analyses", []):
         if multi and ca.get("multi_import"):
             continue
-        contributing, list_roles = _resolve_cell_inputs(ca, grp, cfg)
+        contributing, list_roles = _resolve_cell_inputs(ca, samples_for_analysis(ca, grp), cfg)
         if contributing is None:
             continue
         bnd = cfg.get("roles", {}).get("boundaries", {})
@@ -2386,6 +2470,18 @@ def plan_cell_analyses(grp, sge_root, cfg, fic_dir, default_model_id, multi):
                          and "--zero-based-clust-id" not in (ca.get("extra_flags") or []))
             alias = write_cell_alias(ca["alias"], os.path.join(sge_root, f"alias.{ca['id']}.tsv"),
                                      one_based, ca["id"])
+        elif ca.get("alias_from"):
+            # Labels written by the reformat ingest, already in the packaged layout (0-based
+            # index<TAB>alias) and only present once ingest has run, so they are deployed
+            # as-is rather than validated here. Each sample numbers its own labels, so they
+            # name a single-sample decode only.
+            paths = [s.get("produced", {}).get(ca["alias_from"]) for s in contributing]
+            if len(paths) == 1 and paths[0]:
+                alias = paths[0]
+            else:
+                print(f"NOTE: cell analysis '{ca['id']}': not attaching the '{ca['alias_from']}' "
+                      f"labels, which are per sample, to a decode of {len(paths)} samples.",
+                      file=sys.stderr)
         active.append({"id": ca["id"], "sids": [s["id"] for s in contributing],
                        "name": ca.get("name"), "alias": alias,
                        "cmd": cmd_cells(ca, list_files, fic_dir, model_path, cfg)})
@@ -2421,7 +2517,7 @@ def parse_arguments(_args):
                         "image_defaults), and sample roles the platform cannot consume.")
 
     io = p.add_argument_group("Input/Output")
-    io.add_argument("--platform", type=str, help="Platform preset, e.g. 10x_xenium, 10x_visium_hd, cosmx_smi, merfish, generic")
+    io.add_argument("--platform", type=str, help="Platform preset, e.g. 10x_xenium, 10x_atera, 10x_visium_hd, cosmx_smi, merfish, generic")
     io.add_argument("--in-dir", type=str, help="Input directory for a single sample (roles auto-detected inside it)")
     io.add_argument("--in-prefix", type=str,
                     help="Input path prefix for a single sample, for platforms whose files are named by "
@@ -2575,7 +2671,7 @@ def parse_arguments(_args):
                         "distribution instead of a grid. Pick roughly half the bin pitch (0.8 for 2um bins). "
                         "Like the ingest feature filters this rewrites the data itself, so every later stage "
                         "sees the jittered coordinates. Supported on every platform whose ingest runs "
-                        "sge_convert (all but cosmx_smi); ignored (with a warning) for samples that supply an "
+                        "sge_convert (all but cosmx_smi and 10x_atera); ignored (with a warning) for samples that supply an "
                         "already-ingested transcript. Equivalent config key: {\"ingest\": {\"jitter_xy\": 0.8}}.")
     j.add_argument("--units-per-um", type=float, default=None,
                    help="How many coordinate units of the raw input make one micron, i.e. the "
@@ -2586,7 +2682,7 @@ def parse_arguments(_args):
                         "--units-per-um 1000) and whose current ones encode microns "
                         "('SBC:686.951:4668.15', --units-per-um 1); left unset, ingest detects "
                         "which of the two a barcode file uses. Applies to every platform whose "
-                        "ingest runs sge_convert (all but cosmx_smi); ignored (with a warning) for "
+                        "ingest runs sge_convert (all but cosmx_smi and 10x_atera); ignored (with a warning) for "
                         "samples that supply an already-ingested transcript. Equivalent config key: "
                         "{\"ingest\": {\"units_per_um\": 1}}.")
 

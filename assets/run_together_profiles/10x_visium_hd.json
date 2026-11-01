@@ -21,7 +21,7 @@
   },
   "ficture_defaults": { "decode_scale": 2 },
   "ficture": [
-    { "id": "denovo", "mode": "train", "width": "12", "n_factor": "24,48,96" }
+    { "id": "denovo", "mode": "train", "width": "12", "n_factor": "12,24,48" }
   ],
   "cell_analyses": [
     { "id": "cartloader", "uses": ["mex"], "optional_uses": ["boundaries"], "require_all": true }

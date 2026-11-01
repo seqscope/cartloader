@@ -18,7 +18,7 @@ Alternatively, `--raw-transcript` / a `raw_transcript` column names a raw per-mo
 
 Histology has no standard filename, so it is always given explicitly with `--image` (see [Images](#images)).
 
-**Defaults:** ingest with `--units-per-um 1000` (nm → µm), `--icols-mtx 2` (the gene-exon count), `--sge-visual`; FICTURE `width=12`, `n_factor=24,48,96`, single-molecule mode; packaging with `--use-pmpoint --bin-count 500`.
+**Defaults:** ingest with `--units-per-um 1000` (nm → µm), `--icols-mtx 2` (the gene-exon count), `--sge-visual`; FICTURE `width=12`, `n_factor=12,24,48`, single-molecule mode; packaging with `--use-pmpoint --bin-count 500`.
 
 ---
 ## 1. Single sample

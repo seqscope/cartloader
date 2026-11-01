@@ -8,7 +8,7 @@
   },
   "roles": {},
   "ficture": [
-    { "id": "denovo", "mode": "train", "width": "12", "n_factor": "24,48,96" }
+    { "id": "denovo", "mode": "train", "width": "12", "n_factor": "12,24,48" }
   ],
   "cell_analyses": [],
   "cartload": { "use_pmpoint": true, "bin_count": 500 },

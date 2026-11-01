@@ -28,6 +28,7 @@ def parse_arguments(_args):
     inout_params.add_argument('--csv', type=str, required=True, help='Path to the Xenium alignment CSV file')
     inout_params.add_argument('--out-prefix', type=str, help='Prefix for naming the output files.')
     inout_params.add_argument('--px-size-xy', type=float, default=None, help='Override pixel size in um for both X and Y dimensions. If provided, skip reading OME-TIFF metadata.')
+    inout_params.add_argument('--morphology-px-size', type=float, default=None, help='Pixel size in um of the morphology image the alignment CSV maps into (e.g. pixel_size in an Atera experiment.spatial). The H&E pixel size is then derived from the CSV scale instead of the OME-TIFF metadata. Ignored when --px-size-xy is given.')
 
     key_params = parser.add_argument_group("Key parameters")
     key_params.add_argument('--threads', type=int, default=12, help='Number of threads to use for processing (default: 12)')
@@ -97,9 +98,17 @@ def image_xenium_hne2pmtiles(_args):
         raise ValueError("The transformation matrix seems incorrect. Please check the CSV file.")
     #scale = np.sqrt(np.linalg.det(trans_mat))
 
-    if args.px_size_xy is not None:
-        px_size_xy = args.px_size_xy
-        logger.info(f"Using overridden pixel size: {px_size_xy} um")
+    if args.px_size_xy is not None or args.morphology_px_size is not None:
+        if args.px_size_xy is not None:
+            px_size_xy = args.px_size_xy
+            logger.info(f"Using overridden pixel size: {px_size_xy} um")
+        else:
+            # The CSV maps H&E pixels onto morphology pixels, so its scale times the morphology
+            # pixel size is the H&E pixel size that keeps rotation and translation consistent.
+            px_size_xy = float(np.linalg.svd(trans_mat[0:2, 0:2], compute_uv=False).mean()) * args.morphology_px_size
+            logger.info(f"H&E pixel size derived from the alignment scale and the {args.morphology_px_size} um morphology pixel: {px_size_xy:.6f} um")
+        px_size_x = px_size_y = px_size_xy
+        offset_um_x = offset_um_y = 0.0
     else:
         logger.info("Reading OME-TIFF metadata for pixel size...")
         # [CSV processing and metadata extraction remain the same]

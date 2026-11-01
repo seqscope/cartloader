@@ -416,7 +416,7 @@ cartloader run_together --platform 10x_xenium --in-dir IN --out-dir OUT \
 Each entry is either de-novo or a projection:
 
 ```jsonc
-{ "id": "denovo", "mode": "train",   "width": "12", "n_factor": "24,48,96" }
+{ "id": "denovo", "mode": "train",   "width": "12", "n_factor": "12,24,48" }
 { "id": "ref",    "mode": "project", "model": "/models/ref.tsv", "width": 12 }
 ```
 

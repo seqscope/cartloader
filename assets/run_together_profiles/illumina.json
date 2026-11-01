@@ -11,7 +11,7 @@
     "boundaries": { "colname_cell": "cell_id", "colname_x": "vertex_x", "colname_y": "vertex_y" }
   },
   "ficture": [
-    { "id": "denovo", "mode": "train", "width": "12", "n_factor": "24,48,96" }
+    { "id": "denovo", "mode": "train", "width": "12", "n_factor": "12,24,48" }
   ],
   "cell_analyses": [
     { "id": "cartloader", "uses": ["boundaries"], "optional_uses": ["xy"] }
