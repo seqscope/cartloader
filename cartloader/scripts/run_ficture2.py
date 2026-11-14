@@ -29,6 +29,7 @@ def parse_arguments(_args):
     run_params.add_argument('--makefn', type=str, default="run_ficture2.mk", help='File name of Makefile to write (default: run_ficture2.mk)')
     run_params.add_argument('--n-jobs', type=int, default=1, help='Number of parallel jobs to run (default: 1)')
     run_params.add_argument('--threads', type=int, default=4, help='Maximum number of threads per job (default: 4)')
+    run_params.add_argument('--max-ram-gb', type=float, default=64, help='Best-effort RAM target (decimal GB) passed to punkst pixel-decode --max-ram-gb; not a hard limit, applies per pixel-decode job. Set 0 to disable (default: 64)')
 
     cmd_params = parser.add_argument_group("Commands", "FICTURE steps to run")
     cmd_params.add_argument('--main', action='store_true', default=False, help='Run all main functions, including tile, segment, init-lda, decode, umap') #, and summary')
@@ -470,6 +471,7 @@ def run_ficture2(_args):
                 f"--n-moves {fit_n_move}",
                 f"--single-molecule" if args.single_molecule else f"--pixel-res {args.decode_pixel_res}",
                 f"--threads {args.threads}",
+                f"--max-ram-gb {args.max_ram_gb}" if args.max_ram_gb > 0 else "",
                 f"--seed {args.seed}",
                 f"--output-binary",
                 ])

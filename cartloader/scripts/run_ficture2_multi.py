@@ -25,6 +25,7 @@ def parse_arguments(_args):
     run_params.add_argument('--dry-run', action='store_true', default=False, help='Generate the Makefile, and print commands without executing them')
     run_params.add_argument('--restart', action='store_true', default=False, help='Ignore existing outputs and start from the beginning')
     run_params.add_argument('--threads', type=int, default=8, help='Maximum number of threads per job (default: 8)')
+    run_params.add_argument('--max-ram-gb', type=float, default=64, help='Best-effort RAM target (decimal GB) passed to punkst pixel-decode --max-ram-gb; not a hard limit, applies per pixel-decode job. Set 0 to disable (default: 64)')
     run_params.add_argument('--n-jobs', type=int, default=2, help='Number of parallel jobs to run (default: 2)')
     run_params.add_argument('--makefn', type=str, default="run_ficture2_multi.mk", help='File name of Makefile to write (default: run_ficture2_multi.mk)')
 
@@ -511,6 +512,7 @@ def add_pixel_decode_target_per_sample(mm, args, ficture2bin, ficture2report, mo
         f"--single-molecule" if args.single_molecule else f"--pixel-res {args.decode_pixel_res}",
         f"--output-binary",
         f"--threads {args.threads}",
+        f"--max-ram-gb {args.max_ram_gb}" if args.max_ram_gb > 0 else "",
         f"--seed {args.seed}"
         #f"--output-original"
     ])
