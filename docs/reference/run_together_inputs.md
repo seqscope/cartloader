@@ -341,7 +341,7 @@ Dict values are **deep-merged** into the profile; other values replace it, excep
 | `ingest` | Ingest settings (below). |
 | `roles` | Per-role auto-detection and column settings (below). |
 | `cartload` | `pmtiles`, `tile_format`, `sge_scale`, `bin_count` (`--bin-count` wins). `tile_format` is the tile format of the molecule PMTiles, `"MVT"` (default) or `"MLT"` (not with `"tippecanoe"`; `--tile-format` wins). `pmtiles` picks the backend for the molecule (point) PMTiles: `"pmpoint"` (default), `"tippecanoe"`, or `"ficture2"` (molecule, hexagon, and cell-boundary layers built by punkst alone, `run_cartload2 --pmtiles-ficture2`); `--pmtiles-pmpoint` / `--pmtiles-tippecanoe` / `--pmtiles-ficture2` win over it. The older boolean `use_pmpoint` is still accepted (`true` → `"pmpoint"`, `false` → `"tippecanoe"`) when `pmtiles` is not set in the same block. |
-| `resources` | `n_jobs`, `threads` — passed to every command; **wins over** `-j` / `--threads` (`make` itself still runs with the CLI `-j`). |
+| `resources` | `n_jobs`, `threads` — passed to every command; **wins over** `-j` / `--threads` (`make` itself still runs with the CLI `-j`). `max_ram_gb` — the pixel-decode RAM target passed to `run_ficture2_multi` / `run_ficture2_multi_cells`; `--max-ram-gb` wins over it. |
 | `ficture_defaults` / `cell_defaults` | Defaults merged into every `ficture` / `cell_analyses` entry (per-entry keys win). |
 | `ficture`, `cell_analyses`, `images` | Lists merged by `id` (below). |
 | `segment_10x`, `tile_size`, `tile_buffer` | As `--segment-10x` / `--segment-width-10x`, `--tile-size`, `--tile-buffer`. |

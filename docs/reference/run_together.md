@@ -148,6 +148,7 @@ Grouped as in `cartloader run_together --help`. A CLI flag wins over the same se
 | `--restart` | off | Ignore existing outputs and rebuild (`make -B`). |
 | `-j`, `--n-jobs` | `1` | Parallel `make` jobs; also each command's `--n-jobs` unless the config sets `resources.n_jobs`. |
 | `--threads` | `4` | Each command's `--threads`, unless the config sets `resources.threads`. |
+| `--max-ram-gb` | `64` (the FICTURE commands' own) | Best-effort RAM target in decimal GB for each pixel-decode job, passed to `run_ficture2_multi` and `run_ficture2_multi_cells` (`resources.max_ram_gb`); `0` disables it. It is not a hard limit, and with `-j N` up to N decode jobs can run at once. Unlike `-j` / `--threads`, the CLI value wins over the config. |
 | `--makefn` | `run_together.mk` | Master Makefile name. |
 | `--only` | all | Comma-separated stages to run exclusively (`ingest,ficture,cells,cartload,images,anno,upload`). |
 | `--skip` | none | Comma-separated stages to skip. |
@@ -155,7 +156,7 @@ Grouped as in `cartloader run_together --help`. A CLI flag wins over the same se
 | `--allow-unknown-config-keys` | off | Ignore, instead of rejecting, unrecognized keys in `--config` (top-level keys, sample keys, closed-schema blocks, and sample roles the platform cannot consume). See [Specifying Inputs → Validation](./run_together_inputs.md#validation-of-config-keys). |
 
 !!! note "Resources: the config wins"
-    `resources.n_jobs` / `resources.threads` in `--config` take precedence over `-j` / `--threads` for the values passed to each command. `make` itself always runs with the CLI `-j`.
+    `resources.n_jobs` / `resources.threads` in `--config` take precedence over `-j` / `--threads` for the values passed to each command. `make` itself always runs with the CLI `-j`. `resources.max_ram_gb` is the exception: `--max-ram-gb` on the command line wins over it.
 
 ### Input / output
 

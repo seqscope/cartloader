@@ -122,7 +122,7 @@ KNOWN_SUBKEYS = {
         "csv_colnames_others", "cellxgene_blank_prefix", "jitter_xy", "extra_flags",
     }),
     "cartload": frozenset({"pmtiles", "tile_format", "use_pmpoint", "sge_scale", "bin_count"}),
-    "resources": frozenset({"threads", "n_jobs"}),
+    "resources": frozenset({"threads", "n_jobs", "max_ram_gb"}),
     "image_defaults": frozenset({
         "um_per_pixel", "um_per_pixel_json", "um_per_pixel_key", "georeferenced",
         "georef_detect", "shrink_factor", "high_memory", "rescale", "rescale_range",
@@ -803,6 +803,9 @@ def build_config(args):
     prof.setdefault("resources", {})
     prof["resources"].setdefault("n_jobs", args.n_jobs)
     prof["resources"].setdefault("threads", args.threads)
+    # Unlike n_jobs/threads, an explicit --max-ram-gb wins over resources.max_ram_gb.
+    if args.max_ram_gb is not None:
+        prof["resources"]["max_ram_gb"] = args.max_ram_gb
 
     # Samples: --in-dir / explicit per-file flags (one), --samples sheet (many),
     # or JSON 'samples'. The single-sample CLI accepts either a directory (--in-dir,
@@ -1560,6 +1563,8 @@ def cmd_ficture_analysis(a, in_list, fic_dir, cfg):
              f"--in-list {in_list}", f"--out-dir {fic_dir}",
              f"--width {a['width']}", f"--threads {res['threads']}",
              f"--n-jobs {res['n_jobs']}", "--gzip pigz"]
+    if res.get("max_ram_gb") is not None:
+        parts.append(f"--max-ram-gb {res['max_ram_gb']}")
     if a.get("mode") == "prepare":
         # Tiling only: no model is trained or projected, and the manifest it writes
         # carries just the tiled transcript for packaging (--no-ficture).
@@ -1597,6 +1602,8 @@ def cmd_cells(ca, list_files, fic_dir, model_path, cfg):
              f"--out-prefix {ca['id']}", f"--out-dir {fic_dir}",
              f"--threads {res['threads']}", f"--n-jobs {res['n_jobs']}",
              f"--pretrained-model {model_path}", "--gzip pigz"]
+    if res.get("max_ram_gb") is not None:
+        parts.append(f"--max-ram-gb {res['max_ram_gb']}")
     xy_cfg = cfg.get("roles", {}).get("xy", {})
     for role, path in list_files.items():
         parts.append(f"{ROLE_LIST_FLAG[role]} {path}")
@@ -2575,6 +2582,10 @@ def parse_arguments(_args):
     r.add_argument("--restart", action="store_true", help="Ignore existing outputs and rebuild (make -B)")
     r.add_argument("-j", "--n-jobs", type=int, default=1, help="Parallel jobs (default: 1)")
     r.add_argument("--threads", type=int, default=4, help="Threads per job (default: 4)")
+    r.add_argument("--max-ram-gb", type=float, default=None,
+                   help="Best-effort RAM target (decimal GB) for each punkst pixel-decode job, passed to "
+                        "run_ficture2_multi and run_ficture2_multi_cells (default: their own, 64; 0 disables). "
+                        "Not a hard limit; with -j N up to N decode jobs may run at once")
     r.add_argument("--makefn", type=str, default="run_together.mk", help="Master Makefile name")
     r.add_argument("--only", type=str, help="Comma-separated stages to run exclusively (ingest,ficture,cells,cartload,images,anno,upload)")
     r.add_argument("--skip", type=str, help="Comma-separated stages to skip")
