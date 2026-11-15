@@ -1,4 +1,4 @@
-import sys, os, argparse, logging, subprocess, inspect, shlex
+import sys, os, re, argparse, logging, subprocess, inspect, shlex
 import pandas as pd
 from pathlib import Path
 
@@ -6,7 +6,8 @@ from cartloader.utils.minimake import minimake
 from cartloader.utils.utils import cmd_separator, scheck_app, create_custom_logger, load_file_to_dict, write_dict_to_file, read_minmax, flexopen, execute_makefile, valid_and_touch_cmd
 from cartloader.utils.cartload_helper import copy_rgb_tsv, render_umap_cmd, umap_tippecanoe_cmd
 from cartloader.utils.ficture2_helper import ficture2_params_to_factor_assets
-from cartloader.utils.ficture2_helper_patch import infer_tiled_query_layout, make_direct_pmtiles_cmd, make_direct_pmtiles_pyramid_cmd
+from cartloader.utils.ficture2_helper_patch import (infer_tiled_query_layout, make_direct_pmtiles_cmd, make_direct_pmtiles_pyramid_cmd,
+    make_dummy_factor_cmds, make_compact_pmtiles_cmd, make_index_filter_cmd)
 
 def parse_arguments(_args):
     """
@@ -62,8 +63,11 @@ def parse_arguments(_args):
     aux_params.add_argument('--bin-count', type=int, default=50, help='Number of bins when splitting input molecules (default: 50)')
     aux_params.add_argument('--point-min-zoom', type=int, default=10, help='Minimum zoom for direct point PMTiles pyramid building (default: 10)')
     aux_params.add_argument('--point-max-zoom', type=int, default=18, help='Maximum zoom for direct point PMTiles export (default: 18)')
-    aux_params.add_argument('--max-point-tile-bytes', type=int, default=10000000, help='Maximum tile size of points in bytes for tippecanoe/PMTiles (default: 5000000)')
-    aux_params.add_argument('--max-point-feature-counts', type=int, default=1000000, help='Maximum features of points per tile for tippecanoe/PMTiles (default: 500000)')
+    aux_params.add_argument('--max-point-tile-bytes', type=int, default=1000000, help='Maximum tile size of points in bytes for tippecanoe/PMTiles (default: 1000000)')
+    aux_params.add_argument('--max-point-feature-counts', type=int, default=100000, help='Maximum features of points per tile for tippecanoe/PMTiles (default: 100000)')
+    aux_params.add_argument('--keep-bin-extra-columns', action='store_true', default=False, help='Keep every column (e.g. the joined FICTURE factor/probability columns) in the per-bin molecule PMTiles ([out-molecules-id]_bin*.pmtiles). By default they carry only X, Y, feature and count; the factor columns remain available in [out-molecules-id]_all.pmtiles')
+    aux_params.add_argument('--polygon-min-zoom', type=int, default=10, help='Minimum zoom of the hexagon and cell-boundary PMTiles built with --pmtiles-ficture2 (default: 10)')
+    aux_params.add_argument('--polygon-max-zoom', type=int, default=18, help='Maximum zoom of the hexagon and cell-boundary PMTiles built with --pmtiles-ficture2 (default: 18)')
     aux_params.add_argument('--max-polygon-tile-bytes', type=int, default=50000000, help='Maximum tile size of polygons in bytes for tippecanoe/PMTiles (default: 50000000)')
     aux_params.add_argument('--max-polygon-feature-counts', type=int, default=5000000, help='Maximum features of polygons per tile for tippecanoe/PMTiles (default: 5000000)')
     aux_params.add_argument('--preserve-point-density-thres', type=int, default=1024, help='Tippecanoe point-density preservation threshold (default: 1024)')
@@ -84,11 +88,13 @@ def parse_arguments(_args):
     aux_params.add_argument('--transparent-above', type=int, help='Set pixels above this value to transparent for light background (range: 0~255)')
     aux_params.add_argument('--sge-scale', type=int, default=1, help='scales input coordinates to pixels in the output image (default: 1)')
     aux_params.add_argument('--hex-thres-prob', type=float, default=0.0001, help='Minimum probability threshold for storing per-factor probability in hex PMTiles')
-    aux_params.add_argument('--use-pmpoint', action='store_true', default=False, help='Use pmpoint/MLT instead of tippecanoe for point PMTiles generation (requires --pmpoint)')
-    aux_params.add_argument('--tile-format-pmpoint', choices=['MLT', 'MVT'], default='MVT', help='Tile format to use when --use-pmpoint is enabled (default: MVT)')
-    aux_params.add_argument('--use-ficture2-direct-pmtiles', action='store_true', default=False, help='Use direct punkst/ficture2 PMTiles packaging for joined transcript-factor molecule layers while keeping the legacy tsv2pmtiles route as the default')
+    aux_params.add_argument('--pmtiles-pmpoint', action='store_true', default=False, help='Use pmpoint/MLT instead of tippecanoe for point PMTiles generation (requires --pmpoint)')
+    aux_params.add_argument('--pmtiles-tippecanoe', action='store_true', default=False, help='Use tippecanoe for point PMTiles generation (the default when neither --pmtiles-pmpoint nor --pmtiles-ficture2 is given)')
+    aux_params.add_argument('--tile-format', choices=['MVT', 'MLT'], default=None, help='Tile format of the molecule (point) PMTiles built with --pmtiles-pmpoint or --pmtiles-ficture2 (default: MVT). tippecanoe writes MVT only')
+    aux_params.add_argument('--tile-format-pmpoint', choices=['MLT', 'MVT'], default=None, help='Deprecated alias of --tile-format')
+    aux_params.add_argument('--pmtiles-ficture2', action='store_true', default=False, help='Build the molecule, hexagon and cell-boundary PMTiles with punkst (FICTURE2) alone (tile-op, poly2pmtiles, build-pyramid) instead of spatula/pmpoint/tippecanoe. Cell-centroid and UMAP PMTiles still use tippecanoe')
     aux_params.add_argument('--use-image-png2pmtiles', action='store_true', default=False, help='Do not use image2pmtiles even if it is availableand use image_png2pmtiles instead')
-    aux_params.add_argument('--pmpoint-compression-scale', type=float, default=10.0, help='Additional compression scale for pmpoint when --use-pmpoint is turned on. Default: 10.0')
+    aux_params.add_argument('--pmpoint-compression-scale', type=float, default=10.0, help='Additional compression scale for pmpoint when --pmtiles-pmpoint is turned on. Default: 10.0')
     aux_params.add_argument('--raster-min-zoom', type=int, default=6, help='Minimum zoom for generated Raster PMTiles (default: 6)')
     aux_params.add_argument('--raster-max-zoom', type=int, default=18, help='Maximum zoom for generated UMAP PMTiles (default: 18)')
 
@@ -113,6 +119,14 @@ def parse_arguments(_args):
     # dir
     if args.tmp_dir is None:
         args.tmp_dir = os.path.join(args.out_dir, "tmp")
+
+    if args.pmtiles_tippecanoe and (args.pmtiles_pmpoint or args.pmtiles_ficture2):
+        parser.error("--pmtiles-tippecanoe cannot be combined with --pmtiles-pmpoint or --pmtiles-ficture2")
+
+    # molecule tile format: --tile-format wins over its deprecated alias; MVT by default
+    args.tile_format = args.tile_format or args.tile_format_pmpoint or "MVT"
+    if args.tile_format == "MLT" and not (args.pmtiles_pmpoint or args.pmtiles_ficture2):
+        parser.error("--tile-format MLT requires --pmtiles-pmpoint or --pmtiles-ficture2 (tippecanoe writes MVT only)")
 
     # env
     scheck_app(args.spatula)
@@ -463,22 +477,64 @@ def run_cartload2(_args):
                 outfiles=[]
                 if not os.path.exists(cell_boundaries_f):
                     raise FileNotFoundError(f"Cell boundaries file not found: {cell_boundaries_f} for model {model_id} in cell parameters (provided by --in-cell-params)")
-                cmd = " ".join([
-                    "cartloader", "run_boundaries2pmtiles",
-                    "--in-csv", cell_boundaries_f,
-                    "--in-format 10x_xenium",
-                    "--in-clust", cell_clust_f,
-                    "--out-prefix", f"{out_prefix}-boundaries",
-                    "--threads", str(args.threads),
-                    "--max-tile-bytes", str(args.max_polygon_tile_bytes),
-                    "--max-feature-counts", str(args.max_polygon_feature_counts),
-                    "--preserve-point-density-thres", str(args.preserve_point_density_thres),
-                    f"--tippecanoe '{args.tippecanoe}'",
-                    f"--log --log-suffix '{args.log_suffix}'" if args.log else "",
-                    f"--tmp-dir '{args.tmp_dir}'",
-                    "--keep-intermediate-files" if args.keep_intermediate_files else ""
-                ])
-                cmds.append(cmd)
+                if args.pmtiles_ficture2:
+                    # punkst only: single-zoom polygons from the vertex table, then the
+                    # lower zooms rebuilt from the same vertices. Polygons are kept whole
+                    # in every tile they touch, as with tippecanoe --no-clipping.
+                    bnd_geom = os.path.join(args.tmp_dir, f"{out_id}-boundaries.geom.csv")
+                    bnd_props = os.path.join(args.tmp_dir, f"{out_id}-boundaries.props.tsv")
+                    bnd_z = f"{out_prefix}-boundaries.z{args.polygon_max_zoom}.pmtiles"
+                    bnd_layer = re.sub(r"[^A-Za-z0-9_]", "", f"{out_id}boundaries")
+                    cmds.append(f"mkdir -p {shlex.quote(args.tmp_dir)}")
+                    cmds.append(
+                        "python3 -c \"from cartloader.utils.cartload_helper import prepare_punkst_boundaries; "
+                        f"prepare_punkst_boundaries('{cell_boundaries_f}', '{cell_clust_f}', '{bnd_geom}', '{bnd_props}')\""
+                    )
+                    cmds.append(" ".join([
+                        shlex.quote(ficture2bin), "poly2pmtiles-generic",
+                        "--in-tsv", shlex.quote(bnd_props),
+                        "--id-col cell_id", "--string-cols topK",
+                        "--in-geom", shlex.quote(bnd_geom),
+                        "--g-icol-id 0 --g-icol-x 1 --g-icol-y 2",
+                        "--format MVT",
+                        "--pmtiles-zoom", str(args.polygon_max_zoom),
+                        "--no-clipping --tile-buffer-px 0",
+                        "--layer-name", bnd_layer,
+                        "--threads", str(args.threads),
+                        "--out", shlex.quote(bnd_z),
+                    ]))
+                    cmds.append(" ".join([
+                        shlex.quote(ficture2bin), "build-pyramid",
+                        "--polygon-in", shlex.quote(bnd_z),
+                        "--polygon-id-col cell_id",
+                        "--polygon-source", shlex.quote(bnd_geom),
+                        "--icol-id 0 --icol-x 1 --icol-y 2",
+                        "--min-zoom", str(args.polygon_min_zoom),
+                        "--max-tile-bytes", str(args.max_polygon_tile_bytes),
+                        "--max-tile-features", str(args.max_polygon_feature_counts),
+                        "--no-clipping",
+                        "--threads", str(args.threads),
+                        "--out", shlex.quote(f"{out_prefix}-boundaries.pmtiles"),
+                    ]))
+                    if not args.keep_intermediate_files:
+                        cmds.append(f"rm -f {shlex.quote(bnd_z)} {shlex.quote(bnd_geom)} {shlex.quote(bnd_props)}")
+                else:
+                    cmd = " ".join([
+                        "cartloader", "run_boundaries2pmtiles",
+                        "--in-csv", cell_boundaries_f,
+                        "--in-format 10x_xenium",
+                        "--in-clust", cell_clust_f,
+                        "--out-prefix", f"{out_prefix}-boundaries",
+                        "--threads", str(args.threads),
+                        "--max-tile-bytes", str(args.max_polygon_tile_bytes),
+                        "--max-feature-counts", str(args.max_polygon_feature_counts),
+                        "--preserve-point-density-thres", str(args.preserve_point_density_thres),
+                        f"--tippecanoe '{args.tippecanoe}'",
+                        f"--log --log-suffix '{args.log_suffix}'" if args.log else "",
+                        f"--tmp-dir '{args.tmp_dir}'",
+                        "--keep-intermediate-files" if args.keep_intermediate_files else ""
+                    ])
+                    cmds.append(cmd)
                 prerequisites.append(cell_boundaries_f)
                 outfiles.append(f"{out_prefix}-boundaries.pmtiles")
                 touch_flag_cmd=valid_and_touch_cmd(outfiles, f"{out_prefix}-boundaries.done") # this only touch the flag file when all output files exist
@@ -628,23 +684,53 @@ def run_cartload2(_args):
             # fit_results
             in_fit_tsvf = train_param.get("fit_path", f"{in_prefix}.results.tsv.gz")
             if os.path.exists(in_fit_tsvf):
-                cmd = " ".join([
-                    "cartloader", "run_hex2pmtiles_compact",
-                    "--in-tsv", in_fit_tsvf,
-                    "--out-prefix", out_prefix,
-                    f"--hex-width {train_width}",
-                    "--rename-column", args.rename_x, args.rename_y,
-                    "--threads", str(args.threads),
-                    "--thres-prob", str(args.hex_thres_prob),
-                    "--max-tile-bytes", str(args.max_polygon_tile_bytes),
-                    "--max-feature-counts", str(args.max_polygon_feature_counts),
-                    "--preserve-point-density-thres", str(args.preserve_point_density_thres),
-                    f"--tippecanoe '{args.tippecanoe}'",
-                    f"--log --log-suffix '{args.log_suffix}'" if args.log else "",
-                    f"--tmp-dir '{args.tmp_dir}'",
-                    "--keep-intermediate-files" if args.keep_intermediate_files else ""
-                ])
-                cmds.append(cmd)
+                if args.pmtiles_ficture2:
+                    # punkst only: single-zoom hexagons from the factor table, then the
+                    # lower zooms. The layer is named as tippecanoe names it (the file
+                    # stem without punctuation).
+                    hex_z = f"{out_prefix}.z{args.polygon_max_zoom}.pmtiles"
+                    cmds.append(" ".join([
+                        shlex.quote(ficture2bin), "poly2pmtiles",
+                        "--in-tsv", shlex.quote(in_fit_tsvf),
+                        "--x-col", args.rename_x.split(":")[0],
+                        "--y-col", args.rename_y.split(":")[0],
+                        "--hex-grid-dist", str(train_width),
+                        "--pmtiles-zoom", str(args.polygon_max_zoom),
+                        "--format MVT",
+                        "--prob-thres", str(args.hex_thres_prob),
+                        "--layer-name", re.sub(r"[^A-Za-z0-9_]", "", out_id),
+                        "--threads", str(args.threads),
+                        "--out", shlex.quote(hex_z),
+                    ]))
+                    cmds.append(" ".join([
+                        shlex.quote(ficture2bin), "build-pyramid",
+                        "--polygon-in", shlex.quote(hex_z),
+                        "--min-zoom", str(args.polygon_min_zoom),
+                        "--max-tile-bytes", str(args.max_polygon_tile_bytes),
+                        "--max-tile-features", str(args.max_polygon_feature_counts),
+                        "--threads", str(args.threads),
+                        "--out", shlex.quote(f"{out_prefix}.pmtiles"),
+                    ]))
+                    if not args.keep_intermediate_files:
+                        cmds.append(f"rm -f {shlex.quote(hex_z)}")
+                else:
+                    cmd = " ".join([
+                        "cartloader", "run_hex2pmtiles_compact",
+                        "--in-tsv", in_fit_tsvf,
+                        "--out-prefix", out_prefix,
+                        f"--hex-width {train_width}",
+                        "--rename-column", args.rename_x, args.rename_y,
+                        "--threads", str(args.threads),
+                        "--thres-prob", str(args.hex_thres_prob),
+                        "--max-tile-bytes", str(args.max_polygon_tile_bytes),
+                        "--max-feature-counts", str(args.max_polygon_feature_counts),
+                        "--preserve-point-density-thres", str(args.preserve_point_density_thres),
+                        f"--tippecanoe '{args.tippecanoe}'",
+                        f"--log --log-suffix '{args.log_suffix}'" if args.log else "",
+                        f"--tmp-dir '{args.tmp_dir}'",
+                        "--keep-intermediate-files" if args.keep_intermediate_files else ""
+                    ])
+                    cmds.append(cmd)
                 prerequisites.append(in_fit_tsvf)
                 outfiles.append(f"{out_prefix}.pmtiles")
 
@@ -755,9 +841,27 @@ def run_cartload2(_args):
         join_pixel_ids = [join_pixel_ids[i] for i in sorted_indices]
         join_pixel_res = [join_pixel_res[i] for i in sorted_indices]
 
-    if len(join_pixel_bins) > 0 and args.use_ficture2_direct_pmtiles:
+    # A shared gene->bin assignment (e.g. from run_cartload2_multi): reuse its gene->bin
+    # routing (identical across samples), but refresh each gene's `count` from this
+    # sample's own feature totals (in_features) so the per-sample _bin_counts.json reports
+    # per-sample counts. Genes absent from this sample get count 0. Used by both the
+    # run_tsv2pmtiles path (--in-bin-json) and the direct punkst path (--gene-bin-info).
+    point_bin_json = None
+    if args.in_bin_json is not None:
+        point_bin_json = f"{out_molecules_prefix}.sample_bin_counts.json"
+        rebin_cmds = cmd_separator([], "Refreshing shared gene->bin counts with per-sample feature totals")
+        rebin_cmds.append(
+            "python3 -c \"from cartloader.utils.cartload_helper import update_bin_counts_json; "
+            f"update_bin_counts_json('{args.in_bin_json}', '{in_features}', '{point_bin_json}')\""
+        )
+        mm.add_target(point_bin_json, [args.in_bin_json, in_features], rebin_cmds)
+
+    if args.pmtiles_ficture2:
+        # Molecule PMTiles built with punkst alone: tile-op writes the max-zoom archives
+        # and build-pyramid the lower zooms (no spatula split, tippecanoe or pmpoint).
         if args.bin_count <= 0:
-            raise ValueError("--use-ficture2-direct-pmtiles requires positive --bin-count")
+            raise ValueError("--pmtiles-ficture2 requires positive --bin-count")
+        has_factors = len(join_pixel_bins) > 0
 
         feature_count_tsv = in_features
         if in_features.lower().endswith(".gz"):
@@ -772,23 +876,54 @@ def run_cartload2(_args):
         direct_index_f = f"{out_molecules_prefix}.pmtiles_index.tsv"
         direct_counts_f = f"{out_molecules_prefix}.bin_counts.json"
         direct_done_f = f"{out_molecules_prefix}.direct_punkst_pmtiles.done"
+        all_pmtiles_f = f"{out_molecules_prefix}_all.pmtiles"
 
-        cmds = cmd_separator([], "Packaging joined transcript-factor molecules directly with punkst tile-op")
-        cmds.append(make_direct_pmtiles_cmd(
-            args, ficture2bin, out_molecules_prefix, in_tiled, feature_count_nohdr_tsv,
-            join_pixel_bins, join_pixel_ids, layout
-        ))
-        #if args.use_ficture2_direct_pmtiles:
-        #cmds.append(make_direct_pmtiles_pyramid_cmd(args, args.out_dir, direct_index_f))
-        cmds.append(make_direct_pmtiles_pyramid_cmd(args, args.out_dir, direct_index_f, args.n_jobs))
+        # The gene-bin layers carry gene and count only. punkst writes every archive of one
+        # tile-op run with the same columns, so they come from a second run that annotates
+        # against a dummy factor source (no factor columns); the factor-annotated run then
+        # only contributes the "all" layer. With no decoded factors to join, the dummy run
+        # is the only one and there is no "all" layer (as with --skip-original).
+        compact_bins = (not has_factors) or (not args.keep_bin_extra_columns)
+        if compact_bins:
+            dummy_prefix = os.path.join(args.tmp_dir, "ficture2_dummy", "dummy.tiled")
+            cmds = cmd_separator([], "Packaging gene-bin molecules (gene and count only) with punkst tile-op")
+            cmds.extend(make_dummy_factor_cmds(ficture2bin, dummy_prefix))
+            cmds.append(make_compact_pmtiles_cmd(
+                args, ficture2bin, out_molecules_prefix, in_tiled, feature_count_nohdr_tsv,
+                dummy_prefix, layout, gene_bin_info=point_bin_json
+            ))
+            if has_factors:
+                full_dir = os.path.join(args.tmp_dir, "ficture2_full")
+                full_prefix = os.path.join(full_dir, os.path.basename(out_molecules_prefix))
+                cmds = cmd_separator(cmds, "Packaging joined transcript-factor molecules (the all layer) with punkst tile-op")
+                cmds.append(f"mkdir -p {shlex.quote(full_dir)}")
+                cmds.append(make_direct_pmtiles_cmd(
+                    args, ficture2bin, full_prefix, in_tiled, feature_count_nohdr_tsv,
+                    join_pixel_bins, join_pixel_ids, layout, gene_bin_info=point_bin_json
+                ))
+                cmds.append(f"mv {shlex.quote(full_prefix + '_all.pmtiles')} {shlex.quote(all_pmtiles_f)}")
+                # the factor-annotated gene-bin archives of this run are not used
+                cmds.append(f"rm -f {shlex.quote(full_prefix)}_bin*.pmtiles {shlex.quote(full_prefix)}.pmtiles_index.tsv {shlex.quote(full_prefix)}.bin_counts.json")
+            else:
+                cmds.append(f"rm -f {shlex.quote(all_pmtiles_f)}")
+        else:
+            cmds = cmd_separator([], "Packaging joined transcript-factor molecules directly with punkst tile-op")
+            cmds.append(make_direct_pmtiles_cmd(
+                args, ficture2bin, out_molecules_prefix, in_tiled, feature_count_nohdr_tsv,
+                join_pixel_bins, join_pixel_ids, layout, gene_bin_info=point_bin_json
+            ))
+        cmds.append(make_index_filter_cmd(args.out_dir, direct_index_f, drop_all=not has_factors))
+        cmds.append(make_direct_pmtiles_pyramid_cmd(args, ficture2bin, args.out_dir, direct_index_f, args.n_jobs))
         cmds.append(f"cp {shlex.quote(direct_index_f)} {shlex.quote(sge_index_f)}")
         cmds.append(f"cp {shlex.quote(direct_counts_f)} {shlex.quote(sge_counts_f)}")
-        direct_outputs = [sge_index_f, sge_counts_f, f"{out_molecules_prefix}_all.pmtiles"]
+        direct_outputs = [sge_index_f, sge_counts_f] + ([all_pmtiles_f] if has_factors else [])
         cmds.append(valid_and_touch_cmd(direct_outputs, direct_done_f))
 
         direct_prerequisites = [f"{in_tiled}.tsv", f"{in_tiled}.index", feature_count_tsv]
         for pref in join_pixel_bins:
             direct_prerequisites.extend([f"{pref}.bin", f"{pref}.index"])
+        if point_bin_json is not None:
+            direct_prerequisites.append(point_bin_json)
         mm.add_target(direct_done_f, direct_prerequisites, cmds)
         molecules_target = direct_done_f
     elif ( len(join_pixel_bins) > 0 ):
@@ -822,27 +957,14 @@ def run_cartload2(_args):
         molecules_f = f"{out_join_pixel_prefix}.tsv"
 
     ## 5. run tsv2pmtiles for the convert the joined pixel-level TSV to PMTiles
-    if not (len(join_pixel_bins) > 0 and args.use_ficture2_direct_pmtiles):
+    if not args.pmtiles_ficture2:
         # By default each batch bins genes using its own feature list, so the same gene
         # can land in a different bin/PMTiles layer across datasets (inconsistent lookups).
         # With --replace-features, use a shared feature list (e.g. FICTURE multi.features.tsv)
         # so every batch bins genes identically.
         features_for_points = in_features
         pmtiles_prereqs = [molecules_f]
-        point_bin_json = args.in_bin_json
-        if args.in_bin_json is not None:
-            # A shared gene->bin assignment is supplied (e.g. by run_cartload2_multi).
-            # Reuse its gene->bin routing (identical across samples), but refresh each
-            # gene's `count` from this sample's own feature totals (in_features) so the
-            # per-sample _bin_counts.json reports per-sample counts. Genes absent from
-            # this sample get count 0.
-            point_bin_json = f"{out_molecules_prefix}.sample_bin_counts.json"
-            rebin_cmds = cmd_separator([], "Refreshing shared gene->bin counts with per-sample feature totals")
-            rebin_cmds.append(
-                "python3 -c \"from cartloader.utils.cartload_helper import update_bin_counts_json; "
-                f"update_bin_counts_json('{args.in_bin_json}', '{in_features}', '{point_bin_json}')\""
-            )
-            mm.add_target(point_bin_json, [args.in_bin_json, in_features], rebin_cmds)
+        if point_bin_json is not None:
             pmtiles_prereqs.append(point_bin_json)
         if args.replace_features is not None:
             assert os.path.exists(args.replace_features), f"File not found: {args.replace_features} (--replace-features)"
@@ -885,11 +1007,14 @@ def run_cartload2(_args):
             "--max-feature-counts", str(args.max_point_feature_counts),
             "--preserve-point-density-thres", str(args.preserve_point_density_thres),
             "--bin-count", str(args.bin_count),
+            # The per-bin layers are only used to look up molecules by gene, so they carry
+            # X/Y/feature/count alone; the joined factor columns live in the "all" layer.
+            "" if args.keep_bin_extra_columns else "--compact-bin",
             (f"--in-bin-json '{point_bin_json}'" if args.in_bin_json is not None else ""),
             "--all",
             "--n-jobs", str(args.n_jobs),
             f"--log --log-suffix '{args.log_suffix}'" if args.log else "",
-            f"--use-pmpoint --pmpoint '{args.pmpoint}' --pmpoint-compression-scale {args.pmpoint_compression_scale} --tile-format-pmpoint {args.tile_format_pmpoint}" if args.use_pmpoint else f"--tippecanoe '{args.tippecanoe}'",
+            f"--pmtiles-pmpoint --pmpoint '{args.pmpoint}' --pmpoint-compression-scale {args.pmpoint_compression_scale} --tile-format-pmpoint {args.tile_format}" if args.pmtiles_pmpoint else f"--tippecanoe '{args.tippecanoe}'",
             f"--tmp-dir '{args.tmp_dir}'",
             "--keep-intermediate-files" if args.keep_intermediate_files else ""
         ])

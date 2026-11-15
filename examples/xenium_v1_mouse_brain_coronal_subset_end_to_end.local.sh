@@ -74,7 +74,7 @@ ${CMD} run_ficture2_multi_cells --all --out-dir ${OUTDIR}/fic --out-prefix xeniu
 ## Import all 
 ## We use 'rep1' as generic sample name. Change it to your own sample name that you prefer
 SAMPLE=rep1
-${CMD} run_cartload2 --fic-dir ${OUTDIR}/fic/samples/${SAMPLE} --in-cell-params ${OUTDIR}/fic/samples/${SAMPLE}/ficture.cartloader.params.json ${OUTDIR}/fic/samples/${SAMPLE}/ficture.xeniumranger.params.json --out-dir ${OUTDIR}/cartl/samples/${SAMPLE} --id ${ID} --n-jobs ${JOBS} --threads ${THREADS} --colname-count count --use-pmpoint --gzip pigz --bin-count ${BIN_COUNT} 
+${CMD} run_cartload2 --fic-dir ${OUTDIR}/fic/samples/${SAMPLE} --in-cell-params ${OUTDIR}/fic/samples/${SAMPLE}/ficture.cartloader.params.json ${OUTDIR}/fic/samples/${SAMPLE}/ficture.xeniumranger.params.json --out-dir ${OUTDIR}/cartl/samples/${SAMPLE} --id ${ID} --n-jobs ${JOBS} --threads ${THREADS} --colname-count count --pmtiles-pmpoint --gzip pigz --bin-count ${BIN_COUNT} 
 
 ## Import morphology images
 FOCUSDIR=${INDIR}/morphology_focus

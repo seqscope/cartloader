@@ -206,7 +206,7 @@ Config equivalent: top-level `"segment_10x": true` or `{ "widths": "12,24" }` (a
 
 **Tiling** (run-wide, rarely needed): `--tile-size` and `--tile-buffer` are forwarded to `run_ficture2_multi` (punkst `multisample-prepare`). punkst rejects a tile size under 20× the *side* length (width / √3) of the widest hexagon, so the tile size is chosen automatically when unset: `500` µm, raised for wide hexagons to that minimum rounded up to 100 µm (`600` for width 48, `1200` for width 100), counting every analysis' widths and any `--segment-width-10x`. An explicit value below the minimum stops the run before planning. punkst recommends 50–100× the side length, so set a larger `--tile-size` if pixel-level decoding is poor at a wide width. The buffer is a per-tile line buffer, not a spatial size. Config equivalents: top-level `"tile_size"` / `"tile_buffer"` (a CLI flag wins).
 
-**Common decode overrides** (else profile / built-in default): `--exclude-feature-regex`, `--include-feature-list` / `--exclude-feature-list`, the `--ingest-*-feature-*` family, `--min-ct-per-unit-hexagon` (default `50`), `--min-ct-per-unit-train`, `--cell-min-cell-count` / `--cell-min-feature-count`, and `--always-single-molecule` / `--never-single-molecule` (default: single-molecule **ON** for pixel FICTURE, **OFF** for cell decode). For these, an explicit CLI flag wins over a `--config`/profile value, which wins over the built-in default. Settings that do not follow that order: `resources.n_jobs` / `resources.threads` in a config win over `-j` / `--threads` (see [Mode 3](#mode-3-full-config-json)), and `--units-per-um` has no effect on `seqscope` or `10x_visium_hd` (see [Coordinate units](#coordinate-units-at-ingest)).
+**Common decode overrides** (else profile / built-in default): `--exclude-feature-regex`, `--include-feature-list` / `--exclude-feature-list`, the `--ingest-*-feature-*` family, `--min-ct-per-feature-hexagon` (default `20`), `--min-ct-per-unit-hexagon` (default `50`), `--min-ct-per-unit-train`, `--min-ct-per-unit-cell` / `--min-ct-per-feature-cell-sample`, and `--always-single-molecule` / `--never-single-molecule` (default: single-molecule **ON** for pixel FICTURE, **OFF** for cell decode). For these, an explicit CLI flag wins over a `--config`/profile value, which wins over the built-in default. Settings that do not follow that order: `resources.n_jobs` / `resources.threads` in a config win over `-j` / `--threads` (see [Mode 3](#mode-3-full-config-json)), and `--units-per-um` has no effect on `seqscope` or `10x_visium_hd` (see [Coordinate units](#coordinate-units-at-ingest)).
 
 ### Feature filtering: two independent layers
 
@@ -242,7 +242,7 @@ The ingest regex always replaces `sge_convert`'s per-platform default (e.g. Xeni
 - On the MEX-based platforms (`10x_visium_hd`, `seqscope`, `illumina`) filtering happens inside `spatula convert-sge`, which accepts only **one** include-type and **one** exclude-type filter; a list and a regex of the same polarity is an error there. Resolve them into one list with `cartloader feature_select`.
 
 !!! warning "Count thresholds and the analysis filter"
-    `--min-ct-per-unit-hexagon` is applied over **all** genes, while the model is fit over the **restricted** set, so restricting to a small panel leaves hexagons whose surviving counts are low; `--min-ct-per-unit-train`, counted over the features the model uses, is the threshold to lower. The cell counts are not restricted by the analysis filters (only by the ingest filters), so `--cell-min-cell-count` counts over every gene that survived ingest; it applies to cells built from a transcript or `cell_tsv`, not to MEX-derived cells. Ingest filters run before any counting.
+    `--min-ct-per-unit-hexagon` is applied over **all** genes, while the model is fit over the **restricted** set, so restricting to a small panel leaves hexagons whose surviving counts are low; `--min-ct-per-unit-train`, counted over the features the model uses, is the threshold to lower. The cell counts are not restricted by the analysis filters (only by the ingest filters), so `--min-ct-per-unit-cell` counts over every gene that survived ingest; it applies to cells built from a transcript or `cell_tsv`, not to MEX-derived cells. Ingest filters run before any counting.
 
 ---
 ## Coordinate units at ingest
@@ -314,14 +314,14 @@ Escalate to `--config run.json` when samples need **different** settings, or to 
   "ingest_exclude_feature_regex": "...",            // ingest_{include,exclude}_feature_{regex,list}: drops from the data
   "ingest": { "jitter_xy": 0.8, "units_per_um": 1 }, // random +/- um offset on X/Y, and the input's coordinate units (see above)
   "ficture_defaults": { "decode_scale": 2 },
-  "cell_defaults":    { "min_cell_count": 20 },
+  "cell_defaults":    { "min_ct_per_unit_cell": 20 },
   "segment_10x":   { "widths": "12,24" },           // or true: export the hexagon files as 10x MEX (see FICTURE mode)
   "tile_size": 5000, "tile_buffer": 1000,           // punkst tiling knobs; omit for automatic tile size / 1000
   "ficture":       [ /* analyses: each is a de-novo train OR a projection */ ],
   "cell_analyses": [ /* see below */ ],
   "cell_lists":    { "clusters": "..." },           // ready-made --list-* file(s) for every cell analysis
   "images":        [ /* see Image Modalities */ ],
-  "cartload":  { "use_pmpoint": true, "bin_count": 500 }
+  "cartload":  { "pmtiles": "pmpoint", "bin_count": 500 }   // pmtiles: "pmpoint" (default), "tippecanoe", or "ficture2"
 }
 ```
 
@@ -340,7 +340,7 @@ Dict values are **deep-merged** into the profile; other values replace it, excep
 | `cell_lists` | Run-wide ready-made `--list-*` files, role → path (a `--list-*` flag wins per role). |
 | `ingest` | Ingest settings (below). |
 | `roles` | Per-role auto-detection and column settings (below). |
-| `cartload` | `use_pmpoint`, `sge_scale`, `bin_count` (`--bin-count` wins). |
+| `cartload` | `pmtiles`, `tile_format`, `sge_scale`, `bin_count` (`--bin-count` wins). `tile_format` is the tile format of the molecule PMTiles, `"MVT"` (default) or `"MLT"` (not with `"tippecanoe"`; `--tile-format` wins). `pmtiles` picks the backend for the molecule (point) PMTiles: `"pmpoint"` (default), `"tippecanoe"`, or `"ficture2"` (molecule, hexagon, and cell-boundary layers built by punkst alone, `run_cartload2 --pmtiles-ficture2`); `--pmtiles-pmpoint` / `--pmtiles-tippecanoe` / `--pmtiles-ficture2` win over it. The older boolean `use_pmpoint` is still accepted (`true` → `"pmpoint"`, `false` → `"tippecanoe"`) when `pmtiles` is not set in the same block. |
 | `resources` | `n_jobs`, `threads` — passed to every command; **wins over** `-j` / `--threads` (`make` itself still runs with the CLI `-j`). |
 | `ficture_defaults` / `cell_defaults` | Defaults merged into every `ficture` / `cell_analyses` entry (per-entry keys win). |
 | `ficture`, `cell_analyses`, `images` | Lists merged by `id` (below). |
@@ -426,10 +426,10 @@ Each entry is either de-novo or a projection:
 | `mode` | `train` (default) or `project`. |
 | `width`, `n_factor` | Comma lists; de-novo trains every combination. On a projection, `n_factor` only informs which model is the default for cell analyses (largest wins). |
 | `model` | Projection: path to the trained `*.model.tsv`. |
-| `min_ct_per_unit_hexagon`, `min_ct_per_unit_train`, `decode_scale` | Per-analysis `run_ficture2_multi` parameters. |
+| `min_ct_per_feature_hexagon`, `min_ct_per_unit_hexagon`, `min_ct_per_unit_train`, `decode_scale` | Per-analysis `run_ficture2_multi` parameters. |
 | `alias` | A factor-label file copied beside the factor as `<id>-alias.tsv` (`_` → `-` in the id) and recorded under the factor's `alias` key. The entry's `id` must be the catalog's factor id, so this is for projection entries; the file is copied as given. |
 
-`ficture_defaults` (e.g. `decode_scale`, `min_ct_per_unit_hexagon`, `min_ct_per_unit_train`) apply to **every** analysis, including projections; per-entry keys win. `cell_defaults` does the same for `cell_analyses` entries (`min_cell_count`, `min_feature_count`).
+`ficture_defaults` (e.g. `decode_scale`, `min_ct_per_feature_hexagon`, `min_ct_per_unit_hexagon`, `min_ct_per_unit_train`) apply to **every** analysis, including projections; per-entry keys win. `cell_defaults` does the same for `cell_analyses` entries (`min_ct_per_unit_cell`, `min_ct_per_feature_cell_sample`).
 
 ### `cell_analyses`
 
@@ -447,7 +447,7 @@ Cell-level decode is **platform-default and automatic**: an analysis runs whenev
 | `generic_cell` | `generic` platform: run from `--colname-cell` or from a `mex` present in every sample (not both); see [Generic](./platforms/generic.md). |
 | `multi_import` | On joint runs, import per sample with this command instead of decoding jointly (Xenium: `import_xenium_cell`). |
 | `model_id` | FICTURE model to decode against (default: the largest-factor model). |
-| `min_cell_count`, `min_feature_count` | Per-analysis `run_ficture2_multi_cells` thresholds (else `cell_defaults`, else `--cell-min-*`). |
+| `min_ct_per_unit_cell`, `min_ct_per_feature_cell_sample` | Per-analysis `run_ficture2_multi_cells` thresholds (else `cell_defaults`, else `--min-ct-per-unit-cell` / `--min-ct-per-feature-cell-sample`). The per-feature one defaults to `0` (no filter): the cell analyses project the pixel model, whose genes are set by `min_ct_per_feature_hexagon`. |
 | `lists` | Ready-made `--list-*` files for this analysis, role → path (see below). |
 | `extra_flags` | Raw flags appended to this analysis's `run_ficture2_multi_cells` call (e.g. `["--zero-based-clust-id"]`, `["--tsne"]`). |
 | `name` | Display name in the catalogs (below). |

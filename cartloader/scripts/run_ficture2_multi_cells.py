@@ -69,8 +69,8 @@ def parse_arguments(_args):
     aux_params.add_argument('--decode-pixel-res', type=float, default=0.5, help='Decode resolution (default: 0.5)')
 
     # others parameters shared across steps
-    aux_params.add_argument('--min-feature-count', type=int, default=20, help='Minimum feature count for LDA factorization')
-    aux_params.add_argument('--min-cell-count', type=int, default=50, help='Minimum cell count for LDA factorization (not in effect with --mex-dir option)')
+    aux_params.add_argument('--min-ct-per-feature-cell-sample', type=int, default=0, help='Minimum count a feature must have within a sample to be kept in that sample\'s cell matrix (default: 0, no filter; the projected model already defines the features the analysis uses). Samples are merged over the union of their kept features. Also the minimum count for a feature to enter the pseudobulk')
+    aux_params.add_argument('--min-ct-per-unit-cell', type=int, default=50, help='Minimum total count for a cell to be kept in the cell matrix, counted after the feature filters (default: 50; not in effect for cells read from a MEX)')
     aux_params.add_argument('--de-min-ct-per-feature', type=int, default=20, help='Minimum count per feature for differential expression (default: 20)')
     aux_params.add_argument('--de-max-pval', type=float, default=1e-3, help='P-value cutoff for differential expression (default: 1e-3)')
     aux_params.add_argument('--de-min-fold', type=float, default=1.5, help='Fold-change cutoff for differential expression (default: 1.5)')
@@ -335,15 +335,15 @@ def run_ficture2_multi_cells(_args):
                 col_flags = (f"--no-header --idx-col-x {args.colidx_x} --idx-col-y {args.colidx_y} "
                              f"--idx-col-ftr {args.colidx_feature} --idx-col-cnt {args.colidx_count} "
                              f"--idx-col-id {args.colidx_cell_id}")
-            return (f"{args.spatula} pixel2sptsv --min-cell-count {args.min_cell_count} --pixel {pixel_tsv} "
+            return (f"{args.spatula} pixel2sptsv --min-cell-count {args.min_ct_per_unit_cell} --pixel {pixel_tsv} "
                     f"{col_flags} --ignore-ids {args.ignore_ids} "
-                    f"--out {out_prefix} --min-feature-count {args.min_feature_count} {cmd_ftr_include_exclude}")
+                    f"--out {out_prefix} --min-feature-count {args.min_ct_per_feature_cell_sample} {cmd_ftr_include_exclude}")
 
         for sample_id in in_samples:
             sample_sptsv_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.sptsv"
             if sample_id in samp2mex:
                 mex_bcd, mex_ftr, mex_mtx = samp2mex[sample_id]
-                cmd = f"{args.spatula} mex2sptsv --bcd {mex_bcd} --ftr {mex_ftr} --mtx {mex_mtx} --out {sample_sptsv_prefix} --min-feature-count {args.min_feature_count} {cmd_ftr_include_exclude}"
+                cmd = f"{args.spatula} mex2sptsv --bcd {mex_bcd} --ftr {mex_ftr} --mtx {mex_mtx} --out {sample_sptsv_prefix} --min-feature-count {args.min_ct_per_feature_cell_sample} {cmd_ftr_include_exclude}"
                 deps.extend([mex_bcd, mex_ftr, mex_mtx])
             elif sample_id in samp2tsv:
                 cmd = cmd_pixel2sptsv(samp2tsv[sample_id], sample_sptsv_prefix, has_header=True)
@@ -709,7 +709,7 @@ def run_ficture2_multi_cells(_args):
 
         cmds = cmd_separator([], f"Generating pseudobulk matrix...")
         cmds.append(f"touch {pseudobulk_prefix}.begin")
-        cmd = f"{args.spatula} sptsv2model --min-count {args.min_feature_count} --tsv '{sptsv_prefix}.randomized.tsv' --clust '{leiden_prefix}.tsv.gz' --features '{sptsv_prefix}.feature.counts.tsv' --json '{sptsv_prefix}.json' --out '{pseudobulk_prefix}.tsv'"
+        cmd = f"{args.spatula} sptsv2model --min-count {args.min_ct_per_feature_cell_sample} --tsv '{sptsv_prefix}.randomized.tsv' --clust '{leiden_prefix}.tsv.gz' --features '{sptsv_prefix}.feature.counts.tsv' --json '{sptsv_prefix}.json' --out '{pseudobulk_prefix}.tsv'"
         cmds.append(cmd)
 
         cmd = f"head -n $(head -1 '{pseudobulk_prefix}.tsv' | wc -w) '{args.cmap_file}' > '{pseudobulk_prefix}.cmap.tsv'"
@@ -724,7 +724,7 @@ def run_ficture2_multi_cells(_args):
             sample_sptsv_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.sptsv"
             sample_leiden_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.leiden"
             sample_pseudobulk_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.leiden.pseudobulk"
-            cmd = f"{args.spatula} sptsv2model --min-count {args.min_feature_count} --tsv '{sample_sptsv_prefix}.tsv' --clust '{sample_leiden_prefix}.tsv.gz' --features '{sample_sptsv_prefix}.feature.counts.tsv' --json '{sample_sptsv_prefix}.json' --out '{sample_pseudobulk_prefix}.tsv'"
+            cmd = f"{args.spatula} sptsv2model --min-count {args.min_ct_per_feature_cell_sample} --tsv '{sample_sptsv_prefix}.tsv' --clust '{sample_leiden_prefix}.tsv.gz' --features '{sample_sptsv_prefix}.feature.counts.tsv' --json '{sample_sptsv_prefix}.json' --out '{sample_pseudobulk_prefix}.tsv'"
             cmds.append(cmd)
 
             cmd = f"head -n $(head -1 '{sample_pseudobulk_prefix}.tsv' | wc -w) '{args.cmap_file}' > '{sample_pseudobulk_prefix}.cmap.tsv'"

@@ -11,6 +11,6 @@
   "cell_analyses": [
     { "id": "cartloader", "generic_cell": true, "optional_uses": ["xy", "boundaries"] }
   ],
-  "cartload": { "use_pmpoint": true, "bin_count": 500 },
+  "cartload": { "pmtiles": "pmpoint", "bin_count": 500 },
   "images": []
 }

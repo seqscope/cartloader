@@ -193,6 +193,7 @@ cartloader feature_select \
 - `--in-features` (str): The universe of features: a TSV whose first column is the feature name and whose optional second column is a count (e.g., `multi.union_features.tsv`); lines starting with `#` are skipped. Required unless `--mode include` with `--include-list`, in which case the include list is the universe.
 - `--include-list`, `--exclude-list` (str): Files of feature names to include/exclude (one per line; only the first tab-separated column is read).
 - `--include-regex`, `--exclude-regex` (str): Regexes of feature names to include/exclude (substring semantics).
+- `--min-count` (int): Keep only the features whose count (second column of `--in-features`; in `multi.union_features.tsv` this is the total over all samples) is at least this value (default: 0, no count filter; `--mode include` only).
 - `--allow-empty` (flag): Write an empty output instead of failing when no feature survives.
 
 ### Output

@@ -14,7 +14,7 @@ First match wins where several paths are listed; optional files are skipped when
 | Cluster labels | `analysis/clustering/gene_expression_graphclust/clusters.csv` → the `xeniumranger` factor |
 | Morphology images | `morphology_focus/morphology_focus_000{0,1,2,3}.ome.tif` → `dapi`/`boundary`/`rna`/`protein`; or a single `morphology_focus.ome.tif` / `morphology.ome.tif` → `dapi` |
 
-**Defaults:** FICTURE `width=12`, `n_factor=12,24,48`, single-molecule mode; packaging with `--use-pmpoint --bin-count 500`. Two cell analyses are wired: `cartloader` (jointly-decoded factors from boundaries + xy) and `xeniumranger` (the Ranger `clusters.csv`).
+**Defaults:** FICTURE `width=12`, `n_factor=12,24,48`, single-molecule mode; packaging with `--pmtiles-pmpoint --bin-count 500`. Two cell analyses are wired: `cartloader` (jointly-decoded factors from boundaries + xy) and `xeniumranger` (the Ranger `clusters.csv`).
 
 ---
 ## 1. Single sample (direct CLI)

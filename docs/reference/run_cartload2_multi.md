@@ -79,7 +79,7 @@ cartloader run_cartload2_multi \
   --fic-dir /path/to/run_ficture2_multi/out \
   --out-dir /path/to/out/mydataset \
   --id      mydataset \
-  --use-pmpoint --bin-count 500 \
+  --pmtiles-pmpoint --bin-count 500 \
   -j 10 --threads 24
 ```
 
@@ -104,13 +104,13 @@ Add `--dry-run` to write the Makefile and print the commands without executing t
 - `--dry-run` / `--restart` / `--makefn` (default: `run_cartload2_multi.mk`) / `--log` / `--log-suffix`.
 
 ??? note "Auxiliary parameters forwarded to each `run_cartload2`"
-    Use defaults unless needed. Forwarded when set: `--in-fic-params`, `--out-fic-assets`, `--rename-x/y`, `--colname-feature/count`, `--out-molecules-id`, `--bin-count`, `--preserve-point-density-thres`, `--sge-scale`, `--use-pmpoint`, `--tile-format-pmpoint`, `--umap-colname-factor/x/y`, `--umap-min/max-zoom`, `--skip-umap`, `--skip-raster`, `--keep-intermediate-files`, and the run options `--restart`, `--threads`, `--log`, `--log-suffix`, `--n-jobs`. (`--max-join-dist-um`, `--join-tile-size`, and `--transparent-below/above` are forwarded but unused by `run_cartload2`.)
+    Use defaults unless needed. Forwarded when set: `--in-fic-params`, `--out-fic-assets`, `--rename-x/y`, `--colname-feature/count`, `--out-molecules-id`, `--bin-count`, `--preserve-point-density-thres`, `--sge-scale`, `--pmtiles-pmpoint`, `--pmtiles-tippecanoe`, `--tile-format`, `--pmtiles-ficture2`, `--umap-colname-factor/x/y`, `--umap-min/max-zoom`, `--skip-umap`, `--skip-raster`, `--keep-intermediate-files`, and the run options `--restart`, `--threads`, `--log`, `--log-suffix`, `--n-jobs`. (`--max-join-dist-um`, `--join-tile-size`, and `--transparent-below/above` are forwarded but unused by `run_cartload2`.)
 
     Environment: `--gzip`, `--pmtiles`, `--gdal_translate`, `--gdaladdo`, `--tippecanoe`, `--spatula`, `--pmpoint`, `--ficture2`.
 
     `--skip-umap` affects the per-sample packaging only; the shared UMAP at the root is still built when the manifest provides one.
 
-    Not forwarded: `--tmp-dir` sets the temporary directory for the root-level shared UMAP only (default: `<out-dir>/tmp`); each sample uses `<sample_dir>/tmp`. Options such as `--max-point-tile-bytes`, `--hex-thres-prob`, or `--use-ficture2-direct-pmtiles` are not exposed here.
+    Not forwarded: `--tmp-dir` sets the temporary directory for the root-level shared UMAP only (default: `<out-dir>/tmp`); each sample uses `<sample_dir>/tmp`. Options such as `--max-point-tile-bytes`, `--keep-bin-extra-columns`, or `--hex-thres-prob` are not exposed here.
 
     See the [`run_cartload2` reference](./run_cartload2.md) for their meanings and defaults.
 

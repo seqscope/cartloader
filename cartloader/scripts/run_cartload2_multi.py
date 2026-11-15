@@ -16,7 +16,7 @@ aux_args = {
         "out_molecules_id", "max_join_dist_um", "join_tile_size", "bin_count",
         "preserve_point_density_thres",
         "umap_colname_factor", "umap_colname_x", "umap_colname_y", "umap_min_zoom", "umap_max_zoom",
-        "sge_scale", "use_pmpoint", "tile_format_pmpoint",
+        "sge_scale", "pmtiles_pmpoint", "pmtiles_tippecanoe", "tile_format", "tile_format_pmpoint", "pmtiles_ficture2",
         "skip_umap", "skip_raster",
         "keep_intermediate_files",
         "transparent_below", "transparent_above",
@@ -62,8 +62,11 @@ def parse_arguments(_args):
     aux_params.add_argument('--bin-count', type=int, help='Number of bins when splitting input molecules')
     aux_params.add_argument('--preserve-point-density-thres', type=int, help='Tippecanoe point-density preservation threshold')
     aux_params.add_argument('--sge-scale', type=int, help='Scale factor from input coordinates to output pixels')
-    aux_params.add_argument('--use-pmpoint', action='store_true', default=False, help='Use pmpoint/MLT instead of tippecanoe for point PMTiles')
-    aux_params.add_argument('--tile-format-pmpoint', choices=['MLT', 'MVT'], help='Tile format when --use-pmpoint is enabled')
+    aux_params.add_argument('--pmtiles-pmpoint', action='store_true', default=False, help='Use pmpoint/MLT instead of tippecanoe for point PMTiles')
+    aux_params.add_argument('--pmtiles-tippecanoe', action='store_true', default=False, help='Use tippecanoe for point PMTiles (the run_cartload2 default)')
+    aux_params.add_argument('--pmtiles-ficture2', action='store_true', default=False, help='Build the molecule, hexagon and cell-boundary PMTiles with punkst (FICTURE2) alone (forwarded to run_cartload2)')
+    aux_params.add_argument('--tile-format', choices=['MVT', 'MLT'], help='Tile format of the molecule (point) PMTiles with --pmtiles-pmpoint or --pmtiles-ficture2 (run_cartload2 default: MVT)')
+    aux_params.add_argument('--tile-format-pmpoint', choices=['MLT', 'MVT'], help='Deprecated alias of --tile-format')
     aux_params.add_argument('--umap-colname-factor', type=str, help='UMAP dominant-factor column name')
     aux_params.add_argument('--umap-colname-x', type=str, help='UMAP X column name')
     aux_params.add_argument('--umap-colname-y', type=str, help='UMAP Y column name')

@@ -121,7 +121,7 @@ KNOWN_SUBKEYS = {
         "autodetect", "assign_cell_id", "csv_colname_cell", "csv_colnames",
         "csv_colnames_others", "cellxgene_blank_prefix", "jitter_xy", "extra_flags",
     }),
-    "cartload": frozenset({"use_pmpoint", "sge_scale", "bin_count"}),
+    "cartload": frozenset({"pmtiles", "tile_format", "use_pmpoint", "sge_scale", "bin_count"}),
     "resources": frozenset({"threads", "n_jobs"}),
     "image_defaults": frozenset({
         "um_per_pixel", "um_per_pixel_json", "um_per_pixel_key", "georeferenced",
@@ -130,6 +130,41 @@ KNOWN_SUBKEYS = {
         "swapxy", "rotate", "flip_vertical", "flip_horizontal",
     }),
 }
+# Backends that build the molecule (point) PMTiles, selected by `cartload.pmtiles` or the
+# --pmtiles-* CLI flags, mapped to the run_cartload2 / run_cartload2_multi flags that select
+# them. "ficture2" builds every molecule layer with punkst (FICTURE2) alone, and the
+# hexagon and cell-boundary layers too.
+PMTILES_BACKENDS = {
+    "pmpoint": ["--pmtiles-pmpoint"],
+    "tippecanoe": [],
+    "ficture2": ["--pmtiles-ficture2"],
+}
+DEFAULT_PMTILES_BACKEND = "pmpoint"
+# Tile format of the molecule (point) PMTiles (`cartload.tile_format` / --tile-format).
+# pmpoint and punkst write either; tippecanoe writes MVT only.
+TILE_FORMATS = ("MVT", "MLT")
+DEFAULT_TILE_FORMAT = "MVT"
+
+
+def pmtiles_backend_flags(cart):
+    """run_cartload2 / run_cartload2_multi flags selecting the molecule PMTiles backend and
+    tile format. The format flag is emitted only when it differs from the default."""
+    flags = list(PMTILES_BACKENDS[cart.get("pmtiles", DEFAULT_PMTILES_BACKEND)])
+    fmt = cart.get("tile_format", DEFAULT_TILE_FORMAT)
+    if fmt != DEFAULT_TILE_FORMAT:
+        flags.append(f"--tile-format {fmt}")
+    return flags
+
+
+def legacy_pmtiles_backend(cart):
+    """Translate the legacy boolean `cartload.use_pmpoint` into `cartload.pmtiles` in place
+    (an explicit `pmtiles` in the same block wins), and drop the legacy key."""
+    if isinstance(cart, dict) and "use_pmpoint" in cart:
+        legacy = cart.pop("use_pmpoint")
+        cart.setdefault("pmtiles", "pmpoint" if legacy else "tippecanoe")
+    return cart
+
+
 # transcript column-override key -> the sge_convert flag that names that input column
 CSV_COLNAME_FLAGS = {
     "x": "--csv-colname-x",
@@ -367,7 +402,12 @@ def build_config(args):
     # Layer 0: profile
     prof = load_builtin_profile(platform)
     if args.platform_json:
-        prof = deep_merge(prof, load_json(args.platform_json))
+        pj = load_json(args.platform_json)
+        # resolve the legacy use_pmpoint within this layer too, so it still overrides
+        # the built-in profile's `pmtiles`
+        legacy_pmtiles_backend(prof.get("cartload"))
+        legacy_pmtiles_backend(pj.get("cartload"))
+        prof = deep_merge(prof, pj)
     prof["platform"] = platform
     prof.setdefault("ficture_defaults", {})
     prof.setdefault("cell_defaults", {})
@@ -413,6 +453,11 @@ def build_config(args):
               "squares", "cell_import", "hne", "image_transform", "image_defaults",
               "publish", "resources", "segment_10x", "tile_size", "tile_buffer"):
         if k in cfg:
+            if k == "cartload" and isinstance(cfg[k], dict):
+                # resolve the legacy use_pmpoint within each layer, so a config's
+                # use_pmpoint still overrides the profile's `pmtiles`
+                legacy_pmtiles_backend(prof.get(k))
+                cfg[k] = legacy_pmtiles_backend(dict(cfg[k]))
             prof[k] = deep_merge(prof.get(k), cfg[k]) if isinstance(cfg[k], dict) else cfg[k]
     if "ficture" in cfg:
         prof["ficture"] = merge_id_list(prof["ficture"], cfg["ficture"])
@@ -571,12 +616,14 @@ def build_config(args):
         fd["min_ct_per_unit_hexagon"] = DEFAULT_MIN_CT_PER_UNIT_HEXAGON
     if args.min_ct_per_unit_train is not None:
         fd["min_ct_per_unit_train"] = args.min_ct_per_unit_train
+    if args.min_ct_per_feature_hexagon is not None:
+        fd["min_ct_per_feature_hexagon"] = args.min_ct_per_feature_hexagon
     # per-cell count thresholds (applied by the cell analyses after feature filtering)
     cd = prof.setdefault("cell_defaults", {})
-    if args.cell_min_cell_count is not None:
-        cd["min_cell_count"] = args.cell_min_cell_count
-    if args.cell_min_feature_count is not None:
-        cd["min_feature_count"] = args.cell_min_feature_count
+    if args.min_ct_per_unit_cell is not None:
+        cd["min_ct_per_unit_cell"] = args.min_ct_per_unit_cell
+    if args.min_ct_per_feature_cell_sample is not None:
+        cd["min_ct_per_feature_cell_sample"] = args.min_ct_per_feature_cell_sample
     # single-molecule: default ON for pixel FICTURE, OFF for cell decode;
     # --always/--never force the same value for both.
     if args.always_single_molecule and args.never_single_molecule:
@@ -592,6 +639,28 @@ def build_config(args):
     # Packaging knobs: a CLI flag wins over the profile's `cartload` block.
     if args.bin_count is not None:
         prof.setdefault("cartload", {})["bin_count"] = args.bin_count
+    cart = legacy_pmtiles_backend(prof.setdefault("cartload", {}))
+    cli_backends = [b for b, on in (("pmpoint", args.pmtiles_pmpoint),
+                                    ("tippecanoe", args.pmtiles_tippecanoe),
+                                    ("ficture2", args.pmtiles_ficture2)) if on]
+    if len(cli_backends) > 1:
+        sys.exit("ERROR: --pmtiles-pmpoint, --pmtiles-tippecanoe and --pmtiles-ficture2 "
+                 "are mutually exclusive.")
+    if cli_backends:
+        cart["pmtiles"] = cli_backends[0]
+    cart.setdefault("pmtiles", DEFAULT_PMTILES_BACKEND)
+    if not isinstance(cart["pmtiles"], str) or cart["pmtiles"] not in PMTILES_BACKENDS:
+        sys.exit(f"ERROR: cartload.pmtiles must be one of {', '.join(PMTILES_BACKENDS)}; "
+                 f"got {cart['pmtiles']!r}.")
+    if args.tile_format is not None:
+        cart["tile_format"] = args.tile_format
+    fmt = cart.setdefault("tile_format", DEFAULT_TILE_FORMAT)
+    if not isinstance(fmt, str) or fmt.upper() not in TILE_FORMATS:
+        sys.exit(f"ERROR: cartload.tile_format must be one of {', '.join(TILE_FORMATS)}; got {fmt!r}.")
+    cart["tile_format"] = fmt.upper()
+    if cart["tile_format"] == "MLT" and cart["pmtiles"] == "tippecanoe":
+        sys.exit("ERROR: tile format MLT is not available with the tippecanoe backend "
+                 "(cartload.pmtiles); use pmpoint or ficture2.")
 
     # Packaging without any factor analysis (tiling only; see cmd_ficture_analysis).
     prof["_no_ficture"] = args.no_ficture
@@ -1503,6 +1572,8 @@ def cmd_ficture_analysis(a, in_list, fic_dir, cfg):
         parts.append(f"--min-ct-per-unit-hexagon {a['min_ct_per_unit_hexagon']}")
     if a.get("min_ct_per_unit_train") is not None:
         parts.append(f"--min-ct-per-unit-train {a['min_ct_per_unit_train']}")
+    if a.get("min_ct_per_feature_hexagon") is not None and a.get("mode") != "prepare":
+        parts.append(f"--min-ct-per-feature-hexagon {a['min_ct_per_feature_hexagon']}")
     if a.get("decode_scale"):
         parts.append(f"--decode-scale {a['decode_scale']}")
     if cfg.get("_sm_pixel"):   # single-molecule for pixel FICTURE (default ON)
@@ -1554,11 +1625,15 @@ def cmd_cells(ca, list_files, fic_dir, model_path, cfg):
     if cfg.get("_sm_cells"):   # single-molecule for cell decode (default OFF)
         parts.append("--single-molecule")
     # Count thresholds are applied after feature filtering, so a run restricted to a small
-    # panel usually wants them lowered (see cell_defaults / --cell-min-*-count).
-    if ca.get("min_cell_count") is not None:
-        parts.append(f"--min-cell-count {ca['min_cell_count']}")
-    if ca.get("min_feature_count") is not None:
-        parts.append(f"--min-feature-count {ca['min_feature_count']}")
+    # panel usually wants them lowered (see cell_defaults / --min-ct-per-unit-cell).
+    for old, new in (("min_cell_count", "min_ct_per_unit_cell"), ("min_feature_count", "min_ct_per_feature_cell_sample")):
+        if old in ca:
+            sys.exit(f"ERROR: cell analysis '{ca['id']}': '{old}' was renamed to '{new}' "
+                     "(cell_analyses / cell_defaults).")
+    if ca.get("min_ct_per_unit_cell") is not None:
+        parts.append(f"--min-ct-per-unit-cell {ca['min_ct_per_unit_cell']}")
+    if ca.get("min_ct_per_feature_cell_sample") is not None:
+        parts.append(f"--min-ct-per-feature-cell-sample {ca['min_ct_per_feature_cell_sample']}")
     # Cell counts get the ingest filter, NOT the FICTURE filter: FICTURE-excluded / non-HVG
     # genes must survive into the cell pseudobulk and DE (the FICTURE restriction reaches
     # clustering via the projected pixel model instead). See cells_count_filter_flags.
@@ -1579,8 +1654,7 @@ def cmd_cartload(fic_sample_dir, cart_dir, sid, cfg, cell_params):
              "--colname-count count", "--gzip pigz"]
     if cell_params:
         parts.append("--in-cell-params " + " ".join(cell_params))
-    if cart.get("use_pmpoint"):
-        parts.append("--use-pmpoint")
+    parts.extend(pmtiles_backend_flags(cart))
     if cart.get("sge_scale"):
         parts.append(f"--sge-scale {cart['sge_scale']}")
     if cart.get("bin_count") is not None:
@@ -1632,8 +1706,7 @@ def cmd_cartload_multi(fic_dir, cart_root, multi_id, cfg):
              f"--fic-dir {fic_dir}", f"--out-dir {cart_root}", f"--id {multi_id}",
              f"-j {res['n_jobs']}", f"--threads {res['threads']}",
              "--colname-count count", "--gzip pigz"]
-    if cart.get("use_pmpoint"):
-        parts.append("--use-pmpoint")
+    parts.extend(pmtiles_backend_flags(cart))
     if cart.get("sge_scale"):
         parts.append(f"--sge-scale {cart['sge_scale']}")
     if cart.get("bin_count") is not None:
@@ -2693,13 +2766,19 @@ def parse_arguments(_args):
                         "analysis uses (default: FICTURE2's own). Worth lowering when a feature list "
                         "restricts the analysis to a small panel, since --min-ct-per-unit-hexagon is "
                         "applied earlier, over all genes.")
-    d.add_argument("--cell-min-cell-count", type=int, default=None,
+    d.add_argument("--min-ct-per-feature-hexagon", type=int, default=None,
+                   help="Minimum total count (over all samples) for a feature to be used when training "
+                        "a model on the hexagons, and hence in pixel decoding and the cell analyses "
+                        "that project that model (default: run_ficture2_multi's own, 20). Not applied "
+                        "to --project-models.")
+    d.add_argument("--min-ct-per-unit-cell", type=int, default=None,
                    help="Minimum count per cell in the cell-based analysis, counted over the features it "
                         "uses (default: run_ficture2_multi_cells' own). Same rationale as "
                         "--min-ct-per-unit-train.")
-    d.add_argument("--cell-min-feature-count", type=int, default=None,
-                   help="Minimum total count per feature in the cell-based analysis "
-                        "(default: run_ficture2_multi_cells' own)")
+    d.add_argument("--min-ct-per-feature-cell-sample", type=int, default=None,
+                   help="Minimum count per feature in the cell-based analysis (default: "
+                        "run_ficture2_multi_cells' own, 0 = no filter; the projected model already "
+                        "defines the features used)")
     d.add_argument("--always-single-molecule", action="store_true",
                    help="Force single-molecule ON for both pixel FICTURE and cell decode")
     d.add_argument("--never-single-molecule", action="store_true",
@@ -2715,6 +2794,20 @@ def parse_arguments(_args):
     k.add_argument("--bin-count", type=int, default=None,
                    help="Number of gene bins for the point PMTiles layers (profile default: "
                         "500 on most platforms)")
+
+    k.add_argument("--tile-format", type=str.upper, choices=list(TILE_FORMATS), default=None,
+                   help="Tile format of the molecule (point) PMTiles (cartload.tile_format; "
+                        "default: MVT). MLT needs the pmpoint or ficture2 backend")
+    k.add_argument("--pmtiles-pmpoint", action="store_true",
+                   help="Build the molecule (point) PMTiles with pmpoint (cartload.pmtiles = "
+                        "\"pmpoint\"; the default)")
+    k.add_argument("--pmtiles-tippecanoe", action="store_true",
+                   help="Build the molecule (point) PMTiles with tippecanoe (cartload.pmtiles = "
+                        "\"tippecanoe\")")
+    k.add_argument("--pmtiles-ficture2", action="store_true",
+                   help="Build the molecule (point), hexagon and cell-boundary PMTiles with "
+                        "punkst (FICTURE2) instead of pmpoint/tippecanoe (cartload.pmtiles = "
+                        "\"ficture2\")")
 
     pub = p.add_argument_group("Publish (opt-in; enable with --anno and/or --s3-upload)")
     pub.add_argument("--anno", action="store_true", help="AI-annotate each sample (requires --tissue and --organism)")

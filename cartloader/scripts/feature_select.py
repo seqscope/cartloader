@@ -21,6 +21,9 @@ def parse_arguments(_args):
     parser.add_argument('--exclude-list', type=str, default=None, help='File listing feature names to exclude (one per line)')
     parser.add_argument('--include-regex', type=str, default=None, help='Regex of feature names to include')
     parser.add_argument('--exclude-regex', type=str, default=None, help='Regex of feature names to exclude')
+    parser.add_argument('--min-count', type=int, default=0,
+                        help='Keep only the features whose count (second column of the universe file) is at '
+                             'least this value (default: 0, no count filter). Requires counts in that file.')
     parser.add_argument('--allow-empty', action='store_true', default=False,
                         help='Write an empty output instead of failing when no feature survives the filters')
 
@@ -41,6 +44,8 @@ def feature_select(_args):
     exclude_re = compile_regex(args.exclude_regex, "--exclude-regex")
 
     if args.mode == "exclude":
+        if args.min_count > 0:
+            sys.exit("ERROR: --min-count applies to --mode include only.")
         if args.include_list or include_re:
             sys.exit("ERROR: --mode exclude writes the features to drop, so --include-list/--include-regex "
                      "cannot be combined with it.")
@@ -90,6 +95,13 @@ def feature_select(_args):
             continue
         if exclude_re is not None and exclude_re.search(name):
             continue
+        if args.min_count > 0:
+            try:
+                if float(count) < args.min_count:
+                    continue
+            except (TypeError, ValueError):
+                sys.exit(f"ERROR: --min-count needs a numeric count for every feature, but {universe_src} "
+                         f"has none for '{name}'.")
         selected.append((name, count))
 
     if not selected and not args.allow_empty:

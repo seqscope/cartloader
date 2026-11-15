@@ -17,7 +17,7 @@
     - always: `spatula`, `tippecanoe`, and punkst (`--ficture2`; `<ficture2>/bin/punkst` must exist even without FICTURE results);
     - unless `--skip-raster`: `pmtiles`;
     - with `--use-image-png2pmtiles`: `gdal_translate`, `gdaladdo`;
-    - with `--use-pmpoint` or `--use-ficture2-direct-pmtiles`: `pmpoint`.
+    - with `--pmtiles-pmpoint`: `pmpoint`. With `--pmtiles-ficture2`, the molecule, hexagon, and cell-boundary layers are built by punkst alone (no `pmpoint`; `spatula` only for the SGE basemap); `tippecanoe` is still used for the cell-centroid and UMAP layers.
 
 !!! warning "Packaging without FICTURE (`--sge-dir`)"
     With `--sge-dir`, the SGE assets JSON must provide `transcript`, `feature`, and `minmax`, and `<transcript>.tsv` and `<transcript>.index` (a punkst tiled transcript) must exist. The `sge_assets.json` written by [`sge_convert`](./sge_convert.md) points to `transcripts.unsorted.tsv.gz`, which does not meet this requirement, so `--sge-dir` alone currently fails on standard `sge_convert` output. If both `--sge-dir` and `--fic-dir` are given, `--sge-dir` is used when its JSON has all three keys. Use `--fic-dir` (a `run_ficture2` output) as the SGE source.
@@ -109,16 +109,19 @@ Provide the SGE through `--fic-dir` (recommended) or `--sge-dir` (see the warnin
     * `--colname-count` (str): Count column name (default: `count`).
     * `--rename-x` / `--rename-y` (str): Column renaming rules for tippecanoe (default: `x:lon` / `y:lat`).
     * `--bin-count` (int): Number of gene bins for the point PMTiles (default: `50`).
-    * `--max-point-tile-bytes` (int): Maximum tile size in bytes for point layers (default: `10000000`).
-    * `--max-point-feature-counts` (int): Maximum features per tile for point layers (default: `1000000`).
+    * `--max-point-tile-bytes` (int): Maximum tile size in bytes for point layers (default: `1000000`).
+    * `--max-point-feature-counts` (int): Maximum features per tile for point layers (default: `100000`).
+    * `--keep-bin-extra-columns` (flag): Keep every column (e.g., the joined factor/probability columns) in the gene-bin point layers. By default `genes_bin*.pmtiles` carry only X, Y, feature, and count; the joined columns stay in `genes_all.pmtiles`.
     * `--preserve-point-density-thres` (int): Tippecanoe point-density preservation threshold (default: `1024`).
     * `--replace-features` (str): Shared feature list (e.g., `multi.features.tsv`); a header-normalized copy (`multi.features.rehdr.tsv`) is used for gene-to-bin assignment so batches sharing the list bin genes identically.
     * `--in-bin-json` (str): Precomputed gene→bin assignment JSON (a `_bin_counts.json`); reused instead of deriving bins, with counts refreshed from this sample. Takes precedence over `--replace-features`. Supplied automatically by `run_cartload2_multi`.
-    * `--use-pmpoint` (flag): Build point PMTiles with `pmpoint` instead of tippecanoe.
-    * `--tile-format-pmpoint` (str): `MVT` or `MLT` with `--use-pmpoint` (default: `MVT`).
+    * `--pmtiles-pmpoint` (flag): Build point PMTiles with `pmpoint` instead of tippecanoe.
+    * `--pmtiles-tippecanoe` (flag): Build point PMTiles with tippecanoe (the default when neither `--pmtiles-pmpoint` nor `--pmtiles-ficture2` is given).
+    * `--tile-format` (str): Tile format of the molecule PMTiles, `MVT` or `MLT`, with `--pmtiles-pmpoint` or `--pmtiles-ficture2` (default: `MVT`). tippecanoe writes MVT only. `--tile-format-pmpoint` is a deprecated alias.
     * `--pmpoint-compression-scale` (float): Extra pmpoint compression scale (default: `10.0`).
-    * `--use-ficture2-direct-pmtiles` (flag): Package joined molecules directly with `punkst tile-op` + `pmpoint` instead of `run_tsv2pmtiles`; applies only when decoded factors are joined, and requires a positive `--bin-count`.
-    * `--point-min-zoom` / `--point-max-zoom` (int): Zoom range for `--use-ficture2-direct-pmtiles` only (default: `10` / `18`).
+    * `--pmtiles-ficture2` (flag): Build the molecule layers with punkst alone (`tile-op` for the full-zoom archives, `build-pyramid` for the lower zooms) instead of `run_tsv2pmtiles`, and the hexagon and cell-boundary layers with `punkst poly2pmtiles` / `poly2pmtiles-generic` + `build-pyramid` instead of tippecanoe. Requires a positive `--bin-count`. Works without decoded factors too (e.g. a `--no-ficture` run; no `genes_all.pmtiles` then). With `--in-bin-json`, the shared gene→bin assignment is passed to punkst (`--gene-bin-info`). See [Layers built with `--pmtiles-ficture2`](#layers-built-with-pmtiles-ficture2) for how the output differs.
+    * `--point-min-zoom` / `--point-max-zoom` (int): Zoom range of the molecule layers with `--pmtiles-ficture2` (default: `10` / `18`).
+    * `--polygon-min-zoom` / `--polygon-max-zoom` (int): Zoom range of the hexagon and cell-boundary layers with `--pmtiles-ficture2` (default: `10` / `18`).
 
     **Polygon PMTiles (hexagons, cells, boundaries)**:
 
@@ -186,8 +189,18 @@ All files are written under `--out-dir`. FICTURE ids are hyphenated in file name
 
 ### Molecule PMTiles
 * `transcripts_pixel_joined.tsv`: Molecules annotated with decoded factors (uncompressed; kept after the run).
-* `genes_bin*.pmtiles`, `genes_all.pmtiles`: Gene-bin point layers and the all-gene layer (`genes_all.pmtiles` only when factors are joined).
+* `genes_bin*.pmtiles`, `genes_all.pmtiles`: Gene-bin point layers and the all-gene layer (`genes_all.pmtiles` only when factors are joined). The gene-bin layers carry only X, Y, feature, and count; the joined factor columns are stored in `genes_all.pmtiles` alone (see `--keep-bin-extra-columns`).
 * `genes_index.tsv`, `genes_pmtiles_index.tsv`, `genes_bin_counts.json`: Bin index, PMTiles index, and per-bin gene counts (prefix set by `--out-molecules-id`).
+
+### Layers built with `--pmtiles-ficture2`
+
+File names and the catalog are the same as with the other backends; the contents differ in these ways:
+
+* **Molecules**: the layer is named after the file (`genes_all`, `genes_bin<N>`, not `..._molecules`) and the count attribute is `ct` (not `count`); the feature attribute is `gene`. Gene bins are assigned by punkst in `fixed` mode: exactly `--bin-count` bins of about equal molecule totals, the same assignment as the other backends. `genes_index.tsv` is not written.
+* **Gene-bin layers** are produced by a second `tile-op` pass against a one-row dummy factor source, which is how they carry gene and count only; their metadata still declares unused `K1`/`P1` fields.
+* **Hexagons**: `hex_q` / `hex_r` (grid indices) replace the `lon` / `lat` centre attributes, and feature ids are 64-bit grid ids.
+* **Cell boundaries**: a cell without a cluster has no `topK` (instead of the string `NA`).
+* **Lower zoom levels** keep more features than tippecanoe or pmpoint (punkst only thins a tile that exceeds the tile limits), so files are somewhat larger; the full-zoom level holds every feature in all backends.
 
 ### Summary Files
 * `ficture_assets.json`: FICTURE assets per trained model.

@@ -15,7 +15,7 @@ Built-in profile for Vizgen MERSCOPE / MERFISH. Ingest runs `sge_convert` (the `
 
 An already-ingested transcript TSV can be given instead with `--in-transcript` / `transcript` (skips ingest, including the `cellxgene` → MEX conversion).
 
-**Defaults:** FICTURE `width=12`, `n_factor=12,24,48`, single-molecule mode; packaging with `--use-pmpoint --bin-count 500`. Coordinates are already in microns and are not shifted, so the files stay aligned.
+**Defaults:** FICTURE `width=12`, `n_factor=12,24,48`, single-molecule mode; packaging with `--pmtiles-pmpoint --bin-count 500`. Coordinates are already in microns and are not shifted, so the files stay aligned.
 
 ---
 ## 1. Single sample (direct CLI)

@@ -22,7 +22,7 @@
   "cell_analyses": [
     { "id": "cartloader", "any_uses": ["boundaries", "mex", "tx_cell_id"], "optional_uses": ["xy"] }
   ],
-  "cartload": { "use_pmpoint": true, "bin_count": 500 },
+  "cartload": { "pmtiles": "pmpoint", "bin_count": 500 },
   "image_transform": { "column": "merfish_csv", "flag": "--micron2pixel-csv" },
   "image_defaults": { "shrink_factor": 5.0, "high_memory": true },
   "images": []

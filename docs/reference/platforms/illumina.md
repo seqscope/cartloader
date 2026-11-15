@@ -31,7 +31,7 @@ cartloader run_together --platform illumina --samples samples.tsv --out-dir OUT 
 
 Default boundary/centroid column names (overridable — see below): boundaries `cell_id` / `vertex_x` / `vertex_y`; xy `cell_id` / `X` / `Y`.
 
-**Defaults:** FICTURE `width=12`, `n_factor=12,24,48`, single-molecule mode; packaging with `--use-pmpoint --bin-count 500`.
+**Defaults:** FICTURE `width=12`, `n_factor=12,24,48`, single-molecule mode; packaging with `--pmtiles-pmpoint --bin-count 500`.
 
 !!! note "How the MEX is supplied"
     The StrataMap MEX is provided as the **`mex` role** (sample sheet / config), *not* via `--in-dir`

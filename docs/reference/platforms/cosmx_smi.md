@@ -12,7 +12,7 @@ Built-in profile. Unlike the others, ingest does **not** run `sge_convert`: a de
 
 Cell ids are formed as `<fov>_<cell_ID>`; transcripts with `cell_ID = 0` are kept but tagged `UNASSIGNED`, and `System*` control probes are dropped at ingest. The `cartloader` cell factor is decoded from the metadata + polygon files via `run_ficture2_multi_cells`.
 
-**Defaults:** FICTURE `width=12`, `n_factor=12,24,48`, `min_ct_per_unit_hexagon=100`, single-molecule mode; packaging with `--use-pmpoint --bin-count 500`.
+**Defaults:** FICTURE `width=12`, `n_factor=12,24,48`, `min_ct_per_unit_hexagon=100`, single-molecule mode; packaging with `--pmtiles-pmpoint --bin-count 500`.
 
 ---
 ## 1. Single sample (direct CLI)

@@ -18,7 +18,7 @@ All resolved by suffixing `--in-prefix`; each is optional except the tissue GEF.
 
 Missing files are simply skipped. Naming is not always consistent across SAW versions — when a file does not match, give it explicitly (`--image type=hne,source=/p/whatever.tif`, or a `gef` / `cellbin_gef` sample-sheet column), which always wins over auto-detection.
 
-**Defaults:** FICTURE `width=12`, `n_factor=12,24,48`, single-molecule mode; packaging with `--use-pmpoint --bin-count 500`; histology at 0.5 µm/pixel.
+**Defaults:** FICTURE `width=12`, `n_factor=12,24,48`, single-molecule mode; packaging with `--pmtiles-pmpoint --bin-count 500`; histology at 0.5 µm/pixel.
 
 ---
 ## 1. Single sample

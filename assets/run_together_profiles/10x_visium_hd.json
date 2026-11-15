@@ -26,7 +26,7 @@
   "cell_analyses": [
     { "id": "cartloader", "uses": ["mex"], "optional_uses": ["boundaries"], "require_all": true }
   ],
-  "cartload": { "use_pmpoint": true, "bin_count": 500, "sge_scale": 2 },
+  "cartload": { "pmtiles": "pmpoint", "bin_count": 500, "sge_scale": 2 },
   "images": [],
   "squares": [
     { "subdir": "binned_outputs/square_008um", "bin_size": 8, "suffix": "spaceranger-sq008" },

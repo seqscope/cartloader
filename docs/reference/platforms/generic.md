@@ -19,7 +19,7 @@ A sample's transcript comes in one of two forms:
 
 Only a transcript is required. With `--in-dir`, a directory without `transcripts.tsv.gz` has no transcript source and the run stops; give the file with `--in-transcript` or `--raw-transcript` instead.
 
-**Defaults:** FICTURE `width=12`, `n_factor=12,24,48`, single-molecule mode; packaging with `--use-pmpoint --bin-count 500`; no images (attach them with [`--image` / `--images`](../run_together_images.md)).
+**Defaults:** FICTURE `width=12`, `n_factor=12,24,48`, single-molecule mode; packaging with `--pmtiles-pmpoint --bin-count 500`; no images (attach them with [`--image` / `--images`](../run_together_images.md)).
 
 ---
 ## Cell-level analysis

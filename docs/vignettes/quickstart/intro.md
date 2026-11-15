@@ -48,4 +48,5 @@ Both quick starts below run two examples:
 - **Your own data**: the [platform tutorials](../intro.md#platform-tutorials) show the `run_together` command for each supported platform, and [Specifying Inputs](../../reference/run_together_inputs.md) covers every way to describe a sample.
 - **Several samples together**: [Multiple Samples with run_together](../pipelines/run_together_multi.md) trains one shared model across samples.
 - **Publishing and annotation**: `run_together --s3-upload` and `--anno` / `--anno-deep` (see [Publishing](../../reference/run_together.md#publishing)).
+- **Example scripts**: [End-to-End Example Scripts](./example_scripts.md) run the same Xenium kidney data stage by stage, as Docker or local shell scripts.
 - **Individual commands**: the [Step-by-step](../step_by_step.md) section runs each stage (`sge_convert`, `run_ficture2`, `run_cartload2`, ...) separately for full control.

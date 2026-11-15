@@ -226,10 +226,11 @@ See [Specifying Inputs → FICTURE mode](./run_together_inputs.md#ficture-mode-d
 |-----------|---------|-------------|
 | `--exclude-feature-regex` | <code>^(Gm[0-9]&#124;MT-&#124;mt-&#124;Rps&#124;Rpl)</code> | Features kept out of the factor models (data and packaging keep them). `''` disables. |
 | `--include-feature-list` / `--exclude-feature-list` | none | File of feature names (one per line) to restrict the factor models to / exclude from them. |
+| `--min-ct-per-feature-hexagon` | `20` | Minimum total count (over all samples) for a gene to be used by a model trained on the hexagons, and hence by pixel decoding and the cell analyses that project that model. Data, hexagon files, and packaging keep every gene. Not applied to `--project-models`. |
 | `--min-ct-per-unit-hexagon` | `50` | Minimum count per hexagon (all genes). |
 | `--min-ct-per-unit-train` | punkst's own | Minimum count per hexagon during training, over the features the model uses. |
-| `--cell-min-cell-count` | `run_ficture2_multi_cells`' own (`50`) | Minimum count per cell for cells built from a transcript or cell TSV. |
-| `--cell-min-feature-count` | `run_ficture2_multi_cells`' own (`20`) | Minimum total count per feature in the cell analysis. |
+| `--min-ct-per-unit-cell` | `run_ficture2_multi_cells`' own (`50`) | Minimum count per cell for cells built from a transcript or cell TSV. |
+| `--min-ct-per-feature-cell-sample` | `run_ficture2_multi_cells`' own (`0`, no filter) | Minimum count per feature, counted within each sample, in the cell analysis. Not needed by default: the cell analyses project the pixel model, whose genes are set by `--min-ct-per-feature-hexagon`. |
 | `--always-single-molecule` / `--never-single-molecule` | ON for pixel FICTURE, OFF for cells | Force single-molecule mode on/off for both. |
 | `--colname-cell` | none | `generic` platform: turns on cell analysis from the transcript's 5th column (`cell_id`); also the default cell-id column of the `xy` file. See [Generic](./platforms/generic.md). |
 
@@ -255,6 +256,12 @@ Ingest filters (and the two coordinate options below) are ignored, with a warnin
 | Parameter | Description |
 |-----------|-------------|
 | `--bin-count` | Number of gene bins for the point PMTiles layers (`cartload.bin_count`; `500` in every built-in profile). |
+| `--pmtiles-pmpoint` | Build the molecule (point) PMTiles with `pmpoint` (`cartload.pmtiles: "pmpoint"`; the default). |
+| `--pmtiles-tippecanoe` | Build the molecule (point) PMTiles with tippecanoe (`cartload.pmtiles: "tippecanoe"`). |
+| `--pmtiles-ficture2` | Build the molecule (point), hexagon, and cell-boundary PMTiles with punkst (FICTURE2) alone, without `pmpoint` or `spatula` (`cartload.pmtiles: "ficture2"`). Cell-centroid and UMAP layers still use tippecanoe. See [`run_cartload2`](./run_cartload2.md#layers-built-with-pmtiles-ficture2) for how the output differs. |
+| `--tile-format` | Tile format of the molecule (point) PMTiles: `MVT` (default) or `MLT` (`cartload.tile_format`). `MLT` needs the pmpoint or ficture2 backend. |
+
+The three `--pmtiles-*` flags are mutually exclusive, and one given on the command line wins over `cartload.pmtiles` in the profile or `--config`.
 
 ### Publish
 

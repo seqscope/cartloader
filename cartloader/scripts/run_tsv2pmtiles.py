@@ -34,7 +34,7 @@ def parse_arguments(_args):
     # own defaults in place.
     inout_params.add_argument('--in-colname-x', type=str, default=None, help='Column name for X in --in-molecules (default: split-mol2bin default, X)')
     inout_params.add_argument('--in-colname-y', type=str, default=None, help='Column name for Y in --in-molecules (default: split-mol2bin default, Y)')
-    inout_params.add_argument('--in-colname-feature', type=str, default=None, help='Column name for the feature/gene in --in-molecules (default: Feature with --use-pmpoint, else split-mol2bin default, gene)')
+    inout_params.add_argument('--in-colname-feature', type=str, default=None, help='Column name for the feature/gene in --in-molecules (default: Feature with --pmtiles-pmpoint, else split-mol2bin default, gene)')
 
     key_params = parser.add_argument_group("Key Parameters", "Key parameters frequently used by users")
     key_params.add_argument('--bin-count', type=int, default=50, help='Number of bins to equally divide the genes into (default: 50)')
@@ -42,14 +42,15 @@ def parse_arguments(_args):
     key_params.add_argument('--dummy-genes', type=str, default='', help='A single name or a regex describing the names of negative control probes')
     key_params.add_argument('--chunk-size', type=int, default=1000000, help='Number of rows to read at a time. Default is 1000000')
     key_params.add_argument('--skip-original', action='store_true', default=False, help='Skip writing the original file')
+    key_params.add_argument('--compact-bin', action='store_true', default=False, help='Keep only the X, Y, feature and count columns in the per-bin outputs ([out-prefix]_bin*.pmtiles), dropping every other column (e.g. joined FICTURE factor/probability columns). The unsplit "all" output is not affected and keeps all columns')
     key_params.add_argument('--log', action='store_true', default=False, help='Write log to file')
     key_params.add_argument('--log-suffix', type=str, default=".log", help='The suffix for the log file (appended to the output directory). Default: .log')
 
     conv_params = parser.add_argument_group("Parameters for pmtiles conversion")
     conv_params.add_argument('--min-zoom', type=int, default=10, help='Minimum zoom level')
     conv_params.add_argument('--max-zoom', type=int, default=18, help='Maximum zoom level')
-    conv_params.add_argument('--max-tile-bytes', type=int, default=5000000, help='Maximum bytes for each tile in PMTiles')
-    conv_params.add_argument('--max-feature-counts', type=int, default=500000, help='Max feature limits per tile in PMTiles')
+    conv_params.add_argument('--max-tile-bytes', type=int, default=1000000, help='Maximum bytes for each tile in PMTiles (default: 1000000)')
+    conv_params.add_argument('--max-feature-counts', type=int, default=100000, help='Max feature limits per tile in PMTiles (default: 100000)')
     conv_params.add_argument('--preserve-point-density-thres', type=int, default=1024, help='Threshold for preserving point density in PMTiles')
 
     run_params = parser.add_argument_group("Run Options", "Run options for FICTURE commands")
@@ -68,9 +69,9 @@ def parse_arguments(_args):
     aux_params.add_argument('--pmpoint', type=str, default=f"{repo_dir}/submodules/pmpoint/bin/pmpoint", help='Path to pmpoint binary')
     aux_params.add_argument('--spatula', type=str, default=f"{repo_dir}/submodules/spatula/bin/spatula", help='Path to spatula binary')
     aux_params.add_argument('--keep-intermediate-files', action='store_true', default=False, help='Keep intermediate output files')
-    aux_params.add_argument('--use-pmpoint', action='store_true', default=False, help='Use pmpoint/MLT instead of tippecanoe for point PMTiles generation (requires --pmpoint)')
-    aux_params.add_argument('--tile-format-pmpoint', choices=['MLT', 'MVT'], default='MVT', help='Tile format to use when --use-pmpoint is enabled (default: MVT)')
-    aux_params.add_argument('--pmpoint-compression-scale', type=float, default=10.0, help='Additional compression scale for pmpoint when --use-pmpoint is turned on. Default: 10.0')
+    aux_params.add_argument('--pmtiles-pmpoint', action='store_true', default=False, help='Use pmpoint/MLT instead of tippecanoe for point PMTiles generation (requires --pmpoint)')
+    aux_params.add_argument('--tile-format-pmpoint', choices=['MLT', 'MVT'], default='MVT', help='Tile format to use when --pmtiles-pmpoint is enabled (default: MVT)')
+    aux_params.add_argument('--pmpoint-compression-scale', type=float, default=10.0, help='Additional compression scale for pmpoint when --pmtiles-pmpoint is turned on. Default: 10.0')
     aux_params.add_argument('--tmp-dir', type=str, help='Temporary directory to be used (default: out-dir/tmp; specify /tmp if needed)')
 
     if len(_args) == 0:
@@ -101,7 +102,7 @@ def run_tsv2pmtiles(_args):
         args.col_rename.append("X:lon")
         args.col_rename.append("Y:lat")
 
-    if args.use_pmpoint and "Feature:gene" not in args.col_rename:
+    if args.pmtiles_pmpoint and "Feature:gene" not in args.col_rename:
         args.col_rename.append("Feature:gene")
 
     # start mm
@@ -122,7 +123,7 @@ def run_tsv2pmtiles(_args):
     if args.split:
         logger.info("Splitting the input cross-platform TSV file into per-bin files")
 
-        in_colname_feature = args.in_colname_feature or ("Feature" if args.use_pmpoint else None)
+        in_colname_feature = args.in_colname_feature or ("Feature" if args.pmtiles_pmpoint else None)
         pmpoint_arg = f"--colname-feature {in_colname_feature}" if in_colname_feature else ""
         if args.in_colname_x:
             pmpoint_arg += f" --colname-x {args.in_colname_x}"
@@ -164,7 +165,7 @@ def run_tsv2pmtiles(_args):
                 --out-feature-tsv-delim '{args.out_features_delim}' \\
                 --out-mol-suffix '{args.out_molecules_suffix}' \\
                 --out-feature-suffix '{args.out_features_suffix}' {pmpoint_arg} {col_rename_arg} \\
-                """ + ("--skip-original" if args.skip_original else "")
+                """ + ("--skip-original" if args.skip_original else "") + (" --compact-bin" if args.compact_bin else "")
 
         print(cmd)
         result = subprocess.run(cmd, shell=True)
@@ -202,7 +203,7 @@ def run_tsv2pmtiles(_args):
                 #pmtiles_path = args.out_prefix + "_bin" + bin_id + ".pmtiles"
                 pmtiles_prefix = args.out_prefix + "_bin" + bin_id 
             cmds = cmd_separator([], f"Converting bin {bin_id} to pmtiles")
-            if args.use_pmpoint:
+            if args.pmtiles_pmpoint:
                 cmds.append(f"mkdir -p {args.tmp_dir}/{bin_id}")
                 cmds.append(f"'{args.pmpoint}' build-point-pmtiles --tmp-dir {args.tmp_dir}/{bin_id} --in {csv_path} --out {pmtiles_prefix}.z{args.max_zoom}.pmtiles --zoom {args.max_zoom} --colname-x {pmpoint_colname_x} --colname-y {pmpoint_colname_y} --delim ',' --threads {args.threads} --format {args.tile_format_pmpoint}")
                 cmds.append(f"'{args.pmpoint}' build-pyramid-pmtiles --scale-factor-compression {args.pmpoint_compression_scale} --tmp-dir {args.tmp_dir}/{bin_id} --in {pmtiles_prefix}.z{args.max_zoom}.pmtiles --out {pmtiles_prefix}.pmtiles --min-zoom {args.min_zoom} --max-tile-bytes {args.max_tile_bytes} --max-tile-features {args.max_feature_counts} --threads {args.threads}")

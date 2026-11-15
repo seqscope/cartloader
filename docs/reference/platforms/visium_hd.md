@@ -15,7 +15,7 @@ Built-in profile. Ingest runs `sge_convert` on the 2 µm bins. Point `--in-dir` 
 | Segmented cell polygons | `segmented_outputs/cell_segmentations.geojson` (`boundaries` role) | `cartloader` cell analysis (optional) |
 | H&E image | not auto-detected: the sample's `hne` column / config key | `hne` layer |
 
-**Defaults:** FICTURE `width=12`, `n_factor=12,24,48`, single-molecule mode, `decode_scale=2`; packaging with `--use-pmpoint --bin-count 500 --sge-scale 2`; `sge_convert` with `--sge-visual --scale-xy 2.0`. These three scale settings render the ingest preview (`xy.png`), the FICTURE pixel-decode images, and the packaged SGE raster at 2 µm per pixel.
+**Defaults:** FICTURE `width=12`, `n_factor=12,24,48`, single-molecule mode, `decode_scale=2`; packaging with `--pmtiles-pmpoint --bin-count 500 --sge-scale 2`; `sge_convert` with `--sge-visual --scale-xy 2.0`. These three scale settings render the ingest preview (`xy.png`), the FICTURE pixel-decode images, and the packaged SGE raster at 2 µm per pixel.
 
 ---
 ## Cell layers

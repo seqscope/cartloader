@@ -29,7 +29,7 @@ All actions run by default (UMAPs can be skipped with `--skip-umap`):
 
 - **Tiling**: tiles each sample (`punkst multisample-prepare`) and writes the per-sample and shared feature lists.
 - **Hexagons**: builds per-sample and joint hexagons at each `--width`.
-- **Feature selection** (only with a [feature filter](#feature-filters)): resolves the filters into `multi.selected_features.tsv`.
+- **Feature selection** (with a [feature filter](#feature-filters) or a positive `--min-ct-per-feature-hexagon`, i.e. by default when training): resolves the filters and the total-count threshold into `multi.selected_features.tsv`.
 - **LDA training**: trains a joint model for each (`--width`, `--n-factor`) pair, or projects `--pretrained-model` onto the joint hexagons; writes DE and a factor report.
 - **Projection**: projects each model onto every sample's hexagons.
 - **UMAP**: shared and per-sample UMAPs of the hexagon factor posteriors.
@@ -46,7 +46,7 @@ All actions run by default (UMAPs can be skipped with `--skip-umap`):
 Re-invoking the command with unchanged inputs leaves the tiles, hexagons, and every model downstream of them alone:
 
 - Tiling is tracked by `multi.tiles.done`, which depends on `multi.tiles.params.json` (sample IDs and transcript paths, column indices, tile size/buffer) and on the transcript files, so a re-ingested sample is re-tiled.
-- Each hexagon width is tracked by `multi.hex_<width>.done`, which depends on `multi.hex_<width>.params.json` (ordered sample list, width, `--min-count-per-sample`, `--min-ct-per-unit-hexagon`).
+- Each hexagon width is tracked by `multi.hex_<width>.done`, which depends on `multi.hex_<width>.params.json` (ordered sample list, width, `--min-ct-per-feature-prepare`, `--min-ct-per-unit-hexagon`).
 - Feature selection depends on `multi.selected_features.params.json` (the `feature_select` command) and on the list files.
 
 A settings file is rewritten only when its content changes, so a changed setting, a changed sample list, or a new width reruns that step and everything built from it; a step whose outputs are missing reruns too. A changed sample list rebuilds every sample's tiles and hexagons. An output directory prepared by an older version (a single `multi.done` flag and no settings files) is adopted as up to date when its outputs exist and are not older than their inputs.
@@ -54,7 +54,7 @@ A settings file is rewritten only when its content changes, so a changed setting
 ---
 ## Feature filters
 
-`--include-feature-list`, `--exclude-feature-list`, `--include-feature-regex`, and `--exclude-feature-regex` restrict the features that **LDA training and projection** use:
+`--include-feature-list`, `--exclude-feature-list`, `--include-feature-regex`, `--exclude-feature-regex`, and the total-count threshold `--min-ct-per-feature-hexagon` restrict the features that **LDA training and projection** use:
 
 - They are resolved by [`cartloader feature_select`](./feature_customization.md#resolving-filters-into-one-list-feature_select) (`--mode include`) against `multi.union_features.tsv` (every feature seen in any sample) into `multi.selected_features.tsv`, and the command is recorded in `multi.selected_features.params.json`.
 - That list is passed as `lda4hex --features` to the joint training and to every per-sample projection; the pixel decode inherits the restriction through the model. Each sample's `ficture.params.json` records it as the FICTURE feature file.
@@ -104,7 +104,8 @@ cartloader run_ficture2_multi \
 - `--colidx-x`, `--colidx-y`, `--colidx-feature`, `--colidx-count` (int, 1‑based): X, Y, feature and count columns of the transcript TSV (defaults: 1, 2, 3, 4).
 - `--tile-size` (int): Tile size in µm. Must be at least 20× the side length (width / √3) of the widest hexagon, including `--segment-width-10x` (default: 500, raised automatically for wide hexagons to that minimum rounded up to 100, e.g. 600 for width 48).
 - `--tile-buffer` (int): Per-tile buffer size (default: 1000).
-- `--min-count-per-sample` (int): Minimum total count for a feature to enter the shared feature list `multi.features.tsv` (`punkst --min-total-count-per-sample`; default: 50).
+- `--min-ct-per-feature-prepare` (int): Minimum count a feature must have **in every sample** to enter the joint hexagon file, and hence the models trained on it (`punkst multisample-prepare --min-total-count-per-sample`; default: 0, so every feature seen in any sample is kept). With a positive value, the shared feature list `multi.features.tsv` is written by a looser rule (it lists every feature whose count summed over all samples reaches the value), so it can contain features that the joint hexagon file leaves out.
+- `--min-ct-per-feature-hexagon` (int): Minimum total count, summed over all samples, for a feature to be used when training a model on the hexagons (default: 20). It is applied through the [feature selection](#feature-filters) below, so the hexagon files, the tiled transcripts, and the packaged genes keep every feature. Not applied with `--pretrained-model`, which defines its own features.
 - `--min-ct-per-unit-hexagon` (int): Minimum count per hexagon, over all features (default: 50).
 - `--prepare-only` (flag): Tile and build hexagons only; write manifests with no models (`--n-factor` not required, UMAP forced off).
 - `--segment-10x` (flag): Also export each per-sample hexagon file as a 10x MEX directory (`samples/<sample>/<sample>.hex_<width>.mex/`). Works with `--prepare-only`.

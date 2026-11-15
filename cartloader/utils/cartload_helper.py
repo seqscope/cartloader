@@ -43,6 +43,59 @@ def update_bin_counts_json(in_bin_json, in_features, out_bin_json, strip_comment
     with open(out_bin_json, "w") as f:
         json.dump(records, f)
 
+def prepare_punkst_boundaries(in_csv, in_clust, out_geom, out_props):
+    """Prepare the two inputs `punkst poly2pmtiles-generic` needs for cell boundaries.
+
+    ``in_csv`` is the boundary vertex table (header cell_id,vertex_x,vertex_y in the first
+    three columns; one vertex per row, a cell's vertices consecutive), ``in_clust`` the
+    cell->cluster table (first two columns, comma/tab/space delimited).
+
+    Writes ``out_geom`` (cell_id,vertex_x,vertex_y with unquoted cell ids) and
+    ``out_props`` (TSV: cell_id, topK), one row per boundary cell. A cell without a
+    cluster gets an empty topK, which punkst stores as a missing value.
+    """
+    import csv
+    from cartloader.utils.utils import flexopen, unquote_str
+
+    bcd2clust = {}
+    with flexopen(in_clust, "rt") as rf:
+        sep = None
+        for line in rf:
+            if sep is None:
+                if "," in line:
+                    sep = ","
+                elif "\t" in line:
+                    sep = "\t"
+                elif " " in line:
+                    sep = " "
+                else:
+                    raise ValueError("Input cluster file must be CSV/TSV/SPACE delimited")
+            toks = line.strip().split(sep)
+            if len(toks) < 2:
+                raise ValueError("Input cluster file must have at least two columns: bcd and cluster")
+            bcd2clust[unquote_str(toks[0])] = unquote_str(toks[1])
+
+    seen = set()
+    with flexopen(in_csv, "rt") as f, open(out_geom, "w") as wg, open(out_props, "w") as wp:
+        reader = csv.reader(f)
+        hdrs = next(reader)
+        if len(hdrs) < 3:
+            raise ValueError(f"Cell boundary file {in_csv} must have at least three columns (cell id, x, y)")
+        wg.write("cell_id,vertex_x,vertex_y\n")
+        wp.write("cell_id\ttopK\n")
+        current = None
+        for row in reader:
+            if len(row) < 3:
+                continue
+            cell_id = unquote_str(row[0])
+            wg.write(f"{cell_id},{row[1]},{row[2]}\n")
+            if cell_id != current:
+                current = cell_id
+                if cell_id not in seen:
+                    seen.add(cell_id)
+                    clust = bcd2clust.get(cell_id, "")
+                    wp.write(f"{cell_id}\t{'' if clust == 'NA' else clust}\n")
+
 
 def copy_rgb_tsv(in_rgb, out_rgb, restart=False):
     """Normalize a FICTURE colormap (columns Name, R, G, B) into an rgb.tsv with

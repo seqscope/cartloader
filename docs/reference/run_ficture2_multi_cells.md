@@ -24,7 +24,7 @@
 !!! warning "Action Specifications"
     No action runs by default. `--all` enables `--sptsv`, `--lda`, `--leiden`, `--umap`, `--pseudobulk`, `--heatmap`, and `--decode`; `--tsne` must be added explicitly.
 
-- **`--sptsv`**: Builds each sample's cell-by-feature matrix (SPTSV) from its cell-count source, applying the [feature filters](#feature-filters), `--min-feature-count` and (for transcript sources) `--min-cell-count`; then merges the samples into `<out-prefix>.sptsv` and randomizes the order.
+- **`--sptsv`**: Builds each sample's cell-by-feature matrix (SPTSV) from its cell-count source, applying the [feature filters](#feature-filters), `--min-ct-per-feature-cell-sample` and (for transcript sources) `--min-ct-per-unit-cell`; then merges the samples into `<out-prefix>.sptsv` and randomizes the order.
 - **`--lda`**: Trains an LDA model with `--n-factor` factors on the merged matrix, or projects `--pretrained-model` (plain or `.gz`) onto it; then projects the model onto each sample.
 - **`--leiden`**: Leiden clustering of the joint LDA results (`--leiden-resolution`), split per sample; with `--list-cluster`, existing cluster labels are imported instead. Also draws each sample's clusters in space when cell coordinates are available (see [Cell coordinates](#cell-coordinates)).
 - **`--umap`** / **`--tsne`**: Shared and per-sample manifolds of the LDA results, colored by cluster.
@@ -123,8 +123,8 @@ The per-sample cluster scatter (`.leiden.xy.*`, the source of the cell-point lay
 
     - `--colidx-x`, `--colidx-y`, `--colidx-feature`, `--colidx-count`, `--colidx-cell-id` (int, 1-based): Columns of the tiled transcript (defaults: 1, 2, 3, 4, 5).
     - `--ignore-ids` (str): Comma-separated cell IDs treated as unassigned (default: `UNASSIGNED,NA,0,-1`).
-    - `--min-feature-count` (int): Minimum count per feature for the cell matrices and the pseudobulk (default: 20).
-    - `--min-cell-count` (int): Minimum count per cell (transcript sources only; default: 50).
+    - `--min-ct-per-feature-cell-sample` (int): Minimum count a feature must have **within a sample** to be kept in that sample's cell matrix (default: 0, no filter). Samples are merged over the union of their kept features, so a feature dropped in one sample is still present if another sample keeps it. Also the minimum count for a feature to enter the pseudobulk.
+    - `--min-ct-per-unit-cell` (int): Minimum count per cell (transcript sources only; default: 50).
 
     **Clusters and coordinates**:
 

@@ -55,7 +55,8 @@ def parse_arguments(_args):
     aux_params.add_argument('--tile-buffer', type=int, default=1000, help='Tile buffer for tiling (default: 1000)')
     aux_params.add_argument('--seed', type=int, default=1, help='Random seed for random number generation (default: 1)')
     # segmentation - ficture
-    aux_params.add_argument('--min-count-per-sample', type=int, default=50, help='Minimum count per sample in the tiled SGE (default: 50)')
+    aux_params.add_argument('--min-ct-per-feature-prepare', type=int, default=0, help='Minimum count a feature must have in every sample to enter the joint hexagon file and the models built on it (punkst multisample-prepare --min-total-count-per-sample; default: 0, i.e. every feature seen in any sample is kept). Note that with a positive value multi.features.tsv is written by a looser rule (total count over all samples at least this value)')
+    aux_params.add_argument('--min-ct-per-feature-hexagon', type=int, default=20, help='Minimum total count (summed over all samples) for a feature to be used when training a model on the hexagons, and hence in pixel decoding (default: 20). The hexagon files, the tiled transcripts and the packaged feature list keep every feature. Not applied when projecting a --pretrained-model, which defines its own features')
     aux_params.add_argument('--min-ct-per-unit-hexagon', type=int, default=50, help='Minimum count per hexagon in hexagon segmentation in FICTURE compatible format (default: 50)')
     aux_params.add_argument('--min-ct-per-unit-train', type=int, default=None, help='Minimum count per hexagon during LDA training/projection, counted over the features the analysis actually uses (default: punkst default). Worth raising/lowering when the feature filters below restrict the analysis to a small panel, since --min-ct-per-unit-hexagon is applied earlier, over all features.')
     # minibatch
@@ -185,7 +186,7 @@ def prepare_cmd(args, ficture2bin, widths=()):
         f"--tile-size {args.tile_size}",
         f"--tile-buffer {args.tile_buffer}",
         f"--threads {args.threads}",
-        f"--min-total-count-per-sample {args.min_count_per_sample}",
+        f"--min-total-count-per-sample {args.min_ct_per_feature_prepare}",
         # No feature filter here on purpose: this step writes the tiled TSV, the per-sample
         # feature lists and multi.features.tsv, all of which packaging reads and which must
         # therefore keep every gene. Filtering happens at LDA time (see add_feature_select_target).
@@ -247,7 +248,7 @@ def add_multisample_prepare_targets(mm, args, ficture2bin, in_samples, sample2ts
         stamp_settings(hex_flag(args, width), settings_path, {
             "samples": [[s, sample2tsv[s]] for s in in_samples],  # order sets each sample's index in the joint file
             "hex_grid_dist": width,
-            "min_count_per_sample": args.min_count_per_sample,
+            "min_ct_per_feature_prepare": args.min_ct_per_feature_prepare,
             "min_ct_per_unit_hexagon": args.min_ct_per_unit_hexagon,
         }, per_sample + joint, [tiles_flag(args)], adopt)
 
@@ -304,8 +305,11 @@ def add_feature_select_target(mm, args, hex_flags, adopt=False):
     restriction because it maps pixels through the model's features. Nothing else reads
     it, which is what keeps the tiled TSV and the packaged feature list complete.
     """
-    if not any([args.include_feature_list, args.exclude_feature_list,
-                args.include_feature_regex, args.exclude_feature_regex]):
+    # The total-count threshold only shapes a model trained here; a pretrained model
+    # brings its own feature space.
+    min_count = args.min_ct_per_feature_hexagon if args.pretrained_model is None else 0
+    if min_count <= 0 and not any([args.include_feature_list, args.exclude_feature_list,
+                                   args.include_feature_regex, args.exclude_feature_regex]):
         return None
 
     union_features = f"{args.out_dir}/multi.union_features.tsv"
@@ -321,6 +325,8 @@ def add_feature_select_target(mm, args, hex_flags, adopt=False):
         parts.append(f"--include-regex '{args.include_feature_regex}'")
     if args.exclude_feature_regex:
         parts.append(f"--exclude-regex '{args.exclude_feature_regex}'")
+    if min_count > 0:
+        parts.append(f"--min-count {min_count}")
     cmds.append(" ".join(parts))
     # Rerun when the filters change (settings file, list files) or the sample list does
     # (tiling flag). Order-only on the hexagon steps (after "|"): each rewrites the union

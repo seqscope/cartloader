@@ -37,7 +37,7 @@
       "role_from": { "clusters": "clusters_azimuth_fine" }, "alias_from": "alias_azimuth_fine",
       "multi_import": "import_xenium_cell" }
   ],
-  "cartload": { "use_pmpoint": true, "bin_count": 500 },
+  "cartload": { "pmtiles": "pmpoint", "bin_count": 500 },
   "images": [
     { "id": "dapi",     "match": "morphology_2d/ch0000_*.ome.tif", "kind": "single", "color": "0F73E6", "convert": "ome2png" },
     { "id": "boundary", "match": "morphology_2d/ch0001_*.ome.tif", "kind": "single", "color": "F300A5", "convert": "ome2png" },

@@ -213,7 +213,7 @@ ${CMD} run_ficture2_multi_cells --all --out-prefix cartloader --out-dir ${OUTDIR
 ${CMD} run_ficture2_multi_cells --all --out-dir ${OUTDIR}/fic --out-prefix xeniumranger --list-cluster ${OUTDIR}/tsv/in_clust.tsv --list-xy ${OUTDIR}/tsv/in_xy.tsv --list-boundaries ${OUTDIR}/tsv/in_boundaries.tsv --threads ${THREADS} --n-jobs ${JOBS} --exclude-feature-regex "${REGEX_STR}" --xy-colname-x x_centroid --xy-colname-y y_centroid --pretrained-model ${MODEL} --gzip pigz
 
 ## Load everything into cartloader tiles
-${CMD} run_cartload2 --fic-dir ${OUTDIR}/fic/samples/${SAMPLE} --in-cell-params ${OUTDIR}/fic/samples/${SAMPLE}/ficture.cartloader.params.json ${OUTDIR}/fic/samples/${SAMPLE}/ficture.xeniumranger.params.json --out-dir ${OUTDIR}/cartl/samples/${SAMPLE} --id ${ID} --n-jobs ${JOBS} --threads ${THREADS} --colname-count ${COLNAME} --use-pmpoint --gzip pigz --bin-count ${BIN_COUNT}
+${CMD} run_cartload2 --fic-dir ${OUTDIR}/fic/samples/${SAMPLE} --in-cell-params ${OUTDIR}/fic/samples/${SAMPLE}/ficture.cartloader.params.json ${OUTDIR}/fic/samples/${SAMPLE}/ficture.xeniumranger.params.json --out-dir ${OUTDIR}/cartl/samples/${SAMPLE} --id ${ID} --n-jobs ${JOBS} --threads ${THREADS} --colname-count ${COLNAME} --pmtiles-pmpoint --gzip pigz --bin-count ${BIN_COUNT}
 
 ##########################################################################################################
 ## Import morphology images
