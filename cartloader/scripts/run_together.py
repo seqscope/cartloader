@@ -121,7 +121,8 @@ KNOWN_SUBKEYS = {
         "autodetect", "assign_cell_id", "csv_colname_cell", "csv_colnames",
         "csv_colnames_others", "cellxgene_blank_prefix", "jitter_xy", "extra_flags",
     }),
-    "cartload": frozenset({"pmtiles", "tile_format", "use_pmpoint", "sge_scale", "bin_count"}),
+    "cartload": frozenset({"pmtiles", "tile_format", "use_pmpoint", "sge_scale", "bin_count",
+                          "bin_pmtiles_from_joined"}),
     "resources": frozenset({"threads", "n_jobs", "max_ram_gb"}),
     "image_defaults": frozenset({
         "um_per_pixel", "um_per_pixel_json", "um_per_pixel_key", "georeferenced",
@@ -153,6 +154,8 @@ def pmtiles_backend_flags(cart):
     fmt = cart.get("tile_format", DEFAULT_TILE_FORMAT)
     if fmt != DEFAULT_TILE_FORMAT:
         flags.append(f"--tile-format {fmt}")
+    if cart.get("bin_pmtiles_from_joined"):
+        flags.append("--bin-pmtiles-from-joined")
     return flags
 
 
@@ -658,6 +661,11 @@ def build_config(args):
     if not isinstance(fmt, str) or fmt.upper() not in TILE_FORMATS:
         sys.exit(f"ERROR: cartload.tile_format must be one of {', '.join(TILE_FORMATS)}; got {fmt!r}.")
     cart["tile_format"] = fmt.upper()
+    if args.bin_pmtiles_from_joined:
+        cart["bin_pmtiles_from_joined"] = True
+    if not isinstance(cart.setdefault("bin_pmtiles_from_joined", False), bool):
+        sys.exit(f"ERROR: cartload.bin_pmtiles_from_joined must be true or false; "
+                 f"got {cart['bin_pmtiles_from_joined']!r}.")
     if cart["tile_format"] == "MLT" and cart["pmtiles"] == "tippecanoe":
         sys.exit("ERROR: tile format MLT is not available with the tippecanoe backend "
                  "(cartload.pmtiles); use pmpoint or ficture2.")
@@ -2815,6 +2823,11 @@ def parse_arguments(_args):
     k.add_argument("--pmtiles-tippecanoe", action="store_true",
                    help="Build the molecule (point) PMTiles with tippecanoe (cartload.pmtiles = "
                         "\"tippecanoe\")")
+    k.add_argument("--bin-pmtiles-from-joined", action="store_true",
+                   help="Legacy: build the gene-bin molecule PMTiles from the factor-joined "
+                        "molecules, so they also carry the factor columns "
+                        "(cartload.bin_pmtiles_from_joined; default: from the tiled "
+                        "transcripts, carrying only their columns, e.g. cell_id)")
     k.add_argument("--pmtiles-ficture2", action="store_true",
                    help="Build the molecule (point), hexagon and cell-boundary PMTiles with "
                         "punkst (FICTURE2) instead of pmpoint/tippecanoe (cartload.pmtiles = "

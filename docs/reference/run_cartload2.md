@@ -111,7 +111,7 @@ Provide the SGE through `--fic-dir` (recommended) or `--sge-dir` (see the warnin
     * `--bin-count` (int): Number of gene bins for the point PMTiles (default: `50`).
     * `--max-point-tile-bytes` (int): Maximum tile size in bytes for point layers (default: `1000000`).
     * `--max-point-feature-counts` (int): Maximum features per tile for point layers (default: `100000`).
-    * `--keep-bin-extra-columns` (flag): Keep every column (e.g., the joined factor/probability columns) in the gene-bin point layers. By default `genes_bin*.pmtiles` carry only X, Y, feature, and count; the joined columns stay in `genes_all.pmtiles`.
+    * `--bin-pmtiles-from-joined` (flag): Legacy. Build the gene-bin point layers from the factor-joined molecules, so they also carry every factor/probability column. By default `genes_bin*.pmtiles` are built from the tiled transcripts (`<sample>.tiled.tsv`) and carry only its columns: X, Y, feature, count, and any extra transcript columns kept by `sge_convert` (e.g., `cell_id`); the factor columns are in `genes_all.pmtiles`. No effect without decoded factors. Works with every backend.
     * `--preserve-point-density-thres` (int): Tippecanoe point-density preservation threshold (default: `1024`).
     * `--replace-features` (str): Shared feature list (e.g., `multi.features.tsv`); a header-normalized copy (`multi.features.rehdr.tsv`) is used for gene-to-bin assignment so batches sharing the list bin genes identically.
     * `--in-bin-json` (str): Precomputed gene→bin assignment JSON (a `_bin_counts.json`); reused instead of deriving bins, with counts refreshed from this sample. Takes precedence over `--replace-features`. Supplied automatically by `run_cartload2_multi`.
@@ -189,15 +189,16 @@ All files are written under `--out-dir`. FICTURE ids are hyphenated in file name
 
 ### Molecule PMTiles
 * `transcripts_pixel_joined.tsv`: Molecules annotated with decoded factors (uncompressed; kept after the run).
-* `genes_bin*.pmtiles`, `genes_all.pmtiles`: Gene-bin point layers and the all-gene layer (`genes_all.pmtiles` only when factors are joined). The gene-bin layers carry only X, Y, feature, and count; the joined factor columns are stored in `genes_all.pmtiles` alone (see `--keep-bin-extra-columns`).
+* `genes_bin*.pmtiles`, `genes_all.pmtiles`: Gene-bin point layers and the all-gene layer (`genes_all.pmtiles` only when factors are joined). The gene-bin layers are built from the tiled transcripts and carry its columns (X, Y, feature, count, and extra transcript columns such as `cell_id`); the joined factor columns are stored in `genes_all.pmtiles` alone (see `--bin-pmtiles-from-joined`). Because the gene-bin layers do not depend on the join, they are built while the join runs.
 * `genes_index.tsv`, `genes_pmtiles_index.tsv`, `genes_bin_counts.json`: Bin index, PMTiles index, and per-bin gene counts (prefix set by `--out-molecules-id`).
+* `genes.bins_pmtiles_index.tsv`, `genes.bins.done`: PMTiles index and flag of the gene-bin layers alone, merged into `genes_pmtiles_index.tsv` once `genes_all.pmtiles` is built (pmpoint and tippecanoe, with decoded factors, without `--bin-pmtiles-from-joined`).
 
 ### Layers built with `--pmtiles-ficture2`
 
 File names and the catalog are the same as with the other backends; the contents differ in these ways:
 
 * **Molecules**: the layer is named after the file (`genes_all`, `genes_bin<N>`, not `..._molecules`) and the count attribute is `ct` (not `count`); the feature attribute is `gene`. Gene bins are assigned by punkst in `fixed` mode: exactly `--bin-count` bins of about equal molecule totals, the same assignment as the other backends. `genes_index.tsv` is not written.
-* **Gene-bin layers** are produced by a second `tile-op` pass against a one-row dummy factor source, which is how they carry gene and count only; their metadata still declares unused `K1`/`P1` fields.
+* **Gene-bin layers** are produced by a `tile-op` pass over the tiled transcripts against a one-row dummy factor source (punkst writes point PMTiles only while annotating), which is how they carry the transcript columns but no factor columns; their metadata still declares unused `K1`/`P1` fields. `genes_all.pmtiles` comes from a second pass that annotates with the decoded factors; that pass also writes factor-annotated gene-bin archives (punkst would otherwise drop the molecules of genes outside the FICTURE model), which go to the temporary directory and are deleted.
 * **Hexagons**: `hex_q` / `hex_r` (grid indices) replace the `lon` / `lat` centre attributes, and feature ids are 64-bit grid ids.
 * **Cell boundaries**: a cell without a cluster has no `topK` (instead of the string `NA`).
 * **Lower zoom levels** keep more features than tippecanoe or pmpoint (punkst only thins a tile that exceeds the tile limits), so files are somewhat larger; the full-zoom level holds every feature in all backends.

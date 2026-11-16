@@ -1,4 +1,4 @@
-import sys, os, gzip, argparse, logging, warnings, shutil, subprocess, ast, inspect
+import sys, os, gzip, argparse, logging, warnings, shutil, subprocess, ast, inspect, json
 import pandas as pd
 
 from cartloader.utils.minimake import minimake
@@ -42,6 +42,7 @@ def parse_arguments(_args):
     key_params.add_argument('--dummy-genes', type=str, default='', help='A single name or a regex describing the names of negative control probes')
     key_params.add_argument('--chunk-size', type=int, default=1000000, help='Number of rows to read at a time. Default is 1000000')
     key_params.add_argument('--skip-original', action='store_true', default=False, help='Skip writing the original file')
+    key_params.add_argument('--skip-bins', action='store_true', default=False, help='Write only the original (unsplit) output ([out-prefix]_all.pmtiles), no per-bin outputs. Used to package the factor-joined molecules when the per-bin layers come from another input (run_cartload2). Incompatible with --skip-original and --in-bin-json')
     key_params.add_argument('--compact-bin', action='store_true', default=False, help='Keep only the X, Y, feature and count columns in the per-bin outputs ([out-prefix]_bin*.pmtiles), dropping every other column (e.g. joined FICTURE factor/probability columns). The unsplit "all" output is not affected and keeps all columns')
     key_params.add_argument('--log', action='store_true', default=False, help='Write log to file')
     key_params.add_argument('--log-suffix', type=str, default=".log", help='The suffix for the log file (appended to the output directory). Default: .log')
@@ -91,6 +92,13 @@ def run_tsv2pmtiles(_args):
     logger = create_custom_logger(__name__, args.out_prefix + "_tsv2pmtiles" + args.log_suffix if args.log else None)
     logger.info("Analysis Started")
 
+    if args.skip_bins and args.skip_original:
+        logger.error("--skip-bins and --skip-original cannot be combined (nothing would be written)")
+        sys.exit(1)
+    if args.skip_bins and args.in_bin_json is not None:
+        logger.error("--skip-bins does not use a gene->bin assignment; drop --in-bin-json")
+        sys.exit(1)
+
     if args.all:
         args.split = True
         args.convert = True
@@ -139,6 +147,9 @@ def run_tsv2pmtiles(_args):
         # run_cartload2_multi), reuse it so gene-to-bin assignment is identical across
         # samples; otherwise derive it from this dataset's own feature counts.
         bin_json = f"{args.out_prefix}_bin_counts.json"
+        if args.skip_bins:
+            # no gene->bin JSON is published for an all-only run
+            bin_json = os.path.join(args.tmp_dir, f"{out_base}.all_only.bin_counts.json")
         if args.in_bin_json is not None:
             logger.info(f"Reusing gene->bin assignment from {args.in_bin_json}")
             if os.path.abspath(args.in_bin_json) != os.path.abspath(bin_json):
@@ -155,6 +166,22 @@ def run_tsv2pmtiles(_args):
             if result.returncode != 0:
                 logger.error("Error in assigning features to bins (assign-feature2bin)")
                 sys.exit(1)
+
+        if args.skip_bins:
+            # split-mol2bin always writes per-bin files and fails when no molecule lands in
+            # a bin, so route only the rarest observed gene to a single bin and discard
+            # that (tiny) bin after the split. Every other gene stays listed, unassigned
+            # (bin 0), so the "all" row still counts every feature; the original output
+            # keeps every molecule.
+            with open(bin_json) as f:
+                entries = json.load(f)
+            observed = [e for e in entries if e.get("count", 0) > 0]
+            if not observed:
+                logger.error(f"No feature with a positive count in {args.in_features}")
+                sys.exit(1)
+            rarest = min(observed, key=lambda e: e["count"])
+            with open(bin_json, "w") as f:
+                json.dump([dict(e, bin=1 if e is rarest else 0) for e in entries], f)
 
         cmd = f"""'{args.spatula}' split-mol2bin \\
                 --mol-tsv '{args.in_molecules}' \\
@@ -173,6 +200,17 @@ def run_tsv2pmtiles(_args):
         if result.returncode != 0:
             logger.error("Error in splitting the input TSV file into per-bin files")
             sys.exit(1)
+
+        if args.skip_bins:
+            index_f = f"{args.out_prefix}_index.tsv"
+            df_idx = pd.read_csv(index_f, sep="\t", dtype={"bin_id": str})
+            for _, row in df_idx[df_idx["bin_id"] != "all"].iterrows():
+                for col in ("molecules_path", "features_path"):
+                    path = os.path.join(out_dir, row[col])
+                    if os.path.exists(path):
+                        os.remove(path)
+            df_idx[df_idx["bin_id"] == "all"].to_csv(index_f, sep="\t", index=False)
+            os.remove(bin_json)
 
     # pmpoint reads the SPLIT output, whose header has already been rewritten by
     # --col-rename, so its X/Y column names are the renamed ones.

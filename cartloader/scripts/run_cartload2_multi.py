@@ -17,6 +17,7 @@ aux_args = {
         "preserve_point_density_thres",
         "umap_colname_factor", "umap_colname_x", "umap_colname_y", "umap_min_zoom", "umap_max_zoom",
         "sge_scale", "pmtiles_pmpoint", "pmtiles_tippecanoe", "tile_format", "tile_format_pmpoint", "pmtiles_ficture2",
+        "bin_pmtiles_from_joined",
         "skip_umap", "skip_raster",
         "keep_intermediate_files",
         "transparent_below", "transparent_above",
@@ -65,6 +66,7 @@ def parse_arguments(_args):
     aux_params.add_argument('--pmtiles-pmpoint', action='store_true', default=False, help='Use pmpoint/MLT instead of tippecanoe for point PMTiles')
     aux_params.add_argument('--pmtiles-tippecanoe', action='store_true', default=False, help='Use tippecanoe for point PMTiles (the run_cartload2 default)')
     aux_params.add_argument('--pmtiles-ficture2', action='store_true', default=False, help='Build the molecule, hexagon and cell-boundary PMTiles with punkst (FICTURE2) alone (forwarded to run_cartload2)')
+    aux_params.add_argument('--bin-pmtiles-from-joined', action='store_true', default=False, help='Legacy: build the per-bin molecule PMTiles from the factor-joined molecules, so they also carry the factor columns (default: from the tiled transcripts; forwarded to run_cartload2)')
     aux_params.add_argument('--tile-format', choices=['MVT', 'MLT'], help='Tile format of the molecule (point) PMTiles with --pmtiles-pmpoint or --pmtiles-ficture2 (run_cartload2 default: MVT)')
     aux_params.add_argument('--tile-format-pmpoint', choices=['MLT', 'MVT'], help='Deprecated alias of --tile-format')
     aux_params.add_argument('--umap-colname-factor', type=str, help='UMAP dominant-factor column name')

@@ -150,11 +150,22 @@ def _gene_bin_flags(args, feature_count_tsv, gene_bin_info):
     return parts
 
 
+def _ext_col_flags(layout):
+    """punkst tile-op flags carrying the tiled transcripts' extra columns (e.g. cell_id)."""
+    parts = []
+    for flag, key in (("--ext-col-ints", "ext_ints"), ("--ext-col-floats", "ext_floats"),
+                      ("--ext-col-strs", "ext_strs")):
+        if layout[key]:
+            parts.extend([flag] + [shlex.quote(x) for x in layout[key]])
+    return parts
+
+
 def make_direct_pmtiles_cmd(args, ficture2bin, out_prefix, tiled_prefix, feature_count_tsv, join_pixel_bins, join_pixel_ids, layout, gene_bin_info=None):
     """punkst tile-op: annotate the tiled molecules with the decoded pixel factors and write
     max-zoom point PMTiles (<out_prefix>_all.pmtiles and <out_prefix>_bin<N>.pmtiles, every
     archive carrying the factor and extra columns) plus <out_prefix>.pmtiles_index.tsv and
-    <out_prefix>.bin_counts.json."""
+    <out_prefix>.bin_counts.json. Gene bins are always given: without them punkst keeps
+    only the genes of the decoded model, dropping the molecules of other genes."""
     parts = [
         shlex.quote(ficture2bin), "tile-op",
         "--in", shlex.quote(join_pixel_bins[0]),
@@ -176,12 +187,7 @@ def make_direct_pmtiles_cmd(args, ficture2bin, out_prefix, tiled_prefix, feature
         parts.append("--merge-keep-all")
     if join_pixel_ids:
         parts.extend(["--emb-prefix"] + [shlex.quote(x) for x in join_pixel_ids])
-    if layout["ext_ints"]:
-        parts.extend(["--ext-col-ints"] + [shlex.quote(x) for x in layout["ext_ints"]])
-    if layout["ext_floats"]:
-        parts.extend(["--ext-col-floats"] + [shlex.quote(x) for x in layout["ext_floats"]])
-    if layout["ext_strs"]:
-        parts.extend(["--ext-col-strs"] + [shlex.quote(x) for x in layout["ext_strs"]])
+    parts.extend(_ext_col_flags(layout))
     return " ".join(parts)
 
 
@@ -202,9 +208,10 @@ def make_dummy_factor_cmds(ficture2bin, dummy_prefix):
 
 
 def make_compact_pmtiles_cmd(args, ficture2bin, out_prefix, tiled_prefix, feature_count_tsv, dummy_prefix, layout, gene_bin_info=None):
-    """punkst tile-op against the dummy factor source: max-zoom point PMTiles carrying only
-    gene and count (no factor or extra columns), with the same gene bins, index and
-    bin-count JSON as make_direct_pmtiles_cmd given the same binning inputs."""
+    """punkst tile-op against the dummy factor source: max-zoom point PMTiles of the tiled
+    transcripts, carrying their columns (gene, count and extra columns such as cell_id) but
+    no factor columns, with the same gene bins, index and bin-count JSON as
+    make_direct_pmtiles_cmd given the same binning inputs."""
     parts = [
         shlex.quote(ficture2bin), "tile-op",
         "--in", shlex.quote(dummy_prefix),
@@ -220,7 +227,7 @@ def make_compact_pmtiles_cmd(args, ficture2bin, out_prefix, tiled_prefix, featur
     ] + _gene_bin_flags(args, feature_count_tsv, gene_bin_info) + [
         "--out", shlex.quote(out_prefix),
         "--threads", str(args.threads),
-    ]
+    ] + _ext_col_flags(layout)
     return " ".join(parts)
 
 

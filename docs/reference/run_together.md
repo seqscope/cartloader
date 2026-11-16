@@ -261,6 +261,7 @@ Ingest filters (and the two coordinate options below) are ignored, with a warnin
 | `--pmtiles-tippecanoe` | Build the molecule (point) PMTiles with tippecanoe (`cartload.pmtiles: "tippecanoe"`). |
 | `--pmtiles-ficture2` | Build the molecule (point), hexagon, and cell-boundary PMTiles with punkst (FICTURE2) alone, without `pmpoint` or `spatula` (`cartload.pmtiles: "ficture2"`). Cell-centroid and UMAP layers still use tippecanoe. See [`run_cartload2`](./run_cartload2.md#layers-built-with-pmtiles-ficture2) for how the output differs. |
 | `--tile-format` | Tile format of the molecule (point) PMTiles: `MVT` (default) or `MLT` (`cartload.tile_format`). `MLT` needs the pmpoint or ficture2 backend. |
+| `--bin-pmtiles-from-joined` | Legacy: build the gene-bin molecule PMTiles (`genes_bin*.pmtiles`) from the factor-joined molecules, so they also carry the factor columns (`cartload.bin_pmtiles_from_joined: true`). By default they are built from the tiled transcripts and carry only its columns (e.g., `cell_id`); the factor columns are in `genes_all.pmtiles`. Works with every backend. |
 
 The three `--pmtiles-*` flags are mutually exclusive, and one given on the command line wins over `cartload.pmtiles` in the profile or `--config`.
 
