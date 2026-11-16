@@ -100,7 +100,7 @@ Provide the SGE through `--fic-dir` (recommended) or `--sge-dir` (see the warnin
     * `--out-fic-assets` (str): Output FICTURE assets JSON/YAML under `--out-dir` (default: `ficture_assets.json`).
     * `--out-catalog` (str): Output catalog YAML under `--out-dir` (default: `catalog.yaml`).
     * `--out-molecules-id` (str): Base name of the molecule PMTiles files (default: `genes`).
-    * `--tmp-dir` (str): Temporary directory (default: `<out-dir>/tmp`).
+    * `--tmp-dir` (str): Temporary directory (default: `<out-dir>/tmp`). It is also exported as `TMPDIR` to every command, so tools that spill to the system temp directory (punkst, `sort`) write there instead of `/tmp`. punkst `tile-op` spills roughly as much as the PMTiles it writes, so this needs room on large inputs.
     * `--keep-intermediate-files` (flag): Keep intermediate files.
 
     **Molecule (Point) PMTiles**:

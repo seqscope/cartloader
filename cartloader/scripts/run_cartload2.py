@@ -81,7 +81,7 @@ def parse_arguments(_args):
     # ?
     aux_params.add_argument('--skip-raster', action='store_true', default=False, help='Skip raster image generation (no GDAL/go-pmtiles required)')
     # tmp
-    aux_params.add_argument('--tmp-dir', type=str, help='Temporary directory (default: <out_dir>/tmp)')
+    aux_params.add_argument('--tmp-dir', type=str, help='Temporary directory (default: <out_dir>/tmp). Also exported as TMPDIR to every command, so tools that spill to the system temp directory (e.g. punkst tile-op) write here instead of /tmp')
     aux_params.add_argument('--keep-intermediate-files', action='store_true', default=False, help='Keep intermediate files instead of cleaning up')
     # img
     aux_params.add_argument('--transparent-below', type=int, help='Set pixels below this value to transparent for dark background (range: 0~255)')
@@ -1102,7 +1102,9 @@ def run_cartload2(_args):
 
     ## write makefile
     make_f = os.path.join(args.out_dir, args.makefn)
-    mm.write_makefile(make_f)
+    # Tools that spill to the system temp directory (punkst tile-op's per-thread spill
+    # files, sort) honour TMPDIR, which would otherwise be /tmp.
+    mm.write_makefile(make_f, env={"TMPDIR": os.path.abspath(args.tmp_dir)})
 
     execute_makefile(make_f, dry_run=args.dry_run, restart=args.restart, n_jobs=args.n_jobs)
 

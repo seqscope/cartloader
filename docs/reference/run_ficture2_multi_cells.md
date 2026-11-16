@@ -114,8 +114,8 @@ The per-sample cluster scatter (`.leiden.xy.*`, the source of the cell-point lay
 - `--pretrained-model` (str): Model TSV (plain or `.gz`) to project instead of training.
 - `--leiden-resolution` (float): Leiden resolution (default: 1.0).
 - `--cmap-file` (str): Color map TSV (default: `<cartloader_dir>/assets/default_color_map.tsv`).
-- `--decode-fit-width` (int): Hexagon width (µm) for decoding (default: 18).
-- `--anchor-resolution` (int): Anchor resolution; the decode uses `fit_width // anchor_resolution + 1` sliding moves (default: 6).
+- `--decode-fit-width` (int): Hexagon width (µm) for decoding (default: 18). `run_together` sets it to the hexagon width of the model the cell analysis projects (e.g. `12` for `t12_f48`).
+- `--anchor-resolution` (int): Anchor resolution; the decode uses `fit_width / anchor_resolution` sliding moves, rounded down, as in `run_ficture2_multi` (default: 6).
 
 ??? note "Auxiliary Parameters"
 
@@ -161,6 +161,7 @@ The per-sample cluster scatter (`.leiden.xy.*`, the source of the cell-point lay
     - `--dry-run` (flag): Write the Makefile and print the commands only.
     - `--restart` (flag): Ignore existing outputs and rerun all steps.
     - `--threads` (int): Max threads per job (default: 8).
+    - `--tmp-dir` (str): Temporary directory (default: `<out-dir>/tmp`). It is also exported as `TMPDIR` to every command, so tools that spill to the system temp directory (punkst, `sort`) write there instead of `/tmp`.
     - `--n-jobs` (int): Parallel Makefile jobs (default: 2).
     - `--makefn` (str): Makefile name under `--out-dir` (default: `run_ficture2_multi_cells.<out-prefix>.mk`).
 

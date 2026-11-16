@@ -314,23 +314,25 @@ def build_projection_analyses(project_dirs, width):
 
 
 def resolved_models(analyses):
-    """Return (list of {model_id, n_factor}, default_model_id).
+    """Return (list of {model_id, n_factor, width}, default_model_id).
 
     A de-novo entry with widths W and factors F expands to model ids t{w}_f{f};
-    a projection entry contributes its own id.
+    a projection entry contributes its own id. `width` is the hexagon width (um) the
+    model's pixels are decoded at.
     """
     models = []
     for a in analyses:
         if a.get("mode") == "prepare":
             continue           # tiling only (--no-ficture): no models exist
         if a.get("mode") == "project":
-            models.append({"model_id": a["id"], "n_factor": int(a.get("n_factor") or 0)})
+            models.append({"model_id": a["id"], "n_factor": int(a.get("n_factor") or 0),
+                           "width": str(a["width"]).split(",")[0]})
         else:
             widths = str(a["width"]).split(",")
             factors = str(a["n_factor"]).split(",")
             for w in widths:
                 for nf in factors:
-                    models.append({"model_id": f"t{w}_f{nf}", "n_factor": int(nf)})
+                    models.append({"model_id": f"t{w}_f{nf}", "n_factor": int(nf), "width": w})
     default = max(models, key=lambda m: m["n_factor"])["model_id"] if models else None
     return models, default
 
@@ -1604,12 +1606,16 @@ def cmd_ficture_analysis(a, in_list, fic_dir, cfg):
     return " ".join(parts)
 
 
-def cmd_cells(ca, list_files, fic_dir, model_path, cfg):
+def cmd_cells(ca, list_files, fic_dir, model_path, cfg, fit_width=None):
     res = cfg["resources"]
     parts = ["cartloader", "run_ficture2_multi_cells", "--all",
              f"--out-prefix {ca['id']}", f"--out-dir {fic_dir}",
              f"--threads {res['threads']}", f"--n-jobs {res['n_jobs']}",
              f"--pretrained-model {model_path}", "--gzip pigz"]
+    if fit_width is not None:
+        # decode the cell factors at the projected model's hexagon width, as the pixel
+        # FICTURE decode does (run_ficture2_multi_cells' own default is 18 um)
+        parts.append(f"--decode-fit-width {fit_width}")
     if res.get("max_ram_gb") is not None:
         parts.append(f"--max-ram-gb {res['max_ram_gb']}")
     xy_cfg = cfg.get("roles", {}).get("xy", {})
@@ -2550,6 +2556,8 @@ def plan_cell_analyses(grp, sge_root, cfg, fic_dir, default_model_id, multi):
             list_files[role] = path
         model_id = ca.get("model_id", default_model_id)
         model_path = os.path.join(fic_dir, f"{model_id}.model.tsv")
+        fit_width = next((m["width"] for m in resolved_models(cfg["ficture"])[0]
+                          if m["model_id"] == model_id), None)
         alias = None
         if ca.get("alias"):
             # 1-based exactly when the analysis decodes supplied cluster labels (a `lists`
@@ -2572,7 +2580,7 @@ def plan_cell_analyses(grp, sge_root, cfg, fic_dir, default_model_id, multi):
                       file=sys.stderr)
         active.append({"id": ca["id"], "sids": [s["id"] for s in contributing],
                        "name": ca.get("name"), "alias": alias,
-                       "cmd": cmd_cells(ca, list_files, fic_dir, model_path, cfg)})
+                       "cmd": cmd_cells(ca, list_files, fic_dir, model_path, cfg, fit_width)})
     return active
 
 

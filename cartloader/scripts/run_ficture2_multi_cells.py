@@ -17,6 +17,7 @@ def parse_arguments(_args):
     run_params.add_argument('--dry-run', action='store_true', default=False, help='Generate the Makefile, and print commands without executing them')
     run_params.add_argument('--restart', action='store_true', default=False, help='Ignore existing outputs and start from the beginning')
     run_params.add_argument('--threads', type=int, default=8, help='Maximum number of threads per job (default: 8)')
+    run_params.add_argument('--tmp-dir', type=str, default=None, help='Temporary directory, exported as TMPDIR to every command so tools that spill to the system temp directory (punkst, sort) write here instead of /tmp (default: <out-dir>/tmp)')
     run_params.add_argument('--max-ram-gb', type=float, default=64, help='Best-effort RAM target (decimal GB) passed to punkst pixel-decode --max-ram-gb; not a hard limit, applies per pixel-decode job. Set 0 to disable (default: 64)')
     run_params.add_argument('--n-jobs', type=int, default=2, help='Number of parallel jobs to run (default: 2)')
     run_params.add_argument('--makefn', type=str, help='File name of Makefile to write (default: run_ficture2_multi.mk)')
@@ -196,6 +197,9 @@ def run_ficture2_multi_cells(_args):
     # input/output/other files
     # dirs
     os.makedirs(args.out_dir, exist_ok=True)
+    if args.tmp_dir is None:
+        args.tmp_dir = os.path.join(args.out_dir, "tmp")
+    os.makedirs(args.tmp_dir, exist_ok=True)
 
     # ficture2
     ficture2bin = os.path.join(args.ficture2, "bin/punkst")
@@ -827,7 +831,7 @@ def run_ficture2_multi_cells(_args):
             decode_prefix = f"{args.out_dir}/samples/{sample_id}/{sample_id}.{args.out_prefix}.pixel"
             cmds.append(f"touch '{decode_prefix}.begin'")
             fit_width = args.decode_fit_width  ## e.g., 18um
-            fit_n_move = fit_width // args.anchor_resolution + 1
+            fit_n_move = int(fit_width / args.anchor_resolution)  ## as in run_ficture2_multi's pixel decode
             decode_id = f"p{fit_width}_a{args.anchor_resolution}"
             model_path= modelf
             cmd = " ".join([
@@ -1011,7 +1015,7 @@ def run_ficture2_multi_cells(_args):
         sys.exit(1)
     
     make_f = os.path.join(args.out_dir, args.makefn)
-    mm.write_makefile(make_f)
+    mm.write_makefile(make_f, env={"TMPDIR": os.path.abspath(args.tmp_dir)})
 
     execute_makefile(make_f, dry_run=args.dry_run, restart=args.restart, n_jobs=args.n_jobs)
 

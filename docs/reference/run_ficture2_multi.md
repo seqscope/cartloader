@@ -140,6 +140,7 @@ cartloader run_ficture2_multi \
 - `--dry-run` (flag): Write the Makefile and print the commands only.
 - `--restart` (flag): Ignore existing outputs and rerun all steps.
 - `--threads` (int): Max threads per job (default: 8).
+- `--tmp-dir` (str): Temporary directory (default: `<out-dir>/tmp`). It is also exported as `TMPDIR` to every command, so tools that spill to the system temp directory (punkst, `sort`) write there instead of `/tmp`.
 - `--n-jobs` (int): Parallel Makefile jobs (default: 2).
 - `--makefn` (str): Makefile name under `--out-dir` (default: `run_ficture2_multi.mk`).
 

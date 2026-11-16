@@ -231,6 +231,7 @@ See [Specifying Inputs → FICTURE mode](./run_together_inputs.md#ficture-mode-d
 | `--min-ct-per-unit-hexagon` | `50` | Minimum count per hexagon (all genes). |
 | `--min-ct-per-unit-train` | punkst's own | Minimum count per hexagon during training, over the features the model uses. |
 | `--min-ct-per-unit-cell` | `run_ficture2_multi_cells`' own (`50`) | Minimum count per cell for cells built from a transcript or cell TSV. |
+| *(cell decode width)* | the projected model's hexagon width | Not a flag: each cell analysis decodes pixels at the hexagon width of the model it projects (`run_ficture2_multi_cells --decode-fit-width`, e.g. `12` for `t12_f48`), as pixel FICTURE does, instead of that command's own default of 18 µm. |
 | `--min-ct-per-feature-cell-sample` | `run_ficture2_multi_cells`' own (`0`, no filter) | Minimum count per feature, counted within each sample, in the cell analysis. Not needed by default: the cell analyses project the pixel model, whose genes are set by `--min-ct-per-feature-hexagon`. |
 | `--always-single-molecule` / `--never-single-molecule` | ON for pixel FICTURE, OFF for cells | Force single-molecule mode on/off for both. |
 | `--colname-cell` | none | `generic` platform: turns on cell analysis from the transcript's 5th column (`cell_id`); also the default cell-id column of the `xy` file. See [Generic](./platforms/generic.md). |
