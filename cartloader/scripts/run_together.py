@@ -927,8 +927,9 @@ def image_row_to_spec(row, cfg, in_dir):
                  f"('source'/'src' column): {row}")
     spec = {"id": row.get("id") or row.get("img_id") or itype, "type": itype,
             "kind": kind, "source": _abs_in_dir(src, in_dir)}
-    if kind != "rgb":
+    if kind not in ("rgb", "prebuilt"):
         # colorized single-channel: explicit column wins, else the type's default.
+        # (A prebuilt PMTiles is copied as-is, so it takes no color.)
         color = row.get("color") or reg.get("color")
         if not color:
             sys.exit(f"ERROR: image type '{itype}' has no default color and the --images row "
