@@ -31,6 +31,8 @@ dependencies = [
     "PyYAML",
     "requests",
     "parquet-tools",
+    # image_pmtiles_flip_y (run_together prebuilt images with flip_y) reads/writes PMTiles
+    "pmtiles",
 ]
 
 [project.optional-dependencies]

@@ -43,6 +43,7 @@ Fields of an `--images` row or an `--image` value:
 | `georeferenced` | | `rgb`: `true` if the TIFF already carries the intended geotransform (e.g. a Seq-Scope H&E registered upstream): its corner coordinates are kept and only the CRS is assigned (`--georef-detect gtiff`). Else the profile's `image_defaults`. |
 | `georef_detect` | | `rgb`: read the bounds from the file — `ome` (OME `PhysicalSizeX/Y`) or `gtiff` (as `georeferenced`). Else the profile's `image_defaults`. An `.ome.tif` defaults to `ome`. |
 | `georef_plain` | | `rgb`: map the upper-left corner to (0,0) and the lower-right to the image size × `um_per_pixel`. Any non-empty value turns it on. |
+| `flip_y` | | `prebuilt`: `true` to negate the y coordinate (mirror about y = 0) while copying, via [`image_pmtiles_flip_y`](./image_pmtiles_flip_y.md). Use it for a PMTiles built as a standard north-up GeoTIFF (pixel row r at y = −r, so its y bounds are negative), which otherwise lands just below the data. |
 | `swapxy` / `rotate` / `flip_vertical` / `flip_horizontal` | | `rgb`: orientation (see [Orientation](#orientation-rgb-images)). Else the profile's `image_defaults`. |
 | `rescale` | | `rgb`: rescale mode for **16-bit** imagery (`auto` \| `linear` \| `log` \| `none`), forwarded to `geotiff2pmtiles`, which rejects 16-bit input without a range. Use `linear` with the range below. |
 | `rescale_range` / `rescale_min` + `rescale_max` | | `rgb`: input value range for `rescale` (e.g. `0,65535`). Give `rescale_range` in a `--images` TSV or config; on a `--image` CLI value use `rescale_min`/`rescale_max` instead, since the range's comma would split the value. |
@@ -181,7 +182,7 @@ cartloader import_image --ome2png [--skip-image-errors] --png2pmtiles --georefer
 
 A file ending in `morphology.ome.tif` (Xenium's multi-page DAPI z-stack, with or without a prefix) gets `--use-middle-page` and `--high-memory`, whichever way it was supplied, unless `use_middle_page` / `high_memory` say otherwise. `shrink_factor`, `high_memory`, and `um_per_pixel` fall back to the profile's `image_defaults` (e.g. MERSCOPE sets `shrink_factor=5.0`, `high_memory=true` for its large mosaics; Stereo-seq sets `um_per_pixel=0.5`).
 
-An `rgb` image runs `cartloader image_png2pmtiles --geotif2mbtiles --mbtiles2pmtiles --georeference` with the bounds, orientation, and rescale options above. A `prebuilt` image is copied in as `<id>.pmtiles`. Each layer is then added to `catalog.yaml` under its `id`. See [`import_image`](./import_image.md).
+An `rgb` image runs `cartloader image_png2pmtiles --geotif2mbtiles --mbtiles2pmtiles --georeference` with the bounds, orientation, and rescale options above. A `prebuilt` image is copied in as `<id>.pmtiles` (mirrored about y = 0 first when `flip_y` is set). Each layer is then added to `catalog.yaml` under its `id`. See [`import_image`](./import_image.md).
 
 With **`--skip-image-errors`**, a `single` image whose OME-TIFF cannot be read during the OME→PNG step is skipped with a warning instead of failing the run, and any image whose PMTiles was not produced is left out of the catalog. Failures of `rgb` or `prebuilt` images still stop the run. Re-run with the flag to regenerate the Makefile and resume past a corrupt image.
 

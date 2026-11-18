@@ -947,7 +947,7 @@ def image_row_to_spec(row, cfg, in_dir):
     for k in ("shrink_factor", "high_memory", "use_middle_page", "convert", "um_per_pixel",
               "georef_plain", "georeferenced", "georef_detect",
               "swapxy", "rotate", "flip_vertical", "flip_horizontal",
-              "rescale", "rescale_range", "rescale_min", "rescale_max", "nodata"):
+              "rescale", "rescale_range", "rescale_min", "rescale_max", "nodata", "flip_y"):
         if row.get(k):
             spec[k] = row[k]
     # Type-level field defaults from the registry (e.g. sbcd: a plain 1 um/pixel PNG, not
@@ -1788,7 +1788,14 @@ def plan_images(cfg, s, cart_dir, multi, transcript=None):
     for op in resolve_image_ops(cfg, s):
         iid, kind, src = op["id"], op.get("kind", "single"), op["source"]
         if kind == "prebuilt":
-            cmds.append(f"cp {src} {os.path.join(cart_dir, iid + '.pmtiles')}")
+            dst = os.path.join(cart_dir, iid + '.pmtiles')
+            if _truthy(op.get("flip_y")):
+                # Built with the GeoTIFF north-up convention (row r at y = -r): mirror it
+                # about y = 0 so it lines up with cartloader's layers (row r at y = +r).
+                cmds.append(f"cartloader image_pmtiles_flip_y --in-pmtiles {src} --out-pmtiles {dst} "
+                            f"--threads {cfg['resources']['threads']}")
+            else:
+                cmds.append(f"cp {src} {dst}")
         elif kind == "xenium_hne":
             # H&E placed by a 10x alignment CSV (3x3 affine from H&E pixels onto morphology
             # pixels; `alignment` is a glob under in_dir). `morphology_px_json`/`_key` name the
@@ -2653,7 +2660,9 @@ def parse_arguments(_args):
                          "transform (or the platform column e.g. merfish_csv), shrink_factor, high_memory, and the "
                          "orientation keys swapxy / rotate / flip_vertical / flip_horizontal — swapxy=true transposes "
                          "the image, for histology stored with its axes swapped relative to the transcript "
-                         "coordinates). Same fields as a --images TSV row; repeat --image per image. "
+                         "coordinates). kind=prebuilt copies a ready .pmtiles (flip_y=true mirrors it about "
+                         "y = 0 first, for one tiled as a north-up GeoTIFF). "
+                         "Same fields as a --images TSV row; repeat --image per image. "
                          "Seq-Scope: type=sbcd,source=<DATAID>.sge_match_sbcd.png adds the spatial-barcode image.")
     io.add_argument("--out-dir", type=str, help="Output directory (single sample / shared joint model)")
     io.add_argument("--out-root", type=str, help="Output root; each sample gets its own dir and an independent model")
